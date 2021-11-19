@@ -1,4 +1,20 @@
-import discord, time, asyncio
+from asyncio.tasks import gather
+import discord, time, asyncio, random
+from discord.ext import commands
+
+
+# CONSTANTS
+C_BOT_API_KEY = "OTA5MzgyNDE3MDg3ODgxMjc2.YZDeXw.QPHnQPxjc4UQJhKHfjfZwsrd-fA"
+C_DEBUG = True
+C_IS_USER = False
+C_MESSAGE = """
+Arduino Delavnice - 27.11.2021:
+Pridruzite se arduino delavnicam, ki bodo 27.11.2021 <@&905084973244117112>"""
+
+
+## Hour constants
+C_HOUR_TO_SECOND= 3600
+C_MINUTE_TO_SECOND = 60
 
 
 # Classes
@@ -19,84 +35,113 @@ class TIMER:
 
 
 class MESSAGE:
-    def __init__(this, period : float, text : str):
-        this.period = period
+    def __init__(this, start_period : float, end_period : float, text : str, channels : list):
+        if start_period == 0: 
+            this.randomized_time = False
+            this.period = end_period 
+        else:
+            this.randomized_time = True
+            this.random_range = (start_period, end_period)
+            this.period = random.randrange(*this.random_range)
+
+        this.last_timestamp = None
         this.text = text
+        this.channels = channels
         this.timer = TIMER()
+    def generate_timestamp(this):
+        l_timestruct = time.localtime()
+        this.last_timestamp = "Date:{:02d}.{:02d}.{:04d} Time:{:02d}:{:02d}"
+        this.last_timestamp = this.last_timestamp.format(l_timestruct.tm_mday, l_timestruct.tm_mon, l_timestruct.tm_year,l_timestruct.tm_hour,l_timestruct.tm_min)
 
 
 class GUILD:
-    def __init__(this, guildid, channels_to_send_in, messages_to_send):
+    server_list = []
+    bot_object = discord.Client()
+
+    def __init__(this, guildid,  messages_to_send):
         this.guild =    guildid
         this.messages = messages_to_send
-        this.channels = channels_to_send_in
+        this.guild_file_name = None
 
-    def initialize(this):
-        this.guild = m_bot.get_guild(this.guild)
-        this.channels = [this.guild.get_channel(x) for x in this.channels]
+    def initialize(this):       # Get objects from ids
+        this.guild = GUILD.bot_object.get_guild(this.guild) # Transofrm guild id into API guild object
+        if this.guild != None:
+            for l_msg in this.messages:
+                l_msg.channels = [GUILD.bot_object.get_channel(x) for x in l_msg.channels]  # Transform ids into API channel objects
+            this.guild_file_name = this.guild.name.replace("/","_").replace("\\","_").replace(":","_").replace("!","_").replace("|","_").replace("*","_").replace("?","_").replace("<","_").replace(">", "_") + ".txt"
+
+    async def advertise(this, force=False):
+        l_trace = ""
+        if this.guild != None:
+            for l_msg in this.messages:
+                if force or (l_msg.timer.start() and l_msg.timer.elapsed() > l_msg.period):
+                    if l_msg.randomized_time == True:           # If first parameter to msg object is != 0
+                            l_msg.period = random.randrange(*l_msg.random_range)
+                    l_msg.timer.reset()
+                    l_msg.timer.start()
+                    
+                    
+                    for l_channel in l_msg.channels:
+                        await l_channel.send(l_msg.text)
+                    l_msg.generate_timestamp()
+                    l_trace += f'Sending Message: "{l_msg.text}"\n\nServer: {this.guild.name}\nChannels: {[x.name for x in l_msg.channels]} \nTimestamp: {l_msg.last_timestamp}\n\n----------------------------------\n\n'
+                    TRACE(l_trace)
+        return l_trace if l_trace != "" else None
         
 
-    async def advertise(this):
-        for l_msg in this.messages:
-            if  l_msg.timer.start() and l_msg.timer.elapsed() > l_msg.period:
-                l_msg.timer.reset()
-                for l_channel in this.channels:
-                    await l_channel.send(l_msg.text)
+
+############################################################################################
+#                               GUILD MESSAGES DEFINITION                                  #
+############################################################################################
+
+GUILD.server_list = [
+GUILD(
+        639031067868921861,                          # ID Serverja
+        # Messages
+        [   #       min-sec                     max-sec      sporocilo   #IDji kanalov
+            MESSAGE(0*C_HOUR_TO_SECOND, 24*C_HOUR_TO_SECOND , C_MESSAGE, [904382137204101130])
+            # MESSAGE(0, 10*C_MINUTE_TO_SECOND, "TEST")  # Ce je prvi parameter 0, potem je cas vedno drugi parameter drugace pa sta prva dva parametra meje za nakljucno izbiro
+        ]
+    )
+]
 
 
-
-
-
-# CONSTANTS
-C_BOT_API_KEY = "OTExMzI2MjAwOTQ3OTMzMjI1.YZfwqQ.dHrpwrb1aQ_-WvJq7Apdaej9dLI"
-C_DEBUG = True
-
-## Hour constants
-C_HOUR_TO_SECOND= 3600
-C_MINUTE_TO_SECOND = 60
-
-# Globals
-m_bot = discord.Client()
-
-m_server1 = GUILD(863071397207212052,               # ID Serverja
-                # ID Channels
-                [
-                    863071397207212056,# General
-                ],
-                # Messages
-                [   #       secs  text
-                    MESSAGE(1*C_MINUTE_TO_SECOND , "<@133674038546530305>"),
-                ]
-                )
-
-
-m_servers = [m_server1]     # Vsi serverji
-
+                                     
+############################################################################################
 
 # Debugging functions
 def TRACE(message):
     if C_DEBUG:
         print(message)
 
-
-@m_bot.event
+# Event functions
+@GUILD.bot_object.event
 async def on_ready():
-    TRACE(f"We have logged in as {m_bot.user}")
+    TRACE(f"Logged in as {GUILD.bot_object.user}")
     l_advertiser = asyncio.create_task(advertiser())
     asyncio.gather(l_advertiser)
 
+# Advertising task
 async def advertiser(): 
-    for l_server in m_servers:
+    for l_server in GUILD.server_list:
         l_server.initialize()
+        l_ret = await l_server.advertise(True)
+        if l_ret != None:
+            with open(f"{l_server.guild_file_name}",'a', encoding='utf-8') as l_logfile:
+                l_logfile.write(l_ret)
     while True:
-        await asyncio.sleep(0.001)
-        for l_server in m_servers:
-            await l_server.advertise()
-
+        await asyncio.sleep(1)
+        for l_server in GUILD.server_list:
+            l_ret = await l_server.advertise(False)
+            if l_ret != None:
+                with open(f"{l_server.guild_file_name}",'a', encoding='utf-8') as l_logfile:
+                    l_logfile.write(l_ret)
 
 def main():
-    m_bot.run(C_BOT_API_KEY)
+    GUILD.bot_object.run(C_BOT_API_KEY, bot=not C_IS_USER)
+
+
+
 
 if __name__ == "__main__":
     main()
-
