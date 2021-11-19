@@ -1,5 +1,5 @@
 import discord, time, asyncio
-
+from discord.ext import commands
 
 # Classes
 class TIMER:
@@ -56,7 +56,8 @@ C_HOUR_TO_SECOND= 3600
 C_MINUTE_TO_SECOND = 60
 
 # Globals
-m_bot = discord.Client()
+m_bot = commands.Bot("::", description="Commands")
+
 
 m_server1 = GUILD(863071397207212052,               # ID Serverja
                 # ID Channels
@@ -81,7 +82,7 @@ def TRACE(message):
 
 @m_bot.event
 async def on_ready():
-    TRACE(f"We have logged in as {m_bot.user}")
+    TRACE(f"Logged in as {m_bot.user}")
     l_advertiser = asyncio.create_task(advertiser())
     asyncio.gather(l_advertiser)
 
