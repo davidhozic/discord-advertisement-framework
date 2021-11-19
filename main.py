@@ -27,9 +27,14 @@ class MESSAGE:
             this.randomized_time = True
             this.random_range = (start_period, end_period)
             this.period = random.randrange(*this.random_range)
-                       
+
+        this.last_timestamp = "0.0.0::00-00"
         this.text = text
         this.timer = TIMER()
+    def generate_timestamp(this):
+        l_timestruct = time.localtime()
+        this.last_timestamp = "Date:{:02d}.{:02d}.{:04d} Time:{:02d}:{:02d}"
+        this.last_timestamp = this.last_timestamp.format(l_timestruct.tm_mday, l_timestruct.tm_mon, l_timestruct.tm_year,l_timestruct.tm_hour,l_timestruct.tm_min)
 
 
 class GUILD:
@@ -38,24 +43,19 @@ class GUILD:
         this.messages = messages_to_send
         this.channels = channels_to_send_in
 
-    def initialize(this):
+    def initialize(this):       # Get objects from ids
         this.guild = m_bot.get_guild(this.guild)
         this.channels = [this.guild.get_channel(x) for x in this.channels]
-        
-    async def advertise_force(this):
-        for l_msg in this.messages:
-            for l_channel in this.channels:
-                #TRACE(f'Sending msg: "{l_msg.text}" into channel: {l_channel.name}')
-                await l_channel.send(l_msg.text)
 
-    async def advertise(this):
+    async def advertise(this, force=False):
         for l_msg in this.messages:
-            if  l_msg.timer.start() and l_msg.timer.elapsed() > l_msg.period:
-                if l_msg.randomized_time == True:
+            if  force or (l_msg.timer.start() and l_msg.timer.elapsed() > l_msg.period):
+                if l_msg.randomized_time == True:           # If first parameter to msg object is != 0
                     l_msg.period = random.randrange(*l_msg.random_range)
                 l_msg.timer.reset()
+                l_msg.generate_timestamp()
                 for l_channel in this.channels:
-                    #TRACE(f'Sending msg: "{l_msg.text}" into channel: {l_channel.name}')
+                    TRACE(f'Sending Message: "{l_msg.text}"\nChannel: {l_channel.name} \nTimestamp: {l_msg.last_timestamp}')
                     await l_channel.send(l_msg.text)
 
 
@@ -101,12 +101,12 @@ https://cdn.discordapp.com/attachments/898701888676069386/910593996949168158/Und
 
 server_MetaVoicers = GUILD(
                 890131961992081439,                          # ID Serverja
-                [                                            # ID Channels
+                [                                            # Tabela ID Channels
                     893592192147398666            
                 ],
                 # Messages
-                [   #       secs                    text
-                    MESSAGE(5*C_MINUTE_TO_SECOND, 10*C_MINUTE_TO_SECOND , "TEST")
+                [   #       min-sec                     max-sec           sporocilo
+                    MESSAGE(0, 5 * C_HOUR_TO_SECOND , C_MESSAGE)
                   # MESSAGE(0, 10*C_MINUTE_TO_SECOND, "TEST")  # Ce je prvi parameter 0, potem je cas vedno drugi parameter drugace pa sta prva dva parametra meje za nakljucno izbiro
                 ]
                 )
@@ -129,11 +129,11 @@ async def on_ready():
 async def advertiser(): 
     for l_server in m_servers:
         l_server.initialize()
-        await l_server.advertise_force()
+        await l_server.advertise(True)
     while True:
         await asyncio.sleep(1)
         for l_server in m_servers:
-            await l_server.advertise()
+            await l_server.advertise(False)
 
 def main():
     #m_bot.login(C_BOT_API_KEY)
