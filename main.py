@@ -1,6 +1,15 @@
 import discord, time, asyncio, random
 from discord.ext import commands
 
+# Designed by David Hozic
+# Designed by David Hozic
+# Designed by David Hozic
+# Designed by David Hozic
+# Designed by David Hozic
+# Designed by David Hozic
+# Designed by David Hozic
+# Designed by David Hozic
+
 # Classes
 class TIMER:
     def __init__(this):
@@ -36,6 +45,7 @@ class MESSAGE:
         this.last_timestamp = "Date:{:02d}.{:02d}.{:04d} Time:{:02d}:{:02d}"
         this.last_timestamp = this.last_timestamp.format(l_timestruct.tm_mday, l_timestruct.tm_mon, l_timestruct.tm_year,l_timestruct.tm_hour,l_timestruct.tm_min)
 
+# Designed by David Hozic
 
 class GUILD:
     def __init__(this, guildid, channels_to_send_in, messages_to_send):
@@ -48,21 +58,30 @@ class GUILD:
         this.channels = [this.guild.get_channel(x) for x in this.channels]
 
     async def advertise(this, force=False):
+        l_trace = None
         for l_msg in this.messages:
-            if  force or (l_msg.timer.start() and l_msg.timer.elapsed() > l_msg.period):
+            if force or (l_msg.timer.start() and l_msg.timer.elapsed() > l_msg.period):
                 if l_msg.randomized_time == True:           # If first parameter to msg object is != 0
-                    l_msg.period = random.randrange(*l_msg.random_range)
+                        l_msg.period = random.randrange(*l_msg.random_range)
                 l_msg.timer.reset()
                 l_msg.generate_timestamp()
+                l_trace = f'Sending Message: "{l_msg.text}"\nChannels: {[x.name for x in this.channels]} \nTimestamp: {l_msg.last_timestamp}\n\n----------------------------------\n\n'
+                TRACE(l_trace)
                 for l_channel in this.channels:
-                    TRACE(f'Sending Message: "{l_msg.text}"\nChannel: {l_channel.name} \nTimestamp: {l_msg.last_timestamp}')
-                    await l_channel.send(l_msg.text)
+                    #await l_channel.send(l_msg.text)  
+                    pass
+        return l_trace
+        
+                            
+                   
 
 
 # CONSTANTS
 C_BOT_API_KEY = "OTA5MDYwMTIwNjIzODQxMzAy.YZVSvA.2QDp_iJcVXPQ_9LqUsvI4ZPwWmw"
 C_DEBUG = True
 C_IS_USER = True
+C_LOG_FILE_NAME = "log.txt"
+
 
 
 ## Hour constants
@@ -72,6 +91,7 @@ C_MINUTE_TO_SECOND = 60
 # Globals
 m_bot = discord.Client()#commands.Bot("::", description="Commands")
 
+# Designed by David Hozic
 
 C_MESSAGE = \
 """😈 🅰️🇩🅰️  🇺 🇳 🇩 🇪 🇷 🇼 🇴 🇷 🇱 🇩  😈 
@@ -129,14 +149,24 @@ async def on_ready():
 async def advertiser(): 
     for l_server in m_servers:
         l_server.initialize()
-        await l_server.advertise(True)
+        with open(f"{l_server.guild.name}_{C_LOG_FILE_NAME}",'a', encoding='utf-8') as l_logfile:
+            l_ret = await l_server.advertise(True)
+            if l_ret != None:
+                l_logfile.write(l_ret)
     while True:
         await asyncio.sleep(1)
         for l_server in m_servers:
-            await l_server.advertise(False)
+            with open(f"{l_server.guild.name}_{C_LOG_FILE_NAME}",'a', encoding='utf-8') as l_logfile:
+                l_ret = await l_server.advertise(False)
+                if l_ret != None:
+                    l_logfile.write(l_ret)
 
 def main():
     #m_bot.login(C_BOT_API_KEY)
     m_bot.run(C_BOT_API_KEY, bot=not C_IS_USER)
 if __name__ == "__main__":
     main()
+# Designed by David Hozic
+# Designed by David Hozic
+# Designed by David Hozic
+# Designed by David Hozic
