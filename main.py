@@ -1,14 +1,23 @@
 import discord, time, asyncio, random
 from discord.ext import commands
 
-# Designed by David Hozic
-# Designed by David Hozic
-# Designed by David Hozic
-# Designed by David Hozic
-# Designed by David Hozic
-# Designed by David Hozic
-# Designed by David Hozic
-# Designed by David Hozic
+
+# CONSTANTS
+C_BOT_API_KEY = "OTA5MDYwMTIwNjIzODQxMzAy.YZVSvA.2QDp_iJcVXPQ_9LqUsvI4ZPwWmw"
+C_DEBUG = True
+C_IS_USER = True
+C_LOG_FILE_NAME = "log.txt"
+C_MESSAGE = '😈 🅰️🇩🅰️  🇺 🇳 🇩 🇪 🇷 🇼 🇴 🇷 🇱 🇩  😈 \n\n               - a new upcoming project!\n\n                 {INSERT YOUR INVITE LINK HERE}\n\n                     ONLY 500 WHITELIST SPOTS\n\n      ADA Underworld is releasing their Set 1 - Devils!\n\nThe release of 750 unique, hand-drawn, randomly generated\n    NFTs on the Cardano blockchain coming early 2022!\n\nCome join the server for many giveaways, whitelist,\n                 awsome community and much more!\n\n\nCome check it out!\n\nJoin our discord!\nCheck our Twitter: https://twitter.com/ada_underworld\nhttps://cdn.discordapp.com/attachments/898701888676069386/910593996949168158/Underworld_shill_gif.gif'
+
+
+## Hour constants
+C_HOUR_TO_SECOND= 3600
+C_MINUTE_TO_SECOND = 60
+
+# Globals
+m_bot = discord.Client()#commands.Bot("::", description="Commands")
+
+
 
 # Classes
 class TIMER:
@@ -45,93 +54,59 @@ class MESSAGE:
         this.last_timestamp = "Date:{:02d}.{:02d}.{:04d} Time:{:02d}:{:02d}"
         this.last_timestamp = this.last_timestamp.format(l_timestruct.tm_mday, l_timestruct.tm_mon, l_timestruct.tm_year,l_timestruct.tm_hour,l_timestruct.tm_min)
 
-# Designed by David Hozic
 
 class GUILD:
+    server_list = []
+
     def __init__(this, guildid, channels_to_send_in, messages_to_send):
         this.guild =    guildid
         this.messages = messages_to_send
         this.channels = channels_to_send_in
-
+        this.guild_name = None
     def initialize(this):       # Get objects from ids
         this.guild = m_bot.get_guild(this.guild)
         this.channels = [this.guild.get_channel(x) for x in this.channels]
+        this.guild_name = this.guild.name
 
     async def advertise(this, force=False):
-        l_trace = None
+        l_trace = ""
         for l_msg in this.messages:
             if force or (l_msg.timer.start() and l_msg.timer.elapsed() > l_msg.period):
                 if l_msg.randomized_time == True:           # If first parameter to msg object is != 0
                         l_msg.period = random.randrange(*l_msg.random_range)
                 l_msg.timer.reset()
+                l_msg.timer.start()
                 l_msg.generate_timestamp()
-                l_trace = f'Sending Message: "{l_msg.text}"\nChannels: {[x.name for x in this.channels]} \nTimestamp: {l_msg.last_timestamp}\n\n----------------------------------\n\n'
+                l_trace += f'Sending Message: "{l_msg.text}"\n\nServer: {this.guild_name}\nChannels: {[x.name for x in this.channels]} \nTimestamp: {l_msg.last_timestamp}\n\n----------------------------------\n\n'
                 TRACE(l_trace)
                 for l_channel in this.channels:
-                    await l_channel.send(l_msg.text)  
+                    await l_channel.send(l_msg.text)
+                    time.sleep(4)
                     
         return l_trace
         
-                            
-                   
 
 
-# CONSTANTS
-C_BOT_API_KEY = "OTA5MDYwMTIwNjIzODQxMzAy.YZVSvA.2QDp_iJcVXPQ_9LqUsvI4ZPwWmw"
-C_DEBUG = True
-C_IS_USER = True
-C_LOG_FILE_NAME = "log.txt"
+############################################################################################
+#                               GUILD MESSAGES DEFINITION                                  #
+############################################################################################
 
 
+server_Solnanas = GUILD(   # ID Serverja
+                        890131961992081439,   
+                        # Tabela Kanalov                       
+                        [   
+                            893592192147398666            
+                        ],
+                        # Tabela sporocil
+                        [   #       minimum-sec                     maximum-sec           sporocilo
+                            MESSAGE(360 * C_MINUTE_TO_SECOND, 420 * C_MINUTE_TO_SECOND , C_MESSAGE)
+                            # MESSAGE(0, 10*C_MINUTE_TO_SECOND, "TEST")  # Ce je prvi parameter 0, potem je cas vedno drugi parameter drugace pa sta prva dva parametra meje za nakljucno izbiro
+                        ]
+)
 
-## Hour constants
-C_HOUR_TO_SECOND= 3600
-C_MINUTE_TO_SECOND = 60
-
-# Globals
-m_bot = discord.Client()#commands.Bot("::", description="Commands")
-
-# Designed by David Hozic
-
-C_MESSAGE = \
-"""😈 🅰️🇩🅰️  🇺 🇳 🇩 🇪 🇷 🇼 🇴 🇷 🇱 🇩  😈 
-
-               - a new upcoming project!
-
-                 {INSERT YOUR INVITE LINK HERE}
-
-                     ONLY 500 WHITELIST SPOTS
-
-      ADA Underworld is releasing their Set 1 - Devils!
-
-The release of 750 unique, hand-drawn, randomly generated
-    NFTs on the Cardano blockchain coming early 2022!
-
-Come join the server for many giveaways, whitelist,
-                 awsome community and much more!
-
-
-Come check it out!
-
-Join our discord!
-Check our Twitter: https://twitter.com/ada_underworld
-https://cdn.discordapp.com/attachments/898701888676069386/910593996949168158/Underworld_shill_gif.gif"""
-
-
-
-server_MetaVoicers = GUILD(
-                890131961992081439,                          # ID Serverja
-                [                                            # Tabela ID Channels
-                    893592192147398666            
-                ],
-                # Messages
-                [   #       min-sec                     max-sec           sporocilo
-                    MESSAGE(0, 5 * C_HOUR_TO_SECOND , C_MESSAGE)
-                  # MESSAGE(0, 10*C_MINUTE_TO_SECOND, "TEST")  # Ce je prvi parameter 0, potem je cas vedno drugi parameter drugace pa sta prva dva parametra meje za nakljucno izbiro
-                ]
-                )
-
-m_servers = [server_MetaVoicers]     # Vsi serverji
+GUILD.server_list = [server_Solnanas]
+############################################################################################
 
 # Debugging functions
 def TRACE(message):
@@ -147,26 +122,25 @@ async def on_ready():
 
 # Advertising task
 async def advertiser(): 
-    for l_server in m_servers:
+    for l_server in GUILD.server_list:
         l_server.initialize()
-        with open(f"{l_server.guild.name}_{C_LOG_FILE_NAME}",'a', encoding='utf-8') as l_logfile:
-            l_ret = await l_server.advertise(True)
-            if l_ret != None:
+        l_ret = await l_server.advertise(True)
+        if l_ret != None:
+            with open(f"{l_server.guild_name}_{C_LOG_FILE_NAME}",'a', encoding='utf-8') as l_logfile:
                 l_logfile.write(l_ret)
     while True:
         await asyncio.sleep(1)
-        for l_server in m_servers:
-            with open(f"{l_server.guild.name}_{C_LOG_FILE_NAME}",'a', encoding='utf-8') as l_logfile:
-                l_ret = await l_server.advertise(False)
-                if l_ret != None:
+        for l_server in GUILD.server_list:
+            l_ret = await l_server.advertise(False)
+            if l_ret != None:
+                with open(f"{l_server.guild_name}_{C_LOG_FILE_NAME}",'a', encoding='utf-8') as l_logfile:
                     l_logfile.write(l_ret)
 
 def main():
-    #m_bot.login(C_BOT_API_KEY)
     m_bot.run(C_BOT_API_KEY, bot=not C_IS_USER)
+
 if __name__ == "__main__":
     main()
-# Designed by David Hozic
-# Designed by David Hozic
-# Designed by David Hozic
-# Designed by David Hozic
+
+
+
