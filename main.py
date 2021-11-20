@@ -37,7 +37,7 @@ class MESSAGE:
             this.random_range = (start_period, end_period)
             this.period = random.randrange(*this.random_range)
 
-        this.last_timestamp = "0.0.0::00-00"
+        this.last_timestamp = None
         this.text = text
         this.timer = TIMER()
     def generate_timestamp(this):
@@ -68,8 +68,8 @@ class GUILD:
                 l_trace = f'Sending Message: "{l_msg.text}"\nChannels: {[x.name for x in this.channels]} \nTimestamp: {l_msg.last_timestamp}\n\n----------------------------------\n\n'
                 TRACE(l_trace)
                 for l_channel in this.channels:
-                    #await l_channel.send(l_msg.text)  
-                    pass
+                    await l_channel.send(l_msg.text)  
+                    
         return l_trace
         
                             
