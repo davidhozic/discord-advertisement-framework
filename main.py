@@ -4,31 +4,10 @@ from discord.ext import commands
 
 
 # CONSTANTS
-C_BOT_API_KEY = "OTA5MDYwMTIwNjIzODQxMzAy.YZVSvA.2QDp_iJcVXPQ_9LqUsvI4ZPwWmw"#"OTExNzQwOTk4NzUxNzcyNzEy.YZl0qg.mmcNWF__27YgtMEnJ6X95oYbG2s"
+C_BOT_API_KEY = "OTExMzI2MjAwOTQ3OTMzMjI1.YZfwqQ.dHrpwrb1aQ_-WvJq7Apdaej9dLI"
 C_DEBUG = True
-C_IS_USER = True
-C_MESSAGE = """😈 🅰️🇩🅰️  🇺 🇳 🇩 🇪 🇷 🇼 🇴 🇷 🇱 🇩  😈 
-
-               - a new upcoming project!
-
-                 https://discord.gg/kRNnZtsP37
-
-                     **ONLY 500 WHITELIST SPOTS**
-
-      ADA Underworld is releasing their Set 1 - **Devils**!
-
-The release of 750 unique, hand-drawn, randomly generated
-    NFTs on the Cardano blockchain coming early 2022!
-
-Come join the server for many **giveaways, whitelist**,
-                 awsome community and much more!
-
-
-Come check it out!
-
-Join our discord!
-Check our Twitter: https://twitter.com/ada_underworld
-https://cdn.discordapp.com/attachments/898701888676069386/910593996949168158/Underworld_shill_gif.gif"""
+C_IS_USER = False
+C_MESSAGE = """Pridruzite se nam na Arduino delavnicah !"""
 
 
 ## Hour constants
@@ -54,7 +33,7 @@ class TIMER:
 
 
 class MESSAGE:
-    def __init__(this, start_period : float, end_period : float, text : str):
+    def __init__(this, start_period : float, end_period : float, text : str, channels : list):
         if start_period == 0: 
             this.randomized_time = False
             this.period = end_period 
@@ -65,6 +44,7 @@ class MESSAGE:
 
         this.last_timestamp = None
         this.text = text
+        this.channels = channels
         this.timer = TIMER()
     def generate_timestamp(this):
         l_timestruct = time.localtime()
@@ -76,16 +56,16 @@ class GUILD:
     server_list = []
     bot_object = discord.Client()
 
-    def __init__(this, guildid, channels_to_send_in, messages_to_send):
+    def __init__(this, guildid,  messages_to_send):
         this.guild =    guildid
         this.messages = messages_to_send
-        this.channels = channels_to_send_in
         this.guild_file_name = None
-        GUILD.server_list.append(this)
+
     def initialize(this):       # Get objects from ids
-        this.guild = GUILD.bot_object.get_guild(this.guild)
+        this.guild = GUILD.bot_object.get_guild(this.guild) # Transofrm guild id into API guild object
         if this.guild != None:
-            this.channels = [this.guild.get_channel(x) for x in this.channels]
+            for l_msg in this.messages:
+                l_msg.channels = [GUILD.bot_object.get_channel(x) for x in l_msg.channels]  # Transform ids into API channel objects
             this.guild_file_name = this.guild.name.replace("/","_").replace("\\","_").replace(":","_").replace("!","_").replace("|","_").replace("*","_").replace("?","_").replace("<","_").replace(">", "_") + ".txt"
 
     async def advertise(this, force=False):
@@ -97,13 +77,13 @@ class GUILD:
                             l_msg.period = random.randrange(*l_msg.random_range)
                     l_msg.timer.reset()
                     l_msg.timer.start()
+                    
+                    
+                    for l_channel in l_msg.channels:
+                        await l_channel.send(l_msg.text)
                     l_msg.generate_timestamp()
-                    l_trace += f'Sending Message: "{l_msg.text}"\n\nServer: {this.guild.name}\nChannels: {[x.name for x in this.channels]} \nTimestamp: {l_msg.last_timestamp}\n\n----------------------------------\n\n'
+                    l_trace += f'Sending Message: "{l_msg.text}"\n\nServer: {this.guild.name}\nChannels: {[x.name for x in l_msg.channels]} \nTimestamp: {l_msg.last_timestamp}\n\n----------------------------------\n\n'
                     TRACE(l_trace)
-                    for l_channel in this.channels:
-                        asyncio.gather(asyncio.create_task(l_channel.send(l_msg.text)))
-                        await asyncio.sleep(2)
-
         return l_trace if l_trace != "" else None
         
 
@@ -112,19 +92,16 @@ class GUILD:
 #                               GUILD MESSAGES DEFINITION                                  #
 ############################################################################################
 
-
-server_ = GUILD(
-        0,                          # ID Serverja
-        [                                            # Tabela ID Channels
-            0            
-        ],
+GUILD.server_list = [
+GUILD(
+        863071397207212052,                          # ID Serverja
         # Messages
-        [   #       min-sec                     max-sec           sporocilo
-            MESSAGE(0*C_HOUR_TO_SECOND, 0*C_HOUR_TO_SECOND , C_MESSAGE)
+        [   #       min-sec                     max-sec      sporocilo   #IDji kanalov
+            MESSAGE(0*C_HOUR_TO_SECOND, 3 , C_MESSAGE, [863071397207212056, 909499439377416243]),
             # MESSAGE(0, 10*C_MINUTE_TO_SECOND, "TEST")  # Ce je prvi parameter 0, potem je cas vedno drugi parameter drugace pa sta prva dva parametra meje za nakljucno izbiro
         ]
     )
-
+]
 
 
                                      
