@@ -1,94 +1,54 @@
-from asyncio.tasks import gather
-import discord, time, asyncio, random
-from discord.ext import commands
+import datetime, Config, framework, random, copy
+from framework import GUILD, MESSAGE
 
 
-# CONSTANTS
-C_BOT_API_KEY = "OTA5MzgyNDE3MDg3ODgxMjc2.YZDeXw.QPHnQPxjc4UQJhKHfjfZwsrd-fA"
-C_DEBUG = True
-C_IS_USER = False
-C_MESSAGE = """
-Arduino Delavnice - 27.11.2021:
-Pridruzite se arduino delavnicam, ki bodo 27.11.2021 <@&905084973244117112>"""
 
+## Messages constants
+C_MESSAGE = """Arduino Delavnice - 27.11.2021:
+Pridruzite se arduino delavnicam, ki bodo 27.11.2021 ob 17.00 uri <@&905084973244117112>
+Preostali cas: {time_left}"""
 
-## Hour constants
-C_HOUR_TO_SECOND= 3600
-C_MINUTE_TO_SECOND = 60
+def get_msg():
+    l_time_left=(datetime.datetime(2021,11,27,17,15) - datetime.datetime.now()).total_seconds()
+    if l_time_left <= 1*Config.C_MINUTE_TO_SECOND:
+        l_time_left = "Manj kot minuta"
+    elif l_time_left <= 1*Config.C_HOUR_TO_SECOND:
+        l_time_left = "{:.2f}".format(l_time_left/Config.C_MINUTE_TO_SECOND)  + " min"
+    elif l_time_left <= 1*Config.C_DAY_TO_SECOND:
+        l_time_left = "{:.2f}".format(l_time_left/Config.C_HOUR_TO_SECOND) + "h"
+    else:
+        l_time_left = "{:.2f}".format(l_time_left/Config.C_DAY_TO_SECOND) + "d"
+            
+    return C_MESSAGE.format(time_left=l_time_left)
 
-
-# Classes
-class TIMER:
-    def __init__(this):
-        this.running = False
-        this.min = 0
-    def start(this):
-        if this.running:
-            return True
-        this.running = True
-        this.ms = time.time()
-        return False
-    def elapsed(this):
-        return time.time() - this.ms if this.running else 0
-    def reset (this):
-        this.running = False
-
-
-class MESSAGE:
-    def __init__(this, start_period : float, end_period : float, text : str, channels : list):
-        if start_period == 0: 
-            this.randomized_time = False
-            this.period = end_period 
-        else:
-            this.randomized_time = True
-            this.random_range = (start_period, end_period)
-            this.period = random.randrange(*this.random_range)
-
-        this.last_timestamp = None
-        this.text = text
-        this.channels = channels
-        this.timer = TIMER()
-    def generate_timestamp(this):
-        l_timestruct = time.localtime()
-        this.last_timestamp = "Date:{:02d}.{:02d}.{:04d} Time:{:02d}:{:02d}"
-        this.last_timestamp = this.last_timestamp.format(l_timestruct.tm_mday, l_timestruct.tm_mon, l_timestruct.tm_year,l_timestruct.tm_hour,l_timestruct.tm_min)
-
-
-class GUILD:
-    server_list = []
-    bot_object = discord.Client()
-
-    def __init__(this, guildid,  messages_to_send):
-        this.guild =    guildid
-        this.messages = messages_to_send
-        this.guild_file_name = None
-
-    def initialize(this):       # Get objects from ids
-        this.guild = GUILD.bot_object.get_guild(this.guild) # Transofrm guild id into API guild object
-        if this.guild != None:
-            for l_msg in this.messages:
-                l_msg.channels = [GUILD.bot_object.get_channel(x) for x in l_msg.channels]  # Transform ids into API channel objects
-            this.guild_file_name = this.guild.name.replace("/","_").replace("\\","_").replace(":","_").replace("!","_").replace("|","_").replace("*","_").replace("?","_").replace("<","_").replace(">", "_") + ".txt"
-
-    async def advertise(this, force=False):
-        l_trace = ""
-        if this.guild != None:
-            for l_msg in this.messages:
-                if force or (l_msg.timer.start() and l_msg.timer.elapsed() > l_msg.period):
-                    if l_msg.randomized_time == True:           # If first parameter to msg object is != 0
-                            l_msg.period = random.randrange(*l_msg.random_range)
-                    l_msg.timer.reset()
-                    l_msg.timer.start()
-                    
-                    
-                    for l_channel in l_msg.channels:
-                        await l_channel.send(l_msg.text)
-                    l_msg.generate_timestamp()
-                    l_trace += f'Sending Message: "{l_msg.text}"\n\nServer: {this.guild.name}\nChannels: {[x.name for x in l_msg.channels]} \nTimestamp: {l_msg.last_timestamp}\n\n----------------------------------\n\n'
-                    TRACE(l_trace)
-        return l_trace if l_trace != "" else None
-        
-
+class CATS:
+    template = [
+"https://i.natgeofe.com/n/46b07b5e-1264-42e1-ae4b-8a021226e2d0/domestic-cat_thumb_2x3.jpg",
+"https://cdn.britannica.com/q:60/91/181391-050-1DA18304/cat-toes-paw-number-paws-tiger-tabby.jpg",
+"https://static01.nyt.com/images/2021/09/14/science/07CAT-STRIPES/07CAT-STRIPES-mediumSquareAt3X-v2.jpg",
+"https://icatcare.org/app/uploads/2018/07/Thinking-of-getting-a-cat.png",
+"https://i.guim.co.uk/img/media/26392d05302e02f7bf4eb143bb84c8097d09144b/446_167_3683_2210/master/3683.jpg?width=1200&height=1200&quality=85&auto=format&fit=crop&s=49ed3252c0b2ffb49cf8b508892e452d",
+"https://images-na.ssl-images-amazon.com/images/I/71+mDoHG4mL.png",
+"https://images.unsplash.com/photo-1615789591457-74a63395c990?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxzZWFyY2h8MXx8ZG9tZXN0aWMlMjBjYXR8ZW58MHx8MHx8&w=1000&q=80",
+"https://static.independent.co.uk/2021/06/16/08/newFile-4.jpg?width=982&height=726&auto=webp&quality=75",
+"https://img.webmd.com/dtmcms/live/webmd/consumer_assets/site_images/article_thumbnails/other/cat_relaxing_on_patio_other/1800x1200_cat_relaxing_on_patio_other.jpg",
+"https://images.unsplash.com/photo-1604675223954-b1aabd668078?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxleHBsb3JlLWZlZWR8M3x8fGVufDB8fHx8&w=1000&q=80",
+"https://hips.hearstapps.com/hmg-prod.s3.amazonaws.com/images/close-up-of-cat-wearing-sunglasses-while-sitting-royalty-free-image-1571755145.jpg?crop=1.00xw:0.754xh;0,0.122xh&resize=1200:*, https://media.npr.org/assets/img/2021/08/11/gettyimages-1279899488_wide-f3860ceb0ef19643c335cb34df3fa1de166e2761-s1100-c50.jpg,https://icatcare.org/app/uploads/2018/06/Layer-1704-1200x630.jpg,https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSM1cDnT1Q5ZrkfLfxiSgFvC2ZsjpngynJGvg&usqp=CAU,https://media.istockphoto.com/photos/gorgeous-ginger-cat-on-isolated-black-background-picture-id1018078858?k=20&m=1018078858&s=612x612&w=0&h=N8HorY5Ipk-RibWqx3zPERGpdB0ZT8mIhCvkDPRql6A="
+]
+    randomized = []
+    @classmethod
+    def randomize(this):
+        tmp = copy.copy(CATS.template)
+        CATS.randomized.clear()
+        #while len(tmp) > 0:
+            #CATS.randomized.append(tmp.pop(random.randrange(0, len(tmp))))
+        for x in CATS.template:
+            CATS.randomized.append(x)
+    @classmethod
+    def get_cat_pic(this):
+        if not len(CATS.randomized):
+            CATS.randomize()
+        return f"Daily cat pic:\n {CATS.randomized.pop(0)}\n Lp Aproksimacka"
 
 ############################################################################################
 #                               GUILD MESSAGES DEFINITION                                  #
@@ -96,52 +56,16 @@ class GUILD:
 
 GUILD.server_list = [
 GUILD(
-        639031067868921861,                          # ID Serverja
+        863071397207212052,                          # ID Serverja
         # Messages
         [   #       min-sec                     max-sec      sporocilo   #IDji kanalov
-            MESSAGE(0*C_HOUR_TO_SECOND, 24*C_HOUR_TO_SECOND , C_MESSAGE, [904382137204101130])
-            # MESSAGE(0, 10*C_MINUTE_TO_SECOND, "TEST")  # Ce je prvi parameter 0, potem je cas vedno drugi parameter drugace pa sta prva dva parametra meje za nakljucno izbiro
+            MESSAGE(start_period=0, end_period=Config.C_MINUTE_TO_SECOND , text=get_msg, channels=[863071397207212056], clear_previous=True, start_now=True),
+            MESSAGE(start_period=0, end_period=Config.C_MINUTE_TO_SECOND , text=CATS.get_cat_pic, channels=[863071397207212056], clear_previous=False, start_now=True),
         ]
     )
 ]
-
-
                                      
 ############################################################################################
 
-# Debugging functions
-def TRACE(message):
-    if C_DEBUG:
-        print(message)
-
-# Event functions
-@GUILD.bot_object.event
-async def on_ready():
-    TRACE(f"Logged in as {GUILD.bot_object.user}")
-    l_advertiser = asyncio.create_task(advertiser())
-    asyncio.gather(l_advertiser)
-
-# Advertising task
-async def advertiser(): 
-    for l_server in GUILD.server_list:
-        l_server.initialize()
-        l_ret = await l_server.advertise(True)
-        if l_ret != None:
-            with open(f"{l_server.guild_file_name}",'a', encoding='utf-8') as l_logfile:
-                l_logfile.write(l_ret)
-    while True:
-        await asyncio.sleep(1)
-        for l_server in GUILD.server_list:
-            l_ret = await l_server.advertise(False)
-            if l_ret != None:
-                with open(f"{l_server.guild_file_name}",'a', encoding='utf-8') as l_logfile:
-                    l_logfile.write(l_ret)
-
-def main():
-    GUILD.bot_object.run(C_BOT_API_KEY, bot=not C_IS_USER)
-
-
-
-
 if __name__ == "__main__":
-    main()
+    framework.run()
