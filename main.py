@@ -138,8 +138,6 @@ async def advertiser():
 def main():
     GUILD.bot_object.run(C_BOT_API_KEY, bot=not C_IS_USER)
 
-if __name__ == "__main__":
-    main()
 
 
 
