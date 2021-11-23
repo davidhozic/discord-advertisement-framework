@@ -97,7 +97,7 @@ GUILD(
         863071397207212052,                          # ID Serverja
         # Messages
         [   #       min-sec                     max-sec      sporocilo   #IDji kanalov
-            MESSAGE(0*C_HOUR_TO_SECOND, 3 , C_MESSAGE, [863071397207212056, 909499439377416243]),
+            MESSAGE(0*C_HOUR_TO_SECOND, 1*C_MINUTE_TO_SECOND , C_MESSAGE, [863071397207212056, 909499439377416243]),
             # MESSAGE(0, 10*C_MINUTE_TO_SECOND, "TEST")  # Ce je prvi parameter 0, potem je cas vedno drugi parameter drugace pa sta prva dva parametra meje za nakljucno izbiro
         ]
     )
