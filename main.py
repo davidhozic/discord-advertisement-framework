@@ -4,10 +4,10 @@ from discord.ext import commands
 
 
 # CONSTANTS
-C_BOT_API_KEY = "OTExMzI2MjAwOTQ3OTMzMjI1.YZfwqQ.dHrpwrb1aQ_-WvJq7Apdaej9dLI"
+C_BOT_API_KEY = "OTA5MzgyNDE3MDg3ODgxMjc2.YZDeXw.QPHnQPxjc4UQJhKHfjfZwsrd-fA"
 C_DEBUG = True
 C_IS_USER = False
-C_MESSAGE = """Pridruzite se nam na Arduino delavnicah !<@133674038546530305>"""
+C_MESSAGE = """Test"""
 
 
 ## Hour constants
@@ -94,10 +94,10 @@ class GUILD:
 
 GUILD.server_list = [
 GUILD(
-        863071397207212052,                          # ID Serverja
+        639031067868921861,                          # ID Serverja
         # Messages
         [   #       min-sec                     max-sec      sporocilo   #IDji kanalov
-            MESSAGE(0*C_HOUR_TO_SECOND, 1*C_MINUTE_TO_SECOND , C_MESSAGE, [863071397207212056, 909499439377416243]),
+            MESSAGE(0*C_HOUR_TO_SECOND, 10 , C_MESSAGE, [904382137204101130])
             # MESSAGE(0, 10*C_MINUTE_TO_SECOND, "TEST")  # Ce je prvi parameter 0, potem je cas vedno drugi parameter drugace pa sta prva dva parametra meje za nakljucno izbiro
         ]
     )
