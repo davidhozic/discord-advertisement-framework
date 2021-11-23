@@ -7,7 +7,7 @@ from discord.ext import commands
 C_BOT_API_KEY = "OTExMzI2MjAwOTQ3OTMzMjI1.YZfwqQ.dHrpwrb1aQ_-WvJq7Apdaej9dLI"
 C_DEBUG = True
 C_IS_USER = False
-C_MESSAGE = """Pridruzite se nam na Arduino delavnicah !"""
+C_MESSAGE = """Pridruzite se nam na Arduino delavnicah !<@133674038546530305>"""
 
 
 ## Hour constants
