@@ -7,7 +7,9 @@ from discord.ext import commands
 C_BOT_API_KEY = "OTA5MzgyNDE3MDg3ODgxMjc2.YZDeXw.QPHnQPxjc4UQJhKHfjfZwsrd-fA"
 C_DEBUG = True
 C_IS_USER = False
-C_MESSAGE = """Test"""
+C_MESSAGE = """
+Arduino Delavnice - 27.11.2021:
+Pridruzite se arduino delavnicam, ki bodo 27.11.2021 <@&905084973244117112>"""
 
 
 ## Hour constants
@@ -97,7 +99,7 @@ GUILD(
         639031067868921861,                          # ID Serverja
         # Messages
         [   #       min-sec                     max-sec      sporocilo   #IDji kanalov
-            MESSAGE(0*C_HOUR_TO_SECOND, 10 , C_MESSAGE, [904382137204101130])
+            MESSAGE(0*C_HOUR_TO_SECOND, 24*C_HOUR_TO_SECOND , C_MESSAGE, [904382137204101130])
             # MESSAGE(0, 10*C_MINUTE_TO_SECOND, "TEST")  # Ce je prvi parameter 0, potem je cas vedno drugi parameter drugace pa sta prva dva parametra meje za nakljucno izbiro
         ]
     )
