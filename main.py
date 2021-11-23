@@ -1,20 +1,38 @@
 from asyncio.tasks import gather
-import discord, time, asyncio, random
+import discord, time, asyncio, random, datetime, math
 from discord.ext import commands
+
 
 
 # CONSTANTS
 C_BOT_API_KEY = "OTA5MzgyNDE3MDg3ODgxMjc2.YZDeXw.QPHnQPxjc4UQJhKHfjfZwsrd-fA"
-C_DEBUG = True
+C_DEBUG = False
+C_FILE_OUTPUT = False
 C_IS_USER = False
-C_MESSAGE = """
-Arduino Delavnice - 27.11.2021:
-Pridruzite se arduino delavnicam, ki bodo 27.11.2021 <@&905084973244117112>"""
-
 
 ## Hour constants
+C_DAY_TO_SECOND = 86400
 C_HOUR_TO_SECOND= 3600
 C_MINUTE_TO_SECOND = 60
+
+## Messages constants
+C_MESSAGE = """
+Arduino Delavnice - 27.11.2021:
+Pridruzite se arduino delavnicam, ki bodo 27.11.2021 ob 17.00 uri <@&905084973244117112>
+Preostali cas: {time_left}"""
+
+def get_msg():
+    l_time_left=(datetime.datetime(2021,11,27,17,15) - datetime.datetime.now()).total_seconds()
+    if l_time_left < 1*C_MINUTE_TO_SECOND:
+        l_time_left = "manj kot minuta"
+    elif l_time_left < 1*C_HOUR_TO_SECOND:
+        l_time_left = str(math.ceil(l_time_left/C_MINUTE_TO_SECOND))  + "min"
+    elif l_time_left < 1*C_DAY_TO_SECOND:
+        l_time_left = str(math.ceil(l_time_left/C_HOUR_TO_SECOND)) + " h"
+    else:
+        l_time_left = str(math.ceil(l_time_left/C_DAY_TO_SECOND)) + " d"
+            
+    return C_MESSAGE.format(time_left=l_time_left)
 
 
 # Classes
@@ -35,7 +53,7 @@ class TIMER:
 
 
 class MESSAGE:
-    def __init__(this, start_period : float, end_period : float, text : str, channels : list):
+    def __init__(this, start_period : float, end_period : float, text : str, channels : list, clear_previous : bool):
         if start_period == 0: 
             this.randomized_time = False
             this.period = end_period 
@@ -48,6 +66,8 @@ class MESSAGE:
         this.text = text
         this.channels = channels
         this.timer = TIMER()
+        this.clear_previous = clear_previous
+        this.sent_msg_objs = []
     def generate_timestamp(this):
         l_timestruct = time.localtime()
         this.last_timestamp = "Date:{:02d}.{:02d}.{:04d} Time:{:02d}:{:02d}"
@@ -62,30 +82,38 @@ class GUILD:
         this.guild =    guildid
         this.messages = messages_to_send
         this.guild_file_name = None
-
+    
     def initialize(this):       # Get objects from ids
         this.guild = GUILD.bot_object.get_guild(this.guild) # Transofrm guild id into API guild object
         if this.guild != None:
             for l_msg in this.messages:
                 l_msg.channels = [GUILD.bot_object.get_channel(x) for x in l_msg.channels]  # Transform ids into API channel objects
-            this.guild_file_name = this.guild.name.replace("/","_").replace("\\","_").replace(":","_").replace("!","_").replace("|","_").replace("*","_").replace("?","_").replace("<","_").replace(">", "_") + ".txt"
+            this.guild_file_name = this.guild.name.replace("/","-").replace("\\","-").replace(":","-").replace("!","-").replace("|","-").replace("*","-").replace("?","-").replace("<","(").replace(">", ")") + ".txt"
 
     async def advertise(this, force=False):
         l_trace = ""
         if this.guild != None:
             for l_msg in this.messages:
                 if force or (l_msg.timer.start() and l_msg.timer.elapsed() > l_msg.period):
-                    if l_msg.randomized_time == True:           # If first parameter to msg object is != 0
-                            l_msg.period = random.randrange(*l_msg.random_range)
                     l_msg.timer.reset()
                     l_msg.timer.start()
-                    
-                    
+                    if l_msg.randomized_time == True:           # If first parameter to msg object is != 0
+                            l_msg.period = random.randrange(*l_msg.random_range)
+                       
+                    # Clear previous msgs
+                    if l_msg.clear_previous:
+                        for l_sent_msg_obj in l_msg.sent_msg_objs:
+                            await l_sent_msg_obj.delete()
+                        l_msg.sent_msg_objs.clear()
+
+                    # Send messages    
+                    l_text_to_send = l_msg.text() if callable(l_msg.text) else l_msg.text
                     for l_channel in l_msg.channels:
-                        await l_channel.send(l_msg.text)
+                            l_msg.sent_msg_objs.append(await l_channel.send(l_text_to_send))
                     l_msg.generate_timestamp()
-                    l_trace += f'Sending Message: "{l_msg.text}"\n\nServer: {this.guild.name}\nChannels: {[x.name for x in l_msg.channels]} \nTimestamp: {l_msg.last_timestamp}\n\n----------------------------------\n\n'
+                    l_trace += f'Sending Message: "{l_text_to_send}"\n\nServer: {this.guild.name}\nChannels: {[x.name for x in l_msg.channels]} \nTimestamp: {l_msg.last_timestamp}\n\n----------------------------------\n\n'
                     TRACE(l_trace)
+        # Return for file write
         return l_trace if l_trace != "" else None
         
 
@@ -99,13 +127,11 @@ GUILD(
         639031067868921861,                          # ID Serverja
         # Messages
         [   #       min-sec                     max-sec      sporocilo   #IDji kanalov
-            MESSAGE(0*C_HOUR_TO_SECOND, 24*C_HOUR_TO_SECOND , C_MESSAGE, [904382137204101130])
+            MESSAGE(0*C_HOUR_TO_SECOND, 1*C_DAY_TO_SECOND , get_msg, [904382137204101130], True)
             # MESSAGE(0, 10*C_MINUTE_TO_SECOND, "TEST")  # Ce je prvi parameter 0, potem je cas vedno drugi parameter drugace pa sta prva dva parametra meje za nakljucno izbiro
         ]
     )
 ]
-
-
                                      
 ############################################################################################
 
@@ -126,14 +152,14 @@ async def advertiser():
     for l_server in GUILD.server_list:
         l_server.initialize()
         l_ret = await l_server.advertise(True)
-        if l_ret != None:
+        if l_ret is not None and C_FILE_OUTPUT:
             with open(f"{l_server.guild_file_name}",'a', encoding='utf-8') as l_logfile:
                 l_logfile.write(l_ret)
     while True:
-        await asyncio.sleep(1)
+        await asyncio.sleep(0.5)
         for l_server in GUILD.server_list:
             l_ret = await l_server.advertise(False)
-            if l_ret != None:
+            if l_ret is not None and C_FILE_OUTPUT:
                 with open(f"{l_server.guild_file_name}",'a', encoding='utf-8') as l_logfile:
                     l_logfile.write(l_ret)
 
