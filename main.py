@@ -82,21 +82,23 @@ class GUILD:
         this.guild =    guildid
         this.messages = messages_to_send
         this.guild_file_name = None
-    
+        this.first_advert = None
     def initialize(this):       # Get objects from ids
+        this.first_advert = True
         this.guild = GUILD.bot_object.get_guild(this.guild) # Transofrm guild id into API guild object
         if this.guild != None:
             for l_msg in this.messages:
                 l_msg.channels = [GUILD.bot_object.get_channel(x) for x in l_msg.channels]  # Transform ids into API channel objects
             this.guild_file_name = this.guild.name.replace("/","-").replace("\\","-").replace(":","-").replace("!","-").replace("|","-").replace("*","-").replace("?","-").replace("<","(").replace(">", ")") + ".txt"
 
-    async def advertise(this, force=False):
+    async def advertise(this):
         l_trace = ""
         if this.guild != None:
             for l_msg in this.messages:
-                if force or (l_msg.timer.start() and l_msg.timer.elapsed() > l_msg.period):
+                if this.first_advert or (l_msg.timer.start() and l_msg.timer.elapsed() > l_msg.period):
                     l_msg.timer.reset()
                     l_msg.timer.start()
+                    this.first_advert = False
                     if l_msg.randomized_time == True:           # If first parameter to msg object is != 0
                             l_msg.period = random.randrange(*l_msg.random_range)
                        
@@ -151,10 +153,6 @@ async def on_ready():
 async def advertiser(): 
     for l_server in GUILD.server_list:
         l_server.initialize()
-        l_ret = await l_server.advertise(True)
-        if l_ret is not None and C_FILE_OUTPUT:
-            with open(f"{l_server.guild_file_name}",'a', encoding='utf-8') as l_logfile:
-                l_logfile.write(l_ret)
     while True:
         await asyncio.sleep(0.5)
         for l_server in GUILD.server_list:
