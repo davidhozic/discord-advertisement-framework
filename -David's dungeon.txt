@@ -1528,3 +1528,36 @@ Timestamp: Date:24.11.2021 Time:21:23
 
 ----------------------------------
 
+Sending Message: "
+Arduino Delavnice - 27.11.2021:
+Pridruzite se arduino delavnicam, ki bodo 27.11.2021 ob 17.00 uri <@133674038546530305>
+Preostali cas: 2.83d"
+
+Server: \David's dungeon
+Channels: ['general', 'test'] 
+Timestamp: Date:24.11.2021 Time:21:26
+
+----------------------------------
+
+Sending Message: "
+Arduino Delavnice - 27.11.2021:
+Pridruzite se arduino delavnicam, ki bodo 27.11.2021 ob 17.00 uri <@133674038546530305>
+Preostali cas: 2.83d"
+
+Server: \David's dungeon
+Channels: ['general', 'test'] 
+Timestamp: Date:24.11.2021 Time:21:26
+
+----------------------------------
+
+Sending Message: "
+Arduino Delavnice - 27.11.2021:
+Pridruzite se arduino delavnicam, ki bodo 27.11.2021 ob 17.00 uri <@133674038546530305>
+Preostali cas: 2.83d"
+
+Server: \David's dungeon
+Channels: ['general', 'test'] 
+Timestamp: Date:24.11.2021 Time:21:26
+
+----------------------------------
+
