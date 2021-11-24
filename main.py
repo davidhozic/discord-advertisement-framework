@@ -26,11 +26,11 @@ def get_msg():
     if l_time_left <= 1*C_MINUTE_TO_SECOND:
         l_time_left = "Manj kot minuta"
     elif l_time_left <= 1*C_HOUR_TO_SECOND:
-        l_time_left = str(math.floor(l_time_left/C_MINUTE_TO_SECOND))  + " min"
+        l_time_left = "{:.2f}".format(l_time_left/C_MINUTE_TO_SECOND)  + " min"
     elif l_time_left <= 1*C_DAY_TO_SECOND:
-        l_time_left = str(math.floor(l_time_left/C_HOUR_TO_SECOND)) + "h"
+        l_time_left = "{:.2f}".format(l_time_left/C_HOUR_TO_SECOND) + "h"
     else:
-        l_time_left = str(math.floor(l_time_left/C_DAY_TO_SECOND)) + "d"
+        l_time_left = "{:.2f}".format(l_time_left/C_DAY_TO_SECOND) + "d"
             
     return C_MESSAGE.format(time_left=l_time_left)
 
