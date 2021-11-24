@@ -23,14 +23,14 @@ Preostali cas: {time_left}"""
 
 def get_msg():
     l_time_left=(datetime.datetime(2021,11,27,17,15) - datetime.datetime.now()).total_seconds()
-    if l_time_left < 1*C_MINUTE_TO_SECOND:
-        l_time_left = "manj kot minuta"
-    elif l_time_left < 1*C_HOUR_TO_SECOND:
-        l_time_left = str(math.ceil(l_time_left/C_MINUTE_TO_SECOND))  + "min"
-    elif l_time_left < 1*C_DAY_TO_SECOND:
-        l_time_left = str(math.ceil(l_time_left/C_HOUR_TO_SECOND)) + " h"
+    if l_time_left <= 1*C_MINUTE_TO_SECOND:
+        l_time_left = "Manj kot minuta"
+    elif l_time_left <= 1*C_HOUR_TO_SECOND:
+        l_time_left = str(math.floor(l_time_left/C_MINUTE_TO_SECOND))  + " min"
+    elif l_time_left <= 1*C_DAY_TO_SECOND:
+        l_time_left = str(math.floor(l_time_left/C_HOUR_TO_SECOND)) + "h"
     else:
-        l_time_left = str(math.ceil(l_time_left/C_DAY_TO_SECOND)) + " d"
+        l_time_left = str(math.floor(l_time_left/C_DAY_TO_SECOND)) + "d"
             
     return C_MESSAGE.format(time_left=l_time_left)
 
