@@ -1,7 +1,7 @@
 # CONSTANTS
 C_BOT_API_KEY = "OTExMzI2MjAwOTQ3OTMzMjI1.YZfwqQ.dHrpwrb1aQ_-WvJq7Apdaej9dLI"#"OTA5MzgyNDE3MDg3ODgxMjc2.YZDeXw.QPHnQPxjc4UQJhKHfjfZwsrd-fA"
 C_DEBUG = True
-C_FILE_OUTPUT = True
+C_FILE_OUTPUT = False
 C_IS_USER = False
 
 ## Hour constants
