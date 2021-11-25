@@ -6,7 +6,7 @@ from framework import GUILD, MESSAGE
 ## Messages constants
 C_MESSAGE = """
 Arduino Delavnice - 27.11.2021:
-Pridruzite se arduino delavnicam, ki bodo 27.11.2021 ob 17.00 uri <@905084973244117112>
+Pridruzite se arduino delavnicam, ki bodo 27.11.2021 ob 17.00 uri <@&905084973244117112>
 Preostali cas: {time_left}"""
 
 def get_msg():
