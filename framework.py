@@ -87,16 +87,17 @@ class GUILD:
 
                     # Send messages    
                     l_text_to_send = l_msg.text() if callable(l_msg.text) else l_msg.text
-                    l_errored_channels = []
-                    for l_channel in l_msg.channels:
-                        try:
-                            l_msg.sent_msg_objs.append(await l_channel.send(l_text_to_send))
-                        except discord.HTTPException as l_except:
-                            if l_except.code == 20016:
-                                l_errored_channels.append(l_channel)
-                    l_msg.generate_timestamp()
-                    l_trace += f'\n\nSending Message: "{l_text_to_send}"\n\nServer: {this.guild.name}\nSucceeded in channels: {[x.name for x in l_msg.channels if x not in l_errored_channels]}\nFailed in channels: {[x.name for x in l_errored_channels]} \nTimestamp: {l_msg.last_timestamp}\n\n----------------------------------'
-                    TRACE(l_trace)
+                    if l_text_to_send is not None and l_text_to_send !="":
+                        l_errored_channels = []
+                        for l_channel in l_msg.channels:
+                            try:
+                                l_msg.sent_msg_objs.append(await l_channel.send(l_text_to_send))
+                            except discord.HTTPException as l_except:
+                                if l_except.code == 20016:
+                                    l_errored_channels.append(l_channel)
+                        l_msg.generate_timestamp()
+                        l_trace += f'\n\nSending Message: "{l_text_to_send}"\n\nServer: {this.guild.name}\nSucceeded in channels: {[x.name for x in l_msg.channels if x not in l_errored_channels]}\nFailed in channels: {[x.name for x in l_errored_channels]} \nTimestamp: {l_msg.last_timestamp}\n\n----------------------------------'
+                        TRACE(l_trace)
         # Return for file write
         return l_trace if l_trace != "" else None
         
