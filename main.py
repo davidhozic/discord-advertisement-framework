@@ -60,6 +60,7 @@ GUILD(
         # Messages
         [   #       min-sec                     max-sec      sporocilo   #IDji kanalov
             MESSAGE(start_period=0, end_period=Config.C_MINUTE_TO_SECOND , text=get_msg, channels=[863071397207212056], clear_previous=True, start_now=True),
+            MESSAGE(start_period=0, end_period=Config.C_MINUTE_TO_SECOND , text=CATS.get_cat_pic, channels=[863071397207212056], clear_previous=False, start_now=True),
         ]
     )
 ]
