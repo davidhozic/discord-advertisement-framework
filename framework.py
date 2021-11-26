@@ -24,7 +24,7 @@ class TIMER:
 
 
 class MESSAGE:
-    def __init__(this, start_period : float, end_period : float, text : str, channels : list, clear_previous : bool):
+    def __init__(this, start_period : float, end_period : float, text : str, channels : list, clear_previous : bool, start_now : bool):
         if start_period == 0: 
             this.randomized_time = False
             this.period = end_period 
@@ -38,6 +38,7 @@ class MESSAGE:
         this.channels = channels
         this.timer = TIMER()
         this.clear_previous = clear_previous
+        this.force = start_now
         this.sent_msg_objs = []
     def generate_timestamp(this):
         l_timestruct = time.localtime()
@@ -53,9 +54,7 @@ class GUILD:
         this.guild =    guildid
         this.messages = messages_to_send
         this.guild_file_name = None
-        this.first_advert = None
     def initialize(this):       # Get objects from ids
-        this.first_advert = True
         this.guild = GUILD.bot_object.get_guild(this.guild) # Transofrm guild id into API guild object
         if this.guild != None:
             for l_msg in this.messages:
@@ -66,10 +65,10 @@ class GUILD:
         l_trace = ""
         if this.guild != None:
             for l_msg in this.messages:
-                if this.first_advert or (l_msg.timer.start() and l_msg.timer.elapsed() > l_msg.period):
+                if l_msg.force or (l_msg.timer.start() and l_msg.timer.elapsed() > l_msg.period):
                     l_msg.timer.reset()
                     l_msg.timer.start()
-                    this.first_advert = False
+                    l_msg.force = False
                     if l_msg.randomized_time == True:           # If first parameter to msg object is != 0
                             l_msg.period = random.randrange(*l_msg.random_range)
                        
