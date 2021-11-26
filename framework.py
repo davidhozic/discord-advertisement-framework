@@ -58,7 +58,14 @@ class GUILD:
         this.guild = GUILD.bot_object.get_guild(this.guild) # Transofrm guild id into API guild object
         if this.guild != None:
             for l_msg in this.messages:
-                l_msg.channels = [GUILD.bot_object.get_channel(x) for x in l_msg.channels]  # Transform ids into API channel objects
+                for x in range(len(l_msg.channels)):
+                    l_msg.channels[x] = GUILD.bot_object.get_channel(l_msg.channels[x])
+                    # Check if it's user ID for DM
+                    if l_msg.channels[x] is None:
+                        l_msg.channels[x] = GUILD.bot_object.get_user(l_msg.channels[x])
+                if None in l_msg.channels:
+                    l_msg.channels.remove(None)
+
             this.guild_file_name = this.guild.name.replace("/","-").replace("\\","-").replace(":","-").replace("!","-").replace("|","-").replace("*","-").replace("?","-").replace("<","(").replace(">", ")") + ".txt"
 
     async def advertise(this):
@@ -76,14 +83,19 @@ class GUILD:
                     if l_msg.clear_previous:
                         for l_sent_msg_obj in l_msg.sent_msg_objs:
                             await l_sent_msg_obj.delete()
-                        l_msg.sent_msg_objs.clear()
+                    l_msg.sent_msg_objs.clear()
 
                     # Send messages    
                     l_text_to_send = l_msg.text() if callable(l_msg.text) else l_msg.text
+                    l_errored_channels = []
                     for l_channel in l_msg.channels:
+                        try:
                             l_msg.sent_msg_objs.append(await l_channel.send(l_text_to_send))
+                        except discord.HTTPException as l_except:
+                            if l_except.code == 20016:
+                                l_errored_channels.append(l_channel)
                     l_msg.generate_timestamp()
-                    l_trace += f'Sending Message: "{l_text_to_send}"\n\nServer: {this.guild.name}\nChannels: {[x.name for x in l_msg.channels]} \nTimestamp: {l_msg.last_timestamp}\n\n----------------------------------\n\n'
+                    l_trace += f'\n\nSending Message: "{l_text_to_send}"\n\nServer: {this.guild.name}\nSucceeded in channels: {[x.name for x in l_msg.channels if x not in l_errored_channels]}\nFailed in channels: {[x.name for x in l_errored_channels]} \nTimestamp: {l_msg.last_timestamp}\n\n----------------------------------'
                     TRACE(l_trace)
         # Return for file write
         return l_trace if l_trace != "" else None
@@ -101,7 +113,7 @@ async def advertiser():
         l_server.initialize()
 
     while True:
-        await asyncio.sleep(0.5)
+        await asyncio.sleep(0.001)
         for l_server in GUILD.server_list:
             l_ret = await l_server.advertise()
             if l_ret is not None and Config.C_FILE_OUTPUT:
