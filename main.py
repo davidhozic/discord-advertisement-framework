@@ -59,7 +59,7 @@ GUILD(
         863071397207212052,                          # ID Serverja
         # Messages
         [   #       min-sec                     max-sec      sporocilo   #IDji kanalov
-            MESSAGE(start_period=0, end_period=10 , text=get_msg, channels=[863071397207212056], clear_previous=True, start_now=True),
+            MESSAGE(start_period=0, end_period=Config.C_MINUTE_TO_SECOND , text=get_msg, channels=[863071397207212056], clear_previous=True, start_now=True),
         ]
     )
 ]
@@ -67,7 +67,4 @@ GUILD(
 ############################################################################################
 
 if __name__ == "__main__":
-    try:
-        framework.run()
-    except:
-        pass
+    framework.run()
