@@ -4,9 +4,7 @@ from framework import GUILD, MESSAGE
 
 
 ## Messages constants
-C_MESSAGE = "Test delovanja"
-"""
-Arduino Delavnice - 27.11.2021:
+C_MESSAGE = """Arduino Delavnice - 27.11.2021:
 Pridruzite se arduino delavnicam, ki bodo 27.11.2021 ob 17.00 uri <@&905084973244117112>
 Preostali cas: {time_left}"""
 
@@ -34,8 +32,7 @@ GUILD(
         639031067868921861,                          # ID Serverja
         # Messages
         [   #       min-sec                     max-sec      sporocilo   #IDji kanalov
-            MESSAGE(start_period=0, end_period=60 , text=get_msg, channels=[640157109400633349], clear_previous=True)
-            # MESSAGE(0, 10*C_MINUTE_TO_SECOND, "TEST")  # Ce je prvi parameter 0, potem je cas vedno drugi parameter drugace pa sta prva dva parametra meje za nakljucno izbiro
+            MESSAGE(start_period=0, end_period=1*C_DAY_TO_SECOND , text=get_msg, channels=[640157109400633349], clear_previous=True)
         ]
     )
 ]
