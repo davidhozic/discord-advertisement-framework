@@ -32,7 +32,7 @@ GUILD(
         639031067868921861,                          # ID Serverja
         # Messages
         [   #       min-sec                     max-sec      sporocilo   #IDji kanalov
-            MESSAGE(start_period=0, end_period=1*C_DAY_TO_SECOND , text=get_msg, channels=[640157109400633349], clear_previous=True)
+            MESSAGE(start_period=0, end_period=1*C_DAY_TO_SECOND , text=get_msg, channels=[904382137204101130], clear_previous=True)
         ]
     )
 ]
