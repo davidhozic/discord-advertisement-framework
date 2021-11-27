@@ -2,24 +2,25 @@ import datetime, Config, framework, random, copy
 from framework import GUILD, MESSAGE
 
 
-
+C_DELAVNICE_DATE = "4.12.2021"
 ## Messages constants
-C_MESSAGE = """Arduino Delavnice - 27.11.2021:
-Pridruzite se arduino delavnicam, ki bodo 27.11.2021 ob 17.00 uri <@&905084973244117112>
+C_MESSAGE = """Arduino Delavnice - {date}:
+Pridruzite se arduino delavnicam, ki bodo {date} ob 17.15 uri <@&905084973244117112>
 Preostali cas: {time_left}"""
 
 def get_msg():
-    l_time_left=(datetime.datetime(2021,11,27,17,15) - datetime.datetime.now()).total_seconds()
-    if l_time_left <= 1*Config.C_MINUTE_TO_SECOND:
-        l_time_left = "Manj kot minuta"
-    elif l_time_left <= 1*Config.C_HOUR_TO_SECOND:
-        l_time_left = "{:.2f}".format(l_time_left/Config.C_MINUTE_TO_SECOND)  + " min"
-    elif l_time_left <= 1*Config.C_DAY_TO_SECOND:
-        l_time_left = "{:.2f}".format(l_time_left/Config.C_HOUR_TO_SECOND) + "h"
-    else:
-        l_time_left = "{:.2f}".format(l_time_left/Config.C_DAY_TO_SECOND) + "d"
-            
-    return C_MESSAGE.format(time_left=l_time_left)
+    l_time_left=(datetime.datetime(2021,12,4,17,15) - datetime.datetime.now()).total_seconds()
+    if l_time_left < C_DAY_TO_SECOND*3:
+        if l_time_left <= 1*Config.C_MINUTE_TO_SECOND:
+            l_time_left = "Manj kot minuta"
+        elif l_time_left <= 1*Config.C_HOUR_TO_SECOND:
+            l_time_left = "{:.2f}".format(l_time_left/Config.C_MINUTE_TO_SECOND)  + " min"
+        elif l_time_left <= 1*Config.C_DAY_TO_SECOND:
+            l_time_left = "{:.2f}".format(l_time_left/Config.C_HOUR_TO_SECOND) + "h"
+        else:
+            l_time_left = "{:.2f}".format(l_time_left/Config.C_DAY_TO_SECOND) + "d"     
+        return C_MESSAGE.format(time_left=l_time_left, date=C_DELAVNICE_DATE)
+    return None
 
 class CATS:
     template = [
@@ -40,10 +41,8 @@ class CATS:
     def randomize(this):
         tmp = copy.copy(CATS.template)
         CATS.randomized.clear()
-        #while len(tmp) > 0:
-            #CATS.randomized.append(tmp.pop(random.randrange(0, len(tmp))))
-        for x in CATS.template:
-            CATS.randomized.append(x)
+        while len(tmp) > 0:
+            CATS.randomized.append(tmp.pop(random.randrange(0, len(tmp))))
     @classmethod
     def get_cat_pic(this):
         if not len(CATS.randomized):
@@ -56,11 +55,10 @@ class CATS:
 
 GUILD.server_list = [
 GUILD(
-        863071397207212052,                          # ID Serverja
+        639031067868921861,                          # ID Serverja
         # Messages
         [   #       min-sec                     max-sec      sporocilo   #IDji kanalov
-            MESSAGE(start_period=0, end_period=Config.C_MINUTE_TO_SECOND , text=get_msg, channels=[863071397207212056], clear_previous=True, start_now=True),
-            MESSAGE(start_period=0, end_period=Config.C_MINUTE_TO_SECOND , text=CATS.get_cat_pic, channels=[863071397207212056], clear_previous=False, start_now=True),
+            MESSAGE(start_period=0, end_period=Config.C_DAY_TO_SECOND , text=get_msg, channels=[904382137204101130], clear_previous=True, start_now=True)
         ]
     )
 ]
