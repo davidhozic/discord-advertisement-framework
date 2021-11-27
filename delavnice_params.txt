@@ -1,0 +1,3 @@
+datum: 2021-12-04-17-15
+snov: Serial knjiznica, analogni vhodi (ADC) in \'analogni\' izhodi (digitalni PWM)
+indeks : 2

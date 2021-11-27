@@ -1,10 +1,9 @@
-import Config, discord, time, asyncio, random, datetime, math
+import Config, discord, time, asyncio, random
+from debug import *
 
 
-# Debugging functions
-def TRACE(message):
-    if Config.C_DEBUG:
-        print(message)
+
+
 
 # Classes
 class TIMER:
@@ -52,6 +51,7 @@ class GUILD:
 
     def __init__(this, guildid,  messages_to_send):
         this.guild =    guildid
+        this.guild_id = guildid
         this.messages = messages_to_send
         this.guild_file_name = None
     def initialize(this):       # Get objects from ids
@@ -60,13 +60,11 @@ class GUILD:
             for l_msg in this.messages:
                 for x in range(len(l_msg.channels)):
                     l_msg.channels[x] = GUILD.bot_object.get_channel(l_msg.channels[x])
-                    # Check if it's user ID for DM
-                    if l_msg.channels[x] is None:
-                        l_msg.channels[x] = GUILD.bot_object.get_user(l_msg.channels[x])
-                if None in l_msg.channels:
+                while None in l_msg.channels:
                     l_msg.channels.remove(None)
-
             this.guild_file_name = this.guild.name.replace("/","-").replace("\\","-").replace(":","-").replace("!","-").replace("|","-").replace("*","-").replace("?","-").replace("<","(").replace(">", ")") + ".txt"
+        else:
+            TRACE(f"Unable to create server object from server id: {this.guild_id}", TRACE_LEVELS.ERROR)
 
     async def advertise(this):
         l_trace = ""
@@ -89,22 +87,25 @@ class GUILD:
                     l_text_to_send = l_msg.text() if callable(l_msg.text) else l_msg.text
                     if l_text_to_send is not None and l_text_to_send !="":
                         l_errored_channels = []
+                        l_succeded_channels= []
                         for l_channel in l_msg.channels:
                             try:
-                                l_msg.sent_msg_objs.append(await l_channel.send(l_text_to_send))
-                            except discord.HTTPException as l_except:
-                                if l_except.code == 20016:
-                                    l_errored_channels.append(l_channel)
+                                l_discord_sent_msg = await l_channel.send(l_text_to_send)
+                                l_succeded_channels.append(l_channel.name)
+                                if l_msg.clear_previous:
+                                    l_msg.sent_msg_objs.append(l_discord_sent_msg)
+                            except Exception as ex:
+                                l_errored_channels.append(f"{l_channel.name} - Reason: {ex}")
                         l_msg.generate_timestamp()
-                        l_trace += f'\n\nSending Message: "{l_text_to_send}"\n\nServer: {this.guild.name}\nSucceeded in channels: {[x.name for x in l_msg.channels if x not in l_errored_channels]}\nFailed in channels: {[x.name for x in l_errored_channels]} \nTimestamp: {l_msg.last_timestamp}\n\n----------------------------------'
-                        TRACE(l_trace)
+                        l_trace += f'\n\nSending Message: "{l_text_to_send}"\n\nServer: {this.guild.name}\nSucceeded in channels: {l_succeded_channels}\nFailed in channels: {l_errored_channels} \nTimestamp: {l_msg.last_timestamp}\n\n----------------------------------'
+                        TRACE(l_trace, TRACE_LEVELS.NORMAL)
         # Return for file write
         return l_trace if l_trace != "" else None
         
 # Event functions
 @GUILD.bot_object.event
 async def on_ready():
-    TRACE(f"Logged in as {GUILD.bot_object.user}")
+    TRACE(f"Logged in as {GUILD.bot_object.user}", TRACE_LEVELS.NORMAL)
     l_advertiser = asyncio.create_task(advertiser())
     asyncio.gather(l_advertiser)
 
@@ -117,10 +118,12 @@ async def advertiser():
         await asyncio.sleep(0.001)
         for l_server in GUILD.server_list:
             l_ret = await l_server.advertise()
-            if l_ret is not None and Config.C_FILE_OUTPUT:
+            if l_ret is not None and Config.C_SERVER_FILE_LOG:
                 with open(f"{l_server.guild_file_name}",'a', encoding='utf-8') as l_logfile:
                     l_logfile.write(l_ret)
 
 
 def run():
+    if Config.C_IS_USER:
+        TRACE("Bot is an user account which is against discord's ToS",TRACE_LEVELS.WARNING)
     GUILD.bot_object.run(Config.C_BOT_API_KEY, bot=not Config.C_IS_USER)
