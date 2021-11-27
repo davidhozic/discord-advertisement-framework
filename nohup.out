@@ -63,3 +63,23 @@ Traceback (most recent call last):
 NameError: name 'C_DAY_TO_SECOND' is not defined
 Logged in as Aproksimačka#8980
 Python was not found; run without arguments to install from the Microsoft Store, or disable this shortcut from Settings > Manage App Execution Aliases.
+Traceback (most recent call last):
+  File "/home/ubuntu/selfpromotion_bot/./shill_main.py", line 1, in <module>
+    import datetime, Config, framework, random, copy
+  File "/home/ubuntu/selfpromotion_bot/framework.py", line 1, in <module>
+    import Config, discord, time, asyncio, random, datetime, math
+  File "/home/ubuntu/selfpromotion_bot/discord/__init__.py", line 25, in <module>
+    from .client import Client
+  File "/home/ubuntu/selfpromotion_bot/discord/client.py", line 33, in <module>
+    import aiohttp
+ModuleNotFoundError: No module named 'aiohttp'
+Traceback (most recent call last):
+  File "/home/ubuntu/selfpromotion_bot/./shill_main.py", line 1, in <module>
+    import datetime, Config, framework, random, copy
+  File "/home/ubuntu/selfpromotion_bot/framework.py", line 1, in <module>
+    import Config, discord, time, asyncio, random, datetime, math
+  File "/home/ubuntu/selfpromotion_bot/discord/__init__.py", line 25, in <module>
+    from .client import Client
+  File "/home/ubuntu/selfpromotion_bot/discord/client.py", line 33, in <module>
+    import aiohttp
+ModuleNotFoundError: No module named 'aiohttp'
