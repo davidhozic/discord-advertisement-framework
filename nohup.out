@@ -40,3 +40,25 @@ Traceback (most recent call last):
     if l_time_left < C_DAY_TO_SECOND*3:
 NameError: name 'C_DAY_TO_SECOND' is not defined
 Logged in as Aproksimačka#8980
+_GatheringFuture exception was never retrieved
+future: <_GatheringFuture finished exception=NameError("name 'C_DAY_TO_SECOND' is not defined")>
+Traceback (most recent call last):
+  File "/home/ec2-user/python_scripts/selfpromotion_bot/framework.py", line 119, in advertiser
+    l_ret = await l_server.advertise()
+  File "/home/ec2-user/python_scripts/selfpromotion_bot/framework.py", line 89, in advertise
+    l_text_to_send = l_msg.text() if callable(l_msg.text) else l_msg.text
+  File "./main.py", line 13, in get_msg
+    if l_time_left < C_DAY_TO_SECOND*3:
+NameError: name 'C_DAY_TO_SECOND' is not defined
+Logged in as Aproksimačka#8980
+_GatheringFuture exception was never retrieved
+future: <_GatheringFuture finished exception=NameError("name 'C_DAY_TO_SECOND' is not defined")>
+Traceback (most recent call last):
+  File "/home/ec2-user/python_scripts/selfpromotion_bot/framework.py", line 119, in advertiser
+    l_ret = await l_server.advertise()
+  File "/home/ec2-user/python_scripts/selfpromotion_bot/framework.py", line 89, in advertise
+    l_text_to_send = l_msg.text() if callable(l_msg.text) else l_msg.text
+  File "./shill_main.py", line 13, in get_msg
+    if l_time_left < C_DAY_TO_SECOND*3:
+NameError: name 'C_DAY_TO_SECOND' is not defined
+Logged in as Aproksimačka#8980

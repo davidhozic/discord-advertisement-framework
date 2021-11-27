@@ -1,1 +1,1 @@
-nohup python3 ./main.py
+nohup python3 ./shill_main.py # shill

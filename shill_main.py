@@ -2,14 +2,14 @@ import datetime, Config, framework, random, copy
 from framework import GUILD, MESSAGE
 
 
-C_DELAVNICE_DATE = "4.12.2021"
+C_DELAVNICE_DATE = (2021,12,4)
 ## Messages constants
 C_MESSAGE = """Arduino Delavnice - {date}:
 Pridruzite se arduino delavnicam, ki bodo {date} ob 17.15 uri <@&905084973244117112>
 Preostali cas: {time_left}"""
 
 def get_msg():
-    l_time_left=(datetime.datetime(2021,12,4,17,15) - datetime.datetime.now()).total_seconds()
+    l_time_left=(datetime.datetime(*C_DELAVNICE_DATE,17,15) - datetime.datetime.now()).total_seconds()
     if l_time_left < C_DAY_TO_SECOND*3:
         if l_time_left <= 1*Config.C_MINUTE_TO_SECOND:
             l_time_left = "Manj kot minuta"
@@ -19,7 +19,7 @@ def get_msg():
             l_time_left = "{:.2f}".format(l_time_left/Config.C_HOUR_TO_SECOND) + "h"
         else:
             l_time_left = "{:.2f}".format(l_time_left/Config.C_DAY_TO_SECOND) + "d"     
-        return C_MESSAGE.format(time_left=l_time_left, date=C_DELAVNICE_DATE)
+        return C_MESSAGE.format(time_left=l_time_left, date=f"{C_DELAVNICE_DATE[2]}.{C_DELAVNICE_DATE[1]}.{C_DELAVNICE_DATE[0]}")
     return None
 
 class CATS:
