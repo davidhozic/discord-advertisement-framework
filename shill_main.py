@@ -1,19 +1,29 @@
-import datetime, Config, framework, random, copy
+import datetime, Config, framework, random, copy, re
 from framework import GUILD, MESSAGE
 
-
-C_DELAVNICE_DATE = (2021,12,4)
-C_DELAVNICE_SNOV = "Serial knjiznica, analogni vhodi (ADC) in 'analogni' izhodi (digitalni PWM)"
-C_INDEKS_DELAVNIC = 2
-
 ## Messages constants
-C_MESSAGE = """{2}. Arduino Delavnice - {date}:
-Pridruzite se arduino delavnicam, ki bodo {date} ob 17.15 uri <@&905084973244117112>
-Snov delavnic: {C_DELAVNICE_SNOV}
+C_MESSAGE = """<@&905084973244117112>
+{indeks}. Arduino Delavnice - {date}:
+Pridruzite se arduino delavnicam, ki bodo {date}
+Snov delavnic: {content}
 Preostali cas: {time_left}"""
 
+C_DATA_FILE = "delavnice_params.txt"
+
+def find_key(key, data):
+    l_ret =  re.search(f"{key}\s*:.*", data)
+    if l_ret != None:
+        l_ret = re.sub(f"{key}\s*:","", l_ret.group(0)).rstrip().lstrip()
+    return l_ret
+
 def get_msg():
-    l_time_left=(datetime.datetime(*C_DELAVNICE_DATE,17,15) - datetime.datetime.now()).total_seconds()
+    with open (C_DATA_FILE, 'r') as l_data_file:
+        l_data_file_content = l_data_file.read().lower()
+        l_delavnice_date = [int(x) for x in find_key("datum",l_data_file_content).split("-")]
+        l_content = find_key("snov", l_data_file_content)
+        l_index   = int(find_key("indeks", l_data_file_content))
+        pass
+    l_time_left=(datetime.datetime(*l_delavnice_date) - datetime.datetime.now()).total_seconds()
     if l_time_left < Config.C_DAY_TO_SECOND*3:
         if l_time_left <= 1*Config.C_MINUTE_TO_SECOND:
             l_time_left = "Manj kot minuta"
@@ -23,7 +33,11 @@ def get_msg():
             l_time_left = "{:.2f}".format(l_time_left/Config.C_HOUR_TO_SECOND) + "h"
         else:
             l_time_left = "{:.2f}".format(l_time_left/Config.C_DAY_TO_SECOND) + "d"     
-        return C_MESSAGE.format(time_left=l_time_left, date=f"{C_DELAVNICE_DATE[2]}.{C_DELAVNICE_DATE[1]}.{C_DELAVNICE_DATE[0]}")
+        return C_MESSAGE.format(time_left=l_time_left, 
+                                date=f"{l_delavnice_date[2]}.{l_delavnice_date[1]}.{l_delavnice_date[0]} Ura: {l_delavnice_date[3]}:{l_delavnice_date[4]}",
+                                content = l_content,
+                                indeks = l_index
+                                )
     return None
 
 class CATS:
@@ -63,6 +77,13 @@ GUILD(
         # Messages
         [   #       min-sec                     max-sec      sporocilo   #IDji kanalov
             MESSAGE(start_period=0, end_period=Config.C_DAY_TO_SECOND , text=get_msg, channels=[904382137204101130], clear_previous=True, start_now=True)
+        ]
+    ),
+GUILD(
+        863071397207212052,                          # ID Serverja
+        # Messages
+        [   #       min-sec                     max-sec      sporocilo   #IDji kanalov
+            MESSAGE(start_period=0, end_period=Config.C_DAY_TO_SECOND , text=CATS.get_cat_pic, channels=[863071397207212056], clear_previous=False, start_now=True)
         ]
     )
 ]

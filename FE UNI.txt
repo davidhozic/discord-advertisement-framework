@@ -1,0 +1,13 @@
+
+
+Sending Message: "2. Arduino Delavnice - 4.12.2021 Ura: 17:15:
+Pridruzite se arduino delavnicam, ki bodo 4.12.2021 Ura: 17:15
+Snov delavnic: serial knjiznica, analogni vhodi (adc) in \'analogni\' izhodi (digitalni pwm)
+Preostali cas: 6.83d"
+
+Server: FE UNI
+Succeeded in channels: ['arduino-delavnica']
+Failed in channels: [] 
+Timestamp: Date:27.11.2021 Time:21:17
+
+----------------------------------
