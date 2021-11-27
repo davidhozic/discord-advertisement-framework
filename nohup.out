@@ -62,3 +62,4 @@ Traceback (most recent call last):
     if l_time_left < C_DAY_TO_SECOND*3:
 NameError: name 'C_DAY_TO_SECOND' is not defined
 Logged in as Aproksimačka#8980
+Python was not found; run without arguments to install from the Microsoft Store, or disable this shortcut from Settings > Manage App Execution Aliases.
