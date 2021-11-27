@@ -10,7 +10,7 @@ Preostali cas: {time_left}"""
 
 def get_msg():
     l_time_left=(datetime.datetime(*C_DELAVNICE_DATE,17,15) - datetime.datetime.now()).total_seconds()
-    if l_time_left < C_DAY_TO_SECOND*3:
+    if l_time_left < Config.C_DAY_TO_SECOND*3:
         if l_time_left <= 1*Config.C_MINUTE_TO_SECOND:
             l_time_left = "Manj kot minuta"
         elif l_time_left <= 1*Config.C_HOUR_TO_SECOND:
