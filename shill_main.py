@@ -3,9 +3,13 @@ from framework import GUILD, MESSAGE
 
 
 C_DELAVNICE_DATE = (2021,12,4)
+C_DELAVNICE_SNOV = "Serial knjiznica, analogni vhodi (ADC) in 'analogni' izhodi (digitalni PWM)"
+C_INDEKS_DELAVNIC = 2
+
 ## Messages constants
-C_MESSAGE = """Arduino Delavnice - {date}:
+C_MESSAGE = """{2}. Arduino Delavnice - {date}:
 Pridruzite se arduino delavnicam, ki bodo {date} ob 17.15 uri <@&905084973244117112>
+Snov delavnic: {C_DELAVNICE_SNOV}
 Preostali cas: {time_left}"""
 
 def get_msg():
