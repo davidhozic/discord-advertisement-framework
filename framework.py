@@ -91,7 +91,9 @@ class GUILD:
                         l_errored_channels = []
                         for l_channel in l_msg.channels:
                             try:
-                                l_msg.sent_msg_objs.append(await l_channel.send(l_text_to_send))
+                                l_discord_sent_msg = await l_channel.send(l_text_to_send)
+                                if l_msg.clear_previous:
+                                    l_msg.sent_msg_objs.append(l_discord_sent_msg)
                             except discord.HTTPException as l_except:
                                 if l_except.code == 20016:
                                     l_errored_channels.append(l_channel)
