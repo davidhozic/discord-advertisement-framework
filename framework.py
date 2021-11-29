@@ -60,10 +60,7 @@ class GUILD:
             for l_msg in this.messages:
                 for x in range(len(l_msg.channels)):
                     l_msg.channels[x] = GUILD.bot_object.get_channel(l_msg.channels[x])
-                    # Check if it's user ID for DM
-                    if l_msg.channels[x] is None:
-                        l_msg.channels[x] = GUILD.bot_object.get_user(l_msg.channels[x])
-                if None in l_msg.channels:
+                while None in l_msg.channels:
                     l_msg.channels.remove(None)
 
             this.guild_file_name = this.guild.name.replace("/","-").replace("\\","-").replace(":","-").replace("!","-").replace("|","-").replace("*","-").replace("?","-").replace("<","(").replace(">", ")") + ".txt"
@@ -94,9 +91,8 @@ class GUILD:
                                 l_discord_sent_msg = await l_channel.send(l_text_to_send)
                                 if l_msg.clear_previous:
                                     l_msg.sent_msg_objs.append(l_discord_sent_msg)
-                            except discord.HTTPException as l_except:
-                                if l_except.code == 20016:
-                                    l_errored_channels.append(l_channel)
+                            except:
+                                l_errored_channels.append(l_channel)
                         l_msg.generate_timestamp()
                         l_trace += f'\n\nSending Message: "{l_text_to_send}"\n\nServer: {this.guild.name}\nSucceeded in channels: {[x.name for x in l_msg.channels if x not in l_errored_channels]}\nFailed in channels: {[x.name for x in l_errored_channels]} \nTimestamp: {l_msg.last_timestamp}\n\n----------------------------------'
                         TRACE(l_trace)
