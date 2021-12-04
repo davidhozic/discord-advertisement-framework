@@ -73,17 +73,10 @@ class CATS:
 
 GUILD.server_list = [
 GUILD(
-        639031067868921861,                          # ID Serverja
-        # Messages
-        [   #       min-sec                     max-sec      sporocilo   #IDji kanalov
-            MESSAGE(start_period=0, end_period=Config.C_DAY_TO_SECOND , text=get_msg, channels=[904382137204101130], clear_previous=True, start_now=True)
-        ]
-    ),
-GUILD(
         863071397207212052,                          # ID Serverja
         # Messages
         [   #       min-sec                     max-sec      sporocilo   #IDji kanalov
-            MESSAGE(start_period=0, end_period=Config.C_DAY_TO_SECOND , text=CATS.get_cat_pic, channels=[863071397207212056], clear_previous=False, start_now=True)
+            MESSAGE(start_period=0, end_period=5 , text=CATS.get_cat_pic, channels=[863071397207212056], clear_previous=False, start_now=True)
         ]
     )
 ]

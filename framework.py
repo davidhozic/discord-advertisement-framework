@@ -91,10 +91,10 @@ class GUILD:
                                 l_discord_sent_msg = await l_channel.send(l_text_to_send)
                                 if l_msg.clear_previous:
                                     l_msg.sent_msg_objs.append(l_discord_sent_msg)
-                            except:
-                                l_errored_channels.append(l_channel)
+                            except Exception as ex:
+                                l_errored_channels.append(f"{l_channel.name} - Reason: {ex}")
                         l_msg.generate_timestamp()
-                        l_trace += f'\n\nSending Message: "{l_text_to_send}"\n\nServer: {this.guild.name}\nSucceeded in channels: {[x.name for x in l_msg.channels if x not in l_errored_channels]}\nFailed in channels: {[x.name for x in l_errored_channels]} \nTimestamp: {l_msg.last_timestamp}\n\n----------------------------------'
+                        l_trace += f'\n\nSending Message: "{l_text_to_send}"\n\nServer: {this.guild.name}\nSucceeded in channels: {l_errored_channels}\nFailed in channels: {l_errored_channels} \nTimestamp: {l_msg.last_timestamp}\n\n----------------------------------'
                         TRACE(l_trace)
         # Return for file write
         return l_trace if l_trace != "" else None
