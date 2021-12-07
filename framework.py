@@ -84,22 +84,21 @@ class GUILD:
                             await l_sent_msg_obj.delete()
                     l_msg.sent_msg_objs.clear()
 
-                    # Send messages    
-                    l_data_to_send = l_msg.text() if callable(l_msg.text) else l_msg.text # Check if it's function or text
-                   
 
+                    # Check if function was passed
+                    l_data_to_send = l_msg.text() if callable(l_msg.text) else l_msg.text
+                    # Send messages                     
                     if l_data_to_send is not None:
-                        if isinstance(l_data_to_send, list):  # If list of messages was sent, then merge all into single message         
-                            l_temp_text = ""
-                            for l_element in l_data_to_send:
-                                l_temp_text += f"{l_element}\n----------------------\n"
-                            l_data_to_send = l_temp_text.rstrip("\n----------------------\n")
-
                         l_errored_channels = []
                         l_succeded_channels= []
                         for l_channel in l_msg.channels:
                             try:
-                                l_discord_sent_msg = await l_channel.send(l_data_to_send)
+                                l_discord_sent_msg = None
+                                # Check if it's embed
+                                if isinstance(l_data_to_send, discord.Embed):
+                                    l_discord_sent_msg = await l_channel.send(embed=l_data_to_send)
+                                else:
+                                    l_discord_sent_msg = await l_channel.send(l_data_to_send)
                                 l_succeded_channels.append(l_channel.name)
                                 if l_msg.clear_previous:
                                     l_msg.sent_msg_objs.append(l_discord_sent_msg)
