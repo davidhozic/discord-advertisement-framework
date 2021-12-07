@@ -1,3 +1,4 @@
-datum: 2021-12-04-17-15
-snov: Serial knjiznica, analogni vhodi (ADC) in \'analogni\' izhodi (digitalni PWM)
-indeks : 2
+datum: 2021-12-11-17-15
+snov: Binarna stevila, pomikalni register, stevec od 0 do 9 na 7 segmentnem prikazu s pomocjo pomikalnega registra.
+indeks : 3
+povezava : [ZOOM](https://uni-lj-si.zoom.us/j/7591009596)

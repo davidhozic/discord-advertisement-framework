@@ -2,7 +2,8 @@ import Config, discord, time, asyncio, random
 from debug import *
 
 
-
+# Globals
+m_user_callback = None  # User provided function to call after framework is ready
 
 
 # Classes
@@ -83,21 +84,40 @@ class GUILD:
                             await l_sent_msg_obj.delete()
                     l_msg.sent_msg_objs.clear()
 
-                    # Send messages    
-                    l_text_to_send = l_msg.text() if callable(l_msg.text) else l_msg.text
-                    if l_text_to_send is not None and l_text_to_send !="":
+
+                    # Check if function was passed
+                    l_data_to_send  = l_msg.text() if callable(l_msg.text) else l_msg.text
+                    
+                    l_embed_to_send = None
+                    l_text_to_send  = None
+
+
+                    # Check data type of data
+                    if isinstance(l_data_to_send, list) or isinstance(l_data_to_send, tuple):
+                        for element in l_data_to_send:
+                            if isinstance(element, str):
+                                l_text_to_send = element
+                            elif isinstance(element, discord.Embed):
+                                l_embed_to_send = element
+                    elif isinstance(l_data_to_send, discord.Embed):
+                        l_embed_to_send = l_data_to_send
+                    elif isinstance(l_data_to_send, str):
+                        l_text_to_send = l_data_to_send
+                    
+                    # Send messages                     
+                    if l_text_to_send is not None or l_embed_to_send is not None:
                         l_errored_channels = []
                         l_succeded_channels= []
                         for l_channel in l_msg.channels:
                             try:
-                                l_discord_sent_msg = await l_channel.send(l_text_to_send)
+                                l_discord_sent_msg = await l_channel.send(l_text_to_send, embed=l_embed_to_send)
                                 l_succeded_channels.append(l_channel.name)
                                 if l_msg.clear_previous:
                                     l_msg.sent_msg_objs.append(l_discord_sent_msg)
                             except Exception as ex:
                                 l_errored_channels.append(f"{l_channel.name} - Reason: {ex}")
                         l_msg.generate_timestamp()
-                        l_trace += f'\n\nSending Message: "{l_text_to_send}"\n\nServer: {this.guild.name}\nSucceeded in channels: {l_succeded_channels}\nFailed in channels: {l_errored_channels} \nTimestamp: {l_msg.last_timestamp}\n\n----------------------------------'
+                        l_trace += f'\n\nSending Data:\n\nText:\n{l_text_to_send if l_text_to_send is not None else None}\n\nEmbed:\n{l_embed_to_send.fields if l_embed_to_send is not None else None}\n\nServer: {this.guild.name}\nSucceeded in channels: {l_succeded_channels}\nFailed in channels: {l_errored_channels} \nTimestamp: {l_msg.last_timestamp}\n\n----------------------------------'
                         TRACE(l_trace, TRACE_LEVELS.NORMAL)
         # Return for file write
         return l_trace if l_trace != "" else None
@@ -108,6 +128,8 @@ async def on_ready():
     TRACE(f"Logged in as {GUILD.bot_object.user}", TRACE_LEVELS.NORMAL)
     l_advertiser = asyncio.create_task(advertiser())
     asyncio.gather(l_advertiser)
+    if m_user_callback is not None:
+        m_user_callback() # Call user provided function after framework has started
 
 # Advertising task
 async def advertiser(): 
@@ -115,7 +137,7 @@ async def advertiser():
         l_server.initialize()
 
     while True:
-        await asyncio.sleep(0.001)
+        await asyncio.sleep(0.01)
         for l_server in GUILD.server_list:
             l_ret = await l_server.advertise()
             if l_ret is not None and Config.C_SERVER_FILE_LOG:
@@ -123,7 +145,9 @@ async def advertiser():
                     l_logfile.write(l_ret)
 
 
-def run():
+def run(user_callback=None):
+    global m_user_callback
+    m_user_callback = user_callback   # This function will be called once
     if Config.C_IS_USER:
         TRACE("Bot is an user account which is against discord's ToS",TRACE_LEVELS.WARNING)
     GUILD.bot_object.run(Config.C_BOT_API_KEY, bot=not Config.C_IS_USER)
