@@ -84,20 +84,28 @@ class GUILD:
                     l_msg.sent_msg_objs.clear()
 
                     # Send messages    
-                    l_text_to_send = l_msg.text() if callable(l_msg.text) else l_msg.text
-                    if l_text_to_send is not None and l_text_to_send !="":
+                    l_data_to_send = l_msg.text() if callable(l_msg.text) else l_msg.text # Check if it's function or text
+                   
+
+                    if l_data_to_send is not None:
+                        if isinstance(l_data_to_send, list):  # If list of messages was sent, then merge all into single message         
+                            l_temp_text = ""
+                            for l_element in l_data_to_send:
+                                l_temp_text += f"{l_element}\n----------------------\n"
+                            l_data_to_send = l_temp_text.rstrip("\n----------------------\n")
+
                         l_errored_channels = []
                         l_succeded_channels= []
                         for l_channel in l_msg.channels:
                             try:
-                                l_discord_sent_msg = await l_channel.send(l_text_to_send)
+                                l_discord_sent_msg = await l_channel.send(l_data_to_send)
                                 l_succeded_channels.append(l_channel.name)
                                 if l_msg.clear_previous:
                                     l_msg.sent_msg_objs.append(l_discord_sent_msg)
                             except Exception as ex:
                                 l_errored_channels.append(f"{l_channel.name} - Reason: {ex}")
                         l_msg.generate_timestamp()
-                        l_trace += f'\n\nSending Message: "{l_text_to_send}"\n\nServer: {this.guild.name}\nSucceeded in channels: {l_succeded_channels}\nFailed in channels: {l_errored_channels} \nTimestamp: {l_msg.last_timestamp}\n\n----------------------------------'
+                        l_trace += f'\n\nSending Message: "{l_data_to_send}"\n\nServer: {this.guild.name}\nSucceeded in channels: {l_succeded_channels}\nFailed in channels: {l_errored_channels} \nTimestamp: {l_msg.last_timestamp}\n\n----------------------------------'
                         TRACE(l_trace, TRACE_LEVELS.NORMAL)
         # Return for file write
         return l_trace if l_trace != "" else None
