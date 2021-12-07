@@ -86,26 +86,38 @@ class GUILD:
 
 
                     # Check if function was passed
-                    l_data_to_send = l_msg.text() if callable(l_msg.text) else l_msg.text
+                    l_data_to_send  = l_msg.text() if callable(l_msg.text) else l_msg.text
+                    
+                    l_embed_to_send = None
+                    l_text_to_send  = None
+
+
+                    # Check data type of data
+                    if isinstance(l_data_to_send, list) or isinstance(l_data_to_send, tuple):
+                        for element in l_data_to_send:
+                            if isinstance(element, str):
+                                l_text_to_send = element
+                            elif isinstance(element, discord.Embed):
+                                l_embed_to_send = element
+                    elif isinstance(l_data_to_send, discord.Embed):
+                        l_embed_to_send = l_data_to_send
+                    elif isinstance(l_data_to_send, str):
+                        l_text_to_send = l_data_to_send
+                    
                     # Send messages                     
-                    if l_data_to_send is not None:
+                    if l_text_to_send is not None or l_embed_to_send is not None:
                         l_errored_channels = []
                         l_succeded_channels= []
                         for l_channel in l_msg.channels:
                             try:
-                                l_discord_sent_msg = None
-                                # Check if it's embed
-                                if isinstance(l_data_to_send, discord.Embed):
-                                    l_discord_sent_msg = await l_channel.send(embed=l_data_to_send)
-                                else:
-                                    l_discord_sent_msg = await l_channel.send(l_data_to_send)
+                                l_discord_sent_msg = await l_channel.send(l_text_to_send, embed=l_embed_to_send)
                                 l_succeded_channels.append(l_channel.name)
                                 if l_msg.clear_previous:
                                     l_msg.sent_msg_objs.append(l_discord_sent_msg)
                             except Exception as ex:
                                 l_errored_channels.append(f"{l_channel.name} - Reason: {ex}")
                         l_msg.generate_timestamp()
-                        l_trace += f'\n\nSending Message: "{l_data_to_send}"\n\nServer: {this.guild.name}\nSucceeded in channels: {l_succeded_channels}\nFailed in channels: {l_errored_channels} \nTimestamp: {l_msg.last_timestamp}\n\n----------------------------------'
+                        l_trace += f'\n\nSending Message:\n{l_text_to_send}\n\nEmbed:\n{l_embed_to_send.fields}\n\nServer: {this.guild.name}\nSucceeded in channels: {l_succeded_channels}\nFailed in channels: {l_errored_channels} \nTimestamp: {l_msg.last_timestamp}\n\n----------------------------------'
                         TRACE(l_trace, TRACE_LEVELS.NORMAL)
         # Return for file write
         return l_trace if l_trace != "" else None
