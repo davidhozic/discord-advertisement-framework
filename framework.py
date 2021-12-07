@@ -2,7 +2,8 @@ import Config, discord, time, asyncio, random
 from debug import *
 
 
-
+# Globals
+m_user_callback = None  # User provided function to call after framework is ready
 
 
 # Classes
@@ -116,6 +117,8 @@ async def on_ready():
     TRACE(f"Logged in as {GUILD.bot_object.user}", TRACE_LEVELS.NORMAL)
     l_advertiser = asyncio.create_task(advertiser())
     asyncio.gather(l_advertiser)
+    if m_user_callback is not None:
+        m_user_callback() # Call user provided function after framework has started
 
 # Advertising task
 async def advertiser(): 
@@ -131,7 +134,9 @@ async def advertiser():
                     l_logfile.write(l_ret)
 
 
-def run():
+def run(user_callback=None):
+    global m_user_callback
+    m_user_callback = user_callback   # This function will be called once
     if Config.C_IS_USER:
         TRACE("Bot is an user account which is against discord's ToS",TRACE_LEVELS.WARNING)
     GUILD.bot_object.run(Config.C_BOT_API_KEY, bot=not Config.C_IS_USER)
