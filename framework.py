@@ -137,7 +137,7 @@ async def advertiser():
         l_server.initialize()
 
     while True:
-        await asyncio.sleep(0.001)
+        await asyncio.sleep(0.01)
         for l_server in GUILD.server_list:
             l_ret = await l_server.advertise()
             if l_ret is not None and Config.C_SERVER_FILE_LOG:

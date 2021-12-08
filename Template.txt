@@ -1,6 +1,0 @@
-SPOROCILO = "
-[TEST LINK](https://davidhozic.top)
-"
-
-
-DATUM = "11.1.1990 - 17:15"
