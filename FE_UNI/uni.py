@@ -53,6 +53,10 @@ class FE_UNI_OBVESTILA:
         l_ret = None
         if this.stat_post_q.__len__() > 0:
             l_ret = this.stat_post_q.pop(0)
-            l_ret = (l_ret.text, l_ret.embed)
+            l_ret.text = l_ret.text.rstrip().lstrip()
+            if l_ret.text != "":
+                l_ret = (f"<@&{l_ret.text}>", l_ret.embed)
+            else:
+                l_ret = l_ret.embed
                         
         return l_ret
