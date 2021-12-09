@@ -1,4 +1,4 @@
-import re, os, datetime, asyncio, pickle, discord
+import re, os, datetime, asyncio, pickle, discord, debug
 ### SSFE OBVESTILA
 CONFIG_READ_FOLDER = "Obvestila"
 
@@ -29,23 +29,20 @@ class FE_UNI_OBVESTILA:
         pass
     @classmethod                        
     async def file_processor(this):
-        l_files_to_remove = []
         while True:
-            l_files_to_remove.clear()
             for dirname, dirs, filenames in os.walk(CONFIG_READ_FOLDER):
                 for filename in filenames:
-                    with open(os.path.join(dirname,filename), 'rb') as l_file:
-                       l_msg_object = pickle.load(l_file)
-                       if datetime.datetime.now() >  l_msg_object.send_date:
-                           l_files_to_remove.append(filename)
-                           this.stat_post_q.append(l_msg_object)
-                    # Remove files
-                    for filename in l_files_to_remove:
+                    if filename.endswith(".bin"):
+                        l_msg_object = None
                         try:
-                            os.remove(os.path.join(dirname,filename))
-                            l_files_to_remove.remove(filename)
-                        finally:
-                            pass
+                            with open(os.path.join(dirname,filename), 'rb') as l_file:
+                                l_msg_object = pickle.load(l_file)
+                        except Exception as ex:
+                            debug.TRACE(f"Unable to read file, error:\n{ex}", debug.TRACE_LEVELS.ERROR)
+
+                        if l_msg_object is not None and datetime.datetime.now() >  l_msg_object.send_date:
+                            this.stat_post_q.append(l_msg_object)
+                            os.remove(os.path.join(dirname, filename))
             await asyncio.sleep(1)
 
     @classmethod
@@ -55,7 +52,7 @@ class FE_UNI_OBVESTILA:
             l_ret = this.stat_post_q.pop(0)
             l_ret.text = l_ret.text.rstrip().lstrip()
             if l_ret.text != "":
-                l_ret = (f"<@&{l_ret.text}>", l_ret.embed)
+                l_ret = (l_ret.text, l_ret.embed)
             else:
                 l_ret = l_ret.embed
                         
