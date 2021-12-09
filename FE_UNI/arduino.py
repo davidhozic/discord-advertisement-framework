@@ -20,15 +20,15 @@ def get_msg():
         pass
     l_time_left=(datetime.datetime(*l_delavnice_date) - datetime.datetime.now()).total_seconds()
     l_delavnice_date = f"{l_delavnice_date[2]}.{l_delavnice_date[1]}.{l_delavnice_date[0]} ob {l_delavnice_date[3]}:{l_delavnice_date[4]}"
-    if math.floor(l_time_left/Config.C_DAY_TO_SECOND) <= 2: 
+    if math.ceil(l_time_left/Config.C_DAY_TO_SECOND) <= 2: 
         if l_time_left <= 1*Config.C_MINUTE_TO_SECOND:
             l_time_left = "Manj kot minuta"
         elif l_time_left <= 1*Config.C_HOUR_TO_SECOND:
-            l_time_left = "{:.2f}".format(l_time_left/Config.C_MINUTE_TO_SECOND)  + " min"
+            l_time_left = "{}".format(math.ceil(l_time_left/Config.C_MINUTE_TO_SECOND))  + " min"
         elif l_time_left <= 1*Config.C_DAY_TO_SECOND:
-            l_time_left = "{:.2f}".format(l_time_left/Config.C_HOUR_TO_SECOND) + "h"
+            l_time_left = "{}".format(math.ceil(l_time_left/Config.C_HOUR_TO_SECOND)) + "h"
         else:
-            l_time_left = "{:.2f}".format(l_time_left/Config.C_DAY_TO_SECOND) + "d" 
+            l_time_left = "{}".format(math.ceil(l_time_left/Config.C_DAY_TO_SECOND)) + "d" 
         l_embed = framework.discord.Embed()
         l_embed.add_field(name="__Arduino Delavnice__", value=f"Pridruzite se {l_index}. Arduino delavnicam", inline=False)    
         l_embed.add_field(name="Vsebina", value=f"{l_content}", inline=False)
