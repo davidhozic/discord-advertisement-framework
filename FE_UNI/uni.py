@@ -49,11 +49,10 @@ class FE_UNI_OBVESTILA:
     def get_msg(this):
         l_ret = None
         if this.stat_post_q.__len__() > 0:
-            l_ret = this.stat_post_q.pop(0)
-            l_ret.text = l_ret.text.rstrip().lstrip()
-            if l_ret.text != "":
-                l_ret = (l_ret.text, l_ret.embed)
-            else:
-                l_ret = l_ret.embed
-                        
+            l_ret = []
+            l_dat = this.stat_post_q.pop(0)
+            if l_dat.text != None:
+               l_ret.append(l_dat.text)
+            if l_dat.embed != None:
+                l_ret.append(l_dat.embed)
         return l_ret
