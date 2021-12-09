@@ -1,4 +1,4 @@
-import re, os, datetime, asyncio, pickle
+import re, os, datetime, asyncio, pickle, discord
 ### SSFE OBVESTILA
 CONFIG_READ_FOLDER = "Obvestila"
 
@@ -10,7 +10,8 @@ def find_key(key, data):
     return l_ret
 
 class MESSAGE:
-    def __init__(this, embed, send_date):
+    def __init__(this, text, embed, send_date):
+        this.text = text
         this.embed = embed
         this.send_date = send_date
         
@@ -51,7 +52,7 @@ class FE_UNI_OBVESTILA:
     def get_msg(this):
         l_ret = None
         if this.stat_post_q.__len__() > 0:
-            l_ret = this.stat_post_q.pop(0).embed
-            
-            
+            l_ret = this.stat_post_q.pop(0)
+            l_ret = (l_ret.text, l_ret.embed)
+                        
         return l_ret

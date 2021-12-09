@@ -3,7 +3,8 @@ from asyncio import *
 import pickle, discord
 
 class MESSAGE:
-    def __init__(this, embed, send_date):
+    def __init__(this, text, embed, send_date):
+        this.text = text
         this.embed = embed
         this.send_date = send_date
         
@@ -24,9 +25,10 @@ class MAIN_MENU:
             [Text("Seznam vseh embeddov:"), Button("Brisi embed", key="-DELETE-EMBED-")],
             [Listbox(m_embeds, size=(400,20), key="-INPUT-DATA-", select_mode=LISTBOX_SELECT_MODE_EXTENDED)],
             [Text("------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------")],
+            [Text("Mention: "), Input(size=(20,None), key="-MENTION-")],
             [Text("Ime Embedda: "), Input(size=(50,None),key="-EMBED-INPUT-IME-"), Button("Dodaj Embed", key="-ADD-EMBED-")],
             [Text("Vsebina Embeda: ")],
-            [Multiline(size=(120,20),key="-EMBED-INPUT-VSEBINA-")]
+            [Multiline(size=(400,20),key="-EMBED-INPUT-VSEBINA-")]
         ]
     c_scrollable_layout = \
     [
@@ -49,13 +51,14 @@ async def main_loop():
             break
 
         elif l_key == "-SAVE-": # Save to file
-            l_txt = ""
             l_embed = discord.Embed()
+            l_mention = l_values["-MENTION-"]
+            l_embed.set_thumbnail(url="https://cdn.discordapp.com/avatars/909382417087881276/32be4995f99c9a36279ece66d125960c.png?size=256")
             for element in m_embeds:
                 l_embed.add_field(name=element.name, value=element.text, inline=False)
 
             with open(l_values['-SAVE-'], "wb") as l_file:
-                l_msg_object = MESSAGE(l_embed, datetime.datetime(datetime.datetime.now().year, int(l_values["-MESEC-"]), int(l_values["-DAN-"]), int(l_values["-URA-"]), int(l_values["-MINUTE-"])))
+                l_msg_object = MESSAGE(l_mention, l_embed, datetime.datetime(datetime.datetime.now().year, int(l_values["-MESEC-"]), int(l_values["-DAN-"]), int(l_values["-URA-"]), int(l_values["-MINUTE-"])))
                 l_file.write(pickle.dumps(l_msg_object))
             
         elif l_key == "-ADD-EMBED-":                    # Add embed to list
