@@ -33,6 +33,7 @@ def get_msg():
         l_embed.add_field(name="__Arduino Delavnice__", value=f"Pridruzite se {l_index}. Arduino delavnicam", inline=False)    
         l_embed.add_field(name="Vsebina", value=f"{l_content}", inline=False)
         l_embed.add_field(name ="Datum", value=f"{l_delavnice_date}", inline=False)
+        l_embed.add_field(name="Preostali Cas", value=l_time_left,inline=True)
         l_embed.add_field(name ="Povezava do Zooma", value=f"{l_link}", inline=False)
         return l_embed, "<@&905084973244117112>"
     return None
