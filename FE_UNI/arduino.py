@@ -1,4 +1,4 @@
-import Config, discord, re, datetime, framework
+import Config, discord, re, datetime, framework, math
 
 
 
@@ -20,7 +20,7 @@ def get_msg():
         pass
     l_time_left=(datetime.datetime(*l_delavnice_date) - datetime.datetime.now()).total_seconds()
     l_delavnice_date = f"{l_delavnice_date[2]}.{l_delavnice_date[1]}.{l_delavnice_date[0]} ob {l_delavnice_date[3]}:{l_delavnice_date[4]}"
-    if l_time_left < 2 * Config.C_DAY_TO_SECOND:
+    if math.floor(l_time_left/Config.C_DAY_TO_SECOND) <= 2: 
         if l_time_left <= 1*Config.C_MINUTE_TO_SECOND:
             l_time_left = "Manj kot minuta"
         elif l_time_left <= 1*Config.C_HOUR_TO_SECOND:
