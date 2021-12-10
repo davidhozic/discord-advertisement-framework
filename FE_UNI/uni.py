@@ -21,38 +21,24 @@ class EMBEDED:
         this.text = pr_text
         
 
-class FE_UNI_OBVESTILA:
-    # Class variables
-    stat_post_q = [] # Messages queue
-    
-    def __init__(this):
-        pass
-    @classmethod                        
-    async def file_processor(this):
-        while True:
-            for dirname, dirs, filenames in os.walk(CONFIG_READ_FOLDER):
-                for filename in filenames:
-                    if filename.endswith(".bin"):
-                        l_msg_object = None
-                        try:
-                            with open(os.path.join(dirname,filename), 'rb') as l_file:
-                                l_msg_object = pickle.load(l_file)
-                        except Exception as ex:
-                            debug.TRACE(f"Unable to read file, error:\n{ex}", debug.TRACE_LEVELS.ERROR)
+def get_msg():
+    l_msg_object = None
+    l_ret = None
+    for dirname, dirs, filenames in os.walk(CONFIG_READ_FOLDER):
+            for filename in filenames:
+                if filename.endswith(".bin"):
+                    try:
+                        with open(os.path.join(dirname,filename), 'rb') as l_file:
+                            l_msg_object = pickle.load(l_file)
+                    except Exception as ex:
+                        debug.TRACE(f"Unable to read file, error:\n{ex}", debug.TRACE_LEVELS.ERROR)
 
-                        if l_msg_object is not None and datetime.datetime.now() >  l_msg_object.send_date:
-                            this.stat_post_q.append(l_msg_object)
-                            os.remove(os.path.join(dirname, filename))
-            await asyncio.sleep(1)
-
-    @classmethod
-    def get_msg(this):
-        l_ret = None
-        if this.stat_post_q.__len__() > 0:
-            l_ret = []
-            l_dat = this.stat_post_q.pop(0)
-            if l_dat.text != None:
-               l_ret.append(l_dat.text)
-            if l_dat.embed != None:
-                l_ret.append(l_dat.embed)
-        return l_ret
+                    if l_msg_object is not None and datetime.datetime.now() >=  l_msg_object.send_date:
+                        os.remove(os.path.join(dirname, filename))
+                        l_ret = []
+                        if l_msg_object.text != None:
+                            l_ret.append(l_msg_object.text)
+                        if l_msg_object.embed != None:
+                            l_ret.append(l_msg_object.embed)
+                        break          
+    return l_ret

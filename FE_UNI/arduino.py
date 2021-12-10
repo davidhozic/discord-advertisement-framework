@@ -17,22 +17,22 @@ def get_msg():
         l_content = find_key("snov", l_data_file_content)
         l_link = find_key("povezava", l_data_file_content)
         l_index   = int(find_key("indeks", l_data_file_content))
-        pass
+        
     l_time_left=(datetime.datetime(*l_delavnice_date) - datetime.datetime.now()).total_seconds()
     l_delavnice_date = f"{l_delavnice_date[2]}.{l_delavnice_date[1]}.{l_delavnice_date[0]} ob {l_delavnice_date[3]}:{l_delavnice_date[4]}"
-    if math.ceil(l_time_left/Config.C_DAY_TO_SECOND) <= 2: 
-        if l_time_left <= 1*Config.C_MINUTE_TO_SECOND:
+    if math.floor(l_time_left/Config.C_DAY_TO_SECOND) <= 2: 
+        if  math.floor(l_time_left) < 1*Config.C_MINUTE_TO_SECOND:
             l_time_left = "Manj kot minuta"
-        elif l_time_left <= 1*Config.C_HOUR_TO_SECOND:
-            l_time_left = "{}".format(math.ceil(l_time_left/Config.C_MINUTE_TO_SECOND))  + " min"
-        elif l_time_left <= 1*Config.C_DAY_TO_SECOND:
-            l_time_left = "{}".format(math.ceil(l_time_left/Config.C_HOUR_TO_SECOND)) + "h"
+        elif  math.floor(l_time_left < 1*Config.C_HOUR_TO_SECOND):
+            l_time_left = "{}".format(math.floor(l_time_left/Config.C_MINUTE_TO_SECOND))  + " min"
+        elif  math.floor(l_time_left < 1*Config.C_DAY_TO_SECOND):
+            l_time_left = "{}".format(math.floor(l_time_left/Config.C_HOUR_TO_SECOND)) + "h"
         else:
-            l_time_left = "{}".format(math.ceil(l_time_left/Config.C_DAY_TO_SECOND)) + "d" 
+            l_time_left = "{}".format(math.floor(l_time_left/Config.C_DAY_TO_SECOND)) + "d" 
         l_embed = framework.discord.Embed()
         l_embed.add_field(name="__Arduino Delavnice__", value=f"Pridruzite se {l_index}. Arduino delavnicam", inline=False)    
         l_embed.add_field(name="Vsebina", value=f"{l_content}", inline=False)
-        l_embed.add_field(name ="Datum", value=f"{l_delavnice_date}", inline=False)
+        l_embed.add_field(name ="Datum", value=f"{l_delavnice_date}", inline=True)
         l_embed.add_field(name="Preostali Cas", value=l_time_left,inline=True)
         l_embed.add_field(name ="Povezava do Zooma", value=f"{l_link}", inline=False)
         return l_embed, "<@&905084973244117112>"
