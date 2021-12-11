@@ -1,10 +1,15 @@
-import Config, discord, time, asyncio, random
+from asyncio import tasks
+from typing import Union
+import typing
+import Config, discord, time, asyncio, random, contextlib
 from debug import *
+import types
+
 
 
 # Globals
 m_user_callback = None  # User provided function to call after framework is ready
-
+m_advertiser_task : asyncio.Task = None
 
 # Classes
 class TIMER:
@@ -24,7 +29,7 @@ class TIMER:
 
 
 class MESSAGE:
-    def __init__(this, start_period : float, end_period : float, text : str, channels : list, clear_previous : bool, start_now : bool):
+    def __init__(this, start_period : float, end_period : float, text : Union[str, discord.Embed, list[Union[str,discord.Embed]], types.FunctionType], channel_ids : list[int], clear_previous : bool, start_now : bool):
         if start_period == 0: 
             this.randomized_time = False
             this.period = end_period 
@@ -35,7 +40,7 @@ class MESSAGE:
 
         this.last_timestamp = None
         this.text = text
-        this.channels = channels
+        this.channels = channel_ids
         this.timer = TIMER()
         this.clear_previous = clear_previous
         this.force = start_now
@@ -50,19 +55,23 @@ class GUILD:
     server_list = []
     bot_object = discord.Client()
 
-    def __init__(this, guildid,  messages_to_send):
-        this.guild =    guildid
+    def __init__(this, guild_id : int,  messages_to_send : list[MESSAGE]):
+        this.guild =    guild_id
         this.messages = messages_to_send
         this.guild_file_name = None
-    def initialize(this):       # Get objects from ids
+    async def initialize(this):       # Get objects from ids
         l_guild_id = this.guild
         this.guild = GUILD.bot_object.get_guild(l_guild_id) # Transofrm guild id into API guild object
         if this.guild != None:
             for l_msg in this.messages:
-                for x in range(len(l_msg.channels)):
-                    l_msg.channels[x] = GUILD.bot_object.get_channel(l_msg.channels[x])
-                while None in l_msg.channels:
-                    l_msg.channels.remove(None)
+                if isinstance(l_msg, MESSAGE):
+                    for x in range(len(l_msg.channels)):
+                        l_msg.channels[x] = GUILD.bot_object.get_channel(l_msg.channels[x])
+                    while None in l_msg.channels:
+                        l_msg.channels.remove(None)
+                else:
+                    TRACE(f"Invalid data type argument passed to messages list in guild id {l_guild_id}\nPlease fix the error and restart application.\nEntering sleep forever...", level=TRACE_LEVELS.ERROR)
+                    await end()
             this.guild_file_name = this.guild.name.replace("/","-").replace("\\","-").replace(":","-").replace("!","-").replace("|","-").replace("*","-").replace("?","-").replace("<","(").replace(">", ")") + ".txt"
         else:
             TRACE(f"Unable to create server object from server id: {l_guild_id}", TRACE_LEVELS.ERROR)
@@ -129,16 +138,19 @@ class GUILD:
 # Event functions
 @GUILD.bot_object.event
 async def on_ready():
+    global m_advertiser_task
     TRACE(f"Logged in as {GUILD.bot_object.user}", TRACE_LEVELS.NORMAL)
-    l_advertiser = asyncio.create_task(advertiser())
-    asyncio.gather(l_advertiser)
+    m_advertiser_task = asyncio.create_task(advertiser())
+    asyncio.gather(m_advertiser_task)
     if m_user_callback is not None:
         m_user_callback() # Call user provided function after framework has started
+    
 
 # Advertising task
 async def advertiser(): 
+    global m_advertiser_task
     for l_server in GUILD.server_list:
-        l_server.initialize()
+        await l_server.initialize()
 
     while True:
         await asyncio.sleep(0.01)
@@ -148,6 +160,11 @@ async def advertiser():
                 with open(f"{l_server.guild_file_name}",'a', encoding='utf-8') as l_logfile:
                     l_logfile.write(l_ret)
 
+
+
+async def end():
+    while 1:
+        await asyncio.sleep(1000000000000)
 
 def run(user_callback=None):
     global m_user_callback
