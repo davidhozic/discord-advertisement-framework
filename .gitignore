@@ -1,3 +1,2 @@
--David's dungeon.txt
-__pycache__/**
-discord/__pycache__/**
+*.txt
+**/__pycache__/**
