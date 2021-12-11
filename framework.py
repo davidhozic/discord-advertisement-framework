@@ -52,11 +52,11 @@ class GUILD:
 
     def __init__(this, guildid,  messages_to_send):
         this.guild =    guildid
-        this.guild_id = guildid
         this.messages = messages_to_send
         this.guild_file_name = None
     def initialize(this):       # Get objects from ids
-        this.guild = GUILD.bot_object.get_guild(this.guild) # Transofrm guild id into API guild object
+        l_guild_id = this.guild
+        this.guild = GUILD.bot_object.get_guild(l_guild_id) # Transofrm guild id into API guild object
         if this.guild != None:
             for l_msg in this.messages:
                 for x in range(len(l_msg.channels)):
@@ -65,7 +65,7 @@ class GUILD:
                     l_msg.channels.remove(None)
             this.guild_file_name = this.guild.name.replace("/","-").replace("\\","-").replace(":","-").replace("!","-").replace("|","-").replace("*","-").replace("?","-").replace("<","(").replace(">", ")") + ".txt"
         else:
-            TRACE(f"Unable to create server object from server id: {this.guild_id}", TRACE_LEVELS.ERROR)
+            TRACE(f"Unable to create server object from server id: {l_guild_id}", TRACE_LEVELS.ERROR)
 
     async def advertise(this):
         l_trace = ""
