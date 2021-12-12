@@ -1,4 +1,0 @@
-datum: 2021-12-18-17-15
-snov: Binarna stevila, pomikalni register, stevec od 0 do 9 na 7 segmentnem prikazu s pomocjo pomikalnega registra.
-indeks : 4
-povezava : [ZOOM](https://uni-lj-si.zoom.us/j/7591009596)
