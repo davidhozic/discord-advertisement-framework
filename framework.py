@@ -1,11 +1,14 @@
-from asyncio import tasks
 from typing import Union
-import typing
-import Config, discord, time, asyncio, random, contextlib
+import Config, discord, time, asyncio, random
 from debug import *
 import types
 
 
+# Contants
+## Hour constants
+C_DAY_TO_SECOND = 86400
+C_HOUR_TO_SECOND= 3600
+C_MINUTE_TO_SECOND = 60
 
 # Globals
 m_user_callback = None  # User provided function to call after framework is ready
@@ -29,8 +32,8 @@ class TIMER:
 
 
 class MESSAGE:
-    def __init__(this, start_period : float, end_period : float, text : Union[str, discord.Embed, list[Union[str,discord.Embed]], types.FunctionType], channel_ids : list[int], clear_previous : bool, start_now : bool):
-        if start_period == 0: 
+    def __init__(this, start_period : float, end_period : float, data : Union[str, discord.Embed, list[Union[str,discord.Embed]], types.FunctionType], channel_ids : list[int], clear_previous : bool, start_now : bool):
+        if start_period is None: 
             this.randomized_time = False
             this.period = end_period 
         else:
@@ -39,7 +42,7 @@ class MESSAGE:
             this.period = random.randrange(*this.random_range)
 
         this.last_timestamp = None
-        this.text = text
+        this.data = data
         this.channels = channel_ids
         this.timer = TIMER()
         this.clear_previous = clear_previous
@@ -95,7 +98,7 @@ class GUILD:
 
 
                     # Check if function was passed
-                    l_data_to_send  = l_msg.text() if callable(l_msg.text) else l_msg.text
+                    l_data_to_send  = l_msg.data() if callable(l_msg.data) else l_msg.data
                     
                     l_embed_to_send = None
                     l_text_to_send  = None
