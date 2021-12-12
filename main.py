@@ -11,10 +11,10 @@ import  framework
 
 framework.GUILD.server_list = [
     framework.GUILD(
-        123456789,       # ID of server (guild)
+        863071397207212052,       # ID of server (guild)
         [                # List MESSAGE objects 
-            framework.MESSAGE(start_period=None, end_period=0, data="", channel_ids=[123456789, 123456789], clear_previous=False, start_now=True),
-            framework.MESSAGE(start_period=None, end_period=0, data="", channel_ids=[123456789, 123456789], clear_previous=False, start_now=True),
+            framework.MESSAGE(start_period=None, end_period=60, data="First message", channel_ids=[863071397207212056, 909499439377416243], clear_previous=False, start_now=True),
+            framework.MESSAGE(start_period=None, end_period=60, data="Second message", channel_ids=[863071397207212056, 909499439377416243], clear_previous=False, start_now=True)
         ]
     )
 ]
