@@ -1,0 +1,92 @@
+<h1 id="shilling-framework-documentation"><font size=8><strong>Shilling Framework Documentation</strong></font></h1>
+<p>The shilling framework allows you to periodically (absolute or in a random time range) send messages to discord servers and channels. It supports sending normal text or even embeds(you are required to run on an actual bot) and can even accept user defined functions that will be called to get the data you want to send. The framework also supports formatted logging which tells you what messages succeeded in which channels and failed in which channels(and why they failed).</p>
+<p>The below documentation describes everything you need to start shilling, thank you for reading it. If you don’t like to read you can skip to the <a href="#getting_started">Getting Started</a> section. *<strong> ## <font size=5> </strong>Framework creatable objects** </font>:</p>
+<ul>
+<li><strong>GUILD</strong>:
+<ul>
+<li>The <strong>GUILD</strong> object represents a server to which messages will be sent.</li>
+<li><u>Parameters</u>:
+<ul>
+<li><strong>Guild ID</strong> - identificator which can be obtain by enabling <a href="https://discord.com/developers/docs/game-sdk/store">developer mode (a.k.a application test mode)</a> in discord’s settings and afterwards right-clicking on the server/guild icon in the server list and clicking <strong>“Copy ID”</strong>,</li>
+<li><strong>List of <u>MESSAGE</u> objects</strong> - Python list or tuple contating <strong>MESSAGE</strong> objects. <br><br></li>
+</ul></li>
+</ul></li>
+<li><strong>MESSAGE</strong>
+<ul>
+<li>The <strong>MESSAGE</strong> object containts parameters which contain data that will be sent to the server/guild but also contains parameters that specify behaviour.</li>
+<li><u>Parameters</u>:
+<ul>
+<li><strong>Start Period</strong> , <strong>End Period</strong> (start_period, end_period) - These 2 parameters specify the period on which the messages will be sent.
+<ul>
+<li><strong>Start Period</strong> can be either:
+<ul>
+<li>None - Messages will be sent on intervals specified by <strong>End period</strong>,</li>
+<li>Integer larger <span class="math inline">≥</span> 0 - Messages will be sent on intervals <strong>randomly</strong> chosen between <strong><u>Start period</strong> and <strong>End period</u></strong>, where the randomly chosen intervals will be randomized after each sent message.<br><br></li>
+</ul></li>
+</ul></li>
+<li><strong>Data</strong> (data) - The data parameter is the actual data that will be sent using discord’s API. The <strong>data types</strong> of this parameter can be:
+<ul>
+<li>String (normal text),</li>
+<li><a href="https://www.quora.com/What-are-embeds-on-Discord">Embed</a> ,</li>
+<li>List containing: string or embed or (string and embed) - Order in list does not matter,</li>
+<li><strong>Function</strong> that accepts no parameters and returns any of the <strong>above</strong> three data types.<br><br></li>
+</ul></li>
+<li><strong>Channel IDs</strong> (channel_ids) - List of IDs of all the channels you want data to be sent into.</li>
+<li><strong>Clear Previous</strong> (clear_previous) - A bool variable that can be either True of False. If True, then before sending a new message to the channels, the framework will delete all previous messages sent to discord that originated from this message object.</li>
+<li><strong>Start Now</strong> (start_now) - A bool variable that can be either True or False. If True, then the framework will send the message as soon as it is run and then wait it’s period before trying again. If False, then the message will not be sent immediatly after framework is ready, but will instead wait for the period to elapse. <em><strong> ## <font size=5> </strong>Functions<strong> </font>: The framework only gives you one function to call making it easy to use. That function is </strong>run<strong>. The function only accepts one parameter called user_callback which is a </strong>function that will be called after the framework has been initialized<strong>. To access the function, use: </strong>framework.run(user_callback function here)<strong> </strong></em></li>
+</ul></li>
+</ul></li>
+</ul>
+<h2 id="getting-started"><a id="getting_started"></a><font size=5><strong>Getting started</strong></font>:</h2>
+<h3 id="install-requirements"><u> Install requirements:</u></h3>
+<p>The very first thing you need to do is install the requered modules which is discord. In the directory you will already see a discord folder, however this does not include it’s requirements. The folder only containts slightly modified version of the discord.py API which will not block if a certain channel is in slow mode cooldown, but will skip the channel instead (it will be logged under failed channels if <strong>logging</strong> has been enabled in the <a href="Config.py">Configuration</a>).</p>
+<h3 id="configuration"><u> Configuration </u></h3>
+<p>The framework can be configured in the <a href="Config.py">Config.py</a> file. You only need to really change the <a href="#DISCORD-TOKEN">C_BOT_API_KEY</a>.</p>
+<p><u>Configuration variables</u>: - <a id="DISCORD-TOKEN"></a>C_BOT_API_KEY - is the account authorization token, to obtain it for a <strong>bot account</strong>, go to <a href="https://discord.com/developers/applications">Discord’s develeper portal</a>, select your application and go to Bot section and under Token click <strong>Copy key</strong>.<br> To get it for an <strong>user account</strong> follow instructions: <a href="https://www.youtube.com/results?search_query=how+to+find+user+discord+token">INSTRUCTIONS</a></p>
+<ul>
+<li>C_IS_USER - Set this to true if you are trying to send messages from an user account</li>
+<li>C_DEBUG - If True, it will print trace messages to the console</li>
+<li>C_DEBUG_FILE_OUTPUT - C_DEBUG needs to be True for this to be considered. If C_DEBUG_FILE_OUTPUT is True, it will print trace into a file, note that trace includes all trace messages, not just a log of what was sent to each server.</li>
+<li>C_SERVER_FILE_LOG - If True, the framework will generate files for each server and in those willes there is going to be a log of all the sent messages.<br> <u>Example Image:</u><br> <img src="server_log.png" alt="LOG" /></li>
+</ul>
+<h3 id="sending-messages"><u> Sending messages </u></h3>
+<p>To start sending messages you must first create a python file, e.g <u><em>main.py</em></u> and import <u><strong>framework</strong></u>.</p>
+<p>Then define the server list:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode py"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>framework.GUILD.server_list <span class="op">=</span> [</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>]</span></code></pre></div>
+<p>and in that server list, define <strong>GUILD</strong> objects.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode py"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>framework.GUILD.server_list <span class="op">=</span> [</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="co"># GUILD 1</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    framework.GUILD(</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>        <span class="dv">123456789</span>,       <span class="co"># ID of server (guild)</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>        [                <span class="co"># List MESSAGE objects </span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>            framework.MESSAGE(start_period<span class="op">=</span><span class="va">None</span>, end_period<span class="op">=</span><span class="dv">0</span>, data<span class="op">=</span><span class="st">&quot;&quot;</span>, channel_ids<span class="op">=</span>[<span class="dv">123456789</span>, <span class="dv">123456789</span>], clear_previous<span class="op">=</span><span class="va">False</span>, start_now<span class="op">=</span><span class="va">True</span>),</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>            framework.MESSAGE(start_period<span class="op">=</span><span class="va">None</span>, end_period<span class="op">=</span><span class="dv">0</span>, data<span class="op">=</span><span class="st">&quot;&quot;</span>, channel_ids<span class="op">=</span>[<span class="dv">123456789</span>, <span class="dv">123456789</span>], clear_previous<span class="op">=</span><span class="va">False</span>, start_now<span class="op">=</span><span class="va">True</span>),</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>        ]</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    ),</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    <span class="co"># GUILD 2</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>    framework.GUILD(</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>        <span class="dv">123456789</span>,       <span class="co"># ID of server (guild)</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>        [                <span class="co"># List MESSAGE objects </span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>            framework.MESSAGE(start_period<span class="op">=</span><span class="va">None</span>, end_period<span class="op">=</span><span class="dv">0</span>, data<span class="op">=</span><span class="st">&quot;&quot;</span>, channel_ids<span class="op">=</span>[<span class="dv">123456789</span>, <span class="dv">123456789</span>], clear_previous<span class="op">=</span><span class="va">False</span>, start_now<span class="op">=</span><span class="va">True</span>),</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>            framework.MESSAGE(start_period<span class="op">=</span><span class="va">None</span>, end_period<span class="op">=</span><span class="dv">0</span>, data<span class="op">=</span><span class="st">&quot;&quot;</span>, channel_ids<span class="op">=</span>[<span class="dv">123456789</span>, <span class="dv">123456789</span>], clear_previous<span class="op">=</span><span class="va">False</span>, start_now<span class="op">=</span><span class="va">True</span>),</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>        ]</span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>    ),</span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>    <span class="co"># GUILD n</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>    framework.GUILD(</span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>        <span class="dv">123456789</span>,       <span class="co"># ID of server (guild)</span></span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>        [                <span class="co"># List MESSAGE objects </span></span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>            framework.MESSAGE(start_period<span class="op">=</span><span class="va">None</span>, end_period<span class="op">=</span><span class="dv">0</span>, data<span class="op">=</span><span class="st">&quot;&quot;</span>, channel_ids<span class="op">=</span>[<span class="dv">123456789</span>, <span class="dv">123456789</span>], clear_previous<span class="op">=</span><span class="va">False</span>, start_now<span class="op">=</span><span class="va">True</span>),</span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>            framework.MESSAGE(start_period<span class="op">=</span><span class="va">None</span>, end_period<span class="op">=</span><span class="dv">0</span>, data<span class="op">=</span><span class="st">&quot;&quot;</span>, channel_ids<span class="op">=</span>[<span class="dv">123456789</span>, <span class="dv">123456789</span>], clear_previous<span class="op">=</span><span class="va">False</span>, start_now<span class="op">=</span><span class="va">True</span>),</span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>        ]</span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a>]</span></code></pre></div>
+<p>Now start the framework by calling the <strong>framework.run()</strong> function. The function can accept one parameter which is a function to be called after framework has started.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode py"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> callback():</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">&quot;Framework is now running&quot;</span>)</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>framework.run(user_callback<span class="op">=</span>callback)</span></code></pre></div>
+<p>That’s it, your framework is not running and messages will be periodicaly sent.</p>

@@ -1,6 +1,6 @@
 
 # CONSTANTS
-C_BOT_API_KEY = "OTA5MzgyNDE3MDg3ODgxMjc2.YZDeXw.bHvNYYb79nbW9V7hk2QDiNpNfro"   
+C_BOT_API_KEY = ""   
 C_IS_USER = False
 
 

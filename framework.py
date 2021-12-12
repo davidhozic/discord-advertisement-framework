@@ -41,7 +41,6 @@ class MESSAGE:
             this.random_range = (start_period, end_period)
             this.period = random.randrange(*this.random_range)
 
-        this.last_timestamp = None
         this.data = data
         this.channels = channel_ids
         this.timer = TIMER()
@@ -50,8 +49,8 @@ class MESSAGE:
         this.sent_msg_objs = []
     def generate_timestamp(this):
         l_timestruct = time.localtime()
-        this.last_timestamp = "Date:{:02d}.{:02d}.{:04d} Time:{:02d}:{:02d}"
-        this.last_timestamp = this.last_timestamp.format(l_timestruct.tm_mday, l_timestruct.tm_mon, l_timestruct.tm_year,l_timestruct.tm_hour,l_timestruct.tm_min)
+        l_timestamp = "Date:{:02d}.{:02d}.{:04d} Time:{:02d}:{:02d}"
+        return l_timestamp.format(l_timestruct.tm_mday, l_timestruct.tm_mon, l_timestruct.tm_year,l_timestruct.tm_hour,l_timestruct.tm_min)
 
 
 class GUILD:
@@ -128,12 +127,31 @@ class GUILD:
                                     l_msg.sent_msg_objs.append(l_discord_sent_msg)
                             except Exception as ex:
                                 l_errored_channels.append(f"{l_channel.name} - Reason: {ex}")
-                        l_msg.generate_timestamp()
+                        
                         l_embed_log = ""
                         if l_embed_to_send is not None:
                             for l_embed_msg in l_embed_to_send.fields:
-                                l_embed_log += f"{l_embed_msg.name} : {l_embed_msg.value}\n--------------------------\n"
-                        l_trace += f'\n\nSending Data:\n\nText:\n{l_text_to_send if l_text_to_send is not None else None}\n\nEmbed fields:\n{l_embed_log}\n\nServer: {this.guild.name}\nSucceeded in channels: {l_succeded_channels}\nFailed in channels: {l_errored_channels} \nTimestamp: {l_msg.last_timestamp}\n\n----------------------------------'
+                                l_embed_log += f"{l_embed_msg.name} : \n{l_embed_msg.value}\n?::::::::::::::::::::::::::::\n"
+                        if l_embed_log == "":
+                            l_embed_log = None
+                        l_trace += \
+                            f'''\n                         
+###################################################### 
+# MESSAGE LOG:
+######################################################
+## Text:
+    {l_text_to_send}
+        
+## Embed fields:
+    {l_embed_log}
+
+## Other data:
+    Server: {this.guild.name}
+    Succeeded in channels: {l_succeded_channels}
+    Failed in channels: {l_errored_channels}
+    Timestamp: {l_msg.generate_timestamp()}
+######################################################
+'''
                         TRACE(l_trace, TRACE_LEVELS.NORMAL)
         # Return for file write
         return l_trace if l_trace != "" else None

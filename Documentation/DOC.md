@@ -35,6 +35,8 @@ The framework only gives you one function to call making it easy to use.
 That function is **run**. The function only accepts one parameter  called user_callback which is a **function that will be called after the framework has been initialized**.
 To access the function, use: **framework.run(user_callback function here)**
 ***
+
+
 ## <a id="getting_started"></a><font size=5>**Getting started**</font>:
 
 ### <u> Install requirements:</u>
