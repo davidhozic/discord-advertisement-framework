@@ -20,7 +20,7 @@ The below documentation describes everything you need to start shilling, thank y
         - **Start Period** , **End Period** (start_period, end_period) - These 2 parameters specify the period on which the messages will be sent.
             - **Start Period** can be either:
               - None - Messages will be sent on intervals specified by **End period**,
-              - Integer larger $\geq$ 0 - Messages will be sent on intervals **randomly** chosen between **<u>Start period** and **End period</u>**, where the randomly chosen intervals will be randomized after each sent message.<br><br>
+              - Integer  >= 0 - Messages will be sent on intervals **randomly** chosen between **<u>Start period** and **End period</u>**, where the randomly chosen intervals will be randomized after each sent message.<br><br>
         - **Data** (data) - The data parameter is the actual data that will be sent using discord's API. The **data types** of this parameter can be:
           - String (normal text),
           - [Embed](https://www.quora.com/What-are-embeds-on-Discord) ,
@@ -54,7 +54,7 @@ To get it for an **user account** follow instructions: [INSTRUCTIONS](https://ww
 - C_DEBUG_FILE_OUTPUT - C_DEBUG needs to be True for this to be considered. If C_DEBUG_FILE_OUTPUT is True, it will print trace into a file, note that trace includes all trace messages, not just a log of what was sent to each server.
 - C_SERVER_FILE_LOG - If True, the framework will generate files for each server and in those willes there is going to be a log of all the sent messages.<br>
 <u>Example Image:</u><br>
-![LOG](server_log.png)
+![LOG](logging.png)
 
 
 
