@@ -111,4 +111,4 @@ framework.run(user_callback=callback)
 
 ```
 
-That's it, your framework is not running and messages will be periodicaly sent.
+That's it, your framework is now running and messages will be periodicaly sent.

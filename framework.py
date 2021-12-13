@@ -73,7 +73,8 @@ class GUILD:
                         l_msg.channels.remove(None)
                 else:
                     TRACE(f"Invalid data type argument passed to messages list in guild id {l_guild_id}\nPlease fix the error and restart application.\nEntering sleep forever...", level=TRACE_LEVELS.ERROR)
-                    await end()
+                    while l_msg in this.messages:
+                        this.messages.remove(l_msg)
             this.guild_file_name = this.guild.name.replace("/","-").replace("\\","-").replace(":","-").replace("!","-").replace("|","-").replace("*","-").replace("?","-").replace("<","(").replace(">", ")") + ".txt"
         else:
             TRACE(f"Unable to create server object from server id: {l_guild_id}", TRACE_LEVELS.ERROR)
@@ -131,7 +132,7 @@ class GUILD:
                         l_embed_log = ""
                         if l_embed_to_send is not None:
                             for l_embed_msg in l_embed_to_send.fields:
-                                l_embed_log += f"{l_embed_msg.name} : \n{l_embed_msg.value}\n?::::::::::::::::::::::::::::\n"
+                                l_embed_log += f"\tField name: {l_embed_msg.name}\n\tField data: {l_embed_msg.value}\n----------------------------------\n"
                         if l_embed_log == "":
                             l_embed_log = None
                         l_trace += \
@@ -143,7 +144,7 @@ class GUILD:
     {l_text_to_send}
         
 ## Embed fields:
-    {l_embed_log}
+{l_embed_log}
 
 ## Other data:
     Server: {this.guild.name}
@@ -180,12 +181,6 @@ async def advertiser():
             if l_ret is not None and Config.C_SERVER_FILE_LOG:
                 with open(f"{l_server.guild_file_name}",'a', encoding='utf-8') as l_logfile:
                     l_logfile.write(l_ret)
-
-
-
-async def end():
-    while 1:
-        await asyncio.sleep(1000000000000)
 
 def run(user_callback=None):
     global m_user_callback
