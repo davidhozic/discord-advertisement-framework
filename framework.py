@@ -75,7 +75,7 @@ class GUILD:
                     TRACE(f"Invalid data type argument passed to messages list in guild id {l_guild_id}\nPlease fix the error and restart application.\nEntering sleep forever...", level=TRACE_LEVELS.ERROR)
                     while l_msg in this.messages:
                         this.messages.remove(l_msg)
-            this.guild_file_name = this.guild.name.replace("/","-").replace("\\","-").replace(":","-").replace("!","-").replace("|","-").replace("*","-").replace("?","-").replace("<","(").replace(">", ")") + ".txt"
+            this.guild_file_name = this.guild.name.replace("/","-").replace("\\","-").replace(":","-").replace("!","-").replace("|","-").replace("*","-").replace("?","-").replace("<","(").replace(">", ")") + ".md"
         else:
             TRACE(f"Unable to create server object from server id: {l_guild_id}", TRACE_LEVELS.ERROR)
 
