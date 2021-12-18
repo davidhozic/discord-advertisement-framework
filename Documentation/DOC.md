@@ -25,7 +25,8 @@ The below documentation describes everything you need to start shilling, thank y
           - String (normal text),
           - [Embed](https://www.quora.com/What-are-embeds-on-Discord) ,
           - List containing: string or embed or (string and embed) - Order in list does not matter,
-          - **Function** that accepts no parameters and returns any of the **above** three data types.<br><br>
+          - **Function** that returns any of the above parameters and **accepts no parameter**
+          - **Tuple of a <u>function</u> and <u>it's parameters**</u>.<br><br>
         - **Channel IDs** (channel_ids) - List of IDs of all the channels you want data to be sent into.
         - **Clear Previous** (clear_previous) - A bool variable that can be either True of False. If True, then before sending a new message to the channels, the framework will delete all previous messages sent to discord that originated from this message object.
         - **Start Now** (start_now) - A bool variable that can be either True or False. If True, then the framework will send the message as soon as it is run and then wait it's period before trying again. If False, then the message will not be sent immediatly after framework is ready, but will instead wait for the period to elapse.

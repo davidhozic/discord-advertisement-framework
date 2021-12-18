@@ -33,13 +33,13 @@ class TIMER:
 
 class MESSAGE:
     def __init__(this, start_period : float, end_period : float, data : Union[str, discord.Embed, list[Union[str,discord.Embed]], types.FunctionType, Tuple[types.FunctionType,  Any]], channel_ids : list[int], clear_previous : bool, start_now : bool):
-        if start_period is None: 
+        if start_period is None:            # If start_period is none -> period will not be randomized
             this.randomized_time = False
             this.period = end_period 
-        else:
-            this.randomized_time = True
+        else:                               
+            this.randomized_time = True             
             this.random_range = (start_period, end_period)
-            this.period = random.randrange(*this.random_range)
+            this.period = random.randrange(*this.random_range)  # This will happen after each sending as well
 
         this.data = data
         this.channels = channel_ids
