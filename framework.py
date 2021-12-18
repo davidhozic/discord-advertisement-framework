@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Any, Set, Tuple, Union
 import Config, discord, time, asyncio, random
 from debug import *
 import types
@@ -32,7 +32,7 @@ class TIMER:
 
 
 class MESSAGE:
-    def __init__(this, start_period : float, end_period : float, data : Union[str, discord.Embed, list[Union[str,discord.Embed]], types.FunctionType], channel_ids : list[int], clear_previous : bool, start_now : bool):
+    def __init__(this, start_period : float, end_period : float, data : Union[str, discord.Embed, list[Union[str,discord.Embed]], types.FunctionType, Tuple[types.FunctionType,  Any]], channel_ids : list[int], clear_previous : bool, start_now : bool):
         if start_period is None: 
             this.randomized_time = False
             this.period = end_period 
@@ -97,13 +97,24 @@ class GUILD:
                     l_msg.sent_msg_objs.clear()
 
 
-                    # Check if function was passed
-                    l_data_to_send  = l_msg.data() if callable(l_msg.data) else l_msg.data
-                    
+                    # Check if function was passed or function tuple
+                    l_data_to_send  = None     
+                    if callable(l_msg.data):    # Function without parameters
+                        try:
+                            l_data_to_send = l_msg.data()
+                        except Exception as ex:
+                            TRACE(f"Error calling the function: Exception : {ex}", TRACE_LEVELS.ERROR)
+                    elif isinstance(l_msg.data, tuple) or isinstance(l_msg.data, list): # array of function with it's parameters
+                        try:
+                            l_data_to_send = l_msg.data[0](*l_msg.data[1:]) # First element is function, the rest are it's parameters
+                        except Exception as ex:
+                            TRACE(f"Error calling the function: Exception : {ex}", TRACE_LEVELS.ERROR)
+                    else:
+                        l_data_to_send = l_msg.data
+
+
                     l_embed_to_send = None
                     l_text_to_send  = None
-
-
                     # Check data type of data
                     if isinstance(l_data_to_send, list) or isinstance(l_data_to_send, tuple):
                         for element in l_data_to_send:
