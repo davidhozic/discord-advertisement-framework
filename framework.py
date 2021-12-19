@@ -134,6 +134,8 @@ class GUILD:
                         l_succeded_channels= []
                         for l_channel in l_msg.channels:
                             try:
+                                if l_channel.guild.id != this.guild.id:
+                                    raise Exception(f"Channel is not in part of this guild ({this.guild.name}) but is part of a different guild ({l_channel.guild.name})")
                                 l_discord_sent_msg = await l_channel.send(l_text_to_send, embed=l_embed_to_send)
                                 l_succeded_channels.append(l_channel.name)
                                 if l_msg.clear_previous:
