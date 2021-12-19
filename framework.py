@@ -1,4 +1,4 @@
-from typing import Any, Set, Tuple, Union
+from typing import Any, Set, Tuple, Union, Optional
 import Config, discord, time, asyncio, random
 from debug import *
 import types
@@ -57,9 +57,10 @@ class GUILD:
     server_list = []
     bot_object = discord.Client()
 
-    def __init__(this, guild_id : int,  messages_to_send : list[MESSAGE]):
+    def __init__(this, guild_id : int,  messages_to_send : list[MESSAGE], generate_log : Optional[bool] = True):
         this.guild =    guild_id
         this.messages = messages_to_send
+        this.generate_log = generate_log
         this.guild_file_name = None
     async def initialize(this):       # Get objects from ids
         l_guild_id = this.guild
@@ -189,7 +190,7 @@ async def advertiser():
         await asyncio.sleep(0.01)
         for l_server in GUILD.server_list:
             l_ret = await l_server.advertise()
-            if l_ret is not None and Config.C_SERVER_FILE_LOG:
+            if l_ret is not None and l_server.generate_log:
                 with open(f"{l_server.guild_file_name}",'a', encoding='utf-8') as l_logfile:
                     l_logfile.write(l_ret)
 

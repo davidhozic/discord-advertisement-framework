@@ -13,6 +13,7 @@ The below documentation describes everything you need to start shilling, thank y
     - <u>Parameters</u>:
         - **Guild ID** - identificator which can be obtain by enabling [developer mode (a.k.a application test mode)](https://discord.com/developers/docs/game-sdk/store) in discord's settings and afterwards right-clicking on the server/guild icon in the server list and clicking **"Copy ID"**,
         - **List of <u>MESSAGE</u> objects** - Python list or tuple contating **MESSAGE** objects.
+        - **Generate file log** - bool variable, if True it will generate a file log for each message send attempt.
     <br><br>
 -  **MESSAGE** 
     - The **MESSAGE** object containts parameters which contain data that will be sent to the server/guild but also contains parameters that specify behaviour.
@@ -52,11 +53,7 @@ To get it for an **user account** follow instructions: [INSTRUCTIONS](https://ww
 
 - C_IS_USER - Set this to true if you are trying to send messages from an user account
 - C_DEBUG   - If True, it will print trace messages to the console
-- C_DEBUG_FILE_OUTPUT - C_DEBUG needs to be True for this to be considered. If C_DEBUG_FILE_OUTPUT is True, it will print trace into a file, note that trace includes all trace messages, not just a log of what was sent to each server.
-- C_SERVER_FILE_LOG - If True, the framework will generate files for each server and in those willes there is going to be a log of all the sent messages.<br>
-<u>Example Image:</u><br>
-![LOG](logging.png)
-
+- C_DEBUG_FILE_OUTPUT - C_DEBUG needs to be True for this to be considered. If C_DEBUG_FILE_OUTPUT is True, it will print trace into a file, note that trace includes all trace messages, not just a log of what was sent to each server.<br><br>
 
 
 ### <u> Sending messages </u>
