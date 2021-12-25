@@ -1,4 +1,4 @@
-from typing import Any, Set, Tuple, Union, Optional
+from typing import Any, Tuple, Union, Optional
 import Config, discord, time, asyncio, random
 from debug import *
 import types
@@ -47,10 +47,7 @@ class MESSAGE:
         this.clear_previous = clear_previous
         this.force = start_now
         this.sent_msg_objs = []
-    def generate_timestamp(this):
-        l_timestruct = time.localtime()
-        l_timestamp = "Date:{:02d}.{:02d}.{:04d} Time:{:02d}:{:02d}"
-        return l_timestamp.format(l_timestruct.tm_mday, l_timestruct.tm_mon, l_timestruct.tm_year,l_timestruct.tm_hour,l_timestruct.tm_min)
+    
 
 
 class GUILD:
@@ -79,6 +76,43 @@ class GUILD:
             this.guild_file_name = this.guild.name.replace("/","-").replace("\\","-").replace(":","-").replace("!","-").replace("|","-").replace("*","-").replace("?","-").replace("<","(").replace(">", ")") + ".md"
         else:
             TRACE(f"Unable to create server object from server id: {l_guild_id}", TRACE_LEVELS.ERROR)
+
+    def _generate_log(this, sent_text : str, sent_embed : discord.Embed, succeeded_ch : list, failed_ch : list):
+        l_tmp = ""
+        if sent_text:
+            for line in sent_text.split("\n"):
+                l_tmp += f"\t{line}\n"
+        sent_text = l_tmp.rstrip()
+        l_tmp = ""
+        if sent_embed:
+            for field in sent_embed.fields:
+                l_tmp += f"\n- {field.name}\n\t```\n"
+
+                for line in field.value.split("\n"):
+                    l_tmp+=f"\t{line}\n"
+                l_tmp = l_tmp.rstrip()
+                l_tmp += "\n\t```"
+        sent_embed = l_tmp
+        l_timestruct = time.localtime()
+        l_timestamp = "Date:{:02d}.{:02d}.{:04d} Time:{:02d}:{:02d}".format(l_timestruct.tm_mday, l_timestruct.tm_mon, l_timestruct.tm_year,l_timestruct.tm_hour,l_timestruct.tm_min)
+        return f'''                         
+# MESSAGE LOG:
+## Text:
+-   ```  	
+{sent_text}
+    ```
+## Embed fields:
+{sent_embed}
+
+## Other data:
+-   ```
+    Server: {this.guild.name}
+    Succeeded in channels: {succeeded_ch}
+    Failed in channels: {failed_ch}
+    Timestamp: {l_timestamp}
+    ```
+__________________________________________________________
+'''
 
     async def advertise(this):
         l_trace = ""
@@ -149,24 +183,7 @@ class GUILD:
                                 l_embed_log += f"\tField name: {l_embed_msg.name}\n\tField data: {l_embed_msg.value}\n----------------------------------\n"
                         if l_embed_log == "":
                             l_embed_log = None
-                        l_trace += \
-                            f'''\n                         
-###################################################### 
-# MESSAGE LOG:
-######################################################
-## Text:
-    {l_text_to_send}
-        
-## Embed fields:
-{l_embed_log}
-
-## Other data:
-    Server: {this.guild.name}
-    Succeeded in channels: {l_succeded_channels}
-    Failed in channels: {l_errored_channels}
-    Timestamp: {l_msg.generate_timestamp()}
-######################################################
-'''
+                        l_trace = this._generate_log(l_text_to_send, l_embed_to_send, l_succeded_channels, l_errored_channels)
                         TRACE(l_trace, TRACE_LEVELS.NORMAL)
         # Return for file write
         return l_trace if l_trace != "" else None
