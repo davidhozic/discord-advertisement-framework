@@ -1,7 +1,7 @@
 
 # <font size=8>**Shilling Framework Documentation**</font>
 The shilling framework allows you to periodically (absolute or in a random time range)  send messages to discord servers and channels.
-It supports sending normal text or even embeds(you are required to run on an actual bot) and can even accept user defined functions that will be called to get the data you want to send. 
+It supports sending normal text, discord embeds(you are required to run on an actual bot) , files and can even accept user defined functions that will be called to get the data you want to send. 
 The framework also supports formatted logging which tells you what messages succeeded in which channels and failed in which channels(and why they failed).
 
 The below documentation describes everything you need to start shilling, thank you for reading it. If you don't like to read you can skip to the [Getting Started](#getting_started) section.
@@ -53,15 +53,15 @@ To access the function, use: **framework.run(user_callback function here)**
 ### **TRACE**
 The framework allows easy debugging of what went wrong with the framework by printing out trace messages onto the console.
 To enable trace, go to Config.py file and enable **C_DEBUG**.
-You can also enable **C_DEBUG_FILE_OUTPUT** to also log the tracer into a file. **Note** that this is only meant for debugging, if you want to log what messages were sent to discord, see the next [sub section]().<br>
+You can also enable **C_DEBUG_FILE_OUTPUT** to also log the tracer into a file. **Note** that this is only meant for debugging, if you want to log what messages were sent to discord, see the next [section](#logging_sent_msgs).<br>
 
-### **LOG OF SENT MESSAGES**
+### <a id="logging_sent_msgs"></a>**LOG OF SENT MESSAGES**
 The framework can keep a log of sent messages for **each guild/server**. To enable file logging of sent messages, set the parameter [**Generate file log**](#framework_guild_gen_file_log) to True inside each [GUILD OBJECT](#framework_guild).<br> All of these file logs will be Markdown files.
 <br>
 
 ## <a id="getting_started"></a><font size=6>**Getting started**</font>:
 ### <u> Install requirements:</u>
-The very first thing you need to do is install the requered modules which is discord. In the directory you will already see a discord folder, however this does not include it's requirements. The folder only containts slightly modified version of the discord.py API which will not block if a certain channel is in slow mode cooldown, but will skip the channel instead (it will be logged under failed channels if **logging** has been enabled in the [Configuration](Config.py)).
+The very first thing you need to do is install the requered modules which is discord. In the directory you will already see a discord folder, however this does not include it's requirements. The folder only containts slightly modified version of the discord.py API which will not block if a certain channel is in slow mode cooldown, but will skip the channel instead.
 
 ### <u> Configuration </u>
 The framework can be configured in the [Config.py](Config.py) file. You only need to really change the [C_BOT_API_KEY](#DISCORD-TOKEN).
@@ -77,8 +77,9 @@ To get it for an **user account** follow instructions: [INSTRUCTIONS](https://ww
 
 ### <u> Sending messages </u>
 
-To start sending messages you must first create a python file, e.g <u>*main.py*</u> and import <u>**framework**</u>.
-<u>(see examples)</u>
+To start sending messages you must first create a python file, e.g <u>*main.py*</u> and import <u>**framework**</u>.<br>
+I recommend you take a look at <u>**Examples folder**</u>.
+
 
 Then define the server list:
 ```py
