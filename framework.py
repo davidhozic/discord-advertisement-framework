@@ -1,5 +1,5 @@
 from typing import Union, Optional
-import Config, discord, time, asyncio, random, numpy
+import Config, discord, time, asyncio, random
 from debug import *
 import types
 
@@ -157,7 +157,6 @@ __________________________________________________________
                     l_files_to_send  = []
                     # Check data type of data
                     if isinstance(l_data_to_send, list) or isinstance(l_data_to_send, tuple):
-                        l_data_to_send = numpy.array(l_data_to_send).flatten()   # Merge multidimensional arrays into one dimension
                         for element in l_data_to_send:
                             if isinstance(element, str):
                                 l_text_to_send = element

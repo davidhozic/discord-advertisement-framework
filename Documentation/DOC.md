@@ -6,41 +6,60 @@ The framework also supports formatted logging which tells you what messages succ
 
 The below documentation describes everything you need to start shilling, thank you for reading it. If you don't like to read you can skip to the [Getting Started](#getting_started) section.
 ***
-## <font size=5> **Framework creatable objects** </font>:
+<br>
 
-- **GUILD**:
+## <font size=6> **Framework creatable objects** </font>:
+
+- <a id="framework_file"> </a>framework.**FILE**:
+    - The **FILE** objects represents a file you want to send to discord. 
+    - <u>Parameters</u>:
+        - filename  - path to the file you want to send to discord
+        <br><br>
+- <a id="framework_guild"> </a>framework.**GUILD**:
     - The **GUILD** object represents a server to which messages will be sent.
     - <u>Parameters</u>:
         - **Guild ID** - identificator which can be obtain by enabling [developer mode (a.k.a application test mode)](https://discord.com/developers/docs/game-sdk/store) in discord's settings and afterwards right-clicking on the server/guild icon in the server list and clicking **"Copy ID"**,
         - **List of <u>MESSAGE</u> objects** - Python list or tuple contating **MESSAGE** objects.
-        - **Generate file log** - bool variable, if True it will generate a file log for each message send attempt.
+        - <a id="framework_guild_gen_file_log"></a>**Generate file log** - bool variable, if True it will generate a file log for each message send attempt.
     <br><br>
--  **MESSAGE** 
+-  framework.**MESSAGE** 
     - The **MESSAGE** object containts parameters which contain data that will be sent to the server/guild but also contains parameters that specify behaviour.
     - <u>Parameters</u>:
         - **Start Period** , **End Period** (start_period, end_period) - These 2 parameters specify the period on which the messages will be sent.
             - **Start Period** can be either:
               - None - Messages will be sent on intervals specified by **End period**,
-              - Integer  >= 0 - Messages will be sent on intervals **randomly** chosen between **<u>Start period** and **End period</u>**, where the randomly chosen intervals will be randomized after each sent message.<br><br>
+              - Integer  >= 0 - Messages will be sent on intervals **randomly** chosen between **<u>Start period** and **End period</u>**, where the randomly chosen intervals will be re-randomized after each sent message.<br><br>
         - **Data** (data) - The data parameter is the actual data that will be sent using discord's API. The **data types** of this parameter can be:
-          - String (normal text),
-          - [Embed](https://www.quora.com/What-are-embeds-on-Discord) ,
-          - List containing: string or embed or (string and embed) - Order in list does not matter,
+          - **String** (normal text),
+          - [Embed](https://www.quora.com/What-are-embeds-on-Discord),
+          - [framework.**FILE**](#framework_file),
+          - **List/Tuple** containing any of the above arguments (There can up to **1** string, up to **1** embed and up to **10** [framework.FILE](#framework_file) objects)
           - **Function** that returns any of the above parameters and **accepts no parameter**
-          - **Tuple of a <u>function</u> and <u>it's parameters**</u>.<br><br>
+          - **Tuple/list of a <u>function</u> and <u>it's parameters**</u>.<br><br>
         - **Channel IDs** (channel_ids) - List of IDs of all the channels you want data to be sent into.
         - **Clear Previous** (clear_previous) - A bool variable that can be either True of False. If True, then before sending a new message to the channels, the framework will delete all previous messages sent to discord that originated from this message object.
         - **Start Now** (start_now) - A bool variable that can be either True or False. If True, then the framework will send the message as soon as it is run and then wait it's period before trying again. If False, then the message will not be sent immediatly after framework is ready, but will instead wait for the period to elapse.
 ***
-## <font size=5> **Functions** </font>:
+<br>
+
+## <font size=6> **Functions** </font>:
 The framework only gives you one function to call making it easy to use.
 That function is **run**. The function only accepts one parameter  called user_callback which is a **function that will be called after the framework has been initialized**.
 To access the function, use: **framework.run(user_callback function here)**
 ***
+<br>
 
+## <font size=6> **Logging** </font>:
+### **TRACE**
+The framework allows easy debugging of what went wrong with the framework by printing out trace messages onto the console.
+To enable trace, go to Config.py file and enable **C_DEBUG**.
+You can also enable **C_DEBUG_FILE_OUTPUT** to also log the tracer into a file. **Note** that this is only meant for debugging, if you want to log what messages were sent to discord, see the next [sub section]().<br>
 
-## <a id="getting_started"></a><font size=5>**Getting started**</font>:
+### **LOG OF SENT MESSAGES**
+The framework can keep a log of sent messages for **each guild/server**. To enable file logging of sent messages, set the parameter [**Generate file log**](#framework_guild_gen_file_log) to True inside each [GUILD OBJECT](#framework_guild).<br> All of these file logs will be Markdown files.
+<br>
 
+## <a id="getting_started"></a><font size=6>**Getting started**</font>:
 ### <u> Install requirements:</u>
 The very first thing you need to do is install the requered modules which is discord. In the directory you will already see a discord folder, however this does not include it's requirements. The folder only containts slightly modified version of the discord.py API which will not block if a certain channel is in slow mode cooldown, but will skip the channel instead (it will be logged under failed channels if **logging** has been enabled in the [Configuration](Config.py)).
 
@@ -59,7 +78,7 @@ To get it for an **user account** follow instructions: [INSTRUCTIONS](https://ww
 ### <u> Sending messages </u>
 
 To start sending messages you must first create a python file, e.g <u>*main.py*</u> and import <u>**framework**</u>.
-
+<u>(see examples)</u>
 
 Then define the server list:
 ```py
@@ -75,7 +94,8 @@ framework.GUILD.server_list = [
         [                # List MESSAGE objects 
             framework.MESSAGE(start_period=None, end_period=0, data="", channel_ids=[123456789, 123456789], clear_previous=False, start_now=True),
             framework.MESSAGE(start_period=None, end_period=0, data="", channel_ids=[123456789, 123456789], clear_previous=False, start_now=True),
-        ]
+        ],
+        True            # Create file log of sent messages for this server
     ),
 
     # GUILD 2
@@ -84,7 +104,8 @@ framework.GUILD.server_list = [
         [                # List MESSAGE objects 
             framework.MESSAGE(start_period=None, end_period=0, data="", channel_ids=[123456789, 123456789], clear_previous=False, start_now=True),
             framework.MESSAGE(start_period=None, end_period=0, data="", channel_ids=[123456789, 123456789], clear_previous=False, start_now=True),
-        ]
+        ],
+        True            # Create file log of sent messages for this server
     ),
 
     # GUILD n
@@ -93,7 +114,8 @@ framework.GUILD.server_list = [
         [                # List MESSAGE objects 
             framework.MESSAGE(start_period=None, end_period=0, data="", channel_ids=[123456789, 123456789], clear_previous=False, start_now=True),
             framework.MESSAGE(start_period=None, end_period=0, data="", channel_ids=[123456789, 123456789], clear_previous=False, start_now=True),
-        ]
+        ],
+        True            # Create file log of sent messages for this server
     )
 ]
 ```
