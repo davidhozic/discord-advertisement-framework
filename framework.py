@@ -1,7 +1,8 @@
-from typing import Any, Set, Tuple, Union, Optional
+from typing import Union, Optional
 import Config, discord, time, asyncio, random
 from debug import *
 import types
+
 
 
 # Contants
@@ -31,8 +32,13 @@ class TIMER:
         this.running = False
 
 
+class FILE:
+    def __init__(this, filename):
+        this.filename = filename
+
+
 class MESSAGE:
-    def __init__(this, start_period : float, end_period : float, data : Union[str, discord.Embed, list[Union[str,discord.Embed]], types.FunctionType, Tuple[types.FunctionType,  Any]], channel_ids : list[int], clear_previous : bool, start_now : bool):
+    def __init__(this, start_period : float, end_period : float, data : Union[str, discord.Embed, list, types.FunctionType, FILE], channel_ids : list, clear_previous : bool, start_now : bool):
         if start_period is None:            # If start_period is none -> period will not be randomized
             this.randomized_time = False
             this.period = end_period 
@@ -47,17 +53,12 @@ class MESSAGE:
         this.clear_previous = clear_previous
         this.force = start_now
         this.sent_msg_objs = []
-    def generate_timestamp(this):
-        l_timestruct = time.localtime()
-        l_timestamp = "Date:{:02d}.{:02d}.{:04d} Time:{:02d}:{:02d}"
-        return l_timestamp.format(l_timestruct.tm_mday, l_timestruct.tm_mon, l_timestruct.tm_year,l_timestruct.tm_hour,l_timestruct.tm_min)
-
-
+   
 class GUILD:
     server_list = []
     bot_object = discord.Client()
 
-    def __init__(this, guild_id : int,  messages_to_send : list[MESSAGE], generate_log : Optional[bool] = True):
+    def __init__(this, guild_id : int,  messages_to_send : list, generate_log : Optional[bool] = False):
         this.guild =    guild_id
         this.messages = messages_to_send
         this.generate_log = generate_log
@@ -80,6 +81,52 @@ class GUILD:
         else:
             TRACE(f"Unable to create server object from server id: {l_guild_id}", TRACE_LEVELS.ERROR)
 
+    def _generate_log(this, sent_text : str, sent_embed : discord.Embed, sent_files : list, succeeded_ch : list, failed_ch : list):
+        l_tmp = ""
+        if sent_text:
+            l_tmp += "-   ```\n"
+            for line in sent_text.split("\n"):
+                l_tmp += f"\t{line}\n"
+            l_tmp += "    ```"
+        sent_text = l_tmp
+        l_tmp = ""
+        if sent_embed:
+            for field in sent_embed.fields:
+                l_tmp += f"\n- {field.name}\n\t```\n"
+
+                for line in field.value.split("\n"):
+                    l_tmp+=f"\t{line}\n"
+                l_tmp = l_tmp.rstrip()
+                l_tmp += "\n\t```"
+        sent_embed = l_tmp
+        l_tmp = ""
+        if sent_files.__len__():
+            l_tmp += "-   ```\n"
+            for filename in sent_files:
+                l_tmp += f"\t{filename}\n"
+            l_tmp += "    ```"
+        sent_files = l_tmp
+        l_timestruct = time.localtime()
+        l_timestamp = "Date:{:02d}.{:02d}.{:04d} Time:{:02d}:{:02d}".format(l_timestruct.tm_mday, l_timestruct.tm_mon, l_timestruct.tm_year,l_timestruct.tm_hour,l_timestruct.tm_min)
+        return f'''                         
+# MESSAGE LOG:
+## Text:
+{sent_text}
+## Embed fields:
+{sent_embed}
+## Files:
+{sent_files}
+
+## Other data:
+-   ```
+    Server: {this.guild.name}
+    Succeeded in channels: {succeeded_ch}
+    Failed in channels: {failed_ch}
+    Timestamp: {l_timestamp}
+    ```
+__________________________________________________________
+'''
+
     async def advertise(this):
         l_trace = ""
         if this.guild != None:
@@ -95,7 +142,7 @@ class GUILD:
                     if l_msg.clear_previous:
                         for l_sent_msg_obj in l_msg.sent_msg_objs:
                             await l_sent_msg_obj.delete()
-                    l_msg.sent_msg_objs.clear()
+                        l_msg.sent_msg_objs.clear()
 
 
                     # Check if function was passed or function tuple
@@ -105,7 +152,7 @@ class GUILD:
                             l_data_to_send = l_msg.data()
                         except Exception as ex:
                             TRACE(f"Error calling the function: Exception : {ex}", TRACE_LEVELS.ERROR)
-                    elif isinstance(l_msg.data, tuple) or isinstance(l_msg.data, list): # array of function with it's parameters
+                    elif (isinstance(l_msg.data, tuple) or isinstance(l_msg.data, list)) and l_msg.data.__len__() and callable(l_msg.data[0]): # array of function with it's parameters
                         try:
                             l_data_to_send = l_msg.data[0](*l_msg.data[1:]) # First element is function, the rest are it's parameters
                         except Exception as ex:
@@ -116,6 +163,7 @@ class GUILD:
 
                     l_embed_to_send = None
                     l_text_to_send  = None
+                    l_files_to_send  = []
                     # Check data type of data
                     if isinstance(l_data_to_send, list) or isinstance(l_data_to_send, tuple):
                         for element in l_data_to_send:
@@ -123,20 +171,37 @@ class GUILD:
                                 l_text_to_send = element
                             elif isinstance(element, discord.Embed):
                                 l_embed_to_send = element
+                            elif isinstance(element, FILE):
+                                l_files_to_send.append(element)
                     elif isinstance(l_data_to_send, discord.Embed):
                         l_embed_to_send = l_data_to_send
                     elif isinstance(l_data_to_send, str):
                         l_text_to_send = l_data_to_send
+                    elif isinstance(l_data_to_send, FILE):
+                        l_files_to_send.append(l_data_to_send)
                     
                     # Send messages                     
-                    if l_text_to_send is not None or l_embed_to_send is not None:
+                    if l_text_to_send or l_embed_to_send or l_files_to_send.__len__():
                         l_errored_channels = []
                         l_succeded_channels= []
+                        l_file_to_send_names = [x.filename for x in l_files_to_send]
                         for l_channel in l_msg.channels:
                             try:
                                 if l_channel.guild.id != this.guild.id:
                                     raise Exception(f"Channel is not in part of this guild ({this.guild.name}) but is part of a different guild ({l_channel.guild.name})")
-                                l_discord_sent_msg = await l_channel.send(l_text_to_send, embed=l_embed_to_send)
+                                                                
+                                ## Open files if it's not none
+                                if l_files_to_send.__len__():
+                                    l_files_to_send = [  discord.File(open(x.filename)) for x in l_files_to_send]
+
+                                ## Send message to discord
+                                l_discord_sent_msg = await l_channel.send(l_text_to_send, embed=l_embed_to_send, files=l_files_to_send)
+                                
+                                ## Close files if it was opened
+                                if l_files_to_send.__len__():
+                                    for l_file in l_files_to_send:
+                                        l_file.close()
+
                                 l_succeded_channels.append(l_channel.name)
                                 if l_msg.clear_previous:
                                     l_msg.sent_msg_objs.append(l_discord_sent_msg)
@@ -144,29 +209,12 @@ class GUILD:
                                 l_errored_channels.append(f"{l_channel.name} - Reason: {ex}")
                         
                         l_embed_log = ""
-                        if l_embed_to_send is not None:
+                        if l_embed_to_send:
                             for l_embed_msg in l_embed_to_send.fields:
                                 l_embed_log += f"\tField name: {l_embed_msg.name}\n\tField data: {l_embed_msg.value}\n----------------------------------\n"
                         if l_embed_log == "":
                             l_embed_log = None
-                        l_trace += \
-                            f'''\n                         
-###################################################### 
-# MESSAGE LOG:
-######################################################
-## Text:
-    {l_text_to_send}
-        
-## Embed fields:
-{l_embed_log}
-
-## Other data:
-    Server: {this.guild.name}
-    Succeeded in channels: {l_succeded_channels}
-    Failed in channels: {l_errored_channels}
-    Timestamp: {l_msg.generate_timestamp()}
-######################################################
-'''
+                        l_trace = this._generate_log(l_text_to_send, l_embed_to_send, l_file_to_send_names, l_succeded_channels, l_errored_channels)
                         TRACE(l_trace, TRACE_LEVELS.NORMAL)
         # Return for file write
         return l_trace if l_trace != "" else None
@@ -178,7 +226,7 @@ async def on_ready():
     TRACE(f"Logged in as {GUILD.bot_object.user}", TRACE_LEVELS.NORMAL)
     m_advertiser_task = asyncio.create_task(advertiser())
     asyncio.gather(m_advertiser_task)
-    if m_user_callback is not None:
+    if m_user_callback: # If it's not none
         m_user_callback() # Call user provided function after framework has started
     
 
