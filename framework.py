@@ -1,7 +1,8 @@
-from typing import Any, Tuple, Union, Optional
-import Config, discord, time, asyncio, random
+from typing import Union, Optional
+import Config, discord, time, asyncio, random, numpy
 from debug import *
 import types
+
 
 
 # Contants
@@ -31,8 +32,13 @@ class TIMER:
         this.running = False
 
 
+class FILE:
+    def __init__(this, filename):
+        this.filename = filename
+
+
 class MESSAGE:
-    def __init__(this, start_period : float, end_period : float, data : Union[str, discord.Embed, list, types.FunctionType], channel_ids : list, clear_previous : bool, start_now : bool):
+    def __init__(this, start_period : float, end_period : float, data : Union[str, discord.Embed, list, types.FunctionType, FILE], channel_ids : list, clear_previous : bool, start_now : bool):
         if start_period is None:            # If start_period is none -> period will not be randomized
             this.randomized_time = False
             this.period = end_period 
@@ -47,9 +53,7 @@ class MESSAGE:
         this.clear_previous = clear_previous
         this.force = start_now
         this.sent_msg_objs = []
-    
-
-
+   
 class GUILD:
     server_list = []
     bot_object = discord.Client()
@@ -129,7 +133,7 @@ __________________________________________________________
                     if l_msg.clear_previous:
                         for l_sent_msg_obj in l_msg.sent_msg_objs:
                             await l_sent_msg_obj.delete()
-                    l_msg.sent_msg_objs.clear()
+                        l_msg.sent_msg_objs.clear()
 
 
                     # Check if function was passed or function tuple
@@ -139,7 +143,7 @@ __________________________________________________________
                             l_data_to_send = l_msg.data()
                         except Exception as ex:
                             TRACE(f"Error calling the function: Exception : {ex}", TRACE_LEVELS.ERROR)
-                    elif isinstance(l_msg.data, tuple) or isinstance(l_msg.data, list): # array of function with it's parameters
+                    elif (isinstance(l_msg.data, tuple) or isinstance(l_msg.data, list)) and callable(l_msg.data[0]): # array of function with it's parameters
                         try:
                             l_data_to_send = l_msg.data[0](*l_msg.data[1:]) # First element is function, the rest are it's parameters
                         except Exception as ex:
@@ -150,27 +154,45 @@ __________________________________________________________
 
                     l_embed_to_send = None
                     l_text_to_send  = None
+                    l_files_to_send  = []
                     # Check data type of data
                     if isinstance(l_data_to_send, list) or isinstance(l_data_to_send, tuple):
+                        l_data_to_send = numpy.array(l_data_to_send).flatten()   # Merge multidimensional arrays into one dimension
                         for element in l_data_to_send:
                             if isinstance(element, str):
                                 l_text_to_send = element
                             elif isinstance(element, discord.Embed):
                                 l_embed_to_send = element
+                            elif isinstance(element, FILE):
+                                l_files_to_send.append(element)
                     elif isinstance(l_data_to_send, discord.Embed):
                         l_embed_to_send = l_data_to_send
                     elif isinstance(l_data_to_send, str):
                         l_text_to_send = l_data_to_send
+                    elif isinstance(l_data_to_send, FILE):
+                        l_files_to_send.append(l_data_to_send)
                     
                     # Send messages                     
-                    if l_text_to_send is not None or l_embed_to_send is not None:
+                    if l_text_to_send or l_embed_to_send or l_files_to_send:
                         l_errored_channels = []
                         l_succeded_channels= []
                         for l_channel in l_msg.channels:
                             try:
                                 if l_channel.guild.id != this.guild.id:
                                     raise Exception(f"Channel is not in part of this guild ({this.guild.name}) but is part of a different guild ({l_channel.guild.name})")
-                                l_discord_sent_msg = await l_channel.send(l_text_to_send, embed=l_embed_to_send)
+                                                                
+                                ## Open files if it's not none
+                                if l_files_to_send.__len__() > 0:
+                                    l_files_to_send = [  discord.File(open(x.filename)) for x in l_files_to_send]
+                                
+                                ## Send message to discord
+                                l_discord_sent_msg = await l_channel.send(l_text_to_send, embed=l_embed_to_send, files=l_files_to_send)
+                                
+                                ## Close files if it was opened
+                                if l_files_to_send.__len__() > 0:
+                                    for l_file in l_files_to_send:
+                                        l_file.close()
+
                                 l_succeded_channels.append(l_channel.name)
                                 if l_msg.clear_previous:
                                     l_msg.sent_msg_objs.append(l_discord_sent_msg)
@@ -178,7 +200,7 @@ __________________________________________________________
                                 l_errored_channels.append(f"{l_channel.name} - Reason: {ex}")
                         
                         l_embed_log = ""
-                        if l_embed_to_send is not None:
+                        if l_embed_to_send:
                             for l_embed_msg in l_embed_to_send.fields:
                                 l_embed_log += f"\tField name: {l_embed_msg.name}\n\tField data: {l_embed_msg.value}\n----------------------------------\n"
                         if l_embed_log == "":
@@ -195,7 +217,7 @@ async def on_ready():
     TRACE(f"Logged in as {GUILD.bot_object.user}", TRACE_LEVELS.NORMAL)
     m_advertiser_task = asyncio.create_task(advertiser())
     asyncio.gather(m_advertiser_task)
-    if m_user_callback is not None:
+    if m_user_callback: # If it's not none
         m_user_callback() # Call user provided function after framework has started
     
 
