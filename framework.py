@@ -32,7 +32,7 @@ class TIMER:
 
 
 class MESSAGE:
-    def __init__(this, start_period : float, end_period : float, data : Union[str, discord.Embed, list[Union[str,discord.Embed]], types.FunctionType, Tuple[types.FunctionType,  Any]], channel_ids : list[int], clear_previous : bool, start_now : bool):
+    def __init__(this, start_period : float, end_period : float, data : Union[str, discord.Embed, list, types.FunctionType], channel_ids : list, clear_previous : bool, start_now : bool):
         if start_period is None:            # If start_period is none -> period will not be randomized
             this.randomized_time = False
             this.period = end_period 
@@ -54,7 +54,7 @@ class GUILD:
     server_list = []
     bot_object = discord.Client()
 
-    def __init__(this, guild_id : int,  messages_to_send : list[MESSAGE], generate_log : Optional[bool] = True):
+    def __init__(this, guild_id : int,  messages_to_send : list, generate_log : Optional[bool] = True):
         this.guild =    guild_id
         this.messages = messages_to_send
         this.generate_log = generate_log
