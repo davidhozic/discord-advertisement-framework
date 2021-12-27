@@ -195,7 +195,7 @@ __________________________________________________________
                                     l_msg.sent_msg_objs.append(l_discord_sent_msg)
                             except Exception as ex:
                                 l_error_text = f"{l_channel.name} - Reason: {ex}"
-                                if ex.code == 20016 or ex.code == 429:
+                                if ex.code == 20016 or ex.code == 20028:
                                     l_msg.force_retry["ENABLED"] = True 
                                     l_msg.force_retry["TIME"] = int(ex.response.headers["Retry-After"])/1000
                                     l_error_text += f" - Retrying after {l_msg.force_retry['TIME']} seconds"
