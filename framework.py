@@ -1,7 +1,6 @@
 from typing import Union, Optional
-import Config, discord, time, asyncio, random
+import Config, discord, time, asyncio, random, types, os
 from debug import *
-import types
 
 
 
@@ -36,7 +35,6 @@ class FILE:
     def __init__(this, filename):
         this.filename = filename
 
-
 class MESSAGE:
     def __init__(this, start_period : float, end_period : float, data : Union[str, discord.Embed, list, types.FunctionType, FILE], channel_ids : list, clear_previous : bool, start_now : bool):
         if start_period is None:            # If start_period is none -> period will not be randomized
@@ -51,14 +49,14 @@ class MESSAGE:
         this.channels = channel_ids
         this.timer = TIMER()
         this.clear_previous = clear_previous
-        this.force = start_now
+        this.force_retry = [start_now, 0]
         this.sent_msg_objs = []
    
 class GUILD:
     server_list = []
     bot_object = discord.Client()
 
-    def __init__(this, guild_id : int,  messages_to_send : list, generate_log : Optional[bool] = False):
+    def __init__(this, guild_id : int,  messages_to_send : list, generate_log : Optional[bool] = True):
         this.guild =    guild_id
         this.messages = messages_to_send
         this.generate_log = generate_log
@@ -122,10 +120,10 @@ __________________________________________________________
         l_trace = ""
         if this.guild != None:
             for l_msg in this.messages:
-                if l_msg.force or (l_msg.timer.start() and l_msg.timer.elapsed() > l_msg.period):
+                if l_msg.timer.start() and (not l_msg.force_retry[0] and l_msg.timer.elapsed() > l_msg.period or l_msg.force_retry[0] and l_msg.timer.elapsed() > l_msg.force_retry[1]) :  # If timer has started and timer is above set period/above force_retry period
                     l_msg.timer.reset()
                     l_msg.timer.start()
-                    l_msg.force = False
+                    l_msg.force_retry[0] = False
                     if l_msg.randomized_time == True:           # If first parameter to msg object is != 0
                             l_msg.period = random.randrange(*l_msg.random_range)
                        
@@ -197,6 +195,9 @@ __________________________________________________________
                                     l_msg.sent_msg_objs.append(l_discord_sent_msg)
                             except Exception as ex:
                                 l_errored_channels.append(f"{l_channel.name} - Reason: {ex}")
+                                if ex.code == 20016 or ex.code == 429:
+                                    l_msg.force_retry = [True, int(ex.response.headers["Retry-After"])/1000]
+                                                        
                         
                         l_embed_log = ""
                         if l_embed_to_send:
@@ -231,7 +232,9 @@ async def advertiser():
         for l_server in GUILD.server_list:
             l_ret = await l_server.advertise()
             if l_ret is not None and l_server.generate_log:
-                with open(f"{l_server.guild_file_name}",'a', encoding='utf-8') as l_logfile:
+                if Config.C_SERVER_OUTPUT_FOLDER not in os.listdir("./"):
+                    os.mkdir(Config.C_SERVER_OUTPUT_FOLDER)
+                with open(os.path.join(Config.C_SERVER_OUTPUT_FOLDER, l_server.guild_file_name),'a', encoding='utf-8') as l_logfile:
                     l_logfile.write(l_ret)
 
 def run(user_callback=None):
