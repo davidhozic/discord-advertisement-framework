@@ -49,7 +49,7 @@ class MESSAGE:
         this.channels = channel_ids
         this.timer = TIMER()
         this.clear_previous = clear_previous
-        this.force_retry = [start_now, 0]
+        this.force_retry = {"ENABLED" : start_now, "TIME" : 0}
         this.sent_msg_objs = []
    
 class GUILD:
@@ -120,10 +120,10 @@ __________________________________________________________
         l_trace = ""
         if this.guild != None:
             for l_msg in this.messages:
-                if l_msg.timer.start() and (not l_msg.force_retry[0] and l_msg.timer.elapsed() > l_msg.period or l_msg.force_retry[0] and l_msg.timer.elapsed() > l_msg.force_retry[1]) :  # If timer has started and timer is above set period/above force_retry period
+                if l_msg.timer.start() and (not l_msg.force_retry["ENABLED"] and l_msg.timer.elapsed() > l_msg.period or l_msg.force_retry["ENABLED"] and l_msg.timer.elapsed() > l_msg.force_retry["TIME"]) :  # If timer has started and timer is above set period/above force_retry period
                     l_msg.timer.reset()
                     l_msg.timer.start()
-                    l_msg.force_retry[0] = False
+                    l_msg.force_retry["ENABLED"] = False
                     if l_msg.randomized_time == True:           # If first parameter to msg object is != 0
                             l_msg.period = random.randrange(*l_msg.random_range)
                        
@@ -194,9 +194,12 @@ __________________________________________________________
                                 if l_msg.clear_previous:
                                     l_msg.sent_msg_objs.append(l_discord_sent_msg)
                             except Exception as ex:
-                                l_errored_channels.append(f"{l_channel.name} - Reason: {ex}")
+                                l_error_text = f"{l_channel.name} - Reason: {ex}"
                                 if ex.code == 20016 or ex.code == 429:
-                                    l_msg.force_retry = [True, int(ex.response.headers["Retry-After"])/1000]
+                                    l_msg.force_retry["ENABLED"] = True 
+                                    l_msg.force_retry["TIME"] = int(ex.response.headers["Retry-After"])/1000
+                                    l_error_text += f" - Retrying after {l_msg.force_retry['TIME']} seconds"
+                                l_errored_channels.append(l_error_text)
                                                         
                         
                         l_embed_log = ""
