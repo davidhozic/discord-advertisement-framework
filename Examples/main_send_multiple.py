@@ -11,11 +11,20 @@ import  framework, discord
 l_file1 = framework.FILE("./Examples/main_send_file.py")
 l_file2 = framework.FILE("./Examples/main_send_multiple.py")
 
-## Discord embed
-l_embed = discord.Embed()
-l_embed.add_field(name="First_Field", value="This is embed field 1")
-l_embed.add_field(name="Second_Field", value="This is embed field 2")
-
+## Embedded
+l_embed = framework.EMBED(
+author_name="Developer",
+author_image_url="https://solarsystem.nasa.gov/system/basic_html_elements/11561_Sun.png",
+fields=\
+    [
+        framework.EMBED_FIELD("Test 1", "Hello World", True),
+        framework.EMBED_FIELD("Test 2", "Hello World 2", True),
+        framework.EMBED_FIELD("Test 3", "Hello World 3", True),
+        framework.EMBED_FIELD("No Inline", "This is without inline", False),
+        framework.EMBED_FIELD("Test 4", "Hello World 4", True),
+        framework.EMBED_FIELD("Test 5", "Hello World 5", True)
+    ]
+)
 
 
 framework.GUILD.server_list = [
