@@ -58,7 +58,7 @@ class GUILD:
     server_list = []
     bot_object = discord.Client()
 
-    def __init__(this, guild_id : int,  messages_to_send : list, generate_log : Optional[bool] = False):
+    def __init__(this, guild_id : int,  messages_to_send : list, generate_log : Optional[bool] = True):
         this.guild =    guild_id
         this.messages = messages_to_send
         this.generate_log = generate_log
@@ -81,14 +81,12 @@ class GUILD:
         else:
             TRACE(f"Unable to create server object from server id: {l_guild_id}", TRACE_LEVELS.ERROR)
 
-    def _generate_log(this, sent_text : str, sent_embed : discord.Embed, sent_files : list, succeeded_ch : list, failed_ch : list):
+    def _generate_log(this, sent_text : str, sent_embed : discord.Embed, succeeded_ch : list, failed_ch : list):
         l_tmp = ""
         if sent_text:
-            l_tmp += "-   ```\n"
             for line in sent_text.split("\n"):
                 l_tmp += f"\t{line}\n"
-            l_tmp += "    ```"
-        sent_text = l_tmp
+        sent_text = l_tmp.rstrip()
         l_tmp = ""
         if sent_embed:
             for field in sent_embed.fields:
@@ -99,23 +97,16 @@ class GUILD:
                 l_tmp = l_tmp.rstrip()
                 l_tmp += "\n\t```"
         sent_embed = l_tmp
-        l_tmp = ""
-        if sent_files.__len__():
-            l_tmp += "-   ```\n"
-            for filename in sent_files:
-                l_tmp += f"\t{filename}\n"
-            l_tmp += "    ```"
-        sent_files = l_tmp
         l_timestruct = time.localtime()
         l_timestamp = "Date:{:02d}.{:02d}.{:04d} Time:{:02d}:{:02d}".format(l_timestruct.tm_mday, l_timestruct.tm_mon, l_timestruct.tm_year,l_timestruct.tm_hour,l_timestruct.tm_min)
         return f'''                         
 # MESSAGE LOG:
 ## Text:
+-   ```  	
 {sent_text}
+    ```
 ## Embed fields:
 {sent_embed}
-## Files:
-{sent_files}
 
 ## Other data:
 -   ```
@@ -152,7 +143,7 @@ __________________________________________________________
                             l_data_to_send = l_msg.data()
                         except Exception as ex:
                             TRACE(f"Error calling the function: Exception : {ex}", TRACE_LEVELS.ERROR)
-                    elif (isinstance(l_msg.data, tuple) or isinstance(l_msg.data, list)) and l_msg.data.__len__() and callable(l_msg.data[0]): # array of function with it's parameters
+                    elif (isinstance(l_msg.data, tuple) or isinstance(l_msg.data, list)) and callable(l_msg.data[0]): # array of function with it's parameters
                         try:
                             l_data_to_send = l_msg.data[0](*l_msg.data[1:]) # First element is function, the rest are it's parameters
                         except Exception as ex:
@@ -181,24 +172,23 @@ __________________________________________________________
                         l_files_to_send.append(l_data_to_send)
                     
                     # Send messages                     
-                    if l_text_to_send or l_embed_to_send or l_files_to_send.__len__():
+                    if l_text_to_send or l_embed_to_send or l_files_to_send:
                         l_errored_channels = []
                         l_succeded_channels= []
-                        l_file_to_send_names = [x.filename for x in l_files_to_send]
                         for l_channel in l_msg.channels:
                             try:
                                 if l_channel.guild.id != this.guild.id:
                                     raise Exception(f"Channel is not in part of this guild ({this.guild.name}) but is part of a different guild ({l_channel.guild.name})")
                                                                 
                                 ## Open files if it's not none
-                                if l_files_to_send.__len__():
+                                if l_files_to_send.__len__() > 0:
                                     l_files_to_send = [  discord.File(open(x.filename)) for x in l_files_to_send]
-
+                                
                                 ## Send message to discord
                                 l_discord_sent_msg = await l_channel.send(l_text_to_send, embed=l_embed_to_send, files=l_files_to_send)
                                 
                                 ## Close files if it was opened
-                                if l_files_to_send.__len__():
+                                if l_files_to_send.__len__() > 0:
                                     for l_file in l_files_to_send:
                                         l_file.close()
 
@@ -214,7 +204,7 @@ __________________________________________________________
                                 l_embed_log += f"\tField name: {l_embed_msg.name}\n\tField data: {l_embed_msg.value}\n----------------------------------\n"
                         if l_embed_log == "":
                             l_embed_log = None
-                        l_trace = this._generate_log(l_text_to_send, l_embed_to_send, l_file_to_send_names, l_succeded_channels, l_errored_channels)
+                        l_trace += this._generate_log(l_text_to_send, l_embed_to_send, l_succeded_channels, l_errored_channels)
                         TRACE(l_trace, TRACE_LEVELS.NORMAL)
         # Return for file write
         return l_trace if l_trace != "" else None
