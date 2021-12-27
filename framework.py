@@ -138,8 +138,7 @@ __________________________________________________________
                                     
                         l_msg.sent_msg_objs.clear()
 
-
-                    # Check if function was passed or function tuple
+                    # Call data if data is function and save it's return
                     l_data_to_send  = None     
                     if callable(l_msg.data):    # Function without parameters
                         try:
@@ -158,8 +157,9 @@ __________________________________________________________
                     l_embed_to_send = None
                     l_text_to_send  = None
                     l_files_to_send  = []
-                    # Check data type of data
+                    # Parse the data
                     if isinstance(l_data_to_send, list) or isinstance(l_data_to_send, tuple):
+                        # data is list -> parse each element
                         for element in l_data_to_send:
                             if isinstance(element, str):
                                 l_text_to_send = element
@@ -178,46 +178,42 @@ __________________________________________________________
                     if l_text_to_send or l_embed_to_send or l_files_to_send:
                         l_errored_channels = []
                         l_succeded_channels= []
+
+                        ## Open files
+                        if l_files_to_send:
+                            try:
+                                l_files_to_send = [  discord.File(open(x.filename)) for x in l_files_to_send]
+                            except Exception as ex:
+                                TRACE(f"Unable to open file, error: {ex}", TRACE_LEVELS.ERROR)
                         for l_channel in l_msg.channels:
                             try:
                                 if l_channel.guild.id != this.guild.id:
-                                    raise Exception(f"Channel is not in part of this guild ({this.guild.name}) but is part of a different guild ({l_channel.guild.name})")
-                                                                
-                                ## Open files if it's not none
-                                if l_files_to_send.__len__() > 0:
-                                    l_files_to_send = [  discord.File(open(x.filename)) for x in l_files_to_send]
-                                
+                                    raise Exception(f"Channel is not in part of this guild ({this.guild.name}) but is part of a different guild ({l_channel.guild.name})")                                                                
                                 ## Send message to discord
                                 l_discord_sent_msg = await l_channel.send(l_text_to_send, embed=l_embed_to_send, files=l_files_to_send)
-                                
-                                ## Close files if it was opened
-                                if l_files_to_send.__len__() > 0:
-                                    for l_file in l_files_to_send:
-                                        l_file.close()
-
                                 l_succeded_channels.append(l_channel.name)
                                 if l_msg.clear_previous:
                                     l_msg.sent_msg_objs.append(l_discord_sent_msg)
-                            except Exception as ex:
+                            except Exception as ex:     
+                                # Failed to send message
                                 l_error_text = f"{l_channel.name} - Reason: {ex}"
                                 if ex.status == 429:
                                     l_msg.force_retry["ENABLED"] = True 
                                     l_msg.force_retry["TIME"] = int(ex.response.headers["Retry-After"])/1000    # Slow Mode detected -> wait the remaining time
-                                    if ex.code != 20026:
+                                    if ex.code != 20026:    # Rate limit but not slow mode
                                         await asyncio.sleep(l_msg.force_retry["TIME"] + 1)  # Rate limit (global for account) -> wait!
-                                    
                                     l_error_text += f" - Retrying after {l_msg.force_retry['TIME']} seconds"
                                 l_errored_channels.append(l_error_text)
-                                                        
-                        
-                        l_embed_log = ""
-                        if l_embed_to_send:
-                            for l_embed_msg in l_embed_to_send.fields:
-                                l_embed_log += f"\tField name: {l_embed_msg.name}\n\tField data: {l_embed_msg.value}\n----------------------------------\n"
-                        if l_embed_log == "":
-                            l_embed_log = None
-                        l_trace += this._generate_log(l_text_to_send, l_embed_to_send, l_succeded_channels, l_errored_channels)
-                        
+
+                        ## Close files if it was opened
+                        if l_files_to_send:
+                            for l_file in l_files_to_send:
+                                try:
+                                    l_file.close()                             
+                                except: # If file is already closed
+                                    pass
+
+                        l_trace += this._generate_log(l_text_to_send, l_embed_to_send, l_succeded_channels, l_errored_channels)     # Generate trace of sent file
                         # Save into file
                         if this.generate_log:
                             if Config.C_SERVER_OUTPUT_FOLDER not in os.listdir("./"):
