@@ -56,7 +56,7 @@ class GUILD:
     server_list = []
     bot_object = discord.Client()
 
-    def __init__(this, guild_id : int,  messages_to_send : list, generate_log : Optional[bool] = True):
+    def __init__(this, guild_id : int,  messages_to_send : list, generate_log : Optional[bool] = False):
         this.guild =    guild_id
         this.messages = messages_to_send
         this.generate_log = generate_log
