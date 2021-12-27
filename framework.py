@@ -130,7 +130,12 @@ __________________________________________________________
                     # Clear previous msgs
                     if l_msg.clear_previous:
                         for l_sent_msg_obj in l_msg.sent_msg_objs:
-                            await l_sent_msg_obj.delete()
+                            try:
+                                await l_sent_msg_obj.delete()
+                            except Exception as ex:
+                                if ex.status == 429:
+                                    await asyncio.sleep(int(ex.response.headers["Retry-After"])/1000)
+                                    
                         l_msg.sent_msg_objs.clear()
 
 
@@ -195,12 +200,12 @@ __________________________________________________________
                                     l_msg.sent_msg_objs.append(l_discord_sent_msg)
                             except Exception as ex:
                                 l_error_text = f"{l_channel.name} - Reason: {ex}"
-                                if ex.code == 20016 or ex.code == 20028:
+                                if ex.status == 429:
                                     l_msg.force_retry["ENABLED"] = True 
                                     l_msg.force_retry["TIME"] = int(ex.response.headers["Retry-After"])/1000    # Slow Mode detected -> wait the remaining time
-                                    if ex.code == 20028:
-                                        await asyncio.sleep(l_msg.force_retry["TIME"] + 1)  # Cloudflare ban -> wait!
-
+                                    if ex.code != 20026:
+                                        await asyncio.sleep(l_msg.force_retry["TIME"] + 1)  # Rate limit (global for account) -> wait!
+                                    
                                     l_error_text += f" - Retrying after {l_msg.force_retry['TIME']} seconds"
                                 l_errored_channels.append(l_error_text)
                                                         
@@ -212,9 +217,15 @@ __________________________________________________________
                         if l_embed_log == "":
                             l_embed_log = None
                         l_trace += this._generate_log(l_text_to_send, l_embed_to_send, l_succeded_channels, l_errored_channels)
+                        
+                        # Save into file
+                        if this.generate_log:
+                            if Config.C_SERVER_OUTPUT_FOLDER not in os.listdir("./"):
+                                os.mkdir(Config.C_SERVER_OUTPUT_FOLDER)
+                            with open(os.path.join(Config.C_SERVER_OUTPUT_FOLDER, this.guild_file_name),'a', encoding='utf-8') as l_logfile:
+                                l_logfile.write(l_trace)
+
                         TRACE(l_trace, TRACE_LEVELS.NORMAL)
-        # Return for file write
-        return l_trace if l_trace != "" else None
         
 # Event functions
 @GUILD.bot_object.event
@@ -236,12 +247,8 @@ async def advertiser():
     while True:
         await asyncio.sleep(0.01)
         for l_server in GUILD.server_list:
-            l_ret = await l_server.advertise()
-            if l_ret is not None and l_server.generate_log:
-                if Config.C_SERVER_OUTPUT_FOLDER not in os.listdir("./"):
-                    os.mkdir(Config.C_SERVER_OUTPUT_FOLDER)
-                with open(os.path.join(Config.C_SERVER_OUTPUT_FOLDER, l_server.guild_file_name),'a', encoding='utf-8') as l_logfile:
-                    l_logfile.write(l_ret)
+            await l_server.advertise()
+                
 
 def run(user_callback=None):
     global m_user_callback
