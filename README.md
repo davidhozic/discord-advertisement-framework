@@ -56,7 +56,9 @@ To enable trace, go to Config.py file and enable **C_DEBUG**.
 You can also enable **C_DEBUG_FILE_OUTPUT** to also log the tracer into a file. **Note** that this is only meant for debugging, if you want to log what messages were sent to discord, see the next [section](#logging_sent_msgs).<br>
 
 ### <a id="logging_sent_msgs"></a>**LOG OF SENT MESSAGES**
-The framework can keep a log of sent messages for **each guild/server**. To enable file logging of sent messages, set the parameter [**Generate file log**](#framework_guild_gen_file_log) to True inside each [GUILD OBJECT](#framework_guild).<br> All of these file logs will be Markdown files.
+The framework can keep a log of sent messages for **each guild/server**. To enable file logging of sent messages, set the parameter [**Generate file log**](#framework_guild_gen_file_log) to True inside each [GUILD OBJECT](#framework_guild).<br> 
+Inside the log you will find data of what was sent (text, embed, files), a channel list it succeeded to send this message and a channel list of the ones it failed (If it failed due to slow mode, the message will be sent as soon as possible, overwriting the default period) <br>
+All of these file logs will be Markdown files.
 <br>
 
 ## <a id="getting_started"></a><font size=6>**Getting started**</font>:
@@ -96,7 +98,7 @@ framework.GUILD.server_list = [
             framework.MESSAGE(start_period=None, end_period=0, data="", channel_ids=[123456789, 123456789], clear_previous=False, start_now=True),
             framework.MESSAGE(start_period=None, end_period=0, data="", channel_ids=[123456789, 123456789], clear_previous=False, start_now=True),
         ],
-        True            # Create file log of sent messages for this server
+        generate_log=True            # Create file log of sent messages for this server
     ),
 
     # GUILD 2
@@ -106,7 +108,7 @@ framework.GUILD.server_list = [
             framework.MESSAGE(start_period=None, end_period=0, data="", channel_ids=[123456789, 123456789], clear_previous=False, start_now=True),
             framework.MESSAGE(start_period=None, end_period=0, data="", channel_ids=[123456789, 123456789], clear_previous=False, start_now=True),
         ],
-        True            # Create file log of sent messages for this server
+        generate_log=True            # Create file log of sent messages for this server
     ),
 
     # GUILD n
@@ -116,7 +118,7 @@ framework.GUILD.server_list = [
             framework.MESSAGE(start_period=None, end_period=0, data="", channel_ids=[123456789, 123456789], clear_previous=False, start_now=True),
             framework.MESSAGE(start_period=None, end_period=0, data="", channel_ids=[123456789, 123456789], clear_previous=False, start_now=True),
         ],
-        True            # Create file log of sent messages for this server
+        generate_log=True            # Create file log of sent messages for this server
     )
 ]
 ```
