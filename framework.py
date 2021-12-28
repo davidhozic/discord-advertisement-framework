@@ -124,7 +124,7 @@ __________________________________________________________
                     l_msg.timer.reset()
                     l_msg.timer.start()
                     l_msg.force_retry["ENABLED"] = False
-                    if l_msg.randomized_time == True:           # If first parameter to msg object is != 0
+                    if l_msg.randomized_time == True:           # If first parameter to msg object is != None
                             l_msg.period = random.randrange(*l_msg.random_range)
                        
                     # Clear previous msgs
@@ -214,14 +214,14 @@ __________________________________________________________
                                     pass
 
                         l_trace += this._generate_log(l_text_to_send, l_embed_to_send, l_succeded_channels, l_errored_channels)     # Generate trace of sent file
-                        # Save into file
-                        if this.generate_log:
-                            if Config.C_SERVER_OUTPUT_FOLDER not in os.listdir("./"):
-                                os.mkdir(Config.C_SERVER_OUTPUT_FOLDER)
-                            with open(os.path.join(Config.C_SERVER_OUTPUT_FOLDER, this.guild_file_name),'a', encoding='utf-8') as l_logfile:
-                                l_logfile.write(l_trace)
+            # Save into file
+            if this.generate_log and l_trace:
+                if Config.C_SERVER_OUTPUT_FOLDER not in os.listdir("./"):
+                    os.mkdir(Config.C_SERVER_OUTPUT_FOLDER)
+                with open(os.path.join(Config.C_SERVER_OUTPUT_FOLDER, this.guild_file_name),'a', encoding='utf-8') as l_logfile:
+                    l_logfile.write(l_trace)
 
-                        TRACE(l_trace, TRACE_LEVELS.NORMAL)
+                TRACE(l_trace, TRACE_LEVELS.NORMAL)
         
 # Event functions
 @GUILD.bot_object.event
