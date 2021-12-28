@@ -79,12 +79,14 @@ class GUILD:
         else:
             TRACE(f"Unable to create server object from server id: {l_guild_id}", TRACE_LEVELS.ERROR)
 
-    def _generate_log(this, sent_text : str, sent_embed : discord.Embed, succeeded_ch : list, failed_ch : list):
+    def _generate_log(this, sent_text : str, sent_embed : discord.Embed, sent_files : list, succeeded_ch : list, failed_ch : list):
         l_tmp = ""
         if sent_text:
+            l_tmp += "-   ```\n"
             for line in sent_text.split("\n"):
                 l_tmp += f"\t{line}\n"
-        sent_text = l_tmp.rstrip()
+            l_tmp += "    ```"
+        sent_text = l_tmp
         l_tmp = ""
         if sent_embed:
             for field in sent_embed.fields:
@@ -95,16 +97,23 @@ class GUILD:
                 l_tmp = l_tmp.rstrip()
                 l_tmp += "\n\t```"
         sent_embed = l_tmp
+        l_tmp = ""
+        if sent_files.__len__():
+            l_tmp += "-   ```\n"
+            for filename in sent_files:
+                l_tmp += f"\t{filename}\n"
+            l_tmp += "    ```"
+        sent_files = l_tmp
         l_timestruct = time.localtime()
         l_timestamp = "Date:{:02d}.{:02d}.{:04d} Time:{:02d}:{:02d}".format(l_timestruct.tm_mday, l_timestruct.tm_mon, l_timestruct.tm_year,l_timestruct.tm_hour,l_timestruct.tm_min)
         return f'''                         
 # MESSAGE LOG:
 ## Text:
--   ```  	
 {sent_text}
-    ```
 ## Embed fields:
 {sent_embed}
+## Files:
+{sent_files}
 
 ## Other data:
 -   ```
@@ -153,7 +162,7 @@ __________________________________________________________
                     else:
                         l_data_to_send = l_msg.data
 
-
+                    
                     l_embed_to_send = None
                     l_text_to_send  = None
                     l_files_to_send  = []
@@ -181,30 +190,38 @@ __________________________________________________________
 
                         ## Open files
                         if l_files_to_send:
-                            try:
-                                l_files_to_send = [  discord.File(open(x.filename)) for x in l_files_to_send]
-                            except Exception as ex:
-                                TRACE(f"Unable to open file, error: {ex}", TRACE_LEVELS.ERROR)
+                            l_tmp = l_files_to_send
+                            l_files_to_send = []
+                            for l_fileobj in l_tmp:
+                                try:
+                                    l_files_to_send.append(open(l_fileobj.filename, "rb"))
+                                except Exception as l_file_exception:  
+                                    TRACE(f"FILE_EXCEPTION for file: {l_fileobj.filename} | Exception: {l_file_exception}", TRACE_LEVELS.ERROR) 
+                        
+                        # Send to channels
                         for l_channel in l_msg.channels:
                             try:
                                 if l_channel.guild.id != this.guild.id:
-                                    raise Exception(f"Channel is not in part of this guild ({this.guild.name}) but is part of a different guild ({l_channel.guild.name})")                                                                
-                                ## Send message to discord
-                                l_discord_sent_msg = await l_channel.send(l_text_to_send, embed=l_embed_to_send, files=l_files_to_send)
+                                    raise Exception(f"Channel is not in part of this guild ({this.guild.name}) but is part of a different guild ({l_channel.guild.name})")     
+
+                                # SEND TO CHANNEL
+                                l_discord_sent_msg = await l_channel.send(l_text_to_send, embed=l_embed_to_send, files=[discord.File(x) for x in l_files_to_send])
+
                                 l_succeded_channels.append(l_channel.name)
                                 if l_msg.clear_previous:
                                     l_msg.sent_msg_objs.append(l_discord_sent_msg)
-                            except Exception as ex:     
+                            except discord.HTTPException as ex:     
                                 # Failed to send message
                                 l_error_text = f"{l_channel.name} - Reason: {ex}"
                                 if ex.status == 429:
                                     l_msg.force_retry["ENABLED"] = True 
                                     l_msg.force_retry["TIME"] = int(ex.response.headers["Retry-After"])/1000    # Slow Mode detected -> wait the remaining time
-                                    if ex.code != 20026:    # Rate limit but not slow mode
-                                        await asyncio.sleep(l_msg.force_retry["TIME"] + 1)  # Rate limit (global for account) -> wait!
+                                    if ex.code != 20026:    # Rate limit but not slow mode -> put the framework to sleep as it won't be able to send any messages globaly
+                                        await asyncio.sleep(l_msg.force_retry["TIME"])  # Rate limit (global for account) -> wait!
                                     l_error_text += f" - Retrying after {l_msg.force_retry['TIME']} seconds"
                                 l_errored_channels.append(l_error_text)
-
+                            except OSError as ex:
+                                TRACE(f"Error sending data to channels | Exception:{ex}",TRACE_LEVELS.ERROR)
                         ## Close files if it was opened
                         if l_files_to_send:
                             for l_file in l_files_to_send:
@@ -213,15 +230,13 @@ __________________________________________________________
                                 except: # If file is already closed
                                     pass
 
-                        l_trace += this._generate_log(l_text_to_send, l_embed_to_send, l_succeded_channels, l_errored_channels)     # Generate trace of sent file
+                        l_trace += this._generate_log(l_text_to_send, l_embed_to_send, [x.name for x in l_files_to_send], l_succeded_channels, l_errored_channels)     # Generate trace of sent file
             # Save into file
             if this.generate_log and l_trace:
                 if Config.C_SERVER_OUTPUT_FOLDER not in os.listdir("./"):
                     os.mkdir(Config.C_SERVER_OUTPUT_FOLDER)
                 with open(os.path.join(Config.C_SERVER_OUTPUT_FOLDER, this.guild_file_name),'a', encoding='utf-8') as l_logfile:
                     l_logfile.write(l_trace)
-
-                TRACE(l_trace, TRACE_LEVELS.NORMAL)
         
 # Event functions
 @GUILD.bot_object.event
