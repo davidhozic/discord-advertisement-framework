@@ -18,7 +18,7 @@ The below documentation describes everything you need to start shilling, thank y
 - <a id="framework_guild"> </a>framework.**GUILD**:
     - The **GUILD** object represents a server to which messages will be sent.
     - <u>Parameters</u>:
-        - **Guild ID** - identificator which can be obtain by enabling [developer mode (a.k.a application test mode)](https://discord.com/developers/docs/game-sdk/store) in discord's settings and afterwards right-clicking on the server/guild icon in the server list and clicking **"Copy ID"**,
+        - **Guild ID** - identificator which can be obtain by enabling [developer mode](https://techswift.org/2020/09/17/how-to-enable-developer-mode-in-discord/) in discord's settings and afterwards right-clicking on the server/guild icon in the server list and clicking **"Copy ID"**,
         - **List of <u>MESSAGE</u> objects** - Python list or tuple contating **MESSAGE** objects.
         - <a id="framework_guild_gen_file_log"></a>**Generate file log** - bool variable, if True it will generate a file log for each message send attempt.
     <br><br>
