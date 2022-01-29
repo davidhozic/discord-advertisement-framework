@@ -76,13 +76,14 @@ class EMBED(discord.Embed):
         pass
     
     # Functions
-    def __init__(this, *,author_name:str=discord.embeds.EmptyEmbed,author_image_url=discord.embeds.EmptyEmbed, image :str=None, fields : list):
+    def __init__(this, *,author_name:str=None,author_image_url=discord.embeds.EmptyEmbed, image :str=None, fields : list):
         super().__init__()
         ## Set author
         ### Raise exception if incorrect parameters are passed
-        if not isinstance(author_name, Union[str,discord.embeds._EmptyEmbed]) or not isinstance(author_image_url, Union[str,discord.embeds._EmptyEmbed]):
+        if not isinstance(author_name, Union[str,discord.embeds._EmptyEmbed,None]) or not isinstance(author_image_url, Union[str,discord.embeds._EmptyEmbed]):
              raise EMBED.AuthorException(EMBED.C_AUTHOR_EXCEPT)
-        this.set_author(name=author_name, icon_url=author_image_url)
+        if author_name:
+            this.set_author(name=author_name, icon_url=author_image_url)
            
         ## Set image
         if image:
