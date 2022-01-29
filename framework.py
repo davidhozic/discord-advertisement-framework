@@ -1,5 +1,5 @@
-from typing import Union, Optional
 import Config, discord, time, asyncio, random, types, os
+from typing import  Union
 from debug import *
 
 
@@ -12,7 +12,6 @@ C_MINUTE_TO_SECOND = 60
 
 # Globals
 m_user_callback = None  # User provided function to call after framework is ready
-m_advertiser_task : asyncio.Task = None
 
 # Classes
 class TIMER:
@@ -29,6 +28,77 @@ class TIMER:
         return time.time() - this.ms if this.running else 0
     def reset (this):
         this.running = False
+
+class EMBED_FIELD:
+    """
+    Embedded field class for use in EMBED object constructor
+    Parameters:
+    -  Name         : str    -- Name of the field 
+    -  Content      : str    -- Content of the embedded field
+    -  Inline       : bool   -- Make this field appear in the same line as the previous field
+    """
+    def __init__(this, name : str, content : str, inline : bool=False):
+        this.name = name
+        this.content = content 
+        this.inline = inline
+
+    def __iter__(this):
+        class EMBED_FIELD_ITER:
+            def __init__(this, data):
+                this.__data = data
+                this.__index = 0
+                this.__max = len(data)
+            def __next__(this):
+                if this.__index == this.__max:
+                    raise StopIteration
+                this.__index +=1
+                return this.__data[this.__index-1]
+        return EMBED_FIELD_ITER([this.name, this.content,this.inline])
+  
+       
+        
+class EMBED(discord.Embed):
+    """
+    Derrived class of discord.Embed with easier definition
+        Parameters: 
+            - author_name       : str   -- Name of embed author
+            - author_image_url  : str   -- Url to author image
+            - image             : str   -- Url of image to be placed at the end of the embed
+            - fields            : list  -- List of EMBED_FIELD objects
+    """
+    # Exceptions
+    C_AUTHOR_EXCEPT = "Incorrect author parameters"
+    class AuthorException(BaseException):
+        pass
+    C_FIELD_PARAM_EXCEPT  = "The fields parameter must be a list of class EMBED_FIELD"
+    C_FIELD_LEN_EXCEPT    = "The field content can be only up to 1023 per field"
+    class FieldsException(BaseException):
+        pass
+    
+    # Functions
+    def __init__(this, *,author_name:str=discord.embeds.EmptyEmbed,author_image_url=discord.embeds.EmptyEmbed, image :str=None, fields : list):
+        super().__init__()
+        ## Set author
+        ### Raise exception if incorrect parameters are passed
+        if not isinstance(author_name, Union[str,discord.embeds._EmptyEmbed]) or not isinstance(author_image_url, Union[str,discord.embeds._EmptyEmbed]):
+             raise EMBED.AuthorException(EMBED.C_AUTHOR_EXCEPT)
+        this.set_author(name=author_name, icon_url=author_image_url)
+           
+        ## Set image
+        if image:
+            this.set_image(url=image)
+        ## Set fields
+        ### Raise exception if incorrect parameters are passed
+        if not isinstance(fields, list) or not len(fields) or not isinstance(fields[0], EMBED_FIELD):
+            raise EMBED.FieldsException(EMBED.C_FIELD_PARAM_EXCEPT)
+        ### Set fields
+        for field_name, content, inline in fields:
+            if len(content) > 1023:
+                raise EMBED.FieldsException(EMBED.C_FIELD_LEN_EXCEPT) #### Maximum length is 1023
+            this.add_field(name=field_name,value=content,inline=inline)
+        
+
+
 
 
 class FILE:
@@ -56,7 +126,7 @@ class GUILD:
     server_list = []
     bot_object = discord.Client()
 
-    def __init__(this, guild_id : int,  messages_to_send : list, generate_log : Optional[bool] = False):
+    def __init__(this, guild_id : int,  messages_to_send : list, generate_log : bool = False):
         this.guild =    guild_id
         this.messages = messages_to_send
         this.generate_log = generate_log
@@ -172,11 +242,11 @@ __________________________________________________________
                         for element in l_data_to_send:
                             if isinstance(element, str):
                                 l_text_to_send = element
-                            elif isinstance(element, discord.Embed):
+                            elif isinstance(element, EMBED):
                                 l_embed_to_send = element
                             elif isinstance(element, FILE):
                                 l_files_to_send.append(element)
-                    elif isinstance(l_data_to_send, discord.Embed):
+                    elif isinstance(l_data_to_send, EMBED):
                         l_embed_to_send = l_data_to_send
                     elif isinstance(l_data_to_send, str):
                         l_text_to_send = l_data_to_send
@@ -241,17 +311,14 @@ __________________________________________________________
 # Event functions
 @GUILD.bot_object.event
 async def on_ready():
-    global m_advertiser_task
     TRACE(f"Logged in as {GUILD.bot_object.user}", TRACE_LEVELS.NORMAL)
-    m_advertiser_task = asyncio.create_task(advertiser())
-    asyncio.gather(m_advertiser_task)
+    asyncio.gather(asyncio.create_task(advertiser()))
     if m_user_callback: # If it's not none
         m_user_callback() # Call user provided function after framework has started
     
 
 # Advertising task
 async def advertiser(): 
-    global m_advertiser_task
     for l_server in GUILD.server_list:
         await l_server.initialize()
 
@@ -261,9 +328,16 @@ async def advertiser():
             await l_server.advertise()
                 
 
+# Called after framework is ran
 def run(user_callback=None):
     global m_user_callback
     m_user_callback = user_callback   # This function will be called once
     if Config.C_IS_USER:
         TRACE("Bot is an user account which is against discord's ToS",TRACE_LEVELS.WARNING)
     GUILD.bot_object.run(Config.C_BOT_API_KEY, bot=not Config.C_IS_USER)
+
+
+
+
+if __name__ == "__main__":
+    raise Exception("This file is meant as a module, not to run directly! Import it in a sperate py file and call framework.run(user_call_back)")
