@@ -1,9 +1,8 @@
-# -*- coding: utf-8 -*-
-
 """
 The MIT License (MIT)
 
-Copyright (c) 2015-present Rapptz
+Copyright (c) 2015-2021 Rapptz
+Copyright (c) 2021-present Pycord Development
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -24,6 +23,10 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 """
 
+from __future__ import annotations
+
+from typing import Any, Callable, ClassVar, Dict, Iterator, List, Optional, Tuple, Type, TypeVar, overload
+
 from .enums import UserFlags
 
 __all__ = (
@@ -32,34 +35,51 @@ __all__ = (
     'PublicUserFlags',
     'Intents',
     'MemberCacheFlags',
+    'ApplicationFlags',
 )
 
+FV = TypeVar('FV', bound='flag_value')
+BF = TypeVar('BF', bound='BaseFlags')
+
+
 class flag_value:
-    def __init__(self, func):
+    def __init__(self, func: Callable[[Any], int]):
         self.flag = func(None)
         self.__doc__ = func.__doc__
 
-    def __get__(self, instance, owner):
+    @overload
+    def __get__(self: FV, instance: None, owner: Type[BF]) -> FV:
+        ...
+
+    @overload
+    def __get__(self, instance: BF, owner: Type[BF]) -> bool:
+        ...
+
+    def __get__(self, instance: Optional[BF], owner: Type[BF]) -> Any:
         if instance is None:
             return self
         return instance._has_flag(self.flag)
 
-    def __set__(self, instance, value):
+    def __set__(self, instance: BF, value: bool) -> None:
         instance._set_flag(self.flag, value)
 
     def __repr__(self):
-        return '<flag_value flag={.flag!r}>'.format(self)
+        return f'<flag_value flag={self.flag!r}>'
+
 
 class alias_flag_value(flag_value):
     pass
 
-def fill_with_flags(*, inverted=False):
-    def decorator(cls):
+
+def fill_with_flags(*, inverted: bool = False):
+    def decorator(cls: Type[BF]):
+        # fmt: off
         cls.VALID_FLAGS = {
             name: value.flag
             for name, value in cls.__dict__.items()
             if isinstance(value, flag_value)
         }
+        # fmt: on
 
         if inverted:
             max_bits = max(cls.VALID_FLAGS.values()).bit_length()
@@ -68,17 +88,24 @@ def fill_with_flags(*, inverted=False):
             cls.DEFAULT_VALUE = 0
 
         return cls
+
     return decorator
+
 
 # n.b. flags must inherit from this and use the decorator above
 class BaseFlags:
+    VALID_FLAGS: ClassVar[Dict[str, int]]
+    DEFAULT_VALUE: ClassVar[int]
+
+    value: int
+
     __slots__ = ('value',)
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: bool):
         self.value = self.DEFAULT_VALUE
         for key, value in kwargs.items():
             if key not in self.VALID_FLAGS:
-                raise TypeError('%r is not a valid flag name.' % key)
+                raise TypeError(f'{key!r} is not a valid flag name.')
             setattr(self, key, value)
 
     @classmethod
@@ -87,19 +114,19 @@ class BaseFlags:
         self.value = value
         return self
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return isinstance(other, self.__class__) and self.value == other.value
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(self.value)
 
-    def __repr__(self):
-        return '<%s value=%s>' % (self.__class__.__name__, self.value)
+    def __repr__(self) -> str:
+        return f'<{self.__class__.__name__} value={self.value}>'
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[Tuple[str, bool]]:
         for name, value in self.__class__.__dict__.items():
             if isinstance(value, alias_flag_value):
                 continue
@@ -107,16 +134,17 @@ class BaseFlags:
             if isinstance(value, flag_value):
                 yield (name, self._has_flag(value.flag))
 
-    def _has_flag(self, o):
+    def _has_flag(self, o: int) -> bool:
         return (self.value & o) == o
 
-    def _set_flag(self, o, toggle):
+    def _set_flag(self, o: int, toggle: bool) -> None:
         if toggle is True:
             self.value |= o
         elif toggle is False:
             self.value &= ~o
         else:
-            raise TypeError('Value to set for %s must be a bool.' % self.__class__.__name__)
+            raise TypeError(f'Value to set for {self.__class__.__name__} must be a bool.')
+
 
 @fill_with_flags(inverted=True)
 class SystemChannelFlags(BaseFlags):
@@ -152,6 +180,7 @@ class SystemChannelFlags(BaseFlags):
         representing the currently available flags. You should query
         flags via the properties rather than using this raw value.
     """
+
     __slots__ = ()
 
     # For some reason the flags for system channels are "inverted"
@@ -159,10 +188,10 @@ class SystemChannelFlags(BaseFlags):
     # Since this is counter-intuitive from an API perspective and annoying
     # these will be inverted automatically
 
-    def _has_flag(self, o):
+    def _has_flag(self, o: int) -> bool:
         return (self.value & o) != o
 
-    def _set_flag(self, o, toggle):
+    def _set_flag(self, o: int, toggle: bool) -> None:
         if toggle is True:
             self.value &= ~o
         elif toggle is False:
@@ -177,8 +206,24 @@ class SystemChannelFlags(BaseFlags):
 
     @flag_value
     def premium_subscriptions(self):
-        """:class:`bool`: Returns ``True`` if the system channel is used for Nitro boosting notifications."""
+        """:class:`bool`: Returns ``True`` if the system channel is used for "Nitro boosting" notifications."""
         return 2
+
+    @flag_value
+    def guild_reminder_notifications(self):
+        """:class:`bool`: Returns ``True`` if the system channel is used for server setup helpful tips notifications.
+
+        .. versionadded:: 2.0
+        """
+        return 4
+
+    @flag_value
+    def join_notification_replies(self):
+        """:class:`bool`: Returns ``True`` if the system channel is allowing member join sticker replies.
+
+        .. versionadded:: 2.0
+        """
+        return 8
 
 
 @fill_with_flags()
@@ -212,6 +257,7 @@ class MessageFlags(BaseFlags):
         representing the currently available flags. You should query
         flags via the properties rather than using this raw value.
     """
+
     __slots__ = ()
 
     @flag_value
@@ -241,6 +287,41 @@ class MessageFlags(BaseFlags):
         An urgent message is one sent by Discord Trust and Safety.
         """
         return 16
+
+    @flag_value
+    def has_thread(self):
+        """:class:`bool`: Returns ``True`` if the source message is associated with a thread.
+
+        .. versionadded:: 2.0
+        """
+        return 32
+
+    @flag_value
+    def ephemeral(self):
+        """:class:`bool`: Returns ``True`` if the source message is ephemeral.
+
+        .. versionadded:: 2.0
+        """
+        return 64
+
+    @flag_value
+    def loading(self):
+        """:class:`bool`: Returns ``True`` if the source message is deferred.
+
+        The user sees a 'thinking' state
+
+        .. versionadded:: 2.0
+        """
+        return 128
+
+    @flag_value
+    def failed_to_mention_some_roles_in_thread(self):
+        """:class:`bool`: Returns ``True`` if some roles are failed to mention in a thread.
+
+        .. versionadded:: 2.0
+        """
+        return 256
+
 
 @fill_with_flags()
 class PublicUserFlags(BaseFlags):
@@ -296,6 +377,11 @@ class PublicUserFlags(BaseFlags):
         return UserFlags.bug_hunter.value
 
     @flag_value
+    def premium_promo_dismissed(self):
+        """:class:`bool`: Returns ``True`` if the user is marked as dismissed Nitro promotion"""
+        return UserFlags.premium_promo_dismissed.value
+
+    @flag_value
     def hypesquad_bravery(self):
         """:class:`bool`: Returns ``True`` if the user is a HypeSquad Bravery member."""
         return UserFlags.hypesquad_bravery.value
@@ -348,7 +434,23 @@ class PublicUserFlags(BaseFlags):
         """
         return UserFlags.verified_bot_developer.value
 
-    def all(self):
+    @flag_value
+    def discord_certified_moderator(self):
+        """:class:`bool`: Returns ``True`` if the user is a Discord Certified Moderator.
+
+        .. versionadded:: 2.0
+        """
+        return UserFlags.discord_certified_moderator.value
+
+    @flag_value
+    def bot_http_interactions(self):
+        """:class:`bool`: Returns ``True`` if the bot has set an interactions endpoint url.
+
+        .. versionadded:: 2.0
+        """
+        return UserFlags.bot_http_interactions.value
+
+    def all(self) -> List[UserFlags]:
         """List[:class:`UserFlags`]: Returns all public flags the user has."""
         return [public_flag for public_flag in UserFlags if self._has_flag(public_flag.value)]
 
@@ -395,15 +497,15 @@ class Intents(BaseFlags):
 
     __slots__ = ()
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: bool):
         self.value = self.DEFAULT_VALUE
         for key, value in kwargs.items():
             if key not in self.VALID_FLAGS:
-                raise TypeError('%r is not a valid flag name.' % key)
+                raise TypeError(f'{key!r} is not a valid flag name.')
             setattr(self, key, value)
 
     @classmethod
-    def all(cls):
+    def all(cls: Type[Intents]) -> Intents:
         """A factory method that creates a :class:`Intents` with everything enabled."""
         bits = max(cls.VALID_FLAGS.values()).bit_length()
         value = (1 << bits) - 1
@@ -412,14 +514,14 @@ class Intents(BaseFlags):
         return self
 
     @classmethod
-    def none(cls):
+    def none(cls: Type[Intents]) -> Intents:
         """A factory method that creates a :class:`Intents` with everything disabled."""
         self = cls.__new__(cls)
         self.value = self.DEFAULT_VALUE
         return self
 
     @classmethod
-    def default(cls):
+    def default(cls: Type[Intents]) -> Intents:
         """A factory method that creates a :class:`Intents` with everything enabled
         except :attr:`presences` and :attr:`members`.
         """
@@ -462,12 +564,13 @@ class Intents(BaseFlags):
 
         - :func:`on_member_join`
         - :func:`on_member_remove`
-        - :func:`on_member_update` (nickname, roles)
+        - :func:`on_member_update`
         - :func:`on_user_update`
 
         This also corresponds to the following attributes and classes in terms of cache:
 
         - :meth:`Client.get_all_members`
+        - :meth:`Client.get_user`
         - :meth:`Guild.chunk`
         - :meth:`Guild.fetch_members`
         - :meth:`Guild.get_member`
@@ -476,7 +579,7 @@ class Intents(BaseFlags):
         - :attr:`Member.nick`
         - :attr:`Member.premium_since`
         - :attr:`User.name`
-        - :attr:`User.avatar` (:attr:`User.avatar_url` and :meth:`User.avatar_url_as`)
+        - :attr:`User.avatar`
         - :attr:`User.discriminator`
 
         For more information go to the :ref:`member intent documentation <need_members_intent>`.
@@ -503,18 +606,34 @@ class Intents(BaseFlags):
 
     @flag_value
     def emojis(self):
-        """:class:`bool`: Whether guild emoji related events are enabled.
+        """:class:`bool`: Alias of :attr:`.emojis_and_stickers`.
+
+        .. versionchanged:: 2.0
+            Changed to an alias.
+        """
+        return 1 << 3
+
+    @alias_flag_value
+    def emojis_and_stickers(self):
+        """:class:`bool`: Whether guild emoji and sticker related events are enabled.
+
+        .. versionadded:: 2.0
 
         This corresponds to the following events:
 
         - :func:`on_guild_emojis_update`
+        - :func:`on_guild_stickers_update`
 
         This also corresponds to the following attributes and classes in terms of cache:
 
         - :class:`Emoji`
+        - :class:`GuildSticker`
         - :meth:`Client.get_emoji`
+        - :meth:`Client.get_sticker`
         - :meth:`Client.emojis`
+        - :meth:`Client.stickers`
         - :attr:`Guild.emojis`
+        - :attr:`Guild.stickers`
         """
         return 1 << 3
 
@@ -525,6 +644,9 @@ class Intents(BaseFlags):
         This corresponds to the following events:
 
         - :func:`on_guild_integrations_update`
+        - :func:`on_integration_create`
+        - :func:`on_integration_update`
+        - :func:`on_raw_integration_delete`
 
         This does not correspond to any attributes or classes in the library in terms of cache.
         """
@@ -568,6 +690,10 @@ class Intents(BaseFlags):
         - :attr:`VoiceChannel.members`
         - :attr:`VoiceChannel.voice_states`
         - :attr:`Member.voice`
+
+        .. note::
+
+            This intent is required to connect to voice.
         """
         return 1 << 7
 
@@ -577,7 +703,7 @@ class Intents(BaseFlags):
 
         This corresponds to the following events:
 
-        - :func:`on_member_update` (activities, status)
+        - :func:`on_presence_update`
 
         This also corresponds to the following attributes and classes in terms of cache:
 
@@ -607,7 +733,6 @@ class Intents(BaseFlags):
         - :func:`on_message_delete` (both guilds and DMs)
         - :func:`on_raw_message_delete` (both guilds and DMs)
         - :func:`on_raw_message_edit` (both guilds and DMs)
-        - :func:`on_private_channel_create`
 
         This also corresponds to the following attributes and classes in terms of cache:
 
@@ -619,6 +744,12 @@ class Intents(BaseFlags):
         - :func:`on_reaction_add` (both guilds and DMs)
         - :func:`on_reaction_remove` (both guilds and DMs)
         - :func:`on_reaction_clear` (both guilds and DMs)
+
+        .. note::
+
+            As of April 2022 requires opting in explicitly via the developer portal to receive the actual content of the guild messages.
+            Bots in over 100 guilds will need to apply to Discord for verification.
+            See https://support-dev.discord.com/hc/en-us/articles/4404772028055-Message-Content-Access-Deprecation-for-Verified-Bots for more information.
         """
         return (1 << 9) | (1 << 12)
 
@@ -646,6 +777,21 @@ class Intents(BaseFlags):
         - :func:`on_reaction_add` (only for guilds)
         - :func:`on_reaction_remove` (only for guilds)
         - :func:`on_reaction_clear` (only for guilds)
+
+        Without the :attr:`ApplicationFlags.gateway_message_content` intent enabled, the following fields are either an empty string or empty array:
+
+        - :attr:`Message.content`
+        - :attr:`Message.embeds`
+        - :attr:`Message.attachments`
+        - :attr:`Message.components`
+
+        For more information go to the :ref:`message content intent documentation <need_message_content_intent>`.
+
+        .. note::
+
+            As of April 2022 requires opting in explicitly via the developer portal to receive the actual content of the messages.
+            Bots in over 100 guilds will need to apply to Discord for verification.
+            See https://support-dev.discord.com/hc/en-us/articles/4404772028055-Message-Content-Access-Deprecation-for-Verified-Bots for more information.
         """
         return 1 << 9
 
@@ -662,7 +808,6 @@ class Intents(BaseFlags):
         - :func:`on_message_delete` (only for DMs)
         - :func:`on_raw_message_delete` (only for DMs)
         - :func:`on_raw_message_edit` (only for DMs)
-        - :func:`on_private_channel_create`
 
         This also corresponds to the following attributes and classes in terms of cache:
 
@@ -781,6 +926,28 @@ class Intents(BaseFlags):
         This does not correspond to any attributes or classes in the library in terms of cache.
         """
         return 1 << 14
+    
+    @flag_value
+    def scheduled_events(self):
+        """:class:`bool`: Whether "scheduled event" related events are enabled.
+
+        This corresponds to the following events:
+        
+        - :func:`on_scheduled_event_create`
+        - :func:`on_scheduled_event_update`
+        - :func:`on_scheduled_event_delete`
+        - :func:`on_scheduled_event_user_add`
+        - :func:`on_raw_scheduled_event_user_add`
+        - :func:`on_scheduled_event_user_remove`
+        - :func:`on_raw_scheduled_event_user_remove`
+
+        This also corresponds to the following attributes and classes in terms of cache:
+
+        - :class:`ScheduledEvent`
+        - :meth:`Guild.get_scheduled_event`
+        """
+        return 1 << 16
+
 
 @fill_with_flags()
 class MemberCacheFlags(BaseFlags):
@@ -827,16 +994,16 @@ class MemberCacheFlags(BaseFlags):
 
     __slots__ = ()
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: bool):
         bits = max(self.VALID_FLAGS.values()).bit_length()
         self.value = (1 << bits) - 1
         for key, value in kwargs.items():
             if key not in self.VALID_FLAGS:
-                raise TypeError('%r is not a valid flag name.' % key)
+                raise TypeError(f'{key!r} is not a valid flag name.')
             setattr(self, key, value)
 
     @classmethod
-    def all(cls):
+    def all(cls: Type[MemberCacheFlags]) -> MemberCacheFlags:
         """A factory method that creates a :class:`MemberCacheFlags` with everything enabled."""
         bits = max(cls.VALID_FLAGS.values()).bit_length()
         value = (1 << bits) - 1
@@ -845,7 +1012,7 @@ class MemberCacheFlags(BaseFlags):
         return self
 
     @classmethod
-    def none(cls):
+    def none(cls: Type[MemberCacheFlags]) -> MemberCacheFlags:
         """A factory method that creates a :class:`MemberCacheFlags` with everything disabled."""
         self = cls.__new__(cls)
         self.value = self.DEFAULT_VALUE
@@ -856,17 +1023,6 @@ class MemberCacheFlags(BaseFlags):
         return self.value == self.DEFAULT_VALUE
 
     @flag_value
-    def online(self):
-        """:class:`bool`: Whether to cache members with a status.
-
-        For example, members that are part of the initial ``GUILD_CREATE``
-        or become online at a later point. This requires :attr:`Intents.presences`.
-
-        Members that go offline are no longer cached.
-        """
-        return 1
-
-    @flag_value
     def voice(self):
         """:class:`bool`: Whether to cache members that are in voice.
 
@@ -874,7 +1030,7 @@ class MemberCacheFlags(BaseFlags):
 
         Members that leave voice are no longer cached.
         """
-        return 2
+        return 1
 
     @flag_value
     def joined(self):
@@ -885,10 +1041,10 @@ class MemberCacheFlags(BaseFlags):
 
         Members that leave the guild are no longer cached.
         """
-        return 4
+        return 2
 
     @classmethod
-    def from_intents(cls, intents):
+    def from_intents(cls: Type[MemberCacheFlags], intents: Intents) -> MemberCacheFlags:
         """A factory method that creates a :class:`MemberCacheFlags` based on
         the currently selected :class:`Intents`.
 
@@ -906,35 +1062,120 @@ class MemberCacheFlags(BaseFlags):
         self = cls.none()
         if intents.members:
             self.joined = True
-        if intents.presences:
-            self.online = True
         if intents.voice_states:
             self.voice = True
 
-        if not self.joined and self.online and self.voice:
-            self.voice = False
-
         return self
 
-    def _verify_intents(self, intents):
-        if self.online and not intents.presences:
-            raise ValueError('MemberCacheFlags.online requires Intents.presences enabled')
-
+    def _verify_intents(self, intents: Intents):
         if self.voice and not intents.voice_states:
             raise ValueError('MemberCacheFlags.voice requires Intents.voice_states')
 
         if self.joined and not intents.members:
             raise ValueError('MemberCacheFlags.joined requires Intents.members')
 
-        if not self.joined and self.voice and self.online:
-            msg = 'Setting both MemberCacheFlags.voice and MemberCacheFlags.online requires MemberCacheFlags.joined ' \
-                  'to properly evict members from the cache.'
-            raise ValueError(msg)
-
     @property
     def _voice_only(self):
-        return self.value == 2
-
-    @property
-    def _online_only(self):
         return self.value == 1
+
+
+@fill_with_flags()
+class ApplicationFlags(BaseFlags):
+    r"""Wraps up the Discord Application flags.
+
+    .. container:: operations
+
+        .. describe:: x == y
+
+            Checks if two ApplicationFlags are equal.
+        .. describe:: x != y
+
+            Checks if two ApplicationFlags are not equal.
+        .. describe:: hash(x)
+
+            Return the flag's hash.
+        .. describe:: iter(x)
+
+            Returns an iterator of ``(name, value)`` pairs. This allows it
+            to be, for example, constructed as a dict or a list of pairs.
+            Note that aliases are not shown.
+
+    .. versionadded:: 2.0
+
+    Attributes
+    -----------
+    value: :class:`int`
+        The raw value. You should query flags via the properties
+        rather than using this raw value.
+    """
+
+    @flag_value
+    def managed_emoji(self):
+        """:class:`bool`: Returns ``True`` if the application is a managed emoji.
+        """
+        return 1 << 2
+
+    @flag_value
+    def group_dm_create(self):
+        """:class:`bool`: Returns ``True`` if the application can create group DMs.
+        """
+        return 1 << 5
+
+    @flag_value
+    def rpc_has_connected(self):
+        """:class:`bool`: Returns ``True`` if the application has connected to RPC.
+        """
+        return 1 << 11
+
+    @flag_value
+    def gateway_presence(self):
+        """:class:`bool`: Returns ``True`` if the application is verified and is allowed to
+        receive presence information over the gateway.
+        """
+        return 1 << 12
+
+    @flag_value
+    def gateway_presence_limited(self):
+        """:class:`bool`: Returns ``True`` if the application is allowed to receive limited
+        presence information over the gateway.
+        """
+        return 1 << 13
+
+    @flag_value
+    def gateway_guild_members(self):
+        """:class:`bool`: Returns ``True`` if the application is verified and is allowed to
+        receive guild members information over the gateway.
+        """
+        return 1 << 14
+
+    @flag_value
+    def gateway_guild_members_limited(self):
+        """:class:`bool`: Returns ``True`` if the application is allowed to receive limited
+        guild members information over the gateway.
+        """
+        return 1 << 15
+
+    @flag_value
+    def verification_pending_guild_limit(self):
+        """:class:`bool`: Returns ``True`` if the application is currently pending verification
+        and has hit the guild limit.
+        """
+        return 1 << 16
+
+    @flag_value
+    def embedded(self):
+        """:class:`bool`: Returns ``True`` if the application is embedded within the Discord client."""
+        return 1 << 17
+
+    @flag_value
+    def gateway_message_content(self):
+        """:class:`bool`: Returns ``True`` if the application is allowed to read message contents in guilds.
+        """
+        return 1 << 18
+
+    @flag_value
+    def gateway_message_content_limited(self):
+        """:class:`bool`: Returns ``True`` if the application is currently pending verification
+        and has hit the guild limit.
+        """
+        return 1 << 19

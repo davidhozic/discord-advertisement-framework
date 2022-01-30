@@ -9,11 +9,27 @@ The below documentation describes everything you need to start shilling, thank y
 <br>
 
 ## <font size=6> **Framework creatable objects** </font>:
+- <a id="framework_embed"> </a>framework.**EMBED** (available to use if running on a **bot account**):
+    - The **EMBED** class is an inherited class from discord.Embed meaning it has the same methods as [discord.Embed](https://docs.pycord.dev/en/master/api.html?highlight=discord%20embed#discord.Embed) but you can create a full embed without actually having to call those methods. 
+    - <u>Parameters</u>:
+        - Author name  (author_name)        : str   - Name of the embed author
+        - Author Image (author_image_url)   : str   - URL to author's image
+        - Image (image)                     : str   - URL to image that will be placed **at the end** of the embed.
+        - Thumbnail (thumbnail)             : str   - URL to image that will be placed **at top right** of the embed.
+        - Embedded Fields (fields)          : list  - List of [framework.**EMBED_FIELD**](#framework_embed_field)
+        <br><br>
 
+- <a id="framework_embed_field"> </a>framework.**EMBED_FIELD** (available to use if running on a **bot account**):
+    - The **EMBED_FIELD** is used with combination of [framework.**EMBED**:](#framework_embed) as one of it's parameters that represents one of the fields inside the embedded message.
+    - <u>Parameters</u>:
+        - Field name (name)         : str  -  Name of the field
+        - Field content (content)   : str  -  Text that is placed inside the embedded field
+        - Inline (inline)           : bool -  If True and the previous or next embed field also have inline set to true, it will place this field in the same line as the previous or next field
+<br><br>
 - <a id="framework_file"> </a>framework.**FILE**:
     - The **FILE** objects represents a file you want to send to discord. 
     - <u>Parameters</u>:
-        - filename  - path to the file you want to send to discord
+        - File name (filename)  - path to the file you want to send to discord
         <br><br>
 - <a id="framework_guild"> </a>framework.**GUILD**:
     - The **GUILD** object represents a server to which messages will be sent.
@@ -31,7 +47,7 @@ The below documentation describes everything you need to start shilling, thank y
               - Integer  >= 0 - Messages will be sent on intervals **randomly** chosen between **<u>Start period** and **End period</u>**, where the randomly chosen intervals will be re-randomized after each sent message.<br><br>
         - **Data** (data) - The data parameter is the actual data that will be sent using discord's API. The **data types** of this parameter can be:
           - **String** (normal text),
-          - [Embed](https://www.quora.com/What-are-embeds-on-Discord),
+          - [framework.**EMBED**](#framework_embed),
           - [framework.**FILE**](#framework_file),
           - **List/Tuple** containing any of the above arguments (There can up to **1** string, up to **1** embed and up to **10** [framework.FILE](#framework_file) objects)
           - **Function** that returns any of the above parameters and **accepts no parameter**
@@ -63,7 +79,7 @@ All of these file logs will be Markdown files.
 
 ## <a id="getting_started"></a><font size=6>**Getting started**</font>:
 ### <u> Install requirements:</u>
-The very first thing you need to do is install the requered modules which is discord. In the directory you will already see a discord folder, however this does not include it's requirements. The folder only containts slightly modified version of the discord.py API which will not block if a certain channel is in slow mode cooldown, but will skip the channel instead.
+This Shilling framework requires **[PyCord](https://docs.pycord.dev/en/master/)** -- ``python3 -m pip install -U py-cord``.
 
 ### <u> Configuration </u>
 The framework can be configured in the [Config.py](Config.py) file. You only need to really change the [C_BOT_API_KEY](#DISCORD-TOKEN).
@@ -74,7 +90,7 @@ To get it for an **user account** follow instructions: [INSTRUCTIONS](https://ww
 
 - C_IS_USER - Set this to true if you are trying to send messages from an user account
 - C_DEBUG   - If True, it will print trace messages to the console
-- C_DEBUG_FILE_OUTPUT - C_DEBUG needs to be True for this to be considered. If C_DEBUG_FILE_OUTPUT is True, it will print trace into a file, note that trace includes all trace messages, not just a log of what was sent to each server.<br><br>
+- C_DEBUG_FILE_OUTPUT -  If C_DEBUG_FILE_OUTPUT is True, it will print trace into a file (this does not include server logs)
 
 
 ### <u> Sending messages </u>

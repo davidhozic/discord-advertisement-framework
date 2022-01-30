@@ -1,9 +1,8 @@
-# -*- coding: utf-8 -*-
-
 """
 The MIT License (MIT)
 
-Copyright (c) 2015-present Rapptz
+Copyright (c) 2015-2021 Rapptz
+Copyright (c) 2021-present Pycord Development
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -24,8 +23,24 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 """
 
+from __future__ import annotations
+
 from . import utils
 from .mixins import Hashable
+
+from typing import (
+    SupportsInt,
+    TYPE_CHECKING,
+    Union,
+)
+
+if TYPE_CHECKING:
+    import datetime
+    SupportsIntCast = Union[SupportsInt, str, bytes, bytearray]
+
+__all__ = (
+    'Object',
+)
 
 class Object(Hashable):
     """Represents a generic Discord object.
@@ -61,18 +76,33 @@ class Object(Hashable):
         The ID of the object.
     """
 
-    def __init__(self, id):
+    def __init__(self, id: SupportsIntCast):
         try:
             id = int(id)
         except ValueError:
-            raise TypeError('id parameter must be convertable to int not {0.__class__!r}'.format(id)) from None
+            raise TypeError(f'id parameter must be convertible to int not {id.__class__!r}') from None
         else:
             self.id = id
 
-    def __repr__(self):
-        return '<Object id=%r>' % self.id
+    def __repr__(self) -> str:
+        return f'<Object id={self.id!r}>'
 
     @property
-    def created_at(self):
+    def created_at(self) -> datetime.datetime:
         """:class:`datetime.datetime`: Returns the snowflake's creation time in UTC."""
         return utils.snowflake_time(self.id)
+    
+    @property
+    def worker_id(self) -> int:
+        """:class:`int`: Returns the worker id that made the snowflake."""
+        return (self.id & 0x3E0000) >> 17
+
+    @property
+    def process_id(self) -> int:
+        """:class:`int`: Returns the process id that made the snowflake."""
+        return (self.id & 0x1F000) >> 12
+
+    @property
+    def increment_id(self) -> int:
+        """:class:`int`: Returns the increment id that made the snowflake."""
+        return (self.id & 0xFFF)
