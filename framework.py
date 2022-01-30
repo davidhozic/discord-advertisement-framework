@@ -64,6 +64,7 @@ class EMBED(discord.Embed):
             - author_name       : str   -- Name of embed author
             - author_image_url  : str   -- Url to author image
             - image             : str   -- Url of image to be placed at the end of the embed
+            - thumbnail         : str   -- Url of image that will be placed at the top right of embed
             - fields            : list  -- List of EMBED_FIELD objects
     """
     # Exceptions
@@ -76,7 +77,7 @@ class EMBED(discord.Embed):
         pass
     
     # Functions
-    def __init__(this, *,author_name:str=None,author_image_url=discord.embeds.EmptyEmbed, image :str=None, fields : list):
+    def __init__(this, *,author_name:str=None,author_image_url=discord.embeds.EmptyEmbed, image :str=None, thumbnail : str = None, fields : list):
         super().__init__()
         ## Set author
         ### Raise exception if incorrect parameters are passed
@@ -84,10 +85,15 @@ class EMBED(discord.Embed):
              raise EMBED.AuthorException(EMBED.C_AUTHOR_EXCEPT)
         if author_name:
             this.set_author(name=author_name, icon_url=author_image_url)
-           
+
         ## Set image
         if image:
             this.set_image(url=image)
+
+        ## Set thumbnail
+        if thumbnail:
+            this.set_thumbnail(thumbnail)
+        
         ## Set fields
         ### Raise exception if incorrect parameters are passed
         if not isinstance(fields, list) or not len(fields) or not isinstance(fields[0], EMBED_FIELD):
