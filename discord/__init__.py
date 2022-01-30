@@ -1,67 +1,79 @@
-# -*- coding: utf-8 -*-
-
 """
 Discord API Wrapper
 ~~~~~~~~~~~~~~~~~~~
 
 A basic wrapper for the Discord API.
 
-:copyright: (c) 2015-present Rapptz
+:copyright: (c) 2015-2021 Rapptz & (c) 2021-present Pycord Development
 :license: MIT, see LICENSE for more details.
 
 """
 
 __title__ = 'discord'
-__author__ = 'Rapptz'
+__author__ = 'Pycord Development'
 __license__ = 'MIT'
-__copyright__ = 'Copyright 2015-present Rapptz'
-__version__ = '1.7.3'
+__copyright__ = 'Copyright 2015-2021 Rapptz & Copyright 2021-present Pycord Development'
+__version__ = '2.0.0b1'
 
 __path__ = __import__('pkgutil').extend_path(__path__, __name__)
 
-from collections import namedtuple
 import logging
+from typing import NamedTuple, Literal
 
-from .client import Client
-from .appinfo import AppInfo
-from .user import User, ClientUser, Profile
-from .emoji import Emoji
-from .partial_emoji import PartialEmoji
+from . import utils, opus, abc, ui
 from .activity import *
+from .appinfo import *
+from .asset import *
+from .audit_logs import *
+from .bot import *
 from .channel import *
-from .guild import Guild
-from .flags import *
-from .relationship import Relationship
-from .member import Member, VoiceState
-from .message import *
-from .asset import Asset
-from .errors import *
-from .calls import CallMessage, GroupCall
-from .permissions import Permissions, PermissionOverwrite
-from .role import Role, RoleTags
-from .file import File
-from .colour import Color, Colour
-from .integrations import Integration, IntegrationAccount
-from .invite import Invite, PartialInviteChannel, PartialInviteGuild
-from .template import Template
-from .widget import Widget, WidgetMember, WidgetChannel
-from .object import Object
-from .reaction import Reaction
-from . import utils, opus, abc
+from .client import *
+from .cog import Cog
+from .colour import *
+from .commands.__init__ import *
+from .components import *
+from .embeds import *
+from .emoji import *
 from .enums import *
-from .embeds import Embed
-from .mentions import AllowedMentions
-from .shard import AutoShardedClient, ShardInfo
+from .errors import *
+from .file import *
+from .flags import *
+from .guild import *
+from .integrations import *
+from .interactions import *
+from .invite import *
+from .member import *
+from .mentions import *
+from .message import *
+from .object import *
+from .partial_emoji import *
+from .permissions import *
 from .player import *
-from .webhook import *
-from .voice_client import VoiceClient, VoiceProtocol
-from .audit_logs import AuditLogChanges, AuditLogEntry, AuditLogDiff
 from .raw_models import *
+from .reaction import *
+from .role import *
+from .scheduled_events import ScheduledEvent, ScheduledEventLocation
+from .shard import *
+from .stage_instance import *
+from .sticker import *
 from .team import *
-from .sticker import Sticker
+from .template import *
+from .threads import *
+from .user import *
+from .voice_client import *
+from .webhook import *
+from .welcome_screen import *
+from .widget import *
 
-VersionInfo = namedtuple('VersionInfo', 'major minor micro releaselevel serial')
 
-version_info = VersionInfo(major=1, minor=7, micro=3, releaselevel='final', serial=0)
+class VersionInfo(NamedTuple):
+    major: int
+    minor: int
+    micro: int
+    releaselevel: Literal["alpha", "beta", "candidate", "final"]
+    serial: int
+
+
+version_info: VersionInfo = VersionInfo(major=2, minor=0, micro=0, releaselevel='beta', serial=1)
 
 logging.getLogger(__name__).addHandler(logging.NullHandler())
