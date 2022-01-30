@@ -1,4 +1,4 @@
-**Shiller Licence:**
+**Shiller Licence:**<br><br>
 MIT License
 
 
@@ -22,9 +22,11 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
-
-**PyCord Licence:**
+\_
+<br><br><br><br>
+***
+<br><br><br><br>
+**PyCord Licence:**<br><br>
 The MIT License (MIT)
 
 Copyright (c) 2015-2021 Rapptz
