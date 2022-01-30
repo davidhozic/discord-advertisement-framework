@@ -90,7 +90,7 @@ To get it for an **user account** follow instructions: [INSTRUCTIONS](https://ww
 
 - C_IS_USER - Set this to true if you are trying to send messages from an user account
 - C_DEBUG   - If True, it will print trace messages to the console
-- C_DEBUG_FILE_OUTPUT - C_DEBUG needs to be True for this to be considered. If C_DEBUG_FILE_OUTPUT is True, it will print trace into a file, note that trace includes all trace messages, not just a log of what was sent to each server.<br><br>
+- C_DEBUG_FILE_OUTPUT -  If C_DEBUG_FILE_OUTPUT is True, it will print trace into a file (this does not include server logs)
 
 
 ### <u> Sending messages </u>
