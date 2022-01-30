@@ -92,7 +92,7 @@ class EMBED(discord.Embed):
 
         ## Set thumbnail
         if thumbnail:
-            this.set_thumbnail(thumbnail)
+            this.set_thumbnail(url=thumbnail)
         
         ## Set fields
         ### Raise exception if incorrect parameters are passed
