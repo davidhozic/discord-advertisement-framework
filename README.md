@@ -47,7 +47,7 @@ The below documentation describes everything you need to start shilling, thank y
               - Integer  >= 0 - Messages will be sent on intervals **randomly** chosen between **<u>Start period** and **End period</u>**, where the randomly chosen intervals will be re-randomized after each sent message.<br><br>
         - **Data** (data) - The data parameter is the actual data that will be sent using discord's API. The **data types** of this parameter can be:
           - **String** (normal text),
-          - [Embed](https://www.quora.com/What-are-embeds-on-Discord),
+          - [framework.**EMBED**](#framework_embed),
           - [framework.**FILE**](#framework_file),
           - **List/Tuple** containing any of the above arguments (There can up to **1** string, up to **1** embed and up to **10** [framework.FILE](#framework_file) objects)
           - **Function** that returns any of the above parameters and **accepts no parameter**
