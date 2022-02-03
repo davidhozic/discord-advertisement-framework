@@ -17,10 +17,10 @@ def get_data(parameter):
 
 framework.GUILD.server_list = [
     framework.GUILD(
-        guild_id=863071397207212052,        # ID of server (guild)
+        guild_id=123,        # ID of server (guild)
         messages_to_send=[                   # List MESSAGE objects 
                              #    Period will be 5 seconds  ;  To get data, framework will call function get_data everytime before sending to discord 
-            framework.MESSAGE(start_period=None, end_period=5, data=get_data(123), channel_ids=[863071397207212056], clear_previous=False, start_now=True), 
+            framework.MESSAGE(start_period=None, end_period=5, data=get_data(123), channel_ids=[123], clear_previous=False, start_now=True), 
         ],
         generate_log=True 
     )
