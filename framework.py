@@ -13,6 +13,35 @@ C_MINUTE_TO_SECOND = 60
 # Globals
 m_user_callback = None  # User provided function to call after framework is ready
 
+# Decortors
+## Decorator classes
+
+
+class __function_cls_base__:
+    """
+    type:   Dummy class
+    @info:  Used by the framework if data parameter is instance of __FUNCTION_CLS__ (this class is inherited from this class
+                                                                                    making issintance return True, as instances of inherited classes are also instanced of the base class)
+    """
+    pass
+
+def FUNCTION(fnc):
+    """
+    type:   Decorator
+    name:   FUNCTION
+    info:   Decorator used to create a class that will create a callable framework function object
+    return: __FUNCTION_CLS__
+    usage:  \n\n@framework.FUNCTION\ndef function(a,b,c)\n\treturn [str | embed | file | list | tuple]
+    """
+    class __FUNCTION_CLS__(__function_cls_base__):
+        def __init__(this, *args, **kwargs):
+            this.fnc = fnc
+            this.args, this.kwargs = args, kwargs 
+        def __call__(this):
+            return this.fnc(*this.args, **this.kwargs)
+    return __FUNCTION_CLS__
+
+
 # Classes
 class TIMER:
     def __init__(this):
@@ -224,22 +253,13 @@ __________________________________________________________
                                     
                         l_msg.sent_msg_objs.clear()
 
-                    # Call data if data is function and save it's return
+                    
                     l_data_to_send  = None     
-                    if callable(l_msg.data):    # Function without parameters
-                        try:
-                            l_data_to_send = l_msg.data()
-                        except Exception as ex:
-                            TRACE(f"Error calling the function: Exception : {ex}", TRACE_LEVELS.ERROR)
-                    elif (isinstance(l_msg.data, tuple) or isinstance(l_msg.data, list)) and callable(l_msg.data[0]): # array of function with it's parameters
-                        try:
-                            l_data_to_send = l_msg.data[0](*l_msg.data[1:]) # First element is function, the rest are it's parameters
-                        except Exception as ex:
-                            TRACE(f"Error calling the function: Exception : {ex}", TRACE_LEVELS.ERROR)
+                    if isinstance(l_msg.data, __function_cls_base__):    
+                        l_data_to_send = l_msg.data()
                     else:
                         l_data_to_send = l_msg.data
 
-                    
                     l_embed_to_send = None
                     l_text_to_send  = None
                     l_files_to_send  = []
