@@ -58,7 +58,11 @@ Examples folder: [Examples folder](Examples).
               - Integer  >= 0 - Messages will be sent on intervals **randomly** chosen between **<u>Start period** and **End period</u>**, where the randomly chosen intervals will be re-randomized after each sent message.<br><br>
         <a id="framework_message_data"></a>
         - **Data** (data) - The data parameter is the actual data that will be sent using discord's API. The **data types** of this parameter can be:
-          - Function that accepts any ammount of parameters and returns any of the types in the below points. To use a function as a parameter <u>**YOU MUST USE THE [framework.FUNCTION decorator](framework_decorators_function)**</u> on it.<br>
+          - **String** (normal text),
+          - [framework.**EMBED**](#framework_embed),
+          - [framework.**FILE**](#framework_file),
+          - **List/Tuple** containing any of the above arguments (There can up to **1** string, up to **1** embed and up to **10** [framework.FILE](#framework_file) objects, if more than 1 string or embeds are sent, the framework will only consider the last found).
+          - Function that accepts any amount of parameters and returns any of the above types. To pass a function, <u>**YOU MUST USE THE [framework.FUNCTION decorator](framework_decorators_function)**</u> on the function before passing the function to the framework.<br>
           Then when you pass the function to the data parameter, pass it in the next format:
             ```python
             data=function_name(parameter_1, parameter_2, ...., parameter_n)
@@ -66,12 +70,6 @@ Examples folder: [Examples folder](Examples).
             **NOTE**: If you don't use [framework.FUNCTION](framework_decorators_function) decorator the function will only get called once(when you pass it to the data) and will not be called by the framework dynamically.<br>
             Example:<br>
             <image alt="Function parameter" src="DOC_src\function_as_data_parameter_1.png" width=500>
-          <br>
-
-          - **String** (normal text),
-          - [framework.**EMBED**](#framework_embed),
-          - [framework.**FILE**](#framework_file),
-          - **List/Tuple** containing any of the above arguments (There can up to **1** string, up to **1** embed and up to **10** [framework.FILE](#framework_file) objects, if more than 1 string or embeds are sent, the framework will only consider the last found).
         <br><br>
         - **Channel IDs** (channel_ids) - List of IDs of all the channels you want data to be sent into.
         - **Clear Previous** (clear_previous) - A bool variable that can be either True of False. If True, then before sending a new message to the channels, the framework will delete all previous messages sent to discord that originated from this message object.
