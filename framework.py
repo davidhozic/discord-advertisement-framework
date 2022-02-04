@@ -295,28 +295,38 @@ __________________________________________________________
                         
                         # Send to channels
                         for l_channel in l_msg.channels:
-                            try:
-                                if l_channel.guild.id != this.guild.id:
-                                    raise Exception(f"Channel is not in part of this guild ({this.guild.name}) but is part of a different guild ({l_channel.guild.name})")     
+                            for tries in range(3):
+                                try:
+                                    if l_channel.guild.id != this.guild.id:
+                                        raise Exception(f"Channel is not in part of this guild ({this.guild.name}) but is part of a different guild ({l_channel.guild.name})")     
 
-                                # SEND TO CHANNEL
-                                l_discord_sent_msg = await l_channel.send(l_text_to_send, embed=l_embed_to_send, files=[discord.File(x) for x in l_files_to_send])
+                                    # SEND TO CHANNEL
+                                    l_discord_sent_msg = await l_channel.send(l_text_to_send, embed=l_embed_to_send, files=[discord.File(x) for x in l_files_to_send])
+                                    
+                                    l_succeded_channels.append(l_channel.name)
+                                    if l_msg.clear_previous:
+                                        l_msg.sent_msg_objs.append(l_discord_sent_msg)
 
-                                l_succeded_channels.append(l_channel.name)
-                                if l_msg.clear_previous:
-                                    l_msg.sent_msg_objs.append(l_discord_sent_msg)
-                            except discord.HTTPException as ex:     
-                                # Failed to send message
-                                l_error_text = f"{l_channel.name} - Reason: {ex}"
-                                if ex.status == 429:
-                                    l_msg.force_retry["ENABLED"] = True 
-                                    l_msg.force_retry["TIME"] = int(ex.response.headers["Retry-After"]+1)    # Slow Mode detected -> wait the remaining time
-                                    if ex.code != 20026:    # Rate limit but not slow mode -> put the framework to sleep as it won't be able to send any messages globaly
-                                        await asyncio.sleep(l_msg.force_retry["TIME"])  # Rate limit (global for account) -> wait!
-                                    l_error_text += f" - Retrying after {l_msg.force_retry['TIME']} seconds"
-                                l_errored_channels.append(l_error_text)
-                            except OSError as ex:
-                                TRACE(f"Error sending data to channels | Exception:{ex}",TRACE_LEVELS.ERROR)
+                                    break    # Break out of the tries loop
+                                except discord.HTTPException as ex:     
+                                    # Failed to send message
+                                    l_error_text = f"{l_channel.name} - Reason: {ex}"
+                                    if ex.status == 429:
+                                        retry_after = int(ex.response.headers["Retry-After"])  + 1
+                                        # Slow Mode detected -> wait the remaining time
+                                        if ex.code == 20026:
+                                            l_msg.force_retry["ENABLED"] = True 
+                                            l_msg.force_retry["TIME"] = retry_after
+                                            break     
+                                        # Rate limit but not slow mode -> put the framework to sleep as it won't be able to send any messages globaly
+                                        else:    
+                                            await asyncio.sleep(retry_after)  
+
+                                        l_error_text += f" - Retrying after {retry_after}"
+                                    l_errored_channels.append(l_error_text)
+                                except OSError as ex:
+                                    TRACE(f"Error sending data to channel | Exception:{ex}",TRACE_LEVELS.ERROR)
+                                    break
                         ## Close files if it was opened
                         if l_files_to_send:
                             for l_file in l_files_to_send:
