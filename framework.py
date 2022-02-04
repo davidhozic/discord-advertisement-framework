@@ -249,7 +249,7 @@ __________________________________________________________
                                 await l_sent_msg_obj.delete()
                             except Exception as ex:
                                 if ex.status == 429:
-                                    await asyncio.sleep(int(ex.response.headers["Retry-After"])/1000)
+                                    await asyncio.sleep(int(ex.response.headers["Retry-After"])+1)
                                     
                         l_msg.sent_msg_objs.clear()
 
@@ -312,7 +312,7 @@ __________________________________________________________
                                 l_error_text = f"{l_channel.name} - Reason: {ex}"
                                 if ex.status == 429:
                                     l_msg.force_retry["ENABLED"] = True 
-                                    l_msg.force_retry["TIME"] = int(ex.response.headers["Retry-After"])    # Slow Mode detected -> wait the remaining time
+                                    l_msg.force_retry["TIME"] = int(ex.response.headers["Retry-After"]+1)    # Slow Mode detected -> wait the remaining time
                                     if ex.code != 20026:    # Rate limit but not slow mode -> put the framework to sleep as it won't be able to send any messages globaly
                                         await asyncio.sleep(l_msg.force_retry["TIME"])  # Rate limit (global for account) -> wait!
                                     l_error_text += f" - Retrying after {l_msg.force_retry['TIME']} seconds"
