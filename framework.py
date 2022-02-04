@@ -20,8 +20,7 @@ m_user_callback = None  # User provided function to call after framework is read
 class __function_cls_base__:
     """
     type:   Dummy class
-    @info:  Used by the framework if data parameter is instance of __FUNCTION_CLS__ (this class is inherited from this class
-                                                                                    making issintance return True, as instances of inherited classes are also instanced of the base class)
+    @info:  Only used by framework to check if the data parameter of framework.MESSAGE is a framework.FUNCTION object -- isinstance returns True if the class parameter is either the class that created it or a base clase of that class (or base of the base  class, etc..)
     """
     pass
 
@@ -40,7 +39,6 @@ def FUNCTION(fnc):
         def __call__(this):
             return this.fnc(*this.args, **this.kwargs)
     return __FUNCTION_CLS__
-
 
 # Classes
 class TIMER:
@@ -254,6 +252,7 @@ __________________________________________________________
                         l_msg.sent_msg_objs.clear()
 
                     
+                    # Parse data from the data parameter
                     l_data_to_send  = None     
                     if isinstance(l_msg.data, __function_cls_base__):    
                         l_data_to_send = l_msg.data()
@@ -263,7 +262,6 @@ __________________________________________________________
                     l_embed_to_send = None
                     l_text_to_send  = None
                     l_files_to_send  = []
-                    # Parse the data
                     if isinstance(l_data_to_send, list) or isinstance(l_data_to_send, tuple):
                         # data is list -> parse each element
                         for element in l_data_to_send:
