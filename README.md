@@ -115,10 +115,8 @@ All of these file logs will be Markdown files.<br>
 
 ## <a id="getting_started"></a><font size=6>**Getting started**</font>:
 ### <u> Install requirements:</u>
-This Shilling framework requires **[PyCord](https://docs.pycord.dev/en/master/)** : <br>
-```
-python3 -m pip install -U py-cord
-```
+This Shilling framework uses a modified version of pycord (allowed use of user accounts as bots) which requires aiohttp, so just install **aiohttp**.
+
 
 ### <u> Configuration </u>
 The framework can be configured in the [Config.py](Config.py) file. You only need to really change the [C_BOT_API_KEY](#DISCORD-TOKEN).
