@@ -20,8 +20,7 @@ m_user_callback = None  # User provided function to call after framework is read
 class __function_cls_base__:
     """
     type:   Dummy class
-    @info:  Used by the framework if data parameter is instance of __FUNCTION_CLS__ (this class is inherited from this class
-                                                                                    making issintance return True, as instances of inherited classes are also instanced of the base class)
+    @info:  Only used by framework to check if the data parameter of framework.MESSAGE is a framework.FUNCTION object -- isinstance returns True if the class parameter is either the class that created it or a base clase of that class (or base of the base  class, etc..)
     """
     pass
 
@@ -40,7 +39,6 @@ def FUNCTION(fnc):
         def __call__(this):
             return this.fnc(*this.args, **this.kwargs)
     return __FUNCTION_CLS__
-
 
 # Classes
 class TIMER:
@@ -249,11 +247,12 @@ __________________________________________________________
                                 await l_sent_msg_obj.delete()
                             except Exception as ex:
                                 if ex.status == 429:
-                                    await asyncio.sleep(int(ex.response.headers["Retry-After"])/1000)
+                                    await asyncio.sleep(int(ex.response.headers["Retry-After"])+1)
                                     
                         l_msg.sent_msg_objs.clear()
 
                     
+                    # Parse data from the data parameter
                     l_data_to_send  = None     
                     if isinstance(l_msg.data, __function_cls_base__):    
                         l_data_to_send = l_msg.data()
@@ -263,7 +262,6 @@ __________________________________________________________
                     l_embed_to_send = None
                     l_text_to_send  = None
                     l_files_to_send  = []
-                    # Parse the data
                     if isinstance(l_data_to_send, list) or isinstance(l_data_to_send, tuple):
                         # data is list -> parse each element
                         for element in l_data_to_send:
@@ -297,28 +295,38 @@ __________________________________________________________
                         
                         # Send to channels
                         for l_channel in l_msg.channels:
-                            try:
-                                if l_channel.guild.id != this.guild.id:
-                                    raise Exception(f"Channel is not in part of this guild ({this.guild.name}) but is part of a different guild ({l_channel.guild.name})")     
+                            for tries in range(3):
+                                try:
+                                    if l_channel.guild.id != this.guild.id:
+                                        raise Exception(f"Channel is not in part of this guild ({this.guild.name}) but is part of a different guild ({l_channel.guild.name})")     
 
-                                # SEND TO CHANNEL
-                                l_discord_sent_msg = await l_channel.send(l_text_to_send, embed=l_embed_to_send, files=[discord.File(x) for x in l_files_to_send])
+                                    # SEND TO CHANNEL
+                                    l_discord_sent_msg = await l_channel.send(l_text_to_send, embed=l_embed_to_send, files=[discord.File(x) for x in l_files_to_send])
+                                    
+                                    l_succeded_channels.append(l_channel.name)
+                                    if l_msg.clear_previous:
+                                        l_msg.sent_msg_objs.append(l_discord_sent_msg)
 
-                                l_succeded_channels.append(l_channel.name)
-                                if l_msg.clear_previous:
-                                    l_msg.sent_msg_objs.append(l_discord_sent_msg)
-                            except discord.HTTPException as ex:     
-                                # Failed to send message
-                                l_error_text = f"{l_channel.name} - Reason: {ex}"
-                                if ex.status == 429:
-                                    l_msg.force_retry["ENABLED"] = True 
-                                    l_msg.force_retry["TIME"] = int(ex.response.headers["Retry-After"])    # Slow Mode detected -> wait the remaining time
-                                    if ex.code != 20026:    # Rate limit but not slow mode -> put the framework to sleep as it won't be able to send any messages globaly
-                                        await asyncio.sleep(l_msg.force_retry["TIME"])  # Rate limit (global for account) -> wait!
-                                    l_error_text += f" - Retrying after {l_msg.force_retry['TIME']} seconds"
-                                l_errored_channels.append(l_error_text)
-                            except OSError as ex:
-                                TRACE(f"Error sending data to channels | Exception:{ex}",TRACE_LEVELS.ERROR)
+                                    break    # Break out of the tries loop
+                                except discord.HTTPException as ex:     
+                                    # Failed to send message
+                                    l_error_text = f"{l_channel.name} - Reason: {ex}"
+                                    if ex.status == 429:
+                                        retry_after = int(ex.response.headers["Retry-After"])  + 1
+                                        # Slow Mode detected -> wait the remaining time
+                                        if ex.code == 20026:
+                                            l_msg.force_retry["ENABLED"] = True 
+                                            l_msg.force_retry["TIME"] = retry_after
+                                            break     
+                                        # Rate limit but not slow mode -> put the framework to sleep as it won't be able to send any messages globaly
+                                        else:    
+                                            await asyncio.sleep(retry_after)  
+
+                                        l_error_text += f" - Retrying after {retry_after}"
+                                    l_errored_channels.append(l_error_text)
+                                except OSError as ex:
+                                    TRACE(f"Error sending data to channel | Exception:{ex}",TRACE_LEVELS.ERROR)
+                                    break
                         ## Close files if it was opened
                         if l_files_to_send:
                             for l_file in l_files_to_send:

@@ -4,6 +4,9 @@ The shilling framework allows you to periodically (absolute or in a random time 
 It supports sending normal text, discord embeds(you are required to run on an actual bot) , files and can even accept user defined functions that will be called to get the data you want to send. 
 The framework also supports formatted logging which tells you what messages succeeded in which channels and failed in which channels(and why they failed).
 
+You can also build an additional layer on top of the framework, because when run, the framework can call a user defined function before starting shilling, allowing you to eg. make an asyncio task that runs parallel to the shilling framework.
+
+
 The below documentation describes everything you need to start shilling, thank you for reading it. If you don't like to read you can skip to the [Getting Started](#getting_started) section or see [Examples](#code_examples).
 ***
 
@@ -50,7 +53,7 @@ Examples folder: [Examples folder](Examples).
     <br><br>
 <a id="framework_message"></a>
 -  framework.**MESSAGE** 
-    - The **MESSAGE** object containts parameters which behaviour and data that will be sent to the channels.
+    - The **MESSAGE** object containts parameters which describe behaviour and data that will be sent to the channels.
     - <u>Parameters</u>:
         - **Start Period** , **End Period** (start_period, end_period) - These 2 parameters specify the period on which the messages will be sent.
             - **Start Period** can be either:
@@ -79,11 +82,11 @@ Examples folder: [Examples folder](Examples).
 <br>
 
 ## <font size=6> **Decorators** </font>:
-Python decorators are essentially functions/classes that accept a function or a class as one of their parameters and add extra functionality on them.<br>
-<u>In our case</u> There is only one decorator:<br>
+Python decorators are essentially functions/classes that accept a function or a class as their parameter and add extra functionality on them.<br>
+<u>In our case</u> there is only one decorator:<br>
 <a id="framework_decorators_function"></a>
 - framework.FUNCTION:
-    - This decorator accepts a function as it's parameter and then returns a class which's objects will be called by the framework. To use an user defined function as parameter to the [framework.MESSAGE data parameter](#framework_message_data), you must use this decorator before hand. Please see the **Examples** folder.
+    - This decorator accepts a function as it's parameter and then returns a class which's objects will be called by the framework. To use an user defined function as parameter to the [framework.MESSAGE data parameter](#framework_message_data), you must use this decorator beforehand. Please see the **Examples** folder.
     - Usage:<br>
     <img src="DOC_src\function_decorator_1.png" alt="drawing" width="600"/>
 ***
@@ -122,8 +125,10 @@ The framework can be configured in the [Config.py](Config.py) file. You only nee
 
 <u>Configuration variables</u>:
 - <a id="DISCORD-TOKEN"></a>C_BOT_API_KEY - is the account authorization token, to obtain it for a **bot account**, go to [Discord's develeper portal](https://discord.com/developers/applications), select your application and go to Bot section and under Token click **Copy key**.<br>
-To get it for an **user account** follow instructions: [INSTRUCTIONS](https://www.youtube.com/results?search_query=how+to+find+user+discord+token)
-
+To get it for an **user account** follow instructions: [INSTRUCTIONS](https://www.youtube.com/results?search_query=how+to+find+user+discord+token)<br>
+**!**<br>
+<u>**BEWARE! Using an user account is against Discord's Terms of Service and can result in your account getting banned.**</u><br>
+**!**
 - C_IS_USER - Set this to true if you are trying to send messages from an user account
 - C_DEBUG   - If True, it will print trace messages to the console
 - C_DEBUG_FILE_OUTPUT -  If C_DEBUG_FILE_OUTPUT is True, it will print trace into a file (this does not include server logs)
