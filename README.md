@@ -50,7 +50,7 @@ Examples folder: [Examples folder](Examples).
     <br><br>
 <a id="framework_message"></a>
 -  framework.**MESSAGE** 
-    - The **MESSAGE** object containts parameters which behaviour and data that will be sent to the channels.
+    - The **MESSAGE** object containts parameters which describe behaviour and data that will be sent to the channels.
     - <u>Parameters</u>:
         - **Start Period** , **End Period** (start_period, end_period) - These 2 parameters specify the period on which the messages will be sent.
             - **Start Period** can be either:
