@@ -4,6 +4,9 @@ The shilling framework allows you to periodically (absolute or in a random time 
 It supports sending normal text, discord embeds(you are required to run on an actual bot) , files and can even accept user defined functions that will be called to get the data you want to send. 
 The framework also supports formatted logging which tells you what messages succeeded in which channels and failed in which channels(and why they failed).
 
+You can also build an additional layer on top of the framework, because when run, the framework can call a user defined function before starting shilling, allowing you you to eg. make an asyncio task that runs parallel to the shilling framework.
+
+
 The below documentation describes everything you need to start shilling, thank you for reading it. If you don't like to read you can skip to the [Getting Started](#getting_started) section or see [Examples](#code_examples).
 ***
 
