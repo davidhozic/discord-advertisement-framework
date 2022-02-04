@@ -83,10 +83,10 @@ Examples folder: [Examples folder](Examples).
 
 ## <font size=6> **Decorators** </font>:
 Python decorators are essentially functions/classes that accept a function or a class as their parameter and add extra functionality on them.<br>
-<u>In our case</u> There is only one decorator:<br>
+<u>In our case</u> there is only one decorator:<br>
 <a id="framework_decorators_function"></a>
 - framework.FUNCTION:
-    - This decorator accepts a function as it's parameter and then returns a class which's objects will be called by the framework. To use an user defined function as parameter to the [framework.MESSAGE data parameter](#framework_message_data), you must use this decorator before hand. Please see the **Examples** folder.
+    - This decorator accepts a function as it's parameter and then returns a class which's objects will be called by the framework. To use an user defined function as parameter to the [framework.MESSAGE data parameter](#framework_message_data), you must use this decorator beforehand. Please see the **Examples** folder.
     - Usage:<br>
     <img src="DOC_src\function_decorator_1.png" alt="drawing" width="600"/>
 ***
