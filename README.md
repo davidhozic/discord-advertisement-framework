@@ -122,8 +122,10 @@ The framework can be configured in the [Config.py](Config.py) file. You only nee
 
 <u>Configuration variables</u>:
 - <a id="DISCORD-TOKEN"></a>C_BOT_API_KEY - is the account authorization token, to obtain it for a **bot account**, go to [Discord's develeper portal](https://discord.com/developers/applications), select your application and go to Bot section and under Token click **Copy key**.<br>
-To get it for an **user account** follow instructions: [INSTRUCTIONS](https://www.youtube.com/results?search_query=how+to+find+user+discord+token)
-
+To get it for an **user account** follow instructions: [INSTRUCTIONS](https://www.youtube.com/results?search_query=how+to+find+user+discord+token)<br>
+**!**<br>
+<u>**BEWARE! Using an user account is against Discord's Terms of Service and can result in your account getting banned.**</u><br>
+**!**
 - C_IS_USER - Set this to true if you are trying to send messages from an user account
 - C_DEBUG   - If True, it will print trace messages to the console
 - C_DEBUG_FILE_OUTPUT -  If C_DEBUG_FILE_OUTPUT is True, it will print trace into a file (this does not include server logs)
