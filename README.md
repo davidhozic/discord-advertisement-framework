@@ -82,7 +82,7 @@ Examples folder: [Examples folder](Examples).
 <br>
 
 ## <font size=6> **Decorators** </font>:
-Python decorators are essentially functions/classes that accept a function or a class as one of their parameters and add extra functionality on them.<br>
+Python decorators are essentially functions/classes that accept a function or a class as their parameter and add extra functionality on them.<br>
 <u>In our case</u> There is only one decorator:<br>
 <a id="framework_decorators_function"></a>
 - framework.FUNCTION:
