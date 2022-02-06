@@ -1,8 +1,7 @@
-import discord, time, asyncio, random, types, os
+import time, asyncio, random, types, os
 from typing import  Union
-from debug import *
-
-
+from .debug import *
+import discord
 
 # Contants
 ## Hour constants
@@ -363,16 +362,16 @@ async def advertiser():
 
 # Called after framework is ran 
 def run(token,
-        user_callback=None,
         is_user=False,
+        user_callback=None,
         server_log_output="Logging"):
     """
     @type  : function
     @name  : run
     @params:
-        - user_callback     : function  = User callback function (gets called after framework is ran)
         - token             : str       = access token for account
         - is_user           : bool      = Set to True if token is from an user account and not a bot account
+        - user_callback     : function  = User callback function (gets called after framework is ran)
         - server_log_output : str       = Path where the server log files will be created
 
     @description: This function is the function that starts framework and starts shilling
