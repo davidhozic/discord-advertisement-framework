@@ -1,4 +1,4 @@
-import Config, discord, time, asyncio, random, types, os
+import discord, time, asyncio, random, types, os
 from typing import  Union
 from debug import *
 
@@ -12,11 +12,11 @@ C_MINUTE_TO_SECOND = 60
 
 # Globals
 m_user_callback = None  # User provided function to call after framework is ready
+m_server_log_output_path = None
+
 
 # Decortors
 ## Decorator classes
-
-
 class __function_cls_base__:
     """
     type:   Dummy class
@@ -41,6 +41,7 @@ def FUNCTION(fnc):
     return __FUNCTION_CLS__
 
 # Classes
+## Timer
 class TIMER:
     def __init__(this):
         this.running = False
@@ -56,6 +57,7 @@ class TIMER:
     def reset (this):
         this.running = False
 
+## Framework classes
 class EMBED_FIELD:
     """
     Embedded field class for use in EMBED object constructor
@@ -131,10 +133,6 @@ class EMBED(discord.Embed):
                 raise EMBED.FieldsException(EMBED.C_FIELD_LEN_EXCEPT) #### Maximum length is 1023
             this.add_field(name=field_name,value=content,inline=inline)
         
-
-
-
-
 class FILE:
     def __init__(this, filename):
         this.filename = filename
@@ -240,18 +238,7 @@ __________________________________________________________
                     if l_msg.randomized_time == True:           # If first parameter to msg object is != None
                             l_msg.period = random.randrange(*l_msg.random_range)
                        
-                    # Clear previous msgs
-                    if l_msg.clear_previous:
-                        for l_sent_msg_obj in l_msg.sent_msg_objs:
-                            try:
-                                await l_sent_msg_obj.delete()
-                            except Exception as ex:
-                                if ex.status == 429:
-                                    await asyncio.sleep(int(ex.response.headers["Retry-After"])+1)
-                                    
-                        l_msg.sent_msg_objs.clear()
-
-                    
+                                        
                     # Parse data from the data parameter
                     l_data_to_send  = None     
                     if isinstance(l_msg.data, __function_cls_base__):    
@@ -282,6 +269,17 @@ __________________________________________________________
                     if l_text_to_send or l_embed_to_send or l_files_to_send:
                         l_errored_channels = []
                         l_succeded_channels= []
+
+                        ## Clear previous msgs
+                        if l_msg.clear_previous:
+                            for l_sent_msg_obj in l_msg.sent_msg_objs:
+                                try:
+                                    await l_sent_msg_obj.delete()
+                                except Exception as ex:
+                                    if ex.status == 429:
+                                        await asyncio.sleep(int(ex.response.headers["Retry-After"])+1)
+                                        
+                            l_msg.sent_msg_objs.clear()
 
                         ## Open files
                         if l_files_to_send:
@@ -338,9 +336,9 @@ __________________________________________________________
                         l_trace += this._generate_log(l_text_to_send, l_embed_to_send, [x.name for x in l_files_to_send], l_succeded_channels, l_errored_channels)     # Generate trace of sent file
             # Save into file
             if this.generate_log and l_trace:
-                if Config.C_SERVER_OUTPUT_FOLDER not in os.listdir("./"):
-                    os.mkdir(Config.C_SERVER_OUTPUT_FOLDER)
-                with open(os.path.join(Config.C_SERVER_OUTPUT_FOLDER, this.guild_file_name),'a', encoding='utf-8') as l_logfile:
+                if m_server_log_output_path not in os.listdir("./"):
+                    os.mkdir(m_server_log_output_path)
+                with open(os.path.join(m_server_log_output_path, this.guild_file_name),'a', encoding='utf-8') as l_logfile:
                     l_logfile.write(l_trace)
         
 # Event functions
@@ -363,15 +361,29 @@ async def advertiser():
             await l_server.advertise()
                 
 
-# Called after framework is ran
-def run(user_callback=None):
+# Called after framework is ran 
+def run(token,
+        user_callback=None,
+        is_user=False,
+        server_log_output="Logging"):
+    """
+    @type  : function
+    @name  : run
+    @params:
+        - user_callback     : function  = User callback function (gets called after framework is ran)
+        - token             : str       = access token for account
+        - is_user           : bool      = Set to True if token is from an user account and not a bot account
+        - server_log_output : str       = Path where the server log files will be created
+
+    @description: This function is the function that starts framework and starts shilling
+    """
     global m_user_callback
+    global m_server_log_output_path
     m_user_callback = user_callback   # This function will be called once
-    if Config.C_IS_USER:
+    m_server_log_output_path = server_log_output
+    if is_user:
         TRACE("Bot is an user account which is against discord's ToS",TRACE_LEVELS.WARNING)
-    GUILD.bot_object.run(Config.C_BOT_API_KEY, bot=not Config.C_IS_USER)
-
-
+    GUILD.bot_object.run(token, bot=not is_user)
 
 
 if __name__ == "__main__":
