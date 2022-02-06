@@ -103,7 +103,7 @@ class EMBED(discord.Embed):
     C_FIELD_LEN_EXCEPT    = "The field content can be only up to 1023 per field"
     class FieldsException(BaseException):
         pass
-    
+
     # Functions
     def __init__(this, *,author_name:str=None,author_image_url=discord.embeds.EmptyEmbed, image :str=None, thumbnail : str = None, fields : list):
         super().__init__()

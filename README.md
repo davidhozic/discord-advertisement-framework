@@ -1,6 +1,6 @@
 
 # **Shilling Framework Documentation**
-The shilling framework allows you to periodically (absolute or in a random time range)  send messages to discord servers and channels.
+The Discord Shilling/Advertising/Self-Promotion Framework allows you to periodically (absolute or in a random time range)  send messages to discord servers and channels.
 It supports sending normal text, discord embeds(you are required to run on an actual bot) , files and can even accept user defined functions that will be called to get the data you want to send. 
 The framework also supports formatted logging which tells you what messages succeeded in which channels and failed in which channels(and why they failed).
 
@@ -65,7 +65,7 @@ Examples folder: [Examples folder](Examples).
           - [framework.**EMBED**](#framework_embed),
           - [framework.**FILE**](#framework_file),
           - **List/Tuple** containing any of the above arguments (There can up to **1** string, up to **1** embed and up to **10** [framework.FILE](#framework_file) objects, if more than 1 string or embeds are sent, the framework will only consider the last found).
-          - Function that accepts any amount of parameters and returns any of the above types. To pass a function, <u>**YOU MUST USE THE [framework.FUNCTION decorator](framework_decorators_function)**</u> on the function before passing the function to the framework.<br>
+          - Function that accepts any amount of parameters and returns any of the above types. To pass a function, <u>**YOU MUST USE THE [framework.FUNCTION decorator](#framework_decorators_function)**</u> on the function before passing the function to the framework.<br>
           Then when you pass the function to the data parameter, pass it in the next format:
             ```python
             data=function_name(parameter_1, parameter_2, ...., parameter_n)
@@ -123,8 +123,15 @@ All of these file logs will be Markdown files.<br>
 ***
 
 ## **Getting started**:
-### <u> Install requirements:</u>
-To use the Shilling Framework, you need to first install **aiohttp**.
+### <u> Installation</u>
+To install the framework use the following command:
+```fix
+py -3 -m pip install Discord-Shilling-Framework
+```
+or
+```fix
+python3 -m pip install Discord-Shilling-Framework
+```
 
 ### <u> Sending messages </u>
 
