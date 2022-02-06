@@ -41,5 +41,7 @@ framework.GUILD.server_list = [
 ############################################################################################
 
 if __name__ == "__main__":
-    framework.run(user_callback=None)
-    
+    framework.run(  token="your_token_here",        # MANDATORY
+                    is_user=False,                  # OPTIONAL
+                    user_callback=None,             # OPTIONAL
+                    server_log_output="Logging")    # OPTIONAL

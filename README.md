@@ -1,5 +1,5 @@
 
-# <font size=8>**Shilling Framework Documentation**</font>
+# **Shilling Framework Documentation**
 The shilling framework allows you to periodically (absolute or in a random time range)  send messages to discord servers and channels.
 It supports sending normal text, discord embeds(you are required to run on an actual bot) , files and can even accept user defined functions that will be called to get the data you want to send. 
 The framework also supports formatted logging which tells you what messages succeeded in which channels and failed in which channels(and why they failed).
@@ -11,13 +11,13 @@ The below documentation describes everything you need to start shilling, thank y
 ***
 
 <a id="code_examples"> </a>
-## <font size=6> **Examples** </font>:
+##  **Examples** :
 Because I believe reading documention can be a bit boring, I prepaired some examples in the Examples folder which should show everying you might want to do.<br>
 Examples folder: [Examples folder](Examples).
 ***
 <br>
 
-## <font size=6> **Creatable objects** </font>:
+##  **Creatable objects** :
 - <a id="framework_embed"> </a>framework.**EMBED** (available to use if running on a **bot account**):
     - The **EMBED** class is an inherited class from discord.Embed meaning it has the same methods as [discord.Embed](https://docs.pycord.dev/en/master/api.html?highlight=discord%20embed#discord.Embed) but you can create a full embed without actually having to call those methods. 
     - <u>Parameters</u>:
@@ -81,7 +81,7 @@ Examples folder: [Examples folder](Examples).
 ***
 <br>
 
-## <font size=6> **Decorators** </font>:
+##  **Decorators** :
 Python decorators are essentially functions/classes that accept a function or a class as their parameter and add extra functionality on them.<br>
 <u>In our case</u> there is only one decorator:<br>
 <a id="framework_decorators_function"></a>
@@ -92,19 +92,24 @@ Python decorators are essentially functions/classes that accept a function or a 
 ***
 <br>
 
-## <font size=6> **Functions** </font>:
-The framework only gives you one function to call making it easy to use.
-That function is **run**. The function only accepts one parameter  called user_callback which is a **function that will be called after the framework has been initialized**.
-To access the function, use: **framework.run(user_callback function here)**<br>
-<image alt="framework.run" src="DOC_src\framework_framework_run_1.png" width="400">
+##  **Functions** :
+The framework only gives you one function to call making it easy to use:
+- <a id="framework_framework_run"></a>framework.**run**:
+    - <u> Parameters</u>:
+        - token             : str       = access token for account
+        - is_user           : bool      = Set to True if token is from an user account and not a bot account
+        - user_callback     : function  = User callback function (gets called after framework is ran)
+        - server_log_output : str       = Path where the server log files will be created
+    -   ```py
+        framework.run(  token="your_token_here",        # MANDATORY
+                        is_user=False,                  # OPTIONAL
+                        user_callback=None,             # OPTIONAL
+                        server_log_output="Logging")    # OPTIONAL
+        ```
 ***
 <br>
 
-## <font size=6> **Logging** </font>:
-### **TRACE**
-The framework allows easy debugging of what went wrong with the framework by printing out trace messages onto the console.
-To enable trace, go to Config.py file and enable **C_DEBUG**.
-You can also enable **C_DEBUG_FILE_OUTPUT** to also log the tracer into a file. **Note** that this is only meant for debugging, if you want to log what messages were sent to discord, see the next [section](#logging_sent_msgs).<br>
+##  **Logging** :
 
 ### <a id="logging_sent_msgs"></a>**LOG OF SENT MESSAGES**
 The framework can keep a log of sent messages for **each guild/server**. To enable file logging of sent messages, set the parameter [**Generate file log**](#framework_guild_gen_file_log) to True inside each [GUILD OBJECT](#framework_guild).<br> 
@@ -113,24 +118,13 @@ All of these file logs will be Markdown files.<br>
 <image alt="Server Log" src="DOC_src\framework_server_log_1.png" width=1920>
 (Left is raw Markdown code, to the right is rendered Markdown)
 
-## <a id="getting_started"></a><font size=6>**Getting started**</font>:
+<br>
+
+***
+
+## **Getting started**:
 ### <u> Install requirements:</u>
-This Shilling framework uses a modified version of pycord (allowed use of user accounts as bots) which requires aiohttp, so just install **aiohttp**.
-
-
-### <u> Configuration </u>
-The framework can be configured in the [Config.py](Config.py) file. You only need to really change the [C_BOT_API_KEY](#DISCORD-TOKEN).
-
-<u>Configuration variables</u>:
-- <a id="DISCORD-TOKEN"></a>C_BOT_API_KEY - is the account authorization token, to obtain it for a **bot account**, go to [Discord's develeper portal](https://discord.com/developers/applications), select your application and go to Bot section and under Token click **Copy key**.<br>
-To get it for an **user account** follow instructions: [INSTRUCTIONS](https://www.youtube.com/results?search_query=how+to+find+user+discord+token)<br>
-**!**<br>
-<u>**BEWARE! Using an user account is against Discord's Terms of Service and can result in your account getting banned.**</u><br>
-**!**
-- C_IS_USER - Set this to true if you are trying to send messages from an user account
-- C_DEBUG   - If True, it will print trace messages to the console
-- C_DEBUG_FILE_OUTPUT -  If C_DEBUG_FILE_OUTPUT is True, it will print trace into a file (this does not include server logs)
-
+To use the Shilling Framework, you need to first install **aiohttp**.
 
 ### <u> Sending messages </u>
 
@@ -178,14 +172,15 @@ framework.GUILD.server_list = [
 ]
 ```
 
-Now start the framework by calling the **framework.run()** function. The function can accept one parameter which is a function to be called after framework has started.
+Now start the framework by calling the [**framework.run()**](#framework_framework_run) function. The function can accept one parameter which is a function to be called after framework has started.
 
-```py
+```python
 
 def callback():
     print("Framework is now running")
 
-framework.run(user_callback=callback)
+framework.run(token="your_token_here",      
+              user_callback=callback)         
 
 ```
 
