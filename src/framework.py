@@ -1,6 +1,6 @@
 import time, asyncio, random, types, os
 from typing import  Union
-from .debug import *
+from debug import *
 import discord
 
 # Contants
