@@ -1,6 +1,6 @@
 
 # **Shilling Framework Documentation**
-The shilling framework allows you to periodically (absolute or in a random time range)  send messages to discord servers and channels.
+The Discord Shilling/Advertising/Self-Promotion Framework allows you to periodically (absolute or in a random time range)  send messages to discord servers and channels.
 It supports sending normal text, discord embeds(you are required to run on an actual bot) , files and can even accept user defined functions that will be called to get the data you want to send. 
 The framework also supports formatted logging which tells you what messages succeeded in which channels and failed in which channels(and why they failed).
 
