@@ -314,13 +314,17 @@ __________________________________________________________
                                         if ex.code == 20026:
                                             l_msg.force_retry["ENABLED"] = True 
                                             l_msg.force_retry["TIME"] = retry_after
-                                            break     
-                                        # Rate limit but not slow mode -> put the framework to sleep as it won't be able to send any messages globaly
-                                        else:    
+                                        else:   
+                                            # Rate limit but not slow mode -> put the framework to sleep as it won't be able to send any messages globaly 
+                                            TRACE(f"Rate limit! Retrying after {retry_after}",TRACE_LEVELS.WARNING)
                                             await asyncio.sleep(retry_after)  
 
                                         l_error_text += f" - Retrying after {retry_after}"
-                                    l_errored_channels.append(l_error_text)
+
+                                    if tries == 2 or ex.status != 429 or ex.code == 20026:  # Maximum tries reached or no point in retrying
+                                        l_errored_channels.append(l_error_text)
+                                        break
+                                    
                                 except OSError as ex:
                                     TRACE(f"Error sending data to channel | Exception:{ex}",TRACE_LEVELS.ERROR)
                                     break
