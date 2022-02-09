@@ -123,8 +123,15 @@ All of these file logs will be Markdown files.<br>
 ***
 
 ## **Getting started**:
-### <u> Install requirements:</u>
-To use the Shilling Framework, you need to first install **aiohttp**.
+### <u> Installation</u>
+To install the framework use the following command:
+```fix
+py -3 -m pip install Discord-Shilling-Framework
+```
+or
+```fix
+python3 -m pip install Discord-Shilling-Framework
+```
 
 ### <u> Sending messages </u>
 
