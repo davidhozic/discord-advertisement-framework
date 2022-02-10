@@ -13,8 +13,15 @@ C_MINUTE_TO_SECOND = 60
 m_user_callback = None  # User provided function to call after framework is ready
 m_server_log_output_path = None
 
+# Exceptions
+class MESSAGE_ERROR(Exception):
+    pass
 
-# Decortors
+class INVALID_MSG_ARG(MESSAGE_ERROR):
+    pass
+
+
+# Decorators
 ## Decorator classes
 class __FUNCTION_CLS__:
         def __init__(this, fnc):
@@ -23,6 +30,7 @@ class __FUNCTION_CLS__:
         def __call__(this, *args, **kwargs):
             this.args = args
             this.kwargs = kwargs
+            return this
         def get_data(this):
             return this.fnc(*this.args, **this.kwargs)
 
@@ -241,25 +249,29 @@ __________________________________________________________
                         l_data_to_send = l_msg.data.get_data()
                     else:
                         l_data_to_send = l_msg.data
-
-                    l_embed_to_send = None
-                    l_text_to_send  = None
-                    l_files_to_send  = []
-                    if isinstance(l_data_to_send, list) or isinstance(l_data_to_send, tuple):
-                        # data is list -> parse each element
-                        for element in l_data_to_send:
-                            if isinstance(element, str):
-                                l_text_to_send = element
-                            elif isinstance(element, EMBED):
-                                l_embed_to_send = element
-                            elif isinstance(element, FILE):
-                                l_files_to_send.append(element)
-                    elif isinstance(l_data_to_send, EMBED):
-                        l_embed_to_send = l_data_to_send
-                    elif isinstance(l_data_to_send, str):
-                        l_text_to_send = l_data_to_send
-                    elif isinstance(l_data_to_send, FILE):
-                        l_files_to_send.append(l_data_to_send)
+                    
+                    # No data was send in or incorrect data passed
+                    if l_data_to_send != None:  
+                        l_embed_to_send = None
+                        l_text_to_send  = None
+                        l_files_to_send  = []
+                        if isinstance(l_data_to_send, list) or isinstance(l_data_to_send, tuple):
+                            # data is list -> parse each element
+                            for element in l_data_to_send:
+                                if isinstance(element, str):
+                                    l_text_to_send = element
+                                elif isinstance(element, EMBED):
+                                    l_embed_to_send = element
+                                elif isinstance(element, FILE):
+                                    l_files_to_send.append(element)
+                        elif isinstance(l_data_to_send, EMBED):
+                            l_embed_to_send = l_data_to_send
+                        elif isinstance(l_data_to_send, str):
+                            l_text_to_send = l_data_to_send
+                        elif isinstance(l_data_to_send, FILE):
+                            l_files_to_send.append(l_data_to_send)
+                        else:
+                            raise INVALID_MSG_ARG("INVALID ARGUMENT PASSED TO THE DATA PARAMETER")
                     
                     # Send messages                     
                     if l_text_to_send or l_embed_to_send or l_files_to_send:
