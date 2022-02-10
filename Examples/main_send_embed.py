@@ -23,7 +23,7 @@ fields=\
 ############################################################################################
 #                               GUILD MESSAGES DEFINITION                                  #
 ############################################################################################
-framework.GUILD.server_list = [
+guilds = [
     framework.GUILD(
         
         guild_id=123456789,         ## ID of server (guild)
@@ -48,6 +48,7 @@ framework.GUILD.server_list = [
 
 if __name__ == "__main__":
     framework.run(  token=secret.C_TOKEN,           # MANDATORY
+                    server_list=guilds,             # MANDATORY
                     is_user=False,                  # OPTIONAL
                     user_callback=None,             # OPTIONAL
                     server_log_output="Logging")    # OPTIONAL

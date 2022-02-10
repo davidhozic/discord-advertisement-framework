@@ -27,7 +27,7 @@ fields=\
 )
 
 
-framework.GUILD.server_list = [
+guilds = [
     framework.GUILD(
         guild_id=1234,              ## ID of server (guild)
         messages_to_send=[          ## List MESSAGE objects 
@@ -42,6 +42,7 @@ framework.GUILD.server_list = [
 
 if __name__ == "__main__":
     framework.run(  token=secret.C_TOKEN,           # MANDATORY
+                    server_list=guilds,             # MANDATORY
                     is_user=False,                  # OPTIONAL
                     user_callback=None,             # OPTIONAL
                     server_log_output="Logging")    # OPTIONAL
