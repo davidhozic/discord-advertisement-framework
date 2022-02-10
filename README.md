@@ -27,15 +27,35 @@ Examples folder: [Examples folder](Examples).
         - Thumbnail (thumbnail)             : str   - URL to image that will be placed **at top right** of the embed.
         - Embedded Fields (fields)          : list  - List of [framework.**EMBED_FIELD**](#framework_embed_field)<br>
 
-        <image alt="framework.EMBED" src="DOC_src\framework_EMBED_obj_1.png">
-        <br><br>
-
+    ```py
+    test_embed = framework.EMBED(
+    author_name="Developer",
+    author_image_url="https://solarsystem.nasa.gov/system/basic_html_elements/11561_Sun.png",
+    fields=\
+        [
+            framework.EMBED_FIELD("Test 1", "Hello World", True),
+            framework.EMBED_FIELD("Test 2", "Hello World 2", True),
+            framework.EMBED_FIELD("Test 3", "Hello World 3", True),
+            framework.EMBED_FIELD("No Inline", "This is without inline", False),
+            framework.EMBED_FIELD("Test 4", "Hello World 4", True),
+            framework.EMBED_FIELD("Test 5", "Hello World 5", True)
+        ]
+    )
+    ```       
+<br><br>
 - <a id="framework_embed_field"> </a>framework.**EMBED_FIELD** (available to use if running on a **bot account**):
     - The **EMBED_FIELD** is used with combination of [framework.**EMBED**:](#framework_embed) as one of it's parameters that represents one of the fields inside the embedded message.
     - <u>Parameters</u>:
         - Field name (name)         : str  -  Name of the field
         - Field content (content)   : str  -  Text that is placed inside the embedded field
         - Inline (inline)           : bool -  If True and the previous or next embed field also have inline set to true, it will place this field in the same line as the previous or next field
+    ```py
+    framework.EMBED_FIELD(
+                                name="Field name",
+                                content="Field content",
+                                inline=True
+                          )
+    ```
 <br><br>
 - <a id="framework_file"> </a>framework.**FILE**:
     - The **FILE** objects represents a file you want to send to discord. 
@@ -49,7 +69,18 @@ Examples folder: [Examples folder](Examples).
         - **List of <u>MESSAGE</u> objects** - Python list or tuple contating **MESSAGE** objects.
         - <a id="framework_guild_gen_file_log"></a>**Generate file log** - bool variable, if True it will generate a file log for each message send attempt.<br>
 
-    <image alt="framework.GUILD" src="DOC_src\framework_GUILD_obj_1.png">
+    ```py
+    framework.GUILD.server_list = [
+        framework.GUILD(
+
+            guild_id=123456789,         ## ID of server (guild)
+            messages_to_send=[          ## List MESSAGE objects 
+                framework.MESSAGE(...),  
+            ],
+            generate_log=True           ## Generate file log of sent messages (and failed attempts) for this server 
+        )
+    ]
+    ```
     <br><br>
 <a id="framework_message"></a>
 -  framework.**MESSAGE** 
@@ -77,7 +108,19 @@ Examples folder: [Examples folder](Examples).
         - **Channel IDs** (channel_ids) - List of IDs of all the channels you want data to be sent into.
         - **Clear Previous** (clear_previous) - A bool variable that can be either True of False. If True, then before sending a new message to the channels, the framework will delete all previous messages sent to discord that originated from this message object.
         - **Start Now** (start_now) - A bool variable that can be either True or False. If True, then the framework will send the message as soon as it is run and then wait it's period before trying again. If False, then the message will not be sent immediatly after framework is ready, but will instead wait for the period to elapse.<br>
-        <image alt="framework.MESSAGE" src="DOC_src\framework_MESSAGE_obj_1.png">
+    ```py
+    framework.MESSAGE(
+                          start_period=None,            # If None, messages will be send on a fixed period (end period)
+                          end_period=15,                # If start_period is None, it dictates the fixed sending period,
+                                                        # If start period is defined, it dictates the maximum limit of randomized period
+                          data="Some Text",             # Data yo you want sent to the function (Can be of types : str, embed, file, list of types to the left
+                                                        # or function that returns any of above types(or returns None if you don't have any data to send yet), 
+                                                        # where if you pass a function you need to use the framework.FUNCTION decorator on top of it ).
+                          channel_ids=[123456789],      # List of ids of all the channels you want this message to be sent into
+                          clear_previous=True,          # Clear all discord messages that originated from this MESSAGE object
+                          start_now=True                # Start sending now (True) or wait until period
+                          ),  
+    ```
 ***
 <br>
 
