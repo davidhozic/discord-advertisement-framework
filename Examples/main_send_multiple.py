@@ -1,4 +1,4 @@
-import  framework, discord
+import  framework, secret
 
 
 
@@ -41,7 +41,7 @@ framework.GUILD.server_list = [
 ############################################################################################
 
 if __name__ == "__main__":
-    framework.run(  token="your_token_here",        # MANDATORY
+    framework.run(  token=secret.C_TOKEN,           # MANDATORY
                     is_user=False,                  # OPTIONAL
                     user_callback=None,             # OPTIONAL
                     server_log_output="Logging")    # OPTIONAL
