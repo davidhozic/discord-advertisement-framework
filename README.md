@@ -177,7 +177,7 @@ All of these file logs will be Markdown files.<br>
 
 ***
 
-## **Getting started**:
+## <a id="getting_started"></a> **Getting started**:
 ### <u> Installation</u>
 To install the framework use the following command:
 ```fix
