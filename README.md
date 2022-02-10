@@ -70,16 +70,14 @@ Examples folder: [Examples folder](Examples).
         - <a id="framework_guild_gen_file_log"></a>**Generate file log** - bool variable, if True it will generate a file log for each message send attempt.<br>
 
     ```py
-    framework.GUILD.server_list = [
         framework.GUILD(
 
-            guild_id=123456789,         ## ID of server (guild)
-            messages_to_send=[          ## List MESSAGE objects 
-                framework.MESSAGE(...),  
-            ],
-            generate_log=True           ## Generate file log of sent messages (and failed attempts) for this server 
-        )
-    ]
+                        guild_id=123456789,         ## ID of server (guild)
+                        messages_to_send=[          ## List MESSAGE objects 
+                            framework.MESSAGE(...),  
+                        ],
+                        generate_log=True           ## Generate file log of sent messages (and failed attempts) for this server 
+                        )
     ```
     <br><br>
 <a id="framework_message"></a>
@@ -199,7 +197,7 @@ I recommend you take a look at <u>**Examples folder**</u>.
 
 Then define the server list and in that server list, define **GUILD** objects:
 ```py
-framework.GUILD.server_list = [
+guilds = [
     # GUILD 1
     framework.GUILD(
         123456789,       # ID of server (guild)
@@ -239,8 +237,11 @@ Now start the framework by calling the [**framework.run()**](#framework_framewor
 def callback():
     print("Framework is now running")
 
-framework.run(token="your_token_here",      
-              user_callback=callback)         
+framework.run(  token="account token here",     # MANDATORY (This is the string that contains the account token, I suggest you define it in a secret.py)
+                server_list=guilds,             # MANDATORY
+                is_user=False,                  # OPTIONAL
+                user_callback=None,             # OPTIONAL
+                server_log_output="Logging")    # OPTIONAL      
 
 ```
 
