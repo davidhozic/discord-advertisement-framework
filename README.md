@@ -27,15 +27,35 @@ Examples folder: [Examples folder](Examples).
         - Thumbnail (thumbnail)             : str   - URL to image that will be placed **at top right** of the embed.
         - Embedded Fields (fields)          : list  - List of [framework.**EMBED_FIELD**](#framework_embed_field)<br>
 
-        <image alt="framework.EMBED" src="DOC_src\framework_EMBED_obj_1.png">
-        <br><br>
-
+    ```py
+    test_embed = framework.EMBED(
+    author_name="Developer",
+    author_image_url="https://solarsystem.nasa.gov/system/basic_html_elements/11561_Sun.png",
+    fields=\
+        [
+            framework.EMBED_FIELD("Test 1", "Hello World", True),
+            framework.EMBED_FIELD("Test 2", "Hello World 2", True),
+            framework.EMBED_FIELD("Test 3", "Hello World 3", True),
+            framework.EMBED_FIELD("No Inline", "This is without inline", False),
+            framework.EMBED_FIELD("Test 4", "Hello World 4", True),
+            framework.EMBED_FIELD("Test 5", "Hello World 5", True)
+        ]
+    )
+    ```       
+<br><br>
 - <a id="framework_embed_field"> </a>framework.**EMBED_FIELD** (available to use if running on a **bot account**):
     - The **EMBED_FIELD** is used with combination of [framework.**EMBED**:](#framework_embed) as one of it's parameters that represents one of the fields inside the embedded message.
     - <u>Parameters</u>:
         - Field name (name)         : str  -  Name of the field
         - Field content (content)   : str  -  Text that is placed inside the embedded field
         - Inline (inline)           : bool -  If True and the previous or next embed field also have inline set to true, it will place this field in the same line as the previous or next field
+    ```py
+    framework.EMBED_FIELD(
+                                name="Field name",
+                                content="Field content",
+                                inline=True
+                          )
+    ```
 <br><br>
 - <a id="framework_file"> </a>framework.**FILE**:
     - The **FILE** objects represents a file you want to send to discord. 
@@ -49,7 +69,16 @@ Examples folder: [Examples folder](Examples).
         - **List of <u>MESSAGE</u> objects** - Python list or tuple contating **MESSAGE** objects.
         - <a id="framework_guild_gen_file_log"></a>**Generate file log** - bool variable, if True it will generate a file log for each message send attempt.<br>
 
-    <image alt="framework.GUILD" src="DOC_src\framework_GUILD_obj_1.png">
+    ```py
+        framework.GUILD(
+
+                        guild_id=123456789,         ## ID of server (guild)
+                        messages_to_send=[          ## List MESSAGE objects 
+                            framework.MESSAGE(...),  
+                        ],
+                        generate_log=True           ## Generate file log of sent messages (and failed attempts) for this server 
+                        )
+    ```
     <br><br>
 <a id="framework_message"></a>
 -  framework.**MESSAGE** 
@@ -65,19 +94,41 @@ Examples folder: [Examples folder](Examples).
           - [framework.**EMBED**](#framework_embed),
           - [framework.**FILE**](#framework_file),
           - **List/Tuple** containing any of the above arguments (There can up to **1** string, up to **1** embed and up to **10** [framework.FILE](#framework_file) objects, if more than 1 string or embeds are sent, the framework will only consider the last found).
-          - Function that accepts any amount of parameters and returns any of the above types. To pass a function, <u>**YOU MUST USE THE [framework.FUNCTION decorator](#framework_decorators_function)**</u> on the function before passing the function to the framework.<br>
-          Then when you pass the function to the data parameter, pass it in the next format:
-            ```python
-            data=function_name(parameter_1, parameter_2, ...., parameter_n)
+          - Function that accepts any amount of parameters and returns any of the above types. To pass a function, **YOU MUST USE THE [framework.FUNCTION decorator](#framework_decorators_function)** on the function before passing the function to the framework.<br>
+          **NOTE:** The function is also allowed to return **None object** which will then cause the framework to skip the send and skip generation of server log. For example, you could create an application that randomly chooses cat images from a folder and then return the framework.FILE object if any pictures are available or returns None if no pictures are available.<br><br>
+          When you pass the function to the data parameter, pass it in the next format:
+            ```py
+            data=function_name(parameter_1, parameter_2, ...., parameter_n) # This is not your old function but a wrapper object, which when called directly, it updates the parameters,
+                                                                            # so tehnically you could also change the function parameters mid-run
             ```
-            **NOTE**: If you don't use [framework.FUNCTION](framework_decorators_function) decorator the function will only get called once(when you pass it to the data) and will not be called by the framework dynamically.<br>
-            Example:<br>
+            **NOTE 1**:<br>
+            When you use the framework.FUNCTION decorator on the function, it returns a callable object that can be used by the framework but the function call is only used for updating parameters, making this function unusable to the user, so if you plan on calling the function manually outside the framework, please either create another function with the same definition or use this decorator on a retreive data only function.<br>
+            **NOTE 2**:<br>
+            If you don't use the [framework.FUNCTION](framework_decorators_function) decorator, the function will only get called once(when you pass it to the data) and will not be called by the framework dynamically.<br>
+            **NOTE 3**:<br>
+            Because the decorator creates a callable object, whos call, updates the parameters,the function parameters that were sent to the framework can still be changed after the framework has already started a.k.a "mid-run". You can do that by "calling" the same function again with different parameters (without sending it to the framework again). This will update the parameters inside the framework. 
+            ```py
+            some_function(new_parameter1, new_parameter2)
+            ```
+            <br>
             <image alt="Function parameter" src="DOC_src\function_as_data_parameter_1.png" width=500>
         <br><br>
         - **Channel IDs** (channel_ids) - List of IDs of all the channels you want data to be sent into.
         - **Clear Previous** (clear_previous) - A bool variable that can be either True of False. If True, then before sending a new message to the channels, the framework will delete all previous messages sent to discord that originated from this message object.
         - **Start Now** (start_now) - A bool variable that can be either True or False. If True, then the framework will send the message as soon as it is run and then wait it's period before trying again. If False, then the message will not be sent immediatly after framework is ready, but will instead wait for the period to elapse.<br>
-        <image alt="framework.MESSAGE" src="DOC_src\framework_MESSAGE_obj_1.png">
+    ```py
+    framework.MESSAGE(
+                          start_period=None,            # If None, messages will be send on a fixed period (end period)
+                          end_period=15,                # If start_period is None, it dictates the fixed sending period,
+                                                        # If start period is defined, it dictates the maximum limit of randomized period
+                          data="Some Text",             # Data yo you want sent to the function (Can be of types : str, embed, file, list of types to the left
+                                                        # or function that returns any of above types(or returns None if you don't have any data to send yet), 
+                                                        # where if you pass a function you need to use the framework.FUNCTION decorator on top of it ).
+                          channel_ids=[123456789],      # List of ids of all the channels you want this message to be sent into
+                          clear_previous=True,          # Clear all discord messages that originated from this MESSAGE object
+                          start_now=True                # Start sending now (True) or wait until period
+                          ),  
+    ```
 ***
 <br>
 
@@ -97,11 +148,13 @@ The framework only gives you one function to call making it easy to use:
 - <a id="framework_framework_run"></a>framework.**run**:
     - <u> Parameters</u>:
         - token             : str       = access token for account
+        - server_list       : list      = List of framework.GUILD objects
         - is_user           : bool      = Set to True if token is from an user account and not a bot account
         - user_callback     : function  = User callback function (gets called after framework is ran)
         - server_log_output : str       = Path where the server log files will be created
     -   ```py
         framework.run(  token="your_token_here",        # MANDATORY
+                        server_list = [framework.GUILD(...), framework.GUILD(...),...], # MANDATORY
                         is_user=False,                  # OPTIONAL
                         user_callback=None,             # OPTIONAL
                         server_log_output="Logging")    # OPTIONAL
@@ -122,7 +175,7 @@ All of these file logs will be Markdown files.<br>
 
 ***
 
-## **Getting started**:
+## <a id="getting_started"></a> **Getting started**:
 ### <u> Installation</u>
 To install the framework use the following command:
 ```fix
@@ -136,17 +189,15 @@ python3 -m pip install Discord-Shilling-Framework
 ### <u> Sending messages </u>
 
 To start sending messages you must first create a python file, e.g <u>*main.py*</u> and import <u>**framework**</u>.<br>
+```py
+import framework
+```
 I recommend you take a look at <u>**Examples folder**</u>.
 
 
-Then define the server list:
+Then define the server list and in that server list, define **GUILD** objects:
 ```py
-framework.GUILD.server_list = [
-]
-```
-and in that server list, define **GUILD** objects.
-```py
-framework.GUILD.server_list = [
+guilds = [
     # GUILD 1
     framework.GUILD(
         123456789,       # ID of server (guild)
@@ -186,8 +237,11 @@ Now start the framework by calling the [**framework.run()**](#framework_framewor
 def callback():
     print("Framework is now running")
 
-framework.run(token="your_token_here",      
-              user_callback=callback)         
+framework.run(  token="account token here",     # MANDATORY (This is the string that contains the account token, I suggest you define it in a secret.py)
+                server_list=guilds,             # MANDATORY
+                is_user=False,                  # OPTIONAL
+                user_callback=None,             # OPTIONAL
+                server_log_output="Logging")    # OPTIONAL      
 
 ```
 
