@@ -101,10 +101,18 @@ Examples folder: [Examples folder](Examples).
           When you pass the function to the data parameter, pass it in the next format:
             ```py
             data=function_name(parameter_1, parameter_2, ...., parameter_n) # This is not your old function but a wrapper object, which when called directly, it updates the parameters,
-            so tehnically you could also change the function parameters mid-run
+                                                                            # so tehnically you could also change the function parameters mid-run
             ```
-            **NOTE**: If you don't use [framework.FUNCTION](framework_decorators_function) decorator the function will only get called once(when you pass it to the data) and will not be called by the framework dynamically.<br>
-            Example:<br>
+            **NOTE 1**:<br>
+            When you use the framework.FUNCTION decorator on the function, it returns a callable object that can be used by the framework but the function call is only used for updating parameters, making this function unusable to the user, so if you plan on calling the function manually outside the framework, please either create another function with the same definition or use this decorator on a retreive data only function.<br>
+            **NOTE 2**:<br>
+            If you don't use the [framework.FUNCTION](framework_decorators_function) decorator, the function will only get called once(when you pass it to the data) and will not be called by the framework dynamically.<br>
+            **NOTE 3**:<br>
+            Because the decorator creates a callable object, whos call, updates the parameters,the function parameters that were sent to the framework can still be changed after the framework has already started a.k.a "mid-run". You can do that by "calling" the same function again with different parameters (without sending it to the framework again). This will update the parameters inside the framework. 
+            ```py
+            some_function(new_parameter1, new_parameter2)
+            ```
+            <br>
             <image alt="Function parameter" src="DOC_src\function_as_data_parameter_1.png" width=500>
         <br><br>
         - **Channel IDs** (channel_ids) - List of IDs of all the channels you want data to be sent into.
