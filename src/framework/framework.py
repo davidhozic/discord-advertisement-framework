@@ -16,28 +16,25 @@ m_server_log_output_path = None
 
 # Decortors
 ## Decorator classes
-class __function_cls_base__:
-    """
-    type:   Dummy class
-    @info:  Only used by framework to check if the data parameter of framework.MESSAGE is a framework.FUNCTION object -- isinstance returns True if the class parameter is either the class that created it or a base clase of that class (or base of the base  class, etc..)
-    """
-    pass
+class __FUNCTION_CLS__:
+        def __init__(this, fnc):
+            this.fnc = fnc
+            this.args, this.kwargs = None, None
+        def __call__(this, *args, **kwargs):
+            this.args = args
+            this.kwargs = kwargs
+        def get_data(this):
+            return this.fnc(*this.args, **this.kwargs)
 
 def FUNCTION(fnc):
     """
     type:   Decorator
     name:   FUNCTION
-    info:   Decorator used to create a class that will create a callable framework function object
+    info:   Decorator used to create a callable framework function object
     return: __FUNCTION_CLS__
     usage:  \n\n@framework.FUNCTION\ndef function(a,b,c)\n\treturn [str | embed | file | list | tuple]
     """
-    class __FUNCTION_CLS__(__function_cls_base__):
-        def __init__(this, *args, **kwargs):
-            this.fnc = fnc
-            this.args, this.kwargs = args, kwargs 
-        def __call__(this):
-            return this.fnc(*this.args, **this.kwargs)
-    return __FUNCTION_CLS__
+    return __FUNCTION_CLS__(fnc)
 
 # Classes
 ## Timer
@@ -240,8 +237,8 @@ __________________________________________________________
                                         
                     # Parse data from the data parameter
                     l_data_to_send  = None     
-                    if isinstance(l_msg.data, __function_cls_base__):    
-                        l_data_to_send = l_msg.data()
+                    if isinstance(l_msg.data, __FUNCTION_CLS__):    
+                        l_data_to_send = l_msg.data.get_data()
                     else:
                         l_data_to_send = l_msg.data
 
