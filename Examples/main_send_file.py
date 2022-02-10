@@ -12,12 +12,12 @@ l_file = framework.FILE("./Examples/main_send_file.py")
 
 framework.GUILD.server_list = [
     framework.GUILD(
-        guild_id=1234,            # ID of server (guild)
-        messages_to_send=[        # List MESSAGE objects 
+        guild_id=1234,              ## ID of server (guild)
+        messages_to_send=[          ## List MESSAGE objects 
             # Will send this example file to channels every 60 seconds  
             framework.MESSAGE(start_period=None, end_period=60, data=l_file, channel_ids=[1234, 1234], clear_previous=False, start_now=True),
         ],
-        generate_log=True 
+        generate_log=True           ## Generate file log of sent messages (and failed attempts) for this server 
     )
 ]
                                      

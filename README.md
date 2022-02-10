@@ -96,10 +96,12 @@ Examples folder: [Examples folder](Examples).
           - [framework.**EMBED**](#framework_embed),
           - [framework.**FILE**](#framework_file),
           - **List/Tuple** containing any of the above arguments (There can up to **1** string, up to **1** embed and up to **10** [framework.FILE](#framework_file) objects, if more than 1 string or embeds are sent, the framework will only consider the last found).
-          - Function that accepts any amount of parameters and returns any of the above types. To pass a function, <u>**YOU MUST USE THE [framework.FUNCTION decorator](#framework_decorators_function)**</u> on the function before passing the function to the framework.<br>
-          Then when you pass the function to the data parameter, pass it in the next format:
-            ```python
-            data=function_name(parameter_1, parameter_2, ...., parameter_n)
+          - Function that accepts any amount of parameters and returns any of the above types. To pass a function, **YOU MUST USE THE [framework.FUNCTION decorator](#framework_decorators_function)** on the function before passing the function to the framework.<br>
+          **NOTE:** The function is also allowed to return **None object** which will then cause the framework to skip the send and skip generation of server log. For example, you could create an application that randomly chooses cat images from a folder and then return the framework.FILE object if any pictures are available or returns None if no pictures are available.<br><br>
+          When you pass the function to the data parameter, pass it in the next format:
+            ```py
+            data=function_name(parameter_1, parameter_2, ...., parameter_n) # This is not your old function but a wrapper object, which when called directly, it updates the parameters,
+            so tehnically you could also change the function parameters mid-run
             ```
             **NOTE**: If you don't use [framework.FUNCTION](framework_decorators_function) decorator the function will only get called once(when you pass it to the data) and will not be called by the framework dynamically.<br>
             Example:<br>
@@ -181,15 +183,13 @@ python3 -m pip install Discord-Shilling-Framework
 ### <u> Sending messages </u>
 
 To start sending messages you must first create a python file, e.g <u>*main.py*</u> and import <u>**framework**</u>.<br>
+```py
+import framework
+```
 I recommend you take a look at <u>**Examples folder**</u>.
 
 
-Then define the server list:
-```py
-framework.GUILD.server_list = [
-]
-```
-and in that server list, define **GUILD** objects.
+Then define the server list and in that server list, define **GUILD** objects:
 ```py
 framework.GUILD.server_list = [
     # GUILD 1

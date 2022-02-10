@@ -9,12 +9,12 @@ import  framework, secret
 
 framework.GUILD.server_list = [
     framework.GUILD(
-        guild_id=1234,               # ID of server (guild)
-        messages_to_send=[                   # List MESSAGE objects 
+        guild_id=1234,                      ## ID of server (guild)
+        messages_to_send=[                  ## List MESSAGE objects 
             framework.MESSAGE(start_period=None, end_period=60, data="First message", channel_ids=[1234, 1234], clear_previous=False, start_now=True),  ## Will sent a message every 60 seconds
             framework.MESSAGE(start_period=30, end_period=60, data="Second message", channel_ids=[1234, 1234], clear_previous=False, start_now=True) ## Will sent a message every period between 30 and 60 seconds (randomly chosen)
         ],
-        generate_log=True 
+        generate_log=True                   ## Generate file log of sent messages (and failed attempts) for this server 
     )
 ]
                                      
