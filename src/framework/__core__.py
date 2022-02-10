@@ -12,32 +12,42 @@ C_MINUTE_TO_SECOND = 60
 # Globals
 m_user_callback = None  # User provided function to call after framework is ready
 m_server_log_output_path = None
+m_server_list = None
 
-
-# Decortors
-## Decorator classes
-class __function_cls_base__:
-    """
-    type:   Dummy class
-    @info:  Only used by framework to check if the data parameter of framework.MESSAGE is a framework.FUNCTION object -- isinstance returns True if the class parameter is either the class that created it or a base clase of that class (or base of the base  class, etc..)
-    """
+# Exceptions
+class FRAMEWORK_EXCEPTION(Exception):
     pass
+
+class MESSAGE_ERROR(FRAMEWORK_EXCEPTION):
+    pass
+class INVALID_MSG_ARG(MESSAGE_ERROR):
+    pass
+
+
+
+
+# Decorators
+## Decorator classes
+class __FUNCTION_CLS__:
+        def __init__(this, fnc):
+            this.fnc = fnc
+            this.args, this.kwargs = None, None
+        def __call__(this, *args, **kwargs):
+            this.args = args
+            this.kwargs = kwargs
+            return this
+        def get_data(this):
+            return this.fnc(*this.args, **this.kwargs)
 
 def FUNCTION(fnc):
     """
     type:   Decorator
     name:   FUNCTION
-    info:   Decorator used to create a class that will create a callable framework function object
+    info:   Decorator used to create a callable framework function object
     return: __FUNCTION_CLS__
     usage:  \n\n@framework.FUNCTION\ndef function(a,b,c)\n\treturn [str | embed | file | list | tuple]
     """
-    class __FUNCTION_CLS__(__function_cls_base__):
-        def __init__(this, *args, **kwargs):
-            this.fnc = fnc
-            this.args, this.kwargs = args, kwargs 
-        def __call__(this):
-            return this.fnc(*this.args, **this.kwargs)
-    return __FUNCTION_CLS__
+    return __FUNCTION_CLS__(fnc)
 
 # Classes
 ## Timer
@@ -154,7 +164,6 @@ class MESSAGE:
         this.sent_msg_objs = []
    
 class GUILD:
-    server_list = []
     bot_object = discord.Client()
 
     def __init__(this, guild_id : int,  messages_to_send : list, generate_log : bool = False):
@@ -240,29 +249,33 @@ __________________________________________________________
                                         
                     # Parse data from the data parameter
                     l_data_to_send  = None     
-                    if isinstance(l_msg.data, __function_cls_base__):    
-                        l_data_to_send = l_msg.data()
+                    if isinstance(l_msg.data, __FUNCTION_CLS__):    
+                        l_data_to_send = l_msg.data.get_data()
                     else:
                         l_data_to_send = l_msg.data
-
-                    l_embed_to_send = None
-                    l_text_to_send  = None
-                    l_files_to_send  = []
-                    if isinstance(l_data_to_send, list) or isinstance(l_data_to_send, tuple):
-                        # data is list -> parse each element
-                        for element in l_data_to_send:
-                            if isinstance(element, str):
-                                l_text_to_send = element
-                            elif isinstance(element, EMBED):
-                                l_embed_to_send = element
-                            elif isinstance(element, FILE):
-                                l_files_to_send.append(element)
-                    elif isinstance(l_data_to_send, EMBED):
-                        l_embed_to_send = l_data_to_send
-                    elif isinstance(l_data_to_send, str):
-                        l_text_to_send = l_data_to_send
-                    elif isinstance(l_data_to_send, FILE):
-                        l_files_to_send.append(l_data_to_send)
+                    
+                    # No data was send in or incorrect data passed
+                    if l_data_to_send != None:  
+                        l_embed_to_send = None
+                        l_text_to_send  = None
+                        l_files_to_send  = []
+                        if isinstance(l_data_to_send, list) or isinstance(l_data_to_send, tuple):
+                            # data is list -> parse each element
+                            for element in l_data_to_send:
+                                if isinstance(element, str):
+                                    l_text_to_send = element
+                                elif isinstance(element, EMBED):
+                                    l_embed_to_send = element
+                                elif isinstance(element, FILE):
+                                    l_files_to_send.append(element)
+                        elif isinstance(l_data_to_send, EMBED):
+                            l_embed_to_send = l_data_to_send
+                        elif isinstance(l_data_to_send, str):
+                            l_text_to_send = l_data_to_send
+                        elif isinstance(l_data_to_send, FILE):
+                            l_files_to_send.append(l_data_to_send)
+                        else:
+                            raise INVALID_MSG_ARG("INVALID ARGUMENT PASSED TO THE DATA PARAMETER")
                     
                     # Send messages                     
                     if l_text_to_send or l_embed_to_send or l_files_to_send:
@@ -355,25 +368,32 @@ async def on_ready():
 
 # Advertising task
 async def advertiser(): 
-    for l_server in GUILD.server_list:
+    global m_server_list
+    if not m_server_list:
+        TRACE("SERVER LIST IS NOT DEFINED!", TRACE_LEVELS.ERROR)
+        raise FRAMEWORK_EXCEPTION("THE SERVER LIST IS EMPTY!")
+
+    for l_server in m_server_list:
         await l_server.initialize()
 
     while True:
         await asyncio.sleep(0.01)
-        for l_server in GUILD.server_list:
+        for l_server in m_server_list:
             await l_server.advertise()
                 
 
 # Called after framework is ran 
-def run(token,
-        is_user=False,
-        user_callback=None,
-        server_log_output="Logging"):
+def run(token : str,
+        server_list : list,
+        is_user : bool =False,
+        user_callback : bool=None,
+        server_log_output : str ="Logging"):
     """
     @type  : function
     @name  : run
     @params:
         - token             : str       = access token for account
+        - server_list       : list      = List of framework.GUILD objects
         - is_user           : bool      = Set to True if token is from an user account and not a bot account
         - user_callback     : function  = User callback function (gets called after framework is ran)
         - server_log_output : str       = Path where the server log files will be created
@@ -382,8 +402,11 @@ def run(token,
     """
     global m_user_callback
     global m_server_log_output_path
+    global m_server_list
+
     m_user_callback = user_callback   # This function will be called once
     m_server_log_output_path = server_log_output
+    m_server_list = server_list
     if is_user:
         TRACE("Bot is an user account which is against discord's ToS",TRACE_LEVELS.WARNING)
     GUILD.bot_object.run(token, bot=not is_user)
