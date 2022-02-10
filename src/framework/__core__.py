@@ -254,29 +254,24 @@ __________________________________________________________
                     else:
                         l_data_to_send = l_msg.data
                     
-                    # No data was send in or incorrect data passed
-                    if l_data_to_send != None:  
-                        l_embed_to_send = None
-                        l_text_to_send  = None
-                        l_files_to_send  = []
-                        if isinstance(l_data_to_send, list) or isinstance(l_data_to_send, tuple):
-                            # data is list -> parse each element
-                            for element in l_data_to_send:
-                                if isinstance(element, str):
-                                    l_text_to_send = element
-                                elif isinstance(element, EMBED):
-                                    l_embed_to_send = element
-                                elif isinstance(element, FILE):
-                                    l_files_to_send.append(element)
-                        elif isinstance(l_data_to_send, EMBED):
-                            l_embed_to_send = l_data_to_send
-                        elif isinstance(l_data_to_send, str):
-                            l_text_to_send = l_data_to_send
-                        elif isinstance(l_data_to_send, FILE):
-                            l_files_to_send.append(l_data_to_send)
-                        else:
-                            raise INVALID_MSG_ARG("INVALID ARGUMENT PASSED TO THE DATA PARAMETER")
-                    
+                    l_embed_to_send = None
+                    l_text_to_send  = None
+                    l_files_to_send  = []
+                    # If any valid data was passed to the data parameter of framework.MESSAGE
+                    if l_data_to_send is not None:      
+                        if not isinstance(l_data_to_send, Union[list,tuple]):
+                            l_data_to_send = [l_data_to_send]
+                        # data is list -> parse each element
+                        for element in l_data_to_send:
+                            if isinstance(element, str):
+                                l_text_to_send = element
+                            elif isinstance(element, EMBED):
+                                l_embed_to_send = element
+                            elif isinstance(element, FILE):
+                                l_files_to_send.append(element)
+                            elif element is not None:
+                                TRACE(f"INVALID DATA PARAMETER PASSED!\nArgument is of type : {element.__class__}\nSee README.md for allowed data types", TRACE_LEVELS.ERROR)
+                                raise INVALID_MSG_ARG(f"\nINVALID DATA PARAMETER PASSED!\nArgument is of type : {element.__class__}\nSee README.md for allowed data types")
                     # Send messages                     
                     if l_text_to_send or l_embed_to_send or l_files_to_send:
                         l_errored_channels = []
@@ -333,6 +328,8 @@ __________________________________________________________
                                             await asyncio.sleep(retry_after)  
 
                                         l_error_text += f" - Retrying after {retry_after}"
+                                    else:
+                                        await asyncio.sleep(0.25)   # Wait a bit before retrying
 
                                     if tries == 2 or ex.status != 429 or ex.code == 20026:  # Maximum tries reached or no point in retrying
                                         l_errored_channels.append(l_error_text)
