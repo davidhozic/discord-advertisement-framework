@@ -12,13 +12,18 @@ C_MINUTE_TO_SECOND = 60
 # Globals
 m_user_callback = None  # User provided function to call after framework is ready
 m_server_log_output_path = None
+m_server_list = None
 
 # Exceptions
-class MESSAGE_ERROR(Exception):
+class FRAMEWORK_EXCEPTION(Exception):
     pass
 
+class MESSAGE_ERROR(FRAMEWORK_EXCEPTION):
+    pass
 class INVALID_MSG_ARG(MESSAGE_ERROR):
     pass
+
+
 
 
 # Decorators
@@ -159,7 +164,6 @@ class MESSAGE:
         this.sent_msg_objs = []
    
 class GUILD:
-    server_list = []
     bot_object = discord.Client()
 
     def __init__(this, guild_id : int,  messages_to_send : list, generate_log : bool = False):
@@ -364,25 +368,32 @@ async def on_ready():
 
 # Advertising task
 async def advertiser(): 
-    for l_server in GUILD.server_list:
+    global m_server_list
+    if not m_server_list:
+        TRACE("SERVER LIST IS NOT DEFINED!", TRACE_LEVELS.ERROR)
+        raise FRAMEWORK_EXCEPTION("THE SERVER LIST IS EMPTY!")
+
+    for l_server in m_server_list:
         await l_server.initialize()
 
     while True:
         await asyncio.sleep(0.01)
-        for l_server in GUILD.server_list:
+        for l_server in m_server_list:
             await l_server.advertise()
                 
 
 # Called after framework is ran 
-def run(token,
-        is_user=False,
-        user_callback=None,
-        server_log_output="Logging"):
+def run(token : str,
+        server_list : list,
+        is_user : bool =False,
+        user_callback : bool=None,
+        server_log_output : str ="Logging"):
     """
     @type  : function
     @name  : run
     @params:
         - token             : str       = access token for account
+        - server_list       : list      = List of framework.GUILD objects
         - is_user           : bool      = Set to True if token is from an user account and not a bot account
         - user_callback     : function  = User callback function (gets called after framework is ran)
         - server_log_output : str       = Path where the server log files will be created
@@ -391,8 +402,11 @@ def run(token,
     """
     global m_user_callback
     global m_server_log_output_path
+    global m_server_list
+
     m_user_callback = user_callback   # This function will be called once
     m_server_log_output_path = server_log_output
+    m_server_list = server_list
     if is_user:
         TRACE("Bot is an user account which is against discord's ToS",TRACE_LEVELS.WARNING)
     GUILD.bot_object.run(token, bot=not is_user)

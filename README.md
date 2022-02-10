@@ -97,11 +97,13 @@ The framework only gives you one function to call making it easy to use:
 - <a id="framework_framework_run"></a>framework.**run**:
     - <u> Parameters</u>:
         - token             : str       = access token for account
+        - server_list       : list      = List of framework.GUILD objects
         - is_user           : bool      = Set to True if token is from an user account and not a bot account
         - user_callback     : function  = User callback function (gets called after framework is ran)
         - server_log_output : str       = Path where the server log files will be created
     -   ```py
         framework.run(  token="your_token_here",        # MANDATORY
+                        server_list = [framework.GUILD(...), framework.GUILD(...),...], # MANDATORY
                         is_user=False,                  # OPTIONAL
                         user_callback=None,             # OPTIONAL
                         server_log_output="Logging")    # OPTIONAL
