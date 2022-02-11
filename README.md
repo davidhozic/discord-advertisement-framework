@@ -152,12 +152,16 @@ The framework only gives you one function to call making it easy to use:
         - is_user           : bool      = Set to True if token is from an user account and not a bot account
         - user_callback     : function  = User callback function (gets called after framework is ran)
         - server_log_output : str       = Path where the server log files will be created
+        - debug             : bool      = Print trace message to the console,
+                                          usefull for debugging if you feel like something is not working
     -   ```py
-        framework.run(  token="your_token_here",        # MANDATORY
-                        server_list = [framework.GUILD(...), framework.GUILD(...),...], # MANDATORY
-                        is_user=False,                  # OPTIONAL
-                        user_callback=None,             # OPTIONAL
-                        server_log_output="Logging")    # OPTIONAL
+        framework.run(  token="your_token_here",                # MANDATORY
+                        server_list = [framework.GUILD(...),    # MANDATORY
+                                       framework.GUILD(...)],
+                        is_user=False,                          # OPTIONAL
+                        user_callback=None,                     # OPTIONAL
+                        server_log_output="Logging"             # OPTIONAL
+                        debug=False)                            # OPTIONAL
         ```
 ***
 <br>

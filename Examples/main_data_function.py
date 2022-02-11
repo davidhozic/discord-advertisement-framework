@@ -44,5 +44,6 @@ if __name__ == "__main__":
                     server_list=guilds,             # MANDATORY
                     is_user=False,                  # OPTIONAL
                     user_callback=None,             # OPTIONAL
-                    server_log_output="Logging")    # OPTIONAL
+                    server_log_output="Logging",    # OPTIONAL
+                    debug=True)                     # OPTIONAL
     

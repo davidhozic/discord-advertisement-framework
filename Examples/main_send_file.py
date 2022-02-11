@@ -34,9 +34,10 @@ guilds = [
 ############################################################################################
 
 if __name__ == "__main__":
-    framework.run(  token=secret.C_TOKEN,           # MANDATORY
+    framework.run(  token=secret.C_TOKEN,           # MANDATORY,
                     server_list=guilds,             # MANDATORY
                     is_user=False,                  # OPTIONAL
                     user_callback=None,             # OPTIONAL
-                    server_log_output="Logging")    # OPTIONAL
+                    server_log_output="Logging",    # OPTIONAL
+                    debug=True)                     # OPTIONAL
     
