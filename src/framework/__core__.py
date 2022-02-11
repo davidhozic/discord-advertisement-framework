@@ -1,7 +1,7 @@
 import time, asyncio, random, types, os
 from typing import  Union
 from .debug import *
-import discord
+import pycordmod
 
 # Contants
 ## Hour constants
@@ -95,7 +95,7 @@ class EMBED_FIELD:
   
        
         
-class EMBED(discord.Embed):
+class EMBED(pycordmod.Embed):
     """
     Derrived class of discord.Embed with easier definition
         Parameters: 
@@ -115,11 +115,11 @@ class EMBED(discord.Embed):
         pass
 
     # Functions
-    def __init__(this, *,author_name:str=None,author_image_url=discord.embeds.EmptyEmbed, image :str=None, thumbnail : str = None, fields : list):
+    def __init__(this, *,author_name:str=None,author_image_url=pycordmod.embeds.EmptyEmbed, image :str=None, thumbnail : str = None, fields : list):
         super().__init__()
         ## Set author
         ### Raise exception if incorrect parameters are passed
-        if not isinstance(author_name, Union[str,discord.embeds._EmptyEmbed,None]) or not isinstance(author_image_url, Union[str,discord.embeds._EmptyEmbed]):
+        if not isinstance(author_name, Union[str,pycordmod.embeds._EmptyEmbed,None]) or not isinstance(author_image_url, Union[str,pycordmod.embeds._EmptyEmbed]):
              raise EMBED.AuthorException(EMBED.C_AUTHOR_EXCEPT)
         if author_name:
             this.set_author(name=author_name, icon_url=author_image_url)
@@ -147,7 +147,7 @@ class FILE:
         this.filename = filename
 
 class MESSAGE:
-    def __init__(this, start_period : float, end_period : float, data : Union[str, discord.Embed, list, types.FunctionType, FILE], channel_ids : list, clear_previous : bool, start_now : bool):
+    def __init__(this, start_period : float, end_period : float, data : Union[str, pycordmod.Embed, list, types.FunctionType, FILE], channel_ids : list, clear_previous : bool, start_now : bool):
         if start_period is None:            # If start_period is none -> period will not be randomized
             this.randomized_time = False
             this.period = end_period 
@@ -164,7 +164,7 @@ class MESSAGE:
         this.sent_msg_objs = []
    
 class GUILD:
-    bot_object = discord.Client()
+    bot_object = pycordmod.Client()
 
     def __init__(this, guild_id : int,  messages_to_send : list, generate_log : bool = False):
         this.guild =    guild_id
@@ -189,7 +189,7 @@ class GUILD:
         else:
             TRACE(f"Unable to create server object from server id: {l_guild_id}", TRACE_LEVELS.ERROR)
 
-    def _generate_log(this, sent_text : str, sent_embed : discord.Embed, sent_files : list, succeeded_ch : list, failed_ch : list):
+    def _generate_log(this, sent_text : str, sent_embed : pycordmod.Embed, sent_files : list, succeeded_ch : list, failed_ch : list):
         l_tmp = ""
         if sent_text:
             l_tmp += "-   ```\n"
@@ -306,14 +306,14 @@ __________________________________________________________
                                         raise Exception(f"Channel is not in part of this guild ({this.guild.name}) but is part of a different guild ({l_channel.guild.name})")     
 
                                     # SEND TO CHANNEL
-                                    l_discord_sent_msg = await l_channel.send(l_text_to_send, embed=l_embed_to_send, files=[discord.File(x) for x in l_files_to_send])
+                                    l_discord_sent_msg = await l_channel.send(l_text_to_send, embed=l_embed_to_send, files=[pycordmod.File(x) for x in l_files_to_send])
                                     
                                     l_succeded_channels.append(l_channel.name)
                                     if l_msg.clear_previous:
                                         l_msg.sent_msg_objs.append(l_discord_sent_msg)
 
                                     break    # Break out of the tries loop
-                                except discord.HTTPException as ex:     
+                                except pycordmod.HTTPException as ex:     
                                     # Failed to send message
                                     l_error_text = f"{l_channel.name} - Reason: {ex}"
                                     if ex.status == 429:
