@@ -1,6 +1,6 @@
 
 # **Shilling Framework Documentation**
-The Discord Shilling/Advertising/Self-Promotion Framework allows you to periodically (absolute or in a random time range)  send messages to discord servers and channels.
+The Discord Shilling/Advertising/Self-Promotion Framework allows you to periodically (absolute or in a random time range)  send messages to discord servers and channels (it's an automatic shiller).
 It supports sending normal text, discord embeds(you are required to run on an actual bot) , files and can even accept user defined functions that will be called to get the data you want to send. 
 The framework also supports formatted logging which tells you what messages succeeded in which channels and failed in which channels(and why they failed).
 
@@ -69,7 +69,7 @@ Examples folder: [Examples folder](Examples).
         - **List of <u>MESSAGE</u> objects** - Python list or tuple contating **MESSAGE** objects.
         - <a id="framework_guild_gen_file_log"></a>**Generate file log** - bool variable, if True it will generate a file log for each message send attempt.<br>
 
-    ```py
+    -   ```py
         framework.GUILD(
 
                         guild_id=123456789,         ## ID of server (guild)
@@ -78,66 +78,80 @@ Examples folder: [Examples folder](Examples).
                         ],
                         generate_log=True           ## Generate file log of sent messages (and failed attempts) for this server 
                         )
-    ```
+        ```
     <br><br>
 <a id="framework_message"></a>
 -  framework.**MESSAGE** 
     - The **MESSAGE** object containts parameters which describe behaviour and data that will be sent to the channels.
     - <u>Parameters</u>:
-        - **Start Period** , **End Period** (start_period, end_period) - These 2 parameters specify the period on which the messages will be sent.
+        - <a id="fw_msg_data_period"></a> **Start Period** , **End Period** (start_period, end_period) - These 2 parameters specify the period on which the messages will be sent.
             - **Start Period** can be either:
               - None - Messages will be sent on intervals specified by **End period**,
               - Integer  >= 0 - Messages will be sent on intervals **randomly** chosen between **<u>Start period** and **End period</u>**, where the randomly chosen intervals will be re-randomized after each sent message.<br><br>
         <a id="framework_message_data"></a>
-        - **Data** (data) - The data parameter is the actual data that will be sent using discord's API. The **data types** of this parameter can be:
-          - **String** (normal text),
+        - **Data** (data) - The data parameter is the actual data that will be sent using discord's API. The **data types** of this parameter can be: 
+          - <a id="framework_message_data_types"></a> **str** (normal text),
           - [framework.**EMBED**](#framework_embed),
           - [framework.**FILE**](#framework_file),
-          - **List/Tuple** containing any of the above arguments (There can up to **1** string, up to **1** embed and up to **10** [framework.FILE](#framework_file) objects, if more than 1 string or embeds are sent, the framework will only consider the last found).
-          - Function that accepts any amount of parameters and returns any of the above types. To pass a function, **YOU MUST USE THE [framework.FUNCTION decorator](#framework_decorators_function)** on the function before passing the function to the framework.<br>
-          **NOTE:** The function is also allowed to return **None object** which will then cause the framework to skip the send and skip generation of server log. For example, you could create an application that randomly chooses cat images from a folder and then return the framework.FILE object if any pictures are available or returns None if no pictures are available.<br><br>
-          When you pass the function to the data parameter, pass it in the next format:
-            ```py
-            data=function_name(parameter_1, parameter_2, ...., parameter_n) # This is not your old function but a wrapper object, which when called directly, it updates the parameters,
-                                                                            # so tehnically you could also change the function parameters mid-run
-            ```
+          - **list/tuple** containing any of the above arguments (There can up to **1** string, up to **1** embed and up to **10** [framework.FILE](#framework_file) objects, if more than 1 string or embeds are sent, the framework will only consider the last found).
+          - **Function** defined by the user:
+            - Parameters: The function is allowed to accept anything
+            - Return: The function **must** return any of the **above data types** or the **None** object if no data is ready to be sent.<br>
+            If **None** is returned by the function, the framework will skip the send attempt and retry after it's [configured period](#fw_msg_data_period). For example you could make the framework call your function on more regular intervals and then decide within the function if anything is to be returned and if nothing is to be returned, you would return None.
+            - **IMPORANT:** if you decide to use an user defined function as the data parameter, you **MUST** use the [framework.**FUNCTION**](#framework_decorators_function) decorator on it.
+            <br><br>
+            When you pass the function to the data parameter, pass it in the next format:
+            - ```py
+
+              @framework.FUNCTION # <- IMPORTANT!!!
+              def function_name(parameter_1, parameter_2):
+                  """
+                  Info: Function returns a different string each time when called by the framework making the sent data dynamic.
+                  """
+                  return f"Parameter: {parameter_1}\nTimestamp: {datetime.datetime.now()}"
+
+              framework.MESSAGE(...,
+                                data=function_name(parameter_1, parameter_2),
+                                ...)
+                                                                                
+              ```
             **NOTE 1**:<br>
             When you use the framework.FUNCTION decorator on the function, it returns a callable object that can be used by the framework but the function call is only used for updating parameters, making this function unusable to the user, so if you plan on calling the function manually outside the framework, please either create another function with the same definition or use this decorator on a retreive data only function.<br>
             **NOTE 2**:<br>
             If you don't use the [framework.FUNCTION](framework_decorators_function) decorator, the function will only get called once(when you pass it to the data) and will not be called by the framework dynamically.<br>
             **NOTE 3**:<br>
-            Because the decorator creates a callable object, whos call, updates the parameters,the function parameters that were sent to the framework can still be changed after the framework has already started a.k.a "mid-run". You can do that by "calling" the same function again with different parameters (without sending it to the framework again). This will update the parameters inside the framework. 
-            ```py
-            some_function(new_parameter1, new_parameter2)
-            ```
+            Because the decorator creates a callable object, whos call, updates the parameters, the function parameters that were sent to the framework can still be changed after the framework has already started a.k.a "mid-run". You can do that by "calling" the same function again with different parameters (without sending it to the framework again). This will update the parameters inside the the framework as well. 
+
             <br>
             <image alt="Function parameter" src="DOC_src\function_as_data_parameter_1.png" width=500>
         <br><br>
         - **Channel IDs** (channel_ids) - List of IDs of all the channels you want data to be sent into.
         - **Clear Previous** (clear_previous) - A bool variable that can be either True of False. If True, then before sending a new message to the channels, the framework will delete all previous messages sent to discord that originated from this message object.
         - **Start Now** (start_now) - A bool variable that can be either True or False. If True, then the framework will send the message as soon as it is run and then wait it's period before trying again. If False, then the message will not be sent immediatly after framework is ready, but will instead wait for the period to elapse.<br>
-    ```py
-    framework.MESSAGE(
-                          start_period=None,            # If None, messages will be send on a fixed period (end period)
-                          end_period=15,                # If start_period is None, it dictates the fixed sending period,
-                                                        # If start period is defined, it dictates the maximum limit of randomized period
-                          data="Some Text",             # Data yo you want sent to the function (Can be of types : str, embed, file, list of types to the left
-                                                        # or function that returns any of above types(or returns None if you don't have any data to send yet), 
+    - ```py
+      framework.MESSAGE(
+                        start_period=None,            # If None, messages will be send on a fixed period (end period)
+                        end_period=15,                # If start_period is None, it dictates the fixed sending period,
+                                                      # If start period is defined, it dictates the maximum limit of randomized period
+                        data="Some Text",             # Data yo you want sent to the function (Can be of types : str, embed, file, list of types to the left
+                                                      # or function that returns any of above types(or returns None if you don't have any data to send yet), 
                                                         # where if you pass a function you need to use the framework.FUNCTION decorator on top of it ).
-                          channel_ids=[123456789],      # List of ids of all the channels you want this message to be sent into
-                          clear_previous=True,          # Clear all discord messages that originated from this MESSAGE object
-                          start_now=True                # Start sending now (True) or wait until period
-                          ),  
-    ```
+                        channel_ids=[123456789],      # List of ids of all the channels you want this message to be sent into
+                        clear_previous=True,          # Clear all discord messages that originated from this MESSAGE object
+                        start_now=True                # Start sending now (True) or wait until period
+                        ),  
+      ```
 ***
 <br>
 
 ##  **Decorators** :
-Python decorators are essentially functions/classes that accept a function or a class as their parameter and add extra functionality on them.<br>
-<u>In our case</u> there is only one decorator:<br>
+Python decorators are callable objects that you can use to give your function or class extra functionallity. Essentialy they are meant to accept a function or a class as their parameter and then process whatever they are meant to do with the function or class.
+More on Python decorators [here](https://realpython.com/primer-on-python-decorators/).<br>
+<br>
+**Inside the framework**, there is only one decorator:
 <a id="framework_decorators_function"></a>
-- framework.FUNCTION:
-    - This decorator accepts a function as it's parameter and then returns a class which's objects will be called by the framework. To use an user defined function as parameter to the [framework.MESSAGE data parameter](#framework_message_data), you must use this decorator beforehand. Please see the **Examples** folder.
+- framework.**FUNCTION**:
+    - This decorator accepts a function as it's parameter and then returns a object that will be called by the framework. To use an <u>user defined function as parameter</u> to the [framework.MESSAGE data parameter](#framework_message_data), you **MUST** use this decorator beforehand. Please see the **Examples** folder.
     - Usage:<br>
     <img src="DOC_src\function_decorator_1.png" alt="drawing" width="600"/>
 ***
@@ -189,6 +203,7 @@ or
 ```fix
 python3 -m pip install Discord-Shilling-Framework
 ```
+<br>
 
 ### <u> Sending messages </u>
 
@@ -248,5 +263,5 @@ framework.run(  token="account token here",     # MANDATORY (This is the string 
                 server_log_output="Logging")    # OPTIONAL      
 
 ```
-
 That's it, your framework is now running and messages will be periodicaly sent.
+***
