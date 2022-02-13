@@ -2,7 +2,7 @@
     DISCORD SHILLING FRAMEWORK (DSF)
     Author      :: David Hozic
     Copyright   :: Copyright (c) 2022 David Hozic
-    Version     :: V1.7.4
+    Version     :: V1.7.4.1
 """
 from contextlib import suppress
 from   typing import Union, List
