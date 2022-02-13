@@ -1,195 +1,342 @@
-import time, asyncio, random, types, os
-from typing import  Union
-from .debug import *
-import discord
+"""
+    DISCORD SHILLING FRAMEWORK (DSF)
+    Author      :: David Hozic
+    Copyright   :: Copyright (c) 2022 David Hozic
+    Version     :: V1.7.4.1
+"""
+from contextlib import suppress
+from   typing import Union, List
+import time
+import asyncio
+import random
+import types
+import os
+import enum
+import pycordmod
 
+#######################################################################
+# Globals
+#######################################################################
+m_user_callback          = None     # User provided function to call after framework is ready
+m_server_log_output_path = None     # User provided for server log output path
+m_server_list            = None     # User provided server list
+m_debug                  = None     # User provided option to enable debugging
+m_client                 = None     # Pycord Client object
+
+#######################################################################
 # Contants
-## Hour constants
+#######################################################################
 C_DAY_TO_SECOND = 86400
 C_HOUR_TO_SECOND= 3600
 C_MINUTE_TO_SECOND = 60
 
-# Globals
-m_user_callback = None  # User provided function to call after framework is ready
-m_server_log_output_path = None
-m_server_list = None
+#######################################################################
+# Debugging
+#######################################################################
+class TRACE_LEVELS(enum.Enum):
+    """
+    Info: Level of trace for debug
+    """
+    NORMAL = 0
+    WARNING = 1
+    ERROR =  2
 
-# Exceptions
-class FRAMEWORK_EXCEPTION(Exception):
-    pass
+def TRACE(message: str,
+          level:   TRACE_LEVELS):
+    """"
+    Name : TRACE
+    Param:
+    - message : str          = Trace message
+    - level   : TRACE_LEVELS = Level of the trace
+    """
+    if m_debug:
+        l_timestruct = time.localtime()
+        l_timestamp = "Date: {:02d}.{:02d}.{:04d} Time:{:02d}:{:02d}"
+        l_timestamp = l_timestamp.format(l_timestruct.tm_mday,
+                                         l_timestruct.tm_mon,
+                                         l_timestruct.tm_year,
+                                         l_timestruct.tm_hour,
+                                         l_timestruct.tm_min)
+        l_trace = f"{l_timestamp}\nTrace level: {level.name}\nMessage: {message}\n"
+        print(l_trace)
 
-class MESSAGE_ERROR(FRAMEWORK_EXCEPTION):
-    pass
-class INVALID_MSG_ARG(MESSAGE_ERROR):
-    pass
+#######################################################################
+# Tasks
+#######################################################################
+async def advertiser():
+    """
+    Name  : advertiser
+    Param : void
+    Info  : Main task that is responsible for the framework
+    """
+    if not m_server_list:
+        TRACE("SERVER LIST IS NOT DEFINED!", TRACE_LEVELS.ERROR)
+    for l_server in m_server_list:
+        await l_server.initialize()
+    while True:
+        await asyncio.sleep(0.100)
+        for l_server in m_server_list:
+            await l_server.advertise()
 
-
-
-
+#######################################################################
 # Decorators
-## Decorator classes
-class __FUNCTION_CLS__:
-        def __init__(this, fnc):
-            this.fnc = fnc
-            this.args, this.kwargs = None, None
-        def __call__(this, *args, **kwargs):
-            this.args = args
-            this.kwargs = kwargs
-            return this
-        def get_data(this):
-            return this.fnc(*this.args, **this.kwargs)
+#######################################################################
+class __FUNCTION_CLS_BASE__:
+    pass
 
 def FUNCTION(fnc):
     """
     type:   Decorator
     name:   FUNCTION
-    info:   Decorator used to create a callable framework function object
+    info:   Decorator used to create a framework __FUNCTION_CLS__ class for function
     return: __FUNCTION_CLS__
     usage:  \n\n@framework.FUNCTION\ndef function(a,b,c)\n\treturn [str | embed | file | list | tuple]
     """
-    return __FUNCTION_CLS__(fnc)
+    class __FUNCTION_CLS__(__FUNCTION_CLS_BASE__):
+        """"
+        _FUNCTION_CLS_
+        Info : Used for creating special classes that are then used to create objects in the framework.MESSAGE
+               data parameter, allows for sending dynamic contentent received thru an user defined function.
 
-# Classes
-## Timer
+        Param: function
+        """
+        def __init__(self, *args, **kwargs):
+            self.args = args
+            self.kwargs = kwargs
+            
+        def get_data(self):
+            """
+            Retreives the data from the user function
+            """
+            return fnc(*self.args, **self.kwargs)
+    return __FUNCTION_CLS__
+
+
+#######################################################################
+# Misc. classes
+#######################################################################
 class TIMER:
-    def __init__(this):
-        this.running = False
-        this.min = 0
-    def start(this):
-        if this.running:
+    """
+    TIMER
+    Info : Used in MESSAGE objects as a send timer
+    """
+    def __init__(self):
+        "Initiate the timer"
+        self.running = False
+        self.startms = 0
+    def start(self):
+        "Start the timer"
+        if self.running:
             return True
-        this.running = True
-        this.ms = time.time()
+        self.running = True
+        self.startms = time.time()
         return False
-    def elapsed(this):
-        return time.time() - this.ms if this.running else 0
-    def reset (this):
-        this.running = False
+    def elapsed(self):
+        "Return the timer elapsed from last reset"
+        return time.time() - self.startms if self.running else 0
+    def reset (self):
+        "Reset the timer"
+        self.running = False
 
-## Framework classes
+#######################################################################
+# Framework classes
+#######################################################################
+class DISCORD_CLIENT(pycordmod.Client):
+    """
+        Name : DISCORD_CLIENT
+        Info : Inherited class from pycordmod.Client.
+               Contains an additional on_ready function.
+    """
+    async def on_ready(self):
+        """
+        Name : on_ready
+        Info : Tasks that is started by pycord when you have been successfully logged into discord.
+        """
+        TRACE(f"Logged in as {self.user}", TRACE_LEVELS.NORMAL)
+        asyncio.gather(asyncio.create_task(advertiser()))
+        if m_user_callback:   # If user callback function was specified
+            m_user_callback() # Call user provided function after framework has started
+
 class EMBED_FIELD:
     """
     Embedded field class for use in EMBED object constructor
     Parameters:
-    -  Name         : str    -- Name of the field 
+    -  Name         : str    -- Name of the field
     -  Content      : str    -- Content of the embedded field
     -  Inline       : bool   -- Make this field appear in the same line as the previous field
     """
-    def __init__(this, name : str, content : str, inline : bool=False):
-        this.name = name
-        this.content = content 
-        this.inline = inline
+    def __init__(self,
+                 name : str,
+                 content : str,
+                 inline : bool=False):
+        self.name = name
+        self.content = content
+        self.inline = inline
 
-    def __iter__(this):
+    def __iter__(self):
+        """
+        Name: __iter__
+        Info: Iterator used to return EMBED_FIELD_ITER
+        """
         class EMBED_FIELD_ITER:
-            def __init__(this, data):
-                this.__data = data
-                this.__index = 0
-                this.__max = len(data)
-            def __next__(this):
-                if this.__index == this.__max:
+            """
+            Name: EMBED_FIELD_ITER
+            Info: Iterator used to expand the EMBED_FIELD object into name, content, inline
+            """
+            def __init__(self, data):
+                self.__data = data
+                self.__index = 0
+                self.__max = len(data)
+            def __next__(self):
+                if self.__index == self.__max:
                     raise StopIteration
-                this.__index +=1
-                return this.__data[this.__index-1]
-        return EMBED_FIELD_ITER([this.name, this.content,this.inline])
-  
-       
-        
-class EMBED(discord.Embed):
+                self.__index +=1
+                return self.__data[self.__index-1]
+        return EMBED_FIELD_ITER([self.name, self.content,self.inline])
+
+class EMBED(pycordmod.Embed):
     """
     Derrived class of discord.Embed with easier definition
-        Parameters: 
+        Parameters:
             - author_name       : str   -- Name of embed author
             - author_image_url  : str   -- Url to author image
             - image             : str   -- Url of image to be placed at the end of the embed
             - thumbnail         : str   -- Url of image that will be placed at the top right of embed
             - fields            : list  -- List of EMBED_FIELD objects
     """
-    # Exceptions
-    C_AUTHOR_EXCEPT = "Incorrect author parameters"
-    class AuthorException(BaseException):
-        pass
-    C_FIELD_PARAM_EXCEPT  = "The fields parameter must be a list of class EMBED_FIELD"
-    C_FIELD_LEN_EXCEPT    = "The field content can be only up to 1023 per field"
-    class FieldsException(BaseException):
-        pass
+    def __init__(self, *,
+                author_name: str=None,
+                author_image_url: str=pycordmod.embeds.EmptyEmbed,
+                image: str= None,
+                thumbnail : str = None,
+                fields : List[EMBED_FIELD]):
 
-    # Functions
-    def __init__(this, *,author_name:str=None,author_image_url=discord.embeds.EmptyEmbed, image :str=None, thumbnail : str = None, fields : list):
         super().__init__()
         ## Set author
-        ### Raise exception if incorrect parameters are passed
-        if not isinstance(author_name, Union[str,discord.embeds._EmptyEmbed,None]) or not isinstance(author_image_url, Union[str,discord.embeds._EmptyEmbed]):
-             raise EMBED.AuthorException(EMBED.C_AUTHOR_EXCEPT)
         if author_name:
-            this.set_author(name=author_name, icon_url=author_image_url)
-
+            self.set_author(name=author_name, icon_url=author_image_url)
         ## Set image
         if image:
-            this.set_image(url=image)
-
+            self.set_image(url=image)
         ## Set thumbnail
         if thumbnail:
-            this.set_thumbnail(url=thumbnail)
-        
-        ## Set fields
-        ### Raise exception if incorrect parameters are passed
-        if not isinstance(fields, list) or not len(fields) or not isinstance(fields[0], EMBED_FIELD):
-            raise EMBED.FieldsException(EMBED.C_FIELD_PARAM_EXCEPT)
+            self.set_thumbnail(url=thumbnail)
         ### Set fields
         for field_name, content, inline in fields:
-            if len(content) > 1023:
-                raise EMBED.FieldsException(EMBED.C_FIELD_LEN_EXCEPT) #### Maximum length is 1023
-            this.add_field(name=field_name,value=content,inline=inline)
-        
+            self.add_field(name=field_name,value=content,inline=inline)
+
 class FILE:
-    def __init__(this, filename):
-        this.filename = filename
+    """
+    Name: FILE
+    Info: FILE object used as a data parameter to the MESSAGE objects.
+          This is needed aposed to a normal file object because this way,
+          you can edit the file after the framework has already been started.
+    """
+    def __init__(self,
+                 filename):
+        self.filename = filename
 
 class MESSAGE:
-    def __init__(this, start_period : float, end_period : float, data : Union[str, discord.Embed, list, types.FunctionType, FILE], channel_ids : list, clear_previous : bool, start_now : bool):
+    """
+    Name: MESSAGE
+    Info: The MESSAGE object containts parameters which describe behaviour and data that will be sent to the channels.
+    Params:
+    - Start Period , End Period (start_period, end_period) - These 2 parameters specify the period on which the messages will be sent:
+    Start Period can be either:
+        - None - Messages will be sent on intervals specified by End period,
+        - Integer >= 0 - Messages will be sent on intervals randomly chosen between Start period and End period,
+          where the randomly chosen intervals will be re-randomized after each sent message.
+    - Data (data) - The data parameter is the actual data that will be sent using discord's API. The data types of this parameter can be:
+        - String (normal text),
+        - framework.EMBED,
+        - framework.FILE,
+        - List/Tuple containing any of the above arguments (There can up to 1 string, up to 1 embed and up to 10 framework.FILE objects,
+          if more than 1 string or embeds are sent, the framework will only consider the last found).
+        - Function that accepts any amount of parameters and returns any of the above types.
+          To pass a function, YOU MUST USE THE framework.FUNCTION decorator on the function before passing the function to the framework.
+    - Channel IDs (channel_ids) - List of IDs of all the channels you want data to be sent into.
+    - Clear Previous (clear_previous) - A bool variable that can be either True of False. If True, then before sending a new message to the channels,
+      the framework will delete all previous messages sent to discord that originated from this message object.
+    - Start Now (start_now) - A bool variable that can be either True or False. If True, then the framework will send the message
+      as soon as it is run and then wait it's period before trying again. If False, then the message will not be sent immediatly after framework is ready,
+      but will instead wait for the period to elapse.
+    """
+    def __init__(self,
+                start_period : float,
+                end_period : float,
+                data : Union[str, pycordmod.Embed, list, types.FunctionType, FILE],
+                channel_ids : List[int],
+                clear_previous : bool,
+                start_now : bool):
+
         if start_period is None:            # If start_period is none -> period will not be randomized
-            this.randomized_time = False
-            this.period = end_period 
-        else:                               
-            this.randomized_time = True             
-            this.random_range = (start_period, end_period)
-            this.period = random.randrange(*this.random_range)  # This will happen after each sending as well
+            self.randomized_time = False
+            self.period = end_period
 
-        this.data = data
-        this.channels = channel_ids
-        this.timer = TIMER()
-        this.clear_previous = clear_previous
-        this.force_retry = {"ENABLED" : start_now, "TIME" : 0}
-        this.sent_msg_objs = []
-   
-class GUILD:
-    bot_object = discord.Client()
-
-    def __init__(this, guild_id : int,  messages_to_send : list, generate_log : bool = False):
-        this.guild =    guild_id
-        this.messages = messages_to_send
-        this.generate_log = generate_log
-        this.guild_file_name = None
-    async def initialize(this):       # Get objects from ids
-        l_guild_id = this.guild
-        this.guild = GUILD.bot_object.get_guild(l_guild_id) # Transofrm guild id into API guild object
-        if this.guild != None:
-            for l_msg in this.messages:
-                if isinstance(l_msg, MESSAGE):
-                    for x in range(len(l_msg.channels)):
-                        l_msg.channels[x] = GUILD.bot_object.get_channel(l_msg.channels[x])
-                    while None in l_msg.channels:
-                        l_msg.channels.remove(None)
-                else:
-                    TRACE(f"Invalid data type argument passed to messages list in guild id {l_guild_id}\nPlease fix the error and restart application.\nEntering sleep forever...", level=TRACE_LEVELS.ERROR)
-                    while l_msg in this.messages:
-                        this.messages.remove(l_msg)
-            this.guild_file_name = this.guild.name.replace("/","-").replace("\\","-").replace(":","-").replace("!","-").replace("|","-").replace("*","-").replace("?","-").replace("<","(").replace(">", ")") + ".md"
         else:
-            TRACE(f"Unable to create server object from server id: {l_guild_id}", TRACE_LEVELS.ERROR)
+            self.randomized_time = True
+            self.random_range = (start_period, end_period)
+            self.period = random.randrange(*self.random_range)  # This will happen after each sending as well
 
-    def _generate_log(this, sent_text : str, sent_embed : discord.Embed, sent_files : list, succeeded_ch : list, failed_ch : list):
+        self.data = data
+        self.channels = channel_ids
+        self.timer = TIMER()
+        self.clear_previous = clear_previous
+        self.force_retry = {"ENABLED" : start_now, "TIME" : 0}
+        self.sent_msg_objs = []
+
+class GUILD:
+    """
+    Name: GUILD
+    Info: The GUILD object represents a server to which messages will be sent.
+    Params:
+    - Guild ID - identificator which can be obtain by enabling developer mode in discord's settings and
+                 afterwards right-clicking on the server/guild icon in the server list and clicking "Copy ID",
+    - List of MESSAGE objects - Python list or tuple contating MESSAGE objects.
+    - Generate file log - bool variable, if True it will generate a file log for each message send attempt.
+    """
+    def __init__(self,
+                 guild_id : int,
+                 messages_to_send : List[MESSAGE],
+                 generate_log : bool = False):
+
+        self.guild =    guild_id
+        self.messages = messages_to_send
+        self.generate_log = generate_log
+        self.guild_file_name = None
+    async def initialize(self):       # Get objects from ids
+        """
+        Name: initialize
+        Info: After login to discord, this functions initializes the guild and channel objects
+        """
+        l_guild_id = self.guild
+        self.guild = m_client.get_guild(l_guild_id) # Transofrm guild id into API guild object
+        if self.guild is not None:
+            for l_msg in self.messages:
+                for index in range(len(l_msg.channels)):
+                    l_channel_id = l_msg.channels[index]
+                    l_msg.channels[index] = m_client.get_channel(l_channel_id)
+                    if l_msg.channels[index] is None:
+                        TRACE(f"Unable to find channel from id: {l_channel_id}\nIn guild: {self.guild} (ID: {self.guild.id})", TRACE_LEVELS.ERROR)
+                while None in l_msg.channels:
+                    l_msg.channels.remove(None)
+
+            self.guild_file_name = self.guild.name.replace("/","-").replace("\\","-").replace(":","-").replace("!","-").replace("|","-").replace("*","-").replace("?","-").replace("<","(").replace(">", ")") + ".md"
+        else:
+            TRACE(f"Unable to create server object from server id: {l_guild_id}\nRemoving the object from the list!", TRACE_LEVELS.ERROR)
+            m_server_list.remove(self)
+            del self
+
+    def _generate_log(self,
+                      sent_text : str,
+                      sent_embed : pycordmod.Embed,
+                      sent_files : list,
+                      succeeded_ch : list,
+                      failed_ch : list):
+        """
+        Name: _generate_log
+        Info: Generates a log of a message send attempt
+        """
         l_tmp = ""
         if sent_text:
             l_tmp += "-   ```\n"
@@ -216,7 +363,7 @@ class GUILD:
         sent_files = l_tmp
         l_timestruct = time.localtime()
         l_timestamp = "Date:{:02d}.{:02d}.{:04d} Time:{:02d}:{:02d}".format(l_timestruct.tm_mday, l_timestruct.tm_mon, l_timestruct.tm_year,l_timestruct.tm_hour,l_timestruct.tm_min)
-        return f'''                         
+        return f'''
 # MESSAGE LOG:
 ## Text:
 {sent_text}
@@ -227,7 +374,7 @@ class GUILD:
 
 ## Other data:
 -   ```
-    Server: {this.guild.name}
+    Server: {self.guild.name}
     Succeeded in channels: {succeeded_ch}
     Failed in channels: {failed_ch}
     Timestamp: {l_timestamp}
@@ -235,30 +382,36 @@ class GUILD:
 __________________________________________________________
 '''
 
-    async def advertise(this):
+    async def advertise(self):
+        """
+        Name: advertise
+        Info: async function that goes thru all the messages inside the guild and tries to send them to discord
+              if timer has reached the expected value.
+        """
         l_trace = ""
-        if this.guild != None:
-            for l_msg in this.messages:
-                if l_msg.timer.start() and (not l_msg.force_retry["ENABLED"] and l_msg.timer.elapsed() > l_msg.period or l_msg.force_retry["ENABLED"] and l_msg.timer.elapsed() > l_msg.force_retry["TIME"]) :  # If timer has started and timer is above set period/above force_retry period
+        if self.guild is not None:
+            for l_msg in self.messages:
+                if l_msg.timer.start() and\
+                   (not l_msg.force_retry["ENABLED"] and l_msg.timer.elapsed() > l_msg.period\
+                    or l_msg.force_retry["ENABLED"] and l_msg.timer.elapsed() > l_msg.force_retry["TIME"]) :  # If timer has started and timer is above set period/above force_retry period
                     l_msg.timer.reset()
                     l_msg.timer.start()
                     l_msg.force_retry["ENABLED"] = False
-                    if l_msg.randomized_time == True:           # If first parameter to msg object is != None
-                            l_msg.period = random.randrange(*l_msg.random_range)
-                       
-                                        
+                    if l_msg.randomized_time is True:           # If first parameter to msg object is not None
+                        l_msg.period = random.randrange(*l_msg.random_range)
+
                     # Parse data from the data parameter
-                    l_data_to_send  = None     
-                    if isinstance(l_msg.data, __FUNCTION_CLS__):    
+                    l_data_to_send  = None
+                    if isinstance(l_msg.data, __FUNCTION_CLS_BASE__):
                         l_data_to_send = l_msg.data.get_data()
                     else:
                         l_data_to_send = l_msg.data
-                    
+
                     l_embed_to_send = None
                     l_text_to_send  = None
                     l_files_to_send  = []
                     # If any valid data was passed to the data parameter of framework.MESSAGE
-                    if l_data_to_send is not None:      
+                    if l_data_to_send is not None:
                         if not isinstance(l_data_to_send, Union[list,tuple]):
                             l_data_to_send = [l_data_to_send]
                         # data is list -> parse each element
@@ -268,11 +421,17 @@ __________________________________________________________
                             elif isinstance(element, EMBED):
                                 l_embed_to_send = element
                             elif isinstance(element, FILE):
-                                l_files_to_send.append(element)
+                                l_files_to_send.append(pycordmod.File(element.filename))
                             elif element is not None:
-                                TRACE(f"INVALID DATA PARAMETER PASSED!\nArgument is of type : {element.__class__}\nSee README.md for allowed data types", TRACE_LEVELS.ERROR)
-                                raise INVALID_MSG_ARG(f"\nINVALID DATA PARAMETER PASSED!\nArgument is of type : {element.__class__}\nSee README.md for allowed data types")
-                    # Send messages                     
+                                TRACE(f"""\
+                                INVALID DATA PARAMETER PASSED!
+                                Argument is of type : {element.__class__}
+                                See README.md for allowed data types
+                                GUILD: {self.guild.name} (ID: {self.guild.id})
+                                """,
+                                 TRACE_LEVELS.ERROR)
+
+                    # Send messages
                     if l_text_to_send or l_embed_to_send or l_files_to_send:
                         l_errored_channels = []
                         l_succeded_channels= []
@@ -282,50 +441,42 @@ __________________________________________________________
                             for l_sent_msg_obj in l_msg.sent_msg_objs:
                                 try:
                                     await l_sent_msg_obj.delete()
-                                except Exception as ex:
+                                except pycordmod.HTTPException as ex:
                                     if ex.status == 429:
                                         await asyncio.sleep(int(ex.response.headers["Retry-After"])+1)
-                                        
-                            l_msg.sent_msg_objs.clear()
 
-                        ## Open files
-                        if l_files_to_send:
-                            l_tmp = l_files_to_send
-                            l_files_to_send = []
-                            for l_fileobj in l_tmp:
-                                try:
-                                    l_files_to_send.append(open(l_fileobj.filename, "rb"))
-                                except Exception as l_file_exception:  
-                                    TRACE(f"FILE_EXCEPTION for file: {l_fileobj.filename} | Exception: {l_file_exception}", TRACE_LEVELS.ERROR) 
-                        
+                            l_msg.sent_msg_objs.clear()                                               
+
                         # Send to channels
                         for l_channel in l_msg.channels:
-                            for tries in range(3):
+                            for tries in range(3):  # Maximum 3 tries (if rate limit)
                                 try:
-                                    if l_channel.guild.id != this.guild.id:
-                                        raise Exception(f"Channel is not in part of this guild ({this.guild.name}) but is part of a different guild ({l_channel.guild.name})")     
-
-                                    # SEND TO CHANNEL
-                                    l_discord_sent_msg = await l_channel.send(l_text_to_send, embed=l_embed_to_send, files=[discord.File(x) for x in l_files_to_send])
-                                    
-                                    l_succeded_channels.append(l_channel.name)
-                                    if l_msg.clear_previous:
-                                        l_msg.sent_msg_objs.append(l_discord_sent_msg)
-
+                                    if l_channel.guild.id != self.guild.id:
+                                        TRACE(f"Channel {l_channel.name} (ID: {l_channel.id}) is not part of guild {self.guild.name} (ID: {self.guild.id})",TRACE_LEVELS.ERROR)
+                                        l_msg.channels.remove(l_channel)  ## Remove from list as channel not part of the current guild
+                                    else:
+                                        # SEND TO CHANNEL
+                                        l_discord_sent_msg = await l_channel.send(l_text_to_send,
+                                                                                  embed=l_embed_to_send,
+                                                                                  files=l_files_to_send)
+                                        l_succeded_channels.append(l_channel.name)
+                                        if l_msg.clear_previous:
+                                            l_msg.sent_msg_objs.append(l_discord_sent_msg)
                                     break    # Break out of the tries loop
-                                except discord.HTTPException as ex:     
+                                except pycordmod.HTTPException as ex:
                                     # Failed to send message
                                     l_error_text = f"{l_channel.name} - Reason: {ex}"
                                     if ex.status == 429:
                                         retry_after = int(ex.response.headers["Retry-After"])  + 1
                                         # Slow Mode detected -> wait the remaining time
                                         if ex.code == 20026:
-                                            l_msg.force_retry["ENABLED"] = True 
+                                            l_msg.force_retry["ENABLED"] = True
                                             l_msg.force_retry["TIME"] = retry_after
-                                        else:   
-                                            # Rate limit but not slow mode -> put the framework to sleep as it won't be able to send any messages globaly 
+
+                                        else:
+                                            # Rate limit but not slow mode -> put the framework to sleep as it won't be able to send any messages globaly
                                             TRACE(f"Rate limit! Retrying after {retry_after}",TRACE_LEVELS.WARNING)
-                                            await asyncio.sleep(retry_after)  
+                                            await asyncio.sleep(retry_after)
 
                                         l_error_text += f" - Retrying after {retry_after}"
                                     else:
@@ -334,57 +485,28 @@ __________________________________________________________
                                     if tries == 2 or ex.status != 429 or ex.code == 20026:  # Maximum tries reached or no point in retrying
                                         l_errored_channels.append(l_error_text)
                                         break
-                                    
+
                                 except OSError as ex:
                                     TRACE(f"Error sending data to channel | Exception:{ex}",TRACE_LEVELS.ERROR)
                                     break
-                        ## Close files if it was opened
-                        if l_files_to_send:
-                            for l_file in l_files_to_send:
-                                try:
-                                    l_file.close()                             
-                                except: # If file is already closed
-                                    pass
-
-                        l_trace += this._generate_log(l_text_to_send, l_embed_to_send, [x.name for x in l_files_to_send], l_succeded_channels, l_errored_channels)     # Generate trace of sent file
+                                
+                        l_trace += self._generate_log(l_text_to_send, l_embed_to_send, [x.filename for x in l_files_to_send], l_succeded_channels, l_errored_channels)     # Generate trace of sent file
             # Save into file
-            if this.generate_log and l_trace:
-                if m_server_log_output_path not in os.listdir("./"):
+            if self.generate_log and l_trace:
+                with suppress(FileExistsError):
                     os.mkdir(m_server_log_output_path)
-                with open(os.path.join(m_server_log_output_path, this.guild_file_name),'a', encoding='utf-8') as l_logfile:
+                with open(os.path.join(m_server_log_output_path, self.guild_file_name),'a', encoding='utf-8') as l_logfile:
                     l_logfile.write(l_trace)
-        
-# Event functions
-@GUILD.bot_object.event
-async def on_ready():
-    TRACE(f"Logged in as {GUILD.bot_object.user}", TRACE_LEVELS.NORMAL)
-    asyncio.gather(asyncio.create_task(advertiser()))
-    if m_user_callback: # If it's not none
-        m_user_callback() # Call user provided function after framework has started
-    
 
-# Advertising task
-async def advertiser(): 
-    global m_server_list
-    if not m_server_list:
-        TRACE("SERVER LIST IS NOT DEFINED!", TRACE_LEVELS.ERROR)
-        raise FRAMEWORK_EXCEPTION("THE SERVER LIST IS EMPTY!")
-
-    for l_server in m_server_list:
-        await l_server.initialize()
-
-    while True:
-        await asyncio.sleep(0.01)
-        for l_server in m_server_list:
-            await l_server.advertise()
-                
-
-# Called after framework is ran 
+#######################################################################
+# Functions
+#######################################################################
 def run(token : str,
-        server_list : list,
+        server_list : List[GUILD],
         is_user : bool =False,
         user_callback : bool=None,
-        server_log_output : str ="Logging"):
+        server_log_output : str ="Logging",
+        debug : bool=False):
     """
     @type  : function
     @name  : run
@@ -394,19 +516,26 @@ def run(token : str,
         - is_user           : bool      = Set to True if token is from an user account and not a bot account
         - user_callback     : function  = User callback function (gets called after framework is ran)
         - server_log_output : str       = Path where the server log files will be created
+        - debug             : bool      = Print trace message to the console,
+                                          useful for debugging if you feel like something is not working
 
     @description: This function is the function that starts framework and starts shilling
     """
-    global m_user_callback
-    global m_server_log_output_path
-    global m_server_list
+    global m_user_callback,\
+           m_server_log_output_path,\
+           m_server_list,\
+           m_debug,\
+           m_client
 
-    m_user_callback = user_callback   # This function will be called once
-    m_server_log_output_path = server_log_output
-    m_server_list = server_list
+    m_user_callback = user_callback                 ## Called after framework has started
+    m_server_log_output_path = server_log_output    ## Path to folder where to crete server logs
+    m_server_list = server_list                     ## List of guild objects to iterate thru in the advertiser task
+    m_debug = debug                                 ## Print trace messages to the console for debugging purposes
+    m_client = DISCORD_CLIENT()                     ## Create a Client object for communication with discord's API
+
     if is_user:
         TRACE("Bot is an user account which is against discord's ToS",TRACE_LEVELS.WARNING)
-    GUILD.bot_object.run(token, bot=not is_user)
+    m_client.run(token, bot=not is_user)
 
 
 if __name__ == "__main__":
