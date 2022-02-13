@@ -4,6 +4,7 @@
     Copyright   :: Copyright (c) 2022 David Hozic
     Version     :: V1.7.4
 """
+from contextlib import suppress
 from   typing import Union, List
 import time
 import asyncio
@@ -510,7 +511,7 @@ __________________________________________________________
                         l_trace += self._generate_log(l_text_to_send, l_embed_to_send, [x.name for x in l_files_to_send], l_succeded_channels, l_errored_channels)     # Generate trace of sent file
             # Save into file
             if self.generate_log and l_trace:
-                if m_server_log_output_path not in os.listdir("./"):
+                with suppress(FileExistsError):
                     os.mkdir(m_server_log_output_path)
                 with open(os.path.join(m_server_log_output_path, self.guild_file_name),'a', encoding='utf-8') as l_logfile:
                     l_logfile.write(l_trace)
