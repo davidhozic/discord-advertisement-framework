@@ -80,47 +80,35 @@ async def advertiser():
 #######################################################################
 # Decorators
 #######################################################################
-class __FUNCTION_CLS__:
-    """"
-    _FUNCTION_CLS_
-    Info : Used for creating special objects used as a data parameter to the framework.MESSAGE.
-          When called, it saves the parameters and then after framework is running, the framework
-          will call the function stored in the object passing those parameters.
-
-    Param: When initializing: function object (decorator use).
-           When calling: Parameters.
-    """
-    def __init__(self,
-                 fnc):
-        """
-        Initiate the object with the passed function parameter
-        """
-        self.fnc = fnc
-        self.args, self.kwargs = None, None
-
-    def __call__(self, *args, **kwargs):
-        """
-        Update the internal parameters
-        """
-        self.args = args
-        self.kwargs = kwargs
-        return self
-
-    def get_data(self):
-        """
-        Retreives the data from the saved function
-        """
-        return self.fnc(*self.args, **self.kwargs)
+class __FUNCTION_CLS_BASE__:
+    pass
 
 def FUNCTION(fnc):
     """
     type:   Decorator
     name:   FUNCTION
-    info:   Decorator used to create a callable framework function object
+    info:   Decorator used to create a framework __FUNCTION_CLS__ class for function
     return: __FUNCTION_CLS__
     usage:  \n\n@framework.FUNCTION\ndef function(a,b,c)\n\treturn [str | embed | file | list | tuple]
     """
-    return __FUNCTION_CLS__(fnc)
+    class __FUNCTION_CLS__(__FUNCTION_CLS_BASE__):
+        """"
+        _FUNCTION_CLS_
+        Info : Used for creating special classes that are then used to create objects in the framework.MESSAGE
+               data parameter, allows for sending dynamic contentent received thru an user defined function.
+
+        Param: function
+        """
+        def __init__(self, *args, **kwargs):
+            self.args = args
+            self.kwargs = kwargs
+            
+        def get_data(self):
+            """
+            Retreives the data from the user function
+            """
+            return fnc(*self.args, **self.kwargs)
+    return __FUNCTION_CLS__
 
 
 #######################################################################
@@ -413,7 +401,7 @@ __________________________________________________________
 
                     # Parse data from the data parameter
                     l_data_to_send  = None
-                    if isinstance(l_msg.data, __FUNCTION_CLS__):
+                    if isinstance(l_msg.data, __FUNCTION_CLS_BASE__):
                         l_data_to_send = l_msg.data.get_data()
                     else:
                         l_data_to_send = l_msg.data

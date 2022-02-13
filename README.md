@@ -116,12 +116,11 @@ Examples folder: [Examples folder](Examples).
                                                                                 
               ```
             **NOTE 1**:<br>
-            When you use the framework.FUNCTION decorator on the function, it returns a callable object that can be used by the framework but the function call is only used for updating parameters, making this function unusable to the user, so if you plan on calling the function manually outside the framework, please either create another function with the same definition or use this decorator on a retreive data only function.<br>
+            When you use the framework.FUNCTION decorator on the function, it returns a special class that is used by the framework to get data.<br>
+            Because the decorator returns a class and assigns it to the function name, you can no longer use this function as a regular function,<br>
+            so consider making another function with the same definition and a different name or consider making this function to retreive data only.<br>
             **NOTE 2**:<br>
             If you don't use the [framework.FUNCTION](framework_decorators_function) decorator, the function will only get called once(when you pass it to the data) and will not be called by the framework dynamically.<br>
-            **NOTE 3**:<br>
-            Because the decorator creates a callable object, whos call, updates the parameters, the function parameters that were sent to the framework can still be changed after the framework has already started a.k.a "mid-run". You can do that by "calling" the same function again with different parameters (without sending it to the framework again). This will update the parameters inside the the framework as well. 
-
             <br>
             <image alt="Function parameter" src="DOC_src\function_as_data_parameter_1.png" width=500>
         <br><br>
