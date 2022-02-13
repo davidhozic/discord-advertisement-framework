@@ -9,7 +9,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 __metadata__ = \
 {
-    "version" :  "1.7.4",
+    "version" :  "1.7.5",
     "requirements" :  ["aiohttp>=3.6.0,<3.9.0"],
     "minimum_py_version" :  "3.8",
 }

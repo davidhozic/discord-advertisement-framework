@@ -18,9 +18,8 @@ def get_data(parameter):
 
 guilds = [
     framework.GUILD(
-        
-        guild_id=123456789,         ## ID of server (guild)
-        messages_to_send=[          ## List MESSAGE objects 
+        guild_id=123456789,                                 # ID of server (guild)
+        messages_to_send=[                                  # List MESSAGE objects 
             framework.MESSAGE(
                               start_period=None,            # If None, messages will be send on a fixed period (end period)
                               end_period=15,                # If start_period is None, it dictates the fixed sending period,
@@ -44,5 +43,6 @@ if __name__ == "__main__":
                     server_list=guilds,             # MANDATORY
                     is_user=False,                  # OPTIONAL
                     user_callback=None,             # OPTIONAL
-                    server_log_output="Logging")    # OPTIONAL
+                    server_log_output="Logging",    # OPTIONAL
+                    debug=True)                     # OPTIONAL
     
