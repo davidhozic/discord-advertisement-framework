@@ -421,7 +421,7 @@ __________________________________________________________
                             elif isinstance(element, EMBED):
                                 l_embed_to_send = element
                             elif isinstance(element, FILE):
-                                l_files_to_send.append(element)
+                                l_files_to_send.append(pycordmod.File(element.filename))
                             elif element is not None:
                                 TRACE(f"""\
                                 INVALID DATA PARAMETER PASSED!
@@ -445,17 +445,7 @@ __________________________________________________________
                                     if ex.status == 429:
                                         await asyncio.sleep(int(ex.response.headers["Retry-After"])+1)
 
-                            l_msg.sent_msg_objs.clear()
-
-                        ## Open files
-                        if l_files_to_send:
-                            l_tmp = l_files_to_send
-                            l_files_to_send = []
-                            for l_fileobj in l_tmp:
-                                try:
-                                    l_files_to_send.append(open(l_fileobj.filename, "rb"))
-                                except OSError as l_file_exception:
-                                    TRACE(f"FILE_EXCEPTION for file: {l_fileobj.filename} | Exception: {l_file_exception}", TRACE_LEVELS.ERROR)
+                            l_msg.sent_msg_objs.clear()                                               
 
                         # Send to channels
                         for l_channel in l_msg.channels:
@@ -468,7 +458,7 @@ __________________________________________________________
                                         # SEND TO CHANNEL
                                         l_discord_sent_msg = await l_channel.send(l_text_to_send,
                                                                                   embed=l_embed_to_send,
-                                                                                  files=[pycordmod.File(x) for x in l_files_to_send])
+                                                                                  files=l_files_to_send)
                                         l_succeded_channels.append(l_channel.name)
                                         if l_msg.clear_previous:
                                             l_msg.sent_msg_objs.append(l_discord_sent_msg)
@@ -499,16 +489,8 @@ __________________________________________________________
                                 except OSError as ex:
                                     TRACE(f"Error sending data to channel | Exception:{ex}",TRACE_LEVELS.ERROR)
                                     break
-
-                        ## Close files if it was opened
-                        if l_files_to_send:
-                            for l_file in l_files_to_send:
-                                try:
-                                    l_file.close()
-                                except OSError: # If file is already closed
-                                    pass
-
-                        l_trace += self._generate_log(l_text_to_send, l_embed_to_send, [x.name for x in l_files_to_send], l_succeded_channels, l_errored_channels)     # Generate trace of sent file
+                                
+                        l_trace += self._generate_log(l_text_to_send, l_embed_to_send, [x.filename for x in l_files_to_send], l_succeded_channels, l_errored_channels)     # Generate trace of sent file
             # Save into file
             if self.generate_log and l_trace:
                 with suppress(FileExistsError):
