@@ -175,7 +175,7 @@ The framework only gives you one function to call making it easy to use:
                         is_user=False,                          # OPTIONAL
                         user_callback=None,                     # OPTIONAL
                         server_log_output="Logging"             # OPTIONAL
-                        debug=False)                            # OPTIONAL
+                        debug=True)                             # OPTIONAL
         ```
 ***
 <br>
@@ -260,7 +260,8 @@ framework.run(  token="account token here",     # MANDATORY (This is the string 
                 server_list=guilds,             # MANDATORY
                 is_user=False,                  # OPTIONAL
                 user_callback=None,             # OPTIONAL
-                server_log_output="Logging")    # OPTIONAL      
+                server_log_output="Logging",    # OPTIONAL      
+                debug=True)                     # OPTIONAL
 
 ```
 That's it, your framework is now running and messages will be periodicaly sent.
