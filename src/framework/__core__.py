@@ -221,7 +221,7 @@ class EMBED(discord.Embed):
     # Static members   
     Color = Colour = discord.Color  # Used for color parameter
     EmptyEmbed = discord.embeds.EmptyEmbed
-    pass
+    
     @staticmethod
     def from_discord_embed(object : discord.Embed):
         """
@@ -231,9 +231,11 @@ class EMBED(discord.Embed):
             - object : discord.Embed | discord.Embed (same type) -- The discord Embed object you want converted into the framework.EMBED class
         """
         ret = EMBED()
-        with suppress(TypeError):
-            for key in dir(object):
-                setattr(ret,key, getattr(object,key))                    
+        # Copy attributes but not special methods to the new EMBED. "dir" is used instead of "vars" because the object does not support the function.
+        for key in dir(object): 
+            if not key.startswith("__") and not key.endswith("__"):
+                with suppress(AttributeError):
+                    setattr(ret, key, getattr(object,key))                    
         return ret
 
     # Object members
@@ -253,7 +255,8 @@ class EMBED(discord.Embed):
                 description = EmptyEmbed,
                 timestamp: datetime.datetime = None):
         
-        ## Set original args from discord.Embed
+        ## Initiate original arguments from discord. Embed 
+        ## by looping thru the super().__init__ annotations(variables the function accepts)
         default_args = {}
         localargs = locals()
         for key, value in super().__init__.__annotations__.items():
