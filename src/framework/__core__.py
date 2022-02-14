@@ -12,7 +12,8 @@ import random
 import types
 import os
 import enum
-import pycordmod
+import pycordmod as discord
+import datetime
 
 #######################################################################
 # Globals
@@ -82,7 +83,14 @@ async def advertiser():
 # Decorators
 #######################################################################
 class __FUNCTION_CLS_BASE__:
-    pass
+    """
+    type: dummy class
+    name: __FUNCTION_CLS_BASE__
+    info: used as a base class to __FUNCTION_CLS__ which gets created in framework.FUNCTION decorator.
+    Because the __FUNCTION_CLS__ is inaccessible outside the FUNCTION decorator, this class is used to detect
+    if the MESSAGE.data parameter is of function type, because the function isinstance also returns True when comparing
+    the object to it's class or to the base class from which the object class is inherited from.
+    """
 
 def FUNCTION(fnc):
     """
@@ -141,10 +149,10 @@ class TIMER:
 #######################################################################
 # Framework classes
 #######################################################################
-class DISCORD_CLIENT(pycordmod.Client):
+class DISCORD_CLIENT(discord.Client):
     """
         Name : DISCORD_CLIENT
-        Info : Inherited class from pycordmod.Client.
+        Info : Inherited class from discord.Client.
                Contains an additional on_ready function.
     """
     async def on_ready(self):
@@ -194,36 +202,79 @@ class EMBED_FIELD:
                 return self.__data[self.__index-1]
         return EMBED_FIELD_ITER([self.name, self.content,self.inline])
 
-class EMBED(pycordmod.Embed):
+class EMBED(discord.Embed):
     """
     Derrived class of discord.Embed with easier definition
-        Parameters:
-            - author_name       : str   -- Name of embed author
-            - author_image_url  : str   -- Url to author image
-            - image             : str   -- Url of image to be placed at the end of the embed
-            - thumbnail         : str   -- Url of image that will be placed at the top right of embed
-            - fields            : list  -- List of EMBED_FIELD objects
+    Parameters:
+        Added parameters:
+            - author_name       : str           -- Name of embed author
+            - author_icon       : str           -- Url to author image
+            - image             : str           -- Url of image to be placed at the end of the embed
+            - thumbnail         : str           -- Url of image that will be placed at the top right of embed
+            - fields            : list          -- List of EMBED_FIELD objects
+        Inherited from discord.Embed:
+            - For the other, original params see https://docs.pycord.dev/en/master/api.html?highlight=discord%20embed#discord.Embed
+        
     """
+    
+    # TODO DOCUMENTATION
+    # Static members   
+    Color = Colour = discord.Color  # Used for color parameter
+    EmptyEmbed = discord.embeds.EmptyEmbed
+    pass
+    @staticmethod
+    def from_discord_embed(object : discord.Embed):
+        """
+        Name:   from_discord_embed
+        Type:   static method
+        Param:  
+            - object : discord.Embed | discord.Embed (same type) -- The discord Embed object you want converted into the framework.EMBED class
+        """
+        ret = EMBED()
+        with suppress(TypeError):
+            for key in dir(object):
+                setattr(ret,key, getattr(object,key))                    
+        return ret
+
+    # Object members
     def __init__(self, *,
+                # Additional parameters
                 author_name: str=None,
-                author_image_url: str=pycordmod.embeds.EmptyEmbed,
+                author_icon: str=EmptyEmbed,
                 image: str= None,
                 thumbnail : str = None,
-                fields : List[EMBED_FIELD]):
+                fields : List[EMBED_FIELD] = None,
+                # Base class parameters
+                colour: Union[int, Colour] = EmptyEmbed,
+                color: Union[int, Colour] = EmptyEmbed,
+                title: str = EmptyEmbed,
+                type :str = "rich",
+                url: str= EmptyEmbed,
+                description = EmptyEmbed,
+                timestamp: datetime.datetime = None):
+        
+        ## Set original args from discord.Embed
+        default_args = {}
+        localargs = locals()
+        for key, value in super().__init__.__annotations__.items():
+            default_args[key] = localargs[key]
+        super().__init__(**default_args)
 
-        super().__init__()
         ## Set author
-        if author_name:
-            self.set_author(name=author_name, icon_url=author_image_url)
+        if author_name is not None:
+            self.set_author(name=author_name, icon_url=author_icon)
         ## Set image
-        if image:
+        if image is not None:
             self.set_image(url=image)
         ## Set thumbnail
-        if thumbnail:
+        if thumbnail is not None:
             self.set_thumbnail(url=thumbnail)
         ### Set fields
-        for field_name, content, inline in fields:
-            self.add_field(name=field_name,value=content,inline=inline)
+        if fields is not None:
+            for field_name, content, inline in fields:
+                self.add_field(name=field_name,value=content,inline=inline)
+    
+
 
 class FILE:
     """
@@ -264,7 +315,7 @@ class MESSAGE:
     def __init__(self,
                 start_period : float,
                 end_period : float,
-                data : Union[str, pycordmod.Embed, list, types.FunctionType, FILE],
+                data : Union[str, discord.Embed, list, types.FunctionType, FILE],
                 channel_ids : List[int],
                 clear_previous : bool,
                 start_now : bool):
@@ -329,7 +380,7 @@ class GUILD:
 
     def _generate_log(self,
                       sent_text : str,
-                      sent_embed : pycordmod.Embed,
+                      sent_embed : discord.Embed,
                       sent_files : list,
                       succeeded_ch : list,
                       failed_ch : list):
@@ -421,7 +472,7 @@ __________________________________________________________
                             elif isinstance(element, EMBED):
                                 l_embed_to_send = element
                             elif isinstance(element, FILE):
-                                l_files_to_send.append(pycordmod.File(element.filename))
+                                l_files_to_send.append(discord.File(element.filename))
                             elif element is not None:
                                 TRACE(f"""\
                                 INVALID DATA PARAMETER PASSED!
@@ -441,7 +492,7 @@ __________________________________________________________
                             for l_sent_msg_obj in l_msg.sent_msg_objs:
                                 try:
                                     await l_sent_msg_obj.delete()
-                                except pycordmod.HTTPException as ex:
+                                except discord.HTTPException as ex:
                                     if ex.status == 429:
                                         await asyncio.sleep(int(ex.response.headers["Retry-After"])+1)
 
@@ -463,7 +514,7 @@ __________________________________________________________
                                         if l_msg.clear_previous:
                                             l_msg.sent_msg_objs.append(l_discord_sent_msg)
                                     break    # Break out of the tries loop
-                                except pycordmod.HTTPException as ex:
+                                except discord.HTTPException as ex:
                                     # Failed to send message
                                     l_error_text = f"{l_channel.name} - Reason: {ex}"
                                     if ex.status == 429:
@@ -506,7 +557,7 @@ def run(token : str,
         is_user : bool =False,
         user_callback : bool=None,
         server_log_output : str ="Logging",
-        debug : bool=False):
+        debug : bool=True):
     """
     @type  : function
     @name  : run

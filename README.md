@@ -18,30 +18,26 @@ Examples folder: [Examples folder](Examples).
 <br>
 
 ##  **Creatable objects** :
-- <a id="framework_embed"> </a>framework.**EMBED** (available to use if running on a **bot account**):
-    - The **EMBED** class is an inherited class from discord.Embed meaning it has the same methods as [discord.Embed](https://docs.pycord.dev/en/master/api.html?highlight=discord%20embed#discord.Embed) but you can create a full embed without actually having to call those methods. 
-    - <u>Parameters</u>:
-        - Author name  (author_name)        : str   - Name of the embed author
-        - Author Image (author_image_url)   : str   - URL to author's image
-        - Image (image)                     : str   - URL to image that will be placed **at the end** of the embed.
-        - Thumbnail (thumbnail)             : str   - URL to image that will be placed **at top right** of the embed.
-        - Embedded Fields (fields)          : list  - List of [framework.**EMBED_FIELD**](#framework_embed_field)<br>
 
-    ```py
-    test_embed = framework.EMBED(
-    author_name="Developer",
-    author_image_url="https://solarsystem.nasa.gov/system/basic_html_elements/11561_Sun.png",
-    fields=\
-        [
-            framework.EMBED_FIELD("Test 1", "Hello World", True),
-            framework.EMBED_FIELD("Test 2", "Hello World 2", True),
-            framework.EMBED_FIELD("Test 3", "Hello World 3", True),
-            framework.EMBED_FIELD("No Inline", "This is without inline", False),
-            framework.EMBED_FIELD("Test 4", "Hello World 4", True),
-            framework.EMBED_FIELD("Test 5", "Hello World 5", True)
-        ]
-    )
-    ```       
+### <a id="framework_embed"> </a> <u>framework.**EMBED** (available to use if running on a **bot account**):</u>
+
+The **EMBED** class is an inherited class from discord.Embed meaning it has the same methods as [discord.Embed](https://docs.pycord.dev/en/master/api.html?highlight=discord%20embed#discord.Embed) but you can create a full embed without actually having to call those methods. 
+```py
+    framework.EMBED(*, author_name=None, author_icon=EmptyEmbed, image=None, thumbnail=None, fields=None, 
+    colour=EmptyEmbed, color= EmptyEmbed, title=EmptyEmbed, type="rich", url=EmptyEmbed, description=EmptyEmbed, timestamp=None):
+```
+| Argument    | Type                                          | Info                                                                                                                                                   |
+| ----------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| author_name | str                                           | Name of the embed author                                                                                                                               |
+| author_icon | str                                           | Url to the author's icon url                                                                                                                           |
+| image       | str                                           | Url to embedded image (displayed at bottom of embed)                                                                                                   |
+| thumbnail   | str                                           | Url to embedded thumbnail (displayed top right of embed)                                                                                               |
+| fields      | list\[[EMBED_FIELD](#framework_embed_field)\] | Iteratable that returns framework.[**EMBED_FIELD**](#framework_embed_field)                                                                            |
+| ...         |                                               | For other arguments (discord.Embed's args) see [discord.**Embed**](https://docs.pycord.dev/en/master/api.html?highlight=discord%20embed#discord.Embed) |
+<br>
+
+### **<u>Methods</u>**
+TODO : Write methods
 <br><br>
 - <a id="framework_embed_field"> </a>framework.**EMBED_FIELD** (available to use if running on a **bot account**):
     - The **EMBED_FIELD** is used with combination of [framework.**EMBED**:](#framework_embed) as one of it's parameters that represents one of the fields inside the embedded message.
