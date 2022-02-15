@@ -2,14 +2,13 @@
     DISCORD SHILLING FRAMEWORK (DSF)
     Author      :: David Hozic
     Copyright   :: Copyright (c) 2022 David Hozic
-    Version     :: V1.7.4.1
+    Version     :: V1.7.5.1
 """
-from contextlib import suppress
+from   contextlib import suppress
 from   typing import Union, List
 import time
 import asyncio
 import random
-import types
 import os
 import enum
 import pycordmod as discord
@@ -319,13 +318,13 @@ class MESSAGE:
       but will instead wait for the period to elapse.
     """
     def __init__(self,
-                start_period : float,
+                start_period : Union[float,None],
                 end_period : float,
-                data : Union[str, discord.Embed, list, types.FunctionType, FILE],
+                data : Union[str, EMBED, FILE, List[Union[str, EMBED, FILE]]],
                 channel_ids : List[int],
                 clear_previous : bool,
                 start_now : bool):
-
+        
         if start_period is None:            # If start_period is none -> period will not be randomized
             self.randomized_time = False
             self.period = end_period
