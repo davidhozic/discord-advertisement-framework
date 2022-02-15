@@ -14,6 +14,7 @@ import os
 import enum
 import pycordmod as discord
 import datetime
+import copy
 
 #######################################################################
 # Globals
@@ -230,12 +231,14 @@ class EMBED(discord.Embed):
         Param:  
             - object : discord.Embed | discord.Embed (same type) -- The discord Embed object you want converted into the framework.EMBED class
         """
+        
         ret = EMBED()
         # Copy attributes but not special methods to the new EMBED. "dir" is used instead of "vars" because the object does not support the function.
         for key in dir(object): 
             if not key.startswith("__") and not key.endswith("__"):
-                with suppress(AttributeError):
-                    setattr(ret, key, getattr(object,key))                    
+                with suppress(AttributeError | TypeError):
+                    if not callable(getattr(ret, key)):
+                        setattr(ret, key, copy.deepcopy(getattr(object,key)))
         return ret
 
     # Object members
