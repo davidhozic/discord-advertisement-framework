@@ -62,24 +62,6 @@ def TRACE(message: str,
         print(l_trace)
 
 #######################################################################
-# Tasks
-#######################################################################
-async def advertiser():
-    """
-    Name  : advertiser
-    Param : void
-    Info  : Main task that is responsible for the framework
-    """
-    if not m_server_list:
-        TRACE("SERVER LIST IS NOT DEFINED!", TRACE_LEVELS.ERROR)
-    for l_server in m_server_list:
-        await l_server.initialize()
-    while True:
-        await asyncio.sleep(0.100)
-        for l_server in m_server_list:
-            await l_server.advertise()
-
-#######################################################################
 # Decorators
 #######################################################################
 class __FUNCTION_CLS_BASE__:
@@ -111,7 +93,7 @@ def FUNCTION(fnc):
         def __init__(self, *args, **kwargs):
             self.args = args
             self.kwargs = kwargs
-            
+
         def get_data(self):
             """
             Retreives the data from the user function
@@ -161,9 +143,12 @@ class DISCORD_CLIENT(discord.Client):
         Info : Tasks that is started by pycord when you have been successfully logged into discord.
         """
         TRACE(f"Logged in as {self.user}", TRACE_LEVELS.NORMAL)
-        asyncio.gather(asyncio.create_task(advertiser()))
+
+        initialize()
+
         if m_user_callback:   # If user callback function was specified
             m_user_callback() # Call user provided function after framework has started
+
 
 class EMBED_FIELD:
     """
@@ -200,7 +185,8 @@ class EMBED_FIELD:
                     raise StopIteration
                 self.__index +=1
                 return self.__data[self.__index-1]
-        return EMBED_FIELD_ITER([self.name, self.content,self.inline])
+        return EMBED_FIELD_ITER([self.name, self.content, self.inline])
+
 
 class EMBED(discord.Embed):
     """
@@ -214,30 +200,28 @@ class EMBED(discord.Embed):
             - fields            : list          -- List of EMBED_FIELD objects
         Inherited from discord.Embed:
             - For the other, original params see https://docs.pycord.dev/en/master/api.html?highlight=discord%20embed#discord.Embed
-        
+
     """
-    
-    # TODO DOCUMENTATION
-    # Static members   
+    # Static members
     Color = Colour = discord.Color  # Used for color parameter
     EmptyEmbed = discord.embeds.EmptyEmbed
-    
+
     @staticmethod
-    def from_discord_embed(object : discord.Embed):
+    def from_discord_embed(_object : discord.Embed):
         """
         Name:   from_discord_embed
         Type:   static method
-        Param:  
+        Param:
             - object : discord.Embed | discord.Embed (same type) -- The discord Embed object you want converted into the framework.EMBED class
         """
-        
+
         ret = EMBED()
         # Copy attributes but not special methods to the new EMBED. "dir" is used instead of "vars" because the object does not support the function.
-        for key in dir(object): 
+        for key in dir(_object):
             if not key.startswith("__") and not key.endswith("__"):
-                with suppress(AttributeError | TypeError):
+                with suppress(Union[AttributeError,TypeError]):
                     if not callable(getattr(ret, key)):
-                        setattr(ret, key, copy.deepcopy(getattr(object,key)))
+                        setattr(ret, key, copy.deepcopy(getattr(_object,key)))
         return ret
 
     # Object members
@@ -256,12 +240,12 @@ class EMBED(discord.Embed):
                 url: str= EmptyEmbed,
                 description = EmptyEmbed,
                 timestamp: datetime.datetime = None):
-        
-        ## Initiate original arguments from discord. Embed 
+
+        ## Initiate original arguments from discord. Embed
         ## by looping thru the super().__init__ annotations(variables the function accepts)
         default_args = {}
         localargs = locals()
-        for key, value in super().__init__.__annotations__.items():
+        for key in super().__init__.__annotations__.keys():
             default_args[key] = localargs[key]
         super().__init__(**default_args)
 
@@ -278,7 +262,6 @@ class EMBED(discord.Embed):
         if fields is not None:
             for field_name, content, inline in fields:
                 self.add_field(name=field_name,value=content,inline=inline)
-    
 
 
 class FILE:
@@ -291,6 +274,7 @@ class FILE:
     def __init__(self,
                  filename):
         self.filename = filename
+
 
 class MESSAGE:
     """
@@ -324,7 +308,7 @@ class MESSAGE:
                 channel_ids : List[int],
                 clear_previous : bool,
                 start_now : bool):
-        
+
         if start_period is None:            # If start_period is none -> period will not be randomized
             self.randomized_time = False
             self.period = end_period
@@ -335,11 +319,12 @@ class MESSAGE:
             self.period = random.randrange(*self.random_range)  # This will happen after each sending as well
 
         self.data = data
-        self.channels = channel_ids
+        self.channels = list(set(channel_ids)) # Remove Duplicates
         self.timer = TIMER()
         self.clear_previous = clear_previous
         self.force_retry = {"ENABLED" : start_now, "TIME" : 0}
         self.sent_msg_objs = []
+
 
 class GUILD:
     """
@@ -360,7 +345,7 @@ class GUILD:
         self.messages = messages_to_send
         self.generate_log = generate_log
         self.guild_file_name = None
-    async def initialize(self):       # Get objects from ids
+    def initialize(self):
         """
         Name: initialize
         Info: After login to discord, this functions initializes the guild and channel objects
@@ -369,13 +354,23 @@ class GUILD:
         self.guild = m_client.get_guild(l_guild_id) # Transofrm guild id into API guild object
         if self.guild is not None:
             for l_msg in self.messages:
-                for index in range(len(l_msg.channels)):
+                # Initiate message objects
+                index = 0
+                while index < len(l_msg.channels):    # Get the channel objects
                     l_channel_id = l_msg.channels[index]
                     l_msg.channels[index] = m_client.get_channel(l_channel_id)
-                    if l_msg.channels[index] is None:
-                        TRACE(f"Unable to find channel from id: {l_channel_id}\nIn guild: {self.guild} (ID: {self.guild.id})", TRACE_LEVELS.ERROR)
-                while None in l_msg.channels:
-                    l_msg.channels.remove(None)
+                    l_channel = l_msg.channels[index]
+
+                    if l_channel is None: # Channel not found -> remove
+                        TRACE(f"Unable to get channel from id: {l_channel_id} (Does not exist - Incorrect ID?) in GUILD: \"{self.guild.name}\" (ID: {l_guild_id})",
+                              TRACE_LEVELS.ERROR)
+                        l_msg.channels.remove(None)
+                    elif l_channel.guild.id != l_guild_id:
+                        TRACE(f"Guild \"{self.guild.name}\" (ID: {l_guild_id}) has no channel \"{l_channel.name}\" (ID: {l_channel_id})",
+                              TRACE_LEVELS.ERROR)
+                        l_msg.channels.remove(l_channel)
+                    else:
+                        index += 1
 
             self.guild_file_name = self.guild.name.replace("/","-").replace("\\","-").replace(":","-").replace("!","-").replace("|","-").replace("*","-").replace("?","-").replace("<","(").replace(">", ")") + ".md"
         else:
@@ -501,14 +496,14 @@ __________________________________________________________
                                     if ex.status == 429:
                                         await asyncio.sleep(int(ex.response.headers["Retry-After"])+1)
 
-                            l_msg.sent_msg_objs.clear()                                               
+                            l_msg.sent_msg_objs.clear()
 
                         # Send to channels
                         for l_channel in l_msg.channels:
                             for tries in range(3):  # Maximum 3 tries (if rate limit)
                                 try:
                                     if l_channel.guild.id != self.guild.id:
-                                        TRACE(f"Channel {l_channel.name} (ID: {l_channel.id}) is not part of guild {self.guild.name} (ID: {self.guild.id})",TRACE_LEVELS.ERROR)
+                                        TRACE(f"Channel \"{l_channel.name}\" (ID: {l_channel.id}) is not part of guild \"{self.guild.name}\" (ID: {self.guild.id})",TRACE_LEVELS.ERROR)
                                         l_msg.channels.remove(l_channel)  ## Remove from list as channel not part of the current guild
                                     else:
                                         # SEND TO CHANNEL
@@ -545,7 +540,7 @@ __________________________________________________________
                                 except OSError as ex:
                                     TRACE(f"Error sending data to channel | Exception:{ex}",TRACE_LEVELS.ERROR)
                                     break
-                                
+
                         l_trace += self._generate_log(l_text_to_send, l_embed_to_send, [x.filename for x in l_files_to_send], l_succeded_channels, l_errored_channels)     # Generate trace of sent file
             # Save into file
             if self.generate_log and l_trace:
@@ -554,9 +549,50 @@ __________________________________________________________
                 with open(os.path.join(m_server_log_output_path, self.guild_file_name),'a', encoding='utf-8') as l_logfile:
                     l_logfile.write(l_trace)
 
+
+#######################################################################
+# Tasks
+#######################################################################
+async def advertiser():
+    """
+    Name  : advertiser
+    Param : void
+    Info  : Main task that is responsible for the framework
+    """
+    while True:
+        await asyncio.sleep(0.100)
+        for l_server in m_server_list:
+            await l_server.advertise()
+
+
 #######################################################################
 # Functions
 #######################################################################
+def initialize():
+    """
+    Name: initialize
+    Parameters: void
+    Info: Function that initializes the guild objects
+    """
+    if not m_server_list:
+        TRACE("SERVER LIST IS NOT DEFINED!", TRACE_LEVELS.ERROR)
+
+    l_processed = []
+    i=0
+    while i < len(m_server_list):
+        if m_server_list[i].guild in l_processed:
+            TRACE(f"Duplicated GUILD ID: {m_server_list[i].guild}\nRemoving...", TRACE_LEVELS.WARNING)
+            m_server_list.remove(m_server_list[i])
+        else:
+            l_processed.append(m_server_list[i].guild)
+            i += 1
+
+    for l_server in m_server_list: # Initialize servers
+        l_server.initialize()
+
+    asyncio.gather(asyncio.create_task(advertiser())) # Create advertising task
+
+
 def run(token : str,
         server_list : List[GUILD],
         is_user : bool =False,
