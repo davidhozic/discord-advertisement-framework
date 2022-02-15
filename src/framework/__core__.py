@@ -6,6 +6,7 @@
 """
 from   contextlib import suppress
 from   typing import Union, List
+from   types import MethodType
 import time
 import asyncio
 import random
@@ -214,14 +215,16 @@ class EMBED(discord.Embed):
         Param:
             - object : discord.Embed | discord.Embed (same type) -- The discord Embed object you want converted into the framework.EMBED class
         """
-
+        
         ret = EMBED()
         # Copy attributes but not special methods to the new EMBED. "dir" is used instead of "vars" because the object does not support the function.
         for key in dir(_object):
             if not key.startswith("__") and not key.endswith("__"):
                 with suppress(Union[AttributeError,TypeError]):
-                    if not callable(getattr(ret, key)):
+                    if not callable(getattr(_object, key)) and not isinstance(getattr(_object.__class__, key), property):
                         setattr(ret, key, copy.deepcopy(getattr(_object,key)))
+                        
+
         return ret
 
     # Object members
@@ -262,6 +265,7 @@ class EMBED(discord.Embed):
         if fields is not None:
             for field_name, content, inline in fields:
                 self.add_field(name=field_name,value=content,inline=inline)
+      
 
 
 class FILE:
