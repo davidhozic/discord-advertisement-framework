@@ -6,7 +6,6 @@
 """
 from   contextlib import suppress
 from   typing import Union, List
-from   types import MethodType
 import time
 import asyncio
 import random
@@ -15,6 +14,7 @@ import enum
 import pycordmod as discord
 import datetime
 import copy
+import math
 
 #######################################################################
 # Globals
@@ -267,7 +267,6 @@ class EMBED(discord.Embed):
                 self.add_field(name=field_name,value=content,inline=inline)
       
 
-
 class FILE:
     """
     Name: FILE
@@ -335,7 +334,7 @@ class GUILD:
     Name: GUILD
     Info: The GUILD object represents a server to which messages will be sent.
     Params:
-    - Guild ID - identificator which can be obtain by enabling developer mode in discord's settings and
+    - Guild ID - identificator which can be obtained by enabling developer mode in discord's settings and
                  afterwards right-clicking on the server/guild icon in the server list and clicking "Copy ID",
     - List of MESSAGE objects - Python list or tuple contating MESSAGE objects.
     - Generate file log - bool variable, if True it will generate a file log for each message send attempt.
@@ -368,11 +367,12 @@ class GUILD:
                     if l_channel is None: # Channel not found -> remove
                         TRACE(f"Unable to get channel from id: {l_channel_id} (Does not exist - Incorrect ID?) in GUILD: \"{self.guild.name}\" (ID: {l_guild_id})",
                               TRACE_LEVELS.ERROR)
-                        l_msg.channels.remove(None)
+                        time.sleep(math.inf)
+
                     elif l_channel.guild.id != l_guild_id:
                         TRACE(f"Guild \"{self.guild.name}\" (ID: {l_guild_id}) has no channel \"{l_channel.name}\" (ID: {l_channel_id})",
                               TRACE_LEVELS.ERROR)
-                        l_msg.channels.remove(l_channel)
+                        time.sleep(math.inf)
                     else:
                         index += 1
 
@@ -417,7 +417,11 @@ class GUILD:
             l_tmp += "    ```"
         sent_files = l_tmp
         l_timestruct = time.localtime()
-        l_timestamp = "Date:{:02d}.{:02d}.{:04d} Time:{:02d}:{:02d}".format(l_timestruct.tm_mday, l_timestruct.tm_mon, l_timestruct.tm_year,l_timestruct.tm_hour,l_timestruct.tm_min)
+        l_timestamp = "Date:{:02d}.{:02d}.{:04d} Time:{:02d}:{:02d}".format(l_timestruct.tm_mday,
+                                                                            l_timestruct.tm_mon,
+                                                                            l_timestruct.tm_year,
+                                                                            l_timestruct.tm_hour,
+                                                                            l_timestruct.tm_min)
         return f'''
 # MESSAGE LOG:
 ## Text:
@@ -473,18 +477,20 @@ __________________________________________________________
                         for element in l_data_to_send:
                             if isinstance(element, str):
                                 l_text_to_send = element
+                                
                             elif isinstance(element, EMBED):
                                 l_embed_to_send = element
+
                             elif isinstance(element, FILE):
-                                l_files_to_send.append(discord.File(element.filename))
+                                l_file = None
+                                with suppress(FileNotFoundError):
+                                    l_file = discord.File(element.filename)
+                                if l_file is not None:
+                                    l_files_to_send.append(l_file)
+
                             elif element is not None:
-                                TRACE(f"""\
-                                INVALID DATA PARAMETER PASSED!
-                                Argument is of type : {element.__class__}
-                                See README.md for allowed data types
-                                GUILD: {self.guild.name} (ID: {self.guild.id})
-                                """,
-                                 TRACE_LEVELS.ERROR)
+                                TRACE(f"INVALID DATA PARAMETER PASSED!\nArgument is of type : {element.__class__}\nSee README.md for allowed data types\nGUILD: {self.guild.name} (ID: {self.guild.id})",
+                                      TRACE_LEVELS.ERROR)
 
                     # Send messages
                     if l_text_to_send or l_embed_to_send or l_files_to_send:
@@ -506,44 +512,36 @@ __________________________________________________________
                         for l_channel in l_msg.channels:
                             for tries in range(3):  # Maximum 3 tries (if rate limit)
                                 try:
-                                    if l_channel.guild.id != self.guild.id:
-                                        TRACE(f"Channel \"{l_channel.name}\" (ID: {l_channel.id}) is not part of guild \"{self.guild.name}\" (ID: {self.guild.id})",TRACE_LEVELS.ERROR)
-                                        l_msg.channels.remove(l_channel)  ## Remove from list as channel not part of the current guild
-                                    else:
-                                        # SEND TO CHANNEL
-                                        l_discord_sent_msg = await l_channel.send(l_text_to_send,
-                                                                                  embed=l_embed_to_send,
-                                                                                  files=l_files_to_send)
-                                        l_succeded_channels.append(l_channel.name)
-                                        if l_msg.clear_previous:
-                                            l_msg.sent_msg_objs.append(l_discord_sent_msg)
+                                    # SEND TO CHANNEL
+                                    l_discord_sent_msg = await l_channel.send(l_text_to_send,
+                                                                              embed=l_embed_to_send,
+                                                                              files=l_files_to_send)
+
+                                    l_succeded_channels.append(l_channel.name)
+                                    if l_msg.clear_previous:
+                                        l_msg.sent_msg_objs.append(l_discord_sent_msg)
+
                                     break    # Break out of the tries loop
-                                except discord.HTTPException as ex:
+                                except Exception as ex:
                                     # Failed to send message
                                     l_error_text = f"{l_channel.name} - Reason: {ex}"
-                                    if ex.status == 429:
+                                    if isinstance(ex, discord.HTTPException) and ex.status == 429:
                                         retry_after = int(ex.response.headers["Retry-After"])  + 1
                                         # Slow Mode detected -> wait the remaining time
                                         if ex.code == 20026:
                                             l_msg.force_retry["ENABLED"] = True
                                             l_msg.force_retry["TIME"] = retry_after
-
                                         else:
                                             # Rate limit but not slow mode -> put the framework to sleep as it won't be able to send any messages globaly
                                             TRACE(f"Rate limit! Retrying after {retry_after}",TRACE_LEVELS.WARNING)
                                             await asyncio.sleep(retry_after)
 
                                         l_error_text += f" - Retrying after {retry_after}"
-                                    else:
-                                        await asyncio.sleep(0.25)   # Wait a bit before retrying
 
-                                    if tries == 2 or ex.status != 429 or ex.code == 20026:  # Maximum tries reached or no point in retrying
+                                    if tries == 2 or not isinstance(discord.HTTPException) or\
+                                       ex.status != 429 or ex.code == 20026:  
                                         l_errored_channels.append(l_error_text)
                                         break
-
-                                except OSError as ex:
-                                    TRACE(f"Error sending data to channel | Exception:{ex}",TRACE_LEVELS.ERROR)
-                                    break
 
                         l_trace += self._generate_log(l_text_to_send, l_embed_to_send, [x.filename for x in l_files_to_send], l_succeded_channels, l_errored_channels)     # Generate trace of sent file
             # Save into file
@@ -596,6 +594,15 @@ def initialize():
 
     asyncio.gather(asyncio.create_task(advertiser())) # Create advertising task
 
+
+def get_client():
+    """"
+    Name:   get_client
+    Param:  void
+    Info:   The function returns the logged in Client() object, so the user wouldn't have to login twice in case
+            they wanted to use the Client along side the framework in their application
+    """
+    return m_client
 
 def run(token : str,
         server_list : List[GUILD],
