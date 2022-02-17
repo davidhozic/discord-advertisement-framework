@@ -252,7 +252,7 @@ guilds = [
 ]
 ```
 
-Now start the framework by calling the [**framework.run()**](#framework_framework_run) function. The function can accept one parameter which is a function to be called after framework has started.
+Now start the framework by calling the [**framework.run()**](#framework_framework_run) function.
 
 ```python
 
@@ -260,11 +260,11 @@ def callback():
     print("Framework is now running")
 
 framework.run(  token="account token here",     # MANDATORY (This is the string that contains the account token, I suggest you define it in a secret.py)
-                server_list=guilds,             # MANDATORY
-                is_user=False,                  # OPTIONAL
-                user_callback=None,             # OPTIONAL
-                server_log_output="Logging",    # OPTIONAL      
-                debug=True)                     # OPTIONAL
+                server_list=guilds,             # MANDATORY -- List of GUILD objects
+                is_user=False,                  # OPTIONAL -- Must be true if token is from an user account
+                user_callback=None,             # OPTIONAL -- Function that is called after framework is run
+                server_log_output="Logging",    # OPTIONAL -- The path to the server log file outputs
+                debug=True)                     # OPTIONAL -- For easiser debugging if you think your messages aren't being sent (will print TRACE to the console)
 
 ```
 That's it, your framework is now running and messages will be periodicaly sent.
