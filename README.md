@@ -37,7 +37,7 @@ The **EMBED** class is an inherited class from discord.Embed meaning it has the 
   
 ### **Parameters:**
 - Author name  (author_name)        : str   - Name of the embed author
-- Author Image (author_image_url)   : str   - URL to author's image
+- Author Image (author_icon)   : str   - URL to author's image
 - Image (image)                     : str   - URL to image that will be placed **at the end** of the embed.
 - Thumbnail (thumbnail)             : str   - URL to image that will be placed **at top right** of the embed.
 - Embedded Fields (fields)          : list  - List of [framework.**EMBED_FIELD**](#framework_embed_field)<br>
