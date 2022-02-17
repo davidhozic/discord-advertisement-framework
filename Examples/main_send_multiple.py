@@ -14,7 +14,7 @@ l_file2 = framework.FILE("./Examples/main_send_multiple.py")
 ## Embedded
 l_embed = framework.EMBED(
 author_name="Developer",
-author_image_url="https://solarsystem.nasa.gov/system/basic_html_elements/11561_Sun.png",
+author_icon="https://solarsystem.nasa.gov/system/basic_html_elements/11561_Sun.png",
 fields=\
     [
         framework.EMBED_FIELD("Test 1", "Hello World", True),

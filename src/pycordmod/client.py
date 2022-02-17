@@ -661,13 +661,11 @@ class Client:
         finally:
             future.remove_done_callback(stop_loop_on_completion)
             _log.info('Cleaning up tasks.')
-            _cleanup_loop(loop)
 
         if not future.cancelled():
             try:
                 return future.result()
-            except KeyboardInterrupt:
-                # I am unsure why this gets raised here but suppress it anyway
+            except:
                 return None
 
     # properties
