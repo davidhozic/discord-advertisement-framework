@@ -658,9 +658,6 @@ def initialize() -> bool:
                     else:
                         l_channel_i += 1
 
-                if not len(l_msg.channels):
-                    trace(f"No valid channels IDs were found in guild {l_server.guild.name}(ID: {l_server.guild.id})", TRACE_LEVELS.ERROR)
-
                 # Check for correct data types of the MESSAGE.data parameter
                 if not isinstance(l_msg.data, __FUNCTION_CLS_BASE__):
                     # Convert any arguments passed into a list of arguments
