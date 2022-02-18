@@ -32,7 +32,7 @@ from framework import discord
 
 #  **Creatable objects** :
 ## <a id="framework_embed"> </a>framework.**EMBED** (available to use if running on a **bot account**):
-***
+
 The **EMBED** class is an inherited class from discord.Embed meaning it has the same methods as [discord.Embed](https://docs.pycord.dev/en/master/api.html?highlight=discord%20embed#discord.Embed) but you can create a full embed without actually having to call those methods. 
   
 ### **Parameters:**
@@ -54,7 +54,7 @@ The **EMBED** class is an inherited class from discord.Embed meaning it has the 
 <br><br>
 
 ## <a id="framework_embed_field"> </a>framework.**EMBED_FIELD** (available to use if running on a **bot account**):
-***
+
 The **EMBED_FIELD** is used with combination of [framework.**EMBED**:](#framework_embed) as one of it's parameters that represents one of the fields inside the embedded message.
 ### **Parameters:**
 - Field name (name)         : str  -  Name of the field
@@ -63,14 +63,14 @@ The **EMBED_FIELD** is used with combination of [framework.**EMBED**:](#framewor
 <br><br>
 
 ## <a id="framework_file"> </a>framework.**FILE**:
-***
+
 The **FILE** objects represents a file you want to send to discord. 
 ### **Parameters:**
 - File name (filename)  - path to the file you want to send to discord
 <br><br>
 
 ## <a id="framework_guild"> </a>framework.**GUILD**:
-***
+
 The **GUILD** object represents a server to which messages will be sent.
 ### **Parameters:**
 - **Guild ID** - identificator which can be obtain by enabling [developer mode](https://techswift.org/2020/09/17/how-to-enable-developer-mode-in-discord/) in discord's settings and afterwards right-clicking on the server/guild icon in the server list and clicking **"Copy ID"**,
@@ -89,7 +89,7 @@ GUILD(
 <br>
 
 ## <a id="framework_message"></a> framework.**MESSAGE** 
-***
+
 The **MESSAGE** object containts parameters which describe behaviour and data that will be sent to the channels.
 ### **Parameters:**
 - <a id="fw_msg_data_period"></a> **Start Period** , **End Period** (start_period, end_period) - These 2 parameters specify the period on which the messages will be sent.
@@ -111,7 +111,7 @@ The **MESSAGE** object containts parameters which describe behaviour and data th
     When you pass the function to the data parameter, pass it in the next format:
     - ```py
 
-      @framework.FUNCTION # <- IMPORTANT!!!
+      @framework.data_function # <- IMPORTANT!!!
       def function_name(parameter_1, parameter_2):
           """
           Info: Function returns a different string each time when called by the framework making the sent data dynamic.
@@ -124,11 +124,11 @@ The **MESSAGE** object containts parameters which describe behaviour and data th
                                                                         
       ```
     - **NOTE 1**: <br>
-        When you use the framework.FUNCTION decorator on the function, it returns a special class that is used by the framework to get data.<br>
+        When you use the framework.data_function decorator on the function, it returns a special class that is used by the framework to get data.<br>
         Because the decorator returns a class and assigns it to the function name, you can no longer use this function as a regular function,<br>
         so consider making another function with the same definition and a different name or consider making this function to retreive data only.<br>
     - **NOTE 2**: <br>
-        If you don't use the [framework.FUNCTION](framework_decorators_function) decorator, the function will only get called once(when you pass it to the data) and will not be called by the framework dynamically.
+        If you don't use the **framework.data_function** decorator, the function will only get called once(when you pass it to the data) and will not be called by the framework dynamically.
 <br><br>
 
 - **Channel IDs** (channel_ids) - List of IDs of all the channels you want data to be sent into.
@@ -141,7 +141,7 @@ framework.MESSAGE(
                                                 # If start period is defined, it dictates the maximum limit of randomized period
                 data="Some Text",             # Data yo you want sent to the function (Can be of types : str, embed, file, list of types to the left
                                                 # or function that returns any of above types(or returns None if you don't have any data to send yet), 
-                                                # where if you pass a function you need to use the framework.FUNCTION decorator on top of it ).
+                                                # where if you pass a function you need to use the framework.data_function decorator on top of it ).
                 channel_ids=[123456789],      # List of ids of all the channels you want this message to be sent into
                 clear_previous=True,          # Clear all discord messages that originated from this MESSAGE object
                 start_now=True                # Start sending now (True) or wait until period
@@ -154,18 +154,47 @@ Python decorators are callable objects that you can use to give your function or
 More on Python decorators [here](https://realpython.com/primer-on-python-decorators/).<br>
 **Inside the framework**, there is only one decorator:
 
-## <a id="framework_decorators_function"></a> framework.**FUNCTION**:
-***
+## <a id="framework_decorators_function"></a> framework.**data_function**:
+
 - This decorator accepts a function as it's parameter and then returns a object that will be called by the framework. To use an <u>user defined function as parameter</u> to the [framework.MESSAGE data parameter](#framework_message_data), you **MUST** use this decorator beforehand. Please see the **Examples** folder.
-- Usage:<br>
-<img src="DOC_src\function_decorator_1.png" alt="drawing" width="600"/>
+- Usage:
+    ```py
+    import datetime
+    import framework as fw
+
+    ####################################################################################################
+    @fw.data_function # <---- VERY IMPORTANT! If you don't do this, the function will only be called when you pass it to the data parameter
+    def some_function(parameter1, parameter2):
+        l_dt = datetime.datetime.now()
+        return f"Good day! It is {l_dt.day}.{l_dt.month}.{l_dt.year}  {l_dt.hour}:{l_dt.minute}"
+    ####################################################################################################
+
+    servers = [
+        fw.GUILD(
+            guild_id=123456,
+            messages_to_send=[
+                fw.MESSAGE(
+                            start_period=None,
+                            end_period=1 * fw.C_DAY_TO_SECOND,
+                            data=some_function(1234, 5678),
+                            channel_ids= [21345, 23132, 2313223],
+                            clear_previous=False,
+                            start_now=True
+                          )
+            ],
+            generate_log=True
+        )
+    ]
+
+    ...
+  ```
+
 ***
 <br>
 
 #  **Functions** :
-The framework only gives you one function to call making it easy to use:
 ## <a id="framework_framework_run"></a>framework.**run**:
-***
+
 ### **Parameters:**
 - token             : str       = access token for account
 - server_list       : list      = List of framework.GUILD objects
@@ -182,18 +211,32 @@ framework.run(  token="your_token_here",                # MANDATORY
                 user_callback=None,                     # OPTIONAL
                 server_log_output="Logging"             # OPTIONAL
                 debug=True)                             # OPTIONAL
-```
-***
+``` 
+<br>
+
+## framework.**get_client**:
+### Description
+The framework.**get_client** returns an object which is used to interact with Discord using their API. <br>
+You can call this function to get the internal Client object instead of making a new Client objects.<br>
+See more here: **[discord.Client](https://docs.pycord.dev/en/master/api.html?highlight=client#discord.Client)**.
 <br>
 
 #  **Logging** :
 
-### <a id="logging_sent_msgs"></a>**LOG OF SENT MESSAGES**
+## <a id="logging_sent_msgs"></a>**LOG OF SENT MESSAGES**
 The framework can keep a log of sent messages for **each guild/server**. To enable file logging of sent messages, set the parameter [**Generate file log**](#framework_guild_gen_file_log) to True inside each [GUILD OBJECT](#framework_guild).<br> 
 Inside the log you will find data of what was sent (text, embed, files), a channel list it succeeded to send this message and a channel list of the ones it failed (If it failed due to slow mode, the message will be sent as soon as possible, overwriting the default period) <br>
 All of these file logs will be Markdown files.<br>
 <image alt="Server Log" src="DOC_src\framework_server_log_1.png" width=1920>
 (Left is raw Markdown code, to the right is rendered Markdown)
+
+
+## <a id="trace_debug"></a> **Trace messages**
+In case you feel like the framework is not doing it's job properly, eg. you feel like some messages aren't being send or the framework just stops without advertising, the framework offers **console logging** of **trace** messages. Trace messages can be **informative** (eg. which account is logged in), they can be **warnings** (eg. some channels could not be found),<br>
+or they can be **errors**. <br>
+Most of the trace messages won't stop the framework but will only removed the failed objects and print it to the console, becase you could, eg. get kicked from a server resulting in some channels<br>
+not being found.<br><br>
+To **enable** trace messages, set the **debug** option to True inside the **[framework.run](framework_framework_run)** function.
 
 <br>
 
@@ -264,7 +307,7 @@ framework.run(  token="account token here",     # MANDATORY (This is the string 
                 is_user=False,                  # OPTIONAL -- Must be true if token is from an user account
                 user_callback=None,             # OPTIONAL -- Function that is called after framework is run
                 server_log_output="Logging",    # OPTIONAL -- The path to the server log file outputs
-                debug=True)                     # OPTIONAL -- For easiser debugging if you think your messages aren't being sent (will print TRACE to the console)
+                debug=True)                     # OPTIONAL -- For easiser debugging if you think your messages aren't being sent (will print trace to the console)
 
 ```
 That's it, your framework is now running and messages will be periodicaly sent.
