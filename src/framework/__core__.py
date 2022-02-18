@@ -2,7 +2,7 @@
     DISCORD SHILLING FRAMEWORK (DSF)
     Author      :: David Hozic
     Copyright   :: Copyright (c) 2022 David Hozic
-    Version     :: V1.7.5.1
+    Version     :: V1.7.6
 """
 from   contextlib import suppress
 from   typing import Union, List
@@ -15,8 +15,27 @@ import pycordmod as discord
 import datetime
 import copy
 
+
 #######################################################################
-# Globals
+# Exports
+#######################################################################
+__all__ = (    # __all__ variable dictates which objects get imported when using from <module> import *                                 
+    "discord",
+    "C_DAY_TO_SECOND",
+    "C_HOUR_TO_SECOND",
+    "C_MINUTE_TO_SECOND",
+    "GUILD",
+    "MESSAGE",
+    "FILE",
+    "EMBED",
+    "EMBED_FIELD",
+    "run",
+    "data_function",
+    "get_client",
+)
+
+#######################################################################
+# Globals   (These are all set in the framework.run function)
 #######################################################################
 m_user_callback          = None     # User provided function to call after framework is ready
 m_server_log_output_path = None     # User provided for server log output path
@@ -42,10 +61,10 @@ class TRACE_LEVELS(enum.Enum):
     WARNING = 1
     ERROR =  2
 
-def TRACE(message: str,
-          level:   TRACE_LEVELS):
+def trace(message: str,
+          level:   TRACE_LEVELS = TRACE_LEVELS.NORMAL):
     """"
-    Name : TRACE
+    Name : trace
     Param:
     - message : str          = Trace message
     - level   : TRACE_LEVELS = Level of the trace
@@ -69,19 +88,18 @@ class __FUNCTION_CLS_BASE__:
     """
     type: dummy class
     name: __FUNCTION_CLS_BASE__
-    info: used as a base class to __FUNCTION_CLS__ which gets created in framework.FUNCTION decorator.
-    Because the __FUNCTION_CLS__ is inaccessible outside the FUNCTION decorator, this class is used to detect
+    info: used as a base class to __FUNCTION_CLS__ which gets created in framework.data_function decorator.
+    Because the __FUNCTION_CLS__ is inaccessible outside the data_function decorator, this class is used to detect
     if the MESSAGE.data parameter is of function type, because the function isinstance also returns True when comparing
     the object to it's class or to the base class from which the object class is inherited from.
     """
 
-def FUNCTION(fnc):
+def data_function(fnc):
     """
     type:   Decorator
-    name:   FUNCTION
+    name:   data_function
     info:   Decorator used to create a framework __FUNCTION_CLS__ class for function
     return: __FUNCTION_CLS__
-    usage:  \n\n@framework.FUNCTION\ndef function(a,b,c)\n\treturn [str | embed | file | list | tuple]
     """
     class __FUNCTION_CLS__(__FUNCTION_CLS_BASE__):
         """"
@@ -93,12 +111,14 @@ def FUNCTION(fnc):
         """
         __slots__ = (
             "args",
-            "kwargs"
+            "kwargs",
+            "func_name",
         )
 
         def __init__(self, *args, **kwargs):
             self.args = args
             self.kwargs = kwargs
+            self.func_name = fnc.__name__
 
         def get_data(self):
             """
@@ -142,9 +162,9 @@ class TIMER:
 #######################################################################
 # Framework classes
 #######################################################################
-class DISCORD_CLIENT(discord.Client):
+class CLIENT(discord.Client):
     """
-        Name : DISCORD_CLIENT
+        Name : CLIENT
         Info : Inherited class from discord.Client.
                Contains an additional on_ready function.
     """
@@ -153,10 +173,11 @@ class DISCORD_CLIENT(discord.Client):
         Name : on_ready
         Info : Tasks that is started by pycord when you have been successfully logged into discord.
         """
-        TRACE(f"Logged in as {self.user}", TRACE_LEVELS.NORMAL)
+        trace(f"Logged in as {self.user}", TRACE_LEVELS.NORMAL)
 
         if initialize():
             # Initialization was successful, so create the advertiser task and start advertising.
+            trace("Successful initialization!",TRACE_LEVELS.NORMAL)
             asyncio.gather(asyncio.create_task(advertiser()))
         else:
             # Initialization failed, close everything
@@ -330,7 +351,7 @@ class MESSAGE:
         - List/Tuple containing any of the above arguments (There can up to 1 string, up to 1 embed and up to 10 framework.FILE objects,
           if more than 1 string or embeds are sent, the framework will only consider the last found).
         - Function that accepts any amount of parameters and returns any of the above types.
-          To pass a function, YOU MUST USE THE framework.FUNCTION decorator on the function before passing the function to the framework.
+          To pass a function, YOU MUST USE THE framework.data_function decorator on the function before passing the function to the framework.
     - Channel IDs (channel_ids) - List of IDs of all the channels you want data to be sent into.
     - Clear Previous (clear_previous) - A bool variable that can be either True of False. If True, then before sending a new message to the channels,
       the framework will delete all previous messages sent to discord that originated from this message object.
@@ -361,7 +382,6 @@ class MESSAGE:
         if start_period is None:            # If start_period is none -> period will not be randomized
             self.randomized_time = False
             self.period = end_period
-
         else:
             self.randomized_time = True
             self.random_range = (start_period, end_period)
@@ -373,7 +393,6 @@ class MESSAGE:
         self.clear_previous = clear_previous
         self.force_retry = {"ENABLED" : start_now, "TIME" : 0}
         self.sent_msg_objs = []
-
 
 class GUILD:
     """
@@ -491,9 +510,8 @@ __________________________________________________________
                     l_files_to_send  = []
                     # If any valid data was passed to the data parameter of framework.MESSAGE
                     if l_data_to_send is not None:
-                        if not isinstance(l_data_to_send, Union[list,tuple]):
-                            l_data_to_send = [l_data_to_send]
-                        # data is list -> parse each element
+                        # Convert into a regular list
+                        l_data_to_send = l_data_to_send if isinstance(l_data_to_send, Union[list, tuple, set]) else [l_data_to_send]
                         for element in l_data_to_send:
                             if isinstance(element, str):
                                 l_text_to_send = element
@@ -507,11 +525,11 @@ __________________________________________________________
                                     l_files_to_send.append(l_file)
 
                             elif element is not None:
-                                TRACE(f"INVALID DATA PARAMETER PASSED!\nArgument is of type : {type(element).__name__}\nSee README.md for allowed data types\nGUILD: {self.guild.name} (ID: {self.guild.id})",
+                                trace(f"INVALID DATA PARAMETER PASSED!\nArgument is of type : {type(element).__name__}\nSee README.md for allowed data types\nGUILD: {self.guild.name} (ID: {self.guild.id})",
                                       TRACE_LEVELS.WARNING)
 
                     # Send messages
-                    if l_text_to_send or l_embed_to_send or l_files_to_send:
+                    if l_text_to_send is not None or l_embed_to_send is not None or len(l_files_to_send) > 0:
                         l_errored_channels = []
                         l_succeded_channels= []
 
@@ -544,6 +562,7 @@ __________________________________________________________
                                     # Failed to send message
                                     l_error_text = f"{l_channel.name} - Reason: {ex}"
                                     if isinstance(ex, discord.HTTPException) and ex.status == 429:
+                                        # the if sentence is evaluated by short circuit evaluation
                                         retry_after = int(ex.response.headers["Retry-After"])  + 1
                                         # Slow Mode detected -> wait the remaining time
                                         if ex.code == 20026:
@@ -551,7 +570,7 @@ __________________________________________________________
                                             l_msg.force_retry["TIME"] = retry_after
                                         else:
                                             # Rate limit but not slow mode -> put the framework to sleep as it won't be able to send any messages globaly
-                                            TRACE(f"Rate limit! Retrying after {retry_after}",TRACE_LEVELS.WARNING)
+                                            trace(f"Rate limit! Retrying after {retry_after}",TRACE_LEVELS.WARNING)
                                             await asyncio.sleep(retry_after)
 
                                         l_error_text += f" - Retrying after {retry_after}"
@@ -593,7 +612,7 @@ def initialize() -> bool:
     Name: initialize
     Parameters: void
     Return: success: bool
-    Info: Function that initializes the guild objects and then returns True on success or False on failure
+    Info: Function that initializes the guild objects and then returns True on success or False on failure.
     """
     for l_server in m_server_list[:]:
         """
@@ -629,37 +648,50 @@ def initialize() -> bool:
 
                     if l_channel is None:
                         # Unable to find the channel objects, ergo remove.
-                        TRACE(f"Unable to get channel from id: {l_channel_id} (Does not exist - Incorrect ID?) in GUILD: \"{l_server.guild.name}\" (ID: {l_guild_id})", TRACE_LEVELS.WARNING)
+                        trace(f"Unable to get channel from id: {l_channel_id} (Does not exist - Incorrect ID?) in GUILD: \"{l_server.guild.name}\" (ID: {l_guild_id})", TRACE_LEVELS.WARNING)
                         l_msg.channels.remove(l_channel)
 
                     elif l_channel.guild.id != l_guild_id:
                         # The channel is not part of this guild, ergo remove.
-                        TRACE(f"Guild \"{l_server.guild.name}\" (ID: {l_guild_id}) has no channel \"{l_channel.name}\" (ID: {l_channel_id})", TRACE_LEVELS.WARNING)
+                        trace(f"Guild \"{l_server.guild.name}\" (ID: {l_guild_id}) has no channel \"{l_channel.name}\" (ID: {l_channel_id})", TRACE_LEVELS.WARNING)
                         l_msg.channels.remove(l_channel)
                     else:
                         l_channel_i += 1
 
                 # Check for correct data types of the MESSAGE.data parameter
-                l_data_params = l_msg.data if isinstance(l_msg.data, Union[list, tuple]) else [l_msg.data]
-                for l_data in l_data_params[:]:
-                    """
-                    Check all the data types of all the passed to the data parameter.
-                    If class does not match the allowed types, then the object is removed.
-                    The for loop iterates thru a shallow copy (sliced list) of l_data_params to allow removal of items
-                    without affecting the iteration (would skip elements without a copy or use of while loop)
-                    """
-                    if (
-                        not isinstance(l_data, __FUNCTION_CLS_BASE__) and\
-                        not isinstance(l_data, str) and\
-                        not isinstance(l_data, EMBED) and\
-                        not isinstance(l_data, FILE)
-                    ):
-                        TRACE(f"INVALID DATA PARAMETER PASSED!\nArgument is of type : {type(l_data).__name__}\nSee README.md for allowed data types\nGUILD: {l_server.guild.name} (ID: {l_server.guild.id})",
-                              TRACE_LEVELS.ERROR)
-                        l_data_params.remove(l_data)
+                if not isinstance(l_msg.data, __FUNCTION_CLS_BASE__):
+                    # Convert any arguments passed into a list of arguments
+                    if  isinstance(l_msg.data, Union[list, tuple, set]):
+                        l_msg.data = list(l_msg.data)   # Convert into a regular list to allow removal of items
+                    else:
+                        l_msg.data = [l_msg.data]
+
+                    # Check all the arguments
+                    for l_data in l_msg.data[:]:
+                        """
+                        Check all the data types of all the passed to the data parameter.
+                        If class does not match the allowed types, then the object is removed.
+                        The for loop iterates thru a shallow copy (sliced list) of l_data_params to allow removal of items
+                        without affecting the iteration (would skip elements without a copy or use of while loop)
+                        """
+                        if (
+                            not isinstance(l_data, str) and\
+                            not isinstance(l_data, EMBED) and\
+                            not isinstance(l_data, FILE)\
+                        ):
+                            if isinstance(l_data, __FUNCTION_CLS_BASE__):
+                                trace(f"The function can only be used on the data parameter directly, not in a list\nFunction: {l_data.func_name}", TRACE_LEVELS.ERROR)
+                                l_msg.data.clear()
+                                break
+                            else:
+                                trace(f"INVALID DATA PARAMETER PASSED!\nArgument is of type : {type(l_data).__name__}\nSee README.md for allowed data types\nGUILD: {l_server.guild.name} (ID: {l_server.guild.id})", TRACE_LEVELS.WARNING)
+                                l_msg.data.remove(l_data)
+
 
                 # Check if any data params are left and remove the message object if not
-                if not len(l_msg.channels) or not len(l_data_params):
+                if (not len(l_msg.channels) or
+                    not isinstance(l_msg.data, __FUNCTION_CLS_BASE__) and not len(l_msg.data)   # if isinstance __FUNCTION_CLS_BASE__, then it has no len, and because of short-circuit, len will not be read
+                ):
                     """
                     Failed parsing of all the channels
                     or/and all the data parameters inside the message object, ergo remove the message.
@@ -670,26 +702,36 @@ def initialize() -> bool:
                 """
                 No messages were successfuly processed,
                 ergo remove the guild object from the list as it is useless.
-                TRACE is silent since it is already made in the deepest level of these checks.
+                Trace is silent since it is already made in the deepest level of these checks.
                 """
                 m_server_list.remove(l_server)
 
         else:
-            TRACE(f"Unable to create server object from server id: {l_guild_id}\nRemoving the object from the list!", TRACE_LEVELS.WARNING)
+            trace(f"Unable to create server object from server id: {l_guild_id}\nRemoving the object from the list!", TRACE_LEVELS.WARNING)
             m_server_list.remove(l_server)
 
     if len(m_server_list):
         return True
     else:
-        TRACE("No guilds could be parsed", TRACE_LEVELS.ERROR)
+        trace("No guilds could be parsed", TRACE_LEVELS.ERROR)
         return False
+
+
+def get_client():
+    """
+    Name:   get_client
+    Params: void
+    Return: discord.Client | None
+    Info:   Returns the client object used by the framework, so the user wouldn't have to run 2 clients.
+    """
+    return m_client
 
 
 def run(token : str,
         server_list : List[GUILD],
         is_user : bool =False,
         user_callback : bool=None,
-        server_log_output : str ="Logging",
+        server_log_output : str ="History",
         debug : bool=True):
     """
     @type  : function
@@ -711,12 +753,12 @@ def run(token : str,
            m_debug,\
            m_client
 
-    m_user_callback = user_callback                 ## Called after framework has started
+    m_client = CLIENT()
     m_server_log_output_path = server_log_output    ## Path to folder where to crete server logs
-    m_server_list = server_list                     ## List of guild objects to iterate thru in the advertiser task
     m_debug = debug                                 ## Print trace messages to the console for debugging purposes
-    m_client = DISCORD_CLIENT()                     ## Create a Client object for communication with discord's API
+    m_server_list = server_list                     ## List of guild objects to iterate thru in the advertiser task
+    m_user_callback = user_callback                 ## Called after framework has started
 
     if is_user:
-        TRACE("Bot is an user account which is against discord's ToS",TRACE_LEVELS.WARNING)
+        trace("Bot is an user account which is against discord's ToS",TRACE_LEVELS.WARNING)
     m_client.run(token, bot=not is_user)

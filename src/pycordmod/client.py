@@ -106,6 +106,8 @@ def _cleanup_loop(loop: asyncio.AbstractEventLoop) -> None:
     try:
         _cancel_tasks(loop)
         loop.run_until_complete(loop.shutdown_asyncgens())
+    except:
+        pass
     finally:
         _log.info('Closing the event loop.')
         loop.close()
@@ -665,7 +667,7 @@ class Client:
         if not future.cancelled():
             try:
                 return future.result()
-            except:
+            except KeyboardInterrupt:
                 return None
 
     # properties

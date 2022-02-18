@@ -7,14 +7,14 @@ import  framework, datetime, secret
 #                               GUILD MESSAGES DEFINITION                                  #
 ############################################################################################
 
-# VERY IMPORTANT that you use @framework.FUNCTION to convert your function into a __FUNCTION_CLS__ class which creates an object when you "call" it below
+# It's VERY IMPORTANT that you use @framework.data_function to convert your function into a __FUNCTION_CLS__ class which creates an object when you "call" it below
 #######################################
 
 
-@framework.FUNCTION
+@framework.data_function
 def get_data(parameter):
-    return f"Parameter: {parameter}\nTimestamp: {datetime.datetime.now()}"
-
+    l_time = datetime.datetime.now()
+    return f"Parameter: {parameter}\nTimestamp: {l_time.day}.{l_time.month}.{l_time.year} :: {l_time.hour}:{l_time.minute}:{l_time.second}"
 
 guilds = [
     framework.GUILD(
@@ -35,7 +35,7 @@ guilds = [
         generate_log=True           ## Generate file log of sent messages (and failed attempts) for this server 
     )
 ]
-                                     
+
 ############################################################################################
 
 if __name__ == "__main__":
