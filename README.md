@@ -226,7 +226,7 @@ The **MESSAGE** object containts parameters which describe behaviour and data th
     - Parameters The function is allowed to accept anything
     - Return: The function **must** return any of the **above data types** or the **None** object if no data is ready to be sent.<br>
     If **None** is returned by the function, the framework will skip the send attempt and retry after it's [configured period](#fw_msg_data_period). For example you could make the framework call your function on more regular intervals and then decide within the function if anything is to be returned and if nothing is to be returned, you would return None.
-    - **IMPORANT:** if you decide to use an user defined function as the data parameter, you **MUST** use the [framework.**FUNCTION**](#framework_decorators_function) decorator on it.
+    - **IMPORANT:** if you decide to use an user defined function as the data parameter, you **MUST** use the [framework.**data_function**](#framework_decorators_function) decorator on it.
     <br><br>
     When you pass the function to the data parameter, pass it in the next format:
     - ```py
