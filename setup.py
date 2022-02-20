@@ -9,20 +9,20 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 __metadata__ = \
 {
-    "version" :  "1.7.5",
+    "version" :  "1.7.6.1",
     "requirements" :  ["aiohttp>=3.6.0,<3.9.0"],
     "minimum_py_version" :  "3.8",
 }
 
 setuptools.setup(
-    name="Discord-Shilling-Framework",
+    name="Discord-Advert-Framework",
     version=__metadata__["version"],
     author="David Hozic",
     author_email="davidhozic@gmail.com",
-    description="Discord Shilling/Self-Promo Framework for shilling, eg. NFT",
+    description="Framework (or bot) that allows you to advertise on discord",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/davidhozic/Discord-Shilling-Framework",
+    url="https://github.com/davidhozic/discord-advertisement-framework",
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",

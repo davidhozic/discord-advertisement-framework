@@ -1,5 +1,5 @@
 import  framework, datetime, secret
-
+from framework import discord
 
 
 
@@ -7,14 +7,14 @@ import  framework, datetime, secret
 #                               GUILD MESSAGES DEFINITION                                  #
 ############################################################################################
 
-# VERY IMPORTANT that you use @framework.FUNCTION to convert your function into a __FUNCTION_CLS__ class which creates an object when you "call" it below
+# It's VERY IMPORTANT that you use @framework.data_function to convert your function into a __FUNCTION_CLS__ class which creates an object when you "call" it below
 #######################################
 
 
-@framework.FUNCTION
+@framework.data_function
 def get_data(parameter):
-    return f"Parameter: {parameter}\nTimestamp: {datetime.datetime.now()}"
-
+    l_time = datetime.datetime.now()
+    return f"Parameter: {parameter}\nTimestamp: {l_time.day}.{l_time.month}.{l_time.year} :: {l_time.hour}:{l_time.minute}:{l_time.second}"
 
 guilds = [
     framework.GUILD(
@@ -28,14 +28,14 @@ guilds = [
                                                             # or function that returns any of above types(or returns None if you don't have any data to send yet), 
                                                             # where if you pass a function you need to use the framework.FUNCTION decorator on top of it ).
                               channel_ids=[123456789],      # List of ids of all the channels you want this message to be sent into
-                              clear_previous=True,          # Clear all discord messages that originated from this MESSAGE object
+                              mode="send",          # Clear all discord messages that originated from this MESSAGE object
                               start_now=True                # Start sending now (True) or wait until period
                               ),  
         ],
         generate_log=True           ## Generate file log of sent messages (and failed attempts) for this server 
     )
 ]
-                                     
+
 ############################################################################################
 
 if __name__ == "__main__":
@@ -43,6 +43,6 @@ if __name__ == "__main__":
                     server_list=guilds,             # MANDATORY
                     is_user=False,                  # OPTIONAL
                     user_callback=None,             # OPTIONAL
-                    server_log_output="Logging",    # OPTIONAL
+                    server_log_output="History",    # OPTIONAL
                     debug=True)                     # OPTIONAL
     
