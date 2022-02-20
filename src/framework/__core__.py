@@ -407,7 +407,7 @@ class GUILD:
     __slots__ = (
         "guild",
         "messages",
-        "generate_log",
+        "_generate_log",
         "guild_file_name"
     )
 
@@ -418,49 +418,61 @@ class GUILD:
 
         self.guild =    guild_id
         self.messages = messages_to_send
-        self.generate_log = generate_log
+        self._generate_log = generate_log
         self.guild_file_name = None
 
-    def _generate_log(self,
+    def generate_log(self,
                       sent_text : str,
                       sent_embed : discord.Embed,
                       sent_files : list,
                       succeeded_ch : list,
                       failed_ch : list):
         """
-        Name: _generate_log
+        Name: generate_log
         Info: Generates a log of a message send attempt
         """
-        l_tmp = ""
-        if sent_text:
-            l_tmp += "-   ```\n"
-            for line in sent_text.split("\n"):
-                l_tmp += f"\t{line}\n"
-            l_tmp += "    ```"
-        sent_text = l_tmp
-        l_tmp = ""
-        if sent_embed:
-            for field in sent_embed.fields:
-                l_tmp += f"\n- {field.name}\n\t```\n"
+        # Generate text
+        sent_text = "\t```\n".join(f"\t{line}\n" for line in sent_text.splitlines(keepends=True)) + "\t```" if sent_text is not None else ""
+        #Generate embed
+        EmptyEmbed = discord.embeds.EmptyEmbed
+        ets = sent_embed.timestamp
+        tmp_emb = sent_embed
+        if tmp_emb is not None:
+            sent_embed = \
+f"""
+Title:        {tmp_emb.title if tmp_emb.title is not EmptyEmbed else ""}
+Author:       {tmp_emb.author.name if tmp_emb.author.name is not EmptyEmbed else ""}
+Thumbnail:    {tmp_emb.thumbnail.url if tmp_emb.thumbnail.url is not EmptyEmbed else ""}
+Image:        {tmp_emb.image.url if tmp_emb.image.url is not EmptyEmbed else ""}
+Description:  {tmp_emb.description if tmp_emb.description is not EmptyEmbed else ""}
+Color:        {tmp_emb.colour if tmp_emb.colour is not EmptyEmbed else ""}
+Timestamp:    {f"{ets.day}.{ets.month}.{ets.year}  {ets.hour}:{ets.minute}:{ets.second}" if ets is not EmptyEmbed else ""}
+"""
+            sent_embed += "\nFields:"
+            for field in tmp_emb.fields:
+                sent_embed += f"\n - {field.name}\n"
+                sent_embed += "\t```\n"
+                for line in field.value.splitlines():
+                    sent_embed += f"\t{line}\n"
+                sent_embed += "\t```"
 
-                for line in field.value.split("\n"):
-                    l_tmp+=f"\t{line}\n"
-                l_tmp = l_tmp.rstrip()
-                l_tmp += "\n\t```"
-        sent_embed = l_tmp
-        l_tmp = ""
-        if sent_files.__len__():
-            l_tmp += "-   ```\n"
-            for filename in sent_files:
-                l_tmp += f"\t{filename}\n"
-            l_tmp += "    ```"
-        sent_files = l_tmp
+        else:
+            sent_embed = ""
+
+        # Generate timestamp
         l_timestruct = time.localtime()
-        l_timestamp = "Date:{:02d}.{:02d}.{:04d} Time:{:02d}:{:02d}".format(l_timestruct.tm_mday,
-                                                                            l_timestruct.tm_mon,
-                                                                            l_timestruct.tm_year,
-                                                                            l_timestruct.tm_hour,
-                                                                            l_timestruct.tm_min)
+        l_timestamp = "{:02d}.{:02d}.{:04d} {:02d}:{:02d}".format(l_timestruct.tm_mday,
+                                                                  l_timestruct.tm_mon,
+                                                                  l_timestruct.tm_year,
+                                                                  l_timestruct.tm_hour,
+                                                                  l_timestruct.tm_min)
+        # Generate channel log
+        succeeded_ch = "[\n" + "".join(f"\t\t{ch.name}(ID: {ch.id}),\n" for ch in succeeded_ch).rstrip(",\n") + "\n\t]" if len(succeeded_ch) else "[]"
+        failed_ch = "[\n"+ "".join(f"\t\t- {channel['channel'].name}(ID: {channel['channel'].id}) >>> Reason: {channel['reason']},\n" for channel in failed_ch).rstrip(",\n") + "\n\t]" if len(failed_ch) else "[]"
+            
+        # Generate files
+        sent_files = "".join(    f"- ```\n  {file}\n  ```\n" for file in sent_files    ).rstrip("\n")
+
         return f'''
 # MESSAGE LOG:
 ## Text:
@@ -469,7 +481,6 @@ class GUILD:
 {sent_embed}
 ## Files:
 {sent_files}
-
 ## Other data:
 -   ```
     Server: {self.guild.name}
@@ -477,7 +488,7 @@ class GUILD:
     Failed in channels: {failed_ch}
     Timestamp: {l_timestamp}
     ```
-__________________________________________________________
+***
 '''
 
     async def advertise(self):
@@ -521,8 +532,7 @@ __________________________________________________________
 
                             elif isinstance(element, FILE):
                                 l_file = discord.File(element.filename)
-                                if l_file is not None:
-                                    l_files_to_send.append(l_file)
+                                l_files_to_send.append(l_file)
 
                             elif element is not None:
                                 trace(f"INVALID DATA PARAMETER PASSED!\nArgument is of type : {type(element).__name__}\nSee README.md for allowed data types\nGUILD: {self.guild.name} (ID: {self.guild.id})",
@@ -553,14 +563,13 @@ __________________________________________________________
                                                                               embed=l_embed_to_send,
                                                                               files=l_files_to_send)
 
-                                    l_succeded_channels.append(l_channel.name)
+                                    l_succeded_channels.append(l_channel)
                                     if l_msg.clear_previous:
                                         l_msg.sent_msg_objs.append(l_discord_sent_msg)
 
                                     break    # Break out of the tries loop
                                 except Exception as ex:
                                     # Failed to send message
-                                    l_error_text = f"{l_channel.name} - Reason: {ex}"
                                     if isinstance(ex, discord.HTTPException) and ex.status == 429:
                                         # the if sentence is evaluated by short circuit evaluation
                                         retry_after = int(ex.response.headers["Retry-After"])  + 1
@@ -573,16 +582,14 @@ __________________________________________________________
                                             trace(f"Rate limit! Retrying after {retry_after}",TRACE_LEVELS.WARNING)
                                             await asyncio.sleep(retry_after)
 
-                                        l_error_text += f" - Retrying after {retry_after}"
-
                                     if tries == 2 or not isinstance(ex, discord.HTTPException) or\
                                        ex.status != 429 or ex.code == 20026:
-                                        l_errored_channels.append(l_error_text)
+                                        l_errored_channels.append({"channel":l_channel, "reason":ex})
                                         break
 
-                        l_trace += self._generate_log(l_text_to_send, l_embed_to_send, [x.filename for x in l_files_to_send], l_succeded_channels, l_errored_channels)     # Generate trace of sent file
+                        l_trace += self.generate_log(l_text_to_send, l_embed_to_send, [x.filename for x in l_files_to_send], l_succeded_channels, l_errored_channels)     # Generate trace of sent file
             # Save into file
-            if self.generate_log and l_trace:
+            if self._generate_log and l_trace:
                 with suppress(FileExistsError):
                     os.mkdir(m_server_log_output_path)
                 with open(os.path.join(m_server_log_output_path, self.guild_file_name),'a', encoding='utf-8') as l_logfile:
