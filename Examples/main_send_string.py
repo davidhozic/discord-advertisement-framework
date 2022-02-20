@@ -1,5 +1,5 @@
 import  framework, secret
-
+from framework import discord
 
 
 
@@ -19,10 +19,10 @@ guilds = [
                                                             # or function that returns any of above types(or returns None if you don't have any data to send yet), 
                                                             # where if you pass a function you need to use the framework.FUNCTION decorator on top of it ).
                               channel_ids=[123456789],      # List of ids of all the channels you want this message to be sent into
-                              clear_previous=True,          # Clear all discord messages that originated from this MESSAGE object
+                              mode="send",          # Clear all discord messages that originated from this MESSAGE object
                               start_now=True                # Start sending now (True) or wait until period
                               ),
-            framework.MESSAGE(start_period=5, end_period=10, data="Second Message", channel_ids=[12345], clear_previous=True, start_now=True)  
+            framework.MESSAGE(start_period=5, end_period=10, data="Second Message", channel_ids=[12345], mode="send", start_now=True)  
         ],
         generate_log=True           ## Generate file log of sent messages (and failed attempts) for this server 
     )
@@ -35,5 +35,5 @@ if __name__ == "__main__":
                     server_list=guilds,             # MANDATORY
                     is_user=False,                  # OPTIONAL
                     user_callback=None,             # OPTIONAL
-                    server_log_output="Logging",    # OPTIONAL
+                    server_log_output="History",    # OPTIONAL
                     debug=True)                     # OPTIONAL

@@ -1,5 +1,5 @@
 import  framework as fw, secret
-
+from framework import discord
 
 ############################################################################################
 #                               EMBED VARIABLE DEFINITON                                   #
@@ -20,7 +20,7 @@ fields=\
         fw.EMBED_FIELD("Test 4", "Hello World 4", True),
         fw.EMBED_FIELD("Test 5", "Hello World 5", True)
     ],
-    ## ... Other arguments, refere to the documentation please https://github.com/davidhozic/Discord-Shilling-Framework
+    ## ... for other arguments, see https://github.com/davidhozic/discord-advertisement-framework
 )
 
 
@@ -52,7 +52,7 @@ guilds = [
                                                             # or function that returns any of above types(or returns None if you don't have any data to send yet), 
                                                             # where if you pass a function you need to use the fw.FUNCTION decorator on top of it ).
                               channel_ids=[123456789],      # List of ids of all the channels you want this message to be sent into
-                              clear_previous=True,          # Clear all discord messages that originated from this MESSAGE object
+                              mode="send",          # Clear all discord messages that originated from this MESSAGE object
                               start_now=True                # Start sending now (True) or wait until period
                               ),
 
@@ -63,7 +63,7 @@ guilds = [
                               data=test_embed_fw_2, 
 
                               channel_ids=[123456789],
-                              clear_previous=True,
+                              mode="send",
                               start_now=True
                               ),
         ],
@@ -78,5 +78,5 @@ if __name__ == "__main__":
                     server_list=guilds,             # MANDATORY
                     is_user=False,                  # OPTIONAL
                     user_callback=None,             # OPTIONAL
-                    server_log_output="Logging",    # OPTIONAL
+                    server_log_output="History",    # OPTIONAL
                     debug=True)                     # OPTIONAL

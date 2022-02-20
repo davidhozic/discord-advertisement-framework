@@ -1,17 +1,20 @@
 """
-    DISCORD SHILLING FRAMEWORK (DSF)
+    DISCORD ADVERTISEMENT FRAMEWORK (DSF)
     Author      :: David Hozic
     Copyright   :: Copyright (c) 2022 David Hozic
     Version     :: V1.7.6
 """
 from   contextlib import suppress
-from   typing import Union, List
+from   typing import Literal, Union, List
+from   enum import Enum, auto
 import time
 import asyncio
 import random
 import os
-import enum
-import pycordmod as discord
+
+import _discord as discord
+
+
 import datetime
 import copy
 
@@ -53,13 +56,13 @@ C_MINUTE_TO_SECOND = 60
 #######################################################################
 # Debugging
 #######################################################################
-class TRACE_LEVELS(enum.Enum):
+class TRACE_LEVELS(Enum):
     """
     Info: Level of trace for debug
     """
     NORMAL = 0
-    WARNING = 1
-    ERROR =  2
+    WARNING = auto()
+    ERROR =  auto()
 
 def trace(message: str,
           level:   TRACE_LEVELS = TRACE_LEVELS.NORMAL):
@@ -185,6 +188,7 @@ class CLIENT(discord.Client):
 
         if m_user_callback:   # If user callback function was specified
             m_user_callback() # Call user provided function after framework has started
+
 
 
 class EMBED_FIELD:
@@ -333,7 +337,6 @@ class FILE:
         with open(filename, "rb") as reader:
             pass
 
-
 class MESSAGE:
     """
     Name: MESSAGE
@@ -353,8 +356,9 @@ class MESSAGE:
         - Function that accepts any amount of parameters and returns any of the above types.
           To pass a function, YOU MUST USE THE framework.data_function decorator on the function before passing the function to the framework.
     - Channel IDs (channel_ids) - List of IDs of all the channels you want data to be sent into.
-    - Clear Previous (clear_previous) - A bool variable that can be either True of False. If True, then before sending a new message to the channels,
-      the framework will delete all previous messages sent to discord that originated from this message object.
+    - Send mode (mode) - Parameter that defines how message will be sent to a channel. It can be "send" - each period a new message will be sent,
+                        "edit" - each period the previously send message will be edited (if it exists) or "clear-send" - previous message will be deleted and
+                        a new one sent.
     - Start Now (start_now) - A bool variable that can be either True or False. If True, then the framework will send the message
       as soon as it is run and then wait it's period before trying again. If False, then the message will not be sent immediatly after framework is ready,
       but will instead wait for the period to elapse.
@@ -366,18 +370,19 @@ class MESSAGE:
         "data",
         "channels",
         "timer",
-        "clear_previous",
+        "mode",
         "force_retry",
-        "sent_msg_objs"
+        "sent_messages"
     )
 
+    
     def __init__(self,
                 start_period : Union[float,None],
                 end_period : float,
                 data : Union[str, EMBED, FILE, List[Union[str, EMBED, FILE]]],
                 channel_ids : List[int],
-                clear_previous : bool,
-                start_now : bool):
+                mode : Literal["send", "edit", "clear-send"]="send",
+                start_now : bool=True):
 
         if start_period is None:            # If start_period is none -> period will not be randomized
             self.randomized_time = False
@@ -390,9 +395,9 @@ class MESSAGE:
         self.data = data
         self.channels = channel_ids
         self.timer = TIMER()
-        self.clear_previous = clear_previous
+        self.mode = mode if mode in {"send", "edit", "clear-send"} else "send"
         self.force_retry = {"ENABLED" : start_now, "TIME" : 0}
-        self.sent_msg_objs = []
+        self.sent_messages = {ch_id : None for ch_id in channel_ids}   
 
 class GUILD:
     """
@@ -407,7 +412,7 @@ class GUILD:
     __slots__ = (
         "guild",
         "messages",
-        "generate_log",
+        "_generate_log",
         "guild_file_name"
     )
 
@@ -418,49 +423,77 @@ class GUILD:
 
         self.guild =    guild_id
         self.messages = messages_to_send
-        self.generate_log = generate_log
+        self._generate_log = generate_log
         self.guild_file_name = None
 
-    def _generate_log(self,
+    def generate_log(self,
                       sent_text : str,
                       sent_embed : discord.Embed,
                       sent_files : list,
                       succeeded_ch : list,
                       failed_ch : list):
         """
-        Name: _generate_log
+        Name: generate_log
         Info: Generates a log of a message send attempt
         """
-        l_tmp = ""
-        if sent_text:
-            l_tmp += "-   ```\n"
-            for line in sent_text.split("\n"):
-                l_tmp += f"\t{line}\n"
-            l_tmp += "    ```"
-        sent_text = l_tmp
-        l_tmp = ""
-        if sent_embed:
-            for field in sent_embed.fields:
-                l_tmp += f"\n- {field.name}\n\t```\n"
+        # Generate text
+        if sent_text is not None:
+            tmp_text , sent_text = sent_text, ""
+            sent_text += "- ```\n"
+            for line in tmp_text.splitlines():
+                sent_text += f"  {line}\n"
+            sent_text += "  ```"
+        else:
+            sent_text = ""
 
-                for line in field.value.split("\n"):
-                    l_tmp+=f"\t{line}\n"
-                l_tmp = l_tmp.rstrip()
-                l_tmp += "\n\t```"
-        sent_embed = l_tmp
-        l_tmp = ""
-        if sent_files.__len__():
-            l_tmp += "-   ```\n"
-            for filename in sent_files:
-                l_tmp += f"\t{filename}\n"
-            l_tmp += "    ```"
-        sent_files = l_tmp
+        #Generate embed
+        EmptyEmbed = discord.embeds.EmptyEmbed
+        
+        if sent_embed is not None:
+            tmp_emb = sent_embed
+            ets = sent_embed.timestamp
+            sent_embed = \
+f"""
+Title:        {tmp_emb.title if tmp_emb.title is not EmptyEmbed else ""}
+Author:       {tmp_emb.author.name if tmp_emb.author.name is not EmptyEmbed else ""}
+Thumbnail:    {tmp_emb.thumbnail.url if tmp_emb.thumbnail.url is not EmptyEmbed else ""}
+Image:        {tmp_emb.image.url if tmp_emb.image.url is not EmptyEmbed else ""}
+Description:  {tmp_emb.description if tmp_emb.description is not EmptyEmbed else ""}
+Color:        {tmp_emb.colour if tmp_emb.colour is not EmptyEmbed else ""}
+Timestamp:    {f"{ets.day}.{ets.month}.{ets.year}  {ets.hour}:{ets.minute}:{ets.second}" if ets is not EmptyEmbed else ""}
+"""
+            sent_embed += "\nFields:"
+            for field in tmp_emb.fields:
+                sent_embed += f"\n - {field.name}\n"
+                sent_embed += "\t```\n"
+                for line in field.value.splitlines():
+                    sent_embed += f"\t{line}\n"
+                sent_embed += "\t```"
+
+        else:
+            sent_embed = ""
+
+        # Generate timestamp
         l_timestruct = time.localtime()
-        l_timestamp = "Date:{:02d}.{:02d}.{:04d} Time:{:02d}:{:02d}".format(l_timestruct.tm_mday,
-                                                                            l_timestruct.tm_mon,
-                                                                            l_timestruct.tm_year,
-                                                                            l_timestruct.tm_hour,
-                                                                            l_timestruct.tm_min)
+        l_timestamp = "{:02d}.{:02d}.{:04d} {:02d}:{:02d}".format(l_timestruct.tm_mday,
+                                                                  l_timestruct.tm_mon,
+                                                                  l_timestruct.tm_year,
+                                                                  l_timestruct.tm_hour,
+                                                                  l_timestruct.tm_min)
+        # Generate channel log
+        succeeded_ch = "[\n" + "".join(f"\t\t{ch.name}(ID: {ch.id}),\n" for ch in succeeded_ch).rstrip(",\n") + "\n\t]" if len(succeeded_ch) else "[]"
+        if len(failed_ch):
+            tmp_chs, failed_ch = failed_ch, "["
+            for ch in tmp_chs:
+                ch_reason = str(ch["reason"]).replace("\n", "; ")
+                failed_ch += f"\n\t\t{ch['channel'].name}(ID: {ch['channel'].id}) >>> [ {ch_reason} ],"
+            failed_ch = failed_ch.rstrip(",") + "\n\t]"
+        else:
+            failed_ch = "[]"
+            
+        # Generate files
+        sent_files = "".join(    f"- ```\n  {file}\n  ```\n" for file in sent_files    ).rstrip("\n")
+
         return f'''
 # MESSAGE LOG:
 ## Text:
@@ -469,7 +502,6 @@ class GUILD:
 {sent_embed}
 ## Files:
 {sent_files}
-
 ## Other data:
 -   ```
     Server: {self.guild.name}
@@ -477,7 +509,7 @@ class GUILD:
     Failed in channels: {failed_ch}
     Timestamp: {l_timestamp}
     ```
-__________________________________________________________
+***
 '''
 
     async def advertise(self):
@@ -521,8 +553,7 @@ __________________________________________________________
 
                             elif isinstance(element, FILE):
                                 l_file = discord.File(element.filename)
-                                if l_file is not None:
-                                    l_files_to_send.append(l_file)
+                                l_files_to_send.append(l_file)
 
                             elif element is not None:
                                 trace(f"INVALID DATA PARAMETER PASSED!\nArgument is of type : {type(element).__name__}\nSee README.md for allowed data types\nGUILD: {self.guild.name} (ID: {self.guild.id})",
@@ -532,35 +563,42 @@ __________________________________________________________
                     if l_text_to_send is not None or l_embed_to_send is not None or len(l_files_to_send) > 0:
                         l_errored_channels = []
                         l_succeded_channels= []
-
-                        ## Clear previous msgs
-                        if l_msg.clear_previous:
-                            for l_sent_msg_obj in l_msg.sent_msg_objs:
-                                try:
-                                    await l_sent_msg_obj.delete()
-                                except discord.HTTPException as ex:
-                                    if ex.status == 429:
-                                        await asyncio.sleep(int(ex.response.headers["Retry-After"])+1)
-
-                            l_msg.sent_msg_objs.clear()
-
+                      
                         # Send to channels
                         for l_channel in l_msg.channels:
+                            # Clear previous messages sent to channel if mode is MODE_DELETE_SEND
+                            if l_msg.mode == "clear-send" and l_msg.sent_messages[l_channel.id] is not None:
+                                for tries in range(3):
+                                    try:
+                                        # Delete discord message that originated from this MESSAGE object
+                                        await l_msg.sent_messages[l_channel.id].delete()
+                                        l_msg.sent_messages[l_channel.id] = None
+                                        break
+                                    except discord.HTTPException as ex:
+                                        if ex.status == 429:
+                                            await asyncio.sleep(int(ex.response.headers["Retry-After"])  + 1)
+
+                            # Send/Edit messages
                             for tries in range(3):  # Maximum 3 tries (if rate limit)
                                 try:
-                                    # SEND TO CHANNEL
-                                    l_discord_sent_msg = await l_channel.send(l_text_to_send,
-                                                                              embed=l_embed_to_send,
-                                                                              files=l_files_to_send)
+                                    # Mode dictates to send new message or delete previous and then send new message or mode dictates edit but message was  never sent to this channel before
+                                    if  l_msg.mode in  {"send" , "clear-send"} or\
+                                        l_msg.mode == "edit" and l_msg.sent_messages[l_channel.id] is None:
+                                        l_discord_sent_msg = await l_channel.send(l_text_to_send,
+                                                                                  embed=l_embed_to_send,
+                                                                                  files=l_files_to_send)
 
-                                    l_succeded_channels.append(l_channel.name)
-                                    if l_msg.clear_previous:
-                                        l_msg.sent_msg_objs.append(l_discord_sent_msg)
+                                        l_msg.sent_messages[l_channel.id] = l_discord_sent_msg
 
+                                    # Mode is edit and message was already send to this channel
+                                    elif l_msg.mode == "edit":
+                                        await l_msg.sent_messages[l_channel.id].edit (l_text_to_send,
+                                                                                embed=l_embed_to_send)
+
+                                    l_succeded_channels.append(l_channel)
                                     break    # Break out of the tries loop
                                 except Exception as ex:
                                     # Failed to send message
-                                    l_error_text = f"{l_channel.name} - Reason: {ex}"
                                     if isinstance(ex, discord.HTTPException) and ex.status == 429:
                                         # the if sentence is evaluated by short circuit evaluation
                                         retry_after = int(ex.response.headers["Retry-After"])  + 1
@@ -570,19 +608,16 @@ __________________________________________________________
                                             l_msg.force_retry["TIME"] = retry_after
                                         else:
                                             # Rate limit but not slow mode -> put the framework to sleep as it won't be able to send any messages globaly
-                                            trace(f"Rate limit! Retrying after {retry_after}",TRACE_LEVELS.WARNING)
                                             await asyncio.sleep(retry_after)
-
-                                        l_error_text += f" - Retrying after {retry_after}"
 
                                     if tries == 2 or not isinstance(ex, discord.HTTPException) or\
                                        ex.status != 429 or ex.code == 20026:
-                                        l_errored_channels.append(l_error_text)
+                                        l_errored_channels.append({"channel":l_channel, "reason":ex})
                                         break
 
-                        l_trace += self._generate_log(l_text_to_send, l_embed_to_send, [x.filename for x in l_files_to_send], l_succeded_channels, l_errored_channels)     # Generate trace of sent file
+                        l_trace += self.generate_log(l_text_to_send, l_embed_to_send, [x.filename for x in l_files_to_send], l_succeded_channels, l_errored_channels)     # Generate trace of sent file
             # Save into file
-            if self.generate_log and l_trace:
+            if self._generate_log and l_trace:
                 with suppress(FileExistsError):
                     os.mkdir(m_server_log_output_path)
                 with open(os.path.join(m_server_log_output_path, self.guild_file_name),'a', encoding='utf-8') as l_logfile:
@@ -635,6 +670,11 @@ def initialize() -> bool:
                 Slice (shallow copy) the messages array to allow removal of message objects without affecting the iterator.
                 """
 
+                # Remove duplicated channel ids
+                for l_channel_id in l_msg.channels[:]:
+                    if l_msg.channels.count(l_channel_id) > 1:
+                        trace(f"Guild \"{l_server.guild.name}\" (ID: {l_guild_id}) has duplicated channel (ID: {l_channel_id})", TRACE_LEVELS.WARNING)
+                        l_msg.channels.remove(l_channel_id)
                 # Transform channel ids into pycord channel objects
                 l_channel_i = 0
                 while l_channel_i < len(l_msg.channels):
@@ -745,7 +785,7 @@ def run(token : str,
         - debug             : bool      = Print trace message to the console,
                                           useful for debugging if you feel like something is not working
 
-    @description: This function is the function that starts framework and starts shilling
+    @description: This function is the function that starts framework and starts advertising
     """
     global m_user_callback,\
            m_server_log_output_path,\
