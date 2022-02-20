@@ -251,6 +251,9 @@ The **MESSAGE** object containts parameters which describe behaviour and data th
   This parameter can be:
   - "send"  - Each period a new message will be sent to a channel,
   - "edit"  - The previous message will be edited or a new sent if it doesn't exist,
+    | NOTE                                                                  |
+    | --------------------------------------------------------------------- |
+    | Editing messages files is not yet supported (files won't get updated) |
   - "clear-send" - Previous message sent to a channel will be deleted and then a new message will be sent.<br><br>
 - **Start Now** (start_now) - A bool variable that can be either True or False. If True, then the framework will send the message as soon as it is run and then wait it's period before trying again. If False, then the message will not be sent immediatly after framework is ready, but will instead wait for the period to elapse.<br>
 ```py
@@ -360,11 +363,7 @@ To **enable** trace messages, set the **debug** option to True inside the **[fra
 The DSFW requires a discord API wrapper to work. <br>
 The module used by the DSFW is called Pycord (previously discord.py) which works great except it does not allow user accounts to login, so I modified to work with user accounts.
 When you install the DSFW, the modified Pycord version is installed with it.<br>
-**If you wish to use the Pycord/discord module in your program, you can import it in one of the following ways:**
-```py
-import pycordmod as discord
-```
-or
+**If you wish to use the Pycord/discord module in your program, you can import it like this:**
 ```py
 from framework import discord
 ```

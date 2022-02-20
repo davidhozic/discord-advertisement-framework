@@ -11,7 +11,10 @@ import time
 import asyncio
 import random
 import os
-import pycordmod as discord
+
+import _discord as discord
+
+
 import datetime
 import copy
 
@@ -434,15 +437,20 @@ class GUILD:
         Info: Generates a log of a message send attempt
         """
         # Generate text
-        tmp_text , sent_text = sent_text, ""
-        sent_text += "- ```\n"
-        for line in tmp_text.splitlines(): sent_text += f"  {line}\n"
-        sent_text += "  ```"
+        if sent_text is not None:
+            tmp_text , sent_text = sent_text, ""
+            sent_text += "- ```\n"
+            for line in tmp_text.splitlines():
+                sent_text += f"  {line}\n"
+            sent_text += "  ```"
+        else:
+            sent_text = ""
+
         #Generate embed
         EmptyEmbed = discord.embeds.EmptyEmbed
         
-        tmp_emb = sent_embed
-        if tmp_emb is not None:
+        if sent_embed is not None:
+            tmp_emb = sent_embed
             ets = sent_embed.timestamp
             sent_embed = \
 f"""
@@ -474,12 +482,14 @@ Timestamp:    {f"{ets.day}.{ets.month}.{ets.year}  {ets.hour}:{ets.minute}:{ets.
                                                                   l_timestruct.tm_min)
         # Generate channel log
         succeeded_ch = "[\n" + "".join(f"\t\t{ch.name}(ID: {ch.id}),\n" for ch in succeeded_ch).rstrip(",\n") + "\n\t]" if len(succeeded_ch) else "[]"
-        tmp_chs, failed_ch = failed_ch, "["
-        for ch in tmp_chs:
-            ch_reason = str(ch["reason"]).replace("\n", "; ")
-            failed_ch += f"\n\t\t{ch['channel'].name}(ID: {ch['channel'].id}) >>> [ {ch_reason} ],"
-        failed_ch = failed_ch.rstrip(",") + "\n\t]"
-
+        if len(failed_ch):
+            tmp_chs, failed_ch = failed_ch, "["
+            for ch in tmp_chs:
+                ch_reason = str(ch["reason"]).replace("\n", "; ")
+                failed_ch += f"\n\t\t{ch['channel'].name}(ID: {ch['channel'].id}) >>> [ {ch_reason} ],"
+            failed_ch = failed_ch.rstrip(",") + "\n\t]"
+        else:
+            failed_ch = "[]"
             
         # Generate files
         sent_files = "".join(    f"- ```\n  {file}\n  ```\n" for file in sent_files    ).rstrip("\n")
@@ -583,8 +593,7 @@ Timestamp:    {f"{ets.day}.{ets.month}.{ets.year}  {ets.hour}:{ets.minute}:{ets.
                                     # Mode is edit and message was already send to this channel
                                     elif l_msg.mode == "edit":
                                         await l_msg.sent_messages[l_channel.id].edit (l_text_to_send,
-                                                                                embed=l_embed_to_send,
-                                                                                files=l_files_to_send)
+                                                                                embed=l_embed_to_send)
 
                                     l_succeded_channels.append(l_channel)
                                     break    # Break out of the tries loop
