@@ -231,7 +231,7 @@ class HTTPClient:
         }
 
         if self.token is not None:
-            headers['Authorization'] = 'Bot ' + self.token
+            headers['Authorization'] = 'Bot ' + self.token if self.is_bot else self.token
         # some checking if it's a JSON request
         if 'json' in kwargs:
             headers['Content-Type'] = 'application/json'
@@ -348,12 +348,12 @@ class HTTPClient:
 
     # login management
 
-    async def static_login(self, token: str) -> user.User:
+    async def static_login(self, token: str, bot: bool) -> user.User:
         # Necessary to get aiohttp to stop complaining about session creation
         self.__session = aiohttp.ClientSession(connector=self.connector, ws_response_class=DiscordClientWebSocketResponse)
         old_token = self.token
         self.token = token
-
+        self.is_bot = bot
         try:
             data = await self.request(Route('GET', '/users/@me'))
         except HTTPException as exc:

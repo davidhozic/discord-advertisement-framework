@@ -1,0 +1,76 @@
+diff --git a/src/_discord/client.py b/src/_discord/client.py
+index ae390a7..0dfde10 100644
+--- a/src/_discord/client.py
++++ b/src/_discord/client.py
+@@ -447,7 +447,7 @@ class Client:
+ 
+     # login state management
+ 
+-    async def login(self, token: str) -> None:
++    async def login(self, token: str, bot: bool) -> None:
+         """|coro|
+ 
+         Logs in the client with the specified credentials.
+@@ -475,7 +475,7 @@ class Client:
+ 
+         _log.info('logging in using static token')
+ 
+-        data = await self.http.static_login(token.strip())
++        data = await self.http.static_login(token.strip(), bot)
+         self._connection.user = ClientUser(state=self._connection, data=data)
+ 
+     async def connect(self, *, reconnect: bool = True) -> None:
+@@ -597,7 +597,7 @@ class Client:
+         self._connection.clear()
+         self.http.recreate()
+ 
+-    async def start(self, token: str, *, reconnect: bool = True) -> None:
++    async def start(self, token: str, *, bot = False, reconnect: bool = True) -> None:
+         """|coro|
+ 
+         A shorthand coroutine for :meth:`login` + :meth:`connect`.
+@@ -607,7 +607,7 @@ class Client:
+         TypeError
+             An unexpected keyword argument was received.
+         """
+-        await self.login(token)
++        await self.login(token, bot)
+         await self.connect(reconnect=reconnect)
+ 
+     def run(self, *args: Any, **kwargs: Any) -> None:
+@@ -635,6 +635,7 @@ class Client:
+             called after this function call will not execute until it returns.
+         """
+         loop = self.loop
++        
+ 
+         try:
+             loop.add_signal_handler(signal.SIGINT, loop.stop)
+diff --git a/src/_discord/http.py b/src/_discord/http.py
+index 4e6ecd5..5f105dd 100644
+--- a/src/_discord/http.py
++++ b/src/_discord/http.py
+@@ -231,7 +231,7 @@ class HTTPClient:
+         }
+ 
+         if self.token is not None:
+-            headers['Authorization'] = 'Bot ' + self.token
++            headers['Authorization'] = 'Bot ' + self.token if self.is_bot else self.token
+         # some checking if it's a JSON request
+         if 'json' in kwargs:
+             headers['Content-Type'] = 'application/json'
+@@ -348,12 +348,12 @@ class HTTPClient:
+ 
+     # login management
+ 
+-    async def static_login(self, token: str) -> user.User:
++    async def static_login(self, token: str, bot: bool) -> user.User:
+         # Necessary to get aiohttp to stop complaining about session creation
+         self.__session = aiohttp.ClientSession(connector=self.connector, ws_response_class=DiscordClientWebSocketResponse)
+         old_token = self.token
+         self.token = token
+-
++        self.is_bot = bot
+         try:
+             data = await self.request(Route('GET', '/users/@me'))
+         except HTTPException as exc:
