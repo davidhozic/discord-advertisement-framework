@@ -295,32 +295,7 @@ class HTTPClient:
 
                         # we are being rate limited
                         if response.status == 429:
-                            if not response.headers.get('Via') or isinstance(data, str):
-                                # Banned by Cloudflare more than likely.
-                                raise HTTPException(response, data)
-
-                            fmt = 'We are being rate limited. Retrying in %.2f seconds. Handled under the bucket "%s"'
-
-                            # sleep a bit
-                            retry_after: float = data['retry_after']
-                            _log.warning(fmt, retry_after, bucket)
-
-                            # check if it's a global rate limit
-                            is_global = data.get('global', False)
-                            if is_global:
-                                _log.warning('Global rate limit has been hit. Retrying in %.2f seconds.', retry_after)
-                                self._global_over.clear()
-
-                            await asyncio.sleep(retry_after)
-                            _log.debug('Done sleeping for the rate limit. Retrying...')
-
-                            # release the global lock now that the
-                            # global rate limit has passed
-                            if is_global:
-                                self._global_over.set()
-                                _log.debug('Global rate limit is now over.')
-
-                            continue
+                            raise HTTPException(response, data)
 
                         # we've received a 500, 502, or 504, unconditional retry
                         if response.status in {500, 502, 504}:
