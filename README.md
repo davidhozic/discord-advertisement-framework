@@ -1,6 +1,6 @@
-# **Discord Shilling Framework / Shilling Bot**
+# **Discord Shilling Bot / Framework**
 ## **Table of contents**
-- [**Discord Shilling Framework / Shilling Bot**](#discord-shilling-framework--shilling-bot)
+- [**Discord Shilling Bot / Framework**](#discord-shilling-bot--framework)
   - [**Table of contents**](#table-of-contents)
   - [**Introduction**](#introduction)
   - [**Examples**](#examples)
