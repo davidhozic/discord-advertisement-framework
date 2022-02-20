@@ -127,7 +127,7 @@ fw.run(  token="account token here",            # MANDATORY (This is the string 
                 server_list=servers,            # MANDATORY -- List of GUILD objects
                 is_user=False,                  # OPTIONAL -- Must be true if token is from an user account
                 user_callback=None,             # OPTIONAL -- Function that is called after framework is run
-                server_log_output="Logging",    # OPTIONAL -- The path to the server log file outputs
+                server_log_output="History",    # OPTIONAL -- The path to the server log file outputs
                 debug=True)                     # OPTIONAL -- For easiser debugging if you think your messages aren't being sent (will print trace to the console)
 
 ```
