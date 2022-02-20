@@ -1,5 +1,5 @@
 """
-    DISCORD SHILLING FRAMEWORK (DSF)
+    DISCORD ADVERTISEMENT FRAMEWORK (DSF)
     Author      :: David Hozic
     Copyright   :: Copyright (c) 2022 David Hozic
     Version     :: V1.7.6
@@ -761,7 +761,7 @@ def run(token : str,
         - debug             : bool      = Print trace message to the console,
                                           useful for debugging if you feel like something is not working
 
-    @description: This function is the function that starts framework and starts shilling
+    @description: This function is the function that starts framework and starts advertising
     """
     global m_user_callback,\
            m_server_log_output_path,\

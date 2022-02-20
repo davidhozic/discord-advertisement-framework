@@ -20,7 +20,7 @@ fields=\
         fw.EMBED_FIELD("Test 4", "Hello World 4", True),
         fw.EMBED_FIELD("Test 5", "Hello World 5", True)
     ],
-    ## ... Other arguments, refere to the documentation please https://github.com/davidhozic/Discord-Shilling-Framework
+    ## ... for other arguments, see https://github.com/davidhozic/discord-advertisement-framework
 )
 
 

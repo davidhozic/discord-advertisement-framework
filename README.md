@@ -1,6 +1,6 @@
-# **Discord Shilling Bot / Framework**
+# **Discord Advertisement Framework (Bot)**
 ## **Table of contents**
-- [**Discord Shilling Bot / Framework**](#discord-shilling-bot--framework)
+- [**Discord Advertisement Framework (Bot)**](#discord-advertisement-framework-bot)
   - [**Table of contents**](#table-of-contents)
   - [**Introduction**](#introduction)
   - [**Examples**](#examples)
@@ -33,17 +33,17 @@
 <br>
 
 ## **Introduction**
-Welcome to the Discord Shilling Framework.<br>
-If you ever needed a tool that allows you to shill your projects by **automatically sending messages to discord channels**, this is the tool for you.
-It supports shilling to **multiple guilds at once**, where it can generate **message logs** for each of those guilds where you can easilly find out what messages were successfully sent and which failed (and why they failed).<br>
+Welcome to the Discord Advertisement Framework.<br>
+If you ever needed a tool that allows you to advertise by **automatically sending messages to discord channels**, this is the tool for you.
+It supports advertising to **multiple guilds at once**, where it can generate **message logs** for each of those guilds where you can easilly find out what messages were successfully sent and which failed (and why they failed).<br>
 It allows you to automatically send messages in **custom time ranges** where those ranges can be either **fixed** or **randomized** after each sent message.<br>
 You can send data like **normal text**, **embeds**, **files**, where the data can even be **dynamic** by providing the framework with an user defined function.<br>
 
 **Why is it called a framework?**<br>
-I named it a framework because when the framework is run, it can accept an user defined function which is called after the framework has been started, allowing you to create a seperate asyncio task where you run your application which's data can be retreived by the framedwork by using a user defined [getter function](#frameworkdata_function).<br>
-For a mini example of an additional application layer, see [Coffee example](Examples/Additional%20Application%20Layer%20Example/Coffee).<br>
+The project named framework, because it allows you to create additional application layers on top of it by using an user defined function that returns dynamic content.<br>
+For an example see [**Examples/Coffee example**](Examples/Additional%20Application%20Layer%20Example/Coffee).
 
-The below documentation describes everything you need to start shilling, thank you for reading it.<br>
+The below documentation describes everything you need to start advertising, thank you for reading it.<br>
 If you would like to start right away, you can skip to the [Getting Started](#getting-started) section or see [Examples](#examples).
 <br>
 
@@ -56,11 +56,11 @@ Examples folder: [Examples folder](Examples).
 ## **Installation**
 To install the framework use one of the following commands:
 ```fix
-python3 -m pip install Discord-Shilling-Framework
+python3 -m pip install Discord-Advert-Framework
 ```
 or
 ```fix
-py -3 -m pip install Discord-Shilling-Framework
+py -3 -m pip install Discord-Advert-Framework
 ```
 <br>
 
@@ -338,9 +338,9 @@ The framework can keep a log of sent messages for **each guild/server**. To enab
 Inside the log you will find data of what was sent (text, embed, files), a channel list it succeeded to send this message and a channel list of the ones it failed (If it failed due to slow mode, the message will be sent as soon as possible, overwriting the default period) <br>
 All of these file logs will be Markdown files.<br><br>
 **Raw log:**
-![Raw guild log](DOC_src/guild_log_raw.png)<br><br>
+![Raw guild log](documentation_dep/guild_log_raw.png)<br><br>
 **Rendered log:**
-![Rendered guild log](DOC_src/guild_log_rendered.png)
+![Rendered guild log](documentation_dep/guild_log_rendered.png)
 
 <br> 
 
