@@ -11,7 +11,7 @@ import time
 import asyncio
 import random
 import os
-import pycordmod as discord
+import pycord.discord as discord
 import datetime
 import copy
 
@@ -434,15 +434,20 @@ class GUILD:
         Info: Generates a log of a message send attempt
         """
         # Generate text
-        tmp_text , sent_text = sent_text, ""
-        sent_text += "- ```\n"
-        for line in tmp_text.splitlines(): sent_text += f"  {line}\n"
-        sent_text += "  ```"
+        if sent_text is not None:
+            tmp_text , sent_text = sent_text, ""
+            sent_text += "- ```\n"
+            for line in tmp_text.splitlines():
+                sent_text += f"  {line}\n"
+            sent_text += "  ```"
+        else:
+            sent_text = ""
+
         #Generate embed
         EmptyEmbed = discord.embeds.EmptyEmbed
         
-        tmp_emb = sent_embed
-        if tmp_emb is not None:
+        if sent_embed is not None:
+            tmp_emb = sent_embed
             ets = sent_embed.timestamp
             sent_embed = \
 f"""

@@ -360,11 +360,7 @@ To **enable** trace messages, set the **debug** option to True inside the **[fra
 The DSFW requires a discord API wrapper to work. <br>
 The module used by the DSFW is called Pycord (previously discord.py) which works great except it does not allow user accounts to login, so I modified to work with user accounts.
 When you install the DSFW, the modified Pycord version is installed with it.<br>
-**If you wish to use the Pycord/discord module in your program, you can import it in one of the following ways:**
-```py
-import pycordmod as discord
-```
-or
+**If you wish to use the Pycord/discord module in your program, you can import it like this:**
 ```py
 from framework import discord
 ```
