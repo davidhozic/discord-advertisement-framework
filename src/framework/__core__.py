@@ -432,12 +432,16 @@ class GUILD:
         Info: Generates a log of a message send attempt
         """
         # Generate text
-        sent_text = "\t```\n".join(f"\t{line}\n" for line in sent_text.splitlines(keepends=True)) + "\t```" if sent_text is not None else ""
+        tmp_text , sent_text = sent_text, ""
+        sent_text += "- ```\n"
+        for line in tmp_text.splitlines(): sent_text += f"  {line}\n"
+        sent_text += "  ```"
         #Generate embed
         EmptyEmbed = discord.embeds.EmptyEmbed
-        ets = sent_embed.timestamp
+        
         tmp_emb = sent_embed
         if tmp_emb is not None:
+            ets = sent_embed.timestamp
             sent_embed = \
 f"""
 Title:        {tmp_emb.title if tmp_emb.title is not EmptyEmbed else ""}
@@ -468,7 +472,12 @@ Timestamp:    {f"{ets.day}.{ets.month}.{ets.year}  {ets.hour}:{ets.minute}:{ets.
                                                                   l_timestruct.tm_min)
         # Generate channel log
         succeeded_ch = "[\n" + "".join(f"\t\t{ch.name}(ID: {ch.id}),\n" for ch in succeeded_ch).rstrip(",\n") + "\n\t]" if len(succeeded_ch) else "[]"
-        failed_ch = "[\n"+ "".join(f"\t\t- {channel['channel'].name}(ID: {channel['channel'].id}) >>> Reason: {channel['reason']},\n" for channel in failed_ch).rstrip(",\n") + "\n\t]" if len(failed_ch) else "[]"
+        tmp_chs, failed_ch = failed_ch, "["
+        for ch in tmp_chs:
+            ch_reason = str(ch["reason"]).replace("\n", "; ")
+            failed_ch += f"\n\t\t{ch['channel'].name}(ID: {ch['channel'].id}) >>> [ {ch_reason} ],"
+        failed_ch = failed_ch.rstrip(",") + "\n\t]"
+
             
         # Generate files
         sent_files = "".join(    f"- ```\n  {file}\n  ```\n" for file in sent_files    ).rstrip("\n")

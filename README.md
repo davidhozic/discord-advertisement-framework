@@ -336,9 +336,12 @@ More on Python decorators [here](https://realpython.com/primer-on-python-decorat
 ## **LOG OF SENT MESSAGES**
 The framework can keep a log of sent messages for **each guild/server**. To enable file logging of sent messages, set the parameter **Generate file log** to True inside each [GUILD OBJECT](#frameworkguild).<br> 
 Inside the log you will find data of what was sent (text, embed, files), a channel list it succeeded to send this message and a channel list of the ones it failed (If it failed due to slow mode, the message will be sent as soon as possible, overwriting the default period) <br>
-All of these file logs will be Markdown files.<br>
-<image alt="Server Log" src="DOC_src\framework_server_log_1.png" width=1920>
-(Left is raw Markdown code, to the right is rendered Markdown)
+All of these file logs will be Markdown files.<br><br>
+**Raw log:**
+![Raw guild log](DOC_src/guild_log_raw.png)<br><br>
+**Rendered log:**
+![Rendered guild log](DOC_src/guild_log_rendered.png)
+
 <br> 
 
 ## **Trace messages**
