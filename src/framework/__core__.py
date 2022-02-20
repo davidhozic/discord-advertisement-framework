@@ -11,7 +11,10 @@ import time
 import asyncio
 import random
 import os
-import pycord.discord as discord
+
+from pycord import discord
+
+
 import datetime
 import copy
 
@@ -581,7 +584,7 @@ Timestamp:    {f"{ets.day}.{ets.month}.{ets.year}  {ets.hour}:{ets.minute}:{ets.
                                         l_msg.mode == "edit" and l_msg.sent_messages[l_channel.id] is None:
                                         l_discord_sent_msg = await l_channel.send(l_text_to_send,
                                                                                   embed=l_embed_to_send,
-                                                                                  files=l_files_to_send)
+                                                                                  file=l_files_to_send)
 
                                         l_msg.sent_messages[l_channel.id] = l_discord_sent_msg
 
