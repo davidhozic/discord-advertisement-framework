@@ -1,4 +1,4 @@
-**Shiller Licence:**<br>
+**Discord Advertisement Framework Licence:**<br>
 MIT License
 
 Copyright (c) 2022 David Hozic
