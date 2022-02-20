@@ -5,12 +5,12 @@
     Version     :: V1.7.6
 """
 from   contextlib import suppress
-from   typing import Union, List
+from   typing import Literal, Union, List
+from   enum import Enum, auto
 import time
 import asyncio
 import random
 import os
-import enum
 import pycordmod as discord
 import datetime
 import copy
@@ -53,13 +53,13 @@ C_MINUTE_TO_SECOND = 60
 #######################################################################
 # Debugging
 #######################################################################
-class TRACE_LEVELS(enum.Enum):
+class TRACE_LEVELS(Enum):
     """
     Info: Level of trace for debug
     """
     NORMAL = 0
-    WARNING = 1
-    ERROR =  2
+    WARNING = auto()
+    ERROR =  auto()
 
 def trace(message: str,
           level:   TRACE_LEVELS = TRACE_LEVELS.NORMAL):
@@ -185,6 +185,7 @@ class CLIENT(discord.Client):
 
         if m_user_callback:   # If user callback function was specified
             m_user_callback() # Call user provided function after framework has started
+
 
 
 class EMBED_FIELD:
@@ -333,7 +334,6 @@ class FILE:
         with open(filename, "rb") as reader:
             pass
 
-
 class MESSAGE:
     """
     Name: MESSAGE
@@ -353,8 +353,9 @@ class MESSAGE:
         - Function that accepts any amount of parameters and returns any of the above types.
           To pass a function, YOU MUST USE THE framework.data_function decorator on the function before passing the function to the framework.
     - Channel IDs (channel_ids) - List of IDs of all the channels you want data to be sent into.
-    - Clear Previous (clear_previous) - A bool variable that can be either True of False. If True, then before sending a new message to the channels,
-      the framework will delete all previous messages sent to discord that originated from this message object.
+    - Send mode (mode) - Parameter that defines how message will be sent to a channel. It can be "send" - each period a new message will be sent,
+                        "edit" - each period the previously send message will be edited (if it exists) or "clear-send" - previous message will be deleted and
+                        a new one sent.
     - Start Now (start_now) - A bool variable that can be either True or False. If True, then the framework will send the message
       as soon as it is run and then wait it's period before trying again. If False, then the message will not be sent immediatly after framework is ready,
       but will instead wait for the period to elapse.
@@ -366,18 +367,19 @@ class MESSAGE:
         "data",
         "channels",
         "timer",
-        "clear_previous",
+        "mode",
         "force_retry",
-        "sent_msg_objs"
+        "sent_messages"
     )
 
+    
     def __init__(self,
                 start_period : Union[float,None],
                 end_period : float,
                 data : Union[str, EMBED, FILE, List[Union[str, EMBED, FILE]]],
                 channel_ids : List[int],
-                clear_previous : bool,
-                start_now : bool):
+                mode : Literal["send", "edit", "clear-send"]="send",
+                start_now : bool=True):
 
         if start_period is None:            # If start_period is none -> period will not be randomized
             self.randomized_time = False
@@ -390,9 +392,9 @@ class MESSAGE:
         self.data = data
         self.channels = channel_ids
         self.timer = TIMER()
-        self.clear_previous = clear_previous
+        self.mode = mode if mode in {"send", "edit", "clear-send"} else "send"
         self.force_retry = {"ENABLED" : start_now, "TIME" : 0}
-        self.sent_msg_objs = []
+        self.sent_messages = {ch_id : None for ch_id in channel_ids}   
 
 class GUILD:
     """
@@ -551,31 +553,40 @@ Timestamp:    {f"{ets.day}.{ets.month}.{ets.year}  {ets.hour}:{ets.minute}:{ets.
                     if l_text_to_send is not None or l_embed_to_send is not None or len(l_files_to_send) > 0:
                         l_errored_channels = []
                         l_succeded_channels= []
-
-                        ## Clear previous msgs
-                        if l_msg.clear_previous:
-                            for l_sent_msg_obj in l_msg.sent_msg_objs:
-                                try:
-                                    await l_sent_msg_obj.delete()
-                                except discord.HTTPException as ex:
-                                    if ex.status == 429:
-                                        await asyncio.sleep(int(ex.response.headers["Retry-After"])+1)
-
-                            l_msg.sent_msg_objs.clear()
-
+                      
                         # Send to channels
                         for l_channel in l_msg.channels:
+                            # Clear previous messages sent to channel if mode is MODE_DELETE_SEND
+                            if l_msg.mode == "clear-send" and l_msg.sent_messages[l_channel.id] is not None:
+                                for tries in range(3):
+                                    try:
+                                        # Delete discord message that originated from this MESSAGE object
+                                        await l_msg.sent_messages[l_channel.id].delete()
+                                        l_msg.sent_messages[l_channel.id] = None
+                                        break
+                                    except discord.HTTPException as ex:
+                                        if ex.status == 429:
+                                            await asyncio.sleep(int(ex.response.headers["Retry-After"])  + 1)
+
+                            # Send/Edit messages
                             for tries in range(3):  # Maximum 3 tries (if rate limit)
                                 try:
-                                    # SEND TO CHANNEL
-                                    l_discord_sent_msg = await l_channel.send(l_text_to_send,
-                                                                              embed=l_embed_to_send,
-                                                                              files=l_files_to_send)
+                                    # Mode dictates to send new message or delete previous and then send new message or mode dictates edit but message was  never sent to this channel before
+                                    if  l_msg.mode in  {"send" , "clear-send"} or\
+                                        l_msg.mode == "edit" and l_msg.sent_messages[l_channel.id] is None:
+                                        l_discord_sent_msg = await l_channel.send(l_text_to_send,
+                                                                                  embed=l_embed_to_send,
+                                                                                  files=l_files_to_send)
+
+                                        l_msg.sent_messages[l_channel.id] = l_discord_sent_msg
+
+                                    # Mode is edit and message was already send to this channel
+                                    elif l_msg.mode == "edit":
+                                        await l_msg.sent_messages[l_channel.id].edit (l_text_to_send,
+                                                                                embed=l_embed_to_send,
+                                                                                files=l_files_to_send)
 
                                     l_succeded_channels.append(l_channel)
-                                    if l_msg.clear_previous:
-                                        l_msg.sent_msg_objs.append(l_discord_sent_msg)
-
                                     break    # Break out of the tries loop
                                 except Exception as ex:
                                     # Failed to send message
@@ -588,7 +599,6 @@ Timestamp:    {f"{ets.day}.{ets.month}.{ets.year}  {ets.hour}:{ets.minute}:{ets.
                                             l_msg.force_retry["TIME"] = retry_after
                                         else:
                                             # Rate limit but not slow mode -> put the framework to sleep as it won't be able to send any messages globaly
-                                            trace(f"Rate limit! Retrying after {retry_after}",TRACE_LEVELS.WARNING)
                                             await asyncio.sleep(retry_after)
 
                                     if tries == 2 or not isinstance(ex, discord.HTTPException) or\
@@ -651,6 +661,11 @@ def initialize() -> bool:
                 Slice (shallow copy) the messages array to allow removal of message objects without affecting the iterator.
                 """
 
+                # Remove duplicated channel ids
+                for l_channel_id in l_msg.channels[:]:
+                    if l_msg.channels.count(l_channel_id) > 1:
+                        trace(f"Guild \"{l_server.guild.name}\" (ID: {l_guild_id}) has duplicated channel (ID: {l_channel_id})", TRACE_LEVELS.WARNING)
+                        l_msg.channels.remove(l_channel_id)
                 # Transform channel ids into pycord channel objects
                 l_channel_i = 0
                 while l_channel_i < len(l_msg.channels):

@@ -247,7 +247,11 @@ The **MESSAGE** object containts parameters which describe behaviour and data th
         | If you don't use the **framework.data_function** decorator, the function will only get called once(when you pass it to the data) and will not be called by the framework dynamically. |
 
 - **Channel IDs** (channel_ids) - List of IDs of all the channels you want data to be sent into.
-- **Clear Previous** (clear_previous) - A bool variable that can be either True of False. If True, then before sending a new message to the channels, the framework will delete all previous messages sent to discord that originated from this message object.
+- **Send mode** (mode)  - string variable that defines the way message will be sent to a channel.<br>
+  This parameter can be:
+  - "send"  - Each period a new message will be sent to a channel,
+  - "edit"  - The previous message will be edited or a new sent if it doesn't exist,
+  - "clear-send" - Previous message sent to a channel will be deleted and then a new message will be sent.<br><br>
 - **Start Now** (start_now) - A bool variable that can be either True or False. If True, then the framework will send the message as soon as it is run and then wait it's period before trying again. If False, then the message will not be sent immediatly after framework is ready, but will instead wait for the period to elapse.<br>
 ```py
 framework.MESSAGE(
@@ -258,7 +262,7 @@ framework.MESSAGE(
                                                 # or function that returns any of above types(or returns None if you don't have any data to send yet), 
                                                 # where if you pass a function you need to use the framework.data_function decorator on top of it ).
                 channel_ids=[123456789],        # List of ids of all the channels you want this message to be sent into
-                clear_previous=True,            # Clear all discord messages that originated from this MESSAGE object
+                mode="send",                    # New message will be sent each period (can also be "edit" to edit previous message in channel or "clear-send" to delete old message and then send a new message)
                 start_now=True                  # Start sending now (True) or wait until period
                 ),  
 ```
@@ -320,7 +324,7 @@ More on Python decorators [here](https://realpython.com/primer-on-python-decorat
                             end_period=1 * fw.C_DAY_TO_SECOND,
                             data=some_function(1234, 5678),
                             channel_ids= [21345, 23132, 2313223],
-                            clear_previous=False,
+                            mode="send",
                             start_now=True
                           )
             ],

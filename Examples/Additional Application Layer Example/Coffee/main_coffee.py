@@ -15,7 +15,7 @@ servers = [
         guild_id=123456789,
         messages_to_send=[
 
-            fw.MESSAGE(start_period=None, end_period=10, data=app.app.get_data(), channel_ids=[123456789], clear_previous=False, start_now=True)
+            fw.MESSAGE(start_period=None, end_period=10, data=app.app.get_data(), channel_ids=[123456789], mode="send", start_now=True)
         ],
         generate_log=True
     )

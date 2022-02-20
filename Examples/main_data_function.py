@@ -28,7 +28,7 @@ guilds = [
                                                             # or function that returns any of above types(or returns None if you don't have any data to send yet), 
                                                             # where if you pass a function you need to use the framework.FUNCTION decorator on top of it ).
                               channel_ids=[123456789],      # List of ids of all the channels you want this message to be sent into
-                              clear_previous=True,          # Clear all discord messages that originated from this MESSAGE object
+                              mode="send",          # Clear all discord messages that originated from this MESSAGE object
                               start_now=True                # Start sending now (True) or wait until period
                               ),  
         ],
