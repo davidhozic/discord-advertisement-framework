@@ -1,5 +1,5 @@
 import  framework as fw, secret
-
+from framework import discord
 
 ############################################################################################
 #                               EMBED VARIABLE DEFINITON                                   #

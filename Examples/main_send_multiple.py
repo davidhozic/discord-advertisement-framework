@@ -1,5 +1,5 @@
 import  framework, secret
-
+from framework import discord
 
 
 
