@@ -591,8 +591,7 @@ Timestamp:    {f"{ets.day}.{ets.month}.{ets.year}  {ets.hour}:{ets.minute}:{ets.
                                     # Mode is edit and message was already send to this channel
                                     elif l_msg.mode == "edit":
                                         await l_msg.sent_messages[l_channel.id].edit (l_text_to_send,
-                                                                                embed=l_embed_to_send,
-                                                                                files=l_files_to_send)
+                                                                                embed=l_embed_to_send)
 
                                     l_succeded_channels.append(l_channel)
                                     break    # Break out of the tries loop
