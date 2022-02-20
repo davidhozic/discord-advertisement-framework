@@ -454,13 +454,19 @@ class GUILD:
             ets = sent_embed.timestamp
             sent_embed = \
 f"""
-Title:        {tmp_emb.title if tmp_emb.title is not EmptyEmbed else ""}
-Author:       {tmp_emb.author.name if tmp_emb.author.name is not EmptyEmbed else ""}
-Thumbnail:    {tmp_emb.thumbnail.url if tmp_emb.thumbnail.url is not EmptyEmbed else ""}
-Image:        {tmp_emb.image.url if tmp_emb.image.url is not EmptyEmbed else ""}
-Description:  {tmp_emb.description if tmp_emb.description is not EmptyEmbed else ""}
-Color:        {tmp_emb.colour if tmp_emb.colour is not EmptyEmbed else ""}
-Timestamp:    {f"{ets.day}.{ets.month}.{ets.year}  {ets.hour}:{ets.minute}:{ets.second}" if ets is not EmptyEmbed else ""}
+Title:  {tmp_emb.title if tmp_emb.title != EmptyEmbed else ""}
+
+Author:  {tmp_emb.author.name if tmp_emb.author.name != EmptyEmbed else ""}
+
+Thumbnail:  {tmp_emb.thumbnail.url if tmp_emb.thumbnail.url != EmptyEmbed else ""}
+
+Image:  {tmp_emb.image.url if tmp_emb.image.url != EmptyEmbed else ""}
+
+Description:  {tmp_emb.description if tmp_emb.description != EmptyEmbed else ""}
+
+Color:  {tmp_emb.colour if tmp_emb.colour != EmptyEmbed else ""}
+
+Timestamp:  {f"{ets.day}.{ets.month}.{ets.year}  {ets.hour}:{ets.minute}:{ets.second}" if ets != EmptyEmbed else ""}
 """
             sent_embed += "\nFields:"
             for field in tmp_emb.fields:
@@ -498,10 +504,13 @@ Timestamp:    {f"{ets.day}.{ets.month}.{ets.year}  {ets.hour}:{ets.minute}:{ets.
 # MESSAGE LOG:
 ## Text:
 {sent_text}
-## Embed fields:
+***
+## Embed:
 {sent_embed}
+***
 ## Files:
 {sent_files}
+***
 ## Other data:
 -   ```
     Server: {self.guild.name}
@@ -510,6 +519,7 @@ Timestamp:    {f"{ets.day}.{ets.month}.{ets.year}  {ets.hour}:{ets.minute}:{ets.
     Timestamp: {l_timestamp}
     ```
 ***
+<br><br><br>
 '''
 
     async def advertise(self):

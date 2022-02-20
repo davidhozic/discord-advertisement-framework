@@ -126,13 +126,13 @@ def callback():
 fw.run(  token="account token here",            # MANDATORY (This is the string that contains the account token, I suggest you define it in a secret.py)
                 server_list=servers,            # MANDATORY -- List of GUILD objects
                 is_user=False,                  # OPTIONAL -- Must be true if token is from an user account
-                user_callback=None,             # OPTIONAL -- Function that is called after framework is run
+                user_callback=callback,         # OPTIONAL -- Function that is called after framework is run
                 server_log_output="History",    # OPTIONAL -- The path to the server log file outputs
                 debug=True)                     # OPTIONAL -- For easiser debugging if you think your messages aren't being sent (will print trace to the console)
 
 ```
 That's it, your framework is now running and messages will be periodicaly sent.<br>
-For easier start, I reccommend you take a look at the [Examples](Examples).<br><br>
+For easier start, I recommend you take a look at the [Examples](Examples).<br><br>
 
 For help with the object parameters see [**Creatable Objects**](#creatable-objects).
 <br>
@@ -148,21 +148,25 @@ For help with the object parameters see [**Creatable Objects**](#creatable-objec
 The **EMBED** class is an inherited class from discord.Embed meaning it has the same methods as [discord.Embed](https://docs.pycord.dev/en/master/api.html?highlight=discord%20embed#discord.Embed) but you can create a full embed without actually having to call those methods. 
   
 ### **Parameters**
-- Author name  (author_name)        : str   - Name of the embed author
-- Author Image (author_icon)   : str   - URL to author's image
-- Image (image)                     : str   - URL to image that will be placed **at the end** of the embed.
-- Thumbnail (thumbnail)             : str   - URL to image that will be placed **at top right** of the embed.
-- Embedded Fields (fields)          : list  - List of [framework.**EMBED_FIELD**](#frameworkembedfield)<br>
+- Inherited from discord.Embed:
+  - For original parameters see [discord.Embed](https://docs.pycord.dev/en/master/api.html?highlight=discord%20embed#discord.Embed)
+
+- Additional:
+    - Author name (author_name) - Name of the author
+    - Author icon (author_icon) - URL to author's icon
+    - Author image(image)       - URL to an image (placed at the bottom)
+    - Thumbnail (thumbnail)     - URL for a thumbnail (placed top right)
+    - Fields (fields)           - list of [EMBED_FIELD](#frameworkembed_field) objects   
 
 ### **Methods**
   - ```py
     EMBED.from_discord_embed(
-                                object: discord.Embed
+                                _object: discord.Embed
                             )
     ```
       - **Info:** The method converts a **discord.Embed** object into a **framework.EMBED object**
       - **Parameters** 
-        - object : discord.Embed = object to convert
+        - _object : discord.Embed = object to convert
 <br>
 
 ## framework.**EMBED_FIELD**
@@ -216,26 +220,24 @@ The **MESSAGE** object containts parameters which describe behaviour and data th
    - [framework.**FILE**](#frameworkfile),
    - **list/tuple** containing any of the above arguments (There can up to **1** string, up to **1** embed and up to **10** [framework.FILE](#frameworkfile) objects, if more than 1 string or embeds are sent, the framework will only consider the last found).
    - **Function** defined by the user:
-    - Parameters The function is allowed to accept anything
-    - Return: The function **must** return any of the **above data types** or the **None** object if no data is ready to be sent.<br>
-    If **None** is returned by the function, the framework will skip the send attempt and retry after it's **configured period**. For example you could make the framework call your function on more regular intervals and then decide within the function if anything is to be returned and if nothing is to be returned, you would return None.
-    - **IMPORANT:** if you decide to use an user defined function as the data parameter, you **MUST** use the [framework.**data_function**](#frameworkdatafunction) decorator on it.
-    <br><br>
-    When you pass the function to the data parameter, pass it in the next format:
-    - ```py
+      - Parameters The function is allowed to accept anything
+      - Return: The function **must** return any of the **above data types** or the **None** object if no data is ready to be sent.<br>
+      If **None** is returned by the function, the framework will skip the send attempt and retry after it's **configured period**. For example you could make the framework call your function on more regular intervals and then decide within the function if anything is to be returned and if nothing is to be returned, you would return None.
+      - **IMPORANT:** if you decide to use an user defined function as the data parameter, you **MUST** use the [framework.**data_function**](#frameworkdatafunction) decorator on it.
+        When you pass the function to the data parameter, pass it in the next format:
+        ```py
+        @framework.data_function # <- IMPORTANT!!!
+        def function_name(parameter_1, parameter_2):
+            """
+            Info: Function returns a different string each time when called by the framework making the sent data dynamic.
+            """
+            return f"Parameter: {parameter_1}\nTimestamp: {datetime.datetime.now()}"
 
-      @framework.data_function # <- IMPORTANT!!!
-      def function_name(parameter_1, parameter_2):
-          """
-          Info: Function returns a different string each time when called by the framework making the sent data dynamic.
-          """
-          return f"Parameter: {parameter_1}\nTimestamp: {datetime.datetime.now()}"
-
-      framework.MESSAGE(...,
+        framework.MESSAGE(...,
                         data=function_name(parameter_1, parameter_2),
                         ...)
-                                                                        
-      ```
+                                                                            
+        ```
         | **NOTE 1**:                                                                                                                               |
         | ----------------------------------------------------------------------------------------------------------------------------------------- |
         | When you use the framework.data_function decorator on the function, it returns a special class that is used by the framework to get data. |
@@ -251,9 +253,9 @@ The **MESSAGE** object containts parameters which describe behaviour and data th
   This parameter can be:
   - "send"  - Each period a new message will be sent to a channel,
   - "edit"  - The previous message will be edited or a new sent if it doesn't exist,
-    | NOTE                                                                  |
-    | --------------------------------------------------------------------- |
-    | Editing messages files is not yet supported (files won't get updated) |
+    | NOTE                                                                       |
+    | -------------------------------------------------------------------------- |
+    | Editing messages with files is not yet supported (files won't get updated) |
   - "clear-send" - Previous message sent to a channel will be deleted and then a new message will be sent.<br><br>
 - **Start Now** (start_now) - A bool variable that can be either True or False. If True, then the framework will send the message as soon as it is run and then wait it's period before trying again. If False, then the message will not be sent immediatly after framework is ready, but will instead wait for the period to elapse.<br>
 ```py
