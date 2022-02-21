@@ -2,7 +2,7 @@
     DISCORD ADVERTISEMENT FRAMEWORK (DSF)
     Author      :: David Hozic
     Copyright   :: Copyright (c) 2022 David Hozic
-    Version     :: V1.7.6
+    Version     :: V1.7.6.2
 """
 from   contextlib import suppress
 from   typing import Literal, Union, List
@@ -91,8 +91,8 @@ class __FUNCTION_CLS_BASE__:
     """
     type: dummy class
     name: __FUNCTION_CLS_BASE__
-    info: used as a base class to __FUNCTION_CLS__ which gets created in framework.data_function decorator.
-    Because the __FUNCTION_CLS__ is inaccessible outside the data_function decorator, this class is used to detect
+    info: used as a base class to FUNCTION_CLASS which gets created in framework.data_function decorator.
+    Because the FUNCTION_CLASS is inaccessible outside the data_function decorator, this class is used to detect
     if the MESSAGE.data parameter is of function type, because the function isinstance also returns True when comparing
     the object to it's class or to the base class from which the object class is inherited from.
     """
@@ -101,10 +101,10 @@ def data_function(fnc):
     """
     type:   Decorator
     name:   data_function
-    info:   Decorator used to create a framework __FUNCTION_CLS__ class for function
-    return: __FUNCTION_CLS__
+    info:   Decorator used to create a framework FUNCTION_CLASS class for function
+    return: FUNCTION_CLASS
     """
-    class __FUNCTION_CLS__(__FUNCTION_CLS_BASE__):
+    class FUNCTION_CLASS(__FUNCTION_CLS_BASE__):
         """"
         _FUNCTION_CLS_
         Info : Used for creating special classes that are then used to create objects in the framework.MESSAGE
@@ -128,7 +128,7 @@ def data_function(fnc):
             Retreives the data from the user function
             """
             return fnc(*self.args, **self.kwargs)
-    return __FUNCTION_CLS__
+    return FUNCTION_CLASS
 
 
 #######################################################################
@@ -275,7 +275,7 @@ class EMBED(discord.Embed):
         # Copy attributes but not special methods to the new EMBED. "dir" is used instead of "vars" because the object does not support the function.
         for key in dir(_object):
             if not key.startswith("__") and not key.endswith("__"):
-                with suppress(Union[AttributeError,TypeError]):
+                with suppress(AttributeError,TypeError):
                     if not callable(getattr(_object, key)) and not isinstance(getattr(_object.__class__, key), property):
                         setattr(ret, key, copy.deepcopy(getattr(_object,key)))
 
@@ -550,21 +550,21 @@ Timestamp:  {f"{ets.day}.{ets.month}.{ets.year}  {ets.hour}:{ets.minute}:{ets.se
                     l_embed_to_send = None
                     l_text_to_send  = None
                     l_files_to_send  = []
-                    # If any valid data was passed to the data parameter of framework.MESSAGE
                     if l_data_to_send is not None:
-                        # Convert into a regular list
-                        l_data_to_send = l_data_to_send if isinstance(l_data_to_send, Union[list, tuple, set]) else [l_data_to_send]
+                        if not isinstance(l_data_to_send, (list, tuple, set)):
+                            """ Put into a list for easier iteration.
+                                Technically only necessary if l_msg.data  is a function (dynamic return),
+                                since normal (str, EMBED, FILE) get pre-checked in initialization."""
+                            l_data_to_send = (l_data_to_send,)
+
                         for element in l_data_to_send:
                             if isinstance(element, str):
                                 l_text_to_send = element
-
                             elif isinstance(element, EMBED):
                                 l_embed_to_send = element
-
                             elif isinstance(element, FILE):
                                 l_file = discord.File(element.filename)
                                 l_files_to_send.append(l_file)
-
                             elif element is not None:
                                 trace(f"INVALID DATA PARAMETER PASSED!\nArgument is of type : {type(element).__name__}\nSee README.md for allowed data types\nGUILD: {self.guild.name} (ID: {self.guild.id})",
                                       TRACE_LEVELS.WARNING)
@@ -710,11 +710,16 @@ def initialize() -> bool:
 
                 # Check for correct data types of the MESSAGE.data parameter
                 if not isinstance(l_msg.data, __FUNCTION_CLS_BASE__):
+                    """
+                    This is meant only as a pre-check if the parameters are correct so you wouldn't eg. start
+                    sending this message 6 hours later and only then realize the parameters were incorrect.
+                    The parameters also get checked/parsed each period right before the send.
+                    """
                     # Convert any arguments passed into a list of arguments
-                    if  isinstance(l_msg.data, Union[list, tuple, set]):
+                    if  isinstance(l_msg.data, (list, tuple, set)):
                         l_msg.data = list(l_msg.data)   # Convert into a regular list to allow removal of items
                     else:
-                        l_msg.data = [l_msg.data]
+                        l_msg.data = [l_msg.data]       # Place into a list for iteration, to avoid additional code
 
                     # Check all the arguments
                     for l_data in l_msg.data[:]:
@@ -736,7 +741,6 @@ def initialize() -> bool:
                             else:
                                 trace(f"INVALID DATA PARAMETER PASSED!\nArgument is of type : {type(l_data).__name__}\nSee README.md for allowed data types\nGUILD: {l_server.guild.name} (ID: {l_server.guild.id})", TRACE_LEVELS.WARNING)
                                 l_msg.data.remove(l_data)
-
 
                 # Check if any data params are left and remove the message object if not
                 if (not len(l_msg.channels) or
