@@ -11,10 +11,7 @@ import time
 import asyncio
 import random
 import os
-
 import _discord as discord
-
-
 import datetime
 import copy
 
@@ -35,6 +32,7 @@ __all__ = (    # __all__ variable dictates which objects get imported when using
     "run",
     "data_function",
     "get_client",
+    "shutdown"
 )
 
 #######################################################################
@@ -53,6 +51,8 @@ C_DAY_TO_SECOND = 86400
 C_HOUR_TO_SECOND= 3600
 C_MINUTE_TO_SECOND = 60
 
+C_RT_AVOID_DELAY   = 1.5        # Rate limit avoidance delay
+C_TASK_SLEEP_DELAY = 0.1        # Advertiser task sleep
 #######################################################################
 # Debugging
 #######################################################################
@@ -170,7 +170,7 @@ class CLIENT(discord.Client):
         Info : Inherited class from discord.Client.
                Contains an additional on_ready function.
     """
-    async def on_ready(self):
+    async def on_ready(self) -> None:
         """
         Name : on_ready
         Info : Tasks that is started by pycord when you have been successfully logged into discord.
@@ -183,7 +183,7 @@ class CLIENT(discord.Client):
             asyncio.gather(asyncio.create_task(advertiser()))
         else:
             # Initialization failed, close everything
-            await m_client.close()
+            await shutdown()
 
         if m_user_callback:   # If user callback function was specified
             m_user_callback() # Call user provided function after framework has started
@@ -430,7 +430,7 @@ class GUILD:
                       sent_embed : discord.Embed,
                       sent_files : list,
                       succeeded_ch : list,
-                      failed_ch : list):
+                      failed_ch : list) -> str:
         """
         Name: generate_log
         Info: Generates a log of a message send attempt
@@ -446,26 +446,26 @@ class GUILD:
             sent_text = ""
 
         #Generate embed
-        EmptyEmbed = discord.embeds.EmptyEmbed
+        EmptyEmbed = discord.embeds._EmptyEmbed
         
         if sent_embed is not None:
             tmp_emb = sent_embed
             ets = sent_embed.timestamp
             sent_embed = \
 f"""
-Title:  {tmp_emb.title if tmp_emb.title != EmptyEmbed else ""}
+Title:  {tmp_emb.title if type(tmp_emb.title) is not EmptyEmbed else ""}
 
-Author:  {tmp_emb.author.name if tmp_emb.author.name != EmptyEmbed else ""}
+Author:  {tmp_emb.author.name if type(tmp_emb.author.name) is not EmptyEmbed else ""}
 
-Thumbnail:  {tmp_emb.thumbnail.url if tmp_emb.thumbnail.url != EmptyEmbed else ""}
+Thumbnail:  {tmp_emb.thumbnail.url if type(tmp_emb.thumbnail.url) is not EmptyEmbed else ""}
 
-Image:  {tmp_emb.image.url if tmp_emb.image.url != EmptyEmbed else ""}
+Image:  {tmp_emb.image.url if type(tmp_emb.image.url) is not EmptyEmbed else ""}
 
-Description:  {tmp_emb.description if tmp_emb.description != EmptyEmbed else ""}
+Description:  {tmp_emb.description if type(tmp_emb.description) is not EmptyEmbed else ""}
 
-Color:  {tmp_emb.colour if tmp_emb.colour != EmptyEmbed else ""}
+Color:  {tmp_emb.colour if type(tmp_emb.colour) is not EmptyEmbed else ""}
 
-Timestamp:  {f"{ets.day}.{ets.month}.{ets.year}  {ets.hour}:{ets.minute}:{ets.second}" if ets != EmptyEmbed else ""}
+Timestamp:  {f"{ets.day}.{ets.month}.{ets.year}  {ets.hour}:{ets.minute}:{ets.second}" if type(ets) is not EmptyEmbed else ""}
 """
             sent_embed += "\nFields:"
             for field in tmp_emb.fields:
@@ -497,7 +497,7 @@ Timestamp:  {f"{ets.day}.{ets.month}.{ets.year}  {ets.hour}:{ets.minute}:{ets.se
             failed_ch = "[]"
             
         # Generate files
-        sent_files = "".join(    f"- ```\n  {file}\n  ```\n" for file in sent_files    ).rstrip("\n")
+        sent_files = "".join(    f"- ```\n  {file.filename}\n  ```\n" for file in sent_files    ).rstrip("\n")
 
         return f'''
 # MESSAGE LOG:
@@ -521,131 +521,140 @@ Timestamp:  {f"{ets.day}.{ets.month}.{ets.year}  {ets.hour}:{ets.minute}:{ets.se
 <br><br><br>
 '''
 
-    async def advertise(self):
-        """
-        Name: advertise
-        Info: async function that goes thru all the messages inside the guild and tries to send them to discord
-              if timer has reached the expected value.
-        """
-        l_trace = ""
-        if self.guild is not None:
-            for l_msg in self.messages:
-                if l_msg.timer.start() and\
-                   (not l_msg.force_retry["ENABLED"] and l_msg.timer.elapsed() > l_msg.period\
-                    or l_msg.force_retry["ENABLED"] and l_msg.timer.elapsed() > l_msg.force_retry["TIME"]) :  # If timer has started and timer is above set period/above force_retry period
-                    l_msg.timer.reset()
-                    l_msg.timer.start()
-                    l_msg.force_retry["ENABLED"] = False
-                    if l_msg.randomized_time is True:           # If first parameter to msg object is not None
-                        l_msg.period = random.randrange(*l_msg.random_range)
-
-                    # Parse data from the data parameter
-                    l_data_to_send  = None
-                    if isinstance(l_msg.data, __FUNCTION_CLS_BASE__):
-                        l_data_to_send = l_msg.data.get_data()
-                    else:
-                        l_data_to_send = l_msg.data
-
-                    l_embed_to_send = None
-                    l_text_to_send  = None
-                    l_files_to_send  = []
-                    if l_data_to_send is not None:
-                        if not isinstance(l_data_to_send, (list, tuple, set)):
-                            """ Put into a list for easier iteration.
-                                Technically only necessary if l_msg.data  is a function (dynamic return),
-                                since normal (str, EMBED, FILE) get pre-checked in initialization."""
-                            l_data_to_send = (l_data_to_send,)
-
-                        for element in l_data_to_send:
-                            if isinstance(element, str):
-                                l_text_to_send = element
-                            elif isinstance(element, EMBED):
-                                l_embed_to_send = element
-                            elif isinstance(element, FILE):
-                                l_file = discord.File(element.filename)
-                                l_files_to_send.append(l_file)
-                            elif element is not None:
-                                trace(f"INVALID DATA PARAMETER PASSED!\nArgument is of type : {type(element).__name__}\nSee README.md for allowed data types\nGUILD: {self.guild.name} (ID: {self.guild.id})",
-                                      TRACE_LEVELS.WARNING)
-
-                    # Send messages
-                    if l_text_to_send is not None or l_embed_to_send is not None or len(l_files_to_send) > 0:
-                        l_errored_channels = []
-                        l_succeded_channels= []
-                      
-                        # Send to channels
-                        for l_channel in l_msg.channels:
-                            # Clear previous messages sent to channel if mode is MODE_DELETE_SEND
-                            if l_msg.mode == "clear-send" and l_msg.sent_messages[l_channel.id] is not None:
-                                for tries in range(3):
-                                    try:
-                                        # Delete discord message that originated from this MESSAGE object
-                                        await l_msg.sent_messages[l_channel.id].delete()
-                                        l_msg.sent_messages[l_channel.id] = None
-                                        break
-                                    except discord.HTTPException as ex:
-                                        if ex.status == 429:
-                                            await asyncio.sleep(int(ex.response.headers["Retry-After"])  + 1)
-
-                            # Send/Edit messages
-                            for tries in range(3):  # Maximum 3 tries (if rate limit)
-                                try:
-                                    # Mode dictates to send new message or delete previous and then send new message or mode dictates edit but message was  never sent to this channel before
-                                    if  l_msg.mode in  {"send" , "clear-send"} or\
-                                        l_msg.mode == "edit" and l_msg.sent_messages[l_channel.id] is None:
-                                        l_discord_sent_msg = await l_channel.send(l_text_to_send,
-                                                                                  embed=l_embed_to_send,
-                                                                                  files=l_files_to_send)
-
-                                        l_msg.sent_messages[l_channel.id] = l_discord_sent_msg
-
-                                    # Mode is edit and message was already send to this channel
-                                    elif l_msg.mode == "edit":
-                                        await l_msg.sent_messages[l_channel.id].edit (l_text_to_send,
-                                                                                embed=l_embed_to_send)
-
-                                    l_succeded_channels.append(l_channel)
-                                    break    # Break out of the tries loop
-                                except Exception as ex:
-                                    # Failed to send message
-                                    if isinstance(ex, discord.HTTPException) and ex.status == 429:
-                                        # the if sentence is evaluated by short circuit evaluation
-                                        retry_after = int(ex.response.headers["Retry-After"])  + 1
-                                        # Slow Mode detected -> wait the remaining time
-                                        if ex.code == 20026:
-                                            l_msg.force_retry["ENABLED"] = True
-                                            l_msg.force_retry["TIME"] = retry_after
-                                        else:
-                                            # Rate limit but not slow mode -> put the framework to sleep as it won't be able to send any messages globaly
-                                            await asyncio.sleep(retry_after)
-
-                                    if tries == 2 or not isinstance(ex, discord.HTTPException) or\
-                                       ex.status != 429 or ex.code == 20026:
-                                        l_errored_channels.append({"channel":l_channel, "reason":ex})
-                                        break
-
-                        l_trace += self.generate_log(l_text_to_send, l_embed_to_send, [x.filename for x in l_files_to_send], l_succeded_channels, l_errored_channels)     # Generate trace of sent file
-            # Save into file
-            if self._generate_log and l_trace:
-                with suppress(FileExistsError):
-                    os.mkdir(m_server_log_output_path)
-                with open(os.path.join(m_server_log_output_path, self.guild_file_name),'a', encoding='utf-8') as l_logfile:
-                    l_logfile.write(l_trace)
-
-
 #######################################################################
 # Tasks
 #######################################################################
-async def advertiser():
+async def advertiser() -> None:
     """
     Name  : advertiser
     Param : void
     Info  : Main task that is responsible for the framework
     """
     while True:
-        await asyncio.sleep(0.100)
-        for l_server in m_server_list:
-            await l_server.advertise()
+        await asyncio.sleep(C_TASK_SLEEP_DELAY)
+        for l_server in m_server_list[:]:
+            """The list is sliced first to allow removal of guilds mid iteration
+            in case all the message objects were deleted due to unrecoverable error"""
+            l_trace = ""
+            if l_server.guild is not None:
+                for l_msg in l_server.messages[:]:
+                    """The list is sliced first to allow removal mid iteration in case all the discord
+                    channels were deleted and the message objects needs to be deleted to avoid generation of empty logs"""
+                    if l_msg.timer.start() and\
+                    (not l_msg.force_retry["ENABLED"] and l_msg.timer.elapsed() > l_msg.period\
+                        or l_msg.force_retry["ENABLED"] and l_msg.timer.elapsed() > l_msg.force_retry["TIME"]) :  # If timer has started and timer is above set period/above force_retry period
+                        l_msg.timer.reset()
+                        l_msg.timer.start()
+                        l_msg.force_retry["ENABLED"] = False
+                        if l_msg.randomized_time is True:           # If first parameter to msg object is not None
+                            l_msg.period = random.randrange(*l_msg.random_range)
+
+                        # Parse data from the data parameter
+                        l_data_to_send  = None
+                        if isinstance(l_msg.data, __FUNCTION_CLS_BASE__):
+                            l_data_to_send = l_msg.data.get_data()
+                        else:
+                            l_data_to_send = l_msg.data
+
+                        l_embed_to_send = None
+                        l_text_to_send  = None
+                        l_files_to_send  = []
+                        if l_data_to_send is not None:
+                            if not isinstance(l_data_to_send, (list, tuple, set)):
+                                """ Put into a list for easier iteration.
+                                    Technically only necessary if l_msg.data  is a function (dynamic return),
+                                    since normal (str, EMBED, FILE) get pre-checked in initialization."""
+                                l_data_to_send = (l_data_to_send,)
+
+                            for element in l_data_to_send:
+                                if isinstance(element, str):
+                                    l_text_to_send = element
+                                elif isinstance(element, EMBED):
+                                    l_embed_to_send = element
+                                elif isinstance(element, FILE):
+                                    l_files_to_send.append(element)
+
+                                elif element is not None:
+                                    trace(f"INVALID DATA PARAMETER PASSED!\nArgument is of type : {type(element).__name__}\nSee README.md for allowed data types\nGUILD: {l_server.guild.name} (ID: {l_server.guild.id})",
+                                        TRACE_LEVELS.WARNING)
+
+                        # Send messages
+                        if l_text_to_send is not None or l_embed_to_send is not None or len(l_files_to_send) > 0:
+                            l_errored_channels = []
+                            l_succeded_channels= []
+
+                            # Send to channels
+                            for l_channel in l_msg.channels[:]:
+                                """
+                                List is sliced (shallow copied) to allow removal of
+                                channels, in case they were eg. deleted (code 404), without
+                                affecting the iteration.
+                                """
+                                # Clear previous messages sent to channel if mode is MODE_DELETE_SEND
+                                if l_msg.mode == "clear-send" and l_msg.sent_messages[l_channel.id] is not None:
+                                    for tries in range(3):
+                                        try:
+                                            # Delete discord message that originated from this MESSAGE object
+                                            await l_msg.sent_messages[l_channel.id].delete()
+                                            l_msg.sent_messages[l_channel.id] = None
+                                            break
+                                        except discord.HTTPException as ex:
+                                            if ex.status == 429:
+                                                await asyncio.sleep(int(ex.response.headers["Retry-After"])  + 1)
+
+                                # Send/Edit messages
+                                for tries in range(3):  # Maximum 3 tries (if rate limit)
+                                    try:
+                                        # Mode dictates to send new message or delete previous and then send new message or mode dictates edit but message was  never sent to this channel before
+                                        with l_channel.typing():
+                                            # Rate limit avoidance
+                                            await asyncio.sleep(C_RT_AVOID_DELAY)
+
+                                            if  l_msg.mode in  {"send" , "clear-send"} or\
+                                                l_msg.mode == "edit" and l_msg.sent_messages[l_channel.id] is None:
+                                                l_discord_sent_msg = await l_channel.send(l_text_to_send,
+                                                                                        embed=l_embed_to_send,
+                                                                                        # Create discord.File objects here so it is catched by the except block and then logged
+                                                                                        files=[discord.File(fwFILE.filename) for fwFILE in l_files_to_send]) 
+
+                                                l_msg.sent_messages[l_channel.id] = l_discord_sent_msg
+
+                                            # Mode is edit and message was already send to this channel
+                                            elif l_msg.mode == "edit":
+                                                await l_msg.sent_messages[l_channel.id].edit (l_text_to_send,
+                                                                                        embed=l_embed_to_send)
+
+                                        l_succeded_channels.append(l_channel)
+                                        break    # Break out of the tries loop
+                                    
+                                    except Exception as ex:
+                                        # Failed to send message
+                                        if isinstance(ex, discord.HTTPException):
+                                            if ex.status == 429:    # Rate limit
+                                                retry_after = int(ex.response.headers["Retry-After"])  + 1
+                                                if ex.code == 20026:    # Slow Mode
+                                                    l_msg.force_retry["ENABLED"] = True
+                                                    l_msg.force_retry["TIME"] = retry_after
+                                                else:   # Normal (write) rate limit
+                                                    # Rate limit but not slow mode -> put the framework to sleep as it won't be able to send any messages globaly
+                                                    await asyncio.sleep(retry_after)
+
+                                        # Immediate exit conditions
+                                        # Since python has short circuit evaluation, nothing is wrong with using ex.status and ex.code
+                                        if (not isinstance(ex, discord.HTTPException) or\
+                                            ex.status != 429 or\
+                                            ex.code == 20026
+                                        ):
+                                            l_errored_channels.append({"channel":l_channel, "reason":ex})
+                                            break
+
+                            l_trace += l_server.generate_log(l_text_to_send, l_embed_to_send, l_files_to_send, l_succeded_channels, l_errored_channels)     # Generate trace of sent file
+                # Save into file
+                if l_server._generate_log and l_trace:
+                    with suppress(FileExistsError):
+                        os.mkdir(m_server_log_output_path)
+                    with open(os.path.join(m_server_log_output_path, l_server.guild_file_name),'a', encoding='utf-8') as l_logfile:
+                        l_logfile.write(l_trace)
 
 
 #######################################################################
@@ -769,8 +778,17 @@ def initialize() -> bool:
         trace("No guilds could be parsed", TRACE_LEVELS.ERROR)
         return False
 
+async def shutdown() -> None:
+    # TODO : Documentation
+    """
+    Name:   shutdown
+    Params: void 
+    Return: None
+    Info:   Stops the framework
+    """
+    await m_client.close()
 
-def get_client():
+def get_client()  -> CLIENT:
     """
     Name:   get_client
     Params: void
@@ -785,7 +803,7 @@ def run(token : str,
         is_user : bool =False,
         user_callback : bool=None,
         server_log_output : str ="History",
-        debug : bool=True):
+        debug : bool=True) -> None:
     """
     @type  : function
     @name  : run
