@@ -11,7 +11,7 @@
   - [framework.**EMBED**](#frameworkembed)
     - [**Parameters**](#parameters)
     - [**Methods**](#methods)
-  - [framework.**EMBED_FIELD**](#frameworkembed_field)
+  - [framework.**EmbedFIELD**](#frameworkembed_field)
     - [**Parameters**](#parameters-1)
   - [framework.**FILE**](#frameworkfile)
     - [**Parameters**](#parameters-2)
@@ -156,7 +156,7 @@ The **EMBED** class is an inherited class from discord.Embed meaning it has the 
     - Author icon (author_icon) - URL to author's icon
     - Author image(image)       - URL to an image (placed at the bottom)
     - Thumbnail (thumbnail)     - URL for a thumbnail (placed top right)
-    - Fields (fields)           - list of [EMBED_FIELD](#frameworkembed_field) objects   
+    - Fields (fields)           - list of [EmbedFIELD](#frameworkembed_field) objects   
 
 ### **Methods**
   - ```py
@@ -169,13 +169,13 @@ The **EMBED** class is an inherited class from discord.Embed meaning it has the 
         - _object : discord.Embed = object to convert
 <br>
 
-## framework.**EMBED_FIELD**
+## framework.**EmbedFIELD**
 | **NOTE**<br>                                                       |
 | ------------------------------------------------------------------ |
 | This is only available to use if running on a **bot account**.<br> |
 <br>
 
-The **EMBED_FIELD** is used with combination of [framework.**EMBED**:](#frameworkembed) as one of it's parameters that represents one of the fields inside the embedded message.
+The **EmbedFIELD** is used with combination of [framework.**EMBED**:](#frameworkembed) as one of it's parameters that represents one of the fields inside the embedded message.
 ### **Parameters**
 - Field name (name)         : str  -  Name of the field
 - Field content (content)   : str  -  Text that is placed inside the embedded field
@@ -223,7 +223,7 @@ The **MESSAGE** object containts parameters which describe behaviour and data th
       - Parameters The function is allowed to accept anything
       - Return: The function **must** return any of the **above data types** or the **None** object if no data is ready to be sent.<br>
       If **None** is returned by the function, the framework will skip the send attempt and retry after it's **configured period**. For example you could make the framework call your function on more regular intervals and then decide within the function if anything is to be returned and if nothing is to be returned, you would return None.
-      - **IMPORANT:** if you decide to use an user defined function as the data parameter, you **MUST** use the [framework.**data_function**](#frameworkdatafunction) decorator on it.
+      - **IMPORANT:** if you decide to use an user defined function as the data parameter, you **MUST** use the [framework.**data_function**](#frameworkdata_function) decorator on it.
         When you pass the function to the data parameter, pass it in the next format:
         ```py
         @framework.data_function # <- IMPORTANT!!!
