@@ -1,13 +1,12 @@
 """
-    DISCORD ADVERTISEMENT FRAMEWORK (DSF)
+    DISCORD ADVERTISEMENT FRAMEWORK (DAF)
     Author      :: David Hozic
     Copyright   :: Copyright (c) 2022 David Hozic
-    Version     :: V1.7.6.2
+    Version     :: V1.7.7
 """
 from    contextlib import suppress
 from    typing import Literal, Union, List
 from    enum import Enum, auto
-from    functools import singledispatchmethod
 import  time
 import  asyncio
 import  random
@@ -17,7 +16,7 @@ import  datetime
 import  copy
 
 
-# TODO: Documentation, make VoiceMESSAGE work, move generate log into message classess
+# TODO: Documentation, make initialize function check for incorrect channel id type (Text or Voice)
 
 #######################################################################
 # Exports
@@ -30,6 +29,7 @@ __all__ = (    # __all__ variable dictates which objects get imported when using
     "GUILD",
     "TextMESSAGE",
     "VoiceMESSAGE",
+    "AUDIO",
     "FILE",
     "EMBED",
     "EmbedFIELD",
@@ -55,8 +55,9 @@ C_DAY_TO_SECOND = 86400
 C_HOUR_TO_SECOND= 3600
 C_MINUTE_TO_SECOND = 60
 
-C_RT_AVOID_DELAY   = 1.5        # Rate limit avoidance delay
-C_TASK_SLEEP_DELAY = 0.1        # Advertiser task sleep
+C_RT_AVOID_DELAY     = 1.5        # Rate limit avoidance delay
+C_TASK_SLEEP_DELAY   = 0.1        # Advertiser task sleep
+C_VC_CONNECT_TIMEOUT = 5          # Timeout of voice channels 
 #######################################################################
 # Debugging
 #######################################################################
@@ -77,14 +78,14 @@ def trace(message: str,
     - level   : TraceLEVELS = Level of the trace
     """
     if m_debug:
-        l_timestruct = time.localtime()
-        l_timestamp = "Date: {:02d}.{:02d}.{:04d} Time:{:02d}:{:02d}"
-        l_timestamp = l_timestamp.format(l_timestruct.tm_mday,
-                                         l_timestruct.tm_mon,
-                                         l_timestruct.tm_year,
-                                         l_timestruct.tm_hour,
-                                         l_timestruct.tm_min)
-        l_trace = f"{l_timestamp}\nTrace level: {level.name}\nMessage: {message}\n"
+        timestruct = time.localtime()
+        timestamp = "Date: {:02d}.{:02d}.{:04d} Time:{:02d}:{:02d}"
+        timestamp = timestamp.format(timestruct.tm_mday,
+                                         timestruct.tm_mon,
+                                         timestruct.tm_year,
+                                         timestruct.tm_hour,
+                                         timestruct.tm_min)
+        l_trace = f"{timestamp}\nTrace level: {level.name}\nMessage: {message}\n"
         print(l_trace)
 
 
@@ -110,8 +111,8 @@ def data_function(fnc):
     """
     class FunctionCLASS(FunctionBaseCLASS):
         """"
-        _FUNCTION_CLS_
-        Info : Used for creating special classes that are then used to create objects in the framework.MESSAGE
+        Name:  FunctionCLASS
+        Info:  Used for creating special classes that are then used to create objects in the framework.MESSAGE
                data parameter, allows for sending dynamic contentent received thru an user defined function.
 
         Param: function
@@ -151,6 +152,7 @@ class TIMER:
         "Initiate the timer"
         self.running = False
         self.startms = 0
+        
     def start(self):
         "Start the timer"
         if self.running:
@@ -158,9 +160,16 @@ class TIMER:
         self.running = True
         self.startms = time.time()
         return False
+
     def elapsed(self):
-        "Return the timer elapsed from last reset"
-        return time.time() - self.startms if self.running else 0
+        """Return the timer elapsed from last reset
+           and starts the timer if not already stared"""
+        if self.running:
+            return time.time() - self.startms
+        else:
+            self.start() 
+            return 0
+
     def reset (self):
         "Reset the timer"
         self.running = False
@@ -384,6 +393,12 @@ class BaseMESSAGE:
         self.force_retry = {"ENABLED" : start_now, "TIME" : 0}
         self.sent_messages = {ch_id : None for ch_id in channel_ids}
 
+    def is_ready(self):
+        return not self.force_retry["ENABLED"] and self.timer.elapsed() > self.period or self.force_retry["ENABLED"] and self.timer.elapsed() > self.force_retry["TIME"]
+    
+    def send_to_channels(self):
+        ...
+
 
 class VoiceMESSAGE(BaseMESSAGE):
     """
@@ -411,7 +426,9 @@ class VoiceMESSAGE(BaseMESSAGE):
         "data",
         "channels",
         "timer",
+        "force_retry",
     )
+
     def __init__(self, start_period: Union[float, None],
                  end_period: float,
                  data: AUDIO,
@@ -419,6 +436,72 @@ class VoiceMESSAGE(BaseMESSAGE):
                  start_now: bool = True):
         super().__init__(start_period, end_period, channel_ids, start_now)
         self.data = data
+
+    def stringify_sent_data (self,
+                            sent_audio: AUDIO):
+        """
+        Name:  stringify_sent_data
+        Param: sent_audio -- Audio file that was streamed to the channels
+        Info:  Returns a string representation of send data to the channels.
+               This is then used as a data_context parameter to the GUILD object.
+        """
+        return f'''
+## Streamed AUDIO:
+{sent_audio.filename}
+'''
+
+    async def send_to_channels(self):
+        """
+        Name: send_to_channels
+        Params: void
+        info: sends messages to all the channels
+        """
+        self.timer.reset()
+        self.force_retry["ENABLED"] = False
+        if self.randomized_time is True:
+            self.period = random.randrange(*self.random_range)
+
+        data_to_send  = None
+        if isinstance(self.data, FunctionBaseCLASS):
+            data_to_send = self.data.get_data()
+        else:
+            data_to_send = self.data
+
+        if not isinstance(data_to_send, (list, tuple, set)):
+            # Put into a list for easier iteration
+            data_to_send = (data_to_send,)
+
+        audio_to_stream = None
+        for element in data_to_send:
+            if type(element) is AUDIO:
+                audio_to_stream = element
+
+        if audio_to_stream is not None:
+            errored_channels = []
+            succeded_channels= []
+            voice_client = None
+
+
+            for channel in self.channels:
+                stream = discord.FFmpegPCMAudio(audio_to_stream.filename)
+                try:
+                    voice_client = await channel.connect(timeout=C_VC_CONNECT_TIMEOUT)
+                                        
+                    voice_client.play(stream)
+                    while voice_client.is_playing():
+                        await asyncio.sleep(1)
+                    succeded_channels.append(channel)
+                except Exception as ex:
+                    errored_channels.append({"channel":channel, "reason":ex})
+                finally:
+                    if voice_client is not None:
+                        """
+                        Note (TODO): Should remove this in the future. Currently it disconnects because using
+                              .move_to(channel) method causes some sorts of "thread leak" (new threads keep getting created, waiting for pycord to fix this).
+                        """
+                        await voice_client.disconnect()
+
+        return self.stringify_sent_data(audio_to_stream), succeded_channels, errored_channels
 
 
 class TextMESSAGE(BaseMESSAGE):
@@ -468,146 +551,17 @@ class TextMESSAGE(BaseMESSAGE):
         self.data = data
         self.mode = mode
 
-    async def send_to_channels(self):
-        if self.timer.start() and (not self.force_retry["ENABLED"] and self.timer.elapsed() > self.period or self.force_retry["ENABLED"] and self.timer.elapsed() > self.force_retry["TIME"]):
-            self.timer.reset()
-            self.timer.start()
-            self.force_retry["ENABLED"] = False
-            if self.randomized_time is True:           # If first parameter to msg object is not None
-                self.period = random.randrange(*self.random_range)
-
-            # Parse data from the data parameter
-            l_data_to_send  = None
-            if isinstance(self.data, FunctionBaseCLASS):
-                l_data_to_send = self.data.get_data()
-            else:
-                l_data_to_send = self.data
-
-            l_embed_to_send = None
-            l_text_to_send  = None
-            l_files_to_send  = []
-            if l_data_to_send is not None:
-                if not isinstance(l_data_to_send, (list, tuple, set)):
-                    """ Put into a list for easier iteration.
-                        Technically only necessary if self.data  is a function (dynamic return),
-                        since normal (str, EMBED, FILE) get pre-checked in initialization."""
-                    l_data_to_send = (l_data_to_send,)
-
-                for element in l_data_to_send:
-                    if isinstance(element, str):
-                        l_text_to_send = element
-                    elif isinstance(element, EMBED):
-                        l_embed_to_send = element
-                    elif isinstance(element, FILE):
-                        l_files_to_send.append(element)
-
-            # Send messages
-            if l_text_to_send is not None or l_embed_to_send is not None or len(l_files_to_send) > 0:
-                l_errored_channels = []
-                l_succeded_channels= []
-
-                # Send to channels
-                for l_channel in self.channels:
-                    # Clear previous messages sent to channel if mode is MODE_DELETE_SEND
-                    if self.mode == "clear-send" and self.sent_messages[l_channel.id] is not None:
-                        for tries in range(3):
-                            try:
-                                # Delete discord message that originated from this MESSAGE object
-                                await self.sent_messages[l_channel.id].delete()
-                                self.sent_messages[l_channel.id] = None
-                                break
-                            except discord.HTTPException as ex:
-                                if ex.status == 429:
-                                    await asyncio.sleep(int(ex.response.headers["Retry-After"])  + 1)
-
-                    # Send/Edit messages
-                    for tries in range(3):  # Maximum 3 tries (if rate limit)
-                        try:
-                            # Mode dictates to send new message or delete previous and then send new message or mode dictates edit but message was  never sent to this channel before
-                            with l_channel.typing():
-                                # Rate limit avoidance
-                                await asyncio.sleep(C_RT_AVOID_DELAY)
-
-                                if  self.mode in  {"send" , "clear-send"} or\
-                                    self.mode == "edit" and self.sent_messages[l_channel.id] is None:
-                                    l_discord_sent_msg = await l_channel.send(l_text_to_send,
-                                                                            embed=l_embed_to_send,
-                                                                            # Create discord.File objects here so it is catched by the except block and then logged
-                                                                            files=[discord.File(fwFILE.filename) for fwFILE in l_files_to_send])
-
-                                    self.sent_messages[l_channel.id] = l_discord_sent_msg
-
-                                # Mode is edit and message was already send to this channel
-                                elif self.mode == "edit":
-                                    await self.sent_messages[l_channel.id].edit (l_text_to_send,
-                                                                            embed=l_embed_to_send)
-
-                            l_succeded_channels.append(l_channel)
-                            break    # Break out of the tries loop
-
-                        except Exception as ex:
-                            # Failed to send message
-                            if isinstance(ex, discord.HTTPException):
-                                if ex.status == 429:    # Rate limit
-                                    retry_after = int(ex.response.headers["Retry-After"])  + 1
-                                    if ex.code == 20026:    # Slow Mode
-                                        self.force_retry["ENABLED"] = True
-                                        self.force_retry["TIME"] = retry_after
-                                    else:   # Normal (write) rate limit
-                                        # Rate limit but not slow mode -> put the framework to sleep as it won't be able to send any messages globaly
-                                        await asyncio.sleep(retry_after)
-
-                            # Immediate exit conditions
-                            # Since python has short circuit evaluation, nothing is wrong with using ex.status and ex.code
-                            if (not isinstance(ex, discord.HTTPException) or\
-                                ex.status != 429 or\
-                                ex.code == 20026
-                            ):
-                                l_errored_channels.append({"channel":l_channel, "reason":ex})
-                                break
-
-            # Return sent data + failed and successful function for logging purposes
-            return l_text_to_send, l_embed_to_send, l_files_to_send, l_succeded_channels, l_errored_channels
-
-class GUILD:
-    """
-    Name: GUILD
-    Info: The GUILD object represents a server to which messages will be sent.
-    Params:
-    - Guild ID - identificator which can be obtained by enabling developer mode in discord's settings and
-                 afterwards right-clicking on the server/guild icon in the server list and clicking "Copy ID",
-    - List of MESSAGE objects - Python list or tuple contating MESSAGE objects.
-    - Generate file log - bool variable, if True it will generate a file log for each message send attempt.
-    """
-    __slots__ = (
-        "guild",
-        "messages",
-        "_generate_log",
-        "guild_file_name"
-    )
-
-    def __init__(self,
-                 guild_id : int,
-                 messages_to_send : List[Union[TextMESSAGE, VoiceMESSAGE]],
-                 generate_log : bool = False):
-
-        self.guild =    guild_id
-        self.messages = messages_to_send
-        self._generate_log = generate_log
-        self.guild_file_name = None
-
-    @singledispatchmethod
-    def generate_log(self,
-                      sent_text : str,
-                      sent_embed : discord.Embed,
-                      sent_files : list,
-                      succeeded_ch : list,
-                      failed_ch : list) -> str:
+    def stringify_sent_data (self,
+                            sent_text : str,
+                            sent_embed : discord.Embed,
+                            sent_files : list):
         """
-        Name: generate_log
-        Info: Generates a log of a message send attempt
+        Name:  stringify_sent_data
+        Param: sent_audio -- Audio file that was streamed to the channels
+        Info:  Returns a string representation of send data to the channels.
+               This is then used as a data_context parameter to the GUILD object.
         """
-        # Generate text
+                # Generate text
         if sent_text is not None:
             tmp_text , sent_text = sent_text, ""
             sent_text += "- ```\n"
@@ -650,29 +604,10 @@ Timestamp:  {f"{ets.day}.{ets.month}.{ets.year}  {ets.hour}:{ets.minute}:{ets.se
         else:
             sent_embed = ""
 
-        # Generate timestamp
-        l_timestruct = time.localtime()
-        l_timestamp = "{:02d}.{:02d}.{:04d} {:02d}:{:02d}".format(l_timestruct.tm_mday,
-                                                                  l_timestruct.tm_mon,
-                                                                  l_timestruct.tm_year,
-                                                                  l_timestruct.tm_hour,
-                                                                  l_timestruct.tm_min)
-        # Generate channel log
-        succeeded_ch = "[\n" + "".join(f"\t\t{ch.name}(ID: {ch.id}),\n" for ch in succeeded_ch).rstrip(",\n") + "\n\t]" if len(succeeded_ch) else "[]"
-        if len(failed_ch):
-            tmp_chs, failed_ch = failed_ch, "["
-            for ch in tmp_chs:
-                ch_reason = str(ch["reason"]).replace("\n", "; ")
-                failed_ch += f"\n\t\t{ch['channel'].name}(ID: {ch['channel'].id}) >>> [ {ch_reason} ],"
-            failed_ch = failed_ch.rstrip(",") + "\n\t]"
-        else:
-            failed_ch = "[]"
-
         # Generate files
         sent_files = "".join(    f"- ```\n  {file.filename}\n  ```\n" for file in sent_files    ).rstrip("\n")
 
         return f'''
-# MESSAGE LOG:
 ## Text:
 {sent_text}
 ***
@@ -681,36 +616,156 @@ Timestamp:  {f"{ets.day}.{ets.month}.{ets.year}  {ets.hour}:{ets.minute}:{ets.se
 ***
 ## Files:
 {sent_files}
-***
-## Other data:
--   ```
-    Server: {self.guild.name}
-    Succeeded in channels: {succeeded_ch}
-    Failed in channels: {failed_ch}
-    Timestamp: {l_timestamp}
-    ```
-***
-<br><br><br>
 '''
-
-    @generate_log.register
-    def overload_generate_log(self,
-                      send_audio   : AUDIO,
-                      succeeded_ch : list,
-                      failed_ch : list) -> str:
+    async def send_to_channels(self):
         """
-        Name: generate_log (for VoiceMessages)
-        Info: Generates a log of a message send attempt,
-              that is overloaded to accept audio
+        Name: send_to_channels
+        Params: void
+        info: sends messages to all the channels
         """
+        self.timer.reset()
+        self.force_retry["ENABLED"] = False
+        if self.randomized_time is True:
+            self.period = random.randrange(*self.random_range)
 
+        # Parse data from the data parameter
+        data_to_send  = None
+        if isinstance(self.data, FunctionBaseCLASS):
+            data_to_send = self.data.get_data()
+        else:
+            data_to_send = self.data
+
+        embed_to_send = None
+        text_to_send  = None
+        files_to_send  = []
+        if data_to_send is not None:
+            if not isinstance(data_to_send, (list, tuple, set)):
+                """ Put into a list for easier iteration.
+                    Technically only necessary if self.data  is a function (dynamic return),
+                    since normal (str, EMBED, FILE) get pre-checked in initialization."""
+                data_to_send = (data_to_send,)
+
+            for element in data_to_send:
+                if isinstance(element, str):
+                    text_to_send = element
+                elif isinstance(element, EMBED):
+                    embed_to_send = element
+                elif isinstance(element, FILE):
+                    files_to_send.append(element)
+
+        # Send messages
+        if text_to_send is not None or embed_to_send is not None or len(files_to_send) > 0:
+            errored_channels = []
+            succeded_channels= []
+
+            # Send to channels
+            for channel in self.channels:
+                # Clear previous messages sent to channel if mode is MODE_DELETE_SEND
+                if self.mode == "clear-send" and self.sent_messages[channel.id] is not None:
+                    for tries in range(3):
+                        try:
+                            # Delete discord message that originated from this MESSAGE object
+                            await self.sent_messages[channel.id].delete()
+                            self.sent_messages[channel.id] = None
+                            break
+                        except discord.HTTPException as ex:
+                            if ex.status == 429:
+                                await asyncio.sleep(int(ex.response.headers["Retry-After"])  + 1)
+
+                # Send/Edit messages
+                for tries in range(3):  # Maximum 3 tries (if rate limit)
+                    try:
+                        # Mode dictates to send new message or delete previous and then send new message or mode dictates edit but message was  never sent to this channel before
+                        with channel.typing():
+                            # Rate limit avoidance
+                            await asyncio.sleep(C_RT_AVOID_DELAY)
+
+                            if  self.mode in  {"send" , "clear-send"} or\
+                                self.mode == "edit" and self.sent_messages[channel.id] is None:
+                                discord_sent_msg = await channel.send(text_to_send,
+                                                                        embed=embed_to_send,
+                                                                        # Create discord.File objects here so it is catched by the except block and then logged
+                                                                        files=[discord.File(fwFILE.filename) for fwFILE in files_to_send])
+
+                                self.sent_messages[channel.id] = discord_sent_msg
+
+                            # Mode is edit and message was already send to this channel
+                            elif self.mode == "edit":
+                                await self.sent_messages[channel.id].edit (text_to_send,
+                                                                        embed=embed_to_send)
+
+                        succeded_channels.append(channel)
+                        break    # Break out of the tries loop
+
+                    except Exception as ex:
+                        # Failed to send message
+                        if isinstance(ex, discord.HTTPException):
+                            if ex.status == 429:    # Rate limit
+                                retry_after = int(ex.response.headers["Retry-After"])  + 1
+                                if ex.code == 20026:    # Slow Mode
+                                    self.force_retry["ENABLED"] = True
+                                    self.force_retry["TIME"] = retry_after
+                                else:   # Normal (write) rate limit
+                                    # Rate limit but not slow mode -> put the framework to sleep as it won't be able to send any messages globaly
+                                    await asyncio.sleep(retry_after)
+
+                        # Immediate exit conditions
+                        # Since python has short circuit evaluation, nothing is wrong with using ex.status and ex.code
+                        if (not isinstance(ex, discord.HTTPException) or
+                            ex.status != 429 or
+                            ex.code == 20026 or 
+                            tries == 2
+                        ):
+                            errored_channels.append({"channel":channel, "reason":ex})
+                            break
+
+        # Return sent data + failed and successful function for logging purposes
+        return self.stringify_sent_data(text_to_send, embed_to_send, files_to_send), succeded_channels, errored_channels
+
+
+class GUILD:
+    """
+    Name: GUILD
+    Info: The GUILD object represents a server to which messages will be sent.
+    Params:
+    - Guild ID - identificator which can be obtained by enabling developer mode in discord's settings and
+                 afterwards right-clicking on the server/guild icon in the server list and clicking "Copy ID",
+    - List of TextMESSAGE/VoiceMESSAGE objects
+    - Generate file log - bool variable, if True it will generate a file log for each message send attempt.
+    """
+    __slots__ = (
+        "guild",
+        "messages",
+        "_generate_log",
+        "guild_file_name"
+    )
+
+    def __init__(self,
+                 guild_id : int,
+                 messages_to_send : List[Union[TextMESSAGE, VoiceMESSAGE]],
+                 generate_log : bool = False):
+
+        self.guild =    guild_id
+        self.messages = messages_to_send
+        self._generate_log = generate_log
+        self.guild_file_name = None
+
+    def generate_log(self,
+                     data_context: str,
+                     succeeded_ch : list,
+                     failed_ch : list) -> str:
+        """
+        Name:   generate_log
+        Param:  data_context - str representation of sent data, which is return data of xxxMESSAGE.send_to_channels()
+        Info:   Generates a log of a xxxxMESSAGE send attempt
+        """
         # Generate timestamp
-        l_timestruct = time.localtime()
-        l_timestamp = "{:02d}.{:02d}.{:04d} {:02d}:{:02d}".format(l_timestruct.tm_mday,
-                                                                  l_timestruct.tm_mon,
-                                                                  l_timestruct.tm_year,
-                                                                  l_timestruct.tm_hour,
-                                                                  l_timestruct.tm_min)
+        timestruct = time.localtime()
+        timestamp = "{:02d}.{:02d}.{:04d} {:02d}:{:02d}".format(timestruct.tm_mday,
+                                                                  timestruct.tm_mon,
+                                                                  timestruct.tm_year,
+                                                                  timestruct.tm_hour,
+                                                                  timestruct.tm_min)
         # Generate channel log
         succeeded_ch = "[\n" + "".join(f"\t\t{ch.name}(ID: {ch.id}),\n" for ch in succeeded_ch).rstrip(",\n") + "\n\t]" if len(succeeded_ch) else "[]"
         if len(failed_ch):
@@ -722,22 +777,21 @@ Timestamp:  {f"{ets.day}.{ets.month}.{ets.year}  {ets.hour}:{ets.minute}:{ets.se
         else:
             failed_ch = "[]"
 
-
         return f'''
 # MESSAGE LOG:
-## Audio:
-{send_audio}
+{data_context}
 ***
 ## Other data:
 -   ```
     Server: {self.guild.name}
     Succeeded in channels: {succeeded_ch}
     Failed in channels: {failed_ch}
-    Timestamp: {l_timestamp}
+    Timestamp: {timestamp}
     ```
 ***
 <br><br><br>
 '''
+
 
 #######################################################################
 # Tasks
@@ -750,21 +804,22 @@ async def advertiser() -> None:
     """
     while True:
         await asyncio.sleep(C_TASK_SLEEP_DELAY)
-        for l_server in m_server_list[:]:
+        for server in m_server_list[:]:
             """The list is sliced first to allow removal of guilds mid iteration
             in case all the message objects were deleted due to unrecoverable error"""
             l_trace = ""
-            for l_msg in l_server.messages[:]:
+            for message in server.messages[:]:
                 """The list is sliced first to allow removal mid iteration in case all the discord
                 channels were deleted and the message objects needs to be deleted to avoid generation of empty logs"""
-                l_msg_ret = await l_msg.send_to_channels()
-                if l_msg_ret is not None:
-                    l_trace += l_server.generate_log(*l_msg_ret)     # Generate trace of sent file
+                message_ret = await message.send_to_channels() if message.is_ready() else None
+
+                if message_ret is not None:
+                    l_trace += server.generate_log(*message_ret)     # Generate trace of sent file
             # Save into file
-            if l_server._generate_log and l_trace:
+            if server._generate_log and l_trace:
                 with suppress(FileExistsError):
                     os.mkdir(m_server_log_output_path)
-                with open(os.path.join(m_server_log_output_path, l_server.guild_file_name),'a', encoding='utf-8') as l_logfile:
+                with open(os.path.join(m_server_log_output_path, server.guild_file_name),'a', encoding='utf-8') as l_logfile:
                     l_logfile.write(l_trace)
 
 
@@ -778,110 +833,109 @@ def initialize() -> bool:
     Return: success: bool
     Info: Function that initializes the guild objects and then returns True on success or False on failure.
     """
-    for l_server in m_server_list[:]:
+    for server in m_server_list[:]:
         """
         Replace the guild IDs with actual discord.Guild objects or remove if any errors were discovered.
         The m_server_list is sliced (shallow copied) to allow item
         removal from the list while still under the for loop (the iterator will
         return items from the copied list by reference and I remove them from original list).
         """
-        l_guild_id = l_server.guild
-        l_server.guild = m_client.get_guild(l_guild_id)
+        guild_id = server.guild
+        server.guild = m_client.get_guild(guild_id)
 
-        if l_server.guild is not None:
+        if server.guild is not None:
         # Create a file name without the non allowed characters. Windows' list was choosen to generate the forbidden character because only forbids '/'
             l_forbidden_file_names = ('<','>','"','/','\\','|','?','*',":")
-            l_server.guild_file_name = "".join(char if char not in l_forbidden_file_names else "#" for char in l_server.guild.name) + ".md"
+            server.guild_file_name = "".join(char if char not in l_forbidden_file_names else "#" for char in server.guild.name) + ".md"
 
-            for l_msg in l_server.messages[:]:
+            for message in server.messages[:]:
                 """
                 Initialize all the MESSAGE objects -- Replace all the channel IDs with actual channel objects.
                 Slice (shallow copy) the messages array to allow removal of message objects without affecting the iterator.
                 """
 
                 # Remove duplicated channel ids
-                for l_channel_id in l_msg.channels[:]:
-                    if l_msg.channels.count(l_channel_id) > 1:
-                        trace(f"Guild \"{l_server.guild.name}\" (ID: {l_guild_id}) has duplicated channel (ID: {l_channel_id})", TraceLEVELS.WARNING)
-                        l_msg.channels.remove(l_channel_id)
+                for channel_id in message.channels[:]:
+                    if message.channels.count(channel_id) > 1:
+                        trace(f"Guild \"{server.guild.name}\" (ID: {guild_id}) has duplicated channel (ID: {channel_id})", TraceLEVELS.WARNING)
+                        message.channels.remove(channel_id)
                 # Transform channel ids into pycord channel objects
-                l_channel_i = 0
-                while l_channel_i < len(l_msg.channels):
+                channel_i = 0
+                while channel_i < len(message.channels):
                     """
                     Replace the channel IDs with channel objects.
                     while loop is used as I don't want the index to increase every iteration
                     """
-                    l_channel_id = l_msg.channels[l_channel_i]
-                    l_msg.channels[l_channel_i] = m_client.get_channel(l_channel_id)
-                    l_channel = l_msg.channels[l_channel_i]
+                    channel_id = message.channels[channel_i]
+                    message.channels[channel_i] = m_client.get_channel(channel_id)
+                    channel = message.channels[channel_i]
 
-                    if l_channel is None:
+                    if channel is None:
                         # Unable to find the channel objects, ergo remove.
-                        trace(f"Unable to get channel from id: {l_channel_id} (Does not exist - Incorrect ID?) in GUILD: \"{l_server.guild.name}\" (ID: {l_guild_id})", TraceLEVELS.WARNING)
-                        l_msg.channels.remove(l_channel)
+                        trace(f"Unable to get channel from id: {channel_id} (Does not exist - Incorrect ID?) in GUILD: \"{server.guild.name}\" (ID: {guild_id})", TraceLEVELS.WARNING)
+                        message.channels.remove(channel)
 
-                    elif l_channel.guild.id != l_guild_id:
+                    elif channel.guild.id != guild_id:
                         # The channel is not part of this guild, ergo remove.
-                        trace(f"Guild \"{l_server.guild.name}\" (ID: {l_guild_id}) has no channel \"{l_channel.name}\" (ID: {l_channel_id})", TraceLEVELS.WARNING)
-                        l_msg.channels.remove(l_channel)
+                        trace(f"Guild \"{server.guild.name}\" (ID: {guild_id}) has no channel \"{channel.name}\" (ID: {channel_id})", TraceLEVELS.WARNING)
+                        message.channels.remove(channel)
                     else:
-                        l_channel_i += 1
+                        channel_i += 1
 
                 # Check for correct data types of the MESSAGE.data parameter
-                if not isinstance(l_msg.data, FunctionBaseCLASS):
+                if not isinstance(message.data, FunctionBaseCLASS):
                     """
                     This is meant only as a pre-check if the parameters are correct so you wouldn't eg. start
                     sending this message 6 hours later and only then realize the parameters were incorrect.
                     The parameters also get checked/parsed each period right before the send.
                     """
                     # Convert any arguments passed into a list of arguments
-                    if  isinstance(l_msg.data, (list, tuple, set)):
-                        l_msg.data = list(l_msg.data)   # Convert into a regular list to allow removal of items
+                    if  isinstance(message.data, (list, tuple, set)):
+                        message.data = list(message.data)   # Convert into a regular list to allow removal of items
                     else:
-                        l_msg.data = [l_msg.data]       # Place into a list for iteration, to avoid additional code
+                        message.data = [message.data]       # Place into a list for iteration, to avoid additional code
 
                     # Check all the arguments
-                    for l_data in l_msg.data[:]:
+                    for data in message.data[:]:
                         """
                         Check all the data types of all the passed to the data parameter.
                         If class does not match the allowed types, then the object is removed.
-                        The for loop iterates thru a shallow copy (sliced list) of l_data_params to allow removal of items
+                        The for loop iterates thru a shallow copy (sliced list) of data_params to allow removal of items
                         without affecting the iteration (would skip elements without a copy or use of while loop)
                         """
                         if (
-                            not isinstance(l_data, str) and\
-                            not isinstance(l_data, EMBED) and\
-                            not isinstance(l_data, FILE)\
-                        ):
-                            if isinstance(l_data, FunctionBaseCLASS):
-                                trace(f"The function can only be used on the data parameter directly, not in a list\nFunction: {l_data.func_name}", TraceLEVELS.ERROR)
-                                l_msg.data.clear()
+                              type(message) is TextMESSAGE  and type(data) not in {str, EMBED, FILE} or\
+                              type(message) is VoiceMESSAGE and type(data) not in {AUDIO}
+                           ):
+                            if isinstance(message.data, FunctionBaseCLASS):
+                                trace(f"The function can only be used on the data parameter directly, not in a list\nFunction: {data.func_name}", TraceLEVELS.ERROR)
+                                message.data.clear()
                                 break
                             else:
-                                trace(f"INVALID DATA PARAMETER PASSED!\nArgument is of type : {type(l_data).__name__}\nSee README.md for allowed data types\nGUILD: {l_server.guild.name} (ID: {l_server.guild.id})", TraceLEVELS.WARNING)
-                                l_msg.data.remove(l_data)
+                                trace(f"INVALID DATA PARAMETER PASSED!\nArgument is of type : {type(data).__name__}\nSee README.md for allowed data types\nGUILD: {server.guild.name} (ID: {server.guild.id})", TraceLEVELS.WARNING)
+                                message.data.remove(data)
+
 
                 # Check if any data params are left and remove the message object if not
-                if (not len(l_msg.channels) or
-                    not isinstance(l_msg.data, FunctionBaseCLASS) and not len(l_msg.data)   # if isinstance FunctionBaseCLASS, then it has no len, and because of short-circuit, len will not be read
-                ):
+                if (not len(message.channels) or
+                    not isinstance(message.data, FunctionBaseCLASS) and not len(message.data)):   # if isinstance FunctionBaseCLASS, then it has no len, and because of short-circuit, len will not be read
                     """
                     Failed parsing of all the channels
                     or/and all the data parameters inside the message object, ergo remove the message.
                     """
-                    l_server.messages.remove(l_msg)
+                    server.messages.remove(message)
 
-            if not len(l_server.messages):
+            if not len(server.messages):
                 """
                 No messages were successfuly processed,
                 ergo remove the guild object from the list as it is useless.
                 Trace is silent since it is already made in the deepest level of these checks.
                 """
-                m_server_list.remove(l_server)
+                m_server_list.remove(server)
 
         else:
-            trace(f"Unable to create server object from server id: {l_guild_id}\nRemoving the object from the list!", TraceLEVELS.WARNING)
-            m_server_list.remove(l_server)
+            trace(f"Unable to create server object from server id: {guild_id}\nRemoving the object from the list!", TraceLEVELS.WARNING)
+            m_server_list.remove(server)
 
     if len(m_server_list):
         return True

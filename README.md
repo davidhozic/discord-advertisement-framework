@@ -11,7 +11,7 @@
   - [framework.**EMBED**](#frameworkembed)
     - [**Parameters**](#parameters)
     - [**Methods**](#methods)
-  - [framework.**EmbedFIELD**](#frameworkembed_field)
+  - [framework.**EmbedFIELD**](#frameworkembedfield)
     - [**Parameters**](#parameters-1)
   - [framework.**FILE**](#frameworkfile)
     - [**Parameters**](#parameters-2)
@@ -362,9 +362,9 @@ To **enable** trace messages, set the **debug** option to True inside the **[fra
 <br>
 
 # **Regarding Pycord/discord.py**
-The DSFW requires a discord API wrapper to work. <br>
-The module used by the DSFW is called Pycord (previously discord.py) which works great except it does not allow user accounts to login, so I modified to work with user accounts.
-When you install the DSFW, the modified Pycord version is installed with it.<br>
+The DAF requires a discord API wrapper to work. <br>
+The module used by the DAF is called Pycord (previously discord.py) which works great except it does not allow user accounts to login, so I modified to work with user accounts.
+When you install the DAF, the modified Pycord version is installed with it.<br>
 **If you wish to use the Pycord/discord module in your program, you can import it like this:**
 ```py
 from framework import discord
