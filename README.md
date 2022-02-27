@@ -243,7 +243,7 @@ The **TextMESSAGE** and **VoiceMESSAGE** object containts parameters which descr
    - for **TextMESSAGE** and **VoiceMESSAGE**:
       - **list/tuple** containing the above listed types
       - **Function** defined by the user:
-         - Parameters The function is allowed to accept anything
+         - Parameters: The function is allowed to accept anything
          - Return: The function **must** return any of the **above data types** or the **None** object if no data is ready to be sent.<br>
          If **None** is returned by the function, the framework will skip the send attempt and retry after it's **configured period**. For example you could make the framework call your function on more regular intervals and then decide within the function if anything is to be returned and if nothing is to be returned, you would return None.
          - **IMPORANT:** if you decide to use an user defined function as the data parameter, you **MUST** use the [framework.**data_function**](#frameworkdatafunction) decorator on it.
@@ -269,12 +269,10 @@ The **TextMESSAGE** and **VoiceMESSAGE** object containts parameters which descr
                            data=function_name2(parameter_1, parameter_2),
                            ...)                                                
            ```
-           | **NOTE 1**:                                                                                                                               |
-           | ----------------------------------------------------------------------------------------------------------------------------------------- |
-           | When you use the framework.data_function decorator on the function, it returns a special class that is used by the framework to get data. |
-           | Because the decorator returns a class and assigns it to the function name, you can no longer use this function as a regular function,     |
-           | so consider making another function with the same definition and a different name or consider making this function to retreive data only. |
-           
+           | **NOTE 1**:                                                                                                                                                                                                                                                                                                                                                                                                                   |
+           | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+           | When you use the framework.data_function decorator on the function, it returns a special class that is used by the framework to get data,<br> so consider making another function with the same definition and a different name or consider making this function to retreive data only.<br> Because the decorator returns a class and assigns it to the function name, you can no longer use this function as a regular function, |
+                                   
            | **NOTE 2**:                                                                                                                                                                           |
            | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
            | If you don't use the **framework.data_function** decorator, the function will only get called once(when you pass it to the data) and will not be called by the framework dynamically. |
