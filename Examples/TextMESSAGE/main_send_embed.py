@@ -11,12 +11,12 @@ author_name="Developer",
 author_icon="https://solarsystem.nasa.gov/system/basic_html_elements/11561_Sun.png",
 fields=\
     [
-        fw.EMBED_FIELD("Test 1", "Hello World", True),
-        fw.EMBED_FIELD("Test 2", "Hello World 2", True),
-        fw.EMBED_FIELD("Test 3", "Hello World 3", True),
-        fw.EMBED_FIELD("No Inline", "This is without inline", False),
-        fw.EMBED_FIELD("Test 4", "Hello World 4", True),
-        fw.EMBED_FIELD("Test 5", "Hello World 5", True)
+        fw.EmbedFIELD("Test 1", "Hello World", True),
+        fw.EmbedFIELD("Test 2", "Hello World 2", True),
+        fw.EmbedFIELD("Test 3", "Hello World 3", True),
+        fw.EmbedFIELD("No Inline", "This is without inline", False),
+        fw.EmbedFIELD("Test 4", "Hello World 4", True),
+        fw.EmbedFIELD("Test 5", "Hello World 5", True)
     ],
     ## ... for other arguments, see https://github.com/davidhozic/discord-advertisement-framework
 )
@@ -42,7 +42,7 @@ guilds = [
     fw.GUILD(
         guild_id=123456789,                                 # ID of server (guild)
         messages_to_send=[                                  # List MESSAGE objects
-            fw.MESSAGE(
+            fw.TextMESSAGE(
                               start_period=None,            # If None, messages will be send on a fixed period (end period)
                               end_period=15,                # If start_period is None, it dictates the fixed sending period,
                                                             # If start period is defined, it dictates the maximum limit of randomized period
@@ -50,11 +50,11 @@ guilds = [
                                                             # or function that returns any of above types(or returns None if you don't have any data to send yet), 
                                                             # where if you pass a function you need to use the fw.FUNCTION decorator on top of it ).
                               channel_ids=[123456789],      # List of ids of all the channels you want this message to be sent into
-                              mode="send",          # Clear all discord messages that originated from this MESSAGE object
+                              mode="send",                  # Clear all discord messages that originated from this MESSAGE object
                               start_now=True                # Start sending now (True) or wait until period
                               ),
 
-            fw.MESSAGE(
+            fw.TextMESSAGE(
                               start_period=None,
                               end_period=15,
 
