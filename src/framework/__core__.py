@@ -573,7 +573,7 @@ class VoiceMESSAGE(BaseMESSAGE):
             voice_client = None
 
             for channel in self.channels:
-                stream = discord.FFmpegPCMAudio(audio_to_stream.filename)
+                stream = discord.FFmpegOpusAudio(audio_to_stream.filename)
                 try:
                     voice_client = await channel.connect(timeout=C_VC_CONNECT_TIMEOUT)
 
