@@ -1,4 +1,4 @@
-import  framework, datetime, secret
+import  framework, secret
 from framework import discord
 
 
@@ -7,28 +7,40 @@ from framework import discord
 #                               GUILD MESSAGES DEFINITION                                  #
 ############################################################################################
 
-# It's VERY IMPORTANT that you use @framework.data_function to convert your function into a __FUNCTION_CLS__ class which creates an object when you "call" it below
-#######################################
+# File object representing file that will be sent
+l_file1 = framework.FILE("./Examples/main_send_file.py")
+l_file2 = framework.FILE("./Examples/main_send_multiple.py")
 
+## Embedded
+l_embed = framework.EMBED(
+author_name="Developer",
+author_icon="https://solarsystem.nasa.gov/system/basic_html_elements/11561_Sun.png",
+fields=\
+    [
+        framework.EmbedFIELD("Test 1", "Hello World", True),
+        framework.EmbedFIELD("Test 2", "Hello World 2", True),
+        framework.EmbedFIELD("Test 3", "Hello World 3", True),
+        framework.EmbedFIELD("No Inline", "This is without inline", False),
+        framework.EmbedFIELD("Test 4", "Hello World 4", True),
+        framework.EmbedFIELD("Test 5", "Hello World 5", True)
+    ]
+)
 
-@framework.data_function
-def get_data(parameter):
-    l_time = datetime.datetime.now()
-    return f"Parameter: {parameter}\nTimestamp: {l_time.day}.{l_time.month}.{l_time.year} :: {l_time.hour}:{l_time.minute}:{l_time.second}"
 
 guilds = [
     framework.GUILD(
         guild_id=123456789,                                 # ID of server (guild)
-        messages_to_send=[                                  # List MESSAGE objects 
-            framework.MESSAGE(
+        messages_to_send=[                                  # List MESSAGE objects
+            framework.TextMESSAGE(
                               start_period=None,            # If None, messages will be send on a fixed period (end period)
                               end_period=15,                # If start_period is None, it dictates the fixed sending period,
                                                             # If start period is defined, it dictates the maximum limit of randomized period
-                              data=get_data(123),           # Data you want to sent to the function (Can be of types : str, embed, file, list of types to the left
-                                                            # or function that returns any of above types(or returns None if you don't have any data to send yet), 
-                                                            # where if you pass a function you need to use the framework.FUNCTION decorator on top of it ).
+                              data=["Hello World",          # Data you want to sent to the function (Can be of types : str, embed, file, list of types to the left
+                                    l_file1,                # or function that returns any of above types(or returns None if you don't have any data to send yet),
+                                    l_file2,                # where if you pass a function you need to use the framework.FUNCTION decorator on top of it ).
+                                    l_embed],           
                               channel_ids=[123456789],      # List of ids of all the channels you want this message to be sent into
-                              mode="send",          # Clear all discord messages that originated from this MESSAGE object
+                              mode="send",                  # Clear all discord messages that originated from this MESSAGE object
                               start_now=True                # Start sending now (True) or wait until period
                               ),  
         ],
@@ -36,6 +48,7 @@ guilds = [
     )
 ]
 
+                                     
 ############################################################################################
 
 if __name__ == "__main__":
@@ -45,4 +58,3 @@ if __name__ == "__main__":
                     user_callback=None,             # OPTIONAL
                     server_log_output="History",    # OPTIONAL
                     debug=True)                     # OPTIONAL
-    
