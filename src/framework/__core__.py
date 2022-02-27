@@ -571,9 +571,9 @@ class VoiceMESSAGE(BaseMESSAGE):
             errored_channels = []
             succeded_channels= []
             voice_client = None
-
+            stream = discord.FFmpegOpusAudio(audio_to_stream.filename)
+            
             for channel in self.channels:
-                stream = discord.FFmpegOpusAudio(audio_to_stream.filename)
                 try:
                     voice_client = await channel.connect(timeout=C_VC_CONNECT_TIMEOUT)
 
