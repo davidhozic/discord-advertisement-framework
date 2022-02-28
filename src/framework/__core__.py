@@ -568,12 +568,11 @@ class VoiceMESSAGE(BaseMESSAGE):
             errored_channels = []
             succeded_channels= []
             voice_client = None
-            stream = discord.FFmpegOpusAudio(audio_to_stream.filename)
-            
+
             for channel in self.channels:
+                stream = discord.FFmpegOpusAudio(audio_to_stream.filename)
                 try:
                     voice_client = await channel.connect(timeout=C_VC_CONNECT_TIMEOUT)
-
                     voice_client.play(stream)
                     while voice_client.is_playing():
                         await asyncio.sleep(1)
