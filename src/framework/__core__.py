@@ -15,7 +15,7 @@ import  _discord as discord
 import  datetime
 import  copy
 
-# TODO: Documentation, linting, comments
+# TODO: Events (decorators), test audio, linting
 if __name__ == "__main__":
     raise ImportError("This file is meant as a module and not as a script to run directly. Import it in a sepereate file and run it there")
 
@@ -60,6 +60,7 @@ C_MINUTE_TO_SECOND = 60
 C_RT_AVOID_DELAY     = 1    # Rate limit avoidance delay
 C_TASK_SLEEP_DELAY   = 0.1  # Advertiser task sleep
 C_VC_CONNECT_TIMEOUT = 1    # Timeout of voice channels
+
 #######################################################################
 # Debugging
 #######################################################################
@@ -89,7 +90,6 @@ def trace(message: str,
                                          timestruct.tm_min)
         l_trace = f"{timestamp}\nTrace level: {level.name}\nMessage: {message}\n"
         print(l_trace)
-
 
 #######################################################################
 # Decorators
@@ -555,14 +555,19 @@ class VoiceMESSAGE(BaseMESSAGE):
         else:
             data_to_send = self.data
 
-        if not isinstance(data_to_send, (list, tuple, set)):
-            # Put into a list for easier iteration
-            data_to_send = (data_to_send,)
+        
 
         audio_to_stream = None
-        for element in data_to_send:
-            if type(element) is AUDIO:
-                audio_to_stream = element
+        if data_to_send is not None:
+            """ These block isn't really neccessary as it really only accepts one type and that is AUDIO,
+                but it is written like this to make it analog to the TextMESSAGE parsing code in the send_to_channels"""
+            if not isinstance(data_to_send, (list, tuple, set)):
+                # Put into a list for easier iteration
+                data_to_send = (data_to_send,)
+
+            for element in data_to_send:
+                if type(element) is AUDIO:
+                    audio_to_stream = element
 
         if audio_to_stream is not None:
             errored_channels = []
@@ -570,9 +575,9 @@ class VoiceMESSAGE(BaseMESSAGE):
             voice_client = None
 
             for channel in self.channels:
-                stream = discord.FFmpegOpusAudio(audio_to_stream.filename)
                 try:
                     voice_client = await channel.connect(timeout=C_VC_CONNECT_TIMEOUT)
+                    stream = discord.FFmpegOpusAudio(audio_to_stream.filename)
                     voice_client.play(stream)
                     while voice_client.is_playing():
                         await asyncio.sleep(1)
@@ -582,7 +587,7 @@ class VoiceMESSAGE(BaseMESSAGE):
                 finally:
                     if voice_client is not None:
                         """
-                        Note (TODO): Should remove this in the future. Currently it disconnects because using
+                        Note (TODO): Should remove this in the future. Currently it disconnects instead moving to a different channel, because using
                               .move_to(channel) method causes some sorts of "thread leak" (new threads keep getting created, waiting for pycord to fix this).
                         """
                         await voice_client.disconnect()
@@ -998,7 +1003,6 @@ def initialize() -> bool:
         return False
 
 async def shutdown() -> None:
-    # TODO : Documentation
     """
     Name:   shutdown
     Params: void
