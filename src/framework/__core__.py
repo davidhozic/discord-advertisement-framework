@@ -15,7 +15,7 @@ import  _discord as discord
 import  datetime
 import  copy
 
-# TODO: Events (decorators), test audio, linting
+# TODO: Events (decorators), test audio, test slow mode, test pycord update, linting
 if __name__ == "__main__":
     raise ImportError("This file is meant as a module and not as a script to run directly. Import it in a sepereate file and run it there")
 
@@ -657,7 +657,7 @@ class TextMESSAGE(BaseMESSAGE):
         Info:  Returns a string representation of send data to the channels.
                This is then used as a data_context parameter to the GUILD object.
         """
-                # Generate text
+        # Generate text
         if sent_text is not None:
             tmp_text , sent_text = sent_text, ""
             sent_text += "- ```\n"
@@ -793,23 +793,28 @@ Timestamp:  {f"{ets.day}.{ets.month}.{ets.year}  {ets.hour}:{ets.minute}:{ets.se
 
                     except Exception as ex:
                         # Failed to send message
+                        exit_condition = False
                         if isinstance(ex, discord.HTTPException):
                             if ex.status == 429:    # Rate limit
                                 retry_after = int(ex.response.headers["Retry-After"])  + 1
-                                if ex.code == 20026:    # Slow Mode
+                                if ex.code == 20016:    # Slow Mode
                                     self.force_retry["ENABLED"] = True
                                     self.force_retry["TIME"] = retry_after
+                                    exit_condition = True
                                 else:   # Normal (write) rate limit
                                     # Rate limit but not slow mode -> put the framework to sleep as it won't be able to send any messages globaly
                                     await asyncio.sleep(retry_after)
 
-                        # Immediate exit conditions
-                        # Since python has short circuit evaluation, nothing is wrong with using ex.status and ex.code
-                        if (not isinstance(ex, discord.HTTPException) or
-                            ex.status != 429 or
-                            ex.code == 20026 or
-                            tries == 2
-                        ):
+                            elif ex.status == 404:      # Unknown object
+                                if ex.code == 10008:    # Unknown message
+                                    self.sent_messages[channel.id]  = None
+
+                                exit_condition = True
+                        else:
+                            exit_condition = True
+
+                        # Assume a fail
+                        if exit_condition:
                             errored_channels.append({"channel":channel, "reason":ex})
                             break
 
