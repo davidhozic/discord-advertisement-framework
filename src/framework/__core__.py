@@ -555,8 +555,6 @@ class VoiceMESSAGE(BaseMESSAGE):
         else:
             data_to_send = self.data
 
-        
-
         audio_to_stream = None
         if data_to_send is not None:
             """ These block isn't really neccessary as it really only accepts one type and that is AUDIO,
@@ -576,8 +574,12 @@ class VoiceMESSAGE(BaseMESSAGE):
 
             for channel in self.channels:
                 try:
-                    voice_client = await channel.connect(timeout=C_VC_CONNECT_TIMEOUT)
+                    stream = None
+                    # Try to open file first as FFMpegOpusAudio doesn't raise exception if file does not exist
+                    with open(audio_to_stream.filename, "rb") as reader: pass
                     stream = discord.FFmpegOpusAudio(audio_to_stream.filename)
+                        
+                    voice_client = await channel.connect(timeout=C_VC_CONNECT_TIMEOUT)
                     voice_client.play(stream)
                     while voice_client.is_playing():
                         await asyncio.sleep(1)
@@ -585,6 +587,8 @@ class VoiceMESSAGE(BaseMESSAGE):
                 except Exception as ex:
                     errored_channels.append({"channel":channel, "reason":f"{type(ex).__name__} : {ex}"})
                 finally:
+                    if stream is not None:
+                        stream.cleanup()
                     if voice_client is not None:
                         """
                         Note (TODO): Should remove this in the future. Currently it disconnects instead moving to a different channel, because using
