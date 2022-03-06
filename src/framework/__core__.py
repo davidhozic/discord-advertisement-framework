@@ -2,7 +2,7 @@
     DISCORD ADVERTISEMENT FRAMEWORK (DAF)
     Author      :: David Hozic
     Copyright   :: Copyright (c) 2022 David Hozic
-    Version     :: V1.7.7.1
+    Version     :: V1.7.8
 """
 from    contextlib import suppress
 from    typing import Literal, Union, List, Tuple, Any, Optional
@@ -15,10 +15,8 @@ import  _discord as discord
 import  datetime
 import  copy
 
-# TODO: Events (decorators), test audio, test slow mode, test pycord update, linting
 if __name__ == "__main__":
     raise ImportError("This file is meant as a module and not as a script to run directly. Import it in a sepereate file and run it there")
-
 
 #######################################################################
 # Exports
