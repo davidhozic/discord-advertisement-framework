@@ -2,7 +2,7 @@
     DISCORD ADVERTISEMENT FRAMEWORK (DAF)
     Author      :: David Hozic
     Copyright   :: Copyright (c) 2022 David Hozic
-    Version     :: V1.7.7
+    Version     :: V1.7.8
 """
 from    contextlib import suppress
 from    typing import Literal, Union, List, Tuple, Any, Optional
@@ -15,10 +15,8 @@ import  _discord as discord
 import  datetime
 import  copy
 
-# TODO: Documentation, linting, comments
 if __name__ == "__main__":
     raise ImportError("This file is meant as a module and not as a script to run directly. Import it in a sepereate file and run it there")
-
 
 #######################################################################
 # Exports
@@ -60,6 +58,7 @@ C_MINUTE_TO_SECOND = 60
 C_RT_AVOID_DELAY     = 1    # Rate limit avoidance delay
 C_TASK_SLEEP_DELAY   = 0.1  # Advertiser task sleep
 C_VC_CONNECT_TIMEOUT = 1    # Timeout of voice channels
+
 #######################################################################
 # Debugging
 #######################################################################
@@ -89,7 +88,6 @@ def trace(message: str,
                                          timestruct.tm_min)
         l_trace = f"{timestamp}\nTrace level: {level.name}\nMessage: {message}\n"
         print(l_trace)
-
 
 #######################################################################
 # Decorators
@@ -392,12 +390,15 @@ class BaseMESSAGE:
         """
         return not self.force_retry["ENABLED"] and self.timer.elapsed() > self.period or self.force_retry["ENABLED"] and self.timer.elapsed() > self.force_retry["TIME"]
 
-    def send_to_channels(self) -> Tuple[str, list, list]:
+    def send_to_channels(self) -> Union[Tuple[str, list, list],  None]:
         """
         Name:   send to channels
         Param:  void
         Info:   This function should be implemented in the inherited class
-                and should send the message to all the channels
+                and should send the message to all the channels.
+        Return: The function should return:
+            - stringified (partial) log of sent data, list of successful channels and failed channels
+            - None if message was not ready to be sent (use of a function to ge the data)
         """
         raise NotImplementedError
 
@@ -537,7 +538,7 @@ class VoiceMESSAGE(BaseMESSAGE):
 {sent_audio.filename}
 '''
 
-    async def send_to_channels(self):
+    async def send_to_channels(self) -> Union[Tuple[str, list, list],  None]:
         """
         Name: send_to_channels
         Params: void
@@ -555,14 +556,17 @@ class VoiceMESSAGE(BaseMESSAGE):
         else:
             data_to_send = self.data
 
-        if not isinstance(data_to_send, (list, tuple, set)):
-            # Put into a list for easier iteration
-            data_to_send = (data_to_send,)
-
         audio_to_stream = None
-        for element in data_to_send:
-            if type(element) is AUDIO:
-                audio_to_stream = element
+        if data_to_send is not None:
+            """ These block isn't really neccessary as it really only accepts one type and that is AUDIO,
+                but it is written like this to make it analog to the TextMESSAGE parsing code in the send_to_channels"""
+            if not isinstance(data_to_send, (list, tuple, set)):
+                # Put into a list for easier iteration
+                data_to_send = (data_to_send,)
+
+            for element in data_to_send:
+                if type(element) is AUDIO:
+                    audio_to_stream = element
 
         if audio_to_stream is not None:
             errored_channels = []
@@ -570,8 +574,12 @@ class VoiceMESSAGE(BaseMESSAGE):
             voice_client = None
 
             for channel in self.channels:
-                stream = discord.FFmpegOpusAudio(audio_to_stream.filename)
                 try:
+                    stream = None
+                    # Try to open file first as FFMpegOpusAudio doesn't raise exception if file does not exist
+                    with open(audio_to_stream.filename, "rb") as reader: pass
+                    stream = discord.FFmpegOpusAudio(audio_to_stream.filename)
+                        
                     voice_client = await channel.connect(timeout=C_VC_CONNECT_TIMEOUT)
                     voice_client.play(stream)
                     while voice_client.is_playing():
@@ -580,15 +588,18 @@ class VoiceMESSAGE(BaseMESSAGE):
                 except Exception as ex:
                     errored_channels.append({"channel":channel, "reason":f"{type(ex).__name__} : {ex}"})
                 finally:
+                    if stream is not None:
+                        stream.cleanup()
                     if voice_client is not None:
                         """
-                        Note (TODO): Should remove this in the future. Currently it disconnects because using
+                        Note (TODO): Should remove this in the future. Currently it disconnects instead moving to a different channel, because using
                               .move_to(channel) method causes some sorts of "thread leak" (new threads keep getting created, waiting for pycord to fix this).
                         """
                         await voice_client.disconnect()
 
-        return self.stringify_sent_data(audio_to_stream), succeded_channels, errored_channels
-
+            return self.stringify_sent_data(audio_to_stream), succeded_channels, errored_channels
+        
+        return None
 
 class TextMESSAGE(BaseMESSAGE):
     """
@@ -652,7 +663,7 @@ class TextMESSAGE(BaseMESSAGE):
         Info:  Returns a string representation of send data to the channels.
                This is then used as a data_context parameter to the GUILD object.
         """
-                # Generate text
+        # Generate text
         if sent_text is not None:
             tmp_text , sent_text = sent_text, ""
             sent_text += "- ```\n"
@@ -708,7 +719,7 @@ Timestamp:  {f"{ets.day}.{ets.month}.{ets.year}  {ets.hour}:{ets.minute}:{ets.se
 ## Files:
 {sent_files}
 '''
-    async def send_to_channels(self):
+    async def send_to_channels(self) -> Union[Tuple[str, list, list],  None]:
         """
         Name: send_to_channels
         Params: void
@@ -788,29 +799,35 @@ Timestamp:  {f"{ets.day}.{ets.month}.{ets.year}  {ets.hour}:{ets.minute}:{ets.se
 
                     except Exception as ex:
                         # Failed to send message
+                        exit_condition = False
                         if isinstance(ex, discord.HTTPException):
                             if ex.status == 429:    # Rate limit
                                 retry_after = int(ex.response.headers["Retry-After"])  + 1
-                                if ex.code == 20026:    # Slow Mode
+                                if ex.code == 20016:    # Slow Mode
                                     self.force_retry["ENABLED"] = True
                                     self.force_retry["TIME"] = retry_after
+                                    exit_condition = True
                                 else:   # Normal (write) rate limit
                                     # Rate limit but not slow mode -> put the framework to sleep as it won't be able to send any messages globaly
                                     await asyncio.sleep(retry_after)
 
-                        # Immediate exit conditions
-                        # Since python has short circuit evaluation, nothing is wrong with using ex.status and ex.code
-                        if (not isinstance(ex, discord.HTTPException) or
-                            ex.status != 429 or
-                            ex.code == 20026 or
-                            tries == 2
-                        ):
+                            elif ex.status == 404:      # Unknown object
+                                if ex.code == 10008:    # Unknown message
+                                    self.sent_messages[channel.id]  = None
+
+                                exit_condition = True
+                        else:
+                            exit_condition = True
+
+                        # Assume a fail
+                        if exit_condition:
                             errored_channels.append({"channel":channel, "reason":ex})
                             break
 
-        # Return sent data + failed and successful function for logging purposes
-        return self.stringify_sent_data(text_to_send, embed_to_send, files_to_send), succeded_channels, errored_channels
+            # Return sent data + failed and successful function for logging purposes
+            return self.stringify_sent_data(text_to_send, embed_to_send, files_to_send), succeded_channels, errored_channels
 
+        return None
 
 class GUILD:
     """
@@ -858,10 +875,10 @@ class GUILD:
         for message in getattr(self, attr_message_list):
             if message.is_ready():
                 message_ret = await message.send_to_channels()
-                """xxxMESSAGE.send_to_channels() will always return (partial) trace,
-                because it does not check if enough time has elapsed, that is done in the .is_ready() function, which is why
-                it is enough to only check self._generate_log which is equal to the user passed parameter when creating the GUILD object"""
-                if self._generate_log:
+                """message.send_to_channels() returns either partial log of sent message,
+                succeeded and failed channels or it returns the None object if no data
+                was ready to be sent (user function was used to get the data and it returned None)"""
+                if self._generate_log and message_ret is not None:
                     self.generate_log(*message_ret)
 
     def generate_log(self,
@@ -997,8 +1014,8 @@ def initialize() -> bool:
         trace("No guilds could be parsed", TraceLEVELS.ERROR)
         return False
 
+
 async def shutdown() -> None:
-    # TODO : Documentation
     """
     Name:   shutdown
     Params: void
@@ -1006,6 +1023,7 @@ async def shutdown() -> None:
     Info:   Stops the framework
     """
     await m_client.close()
+
 
 def get_client() -> CLIENT:
     """
@@ -1043,12 +1061,7 @@ def run(token : str,
            m_debug,\
            m_client
 
-    client_intents = discord.Intents.none()
-    client_intents.guilds = True
-    client_intents.typing = True
-    client_intents.voice_states = True
-
-    m_client = CLIENT(intents=client_intents)
+    m_client = CLIENT()
     m_server_log_output_path = server_log_output    ## Path to folder where to crete server logs
     m_debug = debug                                 ## Print trace messages to the console for debugging purposes
     m_server_list = server_list                     ## List of guild objects to iterate thru in the advertiser task

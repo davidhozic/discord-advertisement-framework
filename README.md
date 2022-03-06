@@ -1,4 +1,7 @@
 # **Discord Advertisement Framework (Bot)**
+[![Downloads](https://pepy.tech/badge/discord-advert-framework)](https://pepy.tech/project/discord-advert-framework) [![Downloads](https://pepy.tech/badge/discord-advert-framework/month)](https://pepy.tech/project/discord-advert-framework)
+[![PyPI](https://img.shields.io/pypi/v/discord-advert-framework)](https://pypi.org/project/Discord-Advert-Framework/)
+
 ## **Table of contents**
 - [**Discord Advertisement Framework (Bot)**](#discord-advertisement-framework-bot)
   - [**Table of contents**](#table-of-contents)
@@ -231,7 +234,13 @@ The **TextMESSAGE** and **VoiceMESSAGE** object containts parameters which descr
 -  **Start Period** , **End Period** (start_period, end_period) - These 2 parameters specify the period on which the messages will be sent.
     - **Start Period** can be either:
       - None - Messages will be sent on intervals specified by **End period**,
-      - Integer  >= 0 - Messages will be sent on intervals **randomly** chosen between **<u>Start period** and **End period</u>**, where the randomly chosen intervals will be re-randomized after each sent message.<br><br>
+      - Integer  >= 0 - Messages will be sent on intervals **randomly** chosen between **<u>Start period** and **End period</u>**, where the randomly chosen intervals will be re-randomized after each sent message.
+    
+    | NOTE                                                                                                                                                                |
+    | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+    | The period for VoiceMESSAGE dictates the period of CONNECTING.                                                                                                      |
+    | If your period is 10 second and your audio file is 5 seconds long, then the between messages will be 5 seconds and time between connecting to VC will be 10 seconds |
+    <br>
 
 -  **Data** (data) - The data parameter is the actual data that will be sent using discord's API. The **data types** of this parameter can be: 
    - for **TextMESSAGE**:
@@ -269,8 +278,9 @@ The **TextMESSAGE** and **VoiceMESSAGE** object containts parameters which descr
                            data=function_name2(parameter_1, parameter_2),
                            ...)                                                
            ```
-           | **NOTE 1**:                                                                                                                                                                                                                                                                                                                                                                                                                   |
-           | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+           
+           | **NOTE 1**:                                                                                                                                                                                                                                                                                                                                                                                                                       |
+           | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
            | When you use the framework.data_function decorator on the function, it returns a special class that is used by the framework to get data,<br> so consider making another function with the same definition and a different name or consider making this function to retreive data only.<br> Because the decorator returns a class and assigns it to the function name, you can no longer use this function as a regular function, |
                                    
            | **NOTE 2**:                                                                                                                                                                           |
