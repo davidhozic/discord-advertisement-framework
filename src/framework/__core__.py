@@ -390,12 +390,15 @@ class BaseMESSAGE:
         """
         return not self.force_retry["ENABLED"] and self.timer.elapsed() > self.period or self.force_retry["ENABLED"] and self.timer.elapsed() > self.force_retry["TIME"]
 
-    def send_to_channels(self) -> Tuple[str, list, list]:
+    def send_to_channels(self) -> Union[Tuple[str, list, list],  None]:
         """
         Name:   send to channels
         Param:  void
         Info:   This function should be implemented in the inherited class
-                and should send the message to all the channels
+                and should send the message to all the channels.
+        Return: The function should return:
+            - stringified (partial) log of sent data, list of successful channels and failed channels
+            - None if message was not ready to be sent (use of a function to ge the data)
         """
         raise NotImplementedError
 
@@ -535,7 +538,7 @@ class VoiceMESSAGE(BaseMESSAGE):
 {sent_audio.filename}
 '''
 
-    async def send_to_channels(self):
+    async def send_to_channels(self) -> Union[Tuple[str, list, list],  None]:
         """
         Name: send_to_channels
         Params: void
@@ -594,8 +597,9 @@ class VoiceMESSAGE(BaseMESSAGE):
                         """
                         await voice_client.disconnect()
 
-        return self.stringify_sent_data(audio_to_stream), succeded_channels, errored_channels
-
+            return self.stringify_sent_data(audio_to_stream), succeded_channels, errored_channels
+        
+        return None
 
 class TextMESSAGE(BaseMESSAGE):
     """
@@ -715,7 +719,7 @@ Timestamp:  {f"{ets.day}.{ets.month}.{ets.year}  {ets.hour}:{ets.minute}:{ets.se
 ## Files:
 {sent_files}
 '''
-    async def send_to_channels(self):
+    async def send_to_channels(self) -> Union[Tuple[str, list, list],  None]:
         """
         Name: send_to_channels
         Params: void
@@ -820,9 +824,10 @@ Timestamp:  {f"{ets.day}.{ets.month}.{ets.year}  {ets.hour}:{ets.minute}:{ets.se
                             errored_channels.append({"channel":channel, "reason":ex})
                             break
 
-        # Return sent data + failed and successful function for logging purposes
-        return self.stringify_sent_data(text_to_send, embed_to_send, files_to_send), succeded_channels, errored_channels
+            # Return sent data + failed and successful function for logging purposes
+            return self.stringify_sent_data(text_to_send, embed_to_send, files_to_send), succeded_channels, errored_channels
 
+        return None
 
 class GUILD:
     """
@@ -870,10 +875,10 @@ class GUILD:
         for message in getattr(self, attr_message_list):
             if message.is_ready():
                 message_ret = await message.send_to_channels()
-                """xxxMESSAGE.send_to_channels() will always return (partial) trace,
-                because it does not check if enough time has elapsed, that is done in the .is_ready() function, which is why
-                it is enough to only check self._generate_log which is equal to the user passed parameter when creating the GUILD object"""
-                if self._generate_log:
+                """message.send_to_channels() returns either partial log of sent message,
+                succeeded and failed channels or it returns the None object if no data
+                was ready to be sent (user function was used to get the data and it returned None)"""
+                if self._generate_log and message_ret is not None:
                     self.generate_log(*message_ret)
 
     def generate_log(self,
@@ -1009,6 +1014,7 @@ def initialize() -> bool:
         trace("No guilds could be parsed", TraceLEVELS.ERROR)
         return False
 
+
 async def shutdown() -> None:
     """
     Name:   shutdown
@@ -1017,6 +1023,7 @@ async def shutdown() -> None:
     Info:   Stops the framework
     """
     await m_client.close()
+
 
 def get_client() -> CLIENT:
     """
@@ -1054,12 +1061,7 @@ def run(token : str,
            m_debug,\
            m_client
 
-    client_intents = discord.Intents.none()
-    client_intents.guilds = True
-    client_intents.typing = True
-    client_intents.voice_states = True
-
-    m_client = CLIENT(intents=client_intents)
+    m_client = CLIENT()
     m_server_log_output_path = server_log_output    ## Path to folder where to crete server logs
     m_debug = debug                                 ## Print trace messages to the console for debugging purposes
     m_server_list = server_list                     ## List of guild objects to iterate thru in the advertiser task
