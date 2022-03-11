@@ -2,7 +2,7 @@
     DISCORD ADVERTISEMENT FRAMEWORK (DAF)
     Author      :: David Hozic
     Copyright   :: Copyright (c) 2022 David Hozic
-    Version     :: V1.7.8
+    Version     :: V1.7.9
 """
 from    contextlib import suppress
 from    typing import Literal, Union, List, Tuple, Any, Optional
