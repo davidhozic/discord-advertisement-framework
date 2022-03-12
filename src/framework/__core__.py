@@ -15,7 +15,9 @@ import  _discord as discord
 import  datetime
 import  copy
 
-# TODO: Linting, write documentation for USER object, split into multiple modules
+from _discord import user
+
+# TODO: Linting, write documentation for USER object, split into multiple modules, send method for DirectMESSAGE
 
 if __name__ == "__main__":
     raise ImportError("This file is meant as a module and not as a script to run directly. Import it in a sepereate file and run it there")
@@ -355,10 +357,8 @@ class BaseMESSAGE:
         "randomized_time",
         "period",
         "random_range",
-        "channels",
         "timer",
-        "force_retry",
-        "sent_messages"
+        "force_retry"
     )
 
     """
@@ -368,11 +368,9 @@ class BaseMESSAGE:
     """
     __valid_data_types__ = {}
 
-
     def __init__(self,
                 start_period : Union[float,None],
                 end_period : float,
-                channel_ids : List[int],
                 start_now : bool=True):
 
         if start_period is None:            # If start_period is none -> period will not be randomized
@@ -383,10 +381,9 @@ class BaseMESSAGE:
             self.random_range = (start_period, end_period)
             self.period = random.randrange(*self.random_range)  # This will happen after each sending as well
 
-        self.channels = channel_ids
         self.timer = TIMER()
         self.force_retry = {"ENABLED" : start_now, "TIME" : 0}  # This is used in both TextMESSAGE and VoiceMESSAGE for compatability purposes
-        self.sent_messages = {ch_id : None for ch_id in channel_ids}
+        
 
     def is_ready(self) -> bool:
         """
@@ -396,58 +393,19 @@ class BaseMESSAGE:
         """
         return not self.force_retry["ENABLED"] and self.timer.elapsed() > self.period or self.force_retry["ENABLED"] and self.timer.elapsed() > self.force_retry["TIME"]
 
-    def send_to_channels(self) -> Union[Tuple[str, list, list],  None]:
+    def send(self):
         """
         Name:   send to channels
         Param:  void
         Info:   This function should be implemented in the inherited class
-                and should send the message to all the channels.
-        Return: The function should return:
-            - stringified (partial) log of sent data, list of successful channels and failed channels
-            - None if message was not ready to be sent (use of a function to ge the data)
-        """
+                and should send the message to all the channels."""
         raise NotImplementedError
     
-    async def fetch_channel(self,
-                            id: int):
-        """ ~ fetch_channel ~ 
-            Returns a channel object that will be used to send messages.
-            This should be implemented in inherited classes."""
+    async def initialize_channels(self,
+                                  options) -> bool:
         raise NotImplementedError
-
-    async def initialize(self) -> bool:
-        """
-        Name:   initialize
-        Param:
-            - guild_name: str  ::   Name of the guild that owns the channels.
-                                    This is only used for trace messages for easier debugging.
-            - guild_id: int    ::   Snowflake id of the guild that owns the message channels.
-                                    This parameter is used to check if the channels really belong to this guild and not some other,
-                                    and is also used for trace messages for easier debugging of incorrectly passed parameters."""
-
-        # Remove duplicated channel ids
-        for channel_id in self.channels[:]:
-            if self.channels.count(channel_id) > 1:
-                trace(f"Duplicated channel ID: {channel_id}", TraceLEVELS.WARNING)
-                self.channels.remove(channel_id)
-        # Transform channel ids into pycord channel objects
-        channel_i = 0
-        while channel_i < len(self.channels):
-            """
-            Replace the channel IDs with channel objects.
-            while loop is used as I don't want the index to increase every iteration
-            """
-            channel_id = self.channels[channel_i]
-            self.channels[channel_i] = await self.fetch_channel(channel_id)
-            channel = self.channels[channel_i]
-
-            if channel is None:
-                # Unable to find the channel objects, ergo remove.
-                trace(f"Unable to get channel from id: {channel_id} (Does not exist - Incorrect ID?) in GUILD:", TraceLEVELS.WARNING)
-                self.channels.remove(channel)
-            else:
-                channel_i += 1
-
+    
+    async def initialize_data(self) -> bool:
         # Check for correct data types of the MESSAGE.data parameter
         if not isinstance(self.data, FunctionBaseCLASS):
             """
@@ -481,11 +439,25 @@ class BaseMESSAGE:
                     else:
                         trace(f"INVALID DATA PARAMETER PASSED!\nArgument is of type : {type(data).__name__}\nSee README.md for allowed data types", TraceLEVELS.WARNING)
                         self.data.remove(data)
+            
+            return len(self.data) > 0
 
-        # Check if any data params are left and remove the message object if not
-        if (not len(self.channels) or
-            not isinstance(self.data, FunctionBaseCLASS) and not len(self.data)):   # if isinstance FunctionBaseCLASS, then it has no len, and because of short-circuit, len will not be read
-            # Unable to parse the message, return False to let the guild know it must be removed
+        return True
+
+    async def initialize(self, **options) -> bool:
+        """
+        Name:   initialize
+        Param:
+            - guild_name: str  ::   Name of the guild that owns the channels.
+                                    This is only used for trace messages for easier debugging.
+            - guild_id: int    ::   Snowflake id of the guild that owns the message channels.
+                                    This parameter is used to check if the channels really belong to this guild and not some other,
+                                    and is also used for trace messages for easier debugging of incorrectly passed parameters."""
+
+        if not await self.initialize_channels(options):
+            return False
+
+        if not await self.initialize_data():
             return False
 
         return True
@@ -528,12 +500,28 @@ class VoiceMESSAGE(BaseMESSAGE):
                  channel_ids: List[int],
                  start_now: bool = True):
 
-        super().__init__(start_period, end_period, channel_ids, start_now)
+        super().__init__(start_period, end_period, start_now)
         self.data = data
+        self.channels = channel_ids
+    
+    async def initialize_channels(self, options) -> bool:
+        ch_i = 0
+        while ch_i < len(self.channels):
+            channel_id = self.channels[ch_i]
+            channel = m_client.get_channel(channel_id)
 
-    async def fetch_channel(self,
-                            id: int) -> discord.VoiceChannel:
-        return m_client.get_channel(id)
+            if type(channel) is not discord.VoiceChannel:
+                trace(f"TextMESSAGE object got id for {type(channel).__name__}, but was expecting {discord.VoiceChannel.__name__}", TraceLEVELS.ERROR)
+                channel = None
+
+            self.channels[ch_i] = channel
+
+            if channel is None:
+                self.channels.remove(channel)
+            else:
+                ch_i += 1
+
+        return len(self.channels) > 0
 
     def stringify_sent_data (self,
                             sent_audio: AUDIO):
@@ -548,9 +536,9 @@ class VoiceMESSAGE(BaseMESSAGE):
 {sent_audio.filename}
 '''
 
-    async def send_to_channels(self) -> Union[Tuple[str, list, list],  None]:
+    async def send(self) -> Union[Tuple[str, list, list],  None]:
         """
-        Name: send_to_channels
+        Name: send
         Params: void
         info: sends messages to all the channels
         """
@@ -569,7 +557,7 @@ class VoiceMESSAGE(BaseMESSAGE):
         audio_to_stream = None
         if data_to_send is not None:
             """ These block isn't really neccessary as it really only accepts one type and that is AUDIO,
-                but it is written like this to make it analog to the TextMESSAGE parsing code in the send_to_channels"""
+                but it is written like this to make it analog to the TextMESSAGE parsing code in the send"""
             if not isinstance(data_to_send, (list, tuple, set)):
                 # Put into a list for easier iteration
                 data_to_send = (data_to_send,)
@@ -607,7 +595,7 @@ class VoiceMESSAGE(BaseMESSAGE):
                         """
                         await voice_client.disconnect()
 
-            return self.stringify_sent_data(audio_to_stream), succeded_channels, errored_channels
+            return {"data_context": self.stringify_sent_data(audio_to_stream), "succeeded_ch": succeded_channels, "failed_ch" : errored_channels}
         
         return None
 
@@ -658,13 +646,30 @@ class TextMESSAGE(BaseMESSAGE):
                  channel_ids: List[int],
                  mode: Literal["send", "edit", "clear-send"] = "send",
                  start_now: bool = True):
-        super().__init__(start_period, end_period, channel_ids, start_now)
+        super().__init__(start_period, end_period, start_now)
         self.data = data
         self.mode = mode
+        self.channels = channel_ids
+        self.sent_messages = {ch_id : None for ch_id in channel_ids}
 
-    async def fetch_channel(self,
-                            id: int) -> discord.TextChannel:
-        return m_client.get_channel(id)
+    async def initialize_channels(self, options) -> bool:
+        ch_i = 0
+        while ch_i < len(self.channels):
+            channel_id = self.channels[ch_i]
+            channel = m_client.get_channel(channel_id)
+
+            if type(channel) is not discord.TextChannel:
+                trace(f"TextMESSAGE object got id for {type(channel).__name__}, but was expecting {discord.TextChannel.__name__}", TraceLEVELS.ERROR)
+                channel = None
+
+            self.channels[ch_i] = channel
+
+            if channel is None:
+                self.channels.remove(channel)
+            else:
+                ch_i += 1
+
+        return len(self.channels) > 0
 
     def stringify_sent_data (self,
                             sent_text : str,
@@ -730,11 +735,11 @@ Timestamp:  {f"{ets.day}.{ets.month}.{ets.year}  {ets.hour}:{ets.minute}:{ets.se
 {sent_embed}
 ***
 ## Files:
-{sent_files}
-'''
-    async def send_to_channels(self) -> Union[Tuple[str, list, list],  None]:
+{sent_files}'''
+
+    async def send(self) -> Union[Tuple[str, list, list],  None]:
         """
-        Name: send_to_channels
+        Name: send
         Params: void
         info: sends messages to all the channels
         """
@@ -840,12 +845,12 @@ Timestamp:  {f"{ets.day}.{ets.month}.{ets.year}  {ets.hour}:{ets.minute}:{ets.se
                             break
 
             # Return sent data + failed and successful function for logging purposes
-            return self.stringify_sent_data(text_to_send, embed_to_send, files_to_send), succeded_channels, errored_channels
+            return {"data_context": self.stringify_sent_data(text_to_send, embed_to_send, files_to_send), "succeeded_ch": succeded_channels, "failed_ch" : errored_channels}
 
         return None
 
 
-class DirectMESSAGE(TextMESSAGE):
+class DirectMESSAGE(BaseMESSAGE):
     """
     ~  DirectMESSAGE  ~
     The DirectMESSAGE class is used for creating objects that reperesent a message that will be sent
@@ -858,7 +863,7 @@ class DirectMESSAGE(TextMESSAGE):
         "period",
         "random_range",
         "data",
-        "channels",
+        "channel",
         "timer",
         "mode",
         "force_retry",
@@ -869,27 +874,10 @@ class DirectMESSAGE(TextMESSAGE):
                  start_period: Union[float, None],
                  end_period: float,
                  data: Union[str, EMBED, FILE, List[Union[str, EMBED, FILE]]], 
-                 mode: Literal["send", "edit", "clear-send"] = "send", start_now: bool = True):
-        super().__init__(start_period, end_period,
-                         data,
-                         [],                # The channel_ids parameter empty here since, this is obtained from USER object
-                         mode, start_now)
+                 mode: Literal["send", "edit", "clear-send"] = "send",
+                 start_now: bool = True):
+        super().__init__(start_period, end_period,start_now)
     
-    async def fetch_channel(self,
-                            id: int):
-        user = m_client.get_user(id)
-        channel = None
-        if user is not None:
-            channel = await user.create_dm()
-        return channel
-
-    async def initialize(self,
-                         user_id: int) -> bool:
-        """The channel will be obtained by fetch_channel which
-        in this case requires user ID as the channel id."""
-        self.channels.append(user_id)
-        return await super().initialize()
-
 
 class BaseGUILD:
     """ ~ BaseGUILD ~
@@ -905,25 +893,29 @@ class BaseGUILD:
         self.apiobject = id
         self._generate_log = generate_log
     
-    def get_log_guild_context(self) -> str:
+    def get_log_guild_context(self, **options) -> str:
         raise NotImplementedError
 
     async def initialize(self) -> bool:
         raise NotImplementedError
     
+    async def advertise(self,
+                        attr_name: str=None):
+        for message in getattr(self, attr_name):
+            if message.is_ready():
+                message_ret = await message.send()
+                if self._generate_log and message_ret is not None:
+                    self.generate_log(message_ret)
+    
     def generate_log(self,
-                     data_context: str,
-                     succeeded_ch: list,
-                     failed_ch: List[dict]) -> str:
+                     options) -> str:
         """
         Name:   generate_log
         Param:
-            - data_context  - str representation of sent data, which is return data of xxxMESSAGE.send_to_channels()
-            - succeeded_ch  - list of discord.xxxChannel objects that represent channels that message was successfuly sent into
-            - failed_ch     - list of dictionaries where these dictionaries have keys "channel" which's value is discord.xxxChannel object
-                              and "reason" which's value is the Exception of why sending failed.
+            - data_context  - str representation of sent data, which is return data of xxxMESSAGE.send()
         Info:   Generates a log of a xxxxMESSAGE send attempt
         """
+        data_context = options.pop("data_context")
         # Generate timestamp
         timestruct = time.localtime()
         timestamp = "{:02d}.{:02d}.{:04d} {:02d}:{:02d}".format(timestruct.tm_mday,
@@ -931,16 +923,10 @@ class BaseGUILD:
                                                                 timestruct.tm_year,
                                                                 timestruct.tm_hour,
                                                                 timestruct.tm_min)
-        # Generate channel log
-        succeeded_ch = "[\n" + "".join(f"\t\t{ch}(ID: {ch.id}),\n" for ch in succeeded_ch).rstrip(",\n") + "\n\t]" if len(succeeded_ch) else "[]"
-        if len(failed_ch):
-            tmp_chs, failed_ch = failed_ch, "["
-            for ch in tmp_chs:
-                ch_reason = str(ch["reason"]).replace("\n", "; ")
-                failed_ch += f"\n\t\t{ch['channel']}(ID: {ch['channel'].id}) >>> [ {ch_reason} ],"
-            failed_ch = failed_ch.rstrip(",") + "\n\t]"
-        else:
-            failed_ch = "[]"
+        guild_context = ""                                                                
+        for x in self.get_log_guild_context(**options).splitlines():
+            guild_context += f"\t{x}\n"
+        guild_context = guild_context.rstrip()
 
         appender_data = f"""
 # MESSAGE LOG:
@@ -948,9 +934,7 @@ class BaseGUILD:
 ***
 ## Other data:
 -   ```
-    {self.get_log_guild_context()}
-    Succeeded in channels: {succeeded_ch}
-    Failed in channels: {failed_ch}
+{guild_context}
     Timestamp: {timestamp}
     ```
 ***
@@ -977,6 +961,7 @@ class USER(BaseGUILD):
     __slots__ = (
         "apiobject",
         "t_messages",
+        "vc_messages",
         "_generate_log",
         "log_file_name"
     )
@@ -986,10 +971,16 @@ class USER(BaseGUILD):
                  messages_to_send: List[DirectMESSAGE],
                  generate_log: bool=False):
         self.t_messages = messages_to_send
+        self.vc_messages = []
         return super().__init__(user_id, generate_log)
     
-    def get_log_guild_context(self) -> str:
-        return f"User: {self.apiobject.name}#{self.apiobject.discriminator}"
+    def get_log_guild_context(self,
+                              **options) -> str:
+        return \
+f"""\
+User: {self.apiobject.name}#{self.apiobject.discriminator}
+Success: {options.pop("success")}
+"""
 
     async def initialize(self) -> bool:
         user_id = self.apiobject
@@ -998,7 +989,7 @@ class USER(BaseGUILD):
             self.log_file_name = "".join(char if char not in C_FILE_NAME_FORBIDDEN_CHAR else "#" for char in f"{self.apiobject.display_name}#{self.apiobject.discriminator}") + ".md"
             
             for message in self.t_messages[:]:
-                if not await message.initialize(user_id):
+                if not await message.initialize(channel=await self.apiobject.create_dm()):
                     self.t_messages.remove(message)
             
             if not len(self.t_messages):
@@ -1007,20 +998,6 @@ class USER(BaseGUILD):
             return True
 
         return False
-
-    async def advertise(self,
-                        attr_name: str=None):
-        """
-        Name:   advertise
-        """
-        for message in getattr(self, attr_name):
-            if message.is_ready():
-                message_ret = await message.send_to_channels()
-                """message.send_to_channels() returns either partial log of sent message,
-                succeeded and failed channels or it returns the None object if no data
-                was ready to be sent (user function was used to get the data and it returned None)"""
-                if self._generate_log and message_ret is not None:
-                    self.generate_log(*message_ret)
 
 
 class GUILD(BaseGUILD):
@@ -1054,22 +1031,26 @@ class GUILD(BaseGUILD):
                 self.vc_messages.append(message)
         return super().__init__(guild_id, generate_log)
 
-    def get_log_guild_context(self) -> str:
-        return f"Guild: {self.apiobject.name}(ID: {self.apiobject.id})"
-
-    async def advertise(self,
-                        attr_name: str):
-        """
-        Name:   advertise
-        """
-        for message in getattr(self, attr_name):
-            if message.is_ready():
-                message_ret = await message.send_to_channels()
-                """message.send_to_channels() returns either partial log of sent message,
-                succeeded and failed channels or it returns the None object if no data
-                was ready to be sent (user function was used to get the data and it returned None)"""
-                if self._generate_log and message_ret is not None:
-                    self.generate_log(*message_ret)
+    def get_log_guild_context(self,
+                              **options) -> str:
+        # Generate channel log
+        succeeded_ch = options.pop("succeeded_ch")
+        failed_ch = options.pop("failed_ch")
+        succeeded_ch = "[\n" + "".join(f"\t\t{ch}(ID: {ch.id}),\n" for ch in succeeded_ch).rstrip(",\n") + "\n\t]" if len(succeeded_ch) else "[]"
+        if len(failed_ch):
+            tmp_chs, failed_ch = failed_ch, "["
+            for ch in tmp_chs:
+                ch_reason = str(ch["reason"]).replace("\n", "; ")
+                failed_ch += f"\n\t\t{ch['channel']}(ID: {ch['channel'].id}) >>> [ {ch_reason} ],"
+            failed_ch = failed_ch.rstrip(",") + "\n\t]"
+        else:
+            failed_ch = "[]"
+        return \
+f"""\
+Guild: {self.apiobject.name}(ID: {self.apiobject.id})
+Successful channels: {succeeded_ch}
+Failed channels: {failed_ch}
+"""
 
     async def initialize(self) -> bool:
         """
