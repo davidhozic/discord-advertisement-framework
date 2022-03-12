@@ -15,6 +15,8 @@ import  _discord as discord
 import  datetime
 import  copy
 
+# TODO: Linting, write documentation for USER object, split into multiple modules
+
 if __name__ == "__main__":
     raise ImportError("This file is meant as a module and not as a script to run directly. Import it in a sepereate file and run it there")
 
@@ -27,8 +29,10 @@ __all__ = (    # __all__ variable dictates which objects get imported when using
     "C_HOUR_TO_SECOND",
     "C_MINUTE_TO_SECOND",
     "GUILD",
+    "USER",
     "TextMESSAGE",
     "VoiceMESSAGE",
+    "DirectMESSAGE",
     "AUDIO",
     "FILE",
     "EMBED",
@@ -59,6 +63,7 @@ C_RT_AVOID_DELAY     = 1    # Rate limit avoidance delay
 C_TASK_SLEEP_DELAY   = 0.1  # Advertiser task sleep
 C_VC_CONNECT_TIMEOUT = 1    # Timeout of voice channels
 
+C_FILE_NAME_FORBIDDEN_CHAR = ('<','>','"','/','\\','|','?','*',":")
 #######################################################################
 # Debugging
 #######################################################################
@@ -193,7 +198,7 @@ class CLIENT(discord.Client):
         """
         trace(f"Logged in as {self.user}", TraceLEVELS.NORMAL)
 
-        if initialize():
+        if await initialize():
             # Initialization was successful, so create the advertiser task and start advertising.
             trace("Successful initialization!",TraceLEVELS.NORMAL)
             asyncio.gather(
@@ -363,6 +368,7 @@ class BaseMESSAGE:
     """
     __valid_data_types__ = {}
 
+
     def __init__(self,
                 start_period : Union[float,None],
                 end_period : float,
@@ -401,10 +407,15 @@ class BaseMESSAGE:
             - None if message was not ready to be sent (use of a function to ge the data)
         """
         raise NotImplementedError
+    
+    async def fetch_channel(self,
+                            id: int):
+        """ ~ fetch_channel ~ 
+            Returns a channel object that will be used to send messages.
+            This should be implemented in inherited classes."""
+        raise NotImplementedError
 
-    def initialize( self,
-                    guild_name: str,
-                    guild_id: int) -> bool:
+    async def initialize(self) -> bool:
         """
         Name:   initialize
         Param:
@@ -417,7 +428,7 @@ class BaseMESSAGE:
         # Remove duplicated channel ids
         for channel_id in self.channels[:]:
             if self.channels.count(channel_id) > 1:
-                trace(f"Guild \"{guild_name}\" (ID: {guild_id}) has duplicated channel (ID: {channel_id})", TraceLEVELS.WARNING)
+                trace(f"Duplicated channel ID: {channel_id}", TraceLEVELS.WARNING)
                 self.channels.remove(channel_id)
         # Transform channel ids into pycord channel objects
         channel_i = 0
@@ -427,17 +438,12 @@ class BaseMESSAGE:
             while loop is used as I don't want the index to increase every iteration
             """
             channel_id = self.channels[channel_i]
-            self.channels[channel_i] = m_client.get_channel(channel_id)
+            self.channels[channel_i] = await self.fetch_channel(channel_id)
             channel = self.channels[channel_i]
 
             if channel is None:
                 # Unable to find the channel objects, ergo remove.
-                trace(f"Unable to get channel from id: {channel_id} (Does not exist - Incorrect ID?) in GUILD: \"{guild_name}\" (ID: {guild_id})", TraceLEVELS.WARNING)
-                self.channels.remove(channel)
-
-            elif channel.guild.id != guild_id:
-                # The channel is not part of this guild, ergo remove.
-                trace(f"Guild \"{guild_name}\" (ID: {guild_id}) has no channel \"{channel.name}\" (ID: {channel_id})", TraceLEVELS.WARNING)
+                trace(f"Unable to get channel from id: {channel_id} (Does not exist - Incorrect ID?) in GUILD:", TraceLEVELS.WARNING)
                 self.channels.remove(channel)
             else:
                 channel_i += 1
@@ -473,7 +479,7 @@ class BaseMESSAGE:
                         self.data.clear()
                         break
                     else:
-                        trace(f"INVALID DATA PARAMETER PASSED!\nArgument is of type : {type(data).__name__}\nSee README.md for allowed data types\nGUILD: {guild_name} (ID: {guild_id})", TraceLEVELS.WARNING)
+                        trace(f"INVALID DATA PARAMETER PASSED!\nArgument is of type : {type(data).__name__}\nSee README.md for allowed data types", TraceLEVELS.WARNING)
                         self.data.remove(data)
 
         # Check if any data params are left and remove the message object if not
@@ -524,6 +530,10 @@ class VoiceMESSAGE(BaseMESSAGE):
 
         super().__init__(start_period, end_period, channel_ids, start_now)
         self.data = data
+
+    async def fetch_channel(self,
+                            id: int) -> discord.VoiceChannel:
+        return m_client.get_channel(id)
 
     def stringify_sent_data (self,
                             sent_audio: AUDIO):
@@ -652,6 +662,9 @@ class TextMESSAGE(BaseMESSAGE):
         self.data = data
         self.mode = mode
 
+    async def fetch_channel(self,
+                            id: int) -> discord.TextChannel:
+        return m_client.get_channel(id)
 
     def stringify_sent_data (self,
                             sent_text : str,
@@ -816,6 +829,8 @@ Timestamp:  {f"{ets.day}.{ets.month}.{ets.year}  {ets.hour}:{ets.minute}:{ets.se
                                     self.sent_messages[channel.id]  = None
 
                                 exit_condition = True
+                            else:
+                                exit_condition = True
                         else:
                             exit_condition = True
 
@@ -829,58 +844,73 @@ Timestamp:  {f"{ets.day}.{ets.month}.{ets.year}  {ets.hour}:{ets.minute}:{ets.se
 
         return None
 
-class GUILD:
+
+class DirectMESSAGE(TextMESSAGE):
     """
-    Name: GUILD
-    Info: The GUILD object represents a server to which messages will be sent.
-    Params:
-    - Guild ID - identificator which can be obtained by enabling developer mode in discord's settings and
-                 afterwards right-clicking on the server/guild icon in the server list and clicking "Copy ID",
-    - List of TextMESSAGE/VoiceMESSAGE objects
-    - Generate file log - bool variable, if True it will generate a file log for each message send attempt.
+    ~  DirectMESSAGE  ~
+    The DirectMESSAGE class is used for creating objects that reperesent a message that will be sent
+    into direct messages, it is very simmilar to the TexTMESSAGE (since it inherits the TextMESSAGE) with
+    the exception of channel_ids parameter and the initialization
     """
+    
     __slots__ = (
-        "guild",
-        "t_messages",
-        "vc_messages",
-        "_generate_log",
-        "guild_file_name"
+        "randomized_time",
+        "period",
+        "random_range",
+        "data",
+        "channels",
+        "timer",
+        "mode",
+        "force_retry",
+        "sent_messages"
     )
 
     def __init__(self,
-                 guild_id : int,
-                 messages_to_send : List[Union[TextMESSAGE, VoiceMESSAGE]],
-                 generate_log : bool = False):
-        self.guild = guild_id
-        self.t_messages = []
-        self.vc_messages = []
+                 start_period: Union[float, None],
+                 end_period: float,
+                 data: Union[str, EMBED, FILE, List[Union[str, EMBED, FILE]]], 
+                 mode: Literal["send", "edit", "clear-send"] = "send", start_now: bool = True):
+        super().__init__(start_period, end_period,
+                         data,
+                         [],                # The channel_ids parameter empty here since, this is obtained from USER object
+                         mode, start_now)
+    
+    async def fetch_channel(self,
+                            id: int):
+        user = m_client.get_user(id)
+        channel = None
+        if user is not None:
+            channel = await user.create_dm()
+        return channel
 
-        for message in messages_to_send:
-            if type(message) is TextMESSAGE:
-                self.t_messages.append(message)
-            elif type(message) is VoiceMESSAGE:
-                self.vc_messages.append(message)
+    async def initialize(self,
+                         user_id: int) -> bool:
+        """The channel will be obtained by fetch_channel which
+        in this case requires user ID as the channel id."""
+        self.channels.append(user_id)
+        return await super().initialize()
 
+
+class BaseGUILD:
+    """ ~ BaseGUILD ~
+        BaseGUILD object is used for creating inherited classes that work like a guild"""
+    __slots__ = (
+        "apiobject",
+        "_generate_log",
+        "log_file_name"
+    )
+    def __init__(self,
+                 id: int,
+                 generate_log: bool=False) -> None:
+        self.apiobject = id
         self._generate_log = generate_log
-        self.guild_file_name = None
+    
+    def get_log_guild_context(self) -> str:
+        raise NotImplementedError
 
-    async def advertise(self,
-                        attr_message_list: Literal["t_messages", "vc_messages"]):
-        """
-        Name:   advertise
-        Param:  attr_message_list:
-                This argument is the name of the messages list attribute.
-                This method is called thru 2 different tasks (one for VC and one for Text channels) and it tells us what list to use
-        """
-        for message in getattr(self, attr_message_list):
-            if message.is_ready():
-                message_ret = await message.send_to_channels()
-                """message.send_to_channels() returns either partial log of sent message,
-                succeeded and failed channels or it returns the None object if no data
-                was ready to be sent (user function was used to get the data and it returned None)"""
-                if self._generate_log and message_ret is not None:
-                    self.generate_log(*message_ret)
-
+    async def initialize(self) -> bool:
+        raise NotImplementedError
+    
     def generate_log(self,
                      data_context: str,
                      succeeded_ch: list,
@@ -902,12 +932,12 @@ class GUILD:
                                                                 timestruct.tm_hour,
                                                                 timestruct.tm_min)
         # Generate channel log
-        succeeded_ch = "[\n" + "".join(f"\t\t{ch.name}(ID: {ch.id}),\n" for ch in succeeded_ch).rstrip(",\n") + "\n\t]" if len(succeeded_ch) else "[]"
+        succeeded_ch = "[\n" + "".join(f"\t\t{ch}(ID: {ch.id}),\n" for ch in succeeded_ch).rstrip(",\n") + "\n\t]" if len(succeeded_ch) else "[]"
         if len(failed_ch):
             tmp_chs, failed_ch = failed_ch, "["
             for ch in tmp_chs:
                 ch_reason = str(ch["reason"]).replace("\n", "; ")
-                failed_ch += f"\n\t\t{ch['channel'].name}(ID: {ch['channel'].id}) >>> [ {ch_reason} ],"
+                failed_ch += f"\n\t\t{ch['channel']}(ID: {ch['channel'].id}) >>> [ {ch_reason} ],"
             failed_ch = failed_ch.rstrip(",") + "\n\t]"
         else:
             failed_ch = "[]"
@@ -918,7 +948,7 @@ class GUILD:
 ***
 ## Other data:
 -   ```
-    Server: {self.guild.name}
+    {self.get_log_guild_context()}
     Succeeded in channels: {succeeded_ch}
     Failed in channels: {failed_ch}
     Timestamp: {timestamp}
@@ -930,12 +960,118 @@ class GUILD:
         try:
             with suppress(FileExistsError):
                 os.mkdir(m_server_log_output_path)
-            with open(os.path.join(m_server_log_output_path, self.guild_file_name),'a', encoding='utf-8') as appender:
+            with open(os.path.join(m_server_log_output_path, self.log_file_name),'a', encoding='utf-8') as appender:
                 appender.write(appender_data)
         except OSError as os_exception:
             trace(f"Unable to save log. Exception: {os_exception}", TraceLEVELS.WARNING)
 
-    def initialize(self) -> bool:
+class USER(BaseGUILD):
+    """
+    ~  USER  ~
+    This class is used for creating objects that reperesent specific discord user accounts.
+    It is used for Direct Messaging.
+
+    Parameters:
+    - user_id: int ~ Id of the user you want to send DMs to
+    """
+    __slots__ = (
+        "apiobject",
+        "t_messages",
+        "_generate_log",
+        "log_file_name"
+    )
+
+    def __init__(self,
+                 user_id: int,
+                 messages_to_send: List[DirectMESSAGE],
+                 generate_log: bool=False):
+        self.t_messages = messages_to_send
+        return super().__init__(user_id, generate_log)
+    
+    def get_log_guild_context(self) -> str:
+        return f"User: {self.apiobject.name}#{self.apiobject.discriminator}"
+
+    async def initialize(self) -> bool:
+        user_id = self.apiobject
+        self.apiobject = m_client.get_user(user_id)
+        if self.apiobject is not None:
+            self.log_file_name = "".join(char if char not in C_FILE_NAME_FORBIDDEN_CHAR else "#" for char in f"{self.apiobject.display_name}#{self.apiobject.discriminator}") + ".md"
+            
+            for message in self.t_messages[:]:
+                if not await message.initialize(user_id):
+                    self.t_messages.remove(message)
+            
+            if not len(self.t_messages):
+                return False
+
+            return True
+
+        return False
+
+    async def advertise(self,
+                        attr_name: str=None):
+        """
+        Name:   advertise
+        """
+        for message in getattr(self, attr_name):
+            if message.is_ready():
+                message_ret = await message.send_to_channels()
+                """message.send_to_channels() returns either partial log of sent message,
+                succeeded and failed channels or it returns the None object if no data
+                was ready to be sent (user function was used to get the data and it returned None)"""
+                if self._generate_log and message_ret is not None:
+                    self.generate_log(*message_ret)
+
+
+class GUILD(BaseGUILD):
+    """
+    Name: GUILD
+    Info: The GUILD object represents a server to which messages will be sent.
+    Params:
+    - Guild ID - identificator which can be obtained by enabling developer mode in discord's settings and
+                 afterwards right-clicking on the server/guild icon in the server list and clicking "Copy ID",
+    - List of TextMESSAGE/VoiceMESSAGE objects
+    - Generate file log - bool variable, if True it will generate a file log for each message send attempt.
+    """
+    __slots__ = (
+        "apiobject",
+        "t_messages",
+        "vc_messages",
+        "_generate_log",
+        "log_file_name"
+    )
+
+    def __init__(self,
+                 guild_id: int,
+                 messages_to_send: List[Union[TextMESSAGE, VoiceMESSAGE]],
+                 generate_log: bool=False):
+        self.t_messages = []
+        self.vc_messages = []
+        for message in messages_to_send:
+            if type(message) is TextMESSAGE:
+                self.t_messages.append(message)
+            elif type(message) is VoiceMESSAGE:
+                self.vc_messages.append(message)
+        return super().__init__(guild_id, generate_log)
+
+    def get_log_guild_context(self) -> str:
+        return f"Guild: {self.apiobject.name}(ID: {self.apiobject.id})"
+
+    async def advertise(self,
+                        attr_name: str):
+        """
+        Name:   advertise
+        """
+        for message in getattr(self, attr_name):
+            if message.is_ready():
+                message_ret = await message.send_to_channels()
+                """message.send_to_channels() returns either partial log of sent message,
+                succeeded and failed channels or it returns the None object if no data
+                was ready to be sent (user function was used to get the data and it returned None)"""
+                if self._generate_log and message_ret is not None:
+                    self.generate_log(*message_ret)
+
+    async def initialize(self) -> bool:
         """
         Name:   initialize
         Param:  void
@@ -945,28 +1081,26 @@ class GUILD:
         Info:   The function initializes all the GUILD objects (and other objects inside the GUILD object reccurssively).
                 It tries to get the discord.Guild object from the self.guild id and then tries to initialize the MESSAGE objects.
         """
-        guild_id = self.guild
-        self.guild = m_client.get_guild(guild_id)
+        guild_id = self.apiobject
+        self.apiobject = m_client.get_guild(guild_id)
 
-        if self.guild is not None:
+        if self.apiobject is not None:
         # Create a file name without the non allowed characters. Windows' list was choosen to generate the forbidden character because only forbids '/'
-            l_forbidden_file_names = ('<','>','"','/','\\','|','?','*',":")
-            self.guild_file_name = "".join(char if char not in l_forbidden_file_names else "#" for char in self.guild.name) + ".md"
+            self.log_file_name = "".join(char if char not in C_FILE_NAME_FORBIDDEN_CHAR else "#" for char in self.apiobject.name) + ".md"
 
             for message in self.t_messages[:]:
                 """ Iterate thru the slice text messages list and initialize each
                     message object. If the message objects fails to initialize,
                     then it is removed from the original list."""
-                if not message.initialize(self.guild.name, guild_id):
+                if not await message.initialize():
                     self.t_messages.remove(message)
 
             for message in self.vc_messages[:]:
                 # Same as above but for voice messages
-                if not message.initialize(self.guild.name, guild_id):
+                if not await message.initialize():
                     self.vc_messages.remove(message)
 
             if not len(self.t_messages) + len(self.vc_messages):
-                trace(f"Unable to create server object from server id: {guild_id}", TraceLEVELS.WARNING)
                 return False
 
             return True
@@ -988,14 +1122,14 @@ async def advertiser(message_type: Literal["t_messages", "vc_messages"]) -> None
     """
     while True:
         await asyncio.sleep(C_TASK_SLEEP_DELAY)
-        for guild in m_server_list:
-            await guild.advertise(message_type)
+        for guild_user in m_server_list:
+            await guild_user.advertise(message_type)
 
 
 #######################################################################
 # Functions
 #######################################################################
-def initialize() -> bool:
+async def initialize() -> bool:
     """
     Name:       initialize
     Parameters: void
@@ -1005,7 +1139,7 @@ def initialize() -> bool:
     Info:       Function that initializes the guild objects and then returns True on success or False on failure.
     """
     for server in m_server_list[:]:
-        if not server.initialize():
+        if not await server.initialize():
             m_server_list.remove(server)
 
     if len(m_server_list):
@@ -1061,7 +1195,11 @@ def run(token : str,
            m_debug,\
            m_client
 
-    m_client = CLIENT()
+    intents = discord.Intents.default()
+    intents.members = True
+
+    m_client = CLIENT(intents=intents)
+
     m_server_log_output_path = server_log_output    ## Path to folder where to crete server logs
     m_debug = debug                                 ## Print trace messages to the console for debugging purposes
     m_server_list = server_list                     ## List of guild objects to iterate thru in the advertiser task
