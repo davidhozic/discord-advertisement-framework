@@ -223,8 +223,9 @@ GUILD(
 ```
 <br>
 
-## framework.**TextMESSAGE** / framework.**VoiceMESSAGE**
-The **TextMESSAGE** and **VoiceMESSAGE** object containts parameters which describe behaviour and data that will be sent to the channels. They are very similar where the TextMESSAGE object will send to text channels and VoiceMESSAGE will send to voice channels.
+## framework.**TextMESSAGE** / framework.**DirectMESSAGE** / framework.**VoiceMESSAGE**
+The **TextMESSAGE** and **VoiceMESSAGE** object containts parameters which describe behaviour and data that will be sent to the channels. They are very similar where the TextMESSAGE object will send to text channels,
+VoiceMESSAGE will send to voice channels and DirectMESSAGE will send to direct messages.
 
 | **NOTE**                                                                                                  |
 | --------------------------------------------------------------------------------------------------------- |
@@ -243,7 +244,7 @@ The **TextMESSAGE** and **VoiceMESSAGE** object containts parameters which descr
     <br>
 
 -  **Data** (data) - The data parameter is the actual data that will be sent using discord's API. The **data types** of this parameter can be: 
-   - for **TextMESSAGE**:
+   - for **TextMESSAGE** and **DirectMESSAGE**:
      -  **str** (normal text),
      - [framework.**EMBED**](#frameworkembed),
      - [framework.**FILE**](#frameworkfile),
@@ -287,8 +288,8 @@ The **TextMESSAGE** and **VoiceMESSAGE** object containts parameters which descr
            | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
            | If you don't use the **framework.data_function** decorator, the function will only get called once(when you pass it to the data) and will not be called by the framework dynamically. |
 
-- **Channel IDs** (channel_ids) - List of IDs of all the channels you want data to be sent into.
-- **Send mode** [only **TextMESSAGE**] (mode)  - string variable that defines the way message will be sent to a channel.<br>
+- **Channel IDs**  [**TextMESSAGE** and **VoiceMESSAGE**] (channel_ids) - List of IDs of all the channels you want data to be sent into.
+- **Send mode** [**TextMESSAGE** and **DirectMESSAGE**] (mode)  - string variable that defines the way message will be sent to a channel.<br>
   This parameter can be:
   - "send"  - Each period a new message will be sent to a channel,
   - "edit"  - The previous message will be edited or a new sent if it doesn't exist,
