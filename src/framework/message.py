@@ -259,9 +259,9 @@ class VoiceMESSAGE(BaseMESSAGE):
             voice_client.play(stream)
             while voice_client.is_playing():
                 await asyncio.sleep(1)
-            return {"sucess": True}
+            return {"success": True}
         except Exception as ex:
-            return {"sucess": False, "reason": ex}
+            return {"success": False, "reason": ex}
         finally:
             if stream is not None:
                 stream.cleanup()
@@ -307,7 +307,7 @@ class VoiceMESSAGE(BaseMESSAGE):
             succeded_channels= []
             
             for channel in self.channels:
-                context = self.send_channel(channel, audio_to_stream)
+                context = await self.send_channel(channel, audio_to_stream)
                 if context["success"]:
                     succeded_channels.append(channel)
                 else:
@@ -376,7 +376,7 @@ class TextMESSAGE(BaseMESSAGE):
             channel_id = self.channels[ch_i]
             channel = cl.get_channel(channel_id)
 
-            if type(channel) is not discord.TextChannel:
+            if type(channel) not in {discord.TextChannel, discord.Thread}:
                 trace(f"TextMESSAGE object got id for {type(channel).__name__}, but was expecting {discord.TextChannel.__name__}", TraceLEVELS.ERROR)
                 channel = None
 
@@ -471,54 +471,54 @@ Timestamp:  {f"{ets.day}.{ets.month}.{ets.year}  {ets.hour}:{ets.minute}:{ets.se
                     if ex.status == 429:
                         await asyncio.sleep(int(ex.response.headers["Retry-After"])  + 1)
 
-                # Send/Edit messages
-                for tries in range(3):  # Maximum 3 tries (if rate limit)
-                    try:
-                        # Mode dictates to send new message or delete previous and then send new message or mode dictates edit but message was  never sent to this channel before
-                        # Rate limit avoidance
-                        await asyncio.sleep(C_RT_AVOID_DELAY)
-                        if  self.mode in  {"send" , "clear-send"} or\
-                            self.mode == "edit" and self.sent_messages[channel.id] is None:
-                            discord_sent_msg = await channel.send(  text,
-                                                                    embed=embed,
-                                                                    # Create discord.File objects here so it is catched by the except block and then logged
-                                                                    files=[discord.File(fwFILE.filename) for fwFILE in files])
-                            self.sent_messages[channel.id] = discord_sent_msg
+        # Send/Edit messages
+        for tries in range(3):  # Maximum 3 tries (if rate limit)
+            try:
+                # Mode dictates to send new message or delete previous and then send new message or mode dictates edit but message was  never sent to this channel before
+                # Rate limit avoidance
+                await asyncio.sleep(C_RT_AVOID_DELAY)
+                if  self.mode in  {"send" , "clear-send"} or\
+                    self.mode == "edit" and self.sent_messages[channel.id] is None:
+                    discord_sent_msg = await channel.send(  text,
+                                                            embed=embed,
+                                                            # Create discord.File objects here so it is catched by the except block and then logged
+                                                            files=[discord.File(fwFILE.filename) for fwFILE in files])
+                    self.sent_messages[channel.id] = discord_sent_msg
 
-                        # Mode is edit and message was already send to this channel
-                        elif self.mode == "edit":
-                            await self.sent_messages[channel.id].edit ( text,
-                                                                        embed=embed)
+                # Mode is edit and message was already send to this channel
+                elif self.mode == "edit":
+                    await self.sent_messages[channel.id].edit ( text,
+                                                                embed=embed)
 
-                        return {"success" : True}
+                return {"success" : True}
 
-                    except Exception as ex:
-                        # Failed to send message
-                        exit_condition = False
-                        if isinstance(ex, discord.HTTPException):
-                            if ex.status == 429:    # Rate limit
-                                retry_after = int(ex.response.headers["Retry-After"])  + 1
-                                if ex.code == 20016:    # Slow Mode
-                                    self.force_retry["ENABLED"] = True
-                                    self.force_retry["TIME"] = retry_after
-                                    exit_condition = True
-                                else:   # Normal (write) rate limit
-                                    # Rate limit but not slow mode -> put the framework to sleep as it won't be able to send any messages globaly
-                                    await asyncio.sleep(retry_after)
-
-                            elif ex.status == 404:      # Unknown object
-                                if ex.code == 10008:    # Unknown message
-                                    self.sent_messages[channel.id]  = None
-
-                                exit_condition = True
-                            else:
-                                exit_condition = True
-                        else:
+            except Exception as ex:
+                # Failed to send message
+                exit_condition = False
+                if isinstance(ex, discord.HTTPException):
+                    if ex.status == 429:    # Rate limit
+                        retry_after = int(ex.response.headers["Retry-After"])  + 1
+                        if ex.code == 20016:    # Slow Mode
+                            self.force_retry["ENABLED"] = True
+                            self.force_retry["TIME"] = retry_after
                             exit_condition = True
+                        else:   # Normal (write) rate limit
+                            # Rate limit but not slow mode -> put the framework to sleep as it won't be able to send any messages globaly
+                            await asyncio.sleep(retry_after)
 
-                        # Assume a fail
-                        if exit_condition:
-                            return {"success" : False, "reason" : ex}
+                    elif ex.status == 404:      # Unknown object
+                        if ex.code == 10008:    # Unknown message
+                            self.sent_messages[channel.id]  = None
+
+                        exit_condition = True
+                    else:
+                        exit_condition = True
+                else:
+                    exit_condition = True
+
+                # Assume a fail
+                if exit_condition:
+                    return {"success" : False, "reason" : ex}
 
     async def send(self) -> Union[Tuple[str, list, list],  None]:
         """
@@ -565,7 +565,7 @@ Timestamp:  {f"{ets.day}.{ets.month}.{ets.year}  {ets.hour}:{ets.minute}:{ets.se
             # Send to channels
             for channel in self.channels:
                 # Clear previous messages sent to channel if mode is MODE_DELETE_SEND
-                context = self.send_channel(channel, text_to_send, embed_to_send, files_to_send)
+                context = await self.send_channel(channel, text_to_send, embed_to_send, files_to_send)
                 if context["success"]:
                     succeded_channels.append(channel)
                 else:
