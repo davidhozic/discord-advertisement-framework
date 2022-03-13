@@ -81,7 +81,7 @@ class BaseMESSAGE:
 
         self.timer = TIMER()
         self.force_retry = {"ENABLED" : start_now, "TIME" : 0}  # This is used in both TextMESSAGE and VoiceMESSAGE for compatability purposes
-        
+
 
     def is_ready(self) -> bool:
         """
@@ -91,7 +91,17 @@ class BaseMESSAGE:
         """
         return not self.force_retry["ENABLED"] and self.timer.elapsed() > self.period or self.force_retry["ENABLED"] and self.timer.elapsed() > self.force_retry["TIME"]
 
-    def send(self):
+    async def send_channel(self):
+        """                  ~ send_channel ~
+            @Info:
+            Sends data to a specific channel, this is seperate from send
+            for eaiser implementation of simmilar inherited classes
+            @Return:
+            The method returns a dictionary containing : {"success": bool, "reason": discord.HTTPException}
+            """
+        raise NotImplementedError
+
+    async def send(self):
         """
         Name:   send to channels
         Param:  void
@@ -100,7 +110,7 @@ class BaseMESSAGE:
         raise NotImplementedError
     
     async def initialize_channels(self,
-                                  options) -> bool:
+                                  options: dict) -> bool:
         raise NotImplementedError
     
     async def initialize_data(self) -> bool:
@@ -144,14 +154,13 @@ class BaseMESSAGE:
 
     async def initialize(self, **options) -> bool:
         """
-        Name:   initialize
-        Param:
-            - guild_name: str  ::   Name of the guild that owns the channels.
-                                    This is only used for trace messages for easier debugging.
-            - guild_id: int    ::   Snowflake id of the guild that owns the message channels.
-                                    This parameter is used to check if the channels really belong to this guild and not some other,
-                                    and is also used for trace messages for easier debugging of incorrectly passed parameters."""
-
+            ~ initialize ~
+            @Info:
+            The initialize method initilizes the message object.
+            @Params:
+            - options ~ custom keyword arguments, this differes from inher. to inher. class that
+            is inherited from the BaseGUILD class and must be matched in the inherited class from BaseMESSAGE that
+            you want to use in that specific inherited class from BaseGUILD class"""
         if not await self.initialize_channels(options):
             return False
 
@@ -202,7 +211,8 @@ class VoiceMESSAGE(BaseMESSAGE):
         self.data = data
         self.channels = channel_ids
     
-    async def initialize_channels(self, options) -> bool:
+    async def initialize_channels(self,
+                                  options: dict) -> bool:
         ch_i = 0
         cl = client.get_client()
         while ch_i < len(self.channels):
@@ -234,6 +244,33 @@ class VoiceMESSAGE(BaseMESSAGE):
 ## Streamed AUDIO:
 {sent_audio.filename}
 '''
+
+    async def send_channel(self,
+                           channel: discord.VoiceChannel,
+                           audio: AUDIO):
+        stream = None 
+        voice_client = None                          
+        try:
+            # Try to open file first as FFMpegOpusAudio doesn't raise exception if file does not exist
+            with open(audio.filename, "rb") as reader: pass
+            stream = discord.FFmpegOpusAudio(audio.filename)
+                
+            voice_client = await channel.connect(timeout=C_VC_CONNECT_TIMEOUT)
+            voice_client.play(stream)
+            while voice_client.is_playing():
+                await asyncio.sleep(1)
+            return {"sucess": True}
+        except Exception as ex:
+            return {"sucess": False, "reason": ex}
+        finally:
+            if stream is not None:
+                stream.cleanup()
+            if voice_client is not None:
+                """
+                Note (TODO): Should remove this in the future. Currently it disconnects instead moving to a different channel, because using
+                        .move_to(channel) method causes some sorts of "thread leak" (new threads keep getting created, waiting for pycord to fix this).
+                """
+                await voice_client.disconnect()
 
     async def send(self) -> Union[Tuple[str, list, list],  None]:
         """
@@ -268,31 +305,13 @@ class VoiceMESSAGE(BaseMESSAGE):
         if audio_to_stream is not None:
             errored_channels = []
             succeded_channels= []
-            voice_client = None
-
+            
             for channel in self.channels:
-                try:
-                    stream = None
-                    # Try to open file first as FFMpegOpusAudio doesn't raise exception if file does not exist
-                    with open(audio_to_stream.filename, "rb") as reader: pass
-                    stream = discord.FFmpegOpusAudio(audio_to_stream.filename)
-                        
-                    voice_client = await channel.connect(timeout=C_VC_CONNECT_TIMEOUT)
-                    voice_client.play(stream)
-                    while voice_client.is_playing():
-                        await asyncio.sleep(1)
+                context = self.send_channel(channel, audio_to_stream)
+                if context["success"]:
                     succeded_channels.append(channel)
-                except Exception as ex:
-                    errored_channels.append({"channel":channel, "reason":f"{type(ex).__name__} : {ex}"})
-                finally:
-                    if stream is not None:
-                        stream.cleanup()
-                    if voice_client is not None:
-                        """
-                        Note (TODO): Should remove this in the future. Currently it disconnects instead moving to a different channel, because using
-                              .move_to(channel) method causes some sorts of "thread leak" (new threads keep getting created, waiting for pycord to fix this).
-                        """
-                        await voice_client.disconnect()
+                else:
+                    errored_channels.append({"channel":channel, "reason": context["reason"]})
 
             return {"data_context": self.stringify_sent_data(audio_to_stream), "succeeded_ch": succeded_channels, "failed_ch" : errored_channels}
         
@@ -337,7 +356,6 @@ class TextMESSAGE(BaseMESSAGE):
     )
 
     __valid_data_types__ = {str, EMBED, FILE}
-
 
     def __init__(self, start_period: Union[float, None],
                  end_period: float,
@@ -437,6 +455,71 @@ Timestamp:  {f"{ets.day}.{ets.month}.{ets.year}  {ets.hour}:{ets.minute}:{ets.se
 ## Files:
 {sent_files}'''
 
+    async def send_channel(self,
+                           channel: discord.TextChannel,
+                           text: str,
+                           embed: EMBED,
+                           files: List[FILE]):
+        if self.mode == "clear-send" and self.sent_messages[channel.id] is not None:
+            for tries in range(3):
+                try:
+                    # Delete discord message that originated from this MESSAGE object
+                    await self.sent_messages[channel.id].delete()
+                    self.sent_messages[channel.id] = None
+                    break
+                except discord.HTTPException as ex:
+                    if ex.status == 429:
+                        await asyncio.sleep(int(ex.response.headers["Retry-After"])  + 1)
+
+                # Send/Edit messages
+                for tries in range(3):  # Maximum 3 tries (if rate limit)
+                    try:
+                        # Mode dictates to send new message or delete previous and then send new message or mode dictates edit but message was  never sent to this channel before
+                        # Rate limit avoidance
+                        await asyncio.sleep(C_RT_AVOID_DELAY)
+                        if  self.mode in  {"send" , "clear-send"} or\
+                            self.mode == "edit" and self.sent_messages[channel.id] is None:
+                            discord_sent_msg = await channel.send(  text,
+                                                                    embed=embed,
+                                                                    # Create discord.File objects here so it is catched by the except block and then logged
+                                                                    files=[discord.File(fwFILE.filename) for fwFILE in files])
+                            self.sent_messages[channel.id] = discord_sent_msg
+
+                        # Mode is edit and message was already send to this channel
+                        elif self.mode == "edit":
+                            await self.sent_messages[channel.id].edit ( text,
+                                                                        embed=embed)
+
+                        return {"success" : True}
+
+                    except Exception as ex:
+                        # Failed to send message
+                        exit_condition = False
+                        if isinstance(ex, discord.HTTPException):
+                            if ex.status == 429:    # Rate limit
+                                retry_after = int(ex.response.headers["Retry-After"])  + 1
+                                if ex.code == 20016:    # Slow Mode
+                                    self.force_retry["ENABLED"] = True
+                                    self.force_retry["TIME"] = retry_after
+                                    exit_condition = True
+                                else:   # Normal (write) rate limit
+                                    # Rate limit but not slow mode -> put the framework to sleep as it won't be able to send any messages globaly
+                                    await asyncio.sleep(retry_after)
+
+                            elif ex.status == 404:      # Unknown object
+                                if ex.code == 10008:    # Unknown message
+                                    self.sent_messages[channel.id]  = None
+
+                                exit_condition = True
+                            else:
+                                exit_condition = True
+                        else:
+                            exit_condition = True
+
+                        # Assume a fail
+                        if exit_condition:
+                            return {"success" : False, "reason" : ex}
+
     async def send(self) -> Union[Tuple[str, list, list],  None]:
         """
         Name: send
@@ -482,69 +565,14 @@ Timestamp:  {f"{ets.day}.{ets.month}.{ets.year}  {ets.hour}:{ets.minute}:{ets.se
             # Send to channels
             for channel in self.channels:
                 # Clear previous messages sent to channel if mode is MODE_DELETE_SEND
-                if self.mode == "clear-send" and self.sent_messages[channel.id] is not None:
-                    for tries in range(3):
-                        try:
-                            # Delete discord message that originated from this MESSAGE object
-                            await self.sent_messages[channel.id].delete()
-                            self.sent_messages[channel.id] = None
-                            break
-                        except discord.HTTPException as ex:
-                            if ex.status == 429:
-                                await asyncio.sleep(int(ex.response.headers["Retry-After"])  + 1)
-
-                # Send/Edit messages
-                for tries in range(3):  # Maximum 3 tries (if rate limit)
-                    try:
-                        # Mode dictates to send new message or delete previous and then send new message or mode dictates edit but message was  never sent to this channel before
-                        # Rate limit avoidance
-                        await asyncio.sleep(C_RT_AVOID_DELAY)
-                        if  self.mode in  {"send" , "clear-send"} or\
-                            self.mode == "edit" and self.sent_messages[channel.id] is None:
-                            discord_sent_msg = await channel.send(  text_to_send,
-                                                                    embed=embed_to_send,
-                                                                    # Create discord.File objects here so it is catched by the except block and then logged
-                                                                    files=[discord.File(fwFILE.filename) for fwFILE in files_to_send])
-                            self.sent_messages[channel.id] = discord_sent_msg
-
-                        # Mode is edit and message was already send to this channel
-                        elif self.mode == "edit":
-                            await self.sent_messages[channel.id].edit ( text_to_send,
-                                                                        embed=embed_to_send)
-
-                        succeded_channels.append(channel)
-                        break    # Break out of the tries loop
-
-                    except Exception as ex:
-                        # Failed to send message
-                        exit_condition = False
-                        if isinstance(ex, discord.HTTPException):
-                            if ex.status == 429:    # Rate limit
-                                retry_after = int(ex.response.headers["Retry-After"])  + 1
-                                if ex.code == 20016:    # Slow Mode
-                                    self.force_retry["ENABLED"] = True
-                                    self.force_retry["TIME"] = retry_after
-                                    exit_condition = True
-                                else:   # Normal (write) rate limit
-                                    # Rate limit but not slow mode -> put the framework to sleep as it won't be able to send any messages globaly
-                                    await asyncio.sleep(retry_after)
-
-                            elif ex.status == 404:      # Unknown object
-                                if ex.code == 10008:    # Unknown message
-                                    self.sent_messages[channel.id]  = None
-
-                                exit_condition = True
-                            else:
-                                exit_condition = True
-                        else:
-                            exit_condition = True
-
-                        # Assume a fail
-                        if exit_condition:
-                            errored_channels.append({"channel":channel, "reason":ex})
-                            break
+                context = self.send_channel(channel, text_to_send, embed_to_send, files_to_send)
+                if context["success"]:
+                    succeded_channels.append(channel)
+                else:
+                    errored_channels.append({"channel":channel, "reason": context["reason"]})
 
             # Return sent data + failed and successful function for logging purposes
             return {"data_context": self.stringify_sent_data(text_to_send, embed_to_send, files_to_send), "succeeded_ch": succeded_channels, "failed_ch" : errored_channels}
 
         return None
+        
