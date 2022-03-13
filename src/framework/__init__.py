@@ -4,4 +4,11 @@
     Copyright   :: Copyright (c) 2022 David Hozic
     Version     :: V1.7.9
 """
-from .__core__ import *
+import _discord as discord
+from .client import *
+from .const import *
+from .core import *
+from .dtypes import *
+from .guild import *
+from .message import *
+from .tracing import *
