@@ -10,7 +10,8 @@ import  asyncio
 
 __all__ = (
     "TextMESSAGE",
-    "VoiceMESSAGE"
+    "VoiceMESSAGE",
+    "DirectMESSAGE"
 )
 
 class TIMER:
@@ -82,6 +83,12 @@ class BaseMESSAGE:
         self.timer = TIMER()
         self.force_retry = {"ENABLED" : start_now, "TIME" : 0}  # This is used in both TextMESSAGE and VoiceMESSAGE for compatability purposes
 
+    def stringify_sent_data(self, *opt, **kopt) -> str:
+        """~ stringify_sent_data ~
+            @Info:
+            Returns a partial log containing sent data only (that is then returned to the guild)
+        """
+        raise NotImplementedError
 
     def is_ready(self) -> bool:
         """
@@ -91,7 +98,7 @@ class BaseMESSAGE:
         """
         return not self.force_retry["ENABLED"] and self.timer.elapsed() > self.period or self.force_retry["ENABLED"] and self.timer.elapsed() > self.force_retry["TIME"]
 
-    async def send_channel(self):
+    async def send_channel(self, *opt, **kopt) -> dict:
         """                  ~ send_channel ~
             @Info:
             Sends data to a specific channel, this is seperate from send
@@ -101,7 +108,7 @@ class BaseMESSAGE:
             """
         raise NotImplementedError
 
-    async def send(self):
+    async def send(self, *opt, **kopt) -> dict:
         """
         Name:   send to channels
         Param:  void
@@ -110,7 +117,7 @@ class BaseMESSAGE:
         raise NotImplementedError
     
     async def initialize_channels(self,
-                                  options: dict) -> bool:
+                                  **options: dict) -> bool:
         raise NotImplementedError
     
     async def initialize_data(self) -> bool:
@@ -161,7 +168,7 @@ class BaseMESSAGE:
             - options ~ custom keyword arguments, this differes from inher. to inher. class that
             is inherited from the BaseGUILD class and must be matched in the inherited class from BaseMESSAGE that
             you want to use in that specific inherited class from BaseGUILD class"""
-        if not await self.initialize_channels(options):
+        if not await self.initialize_channels(**options):
             return False
 
         if not await self.initialize_data():
@@ -212,7 +219,7 @@ class VoiceMESSAGE(BaseMESSAGE):
         self.channels = channel_ids
     
     async def initialize_channels(self,
-                                  options: dict) -> bool:
+                                  **options: dict) -> bool:
         ch_i = 0
         cl = client.get_client()
         while ch_i < len(self.channels):
@@ -233,7 +240,7 @@ class VoiceMESSAGE(BaseMESSAGE):
         return len(self.channels) > 0
 
     def stringify_sent_data (self,
-                            sent_audio: AUDIO):
+                            sent_audio: AUDIO) -> str:
         """
         Name:  stringify_sent_data
         Param: sent_audio -- Audio file that was streamed to the channels
@@ -247,7 +254,7 @@ class VoiceMESSAGE(BaseMESSAGE):
 
     async def send_channel(self,
                            channel: discord.VoiceChannel,
-                           audio: AUDIO):
+                           audio: AUDIO) -> dict:
         stream = None 
         voice_client = None                          
         try:
@@ -272,7 +279,7 @@ class VoiceMESSAGE(BaseMESSAGE):
                 """
                 await voice_client.disconnect()
 
-    async def send(self) -> Union[Tuple[str, list, list],  None]:
+    async def send(self) -> Union[dict,  None]:
         """
         Name: send
         Params: void
@@ -369,7 +376,7 @@ class TextMESSAGE(BaseMESSAGE):
         self.channels = channel_ids
         self.sent_messages = {ch_id : None for ch_id in channel_ids}
 
-    async def initialize_channels(self, options) -> bool:
+    async def initialize_channels(self, **options) -> bool:
         ch_i = 0
         cl = client.get_client()
         while ch_i < len(self.channels):
@@ -392,7 +399,7 @@ class TextMESSAGE(BaseMESSAGE):
     def stringify_sent_data (self,
                             sent_text : str,
                             sent_embed : discord.Embed,
-                            sent_files : list):
+                            sent_files : list) -> str:
         """
         Name:  stringify_sent_data
         Param: sent_audio -- Audio file that was streamed to the channels
@@ -459,7 +466,7 @@ Timestamp:  {f"{ets.day}.{ets.month}.{ets.year}  {ets.hour}:{ets.minute}:{ets.se
                            channel: discord.TextChannel,
                            text: str,
                            embed: EMBED,
-                           files: List[FILE]):
+                           files: List[FILE]) -> dict:
         if self.mode == "clear-send" and self.sent_messages[channel.id] is not None:
             for tries in range(3):
                 try:
@@ -520,7 +527,7 @@ Timestamp:  {f"{ets.day}.{ets.month}.{ets.year}  {ets.hour}:{ets.minute}:{ets.se
                 if exit_condition:
                     return {"success" : False, "reason" : ex}
 
-    async def send(self) -> Union[Tuple[str, list, list],  None]:
+    async def send(self) -> Union[dict,  None]:
         """
         Name: send
         Params: void
@@ -575,4 +582,246 @@ Timestamp:  {f"{ets.day}.{ets.month}.{ets.year}  {ets.hour}:{ets.minute}:{ets.se
             return {"data_context": self.stringify_sent_data(text_to_send, embed_to_send, files_to_send), "succeeded_ch": succeded_channels, "failed_ch" : errored_channels}
 
         return None
+
+
+class DirectMESSAGE(BaseMESSAGE):
+    """~ BaseMESSAGE ~
+        @Info:
+        DirectMESSAGE represents a message that will be sent into direct messages
+        @Params:
+        - start_period, end_period:
+            dictate the sending period in seconds, if both are > 0, then the period is randomized
+            each send and that period will be between the specifiec parameters. If start_period is None,
+            the period will be equal to end_period.
+        - data:
+            Represents data that will be sent into the channels, the data types can be:
+            - str, EMBED, FILE, list of str, EMBED, FILE or a function (refer to README)
+        - mode: 
+            Mode parameter dictates the behaviour of the way data is send. It can be:
+            - "send" ~ Each period a new message will be send to Discord,
+            - "edit" ~ Each period the previous message will be edited, or a new sent if the previous message does not exist/was deleted
+            - "clear-send" ~ Each period the previous message will be cleared and a new one sent to the channels.
+        - start_now:
+            Dictates if the message should be sent immediatly after framework start or if it should wait it's period first and then send
+        """
+
+    __slots__ = (
+        "randomized_time",
+        "period",
+        "random_range",
+        "timer",
+        "force_retry",
+        "data",
+        "mode",
+        "previous_message",
+        "dm_channel"
+    )
+    __valid_data_types__ = {str, EMBED, FILE}
+    def __init__(self,
+                 start_period: Union[float, None],
+                 end_period: float,
+                 data: Union[str, EMBED, FILE, list],
+                 mode: Literal["send", "edit", "clear-send"] = "send",
+                 start_now: bool = True):
+        super().__init__(start_period, end_period, start_now)
+        self.data = data
+        self.mode = mode
+        self.dm_channel = None
+    
+    async def initialize_channels(self,
+                                  **options: dict) -> bool:
+        """~ initialize_channels ~
+        @Info:
+        The method creates a direct message channel and
+        returns True on success or False on failure
+        @Parameters:
+        - options ~ dictionary containing key with user_id
+                    (sent to by the USER instance's initialize method)
+        """
+        user_id = options.pop("user_id")
+        cl = client.get_client()
+        self.dm_channel = cl.get_user(user_id)
+        if self.dm_channel is None:
+            trace(f"Unable to create dm with user id: {user_id}", TraceLEVELS.ERROR)
+            return False
+        return True
+    
+    def stringify_sent_data (self,
+                            sent_text : str,
+                            sent_embed : discord.Embed,
+                            sent_files : list) -> str:
+        """
+        Name:  stringify_sent_data
+        Param: sent_audio -- Audio file that was streamed to the channels
+        Info:  Returns a string representation of send data to the channels.
+               This is then used as a data_context parameter to the GUILD object.
+        """
+        # Generate text
+        if sent_text is not None:
+            tmp_text , sent_text = sent_text, ""
+            sent_text += "- ```\n"
+            for line in tmp_text.splitlines():
+                sent_text += f"  {line}\n"
+            sent_text += "  ```"
+        else:
+            sent_text = ""
+
+        #Generate embed
+        EmptyEmbed = discord.embeds._EmptyEmbed
+
+        if sent_embed is not None:
+            tmp_emb = sent_embed
+            ets = sent_embed.timestamp
+            sent_embed = \
+f"""
+Title:  {tmp_emb.title if type(tmp_emb.title) is not EmptyEmbed else ""}
+
+Author:  {tmp_emb.author.name if type(tmp_emb.author.name) is not EmptyEmbed else ""}
+
+Thumbnail:  {tmp_emb.thumbnail.url if type(tmp_emb.thumbnail.url) is not EmptyEmbed else ""}
+
+Image:  {tmp_emb.image.url if type(tmp_emb.image.url) is not EmptyEmbed else ""}
+
+Description:  {tmp_emb.description if type(tmp_emb.description) is not EmptyEmbed else ""}
+
+Color:  {tmp_emb.colour if type(tmp_emb.colour) is not EmptyEmbed else ""}
+
+Timestamp:  {f"{ets.day}.{ets.month}.{ets.year}  {ets.hour}:{ets.minute}:{ets.second}" if type(ets) is not EmptyEmbed else ""}
+"""
+            sent_embed += "\nFields:"
+            for field in tmp_emb.fields:
+                sent_embed += f"\n - {field.name}\n"
+                sent_embed += "\t```\n"
+                for line in field.value.splitlines():
+                    sent_embed += f"\t{line}\n"
+                sent_embed += "\t```"
+
+        else:
+            sent_embed = ""
+
+        # Generate files
+        sent_files = "".join(    f"- ```\n  {file.filename}\n  ```\n" for file in sent_files    ).rstrip("\n")
+
+        return f'''
+## Text:
+{sent_text}
+***
+## Embed:
+{sent_embed}
+***
+## Files:
+{sent_files}'''
+
+    async def send_channel(self,
+                           text: str,
+                           embed: EMBED,
+                           files: List[FILE]) -> dict:
+        """
+            ~ send_channel ~
+            @Info:
+            Sends data to the DM channel (user).
+            @Return:
+            - dict:
+                - "success" : bool ~ True if successful, else False
+                - "reason"  : Exception ~ Only present if "success" is False,
+                              contains the Exception returned by the send attempt.
+        """
+        if self.mode == "clear-send" and self.previous_message is not None:
+            for tries in range(3):
+                try:
+                    # Delete discord message that originated from this MESSAGE object
+                    await self.previous_message.delete()
+                    self.previous_message = None
+                    break
+                except discord.HTTPException as ex:
+                    if ex.status == 429:
+                        await asyncio.sleep(int(ex.response.headers["Retry-After"])  + 1)
+
+        # Send/Edit messages
+        for tries in range(3):  # Maximum 3 tries (if rate limit)
+            try:
+                # Mode dictates to send new message or delete previous and then send new message or mode dictates edit but message was  never sent to this channel before
+                # Rate limit avoidance
+                await asyncio.sleep(C_RT_AVOID_DELAY)
+                if  self.mode in  {"send" , "clear-send"} or\
+                    self.mode == "edit" and self.previous_message is None:
+                    discord_sent_msg = await self.dm_channel.send(  text,
+                                                            embed=embed,
+                                                            # Create discord.File objects here so it is catched by the except block and then logged
+                                                            files=[discord.File(fwFILE.filename) for fwFILE in files])
+                    self.previous_message = discord_sent_msg
+
+                # Mode is edit and message was already send to this channel
+                elif self.mode == "edit":
+                    await self.previous_message.edit(text,
+                                                     embed=embed)
+                return {"success" : True}
+
+            except Exception as ex:
+                # Failed to send message
+                exit_condition = False
+                if isinstance(ex, discord.HTTPException):
+                    if ex.status == 429:    # Rate limit
+                        retry_after = int(ex.response.headers["Retry-After"])  + 1
+                        if ex.code == 20016:    # Slow Mode
+                            self.force_retry["ENABLED"] = True
+                            self.force_retry["TIME"] = retry_after
+                            exit_condition = True
+                        else:   # Normal (write) rate limit
+                            # Rate limit but not slow mode -> put the framework to sleep as it won't be able to send any messages globaly
+                            await asyncio.sleep(retry_after)
+
+                    elif ex.status == 404:      # Unknown object
+                        if ex.code == 10008:    # Unknown message
+                            self.previous_message  = None
+
+                        exit_condition = True
+                    else:
+                        exit_condition = True
+                else:
+                    exit_condition = True
+
+                # Assume a fail
+                if exit_condition:
+                    return {"success" : False, "reason" : ex}
+
+    async def send(self):
+        self.timer.reset()
+        self.timer.start()
+        self.force_retry["ENABLED"] = False
+        if self.randomized_time is True:
+            self.period = random.randrange(*self.random_range)
+
+        # Parse data from the data parameter
+        data_to_send  = None
+        if isinstance(self.data, FunctionBaseCLASS):
+            data_to_send = self.data.get_data()
+        else:
+            data_to_send = self.data
+
+        embed_to_send = None
+        text_to_send  = None
+        files_to_send  = []
+        if data_to_send is not None:
+            if not isinstance(data_to_send, (list, tuple, set)):
+                """ Put into a list for easier iteration.
+                    Technically only necessary if self.data  is a function (dynamic return),
+                    since normal (str, EMBED, FILE) get pre-checked in initialization."""
+                data_to_send = (data_to_send,)
+
+            for element in data_to_send:
+                if isinstance(element, str):
+                    text_to_send = element
+                elif isinstance(element, EMBED):
+                    embed_to_send = element
+                elif isinstance(element, FILE):
+                    files_to_send.append(element)
         
+        if text_to_send is not None or embed_to_send is not None or len(files_to_send) > 0:
+                # Clear previous messages sent to channel if mode is MODE_DELETE_SEND
+            context = await self.send_channel(text_to_send, embed_to_send, files_to_send)
+
+            # Return sent data + failed and successful function for logging purposes
+            return {"data_context": self.stringify_sent_data(text_to_send, embed_to_send, files_to_send), **context}
+
+        return None
