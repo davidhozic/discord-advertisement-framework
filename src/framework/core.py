@@ -13,13 +13,6 @@ from . import client
 import asyncio
 
 
-
-
-# TODO: Linting, write documentation for USER object, split into multiple modules, send method for DirectMESSAGE
-
-if __name__ == "__main__":
-    raise ImportError("This file is meant as a module and not as a script to run directly. Import it in a sepereate file and run it there")
-
 #######################################################################
 # Exports
 #######################################################################

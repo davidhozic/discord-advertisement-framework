@@ -7,9 +7,9 @@ from    typing import Union, List
 import  time
 import  os
 
-
 __all__ = (
     "GUILD",
+    "USER"
 )
 
 #######################################################################
@@ -31,22 +31,22 @@ class BaseGUILD:
         self.apiobject = id
         self._generate_log = generate_log
     
-    def get_log_guild_context(self, **options) -> str:
+    def get_log_guild_context(self, *p, **k) -> str:
         raise NotImplementedError
 
-    async def initialize(self) -> bool:
+    async def initialize(self, *p, **k) -> bool:
         raise NotImplementedError
-    
+
     async def advertise(self,
-                        attr_name: str=None):
+                        attr_name: str):
         for message in getattr(self, attr_name):
             if message.is_ready():
                 message_ret = await message.send()
                 if self._generate_log and message_ret is not None:
-                    self.generate_log(message_ret)
-    
+                    self.generate_log(**message_ret)
+                    
     def generate_log(self,
-                     options) -> str:
+                     **options) -> str:
         """
         Name:   generate_log
         Param:
@@ -102,6 +102,7 @@ class GUILD(BaseGUILD):
         "apiobject",
         "t_messages",
         "vc_messages",
+        "__messages",
         "_generate_log",
         "log_file_name"
     )
@@ -110,20 +111,13 @@ class GUILD(BaseGUILD):
                  guild_id: int,
                  messages_to_send: List[Union[TextMESSAGE, VoiceMESSAGE]],
                  generate_log: bool=False):
-        self.t_messages = []
-        self.vc_messages = []
-        for message in messages_to_send:
-            if type(message) is TextMESSAGE:
-                self.t_messages.append(message)
-            elif type(message) is VoiceMESSAGE:
-                self.vc_messages.append(message)
+        self.__messages = messages_to_send
         return super().__init__(guild_id, generate_log)
 
     def get_log_guild_context(self,
-                              **options) -> str:
+                              succeeded_ch: list,
+                              failed_ch: list) -> str:
         # Generate channel log
-        succeeded_ch = options.pop("succeeded_ch")
-        failed_ch = options.pop("failed_ch")
         succeeded_ch = "[\n" + "".join(f"\t\t{ch}(ID: {ch.id}),\n" for ch in succeeded_ch).rstrip(",\n") + "\n\t]" if len(succeeded_ch) else "[]"
         if len(failed_ch):
             tmp_chs, failed_ch = failed_ch, "["
@@ -150,6 +144,18 @@ Failed channels: {failed_ch}
         Info:   The function initializes all the GUILD objects (and other objects inside the GUILD object reccurssively).
                 It tries to get the discord.Guild object from the self.guild id and then tries to initialize the MESSAGE objects.
         """
+
+        self.t_messages = []
+        self.vc_messages = []
+        for message in self.__messages:
+            if type(message) is TextMESSAGE:
+                self.t_messages.append(message)
+            elif type(message) is VoiceMESSAGE:
+                self.vc_messages.append(message)
+            else:
+                trace(f"Invalid xxxMESSAGE type: {type(message).__name__}, expected  {TextMESSAGE.__name__} or {VoiceMESSAGE.__name__}", TraceLEVELS.ERROR)
+        del self.__messages
+
         guild_id = self.apiobject
         cl = client.get_client()
         self.apiobject = cl.get_guild(guild_id)
@@ -175,4 +181,61 @@ Failed channels: {failed_ch}
 
             return True
 
+        return False
+
+
+class USER(BaseGUILD):
+    """~ USER ~
+        @Info:
+        The USER objects represents a Discord user/member.
+        @Params:
+        - user_id: int ~ id of the user you want to DM,
+        - messages: list ~ list of DirectMESSAGE objects which
+                           represent messages that will be sent to the DM
+        - generate_log: bool ~ dictates if log should be generated for each sent message"""
+    __slots__ = (
+        "apiobject",
+        "_generate_log",
+        "t_messages",
+        "vc_messages",
+        "__messages",
+        "log_file_name",
+    )
+    def __init__(self,
+                 user_id: int,
+                 messages_to_send: List[DirectMESSAGE],
+                 generate_log: bool = False) -> None:
+        super().__init__(user_id, generate_log)
+        self.__messages = messages_to_send
+
+    def get_log_guild_context(self,
+                              **context: dict) -> str:
+        return \
+f"""\
+User: {self.apiobject.display_name}#{self.apiobject.discriminator}
+Success: {context["success"]} {f" >>> [ {context['reason']} ]" if not context["success"] else ""}
+"""
+
+    async def initialize(self) -> bool:
+        self.t_messages = []
+        self.vc_messages = []
+        for message in self.__messages:
+            if type(message) is DirectMESSAGE:
+                self.t_messages.append(message)
+            else:
+                trace(f"Invalid xxxMESSAGE type: {type(message).__name__}, expected  {DirectMESSAGE.__name__}", TraceLEVELS.ERROR)
+        del self.__messages
+
+        user_id = self.apiobject
+        cl = client.get_client()
+        self.apiobject = cl.get_user(user_id)
+
+        if self.apiobject is not None:
+            self.log_file_name = "".join(char if char not in C_FILE_NAME_FORBIDDEN_CHAR else "#" for char in f"{self.apiobject.display_name}#{self.apiobject.discriminator}") + ".md"
+            for message in self.t_messages[:]:
+                if type(message) is not DirectMESSAGE or not await message.initialize(user_id=user_id):
+                    self.t_messages.remove(message)
+            if not len(self.t_messages):
+                return False
+            return True
         return False
