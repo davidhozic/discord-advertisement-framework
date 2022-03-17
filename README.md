@@ -1,5 +1,5 @@
 #  **DISCORD ADVERTISEMENT FRAMEWORK (BOT) - DAF**
-The Discord advertisement frameawork is a tool that allows periodic advertisement in Discord.
+The Discord advertisement framework is a tool that allows easy advertising on Discord.
 
 # **Key features**
 - Periodic advertisement to **Direct messages**, **Text** channels and **Voice** channels
