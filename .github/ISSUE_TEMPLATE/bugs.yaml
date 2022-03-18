@@ -23,6 +23,5 @@ body:
     attributes:
       label: Version
       description: What version of our software are you running?
-      value: ""
     validations:
       required: true
