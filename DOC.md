@@ -1,9 +1,49 @@
 # **Discord Advertisement Framework (Bot)**
-[![Downloads](https://pepy.tech/badge/discord-advert-framework)](https://pepy.tech/project/discord-advert-framework) [![Downloads](https://pepy.tech/badge/discord-advert-framework/month)](https://pepy.tech/project/discord-advert-framework)
-[![PyPI](https://img.shields.io/pypi/v/discord-advert-framework)](https://pypi.org/project/Discord-Advert-Framework/)
-
 ## **Table of contents**
-
+- [**Discord Advertisement Framework (Bot)**](#discord-advertisement-framework-bot)
+  - [**Table of contents**](#table-of-contents)
+  - [**Introduction**](#introduction)
+  - [**Examples**](#examples)
+- [**Creatable objects**](#creatable-objects)
+  - [framework.**EMBED**](#frameworkembed)
+    - [**Parameters**](#parameters)
+    - [**Methods**](#methods)
+  - [framework.**EmbedFIELD**](#frameworkembedfield)
+    - [**Parameters**](#parameters-1)
+  - [framework.**FILE**](#frameworkfile)
+    - [**Parameters**](#parameters-2)
+  - [framework.**AUDIO**](#frameworkaudio)
+    - [**Parameters**](#parameters-3)
+  - [framework.**GUILD**](#frameworkguild)
+    - [**Parameters**](#parameters-4)
+  - [framework.**USER**](#frameworkuser)
+    - [**Parameters**](#parameters-5)
+    - [**Example**](#example)
+  - [framework.**xxxMESSAGE**](#frameworkxxxmessage)
+    - [**xxxMESSAGE types**](#xxxmessage-types)
+    - [**Common parameters**](#common-parameters)
+  - [framework.**TextMESSAGE**](#frameworktextmessage)
+    - [**Parameters**](#parameters-6)
+    - [**Example**](#example-1)
+  - [framework.**DirectMESSAGE**](#frameworkdirectmessage)
+    - [**Parameters**](#parameters-7)
+    - [**Example**](#example-2)
+  - [framework.**VoiceMESSAGE**](#frameworkvoicemessage)
+    - [**Parameters**](#parameters-8)
+    - [**Example**](#example-3)
+- [**Functions**](#functions)
+  - [framework.**run(...)**](#frameworkrun)
+    - [**Parameters**](#parameters-9)
+  - [framework.**get_client()**](#frameworkget_client)
+    - [**Description**](#description)
+  - [framework.**shutdown()**](#frameworkshutdown)
+    - [**Description**](#description-1)
+- [**Decorators**](#decorators)
+  - [framework.**data_function**](#frameworkdata_function)
+- [**Logging**](#logging)
+  - [**LOG OF SENT MESSAGES**](#log-of-sent-messages)
+  - [**Trace messages**](#trace-messages)
+- [**Regarding Pycord/discord.py**](#regarding-pycorddiscordpy)
 
 <br>
 
@@ -119,7 +159,7 @@ The **USER** object represents a user to which **direct messages** will be sent.
 - **user_id** - identificator which can be obtain by enabling [developer mode](https://techswift.org/2020/09/17/how-to-enable-developer-mode-in-discord/) in discord's settings and afterwards right-clicking on the server/guild icon in the server list and clicking **"Copy ID"**,
 - **messages_to_send** - List of [**DirectMESSAGE**](#frameworkdirectmessage) objects
 - **generate_log** - bool variable, if True it will generate a file log for each message send attempt.
-### Example:
+### **Example**
 ```py
 framework.USER(
 
@@ -135,7 +175,7 @@ framework.USER(
 <br>
 
 ## framework.**xxxMESSAGE**
-### **xxxMESSAGE types**:
+### **xxxMESSAGE types**
 The framework has 3 types of MESSAGE objects:
 - [**Text**MESSAGE](#frameworktextmessage)
 - [**Direct**MESSAGE](#frameworkdirectmessage)
@@ -143,7 +183,7 @@ The framework has 3 types of MESSAGE objects:
 
 , where the **Text**MESSAGE and **Direct**MESSAGE are very simillar with the difference being **Direct**MESSAGE is for direct messages (DMs).
 
-### **Common parameters**:
+### **Common parameters**
 Since all the classes inherit the **Base**MESSAGE class, they share certain parameters:
 - **start_period** and **end_period**: `int` - The parameters specify the period on which framework will
 try to send messages and also (if you are using the [data_function](#frameworkdatafunction)), the period on which your data function wil be called.
@@ -155,7 +195,7 @@ try to send messages and also (if you are using the [data_function](#frameworkda
 this is more detaily defined in the inherited classes.
 - start_now: `bool` - This parameter dictates if the message should be sent as soon as the framework is ran or wait the period first.
 
-## framework.**TextMESSAGE**:
+## framework.**TextMESSAGE**
 The **Text**MESSAGE class represents a message that will be sent into **text channels**.
 ### **Parameters**
 Additionaly to the [common parameters](#common-parameters) the **Text**MESSAGE accepts the following parameters:
@@ -200,7 +240,7 @@ Additionaly to the [common parameters](#common-parameters) the **Text**MESSAGE a
   - "edit"  - The previous message will be edited or a new sent if it doesn't exist,
   - "clear-send" - Previous message sent to a channel will be deleted and then a new message will be sent.<br><br>
 
-### **Example**:
+### **Example**
 ```py
 framework.TextMESSAGE(
                 start_period=None,              # If None, messages will be send on a fixed period (end period)
@@ -222,12 +262,12 @@ framework.TextMESSAGE(
 The **Direct**MESSAGE represents a message that is sent into direct messages of an user. It used with USER class as the **messages_to_send** parameter.<br>
 Apart from being sent into direct messages it is very simillar to the [framework.**TextMESSAGE**](#frameworktextmessage).
 
-### **Parameters**:
+### **Parameters**
 Additionally to the [common parameters](#common-parameters) the **Direct**MESSAGE accepts the following parameters:
 - data - This is exactly the same as the data parameter for the [**Text**MESSAGE parameters](#frameworktextmessage), please refer to it's parameters section.
 - send_mode - This is exactly the same as the data parameter for the [**Text**MESSAGE parameters](#frameworktextmessage), please refer to it's parameters section.
 
-### **Example**:
+### **Example**
 ```py
 framework.USER(
         user_id=123456789,                                  # ID of server (guild)
@@ -260,7 +300,7 @@ The **Voice**MESSAGE represents a message that will be **streamed** into an audi
 | The period for VoiceMESSAGE dictates the period of CONNECTING.                                                                                                      |
 | If your period is 10 second and your audio file is 5 seconds long, then the between messages will be 5 seconds and time between connecting to VC will be 10 seconds |
 
-### **Parameters**:
+### **Parameters**
 Additionally to the [common parameters](#common-parameters) the **Voice**MESSAGE accepts the following parameters:
 - **channel_ids** - List of IDs of all the channels you want data to be sent into.
 - data - this parameter represents the data that is actually send to Discord. It can be:
@@ -270,7 +310,7 @@ Additionally to the [common parameters](#common-parameters) the **Voice**MESSAGE
     - Return: The function **must** return any of the **above data types** or the **None** object if no data is ready to be sent.<br>
     - Other rules here are the same as in [framework.**TextMESSAGE** function parameter](#text_msg_param_function)
 
-### **Example**:
+### **Example**
 ```py
 framework.VoiceMESSAGE(
                 start_period=None,                          # If None, messages will be send on a fixed period (end period)

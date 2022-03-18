@@ -1,4 +1,8 @@
 #  **DISCORD ADVERTISEMENT FRAMEWORK (BOT) - DAF**
+![CodeFactor Grade](https://img.shields.io/codefactor/grade/github/davidhozic/discord-advertisement-framework/master)
+[![Downloads](https://pepy.tech/badge/discord-advert-framework)](https://pepy.tech/project/discord-advert-framework) [![Downloads](https://pepy.tech/badge/discord-advert-framework/month)](https://pepy.tech/project/discord-advert-framework)
+[![PyPI](https://img.shields.io/pypi/v/discord-advert-framework)](https://pypi.org/project/Discord-Advert-Framework/)
+
 The Discord advertisement framework is a tool that allows easy advertising on Discord.
 
 # **Key features**
