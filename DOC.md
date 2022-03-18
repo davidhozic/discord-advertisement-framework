@@ -9,10 +9,10 @@
 
 ## **Introduction**
 Welcome to the Discord Advertisement Framework.<br>
-If you ever needed a tool that allows you to advertise by **automatically sending messages to discord channels (text and voice)**, this is the tool for you.
+If you ever needed a tool that allows you to advertise by **automatically sending messages to discord channels (text, voice and direct messages)**, this is the tool for you.
 It supports advertising to **multiple guilds at once**, where it can generate **message logs** for each of those guilds where you can easilly find out what messages were successfully sent and which failed (and why they failed).<br>
 It allows you to automatically send messages in **custom time ranges** where those ranges can be either **fixed** or **randomized** after each sent message.<br>
-You can send data like **normal text**, **embeds**, **files** (TextMESSAGE) or **audio file** for streaming to discord voice channels (VoiceMESSAGE) , where the data can even be **dynamic** by providing the framework with an user defined function.<br>
+You can send data like **normal text**, **embeds**, **files** (TextMESSAGE, DirectMESSAGE) or **audio file** for streaming to discord voice channels (VoiceMESSAGE) , where the data can even be **dynamic** by providing the framework with an **user defined function**.<br>
 
 **Why is it called a framework?**<br>
 The project named framework, because it allows you to create additional application layers on top of it by using an user defined function that returns dynamic content.<br>
@@ -94,11 +94,11 @@ The **AUDIO** parameter represents an audio stream, you want streamed into a voi
 The **GUILD** object represents a server to which messages will be sent.
 
 ### **Parameters**
-- **Guild ID** - identificator which can be obtain by enabling [developer mode](https://techswift.org/2020/09/17/how-to-enable-developer-mode-in-discord/) in discord's settings and afterwards right-clicking on the server/guild icon in the server list and clicking **"Copy ID"**,
-- **List of [TextMESSAGE/VoiceMESSAGE](#frameworktextmessage--frameworkvoicemessage) objects** - Python list or tuple contating **TextMESSAGE**/**VoiceMESSAGE** objects.
-- **Generate file log** - bool variable, if True it will generate a file log for each message send attempt.
+- **guild_id** - identificator which can be obtain by enabling [developer mode](https://techswift.org/2020/09/17/how-to-enable-developer-mode-in-discord/) in discord's settings and afterwards right-clicking on the server/guild icon in the server list and clicking **"Copy ID"**,
+- **messages_to_send** - List of [**TextMESSAGE**](#frameworktextmessage) and/or [**VoiceMESSAGE**](#frameworkvoicemessage)  objects
+- **generate_log** - bool variable, if True it will generate a file log for each message send attempt.
 ```py
-GUILD(
+framework.GUILD(
 
         guild_id=123456789,         ## ID of server (guild)
         messages_to_send=[          ## List xxxMESSAGE objects 
@@ -113,12 +113,33 @@ GUILD(
 ```
 <br>
 
+## framework.**USER**
+The **USER** object represents a user to which **direct messages** will be sent.
+### **Parameters**
+- **user_id** - identificator which can be obtain by enabling [developer mode](https://techswift.org/2020/09/17/how-to-enable-developer-mode-in-discord/) in discord's settings and afterwards right-clicking on the server/guild icon in the server list and clicking **"Copy ID"**,
+- **messages_to_send** - List of [**DirectMESSAGE**](#frameworkdirectmessage) objects
+- **generate_log** - bool variable, if True it will generate a file log for each message send attempt.
+### Example:
+```py
+framework.USER(
+
+        user_id=123456789,                  ## ID of the user 
+        messages_to_send=[                  ## List DirectMESSAGE objects 
+            framework.DirectMESSAGE(...),
+            framework.DirectMESSAGE(...),
+            ...
+        ],
+        generate_log=True                   ## Generate file log of sent messages (and failed attempts) for this server 
+        )
+```
+<br>
+
 ## framework.**xxxMESSAGE**
 ### **xxxMESSAGE types**:
 The framework has 3 types of MESSAGE objects:
-- **Text**MESSAGE
-- **Direct**MESSAGE
-- **Voice**MESSAGE 
+- [**Text**MESSAGE](#frameworktextmessage)
+- [**Direct**MESSAGE](#frameworkdirectmessage)
+- [**Voice**MESSAGE](#frameworkvoicemessage)
 
 , where the **Text**MESSAGE and **Direct**MESSAGE are very simillar with the difference being **Direct**MESSAGE is for direct messages (DMs).
 
@@ -136,15 +157,15 @@ this is more detaily defined in the inherited classes.
 
 ## framework.**TextMESSAGE**:
 The **Text**MESSAGE class represents a message that will be sent into **text channels**.
-
 ### **Parameters**
-Additionaly to the [common parameters](#common-parameters) the **Text**MESSAGE accepts:
-- **Data** (data) - The data parameter is the actual data that will be sent using discord's API. The **data types** of this parameter can be: 
+Additionaly to the [common parameters](#common-parameters) the **Text**MESSAGE accepts the following parameters:
+- **data** - The data parameter is the actual data that will be sent using discord's API. The **data types** of this parameter can be: 
      -  **str** (normal text),
      - [framework.**EMBED**](#frameworkembed),
      - [framework.**FILE**](#frameworkfile),
      - **list/tuple** containing the above listed types (maximum 1 str, 1 embed and up to 10 files)
      - **Function** defined by the user:
+        <a id=text_msg_param_function></a>
         - Parameters: The function is allowed to accept anything
         - Return: The function **must** return any of the **above data types** or the **None** object if no data is ready to be sent.<br>
         If **None** is returned by the function, the framework will skip the send attempt and retry after it's **configured period**. For example you could make the framework call your function on more regular intervals and then decide within the function if anything is to be returned and if nothing is to be returned, you would return None.
@@ -161,25 +182,23 @@ Additionaly to the [common parameters](#common-parameters) the **Text**MESSAGE a
         - Usage:
             ```py
             @framework.data_function # <- IMPORTANT!!!
-            def function_name1(parameter_1, parameter_2):
+            def function_name(parameter_1, parameter_2):
                 """
                 Info: Function returns a different string each time when called by the framework making the sent data dynamic.
                 """
                 return f"Parameter: {parameter_1}\nTimestamp: {datetime.datetime.now()}"
             
-            @framework.data_function # <- IMPORTANT!!!
-            def function_name2(parameter_1, parameter_2):
-                return framework.AUDIO("recording.mp3")
-
-            
             framework.TextMESSAGE(...,
-                            data=function_name1(parameter_1, parameter_2),
-                            ...)
-
-            framework.VoiceMESSAGE(...,
-                            data=function_name2(parameter_1, parameter_2),
-                            ...)                     
+                            data=function_name(parameter_1, parameter_2),
+                            ...)    
             ```
+
+- **channel_ids** - List of IDs of all the channels you want data to be sent into.
+- **send_mode**   - string variable that defines the way message will be sent to a channel.<br>
+  This parameter can be:
+  - "send"  - Each period a new message will be sent to a channel,
+  - "edit"  - The previous message will be edited or a new sent if it doesn't exist,
+  - "clear-send" - Previous message sent to a channel will be deleted and then a new message will be sent.<br><br>
 
 ### **Example**:
 ```py
@@ -199,110 +218,69 @@ framework.TextMESSAGE(
 ```
 <br>
 
-## framework.**TextMESSAGE** / framework.**DirectMESSAGE** / framework.**VoiceMESSAGE**
-The **TextMESSAGE** and **VoiceMESSAGE** object containts parameters which describe behaviour and data that will be sent to the channels. They are very similar where the TextMESSAGE object will send to text channels,
-VoiceMESSAGE will send to voice channels and DirectMESSAGE will send to direct messages.
+## framework.**DirectMESSAGE**
+The **Direct**MESSAGE represents a message that is sent into direct messages of an user. It used with USER class as the **messages_to_send** parameter.<br>
+Apart from being sent into direct messages it is very simillar to the [framework.**TextMESSAGE**](#frameworktextmessage).
 
-| **NOTE**                                                                                                  |
+### **Parameters**:
+Additionally to the [common parameters](#common-parameters) the **Direct**MESSAGE accepts the following parameters:
+- data - This is exactly the same as the data parameter for the [**Text**MESSAGE parameters](#frameworktextmessage), please refer to it's parameters section.
+- send_mode - This is exactly the same as the data parameter for the [**Text**MESSAGE parameters](#frameworktextmessage), please refer to it's parameters section.
+
+### **Example**:
+```py
+framework.USER(
+        user_id=123456789,                                  # ID of server (guild)
+        messages_to_send=[                                  # List MESSAGE objects
+            framework.DirectMESSAGE(
+                                    start_period=None,      # If None, messages will be send on a fixed period (end period)
+                                    end_period=15,          # If start_period is None, it dictates the fixed sending period,
+                                                            # If start period is defined, it dictates the maximum limit of randomized period
+                                    data=["Hello World",    # Data you want to sent to the function (Can be of types : str, embed, file, list of types to the left
+                                        l_file1,            # or function that returns any of above types(or returns None if you don't have any data to send yet),
+                                        l_file2,            # where if you pass a function you need to use the framework.FUNCTION decorator on top of it ).
+                                        l_embed],           
+                                    mode="send",            # "send" will send a new message every time, "edit" will edit the previous message, "clear-send" will delete
+                                                            # the previous message and then send a new one
+                                    start_now=True          # Start sending now (True) or wait until period
+                                   ),  
+        ],
+        generate_log=True                                   ## Generate file log of sent messages (and failed attempts) for this user 
+```
+<br><br>
+
+## framework.**VoiceMESSAGE**
+The **Voice**MESSAGE represents a message that will be **streamed** into an audio channel.
+| **NOTE 1**                                                                                                |
 | --------------------------------------------------------------------------------------------------------- |
 | **VoiceMESSAGE** requires  [**FFMPEG**](https://www.ffmpeg.org/) installed and added to **PATH** to work. |
 
-### **Parameters**
--  **Start Period** , **End Period** (start_period, end_period) - These 2 parameters specify the period on which the messages will be sent.
-    - **Start Period** can be either:
-      - None - Messages will be sent on intervals specified by **End period**,
-      - Integer  >= 0 - Messages will be sent on intervals **randomly** chosen between **<u>Start period** and **End period</u>**, where the randomly chosen intervals will be re-randomized after each sent message.
-    
-    | NOTE                                                                                                                                                                |
-    | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-    | The period for VoiceMESSAGE dictates the period of CONNECTING.                                                                                                      |
-    | If your period is 10 second and your audio file is 5 seconds long, then the between messages will be 5 seconds and time between connecting to VC will be 10 seconds |
-    <br>
+| **NOTE 2**                                                                                                                                                          |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The period for VoiceMESSAGE dictates the period of CONNECTING.                                                                                                      |
+| If your period is 10 second and your audio file is 5 seconds long, then the between messages will be 5 seconds and time between connecting to VC will be 10 seconds |
 
--  **Data** (data) - The data parameter is the actual data that will be sent using discord's API. The **data types** of this parameter can be: 
-   - for **TextMESSAGE** and **DirectMESSAGE**:
-     -  **str** (normal text),
-     - [framework.**EMBED**](#frameworkembed),
-     - [framework.**FILE**](#frameworkfile),
-   - for **VoiceMESSAGE**:
-     - [framework.**AUDIO**](#frameworkaudio)
-   - for **TextMESSAGE** and **VoiceMESSAGE**:
-      - **list/tuple** containing the above listed types
-      - **Function** defined by the user:
-         - Parameters: The function is allowed to accept anything
-         - Return: The function **must** return any of the **above data types** or the **None** object if no data is ready to be sent.<br>
-         If **None** is returned by the function, the framework will skip the send attempt and retry after it's **configured period**. For example you could make the framework call your function on more regular intervals and then decide within the function if anything is to be returned and if nothing is to be returned, you would return None.
-         - **IMPORANT:** if you decide to use an user defined function as the data parameter, you **MUST** use the [framework.**data_function**](#frameworkdatafunction) decorator on it.
-           When you pass the function to the data parameter, pass it in the next format:
-           
-           <!-- ```py
-           @framework.data_function # <- IMPORTANT!!!
-           def function_name1(parameter_1, parameter_2):
-               """
-               Info: Function returns a different string each time when called by the framework making the sent data dynamic.
-               """
-               return f"Parameter: {parameter_1}\nTimestamp: {datetime.datetime.now()}"
-            
-           @framework.data_function # <- IMPORTANT!!!
-           def function_name2(parameter_1, parameter_2):
-               return framework.AUDIO("recording.mp3")
+### **Parameters**:
+Additionally to the [common parameters](#common-parameters) the **Voice**MESSAGE accepts the following parameters:
+- **channel_ids** - List of IDs of all the channels you want data to be sent into.
+- data - this parameter represents the data that is actually send to Discord. It can be:
+  - [framework.**AUDIO**](#frameworkaudio) - This class represents an audio file that is going to be streamed.
+  - **list** containing one audio file, if more are given, only the last is considered. This is allowed only for analogity with the TextMESSAGE and DirectMESSAGE data parameters.
+  - **Function** defined by the user:
+    - Return: The function **must** return any of the **above data types** or the **None** object if no data is ready to be sent.<br>
+    - Other rules here are the same as in [framework.**TextMESSAGE** function parameter](#text_msg_param_function)
 
-            
-           framework.TextMESSAGE(...,
-                           data=function_name1(parameter_1, parameter_2),
-                           ...)
-
-            framework.VoiceMESSAGE(...,
-                           data=function_name2(parameter_1, parameter_2),
-                           ...)                                                
-           ``` -->
-           
-           | **NOTE 1**:                                                                                                                                                                                                                                                                                                                                                                                                                       |
-           | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-           | When you use the framework.data_function decorator on the function, it returns a special class that is used by the framework to get data,<br> so consider making another function with the same definition and a different name or consider making this function to retreive data only.<br> Because the decorator returns a class and assigns it to the function name, you can no longer use this function as a regular function, |
-                                   
-           | **NOTE 2**:                                                                                                                                                                           |
-           | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-           | If you don't use the **framework.data_function** decorator, the function will only get called once(when you pass it to the data) and will not be called by the framework dynamically. |
-
-- **Channel IDs**  [**TextMESSAGE** and **VoiceMESSAGE**] (channel_ids) - List of IDs of all the channels you want data to be sent into.
-- **Send mode** [**TextMESSAGE** and **DirectMESSAGE**] (mode)  - string variable that defines the way message will be sent to a channel.<br>
-  This parameter can be:
-  - "send"  - Each period a new message will be sent to a channel,
-  - "edit"  - The previous message will be edited or a new sent if it doesn't exist,
-  
-    | NOTE                                                                       |
-    | -------------------------------------------------------------------------- |
-    | Editing messages with files is not yet supported (files won't get updated) |
-  - "clear-send" - Previous message sent to a channel will be deleted and then a new message will be sent.<br><br>
-- **Start Now** (start_now) - A bool variable that can be either True or False. If True, then the framework will send the message as soon as it is run and then wait it's period before trying again. If False, then the message will not be sent immediatly after framework is ready, but will instead wait for the period to elapse.<br>
+### **Example**:
 ```py
-framework.TextMESSAGE(
-                start_period=None,              # If None, messages will be send on a fixed period (end period)
-                end_period=15,                  # If start_period is None, it dictates the fixed sending period,
-                                                # If start period is defined, it dictates the maximum limit of randomized period
-                data= ["Some Text",
-                       framework.EMBED(...),
-                       framework.FILE("file.txt")    ],               # Data yo you want sent to the function (Can be of types : str, embed, file, list of types to the left
-                                                # or function that returns any of above types(or returns None if you don't have any data to send yet), 
-                                                # where if you pass a function you need to use the framework.data_function decorator on top of it ).
-                channel_ids=[123456789],        # List of ids of all the channels you want this message to be sent into
-                mode="send",                    # New message will be sent each period (can also be "edit" to edit previous message in channel or "clear-send" to delete old message and then send a new message)
-                start_now=True                  # Start sending now (True) or wait until period
-                ),  
-
 framework.VoiceMESSAGE(
-                start_period=None,              # If None, messages will be send on a fixed period (end period)
-                end_period=15,                  # If start_period is None, it dictates the fixed sending period,
-                                                # If start period is defined, it dictates the maximum limit of randomized period
-                data=framework.AUDIO("a.mp3"),  # Data yo you want sent to the function (Can be of types : str, embed, file, list of types to the left
-                                                # or function that returns any of above types(or returns None if you don't have any data to send yet), 
-                                                # where if you pass a function you need to use the framework.data_function decorator on top of it ).
-                channel_ids=[123456789],        # List of ids of all the channels you want this message to be sent into
-                start_now=True                  # Start sending now (True) or wait until period
-                ),  
+                start_period=None,                          # If None, messages will be send on a fixed period (end period)
+                end_period=15,                              # If start_period is None, it dictates the fixed streaming period (period of channel join).,
+                data=[framework.AUDIO("rick.mp3")],         # Data you want to send (Can be of types : AUDIO or function that returns any of above types [or returns None if you don't have any data to send yet])
+                    
+                channel_ids=[12345],
+                start_now=True
+            )
 ```
-<br>
 
 # **Functions**
 ## framework.**run(...)** 
@@ -326,21 +304,19 @@ framework.run(  token="your_token_here",                # MANDATORY
 <br>
 
 ## framework.**get_client()**
-### Description
+### **Description**
 The framework.**get_client** returns an object which is used to interact with Discord using their API. <br>
 You can call this function to get the internal Client object instead of making a new Client objects.<br>
 See more here: **[discord.Client](https://docs.pycord.dev/en/master/api.html?highlight=client#discord.Client)**.
 <br>
 
 ## framework.**shutdown()**
-### Description
+### **Description**
 The framework.**shutdown()** functions accepts no parameters and returns None.<br>
 It is used to fully shutdown the framework and then **exit** out of the program.<br>
 
 
 # **Decorators**
-Python decorators are callable objects that you can use to give your function or class extra functionallity. Essentialy they are meant to accept a function or a class as their parameter and then process whatever they are meant to do with the function or class.
-More on Python decorators [here](https://realpython.com/primer-on-python-decorators/).<br>
 **Inside the framework**, there is only one decorator:
 
 ## framework.**data_function**
@@ -374,14 +350,31 @@ More on Python decorators [here](https://realpython.com/primer-on-python-decorat
                             channel_ids= [21345, 23132, 2313223],
                             mode="send",
                             start_now=True
-                          ),
+                            ),
                 fw.VoiceMESSAGE(
                             start_period=None,
                             end_period=60,
                             data=some_other_function(),
                             channel_ids= [21345, 23132],
                             start_now=True
-                          )
+                            ),
+        fw.USER(
+            user_id=123456789,
+            messages_to_send=[
+                fw.DirectMESSAGE(
+                            start_period=None,
+                            end_period=15,
+
+                            data=["Hello World",
+                                    l_file1,
+                                    l_file2,
+                                    l_embed],
+                            mode="send",
+                            start_now=True
+                            ),  
+                    ],
+                    generate_log=True
+                )
             ],
             generate_log=True
         )
