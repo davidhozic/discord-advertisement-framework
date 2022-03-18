@@ -82,6 +82,7 @@ class BaseMESSAGE:
     def __init__(self,
                 start_period : Union[float,None],
                 end_period : float,
+                data,
                 start_now : bool=True):
 
         if start_period is None:            # If start_period is none -> period will not be randomized
@@ -94,7 +95,7 @@ class BaseMESSAGE:
 
         self.timer = TIMER()
         self.force_retry = {"ENABLED" : start_now, "TIME" : 0}  # This is used in both TextMESSAGE and VoiceMESSAGE for compatability purposes
-        self.data = None
+        self.data = data
 
     def stringify_sent_data(self) -> str:
         """~ stringify_sent_data ~

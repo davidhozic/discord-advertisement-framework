@@ -3,40 +3,7 @@
 [![PyPI](https://img.shields.io/pypi/v/discord-advert-framework)](https://pypi.org/project/Discord-Advert-Framework/)
 
 ## **Table of contents**
-- [**Discord Advertisement Framework (Bot)**](#discord-advertisement-framework-bot)
-  - [**Table of contents**](#table-of-contents)
-  - [**Introduction**](#introduction)
-  - [**Examples**](#examples)
-- [**Getting started**](#getting-started)
-  - [**Installation**](#installation)
-  - [**Sending messages**](#sending-messages)
-- [**Creatable objects**](#creatable-objects)
-  - [framework.**EMBED**](#frameworkembed)
-    - [**Parameters**](#parameters)
-    - [**Methods**](#methods)
-  - [framework.**EmbedFIELD**](#frameworkembedfield)
-    - [**Parameters**](#parameters-1)
-  - [framework.**FILE**](#frameworkfile)
-    - [**Parameters**](#parameters-2)
-  - [framework.**AUDIO**](#frameworkaudio)
-    - [**Parameters**](#parameters-3)
-  - [framework.**GUILD**](#frameworkguild)
-    - [**Parameters**](#parameters-4)
-  - [framework.**TextMESSAGE** / framework.**VoiceMESSAGE**](#frameworktextmessage--frameworkvoicemessage)
-    - [**Parameters**](#parameters-5)
-- [**Functions**](#functions)
-  - [framework.**run(...)**](#frameworkrun)
-    - [**Parameters**](#parameters-6)
-  - [framework.**get_client()**](#frameworkget_client)
-    - [Description](#description)
-  - [framework.**shutdown()**](#frameworkshutdown)
-    - [Description](#description-1)
-- [**Decorators**](#decorators)
-  - [framework.**data_function**](#frameworkdata_function)
-- [**Logging**](#logging)
-  - [**LOG OF SENT MESSAGES**](#log-of-sent-messages)
-  - [**Trace messages**](#trace-messages)
-- [**Regarding Pycord/discord.py**](#regarding-pycorddiscordpy)
+
 
 <br>
 
@@ -146,6 +113,92 @@ GUILD(
 ```
 <br>
 
+## framework.**xxxMESSAGE**
+### **xxxMESSAGE types**:
+The framework has 3 types of MESSAGE objects:
+- **Text**MESSAGE
+- **Direct**MESSAGE
+- **Voice**MESSAGE 
+
+, where the **Text**MESSAGE and **Direct**MESSAGE are very simillar with the difference being **Direct**MESSAGE is for direct messages (DMs).
+
+### **Common parameters**:
+Since all the classes inherit the **Base**MESSAGE class, they share certain parameters:
+- **start_period** and **end_period**: `int` - The parameters specify the period on which framework will
+try to send messages and also (if you are using the [data_function](#frameworkdatafunction)), the period on which your data function wil be called.
+    - **start_period** can be one of the 2:
+        - **Integer >= 0**: the period will be randomly choosen between **start_period** and **end_period**, and it is randomized after each send attempt.
+        - **None**: The sending period will be equal to the **end_period**
+
+- data: `message type dependant` - The data parameter describes the data that will be sent to Dicord, <br>
+this is more detaily defined in the inherited classes.
+- start_now: `bool` - This parameter dictates if the message should be sent as soon as the framework is ran or wait the period first.
+
+## framework.**TextMESSAGE**:
+The **Text**MESSAGE class represents a message that will be sent into **text channels**.
+
+### **Parameters**
+Additionaly to the [common parameters](#common-parameters) the **Text**MESSAGE accepts:
+- **Data** (data) - The data parameter is the actual data that will be sent using discord's API. The **data types** of this parameter can be: 
+     -  **str** (normal text),
+     - [framework.**EMBED**](#frameworkembed),
+     - [framework.**FILE**](#frameworkfile),
+     - **list/tuple** containing the above listed types (maximum 1 str, 1 embed and up to 10 files)
+     - **Function** defined by the user:
+        - Parameters: The function is allowed to accept anything
+        - Return: The function **must** return any of the **above data types** or the **None** object if no data is ready to be sent.<br>
+        If **None** is returned by the function, the framework will skip the send attempt and retry after it's **configured period**. For example you could make the framework call your function on more regular intervals and then decide within the function if anything is to be returned and if nothing is to be returned, you would return None.
+        - **IMPORANT:** if you decide to use an user defined function as the data parameter, you **MUST** use the [framework.**data_function**](#frameworkdatafunction) decorator on it.
+        When you pass the function to the data parameter, pass it in the next format:
+           
+            | **NOTE 1**:                                                                                                                                                                                                                                                                                                                                                                                                                       |
+            | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+            | When you use the framework.data_function decorator on the function, it returns a special class that is used by the framework to get data,<br> so consider making another function with the same definition and a different name or consider making this function to retreive data only.<br> Because the decorator returns a class and assigns it to the function name, you can no longer use this function as a regular function, |
+                                    
+            | **NOTE 2**:                                                                                                                                                                           |
+            | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+            | If you don't use the **framework.data_function** decorator, the function will only get called once(when you pass it to the data) and will not be called by the framework dynamically. |
+        - Usage:
+            ```py
+            @framework.data_function # <- IMPORTANT!!!
+            def function_name1(parameter_1, parameter_2):
+                """
+                Info: Function returns a different string each time when called by the framework making the sent data dynamic.
+                """
+                return f"Parameter: {parameter_1}\nTimestamp: {datetime.datetime.now()}"
+            
+            @framework.data_function # <- IMPORTANT!!!
+            def function_name2(parameter_1, parameter_2):
+                return framework.AUDIO("recording.mp3")
+
+            
+            framework.TextMESSAGE(...,
+                            data=function_name1(parameter_1, parameter_2),
+                            ...)
+
+            framework.VoiceMESSAGE(...,
+                            data=function_name2(parameter_1, parameter_2),
+                            ...)                     
+            ```
+
+### **Example**:
+```py
+framework.TextMESSAGE(
+                start_period=None,              # If None, messages will be send on a fixed period (end period)
+                end_period=15,                  # If start_period is None, it dictates the fixed sending period,
+                                                # If start period is defined, it dictates the maximum limit of randomized period
+                data= ["Some Text",
+                       framework.EMBED(...),
+                       framework.FILE("file.txt")    ],               # Data yo you want sent to the function (Can be of types : str, embed, file, list of types to the left
+                                                # or function that returns any of above types(or returns None if you don't have any data to send yet), 
+                                                # where if you pass a function you need to use the framework.data_function decorator on top of it ).
+                channel_ids=[123456789],        # List of ids of all the channels you want this message to be sent into
+                mode="send",                    # New message will be sent each period (can also be "edit" to edit previous message in channel or "clear-send" to delete old message and then send a new message)
+                start_now=True                  # Start sending now (True) or wait until period
+                ),  
+```
+<br>
+
 ## framework.**TextMESSAGE** / framework.**DirectMESSAGE** / framework.**VoiceMESSAGE**
 The **TextMESSAGE** and **VoiceMESSAGE** object containts parameters which describe behaviour and data that will be sent to the channels. They are very similar where the TextMESSAGE object will send to text channels,
 VoiceMESSAGE will send to voice channels and DirectMESSAGE will send to direct messages.
@@ -181,7 +234,8 @@ VoiceMESSAGE will send to voice channels and DirectMESSAGE will send to direct m
          If **None** is returned by the function, the framework will skip the send attempt and retry after it's **configured period**. For example you could make the framework call your function on more regular intervals and then decide within the function if anything is to be returned and if nothing is to be returned, you would return None.
          - **IMPORANT:** if you decide to use an user defined function as the data parameter, you **MUST** use the [framework.**data_function**](#frameworkdatafunction) decorator on it.
            When you pass the function to the data parameter, pass it in the next format:
-           ```py
+           
+           <!-- ```py
            @framework.data_function # <- IMPORTANT!!!
            def function_name1(parameter_1, parameter_2):
                """
@@ -193,7 +247,7 @@ VoiceMESSAGE will send to voice channels and DirectMESSAGE will send to direct m
            def function_name2(parameter_1, parameter_2):
                return framework.AUDIO("recording.mp3")
 
-
+            
            framework.TextMESSAGE(...,
                            data=function_name1(parameter_1, parameter_2),
                            ...)
@@ -201,7 +255,7 @@ VoiceMESSAGE will send to voice channels and DirectMESSAGE will send to direct m
             framework.VoiceMESSAGE(...,
                            data=function_name2(parameter_1, parameter_2),
                            ...)                                                
-           ```
+           ``` -->
            
            | **NOTE 1**:                                                                                                                                                                                                                                                                                                                                                                                                                       |
            | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
