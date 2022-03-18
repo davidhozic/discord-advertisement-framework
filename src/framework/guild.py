@@ -1,9 +1,16 @@
+"""
+    ~  guild  ~
+    This module contains the class defitions for all things
+    regarding the guild and also defines a USER class from the
+    BaseGUILD class.
+"""
+
+from    contextlib import suppress
+from    typing import Union, List
 from    .tracing import *
 from    .const import *
 from    .message import *
 from    . import client
-from    contextlib import suppress
-from    typing import Union, List
 import  time
 import  os
 
@@ -15,7 +22,10 @@ __all__ = (
 #######################################################################
 # Globals
 #######################################################################
-m_server_log_output_path = None
+class GLOBALS:
+    """ ~  GLOBALS  ~
+        Contains the global variables for the module"""
+    server_log_path = None
 
 class BaseGUILD:
     """ ~ BaseGUILD ~
@@ -23,28 +33,52 @@ class BaseGUILD:
     __slots__ = (
         "apiobject",
         "_generate_log",
-        "log_file_name"
+        "log_file_name",
+        "t_messages",
+        "vc_messages"
     )
     def __init__(self,
-                 id: int,
+                 snowflake: int,
                  generate_log: bool=False) -> None:
-        self.apiobject = id
+        self.apiobject = snowflake
         self._generate_log = generate_log
-    
-    def get_log_guild_context(self, *p, **k) -> str:
+        self.log_file_name = None
+        self.t_messages = []
+        self.vc_messages = []
+
+    def stringify_guild_context(self, **context) -> str:
+        """
+            ~  stringify_guild_context  ~
+            Returns stringified message context that is related to the guild itself.
+            This is implementation specific.
+        """
         raise NotImplementedError
 
-    async def initialize(self, *p, **k) -> bool:
+    async def initialize(self) -> bool:
+        """
+        ~  initialize  ~
+        @Return: bool:
+                - Returns True if the initialization was successful
+                - Returns False if failed, indicating the object should be removed from the server_list
+        @Info:   The function initializes all the <IMPLEMENTATION> objects (and other objects inside the  <IMPLEMENTATION> object reccurssively).
+                 It tries to get the  discord.<IMPLEMENTATION> object from the self.<implementation>_id and then tries to initialize the MESSAGE objects.
+        """
         raise NotImplementedError
 
     async def advertise(self,
                         attr_name: str):
+        """
+            ~ advertise ~
+            @Info:
+            This is the main coroutine that is responsible for sending all the messages to this specificc guild,
+            it is called from the core module's advertiser task
+        """
         for message in getattr(self, attr_name):
             if message.is_ready():
                 message_ret = await message.send()
                 if self._generate_log and message_ret is not None:
                     self.generate_log(**message_ret)
-                    
+
     def generate_log(self,
                      **options) -> str:
         """
@@ -61,9 +95,9 @@ class BaseGUILD:
                                                                 timestruct.tm_year,
                                                                 timestruct.tm_hour,
                                                                 timestruct.tm_min)
-        guild_context = ""                                                                
-        for x in self.get_log_guild_context(**options).splitlines():
-            guild_context += f"\t{x}\n"
+        guild_context = ""
+        for line in self.stringify_guild_context(**options).splitlines():
+            guild_context += f"\t{line}\n"
         guild_context = guild_context.rstrip()
 
         appender_data = f"""
@@ -81,8 +115,8 @@ class BaseGUILD:
         # Write into file
         try:
             with suppress(FileExistsError):
-                os.mkdir(m_server_log_output_path)
-            with open(os.path.join(m_server_log_output_path, self.log_file_name),'a', encoding='utf-8') as appender:
+                os.mkdir(GLOBALS.server_log_path)
+            with open(os.path.join(GLOBALS.server_log_path, self.log_file_name),'a', encoding='utf-8') as appender:
                 appender.write(appender_data)
         except OSError as os_exception:
             trace(f"Unable to save log. Exception: {os_exception}", TraceLEVELS.WARNING)
@@ -112,12 +146,14 @@ class GUILD(BaseGUILD):
                  messages_to_send: List[Union[TextMESSAGE, VoiceMESSAGE]],
                  generate_log: bool=False):
         self.__messages = messages_to_send
-        return super().__init__(guild_id, generate_log)
+        super().__init__(guild_id, generate_log)
 
-    def get_log_guild_context(self,
-                              succeeded_ch: list,
-                              failed_ch: list) -> str:
+    def stringify_guild_context(self,
+                              **context) -> str:
         # Generate channel log
+        succeeded_ch = context["succeeded_ch"]
+        failed_ch = context["failed_ch"]
+
         succeeded_ch = "[\n" + "".join(f"\t\t{ch}(ID: {ch.id}),\n" for ch in succeeded_ch).rstrip(",\n") + "\n\t]" if len(succeeded_ch) else "[]"
         if len(failed_ch):
             tmp_chs, failed_ch = failed_ch, "["
@@ -144,9 +180,6 @@ Failed channels: {failed_ch}
         Info:   The function initializes all the GUILD objects (and other objects inside the GUILD object reccurssively).
                 It tries to get the discord.Guild object from the self.guild id and then tries to initialize the MESSAGE objects.
         """
-
-        self.t_messages = []
-        self.vc_messages = []
         for message in self.__messages:
             if type(message) is TextMESSAGE:
                 self.t_messages.append(message)
@@ -165,9 +198,9 @@ Failed channels: {failed_ch}
             self.log_file_name = "".join(char if char not in C_FILE_NAME_FORBIDDEN_CHAR else "#" for char in self.apiobject.name) + ".md"
 
             for message in self.t_messages[:]:
-                """ Iterate thru the slice text messages list and initialize each
-                    message object. If the message objects fails to initialize,
-                    then it is removed from the original list."""
+                # Iterate thru the slice text messages list and initialize each
+                # message object. If the message objects fails to initialize,
+                # then it is removed from the original list.
                 if not await message.initialize():
                     self.t_messages.remove(message)
 
@@ -208,7 +241,7 @@ class USER(BaseGUILD):
         super().__init__(user_id, generate_log)
         self.__messages = messages_to_send
 
-    def get_log_guild_context(self,
+    def stringify_guild_context(self,
                               **context: dict) -> str:
         return \
 f"""\
@@ -217,8 +250,6 @@ Success: {context["success"]} {f" >>> [ {context['reason']} ]" if not context["s
 """
 
     async def initialize(self) -> bool:
-        self.t_messages = []
-        self.vc_messages = []
         for message in self.__messages:
             if type(message) is DirectMESSAGE:
                 self.t_messages.append(message)
@@ -233,7 +264,9 @@ Success: {context["success"]} {f" >>> [ {context['reason']} ]" if not context["s
         if self.apiobject is not None:
             self.log_file_name = "".join(char if char not in C_FILE_NAME_FORBIDDEN_CHAR else "#" for char in f"{self.apiobject.display_name}#{self.apiobject.discriminator}") + ".md"
             for message in self.t_messages[:]:
-                if type(message) is not DirectMESSAGE or not await message.initialize(user_id=user_id):
+                if (type(message) is not DirectMESSAGE or
+                    not await message.initialize(user_id=user_id)
+                ):
                     self.t_messages.remove(message)
             if not len(self.t_messages):
                 return False

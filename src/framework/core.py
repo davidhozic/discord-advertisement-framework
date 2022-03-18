@@ -1,22 +1,23 @@
 """
-    DISCORD ADVERTISEMENT FRAMEWORK (DAF)
-    Author      :: David Hozic
-    Copyright   :: Copyright (c) 2022 David Hozic
-    Version     :: V1.7.9
+    ~  core  ~
+    This module contains the essential definitons
+    and functions needed for the framework to run,
+    as well as user function to control the framework
 """
-from   typing import Literal
+import asyncio
+from   typing import Literal, Callable, List
 from . const import *
 from . import tracing
 from . tracing import *
 from . import guild
 from . import client
-import asyncio
+
 
 
 #######################################################################
 # Exports
 #######################################################################
-__all__ = (    # __all__ variable dictates which objects get imported when using from <module> import *
+__all__ = (
     "run",
     "shutdown"
 )
@@ -24,10 +25,12 @@ __all__ = (    # __all__ variable dictates which objects get imported when using
 #######################################################################
 # Globals   (These are all set in the framework.run function)
 #######################################################################
-m_user_callback = None     # User provided function to call after framework is ready
-m_server_list   = None        
+class GLOBALS:
+    """ ~  GLOBALS  ~
+        @Info: Contains the globally needed variables"""
+    user_callback: Callable
+    server_list: List
 
-        
 #######################################################################
 # Tasks
 #######################################################################
@@ -36,13 +39,14 @@ async def advertiser(message_type: Literal["t_messages", "vc_messages"]) -> None
     Name  : advertiser
     Param :
         -   message_type:
-            Name of the message list variable, can be t_messages for TextMESSAGE list and vc_messages for VoiceMESSAGE list
+            Name of the message list variable, can be t_messages for TextMESSAGE list
+            and vc_messages for VoiceMESSAGE list
     Info  : Main task that is responsible for the framework
             2 tasks are created for 2 types of messages: TextMESSAGE and VoiceMESSAGE
     """
     while True:
         await asyncio.sleep(C_TASK_SLEEP_DELAY)
-        for guild_user in m_server_list:
+        for guild_user in GLOBALS.server_list:
             await guild_user.advertise(message_type)
 
 
@@ -55,14 +59,16 @@ async def initialize() -> bool:
     Parameters: void
     Return:     bool:
                 - Returns True if ANY guild was successfully initialized
-                - Returns False if ALL the guilds were not able to initialize, indicating the framework should be stopped.
-    Info:       Function that initializes the guild objects and then returns True on success or False on failure.
+                - Returns False if ALL the guilds were not able to initialize,
+                  indicating the framework should be stopped.
+    Info:       Function that initializes the guild objects and
+                then returns True on success or False on failure.
     """
-    for server in m_server_list[:]:
+    for server in GLOBALS.server_list[:]:
         if not await server.initialize():
-            m_server_list.remove(server)
+            GLOBALS.server_list.remove(server)
 
-    if len(m_server_list):
+    if len(GLOBALS.server_list):
         return True
     else:
         trace("No guilds could be parsed", TraceLEVELS.ERROR)
@@ -92,20 +98,18 @@ def run(token : str,
     @params:
         - token             : str       = access token for account
         - server_list       : list      = List of framework.GUILD objects
-        - is_user           : bool      = Set to True if token is from an user account and not a bot account
-        - user_callback     : function  = User callback function (gets called after framework is ran)
+        - is_user           : bool      = Is the token from an user account
+        - user_callback     : function  = Function to call on run
         - server_log_output : str       = Path where the server log files will be created
         - debug             : bool      = Print trace message to the console,
-                                          useful for debugging if you feel like something is not working
+                                          useful for debugging
 
     @description: This function is the function that starts framework and starts advertising
     """
-    global m_user_callback, m_server_list
 
-    
-    guild.m_server_log_output_path = server_log_output    ## Path to folder where to crete server logs
-    tracing.m_use_debug = debug                     ## Print trace messages to the console for debugging purposes
-    m_server_list = server_list                     ## List of guild objects to iterate thru in the advertiser task
-    m_user_callback = user_callback                 ## Called after framework has started
-       
+    guild.GLOBALS.server_log_path = server_log_output    ## Logging folder
+    tracing.m_use_debug = debug                           ## Print trace messages to the console for debugging purposes
+    GLOBALS.server_list = server_list                     ## List of guild objects to iterate thru in the advertiser task
+    GLOBALS.user_callback = user_callback                 ## Called after framework has started
+
     client.initialize(token, bot=not is_user)

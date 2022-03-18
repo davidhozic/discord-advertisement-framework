@@ -1,18 +1,25 @@
-from    typing import List, Union, Tuple, Literal
+"""
+    ~   message    ~
+    This module contains the definitions regarding the xxxMESSAGE class and
+    all the functionality for sending data into discord channels.
+"""
+from    typing import List, Union, Literal
 from    .dtypes import *
 from    .tracing import *
 from    .const import *
 from    . import client
 import  random
-import  _discord as discord
 import  time
 import  asyncio
+import  _discord as discord
+
 
 __all__ = (
     "TextMESSAGE",
     "VoiceMESSAGE",
     "DirectMESSAGE"
 )
+
 
 class TIMER:
     """
@@ -42,9 +49,8 @@ class TIMER:
            and starts the timer if not already stared"""
         if self.running:
             return time.time() - self.startms
-        else:
-            self.start()
-            return 0
+        self.start()
+        return 0
 
     def reset (self):
         "Reset the timer"
@@ -52,24 +58,31 @@ class TIMER:
 
 
 class BaseMESSAGE:
+    """
+        ~  BaseMESSAGE  ~
+        @Info:
+        This is the base class for all the different classes that
+        represent a message you want to be sent into discord.
+    """
     __slots__ = (
         "randomized_time",
         "period",
         "random_range",
         "timer",
-        "force_retry"
+        "force_retry",
+        "data"
     )
 
-    """
-    The "__valid_data_types__" should be implemented in the INHERITED classes.
-    The set contains all the data types that the class is allowed to accept, this variable
-    is then checked for allowed data types in the "initialize" function bellow.
-    """
+    
+    # The "__valid_data_types__" should be implemented in the INHERITED classes.
+    # The set contains all the data types that the class is allowed to accept, this variable
+    # is then checked for allowed data types in the "initialize" function bellow.
     __valid_data_types__ = {}
 
     def __init__(self,
                 start_period : Union[float,None],
                 end_period : float,
+                data,
                 start_now : bool=True):
 
         if start_period is None:            # If start_period is none -> period will not be randomized
@@ -82,8 +95,9 @@ class BaseMESSAGE:
 
         self.timer = TIMER()
         self.force_retry = {"ENABLED" : start_now, "TIME" : 0}  # This is used in both TextMESSAGE and VoiceMESSAGE for compatability purposes
+        self.data = data
 
-    def stringify_sent_data(self, *opt, **kopt) -> str:
+    def stringify_sent_data(self) -> str:
         """~ stringify_sent_data ~
             @Info:
             Returns a partial log containing sent data only (that is then returned to the guild)
@@ -98,7 +112,7 @@ class BaseMESSAGE:
         """
         return not self.force_retry["ENABLED"] and self.timer.elapsed() > self.period or self.force_retry["ENABLED"] and self.timer.elapsed() > self.force_retry["TIME"]
 
-    async def send_channel(self, *opt, **kopt) -> dict:
+    async def send_channel(self) -> dict:
         """                  ~ send_channel ~
             @Info:
             Sends data to a specific channel, this is seperate from send
@@ -108,26 +122,36 @@ class BaseMESSAGE:
             """
         raise NotImplementedError
 
-    async def send(self, *opt, **kopt) -> dict:
+    async def send(self) -> dict:
         """
         Name:   send to channels
         Param:  void
         Info:   This function should be implemented in the inherited class
                 and should send the message to all the channels."""
         raise NotImplementedError
-    
-    async def initialize_channels(self,
-                                  **options: dict) -> bool:
+
+    async def initialize_channels(self) -> bool:
+        """
+            ~  initialize_channels  ~
+            This method initializes the implementation specific
+            api objects and checks for the correct channel inpit context.
+        """
         raise NotImplementedError
-    
+
     async def initialize_data(self) -> bool:
+        """
+            ~  initialize_data  ~
+            This method checks for the correct data input to the xxxMESSAGE
+            object. The expected datatypes for specific implementation is 
+            defined thru the static variable __valid_data_types__
+        """
         # Check for correct data types of the MESSAGE.data parameter
         if not isinstance(self.data, FunctionBaseCLASS):
-            """
-            This is meant only as a pre-check if the parameters are correct so you wouldn't eg. start
-            sending this message 6 hours later and only then realize the parameters were incorrect.
-            The parameters also get checked/parsed each period right before the send.
-            """
+
+            # This is meant only as a pre-check if the parameters are correct so you wouldn't eg. start
+            # sending this message 6 hours later and only then realize the parameters were incorrect.
+            # The parameters also get checked/parsed each period right before the send.
+
             # Convert any arguments passed into a list of arguments
             if  isinstance(self.data, (list, tuple, set)):
                 self.data = list(self.data)   # Convert into a regular list to allow removal of items
@@ -136,14 +160,13 @@ class BaseMESSAGE:
 
             # Check all the arguments
             for data in self.data[:]:
-                """
-                Check all the data types of all the passed to the data parameter.
-                If class does not match the allowed types, then the object is removed.
-                The for loop iterates thru a shallow copy (sliced list) of data_params to allow removal of items
-                without affecting the iteration (would skip elements without a copy or use of while loop).
+                # Check all the data types of all the passed to the data parameter.
+                # If class does not match the allowed types, then the object is removed.
+                # The for loop iterates thru a shallow copy (sliced list) of data_params to allow removal of items
+                # without affecting the iteration (would skip elements without a copy or use of while loop).
 
-                The inherited classes MUST DEFINE THE "__valid_data_types__" inside the class which should be a set of the allowed data types
-                """
+                # The inherited classes MUST DEFINE THE "__valid_data_types__" inside the class which should be a set of the allowed data types
+
                 if (
                         type(data) not in type(self).__valid_data_types__
                     ):
@@ -154,7 +177,7 @@ class BaseMESSAGE:
                     else:
                         trace(f"INVALID DATA PARAMETER PASSED!\nArgument is of type : {type(data).__name__}\nSee README.md for allowed data types", TraceLEVELS.WARNING)
                         self.data.remove(data)
-            
+
             return len(self.data) > 0
 
         return True
@@ -217,9 +240,8 @@ class VoiceMESSAGE(BaseMESSAGE):
         super().__init__(start_period, end_period, start_now)
         self.data = data
         self.channels = channel_ids
-    
-    async def initialize_channels(self,
-                                  **options: dict) -> bool:
+
+    async def initialize_channels(self) -> bool:
         ch_i = 0
         cl = client.get_client()
         while ch_i < len(self.channels):
@@ -240,7 +262,7 @@ class VoiceMESSAGE(BaseMESSAGE):
         return len(self.channels) > 0
 
     def stringify_sent_data (self,
-                            sent_audio: AUDIO) -> str:
+                            sent_audio) -> str:
         """
         Name:  stringify_sent_data
         Param: sent_audio -- Audio file that was streamed to the channels
@@ -255,13 +277,13 @@ class VoiceMESSAGE(BaseMESSAGE):
     async def send_channel(self,
                            channel: discord.VoiceChannel,
                            audio: AUDIO) -> dict:
-        stream = None 
-        voice_client = None                          
+        stream = None
+        voice_client = None
         try:
             # Try to open file first as FFMpegOpusAudio doesn't raise exception if file does not exist
-            with open(audio.filename, "rb") as reader: pass
+            with open(audio.filename, "rb"): pass
             stream = discord.FFmpegOpusAudio(audio.filename)
-                
+
             voice_client = await channel.connect(timeout=C_VC_CONNECT_TIMEOUT)
             voice_client.play(stream)
             while voice_client.is_playing():
@@ -273,10 +295,8 @@ class VoiceMESSAGE(BaseMESSAGE):
             if stream is not None:
                 stream.cleanup()
             if voice_client is not None:
-                """
-                Note (TODO): Should remove this in the future. Currently it disconnects instead moving to a different channel, because using
-                        .move_to(channel) method causes some sorts of "thread leak" (new threads keep getting created, waiting for pycord to fix this).
-                """
+                # Note (TODO): Should remove this in the future. Currently it disconnects instead moving to a different channel, because using
+                #         .move_to(channel) method causes some sorts of "thread leak" (new threads keep getting created, waiting for pycord to fix this).
                 await voice_client.disconnect()
 
     async def send(self) -> Union[dict,  None]:
@@ -299,8 +319,8 @@ class VoiceMESSAGE(BaseMESSAGE):
 
         audio_to_stream = None
         if data_to_send is not None:
-            """ These block isn't really neccessary as it really only accepts one type and that is AUDIO,
-                but it is written like this to make it analog to the TextMESSAGE parsing code in the send"""
+            # These block isn't really neccessary as it really only accepts one type and that is AUDIO,
+            # but it is written like this to make it analog to the TextMESSAGE parsing code in the send
             if not isinstance(data_to_send, (list, tuple, set)):
                 # Put into a list for easier iteration
                 data_to_send = (data_to_send,)
@@ -312,7 +332,7 @@ class VoiceMESSAGE(BaseMESSAGE):
         if audio_to_stream is not None:
             errored_channels = []
             succeded_channels= []
-            
+
             for channel in self.channels:
                 context = await self.send_channel(channel, audio_to_stream)
                 if context["success"]:
@@ -320,8 +340,8 @@ class VoiceMESSAGE(BaseMESSAGE):
                 else:
                     errored_channels.append({"channel":channel, "reason": context["reason"]})
 
-            return {"data_context": self.stringify_sent_data(audio_to_stream), "succeeded_ch": succeded_channels, "failed_ch" : errored_channels}
-        
+            return {"data_context": self.stringify_sent_data(sent_audio=audio_to_stream), "succeeded_ch": succeded_channels, "failed_ch" : errored_channels}
+
         return None
 
 class TextMESSAGE(BaseMESSAGE):
@@ -376,7 +396,7 @@ class TextMESSAGE(BaseMESSAGE):
         self.channels = channel_ids
         self.sent_messages = {ch_id : None for ch_id in channel_ids}
 
-    async def initialize_channels(self, **options) -> bool:
+    async def initialize_channels(self) -> bool:
         ch_i = 0
         cl = client.get_client()
         while ch_i < len(self.channels):
@@ -551,9 +571,9 @@ Timestamp:  {f"{ets.day}.{ets.month}.{ets.year}  {ets.hour}:{ets.minute}:{ets.se
         files_to_send  = []
         if data_to_send is not None:
             if not isinstance(data_to_send, (list, tuple, set)):
-                """ Put into a list for easier iteration.
-                    Technically only necessary if self.data  is a function (dynamic return),
-                    since normal (str, EMBED, FILE) get pre-checked in initialization."""
+                # Put into a list for easier iteration.
+                # Technically only necessary if self.data  is a function (dynamic return),
+                # since normal (str, EMBED, FILE) get pre-checked in initialization.
                 data_to_send = (data_to_send,)
 
             for element in data_to_send:
@@ -572,7 +592,9 @@ Timestamp:  {f"{ets.day}.{ets.month}.{ets.year}  {ets.hour}:{ets.minute}:{ets.se
             # Send to channels
             for channel in self.channels:
                 # Clear previous messages sent to channel if mode is MODE_DELETE_SEND
-                context = await self.send_channel(channel, text_to_send, embed_to_send, files_to_send)
+                context = await self.send_channel(channel, text_to_send,
+                                                  embed_to_send,
+                                                  files_to_send)
                 if context["success"]:
                     succeded_channels.append(channel)
                 else:
@@ -596,7 +618,7 @@ class DirectMESSAGE(BaseMESSAGE):
         - data:
             Represents data that will be sent into the channels, the data types can be:
             - str, EMBED, FILE, list of str, EMBED, FILE or a function (refer to README)
-        - mode: 
+        - mode:
             Mode parameter dictates the behaviour of the way data is send. It can be:
             - "send" ~ Each period a new message will be send to Discord,
             - "edit" ~ Each period the previous message will be edited, or a new sent if the previous message does not exist/was deleted
@@ -627,9 +649,10 @@ class DirectMESSAGE(BaseMESSAGE):
         self.data = data
         self.mode = mode
         self.dm_channel = None
-    
+        self.previous_message = None
+
     async def initialize_channels(self,
-                                  **options: dict) -> bool:
+                                  user_id) -> bool:
         """~ initialize_channels ~
         @Info:
         The method creates a direct message channel and
@@ -638,14 +661,13 @@ class DirectMESSAGE(BaseMESSAGE):
         - options ~ dictionary containing key with user_id
                     (sent to by the USER instance's initialize method)
         """
-        user_id = options.pop("user_id")
         cl = client.get_client()
         self.dm_channel = cl.get_user(user_id)
         if self.dm_channel is None:
             trace(f"Unable to create dm with user id: {user_id}", TraceLEVELS.ERROR)
             return False
         return True
-    
+
     def stringify_sent_data (self,
                             sent_text : str,
                             sent_embed : discord.Embed,
@@ -816,7 +838,7 @@ Timestamp:  {f"{ets.day}.{ets.month}.{ets.year}  {ets.hour}:{ets.minute}:{ets.se
                     embed_to_send = element
                 elif isinstance(element, FILE):
                     files_to_send.append(element)
-        
+
         if text_to_send is not None or embed_to_send is not None or len(files_to_send) > 0:
                 # Clear previous messages sent to channel if mode is MODE_DELETE_SEND
             context = await self.send_channel(text_to_send, embed_to_send, files_to_send)

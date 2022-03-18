@@ -1,11 +1,16 @@
-
+"""
+    ~ dtypes ~
+    The module contains defintions regarding the data types
+    you can send using the xxxMESSAGE objects.
+"""
 from typing import List, Union
 from contextlib import suppress
 import copy
 import datetime
 import _discord as discord
 
-__all__ =(
+
+__all__ = (
     "data_function",
     "FunctionBaseCLASS",
     "EmbedFIELD",
@@ -13,6 +18,7 @@ __all__ =(
     "FILE",
     "AUDIO"
 )
+
 
 #######################################################################
 # Decorators
@@ -22,9 +28,10 @@ class FunctionBaseCLASS:
     type: dummy class
     name: FunctionBaseCLASS
     info: Used as a base class to FunctionCLASS which gets created in framework.data_function decorator.
-    Because the FunctionCLASS is inaccessible outside the data_function decorator, this class is used to detect
-    if the MESSAGE.data parameter is of function type, because the function isinstance also returns True when comparing
-    the object to it's class or to the base class from which the object class is inherited from.
+          Because the FunctionCLASS is inaccessible outside the data_function decorator,
+          this class is used to detect if the MESSAGE.data parameter is of function type,
+          because the function isinstance also returns True when comparing
+          the object to it's class or to the base class from which the object class is inherited from.
     """
 
 def data_function(fnc):
@@ -40,7 +47,7 @@ def data_function(fnc):
         Info:  Used for creating special classes that are then used to create objects in the framework.MESSAGE
                data parameter, allows for sending dynamic contentent received thru an user defined function.
 
-        Param: function
+        Param: custom number of positional arguments and custom number of keyword arguments.
         """
         __slots__ = (
             "args",
@@ -127,13 +134,14 @@ class EMBED(discord.Embed):
         for key in dir(_object):
             if not key.startswith("__") and not key.endswith("__"):
                 with suppress(AttributeError,TypeError):
-                    if not callable(getattr(_object, key)) and not isinstance(getattr(_object.__class__, key), property):
+                    if (not callable(getattr(_object, key))
+                        and not isinstance(getattr(_object.__class__, key), property)
+                    ):
                         setattr(ret, key, copy.deepcopy(getattr(_object,key)))
 
 
         return ret
 
-    # Object members
     def __init__(self, *,
                 # Additional parameters
                 author_name: str=None,
@@ -145,18 +153,18 @@ class EMBED(discord.Embed):
                 colour: Union[int, Colour] = EmptyEmbed,
                 color: Union[int, Colour] = EmptyEmbed,
                 title: str = EmptyEmbed,
-                type :str = "rich",
+                type : str = "rich",
                 url: str= EmptyEmbed,
                 description = EmptyEmbed,
                 timestamp: datetime.datetime = None):
 
-        ## Initiate original arguments from discord. Embed
-        ## by looping thru the super().__init__ annotations(variables the function accepts)
-        base_args = {}
-        localargs = locals()
-        for key in super().__init__.__annotations__:
-            base_args[key] = localargs[key]
-        super().__init__(**base_args)
+        super().__init__(colour=colour,
+                         color=color,
+                         title=title,
+                         type=type,
+                         url=url,
+                         description=description,
+                         timestamp=timestamp)
 
         ## Set author
         if author_name is not None:

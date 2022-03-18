@@ -1,3 +1,8 @@
+"""
+    ~   Tracing    ~
+    This modules containes functions and classes
+    related to the console debug long or trace.
+"""
 from enum import Enum, auto
 import time
 

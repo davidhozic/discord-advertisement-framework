@@ -8,10 +8,10 @@ from framework import discord
 ############################################################################################
 
 guilds = [
-    framework.GUILD(
-        guild_id=123456789,                                 # ID of server (guild)
+    framework.USER(
+        user_id=123456789,                                 # ID of server (guild)
         messages_to_send=[                                  # List MESSAGE objects
-            framework.TextMESSAGE(
+            framework.DirectMESSAGE(
                               start_period=None,            # If None, messages will be send on a fixed period (end period)
                               end_period=15,                # If start_period is None, it dictates the fixed sending period,
                                                             # If start period is defined, it dictates the maximum limit of randomized period
@@ -25,7 +25,7 @@ guilds = [
                               ),
             framework.TextMESSAGE(start_period=5, end_period=10, data="Second Message", channel_ids=[12345], mode="send", start_now=True)  
         ],
-        generate_log=True           ## Generate file log of sent messages (and failed attempts) for this server 
+        generate_log=True                                   ## Generate file log of sent messages (and failed attempts) for this user
     )
 ]
                                      
