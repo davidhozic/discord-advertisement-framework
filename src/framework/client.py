@@ -65,8 +65,7 @@ def initialize(token: str, *,
         The function initializes Pycord, the discord API wrapper.
     """
     global m_client
-    intents = discord.Intents.default()
-    intents.members = True                  # Needed for direct messages
+    intents = discord.Intents.all()
     m_client = CLIENT(intents=intents)
     if not bot:
         trace("Bot is an user account which is against discord's ToS",TraceLEVELS.WARNING)
