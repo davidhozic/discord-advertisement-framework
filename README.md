@@ -1,7 +1,7 @@
 #  **DISCORD ADVERTISEMENT FRAMEWORK (BOT) - DAF**
-![PyPI - Downloads](https://img.shields.io/pypi/dm/discord-advert-framework?style=for-the-badge)
-
-![CodeFactor Grade](https://img.shields.io/codefactor/grade/github/davidhozic/discord-advertisement-framework?style=for-the-badge)
+![PyPI](https://img.shields.io/pypi/v/discord-advert-framework?color=green&style=for-the-badge)
+[![PyPI - Downloads](https://img.shields.io/pypi/dm/discord-advert-framework?style=for-the-badge)](https://pypi.org/project/Discord-Advert-Framework/)
+[![CodeFactor Grade](https://img.shields.io/codefactor/grade/github/davidhozic/discord-advertisement-framework?style=for-the-badge)](https://www.codefactor.io/repository/github/davidhozic/discord-advertisement-framework)
 
 The Discord advertisement framework is a tool that allows easy advertising on Discord.
 
