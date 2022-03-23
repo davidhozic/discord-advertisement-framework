@@ -92,4 +92,4 @@ if __name__ == "__main__":
 ```
 
 # **Other information**
-The **full documentation** can be found in **[DOC.md](DOC.md)**
+The **full documentation** can be found in **[DOC.md](https://github.com/davidhozic/discord-advertisement-framework/blob/master/DOC.md)**
