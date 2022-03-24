@@ -234,7 +234,7 @@ Additionaly to the [common parameters](#common-parameters) the **Text**MESSAGE a
             ```
 
 - **channel_ids** - List of IDs of all the channels you want data to be sent into.
-- **send_mode**   - string variable that defines the way message will be sent to a channel.<br>
+- **mode**   - string variable that defines the way message will be sent to a channel.<br>
   This parameter can be:
   - "send"  - Each period a new message will be sent to a channel,
   - "edit"  - The previous message will be edited or a new sent if it doesn't exist,
@@ -265,7 +265,7 @@ Apart from being sent into direct messages it is very simillar to the [framework
 ### **Parameters**
 Additionally to the [common parameters](#common-parameters) the **Direct**MESSAGE accepts the following parameters:
 - data - This is exactly the same as the data parameter for the [**Text**MESSAGE parameters](#frameworktextmessage), please refer to it's parameters section.
-- send_mode - This is exactly the same as the data parameter for the [**Text**MESSAGE parameters](#frameworktextmessage), please refer to it's parameters section.
+- mode - This is exactly the same as the data parameter for the [**Text**MESSAGE parameters](#frameworktextmessage), please refer to it's parameters section.
 
 ### **Example**
 ```py
