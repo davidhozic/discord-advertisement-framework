@@ -41,8 +41,8 @@ class CLIENT(discord.Client):
             trace("Successful initialization!",TraceLEVELS.NORMAL)
             asyncio.gather(
                 # Tasks for sending text messages/voice messages
-                asyncio.create_task(core.advertiser("t_messages")),
-                asyncio.create_task(core.advertiser("vc_messages"))
+                asyncio.create_task(core.advertiser("text")),
+                asyncio.create_task(core.advertiser("voice"))
             )
         else:
             # Initialization failed, close everything

@@ -267,7 +267,6 @@ class VoiceMESSAGE(BaseMESSAGE):
         Name:  stringify_sent_data
         Param: sent_audio -- Audio file that was streamed to the channels
         Info:  Returns a string representation of send data to the channels.
-               This is then used as a data_context parameter to the GUILD object.
         """
         return f'''
 ## Streamed AUDIO:
@@ -300,10 +299,17 @@ class VoiceMESSAGE(BaseMESSAGE):
                 await voice_client.disconnect()
 
     async def send(self) -> Union[dict,  None]:
-        """
-        Name: send
-        Params: void
-        info: sends messages to all the channels
+        """"
+            ~  send  ~  
+            @Info:
+                Streams audio into the chanels
+            @Return:
+                Returns a dictionary containing: 
+                - succeeded_ch: list  -- list of all the discord.VoiceChannel objects that belong to the channels where sending was successful
+                - failed_ch: list -- List of dictionaries contatining:
+                    - channel: discord.VoiceChannel --  channel that fw failed to send into
+                    - reason: Exception -- The Exception that caused the failed send attempt
+                - data_str: str -- A stringified representation of sent data that is used to generate a markdown log
         """
         self.timer.reset()
         self.timer.start()
@@ -340,7 +346,7 @@ class VoiceMESSAGE(BaseMESSAGE):
                 else:
                     errored_channels.append({"channel":channel, "reason": context["reason"]})
 
-            return {"data_context": self.stringify_sent_data(sent_audio=audio_to_stream), "succeeded_ch": succeded_channels, "failed_ch" : errored_channels}
+            return {"succeeded_ch": succeded_channels, "failed_ch" : errored_channels, "data_str": self.stringify_sent_data(audio_to_stream)}
 
         return None
 
@@ -487,6 +493,7 @@ Timestamp:  {f"{ets.day}.{ets.month}.{ets.year}  {ets.hour}:{ets.minute}:{ets.se
                            text: str,
                            embed: EMBED,
                            files: List[FILE]) -> dict:
+
         if self.mode == "clear-send" and self.sent_messages[channel.id] is not None:
             for tries in range(3):
                 try:
@@ -548,10 +555,17 @@ Timestamp:  {f"{ets.day}.{ets.month}.{ets.year}  {ets.hour}:{ets.minute}:{ets.se
                     return {"success" : False, "reason" : ex}
 
     async def send(self) -> Union[dict,  None]:
-        """
-        Name: send
-        Params: void
-        info: sends messages to all the channels
+        """"
+            ~  send  ~  
+            @Info:
+                Sends the data into the channels
+            @Return:
+                Returns a dictionary containing: 
+                - succeeded_ch: list  -- list of all the discord.TextChannel objects that belong to the channels where sending was successful
+                - failed_ch: list -- List of dictionaries contatining:
+                    - channel: discord.TextChannel --  channel that fw failed to send into
+                    - reason: Exception -- The Exception that caused the failed send attempt
+                - data_str: str -- A stringified representation of sent data that is used to generate a markdown log
         """
         self.timer.reset()
         self.timer.start()
@@ -601,7 +615,7 @@ Timestamp:  {f"{ets.day}.{ets.month}.{ets.year}  {ets.hour}:{ets.minute}:{ets.se
                     errored_channels.append({"channel":channel, "reason": context["reason"]})
 
             # Return sent data + failed and successful function for logging purposes
-            return {"data_context": self.stringify_sent_data(text_to_send, embed_to_send, files_to_send), "succeeded_ch": succeded_channels, "failed_ch" : errored_channels}
+            return {"succeeded_ch": succeded_channels, "failed_ch" : errored_channels, "data_str": self.stringify_sent_data(text_to_send, embed_to_send, files_to_send)}
 
         return None
 
@@ -807,7 +821,17 @@ Timestamp:  {f"{ets.day}.{ets.month}.{ets.year}  {ets.hour}:{ets.minute}:{ets.se
                 if exit_condition:
                     return {"success" : False, "reason" : ex}
 
-    async def send(self):
+    async def send(self) -> Union[dict, None]:
+        """"
+            ~  send  ~  
+            @Info:
+                Sends the data into the DM channel of the user.
+            @Return:
+                Returns a dictionary containing: 
+                - success: bool  -- True if successful or False on Falure
+                - reason: Exception -- [only if success is False] Exception that caused the message to not succeed
+                - data_str: str -- A stringified representation of sent data that is used to generate a markdown log
+        """
         self.timer.reset()
         self.timer.start()
         self.force_retry["ENABLED"] = False
@@ -844,6 +868,6 @@ Timestamp:  {f"{ets.day}.{ets.month}.{ets.year}  {ets.hour}:{ets.minute}:{ets.se
             context = await self.send_channel(text_to_send, embed_to_send, files_to_send)
 
             # Return sent data + failed and successful function for logging purposes
-            return {"data_context": self.stringify_sent_data(text_to_send, embed_to_send, files_to_send), **context}
+            return {**context, "data_str": self.stringify_sent_data(text_to_send, embed_to_send, files_to_send)}
 
         return None
