@@ -13,6 +13,7 @@ from    .message import *
 from    . import client
 import  time
 import  os
+import  json
 
 __all__ = (
     "GUILD",
@@ -45,6 +46,14 @@ class BaseGUILD:
         self.log_file_name = None
         self.t_messages = []
         self.vc_messages = []
+
+    @property
+    def display_name(self):
+        """
+            ~ @property display name ~
+            Returns the display name of the guild/user object
+        """
+        raise NotImplementedError
 
     def stringify_guild_context(self, **context) -> str:
         """
@@ -95,29 +104,41 @@ class BaseGUILD:
                                                                 timestruct.tm_year,
                                                                 timestruct.tm_hour,
                                                                 timestruct.tm_min)
-        guild_context = ""
-        for line in self.stringify_guild_context(**options).splitlines():
-            guild_context += f"\t{line}\n"
-        guild_context = guild_context.rstrip()
-
-        appender_data = f"""
-# MESSAGE LOG:
-{data_context}
-***
-## Other data:
--   ```
-{guild_context}
-    Timestamp: {timestamp}
-    ```
-***
-<br><br><br>
-"""
+        guild_context = self.stringify_guild_context(**options)
+        
         # Write into file
         try:
             with suppress(FileExistsError):
                 os.mkdir(GLOBALS.server_log_path)
-            with open(os.path.join(GLOBALS.server_log_path, self.log_file_name),'a', encoding='utf-8') as appender:
-                appender.write(appender_data)
+            with suppress(FileExistsError):
+                with open(os.path.join(GLOBALS.server_log_path, self.log_file_name),'x', encoding='utf-8'):
+                    pass
+
+            with open(os.path.join(GLOBALS.server_log_path, self.log_file_name),'r+', encoding='utf-8') as appender:
+                appender_data = None
+
+                try:
+                    appender_data = json.load(appender)
+                except json.JSONDecodeError as ex:
+                    appender_data = {}
+                    appender_data["Display_name"] = self.display_name
+                    appender_data["Messages"] = []
+                finally:
+                    with open(os.path.join(GLOBALS.server_log_path, self.log_file_name),'w', encoding='utf-8'):
+                        pass
+                    appender.seek(0)
+
+                appender_data["Messages"].append(
+                    {
+                        "Sent data": data_context,
+                        "Other info":
+                            {
+                                **guild_context,
+                                "timestamp": timestamp
+                            }
+                    })
+                appender_data = json.dump(appender_data, appender, indent=4)
+
         except OSError as os_exception:
             trace(f"Unable to save log. Exception: {os_exception}", TraceLEVELS.WARNING)
 
@@ -148,27 +169,27 @@ class GUILD(BaseGUILD):
         self.__messages = messages_to_send
         super().__init__(guild_id, generate_log)
 
+    @property
+    def display_name(self):
+        return self.apiobject.name + f" (ID: {self.apiobject.id})" 
+
     def stringify_guild_context(self,
                               **context) -> str:
         # Generate channel log
         succeeded_ch = context["succeeded_ch"]
         failed_ch = context["failed_ch"]
 
-        succeeded_ch = "[\n" + "".join(f"\t\t{ch}(ID: {ch.id}),\n" for ch in succeeded_ch).rstrip(",\n") + "\n\t]" if len(succeeded_ch) else "[]"
-        if len(failed_ch):
-            tmp_chs, failed_ch = failed_ch, "["
-            for ch in tmp_chs:
-                ch_reason = str(ch["reason"]).replace("\n", "; ")
-                failed_ch += f"\n\t\t{ch['channel']}(ID: {ch['channel'].id}) >>> [ {ch_reason} ],"
-            failed_ch = failed_ch.rstrip(",") + "\n\t]"
-        else:
-            failed_ch = "[]"
-        return \
-f"""\
-Guild: {self.apiobject.name}(ID: {self.apiobject.id})
-Successful channels: {succeeded_ch}
-Failed channels: {failed_ch}
-"""
+        succeeded_ch = [
+            f"{channel.name} (ID: {channel.id})" for channel in succeeded_ch
+        ]
+        failed_ch = [
+            f"{channel['channel'].name} (ID: {channel['channel'].id}) >>> {channel['reason']}" for channel in failed_ch
+        ]
+
+        return {
+            "Successful channels": [succeeded_ch],
+            "Failed channels": failed_ch
+        }
 
     async def initialize(self) -> bool:
         """
@@ -195,7 +216,7 @@ Failed channels: {failed_ch}
 
         if self.apiobject is not None:
         # Create a file name without the non allowed characters. Windows' list was choosen to generate the forbidden character because only forbids '/'
-            self.log_file_name = "".join(char if char not in C_FILE_NAME_FORBIDDEN_CHAR else "#" for char in self.apiobject.name) + ".md"
+            self.log_file_name = "".join(char if char not in C_FILE_NAME_FORBIDDEN_CHAR else "#" for char in self.apiobject.name) + ".json"
 
             for message in self.t_messages[:]:
                 # Iterate thru the slice text messages list and initialize each
@@ -241,13 +262,16 @@ class USER(BaseGUILD):
         super().__init__(user_id, generate_log)
         self.__messages = messages_to_send
 
+    @property
+    def display_name(self):
+        return f"{self.apiobject.display_name} (ID:{self.apiobject.id})"
+
     def stringify_guild_context(self,
                               **context: dict) -> str:
         return \
-f"""\
-User: {self.apiobject.display_name}#{self.apiobject.discriminator}
-Success: {context["success"]} {f" >>> [ {context['reason']} ]" if not context["success"] else ""}
-"""
+{
+"Success":  context["success"] + f" >>> [ {context['reason']} ]" if not context["success"] else ""
+}
 
     async def initialize(self) -> bool:
         for message in self.__messages:
@@ -262,7 +286,7 @@ Success: {context["success"]} {f" >>> [ {context['reason']} ]" if not context["s
         self.apiobject = cl.get_user(user_id)
 
         if self.apiobject is not None:
-            self.log_file_name = "".join(char if char not in C_FILE_NAME_FORBIDDEN_CHAR else "#" for char in f"{self.apiobject.display_name}#{self.apiobject.discriminator}") + ".md"
+            self.log_file_name = "".join(char if char not in C_FILE_NAME_FORBIDDEN_CHAR else "#" for char in f"{self.apiobject.display_name}#{self.apiobject.discriminator}") + ".json"
             for message in self.t_messages[:]:
                 if (type(message) is not DirectMESSAGE or
                     not await message.initialize(user_id=user_id)
