@@ -11,6 +11,11 @@ The Discord advertisement framework is a tool that allows easy advertising on Di
 - Logging
 - Ability to add additional application layers with help of asyncio
 
+
+# **FULL documentation**
+The **full documentation** can be found in **[DOC.md](https://github.com/davidhozic/discord-advertisement-framework/blob/master/DOC.md)**
+
+
 # **Installation**
 To install the framework use one of the following:
 ```py
@@ -90,6 +95,3 @@ if __name__ == "__main__":
                     server_log_output="History",    # OPTIONAL
                     debug=True)                     # OPTIONAL
 ```
-
-# **Other information**
-The **full documentation** can be found in **[DOC.md](https://github.com/davidhozic/discord-advertisement-framework/blob/master/DOC.md)**
