@@ -6,7 +6,7 @@
 """
 
 from    contextlib import suppress
-from    typing import Union, List
+from    typing import Literal, Union, List
 from    .tracing import *
 from    .const import *
 from    .message import *
@@ -66,14 +66,14 @@ class BaseGUILD:
         raise NotImplementedError
 
     async def advertise(self,
-                        attr_name: str):
+                        mode: Literal["text", "voice"]):
         """
             ~ advertise ~
             @Info:
             This is the main coroutine that is responsible for sending all the messages to this specificc guild,
             it is called from the core module's advertiser task
         """
-        for message in getattr(self, attr_name):
+        for message in self.t_messages if mode == "text" else self.vc_messages:
             if message.is_ready():
                 message_ret = await message.send()
                 if self._generate_log and message_ret is not None:
@@ -87,7 +87,7 @@ class BaseGUILD:
             - data_context  - str representation of sent data, which is return data of xxxMESSAGE.send()
         Info:   Generates a log of a xxxxMESSAGE send attempt
         """
-        data_context = options.pop("data_context")
+        data_context = options.pop("data_str")
         # Generate timestamp
         timestruct = time.localtime()
         timestamp = "{:02d}.{:02d}.{:04d} {:02d}:{:02d}".format(timestruct.tm_mday,
