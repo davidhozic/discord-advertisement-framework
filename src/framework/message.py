@@ -268,10 +268,10 @@ class VoiceMESSAGE(BaseMESSAGE):
         Param: sent_audio -- Audio file that was streamed to the channels
         Info:  Returns a string representation of send data to the channels.
         """
-        return f'''
-## Streamed AUDIO:
-{sent_audio.filename}
-'''
+        return {
+            "audio" : sent_audio.filename
+        }
+
 
     async def send_channel(self,
                            channel: discord.VoiceChannel,
@@ -428,65 +428,40 @@ class TextMESSAGE(BaseMESSAGE):
                             sent_files : list) -> str:
         """
         Name:  stringify_sent_data
-        Param: sent_audio -- Audio file that was streamed to the channels
+        Param: 
+            sent_text  -- Text that was sent
+            sent_embed -- embed that was sent
+            sent_files -- files that were sent
+
         Info:  Returns a string representation of send data to the channels.
                This is then used as a data_context parameter to the GUILD object.
         """
-        # Generate text
-        if sent_text is not None:
-            tmp_text , sent_text = sent_text, ""
-            sent_text += "- ```\n"
-            for line in tmp_text.splitlines():
-                sent_text += f"  {line}\n"
-            sent_text += "  ```"
-        else:
-            sent_text = ""
 
         #Generate embed
-        EmptyEmbed = discord.embeds._EmptyEmbed
-
         if sent_embed is not None:
-            tmp_emb = sent_embed
-            ets = sent_embed.timestamp
-            sent_embed = \
-f"""
-Title:  {tmp_emb.title if type(tmp_emb.title) is not EmptyEmbed else ""}
-
-Author:  {tmp_emb.author.name if type(tmp_emb.author.name) is not EmptyEmbed else ""}
-
-Thumbnail:  {tmp_emb.thumbnail.url if type(tmp_emb.thumbnail.url) is not EmptyEmbed else ""}
-
-Image:  {tmp_emb.image.url if type(tmp_emb.image.url) is not EmptyEmbed else ""}
-
-Description:  {tmp_emb.description if type(tmp_emb.description) is not EmptyEmbed else ""}
-
-Color:  {tmp_emb.colour if type(tmp_emb.colour) is not EmptyEmbed else ""}
-
-Timestamp:  {f"{ets.day}.{ets.month}.{ets.year}  {ets.hour}:{ets.minute}:{ets.second}" if type(ets) is not EmptyEmbed else ""}
-"""
-            sent_embed += "\nFields:"
-            for field in tmp_emb.fields:
-                sent_embed += f"\n - {field.name}\n"
-                sent_embed += "\t```\n"
-                for line in field.value.splitlines():
-                    sent_embed += f"\t{line}\n"
-                sent_embed += "\t```"
-
-        else:
-            sent_embed = ""
-
+            EmptyEmbed = discord.embeds._EmptyEmbed
+            sent_embed : dict = {
+                "title" : sent_embed.title if type(sent_embed.title) is not EmptyEmbed else None,
+                "author" : sent_embed.author.name if type(sent_embed.author.name) is not EmptyEmbed else None,
+                "thumbnail" : sent_embed.thumbnail.url if type(sent_embed.thumbnail.url) is not EmptyEmbed else None,
+                "image" : sent_embed.image.url if type(sent_embed.image.url) is not EmptyEmbed else None,
+                "description" : sent_embed.description if type(sent_embed.description) is not EmptyEmbed else None,
+                "color" : sent_embed.colour if type(sent_embed.colour) is not EmptyEmbed else None,
+                "fields" : sent_embed._fields
+            }
+            for key in sent_embed.copy():
+                # Pop items that are None to reduce the log length
+                if sent_embed[key] is None:
+                    sent_embed.pop(key)
+                    
         # Generate files
-        sent_files = "".join(    f"- ```\n  {file.filename}\n  ```\n" for file in sent_files    ).rstrip("\n")
+        sent_files = [x.filename for x in sent_files]
 
-        return f'''
-## Text:
-{sent_text}
-***
-## Embed:
-{sent_embed}
-***
-## Files:
-{sent_files}'''
+        return {
+            "text"  : sent_text,
+            "embed" : sent_embed,
+            "files" : sent_files
+        }
 
     async def send_channel(self,
                            channel: discord.TextChannel,
@@ -688,65 +663,40 @@ class DirectMESSAGE(BaseMESSAGE):
                             sent_files : list) -> str:
         """
         Name:  stringify_sent_data
-        Param: sent_audio -- Audio file that was streamed to the channels
+        Param: 
+            sent_text  -- Text that was sent
+            sent_embed -- embed that was sent
+            sent_files -- files that were sent
+
         Info:  Returns a string representation of send data to the channels.
                This is then used as a data_context parameter to the GUILD object.
         """
-        # Generate text
-        if sent_text is not None:
-            tmp_text , sent_text = sent_text, ""
-            sent_text += "- ```\n"
-            for line in tmp_text.splitlines():
-                sent_text += f"  {line}\n"
-            sent_text += "  ```"
-        else:
-            sent_text = ""
 
         #Generate embed
-        EmptyEmbed = discord.embeds._EmptyEmbed
-
         if sent_embed is not None:
-            tmp_emb = sent_embed
-            ets = sent_embed.timestamp
-            sent_embed = \
-f"""
-Title:  {tmp_emb.title if type(tmp_emb.title) is not EmptyEmbed else ""}
-
-Author:  {tmp_emb.author.name if type(tmp_emb.author.name) is not EmptyEmbed else ""}
-
-Thumbnail:  {tmp_emb.thumbnail.url if type(tmp_emb.thumbnail.url) is not EmptyEmbed else ""}
-
-Image:  {tmp_emb.image.url if type(tmp_emb.image.url) is not EmptyEmbed else ""}
-
-Description:  {tmp_emb.description if type(tmp_emb.description) is not EmptyEmbed else ""}
-
-Color:  {tmp_emb.colour if type(tmp_emb.colour) is not EmptyEmbed else ""}
-
-Timestamp:  {f"{ets.day}.{ets.month}.{ets.year}  {ets.hour}:{ets.minute}:{ets.second}" if type(ets) is not EmptyEmbed else ""}
-"""
-            sent_embed += "\nFields:"
-            for field in tmp_emb.fields:
-                sent_embed += f"\n - {field.name}\n"
-                sent_embed += "\t```\n"
-                for line in field.value.splitlines():
-                    sent_embed += f"\t{line}\n"
-                sent_embed += "\t```"
-
-        else:
-            sent_embed = ""
-
+            EmptyEmbed = discord.embeds._EmptyEmbed
+            sent_embed : dict = {
+                "title" : sent_embed.title if type(sent_embed.title) is not EmptyEmbed else None,
+                "author" : sent_embed.author.name if type(sent_embed.author.name) is not EmptyEmbed else None,
+                "thumbnail" : sent_embed.thumbnail.url if type(sent_embed.thumbnail.url) is not EmptyEmbed else None,
+                "image" : sent_embed.image.url if type(sent_embed.image.url) is not EmptyEmbed else None,
+                "description" : sent_embed.description if type(sent_embed.description) is not EmptyEmbed else None,
+                "color" : sent_embed.colour if type(sent_embed.colour) is not EmptyEmbed else None,
+                "fields" : sent_embed._fields
+            }
+            for key in sent_embed.copy():
+                # Pop items that are None to reduce the log length
+                if sent_embed[key] is None:
+                    sent_embed.pop(key)
+                    
         # Generate files
-        sent_files = "".join(    f"- ```\n  {file.filename}\n  ```\n" for file in sent_files    ).rstrip("\n")
+        sent_files = [x.filename for x in sent_files]
 
-        return f'''
-## Text:
-{sent_text}
-***
-## Embed:
-{sent_embed}
-***
-## Files:
-{sent_files}'''
+        return {
+            "text"  : sent_text,
+            "embed" : sent_embed,
+            "files" : sent_files
+        }
 
     async def send_channel(self,
                            text: str,

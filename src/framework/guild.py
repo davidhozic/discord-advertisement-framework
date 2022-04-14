@@ -47,14 +47,6 @@ class BaseGUILD:
         self.t_messages = []
         self.vc_messages = []
 
-    @property
-    def display_name(self):
-        """
-            ~ @property display name ~
-            Returns the display name of the guild/user object
-        """
-        raise NotImplementedError
-
     def stringify_guild_context(self, **context) -> str:
         """
             ~  stringify_guild_context  ~
@@ -121,17 +113,18 @@ class BaseGUILD:
                     appender_data = json.load(appender)
                 except json.JSONDecodeError as ex:
                     appender_data = {}
-                    appender_data["Display_name"] = self.display_name
-                    appender_data["Messages"] = []
+                    appender_data["name"] = str(self.apiobject)
+                    appender_data["id"] = self.apiobject.id
+                    appender_data["message_history"] = []
                 finally:
                     with open(os.path.join(GLOBALS.server_log_path, self.log_file_name),'w', encoding='utf-8'):
                         pass
                     appender.seek(0)
 
-                appender_data["Messages"].append(
+                appender_data["message_history"].append(
                     {
-                        "Sent data": data_context,
-                        "Other info":
+                        "sent_data": data_context,
+                        "other_info":
                             {
                                 **guild_context,
                                 "timestamp": timestamp
@@ -169,10 +162,6 @@ class GUILD(BaseGUILD):
         self.__messages = messages_to_send
         super().__init__(guild_id, generate_log)
 
-    @property
-    def display_name(self):
-        return self.apiobject.name + f" (ID: {self.apiobject.id})" 
-
     def stringify_guild_context(self,
                               **context) -> str:
         # Generate channel log
@@ -180,15 +169,15 @@ class GUILD(BaseGUILD):
         failed_ch = context["failed_ch"]
 
         succeeded_ch = [
-            f"{channel.name} (ID: {channel.id})" for channel in succeeded_ch
+            {"name" : channel.name, "id": channel.id} for channel in succeeded_ch
         ]
         failed_ch = [
-            f"{channel['channel'].name} (ID: {channel['channel'].id}) >>> {channel['reason']}" for channel in failed_ch
+            {"name" : channel["channel"].name, "id": channel["channel"].id, "reason" : str(channel['reason'])} for channel in failed_ch
         ]
 
         return {
-            "Successful channels": [succeeded_ch],
-            "Failed channels": failed_ch
+            "successful_channels": succeeded_ch,
+            "failed_channels": failed_ch
         }
 
     async def initialize(self) -> bool:
@@ -262,16 +251,14 @@ class USER(BaseGUILD):
         super().__init__(user_id, generate_log)
         self.__messages = messages_to_send
 
-    @property
-    def display_name(self):
-        return f"{self.apiobject.display_name} (ID:{self.apiobject.id})"
-
     def stringify_guild_context(self,
                               **context: dict) -> str:
-        return \
-{
-"Success":  context["success"] + f" >>> [ {context['reason']} ]" if not context["success"] else ""
-}
+        data = {
+            "Success":  context["success"]
+        }
+        if not context["success"]:
+            data["reason"] = str(context["reason"])
+        return data
 
     async def initialize(self) -> bool:
         for message in self.__messages:
