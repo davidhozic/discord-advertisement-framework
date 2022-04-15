@@ -328,7 +328,7 @@ framework.VoiceMESSAGE(
 - token             : str       = access token for account
 - server_list       : list      = List of [framework.GUILD](#frameworkguild) objects
 - is_user           : bool      = Set to True if token is from an user account and not a bot account
-- user_callback     : function  = User callback function (gets called after framework is ran)
+- user_callback     : function  = User callback async function (gets called after framework is ran)
 - server_log_output : str       = Path where the server log files will be created
 - debug             : bool      = Print trace message to the console,
                                     usefull for debugging if you feel like something is not working
