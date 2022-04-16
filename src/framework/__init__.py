@@ -8,12 +8,9 @@
 
 """
 TODO:
-- Documentation for DirectMESSAGE, USER classes,
-- Doc strings for each sub module,
-- Doc strings for classes and functions where it's missing
-- Examples for DirectMESSAGE and USER classes
+- Documention for JSON logging
 - Linting
-- Test everything
+- (Additional info inside the json loggin?)
 """
 
 
