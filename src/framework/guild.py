@@ -47,14 +47,6 @@ class BaseGUILD:
         self.t_messages = []
         self.vc_messages = []
 
-    def stringify_guild_context(self, **context) -> str:
-        """
-            ~  stringify_guild_context  ~
-            Returns stringified message context that is related to the guild itself.
-            This is implementation specific.
-        """
-        raise NotImplementedError
-
     async def initialize(self) -> bool:
         """
         ~  initialize  ~
@@ -81,23 +73,21 @@ class BaseGUILD:
                     self.generate_log(**message_ret)
 
     def generate_log(self,
-                     **options) -> str:
+                     **message_context) -> str:
         """
         Name:   generate_log
         Param:
             - data_context  - str representation of sent data, which is return data of xxxMESSAGE.send()
         Info:   Generates a log of a xxxxMESSAGE send attempt
         """
-        data_context = options.pop("data_str")
         # Generate timestamp
         timestruct = time.localtime()
-        timestamp = "{:02d}.{:02d}.{:04d} {:02d}:{:02d}".format(timestruct.tm_mday,
+        timestamp = "{:02d}.{:02d}.{:04d} {:02d}:{:02d}:{:02d}".format(timestruct.tm_mday,
                                                                 timestruct.tm_mon,
                                                                 timestruct.tm_year,
                                                                 timestruct.tm_hour,
-                                                                timestruct.tm_min)
-        guild_context = self.stringify_guild_context(**options)
-        
+                                                                timestruct.tm_min,
+                                                                timestruct.tm_sec)
         # Write into file
         try:
             with suppress(FileExistsError):
@@ -121,14 +111,11 @@ class BaseGUILD:
                         pass
                     appender.seek(0)
 
-                appender_data["message_history"].append(
+                appender_data["message_history"].insert(0,
                     {
-                        "sent_data": data_context,
-                        "other_info":
-                            {
-                                **guild_context,
-                                "timestamp": timestamp
-                            }
+                        **message_context,
+                        "index":    len(appender_data["message_history"]),
+                        "timestamp": timestamp
                     })
                 appender_data = json.dump(appender_data, appender, indent=4)
 
@@ -161,24 +148,6 @@ class GUILD(BaseGUILD):
                  generate_log: bool=False):
         self.__messages = messages_to_send
         super().__init__(guild_id, generate_log)
-
-    def stringify_guild_context(self,
-                              **context) -> str:
-        # Generate channel log
-        succeeded_ch = context["succeeded_ch"]
-        failed_ch = context["failed_ch"]
-
-        succeeded_ch = [
-            {"name" : channel.name, "id": channel.id} for channel in succeeded_ch
-        ]
-        failed_ch = [
-            {"name" : channel["channel"].name, "id": channel["channel"].id, "reason" : str(channel['reason'])} for channel in failed_ch
-        ]
-
-        return {
-            "successful_channels": succeeded_ch,
-            "failed_channels": failed_ch
-        }
 
     async def initialize(self) -> bool:
         """
@@ -251,15 +220,6 @@ class USER(BaseGUILD):
         super().__init__(user_id, generate_log)
         self.__messages = messages_to_send
 
-    def stringify_guild_context(self,
-                              **context: dict) -> str:
-        data = {
-            "Success":  context["success"]
-        }
-        if not context["success"]:
-            data["reason"] = str(context["reason"])
-        return data
-
     async def initialize(self) -> bool:
         for message in self.__messages:
             if type(message) is DirectMESSAGE:
@@ -282,4 +242,6 @@ class USER(BaseGUILD):
             if not len(self.t_messages):
                 return False
             return True
+            
+        trace(f"Unable to create DM with user id: {user_id}", TraceLEVELS.ERROR)
         return False
