@@ -328,7 +328,7 @@ framework.VoiceMESSAGE(
 - token             : str       = access token for account
 - server_list       : list      = List of [framework.GUILD](#frameworkguild) objects
 - is_user           : bool      = Set to True if token is from an user account and not a bot account
-- user_callback     : function  = User callback function (gets called after framework is ran)
+- user_callback     : function  = User callback async function (gets called after framework is ran)
 - server_log_output : str       = Path where the server log files will be created
 - debug             : bool      = Print trace message to the console,
                                     usefull for debugging if you feel like something is not working
@@ -361,7 +361,7 @@ It is used to fully shutdown the framework and then **exit** out of the program.
 
 ## framework.**data_function**
 
-- This decorator accepts a function as it's parameter and then returns a object that will be called by the framework. To use an <u>user defined function as parameter</u> to the [framework.TextMESSAGE/framework.VoiceMESSAGE](#frameworktextmessage--frameworkvoicemessage) data parameter, you **MUST** use this decorator beforehand. Please see the **Examples** folder.
+- This decorator accepts a function as it's parameter and then returns a object that will be called by the framework. To use an <u>user defined function as parameter</u> to the [framework.TextMESSAGE/framework.VoiceMESSAGE/DirectMESSAGE](#frameworkxxxmessage) data parameter, you **MUST** use this decorator beforehand. Please see the **Examples** folder.
 - Usage:
     ```py
     import datetime
@@ -397,7 +397,10 @@ It is used to fully shutdown the framework and then **exit** out of the program.
                             data=some_other_function(),
                             channel_ids= [21345, 23132],
                             start_now=True
-                            ),
+                            )
+            ],
+            generate_log=True
+        ),
         fw.USER(
             user_id=123456789,
             messages_to_send=[
@@ -415,9 +418,6 @@ It is used to fully shutdown the framework and then **exit** out of the program.
                     ],
                     generate_log=True
                 )
-            ],
-            generate_log=True
-        )
     ]
 
     ...

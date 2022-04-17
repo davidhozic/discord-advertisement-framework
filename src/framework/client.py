@@ -36,6 +36,9 @@ class CLIENT(discord.Client):
         """
         trace(f"Logged in as {self.user}", TraceLEVELS.NORMAL)
 
+        if core.GLOBALS.user_callback is not None:   # If user callback function was specified
+            await core.GLOBALS.user_callback() # Call user provided function after framework has started
+
         if await core.initialize():
             # Initialization was successful, so create the advertiser task and start advertising.
             trace("Successful initialization!",TraceLEVELS.NORMAL)
@@ -47,9 +50,6 @@ class CLIENT(discord.Client):
         else:
             # Initialization failed, close everything
             await core.shutdown()
-
-        if core.GLOBALS.user_callback:   # If user callback function was specified
-            core.GLOBALS.user_callback() # Call user provided function after framework has started
 
 
 def initialize(token: str, *,
