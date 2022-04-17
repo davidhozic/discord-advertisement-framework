@@ -265,9 +265,7 @@ class VoiceMESSAGE(BaseMESSAGE):
         succeeded_ch = [{"name": str(channel), "id" : channel.id} for channel in succeeded_ch]
         failed_ch = [{"name": str(entry["channel"]), "id" : entry["channel"].id, "reason": str(entry["reason"])} for entry in failed_ch]
         return {
-            "sent_data": {
-                "audio" : sent_audio.filename
-            },
+            "streamed_audio" : sent_audio.filename,
             "channels": {
                 "successful" : succeeded_ch,
                 "failed": failed_ch
@@ -281,14 +279,13 @@ class VoiceMESSAGE(BaseMESSAGE):
         while ch_i < len(self.channels):
             channel_id = self.channels[ch_i]
             channel = cl.get_channel(channel_id)
-
-            if type(channel) is not discord.VoiceChannel:
-                trace(f"TextMESSAGE object got id for {type(channel).__name__}, but was expecting {discord.VoiceChannel.__name__}", TraceLEVELS.ERROR)
-                channel = None
-
             self.channels[ch_i] = channel
 
             if channel is None:
+                trace(f"Unable to get channel from ID {channel_id}", TraceLEVELS.ERROR)
+                self.channels.remove(channel)
+            elif type(channel) is not discord.VoiceChannel:
+                trace(f"VoiceMESSAGE object got ID ({channel_id}) for {type(channel).__name__}, but was expecting {discord.VoiceChannel.__name__}", TraceLEVELS.ERROR)
                 self.channels.remove(channel)
             else:
                 ch_i += 1
@@ -363,6 +360,13 @@ class VoiceMESSAGE(BaseMESSAGE):
                     succeded_channels.append(channel)
                 else:
                     errored_channels.append({"channel":channel, "reason": context["reason"]})
+            
+            # Remove any channels that returned with code status 404 (They no longer exist)
+            for data in errored_channels:
+                reason = data["reason"]
+                if isinstance(reason, discord.HTTPException) and reason.status == 404 and reason.code == 10003:
+                    self.channels.remove(data["channel"])
+                    trace(f"Channel {channel.name}(ID: {channel.id}) was deleted, removing it from the send list", TraceLEVELS.WARNING)
 
             return self.generate_log_context(audio_to_stream, succeded_channels, errored_channels)
         return None
@@ -484,14 +488,13 @@ class TextMESSAGE(BaseMESSAGE):
         while ch_i < len(self.channels):
             channel_id = self.channels[ch_i]
             channel = cl.get_channel(channel_id)
-
-            if type(channel) not in {discord.TextChannel, discord.Thread}:
-                trace(f"TextMESSAGE object got id for {type(channel).__name__}, but was expecting {discord.TextChannel.__name__}", TraceLEVELS.ERROR)
-                channel = None
-
             self.channels[ch_i] = channel
-
+            
             if channel is None:
+                trace(f"Unable to get channel from ID {channel_id}", TraceLEVELS.ERROR)
+                self.channels.remove(channel)
+            elif type(channel) not in {discord.TextChannel, discord.Thread}:
+                trace(f"TextMESSAGE object got ID ({channel_id}) for {type(channel).__name__}, but was expecting {discord.TextChannel.__name__}", TraceLEVELS.ERROR)
                 self.channels.remove(channel)
             else:
                 ch_i += 1
@@ -553,8 +556,8 @@ class TextMESSAGE(BaseMESSAGE):
                     elif ex.status == 404:      # Unknown object
                         if ex.code == 10008:    # Unknown message
                             self.sent_messages[channel.id]  = None
-
-                        exit_condition = True
+                        else:
+                            exit_condition = True
                     else:
                         exit_condition = True
                 else:
@@ -619,6 +622,13 @@ class TextMESSAGE(BaseMESSAGE):
                     succeded_channels.append(channel)
                 else:
                     errored_channels.append({"channel":channel, "reason": context["reason"]})
+
+            # Remove any channels that returned with code status 404 (They no longer exist)
+            for data in errored_channels:
+                reason = data["reason"]
+                if isinstance(reason, discord.HTTPException) and reason.status == 404 and reason.code == 10003:
+                    self.channels.remove(data["channel"])
+                    trace(f"Channel {channel.name}(ID: {channel.id}) was deleted, removing it from the send list", TraceLEVELS.WARNING)
 
             # Return sent data + failed and successful function for logging purposes
             return self.generate_log_context(text_to_send, embed_to_send, files_to_send,succeded_channels, errored_channels)
@@ -806,8 +816,8 @@ class DirectMESSAGE(BaseMESSAGE):
                     elif ex.status == 404:      # Unknown object
                         if ex.code == 10008:    # Unknown message
                             self.previous_message  = None
-
-                        exit_condition = True
+                        else:
+                            exit_condition = True
                     else:
                         exit_condition = True
                 else:
