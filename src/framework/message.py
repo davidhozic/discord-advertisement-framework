@@ -448,7 +448,7 @@ class TextMESSAGE(BaseMESSAGE):
                 "image" : sent_embed.image.url if type(sent_embed.image.url) is not EmptyEmbed else None,
                 "description" : sent_embed.description if type(sent_embed.description) is not EmptyEmbed else None,
                 "color" : sent_embed.colour if type(sent_embed.colour) is not EmptyEmbed else None,
-                "fields" : sent_embed._fields
+                "fields" : sent_embed._fields if hasattr(sent_embed, "_fields") else None
             }
             for key in sent_embed.copy():
                 # Pop items that are None to reduce the log length
@@ -458,11 +458,17 @@ class TextMESSAGE(BaseMESSAGE):
         # Generate files
         sent_files = [x.filename for x in sent_files]
 
+        sent_data_context = {}
+        if sent_text is not None:
+            sent_data_context["text"] = sent_text
+        if sent_embed is not None:
+            sent_data_context["embed"] = sent_embed
+        if len(sent_files):
+            sent_data_context["files"] = sent_files
+
         return {
             "sent_data": {
-                "text"  : sent_text,
-                "embed" : sent_embed,
-                "files" : sent_files
+                **sent_data_context
             },
             "channels": {
                 "successful" : succeeded_ch,
@@ -690,7 +696,7 @@ class DirectMESSAGE(BaseMESSAGE):
                 "image" : sent_embed.image.url if type(sent_embed.image.url) is not EmptyEmbed else None,
                 "description" : sent_embed.description if type(sent_embed.description) is not EmptyEmbed else None,
                 "color" : sent_embed.colour if type(sent_embed.colour) is not EmptyEmbed else None,
-                "fields" : sent_embed._fields
+                "fields" : sent_embed._fields if hasattr(sent_embed, "_fields") else None
             }
             for key in sent_embed.copy():
                 # Pop items that are None to reduce the log length
@@ -702,12 +708,18 @@ class DirectMESSAGE(BaseMESSAGE):
 
         if not success_context["success"]:
             success_context["reason"] = str(success_context["reason"])
+        
+        sent_data_context = {}
+        if sent_text is not None:
+            sent_data_context["text"] = sent_text
+        if sent_embed is not None:
+            sent_data_context["embed"] = sent_embed
+        if len(sent_files):
+            sent_data_context["files"] = sent_files
 
         return {
             "sent_data": {
-                "text"  : sent_text,
-                "embed" : sent_embed,
-                "files" : sent_files
+                **sent_data_context
             },
             "success_info": {
                 **success_context
