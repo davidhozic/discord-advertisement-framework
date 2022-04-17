@@ -36,7 +36,8 @@ class BaseGUILD:
         "_generate_log",
         "log_file_name",
         "t_messages",
-        "vc_messages"
+        "vc_messages",
+        "log_counter"
     )
     def __init__(self,
                  snowflake: int,
@@ -46,7 +47,8 @@ class BaseGUILD:
         self.log_file_name = None
         self.t_messages = []
         self.vc_messages = []
-
+        self.log_counter = 0
+        
     async def initialize(self) -> bool:
         """
         ~  initialize  ~
@@ -114,9 +116,10 @@ class BaseGUILD:
                 appender_data["message_history"].insert(0,
                     {
                         **message_context,
-                        "index":    len(appender_data["message_history"]),
+                        "index":    self.log_counter,
                         "timestamp": timestamp
                     })
+                self.log_counter += 1
                 appender_data = json.dump(appender_data, appender, indent=4)
 
         except OSError as os_exception:
