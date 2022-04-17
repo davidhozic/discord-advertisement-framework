@@ -12,8 +12,8 @@ from    .const import *
 from    .message import *
 from    . import client
 import  time
-import  os
 import  json
+import pathlib
 
 __all__ = (
     "GUILD",
@@ -28,6 +28,7 @@ class GLOBALS:
         Contains the global variables for the module"""
     server_log_path = None
 
+
 class BaseGUILD:
     """ ~ BaseGUILD ~
         BaseGUILD object is used for creating inherited classes that work like a guild"""
@@ -36,8 +37,7 @@ class BaseGUILD:
         "_generate_log",
         "log_file_name",
         "t_messages",
-        "vc_messages",
-        "log_counter"
+        "vc_messages"
     )
     def __init__(self,
                  snowflake: int,
@@ -47,7 +47,6 @@ class BaseGUILD:
         self.log_file_name = None
         self.t_messages = []
         self.vc_messages = []
-        self.log_counter = 0
         
     async def initialize(self) -> bool:
         """
@@ -84,21 +83,30 @@ class BaseGUILD:
         """
         # Generate timestamp
         timestruct = time.localtime()
-        timestamp = "{:02d}.{:02d}.{:04d} {:02d}:{:02d}:{:02d}".format(timestruct.tm_mday,
-                                                                timestruct.tm_mon,
-                                                                timestruct.tm_year,
-                                                                timestruct.tm_hour,
-                                                                timestruct.tm_min,
-                                                                timestruct.tm_sec)
+        timestamp = "{:02d}.{:02d}.{:04d} {:02d}:{:02d}:{:02d}".format( timestruct.tm_mday,
+                                                                        timestruct.tm_mon,
+                                                                        timestruct.tm_year,
+                                                                        timestruct.tm_hour,
+                                                                        timestruct.tm_min,
+                                                                        timestruct.tm_sec)
+
+        logging_output = pathlib.Path(GLOBALS.server_log_path)\
+                         .joinpath("{:02d}".format(timestruct.tm_year))\
+                         .joinpath("{:02d}".format(timestruct.tm_mon))\
+                         .joinpath("{:02d}".format(timestruct.tm_mday))
+
         # Write into file
         try:
             with suppress(FileExistsError):
-                os.mkdir(GLOBALS.server_log_path)
+                pathlib.Path(logging_output).mkdir(parents=True,exist_ok=True)
+            
+            logging_output = str(logging_output.joinpath(self.log_file_name))
+
             with suppress(FileExistsError):
-                with open(os.path.join(GLOBALS.server_log_path, self.log_file_name),'x', encoding='utf-8'):
+                with open(logging_output,'x', encoding='utf-8'):
                     pass
 
-            with open(os.path.join(GLOBALS.server_log_path, self.log_file_name),'r+', encoding='utf-8') as appender:
+            with open(logging_output,'r+', encoding='utf-8') as appender:
                 appender_data = None
 
                 try:
@@ -109,17 +117,16 @@ class BaseGUILD:
                     appender_data["id"] = self.apiobject.id
                     appender_data["message_history"] = []
                 finally:
-                    with open(os.path.join(GLOBALS.server_log_path, self.log_file_name),'w', encoding='utf-8'):
+                    with open(logging_output,'w', encoding='utf-8'):
                         pass
                     appender.seek(0)
 
                 appender_data["message_history"].insert(0,
                     {
                         **message_context,
-                        "index":    self.log_counter,
+                        "index":    appender_data["message_history"][0]["index"] + 1 if len(appender_data["message_history"]) else 0,
                         "timestamp": timestamp
                     })
-                self.log_counter += 1
                 appender_data = json.dump(appender_data, appender, indent=4)
 
         except OSError as os_exception:
