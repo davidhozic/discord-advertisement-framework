@@ -42,6 +42,7 @@
   - [framework.**data_function**](#frameworkdata_function)
 - [**Logging**](#logging)
   - [**LOG OF SENT MESSAGES**](#log-of-sent-messages)
+    - [**Example**](#example-4)
   - [**Trace messages**](#trace-messages)
 - [**Regarding Pycord/discord.py**](#regarding-pycorddiscordpy)
 
@@ -426,13 +427,157 @@ It is used to fully shutdown the framework and then **exit** out of the program.
 
 #  **Logging**
 ## **LOG OF SENT MESSAGES**
-The framework can keep a log of sent messages for **each guild/server**. To enable file logging of sent messages, set the parameter **Generate file log** to True inside each [GUILD OBJECT](#frameworkguild).<br> 
-Inside the log you will find data of what was sent, a channel list it succeeded to send this message and a channel list of the ones it failed (If it failed due to slow mode, the message will be sent as soon as possible, overwriting the default period) <br>
-All of these file logs will be Markdown files.<br><br>
-![TextMESSAGE log](documentation_dep/msg_log_1.png)
-<br><br>
-![VoiceMESSAGE log](documentation_dep/msg_log_2.png)
-<br> 
+The framework allows to log sent messages for each GUILD/USER (if you set the "generate_log" to True inside the [**GUILD**](#frameworkguild) or [**USER**](#frameworkuser) object).
+The logs are writen in the JSON format and saved into a .json file, that has the name of the guild or an user you were sending messages into.
+The .json files are fragmantated by day and stored into folder "Year/Month/Day", this means that each day a new json file will be generated for that specific day for easier managing,
+for example, if today is 13.07.2022, the log will be saved into the file that is located in 
+```
+History
+└───2022
+│   └───07
+│       └───13
+|           └─── #David's dungeon.json
+```
+
+- name  -- The display name of the guild or an user
+- id    -- The discord's snowflake ID of the guild or the user
+- type  -- The type of object that created this log ([GUILD](#frameworkguild) or [USER](#frameworkuser))
+- message_history   -- A list of all the message logs, this is depandant on the type of [**xxxMESSAGE**](#frameworkxxxmessage):
+  - for **TextMESSAGE**:
+    - sent_data -- contains the information about the sent data, can contain (the following keys are only present if that type of data was sent):
+      - sent_text -- the text that was sent
+      - sent_embed -- The embed that was sent, can contain the following (it only contains certain item if it was specified in the embed):
+        - title
+        - author
+        - thumbnail
+        - image
+        - description
+        - color
+        - fields -- list of the embedded fields, each field contains:
+        	- inline -- bool variable that specifies if the field was inline with the prev. or next field
+        	- name   -- name of the field
+        	- content -- text inside the field body
+      - sent_files -- List of paths to the sent files
+    - channels -- dictionary of channels, contains:
+      - successful -- list of channels that the message was successfuly sent to, contains:
+        - name
+        - id
+      - failed  -- list of channels that the message failed to be sent to, contains:
+        - name
+        - id
+        - reason
+    - type  -- This is always TextMESSAGE
+    - mode  -- The sending mode ("send", "edit", "clear-send")
+    - index -- Index of the log, new items are added to the top of the list
+    - timestamp -- The timestamp of the message
+
+  - for **VoiceMESSAGE**:
+    - streamed_audio -- The audio file that was streamed to the channels
+    - channels -- dictionary of channels, contains:
+      - successful -- list of channels that the message was successfuly sent to, contains:
+        - name
+        - id
+      - failed  -- list of channels that the message failed to be sent to, contains:
+        - name
+        - id
+        - reason
+    - type  -- This is always VoiceMESSAGE
+    - index -- Index of the log, new items are added to the top of the list
+    - timestamp -- The timestamp of the message
+
+  - for **DirectMESSAGE**:
+    - sent_data -- contains the information about the sent data, can contain (the following keys are only present if that type of data was sent):
+      - This is exactly the same as in **TextMESSAGE**
+    - success_info -- dictionary containing:
+      - success -- bool variable that signals that sending was successful
+      - reason -- [only present if success is false] The reason why sending failed
+    - type  -- This is always DirectMESSAGE
+    - mode  -- The sending mode ("send", "edit", "clear-send")
+    - index -- Index of the log, new items are added to the top of the list
+    - timestamp -- The timestamp of the message
+
+### **Example**
+```json
+{
+    "name": "\\David's dungeon",
+    "id": 863071397207212052,
+    "type": "GUILD",
+    "message_history": [
+        {
+            "sent_data": {
+                "text": "First message"
+            },
+            "channels": {
+                "successful": [
+                    {
+                        "name": "spam",
+                        "id": 964251195168423999
+                    }
+                ],
+                "failed": []
+            },
+            "type": "TextMESSAGE",
+            "mode": "send",
+            "index": 3,
+            "timestamp": "18.04.2022 13:07:12"
+        },
+        {
+            "sent_data": {
+                "text": "First message"
+            },
+            "channels": {
+                "successful": [
+                    {
+                        "name": "spam",
+                        "id": 964251195168423999
+                    }
+                ],
+                "failed": []
+            },
+            "type": "TextMESSAGE",
+            "mode": "send",
+            "index": 2,
+            "timestamp": "18.04.2022 13:07:07"
+        },
+        {
+            "sent_data": {
+                "text": "First message"
+            },
+            "channels": {
+                "successful": [
+                    {
+                        "name": "spam",
+                        "id": 964251195168423999
+                    }
+                ],
+                "failed": []
+            },
+            "type": "TextMESSAGE",
+            "mode": "send",
+            "index": 1,
+            "timestamp": "18.04.2022 13:07:02"
+        },
+        {
+            "sent_data": {
+                "text": "First message"
+            },
+            "channels": {
+                "successful": [
+                    {
+                        "name": "spam",
+                        "id": 964251195168423999
+                    }
+                ],
+                "failed": []
+            },
+            "type": "TextMESSAGE",
+            "mode": "send",
+            "index": 0,
+            "timestamp": "18.04.2022 13:06:57"
+        }
+    ]
+}
+```
 
 ## **Trace messages**
 In case you feel like the framework is not doing it's job properly, eg. you feel like some messages aren't being send or the framework just stops without advertising, the framework offers **console logging** of **trace** messages. Trace messages can be **informative** (eg. which account is logged in), they can be **warnings** (eg. some channels could not be found),<br>
