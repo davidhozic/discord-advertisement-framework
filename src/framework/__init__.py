@@ -9,8 +9,6 @@
 """
 TODO:
 - Documention for JSON logging
-- Linting
-- (Additional info inside the json loggin?)
 """
 
 

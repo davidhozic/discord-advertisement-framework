@@ -38,11 +38,9 @@ class TIMER:
 
     def start(self):
         "Start the timer"
-        if self.running:
-            return True
-        self.running = True
-        self.startms = time.time()
-        return False
+        if not self.running:
+            self.running = True
+            self.startms = time.time()
 
     def elapsed(self):
         """Return the timer elapsed from last reset
@@ -72,8 +70,6 @@ class BaseMESSAGE:
         "force_retry",
         "data"
     )
-
-    
     # The "__valid_data_types__" should be implemented in the INHERITED classes.
     # The set contains all the data types that the class is allowed to accept, this variable
     # is then checked for allowed data types in the "initialize" function bellow.
@@ -96,20 +92,13 @@ class BaseMESSAGE:
         self.timer = TIMER()
         self.force_retry = {"ENABLED" : start_now, "TIME" : 0}  # This is used in both TextMESSAGE and VoiceMESSAGE for compatability purposes
         self.data = data
-    
+
     def generate_log_context(self):
         """ ~ generate_log_context ~
             @Info:
             This method is used for generating a dictionary (later converted to json) of the
             data that is to be included in the message log. This is to be implemented inside the
             inherited classes.
-        """
-        raise NotImplementedError
-
-    def stringify_sent_data(self) -> str:
-        """~ stringify_sent_data ~
-            @Info:
-            Returns a partial log containing sent data only (that is then returned to the guild)
         """
         raise NotImplementedError
 
@@ -151,12 +140,11 @@ class BaseMESSAGE:
         """
             ~  initialize_data  ~
             This method checks for the correct data input to the xxxMESSAGE
-            object. The expected datatypes for specific implementation is 
+            object. The expected datatypes for specific implementation is
             defined thru the static variable __valid_data_types__
         """
         # Check for correct data types of the MESSAGE.data parameter
         if not isinstance(self.data, FunctionBaseCLASS):
-
             # This is meant only as a pre-check if the parameters are correct so you wouldn't eg. start
             # sending this message 6 hours later and only then realize the parameters were incorrect.
             # The parameters also get checked/parsed each period right before the send.
@@ -299,7 +287,8 @@ class VoiceMESSAGE(BaseMESSAGE):
         voice_client = None
         try:
             # Try to open file first as FFMpegOpusAudio doesn't raise exception if file does not exist
-            with open(audio.filename, "rb"): pass
+            with open(audio.filename, "rb"):
+                pass
             stream = discord.FFmpegOpusAudio(audio.filename)
 
             voice_client = await channel.connect(timeout=C_VC_CONNECT_TIMEOUT)
@@ -319,7 +308,7 @@ class VoiceMESSAGE(BaseMESSAGE):
 
     async def send(self) -> Union[dict,  None]:
         """"
-            ~  send  ~  
+            ~  send  ~
             @Info:
                 Streams audio into the chanels
             @Return:
@@ -360,12 +349,13 @@ class VoiceMESSAGE(BaseMESSAGE):
                     succeded_channels.append(channel)
                 else:
                     errored_channels.append({"channel":channel, "reason": context["reason"]})
-            
+
             # Remove any channels that returned with code status 404 (They no longer exist)
             for data in errored_channels:
                 reason = data["reason"]
+                channel = data["channel"]
                 if isinstance(reason, discord.HTTPException) and reason.status == 404 and reason.code == 10003:
-                    self.channels.remove(data["channel"])
+                    self.channels.remove(channel)
                     trace(f"Channel {channel.name}(ID: {channel.id}) was deleted, removing it from the send list", TraceLEVELS.WARNING)
 
             return self.generate_log_context(audio_to_stream, succeded_channels, errored_channels)
@@ -444,21 +434,21 @@ class TextMESSAGE(BaseMESSAGE):
 
         #Generate embed
         if sent_embed is not None:
-            EmptyEmbed = discord.embeds._EmptyEmbed
+            EmptyEmbed = discord.embeds.EmptyEmbed
             sent_embed : dict = {
-                "title" : sent_embed.title if type(sent_embed.title) is not EmptyEmbed else None,
-                "author" : sent_embed.author.name if type(sent_embed.author.name) is not EmptyEmbed else None,
-                "thumbnail" : sent_embed.thumbnail.url if type(sent_embed.thumbnail.url) is not EmptyEmbed else None,
-                "image" : sent_embed.image.url if type(sent_embed.image.url) is not EmptyEmbed else None,
-                "description" : sent_embed.description if type(sent_embed.description) is not EmptyEmbed else None,
-                "color" : sent_embed.colour if type(sent_embed.colour) is not EmptyEmbed else None,
+                "title" : sent_embed.title if sent_embed.title is not EmptyEmbed else None,
+                "author" : sent_embed.author.name if sent_embed.author.name is not EmptyEmbed else None,
+                "thumbnail" : sent_embed.thumbnail.url if sent_embed.thumbnail.url is not EmptyEmbed else None,
+                "image" : sent_embed.image.url if sent_embed.image.url is not EmptyEmbed else None,
+                "description" : sent_embed.description if sent_embed.description is not EmptyEmbed else None,
+                "color" : sent_embed.colour if sent_embed.colour is not EmptyEmbed else None,
                 "fields" : sent_embed._fields if hasattr(sent_embed, "_fields") else None
             }
             for key in sent_embed.copy():
                 # Pop items that are None to reduce the log length
                 if sent_embed[key] is None:
                     sent_embed.pop(key)
-                    
+
         # Generate files
         sent_files = [x.filename for x in sent_files]
 
@@ -489,7 +479,7 @@ class TextMESSAGE(BaseMESSAGE):
             channel_id = self.channels[ch_i]
             channel = cl.get_channel(channel_id)
             self.channels[ch_i] = channel
-            
+
             if channel is None:
                 trace(f"Unable to get channel from ID {channel_id}", TraceLEVELS.ERROR)
                 self.channels.remove(channel)
@@ -500,7 +490,7 @@ class TextMESSAGE(BaseMESSAGE):
                 ch_i += 1
 
         return len(self.channels) > 0
-
+    
     async def send_channel(self,
                            channel: discord.TextChannel,
                            text: str,
@@ -523,15 +513,14 @@ class TextMESSAGE(BaseMESSAGE):
             try:
                 # Mode dictates to send new message or delete previous and then send new message or mode dictates edit but message was  never sent to this channel before
                 # Rate limit avoidance
-                await asyncio.sleep(C_RT_AVOID_DELAY)
-                if  self.mode in  {"send" , "clear-send"} or\
-                    self.mode == "edit" and self.sent_messages[channel.id] is None:
+                if  (self.mode in  {"send" , "clear-send"} or
+                    self.mode == "edit" and self.sent_messages[channel.id] is None
+                    ):
                     discord_sent_msg = await channel.send(  text,
                                                             embed=embed,
                                                             # Create discord.File objects here so it is catched by the except block and then logged
                                                             files=[discord.File(fwFILE.filename) for fwFILE in files])
                     self.sent_messages[channel.id] = discord_sent_msg
-
                 # Mode is edit and message was already send to this channel
                 elif self.mode == "edit":
                     await self.sent_messages[channel.id].edit ( text,
@@ -569,7 +558,7 @@ class TextMESSAGE(BaseMESSAGE):
 
     async def send(self) -> Union[dict,  None]:
         """"
-            ~  send  ~  
+            ~  send  ~
             @Info:
                 Sends the data into the channels
             @Return:
@@ -626,12 +615,13 @@ class TextMESSAGE(BaseMESSAGE):
             # Remove any channels that returned with code status 404 (They no longer exist)
             for data in errored_channels:
                 reason = data["reason"]
+                channel = data["channel"]
                 if isinstance(reason, discord.HTTPException) and reason.status == 404 and reason.code == 10003:
-                    self.channels.remove(data["channel"])
+                    self.channels.remove(channel)
                     trace(f"Channel {channel.name}(ID: {channel.id}) was deleted, removing it from the send list", TraceLEVELS.WARNING)
 
             # Return sent data + failed and successful function for logging purposes
-            return self.generate_log_context(text_to_send, embed_to_send, files_to_send,succeded_channels, errored_channels)
+            return self.generate_log_context(text_to_send, embed_to_send, files_to_send, succeded_channels, errored_channels)
 
         return None
 
@@ -698,27 +688,27 @@ class DirectMESSAGE(BaseMESSAGE):
         """
         #Generate embed
         if sent_embed is not None:
-            EmptyEmbed = discord.embeds._EmptyEmbed
+            EmptyEmbed = discord.embeds.EmptyEmbed
             sent_embed : dict = {
-                "title" : sent_embed.title if type(sent_embed.title) is not EmptyEmbed else None,
-                "author" : sent_embed.author.name if type(sent_embed.author.name) is not EmptyEmbed else None,
-                "thumbnail" : sent_embed.thumbnail.url if type(sent_embed.thumbnail.url) is not EmptyEmbed else None,
-                "image" : sent_embed.image.url if type(sent_embed.image.url) is not EmptyEmbed else None,
-                "description" : sent_embed.description if type(sent_embed.description) is not EmptyEmbed else None,
-                "color" : sent_embed.colour if type(sent_embed.colour) is not EmptyEmbed else None,
+                "title" : sent_embed.title if sent_embed.title is not EmptyEmbed else None,
+                "author" : sent_embed.author.name if sent_embed.author.name is not EmptyEmbed else None,
+                "thumbnail" : sent_embed.thumbnail.url if sent_embed.thumbnail.url is not EmptyEmbed else None,
+                "image" : sent_embed.image.url if sent_embed.image.url is not EmptyEmbed else None,
+                "description" : sent_embed.description if sent_embed.description is not EmptyEmbed else None,
+                "color" : sent_embed.colour if sent_embed.colour is not EmptyEmbed else None,
                 "fields" : sent_embed._fields if hasattr(sent_embed, "_fields") else None
             }
             for key in sent_embed.copy():
                 # Pop items that are None to reduce the log length
                 if sent_embed[key] is None:
                     sent_embed.pop(key)
-                    
+
         # Generate files
         sent_files = [x.filename for x in sent_files]
 
         if not success_context["success"]:
             success_context["reason"] = str(success_context["reason"])
-        
+
         sent_data_context = {}
         if sent_text is not None:
             sent_data_context["text"] = sent_text
@@ -784,7 +774,6 @@ class DirectMESSAGE(BaseMESSAGE):
             try:
                 # Mode dictates to send new message or delete previous and then send new message or mode dictates edit but message was  never sent to this channel before
                 # Rate limit avoidance
-                await asyncio.sleep(C_RT_AVOID_DELAY)
                 if  self.mode in  {"send" , "clear-send"} or\
                     self.mode == "edit" and self.previous_message is None:
                     discord_sent_msg = await self.dm_channel.send(  text,
@@ -829,7 +818,7 @@ class DirectMESSAGE(BaseMESSAGE):
 
     async def send(self) -> Union[dict, None]:
         """"
-            ~  send  ~  
+            ~  send  ~
             @Info:
                 Sends the data into the DM channel of the user.
             @Return:

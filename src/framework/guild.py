@@ -47,7 +47,7 @@ class BaseGUILD:
         self.log_file_name = None
         self.t_messages = []
         self.vc_messages = []
-        
+
     async def initialize(self) -> bool:
         """
         ~  initialize  ~
@@ -67,14 +67,10 @@ class BaseGUILD:
             This is the main coroutine that is responsible for sending all the messages to this specificc guild,
             it is called from the core module's advertiser task
         """
-        for message in self.t_messages if mode == "text" else self.vc_messages:
-            if message.is_ready():
-                message_ret = await message.send()
-                if self._generate_log and message_ret is not None:
-                    self.generate_log(**message_ret)
+        raise NotImplementedError
 
     def generate_log(self,
-                     **message_context) -> str:
+                     **message_context) -> None:
         """
         Name:   generate_log
         Param:
@@ -99,7 +95,7 @@ class BaseGUILD:
         try:
             with suppress(FileExistsError):
                 pathlib.Path(logging_output).mkdir(parents=True,exist_ok=True)
-            
+
             logging_output = str(logging_output.joinpath(self.log_file_name))
 
             with suppress(FileExistsError):
@@ -111,10 +107,11 @@ class BaseGUILD:
 
                 try:
                     appender_data = json.load(appender)
-                except json.JSONDecodeError as ex:
+                except json.JSONDecodeError:
                     appender_data = {}
                     appender_data["name"] = str(self.apiobject)
                     appender_data["id"] = self.apiobject.id
+                    appender_data["type"] = type(self).__name__
                     appender_data["message_history"] = []
                 finally:
                     with open(logging_output,'w', encoding='utf-8'):
@@ -127,7 +124,7 @@ class BaseGUILD:
                         "index":    appender_data["message_history"][0]["index"] + 1 if len(appender_data["message_history"]) else 0,
                         "timestamp": timestamp
                     })
-                appender_data = json.dump(appender_data, appender, indent=4)
+                json.dump(appender_data, appender, indent=4)
 
         except OSError as os_exception:
             trace(f"Unable to save log. Exception: {os_exception}", TraceLEVELS.WARNING)
@@ -205,6 +202,26 @@ class GUILD(BaseGUILD):
 
         return False
 
+    async def advertise(self,
+                        mode: Literal["text", "voice"]):
+        """
+            ~ advertise ~
+            @Info:
+            This is the main coroutine that is responsible for sending all the messages to this specificc guild,
+            it is called from the core module's advertiser task
+        """
+        for message in self.t_messages if mode == "text" else self.vc_messages:
+            if message.is_ready():
+                message_ret = await message.send()
+                # Check if the message still has any channels (as they can be auto removed on 404 status)
+                if not len(message.channels):
+                    # Remove message from the list if it has not channels left
+                    getattr(self, "t_messages" if mode == "text" else "vc_messages").remove(message)
+                    trace(f"Removing a {type(message).__name__} because it's channels were removed, in guild {self.apiobject.name}(ID: {self.apiobject.id})")
+
+                if self._generate_log and message_ret is not None:
+                    self.generate_log(**message_ret)
+
 
 class USER(BaseGUILD):
     """~ USER ~
@@ -252,6 +269,20 @@ class USER(BaseGUILD):
             if not len(self.t_messages):
                 return False
             return True
-            
+
         trace(f"Unable to create DM with user id: {user_id}", TraceLEVELS.ERROR)
         return False
+
+    async def advertise(self,
+                        mode: Literal["text", "voice"]):
+        """
+            ~ advertise ~
+            @Info:
+            This is the main coroutine that is responsible for sending all the messages to this specificc guild,
+            it is called from the core module's advertiser task
+        """
+        for message in self.t_messages if mode == "text" else self.vc_messages:
+            if message.is_ready():
+                message_ret = await message.send()
+                if self._generate_log and message_ret is not None:
+                    self.generate_log(**message_ret)
