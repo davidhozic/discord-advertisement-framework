@@ -2,18 +2,13 @@
     DISCORD ADVERTISEMENT FRAMEWORK (DAF)
     Author      :: David Hozic
     Copyright   :: Copyright (c) 2022 David Hozic
-    Version     :: V1.7.9
+    Version     :: V1.8
 """
 
 
 """
 TODO:
-- Documentation for DirectMESSAGE, USER classes,
-- Doc strings for each sub module,
-- Doc strings for classes and functions where it's missing
-- Examples for DirectMESSAGE and USER classes
-- Linting
-- Test everything
+- Documention for JSON logging
 """
 
 

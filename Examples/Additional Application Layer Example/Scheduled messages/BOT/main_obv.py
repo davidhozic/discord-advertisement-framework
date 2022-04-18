@@ -235,7 +235,7 @@ def get_data(ch_id):
     return None
 
 
-def main():
+async def main():
     """
     ~  main  ~
     @Param: void

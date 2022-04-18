@@ -3,7 +3,7 @@
     This module contains the definitions regarding the xxxMESSAGE class and
     all the functionality for sending data into discord channels.
 """
-from    typing import List, Union, Literal
+from    typing import Dict, List, Union, Literal
 from    .dtypes import *
 from    .tracing import *
 from    .const import *
@@ -38,11 +38,9 @@ class TIMER:
 
     def start(self):
         "Start the timer"
-        if self.running:
-            return True
-        self.running = True
-        self.startms = time.time()
-        return False
+        if not self.running:
+            self.running = True
+            self.startms = time.time()
 
     def elapsed(self):
         """Return the timer elapsed from last reset
@@ -72,8 +70,6 @@ class BaseMESSAGE:
         "force_retry",
         "data"
     )
-
-    
     # The "__valid_data_types__" should be implemented in the INHERITED classes.
     # The set contains all the data types that the class is allowed to accept, this variable
     # is then checked for allowed data types in the "initialize" function bellow.
@@ -97,10 +93,12 @@ class BaseMESSAGE:
         self.force_retry = {"ENABLED" : start_now, "TIME" : 0}  # This is used in both TextMESSAGE and VoiceMESSAGE for compatability purposes
         self.data = data
 
-    def stringify_sent_data(self) -> str:
-        """~ stringify_sent_data ~
+    def generate_log_context(self):
+        """ ~ generate_log_context ~
             @Info:
-            Returns a partial log containing sent data only (that is then returned to the guild)
+            This method is used for generating a dictionary (later converted to json) of the
+            data that is to be included in the message log. This is to be implemented inside the
+            inherited classes.
         """
         raise NotImplementedError
 
@@ -142,12 +140,11 @@ class BaseMESSAGE:
         """
             ~  initialize_data  ~
             This method checks for the correct data input to the xxxMESSAGE
-            object. The expected datatypes for specific implementation is 
+            object. The expected datatypes for specific implementation is
             defined thru the static variable __valid_data_types__
         """
         # Check for correct data types of the MESSAGE.data parameter
         if not isinstance(self.data, FunctionBaseCLASS):
-
             # This is meant only as a pre-check if the parameters are correct so you wouldn't eg. start
             # sending this message 6 hours later and only then realize the parameters were incorrect.
             # The parameters also get checked/parsed each period right before the send.
@@ -241,37 +238,47 @@ class VoiceMESSAGE(BaseMESSAGE):
         self.data = data
         self.channels = channel_ids
 
+    def generate_log_context(self,
+                             sent_audio: AUDIO,
+                             succeeded_ch: List[discord.VoiceChannel],
+                             failed_ch: List[dict]):
+        """ ~ generate_log_context ~
+            @Param:
+                sent_audio: AUDIO -- The audio that was streamed to the channels
+                succeeded_ch: List[discord.VoiceChannel] -- list of the successfuly streamed channels,
+                failed_ch: List[dict]   -- list of dictionaries contained the failed channel and the Exception
+            @Info:
+                Generates a dictionary containing data that will be saved in the message log
+        """
+        succeeded_ch = [{"name": str(channel), "id" : channel.id} for channel in succeeded_ch]
+        failed_ch = [{"name": str(entry["channel"]), "id" : entry["channel"].id, "reason": str(entry["reason"])} for entry in failed_ch]
+        return {
+            "streamed_audio" : sent_audio.filename,
+            "channels": {
+                "successful" : succeeded_ch,
+                "failed": failed_ch
+            },
+            "type" : type(self).__name__
+        }
+
     async def initialize_channels(self) -> bool:
         ch_i = 0
         cl = client.get_client()
         while ch_i < len(self.channels):
             channel_id = self.channels[ch_i]
             channel = cl.get_channel(channel_id)
-
-            if type(channel) is not discord.VoiceChannel:
-                trace(f"TextMESSAGE object got id for {type(channel).__name__}, but was expecting {discord.VoiceChannel.__name__}", TraceLEVELS.ERROR)
-                channel = None
-
             self.channels[ch_i] = channel
 
             if channel is None:
+                trace(f"Unable to get channel from ID {channel_id}", TraceLEVELS.ERROR)
+                self.channels.remove(channel)
+            elif type(channel) is not discord.VoiceChannel:
+                trace(f"VoiceMESSAGE object got ID ({channel_id}) for {type(channel).__name__}, but was expecting {discord.VoiceChannel.__name__}", TraceLEVELS.ERROR)
                 self.channels.remove(channel)
             else:
                 ch_i += 1
 
         return len(self.channels) > 0
-
-    def stringify_sent_data (self,
-                            sent_audio) -> str:
-        """
-        Name:  stringify_sent_data
-        Param: sent_audio -- Audio file that was streamed to the channels
-        Info:  Returns a string representation of send data to the channels.
-        """
-        return f'''
-## Streamed AUDIO:
-{sent_audio.filename}
-'''
 
     async def send_channel(self,
                            channel: discord.VoiceChannel,
@@ -280,7 +287,8 @@ class VoiceMESSAGE(BaseMESSAGE):
         voice_client = None
         try:
             # Try to open file first as FFMpegOpusAudio doesn't raise exception if file does not exist
-            with open(audio.filename, "rb"): pass
+            with open(audio.filename, "rb"):
+                pass
             stream = discord.FFmpegOpusAudio(audio.filename)
 
             voice_client = await channel.connect(timeout=C_VC_CONNECT_TIMEOUT)
@@ -300,16 +308,12 @@ class VoiceMESSAGE(BaseMESSAGE):
 
     async def send(self) -> Union[dict,  None]:
         """"
-            ~  send  ~  
+            ~  send  ~
             @Info:
                 Streams audio into the chanels
             @Return:
-                Returns a dictionary containing: 
-                - succeeded_ch: list  -- list of all the discord.VoiceChannel objects that belong to the channels where sending was successful
-                - failed_ch: list -- List of dictionaries contatining:
-                    - channel: discord.VoiceChannel --  channel that fw failed to send into
-                    - reason: Exception -- The Exception that caused the failed send attempt
-                - data_str: str -- A stringified representation of sent data that is used to generate a markdown log
+                Returns a dictionary generated by the generate_log_context method
+                or the None object if message wasn't ready to be sent
         """
         self.timer.reset()
         self.timer.start()
@@ -346,8 +350,15 @@ class VoiceMESSAGE(BaseMESSAGE):
                 else:
                     errored_channels.append({"channel":channel, "reason": context["reason"]})
 
-            return {"succeeded_ch": succeded_channels, "failed_ch" : errored_channels, "data_str": self.stringify_sent_data(audio_to_stream)}
+            # Remove any channels that returned with code status 404 (They no longer exist)
+            for data in errored_channels:
+                reason = data["reason"]
+                channel = data["channel"]
+                if isinstance(reason, discord.HTTPException) and reason.status == 404 and reason.code == 10003:
+                    self.channels.remove(channel)
+                    trace(f"Channel {channel.name}(ID: {channel.id}) was deleted, removing it from the send list", TraceLEVELS.WARNING)
 
+            return self.generate_log_context(audio_to_stream, succeded_channels, errored_channels)
         return None
 
 class TextMESSAGE(BaseMESSAGE):
@@ -402,92 +413,84 @@ class TextMESSAGE(BaseMESSAGE):
         self.channels = channel_ids
         self.sent_messages = {ch_id : None for ch_id in channel_ids}
 
+    def generate_log_context(self,
+                             sent_text : str,
+                             sent_embed : EMBED,
+                             sent_files : List[FILE],
+                             succeeded_ch: List[Union[discord.TextChannel, discord.Thread]],
+                             failed_ch: List[dict]):
+        """ ~ generate_log_context ~
+            @Param:
+                sent_text : str -- The text that was sent
+                sent_embed : EMBED  -- The embed that was sent
+                sent_files : List[FILE] -- List of files that were sent
+                succeeded_ch: List[discord.VoiceChannel] -- list of the successfuly streamed channels,
+                failed_ch: List[dict]   -- list of dictionaries contained the failed channel and the Exception
+            @Info:
+                Generates a dictionary containing data that will be saved in the message log
+        """
+        succeeded_ch = [{"name": str(channel), "id" : channel.id} for channel in succeeded_ch]
+        failed_ch = [{"name": str(entry["channel"]), "id" : entry["channel"].id, "reason": str(entry["reason"])} for entry in failed_ch]
+
+        #Generate embed
+        if sent_embed is not None:
+            EmptyEmbed = discord.embeds.EmptyEmbed
+            sent_embed : dict = {
+                "title" : sent_embed.title if sent_embed.title is not EmptyEmbed else None,
+                "author" : sent_embed.author.name if sent_embed.author.name is not EmptyEmbed else None,
+                "thumbnail" : sent_embed.thumbnail.url if sent_embed.thumbnail.url is not EmptyEmbed else None,
+                "image" : sent_embed.image.url if sent_embed.image.url is not EmptyEmbed else None,
+                "description" : sent_embed.description if sent_embed.description is not EmptyEmbed else None,
+                "color" : sent_embed.colour if sent_embed.colour is not EmptyEmbed else None,
+                "fields" : sent_embed._fields if hasattr(sent_embed, "_fields") else None
+            }
+            for key in sent_embed.copy():
+                # Pop items that are None to reduce the log length
+                if sent_embed[key] is None:
+                    sent_embed.pop(key)
+
+        # Generate files
+        sent_files = [x.filename for x in sent_files]
+
+        sent_data_context = {}
+        if sent_text is not None:
+            sent_data_context["text"] = sent_text
+        if sent_embed is not None:
+            sent_data_context["embed"] = sent_embed
+        if len(sent_files):
+            sent_data_context["files"] = sent_files
+
+        return {
+            "sent_data": {
+                **sent_data_context
+            },
+            "channels": {
+                "successful" : succeeded_ch,
+                "failed": failed_ch
+            },
+            "type" : type(self).__name__,
+            "mode" : self.mode,
+        }
+
     async def initialize_channels(self) -> bool:
         ch_i = 0
         cl = client.get_client()
         while ch_i < len(self.channels):
             channel_id = self.channels[ch_i]
             channel = cl.get_channel(channel_id)
-
-            if type(channel) not in {discord.TextChannel, discord.Thread}:
-                trace(f"TextMESSAGE object got id for {type(channel).__name__}, but was expecting {discord.TextChannel.__name__}", TraceLEVELS.ERROR)
-                channel = None
-
             self.channels[ch_i] = channel
 
             if channel is None:
+                trace(f"Unable to get channel from ID {channel_id}", TraceLEVELS.ERROR)
+                self.channels.remove(channel)
+            elif type(channel) not in {discord.TextChannel, discord.Thread}:
+                trace(f"TextMESSAGE object got ID ({channel_id}) for {type(channel).__name__}, but was expecting {discord.TextChannel.__name__}", TraceLEVELS.ERROR)
                 self.channels.remove(channel)
             else:
                 ch_i += 1
 
         return len(self.channels) > 0
-
-    def stringify_sent_data (self,
-                            sent_text : str,
-                            sent_embed : discord.Embed,
-                            sent_files : list) -> str:
-        """
-        Name:  stringify_sent_data
-        Param: sent_audio -- Audio file that was streamed to the channels
-        Info:  Returns a string representation of send data to the channels.
-               This is then used as a data_context parameter to the GUILD object.
-        """
-        # Generate text
-        if sent_text is not None:
-            tmp_text , sent_text = sent_text, ""
-            sent_text += "- ```\n"
-            for line in tmp_text.splitlines():
-                sent_text += f"  {line}\n"
-            sent_text += "  ```"
-        else:
-            sent_text = ""
-
-        #Generate embed
-        EmptyEmbed = discord.embeds._EmptyEmbed
-
-        if sent_embed is not None:
-            tmp_emb = sent_embed
-            ets = sent_embed.timestamp
-            sent_embed = \
-f"""
-Title:  {tmp_emb.title if type(tmp_emb.title) is not EmptyEmbed else ""}
-
-Author:  {tmp_emb.author.name if type(tmp_emb.author.name) is not EmptyEmbed else ""}
-
-Thumbnail:  {tmp_emb.thumbnail.url if type(tmp_emb.thumbnail.url) is not EmptyEmbed else ""}
-
-Image:  {tmp_emb.image.url if type(tmp_emb.image.url) is not EmptyEmbed else ""}
-
-Description:  {tmp_emb.description if type(tmp_emb.description) is not EmptyEmbed else ""}
-
-Color:  {tmp_emb.colour if type(tmp_emb.colour) is not EmptyEmbed else ""}
-
-Timestamp:  {f"{ets.day}.{ets.month}.{ets.year}  {ets.hour}:{ets.minute}:{ets.second}" if type(ets) is not EmptyEmbed else ""}
-"""
-            sent_embed += "\nFields:"
-            for field in tmp_emb.fields:
-                sent_embed += f"\n - {field.name}\n"
-                sent_embed += "\t```\n"
-                for line in field.value.splitlines():
-                    sent_embed += f"\t{line}\n"
-                sent_embed += "\t```"
-
-        else:
-            sent_embed = ""
-
-        # Generate files
-        sent_files = "".join(    f"- ```\n  {file.filename}\n  ```\n" for file in sent_files    ).rstrip("\n")
-
-        return f'''
-## Text:
-{sent_text}
-***
-## Embed:
-{sent_embed}
-***
-## Files:
-{sent_files}'''
-
+    
     async def send_channel(self,
                            channel: discord.TextChannel,
                            text: str,
@@ -510,15 +513,14 @@ Timestamp:  {f"{ets.day}.{ets.month}.{ets.year}  {ets.hour}:{ets.minute}:{ets.se
             try:
                 # Mode dictates to send new message or delete previous and then send new message or mode dictates edit but message was  never sent to this channel before
                 # Rate limit avoidance
-                await asyncio.sleep(C_RT_AVOID_DELAY)
-                if  self.mode in  {"send" , "clear-send"} or\
-                    self.mode == "edit" and self.sent_messages[channel.id] is None:
+                if  (self.mode in  {"send" , "clear-send"} or
+                    self.mode == "edit" and self.sent_messages[channel.id] is None
+                    ):
                     discord_sent_msg = await channel.send(  text,
                                                             embed=embed,
                                                             # Create discord.File objects here so it is catched by the except block and then logged
                                                             files=[discord.File(fwFILE.filename) for fwFILE in files])
                     self.sent_messages[channel.id] = discord_sent_msg
-
                 # Mode is edit and message was already send to this channel
                 elif self.mode == "edit":
                     await self.sent_messages[channel.id].edit ( text,
@@ -543,8 +545,8 @@ Timestamp:  {f"{ets.day}.{ets.month}.{ets.year}  {ets.hour}:{ets.minute}:{ets.se
                     elif ex.status == 404:      # Unknown object
                         if ex.code == 10008:    # Unknown message
                             self.sent_messages[channel.id]  = None
-
-                        exit_condition = True
+                        else:
+                            exit_condition = True
                     else:
                         exit_condition = True
                 else:
@@ -556,16 +558,12 @@ Timestamp:  {f"{ets.day}.{ets.month}.{ets.year}  {ets.hour}:{ets.minute}:{ets.se
 
     async def send(self) -> Union[dict,  None]:
         """"
-            ~  send  ~  
+            ~  send  ~
             @Info:
                 Sends the data into the channels
             @Return:
-                Returns a dictionary containing: 
-                - succeeded_ch: list  -- list of all the discord.TextChannel objects that belong to the channels where sending was successful
-                - failed_ch: list -- List of dictionaries contatining:
-                    - channel: discord.TextChannel --  channel that fw failed to send into
-                    - reason: Exception -- The Exception that caused the failed send attempt
-                - data_str: str -- A stringified representation of sent data that is used to generate a markdown log
+                Returns a dictionary generated by the generate_log_context method
+                or the None object if message wasn't ready to be sent
         """
         self.timer.reset()
         self.timer.start()
@@ -614,8 +612,16 @@ Timestamp:  {f"{ets.day}.{ets.month}.{ets.year}  {ets.hour}:{ets.minute}:{ets.se
                 else:
                     errored_channels.append({"channel":channel, "reason": context["reason"]})
 
+            # Remove any channels that returned with code status 404 (They no longer exist)
+            for data in errored_channels:
+                reason = data["reason"]
+                channel = data["channel"]
+                if isinstance(reason, discord.HTTPException) and reason.status == 404 and reason.code == 10003:
+                    self.channels.remove(channel)
+                    trace(f"Channel {channel.name}(ID: {channel.id}) was deleted, removing it from the send list", TraceLEVELS.WARNING)
+
             # Return sent data + failed and successful function for logging purposes
-            return {"succeeded_ch": succeded_channels, "failed_ch" : errored_channels, "data_str": self.stringify_sent_data(text_to_send, embed_to_send, files_to_send)}
+            return self.generate_log_context(text_to_send, embed_to_send, files_to_send, succeded_channels, errored_channels)
 
         return None
 
@@ -665,6 +671,63 @@ class DirectMESSAGE(BaseMESSAGE):
         self.dm_channel = None
         self.previous_message = None
 
+    def generate_log_context(self,
+                             sent_text : str,
+                             sent_embed : EMBED,
+                             sent_files : List[FILE],
+                             **success_context):
+        """ ~ generate_log_context ~
+            @Param:
+                sent_text : str -- The text that was sent
+                sent_embed : EMBED  -- The embed that was sent
+                sent_files : List[FILE] -- List of files that were sent
+                succeeded_ch: List[discord.VoiceChannel] -- list of the successfuly streamed channels,
+                failed_ch: List[dict]   -- list of dictionaries contained the failed channel and the Exception
+            @Info:
+                Generates a dictionary containing data that will be saved in the message log
+        """
+        #Generate embed
+        if sent_embed is not None:
+            EmptyEmbed = discord.embeds.EmptyEmbed
+            sent_embed : dict = {
+                "title" : sent_embed.title if sent_embed.title is not EmptyEmbed else None,
+                "author" : sent_embed.author.name if sent_embed.author.name is not EmptyEmbed else None,
+                "thumbnail" : sent_embed.thumbnail.url if sent_embed.thumbnail.url is not EmptyEmbed else None,
+                "image" : sent_embed.image.url if sent_embed.image.url is not EmptyEmbed else None,
+                "description" : sent_embed.description if sent_embed.description is not EmptyEmbed else None,
+                "color" : sent_embed.colour if sent_embed.colour is not EmptyEmbed else None,
+                "fields" : sent_embed._fields if hasattr(sent_embed, "_fields") else None
+            }
+            for key in sent_embed.copy():
+                # Pop items that are None to reduce the log length
+                if sent_embed[key] is None:
+                    sent_embed.pop(key)
+
+        # Generate files
+        sent_files = [x.filename for x in sent_files]
+
+        if not success_context["success"]:
+            success_context["reason"] = str(success_context["reason"])
+
+        sent_data_context = {}
+        if sent_text is not None:
+            sent_data_context["text"] = sent_text
+        if sent_embed is not None:
+            sent_data_context["embed"] = sent_embed
+        if len(sent_files):
+            sent_data_context["files"] = sent_files
+
+        return {
+            "sent_data": {
+                **sent_data_context
+            },
+            "success_info": {
+                **success_context
+            },
+            "type" : type(self).__name__,
+            "mode" : self.mode
+        }
+
     async def initialize_channels(self,
                                   user_id) -> bool:
         """~ initialize_channels ~
@@ -678,75 +741,8 @@ class DirectMESSAGE(BaseMESSAGE):
         cl = client.get_client()
         self.dm_channel = cl.get_user(user_id)
         if self.dm_channel is None:
-            trace(f"Unable to create dm with user id: {user_id}", TraceLEVELS.ERROR)
             return False
         return True
-
-    def stringify_sent_data (self,
-                            sent_text : str,
-                            sent_embed : discord.Embed,
-                            sent_files : list) -> str:
-        """
-        Name:  stringify_sent_data
-        Param: sent_audio -- Audio file that was streamed to the channels
-        Info:  Returns a string representation of send data to the channels.
-               This is then used as a data_context parameter to the GUILD object.
-        """
-        # Generate text
-        if sent_text is not None:
-            tmp_text , sent_text = sent_text, ""
-            sent_text += "- ```\n"
-            for line in tmp_text.splitlines():
-                sent_text += f"  {line}\n"
-            sent_text += "  ```"
-        else:
-            sent_text = ""
-
-        #Generate embed
-        EmptyEmbed = discord.embeds._EmptyEmbed
-
-        if sent_embed is not None:
-            tmp_emb = sent_embed
-            ets = sent_embed.timestamp
-            sent_embed = \
-f"""
-Title:  {tmp_emb.title if type(tmp_emb.title) is not EmptyEmbed else ""}
-
-Author:  {tmp_emb.author.name if type(tmp_emb.author.name) is not EmptyEmbed else ""}
-
-Thumbnail:  {tmp_emb.thumbnail.url if type(tmp_emb.thumbnail.url) is not EmptyEmbed else ""}
-
-Image:  {tmp_emb.image.url if type(tmp_emb.image.url) is not EmptyEmbed else ""}
-
-Description:  {tmp_emb.description if type(tmp_emb.description) is not EmptyEmbed else ""}
-
-Color:  {tmp_emb.colour if type(tmp_emb.colour) is not EmptyEmbed else ""}
-
-Timestamp:  {f"{ets.day}.{ets.month}.{ets.year}  {ets.hour}:{ets.minute}:{ets.second}" if type(ets) is not EmptyEmbed else ""}
-"""
-            sent_embed += "\nFields:"
-            for field in tmp_emb.fields:
-                sent_embed += f"\n - {field.name}\n"
-                sent_embed += "\t```\n"
-                for line in field.value.splitlines():
-                    sent_embed += f"\t{line}\n"
-                sent_embed += "\t```"
-
-        else:
-            sent_embed = ""
-
-        # Generate files
-        sent_files = "".join(    f"- ```\n  {file.filename}\n  ```\n" for file in sent_files    ).rstrip("\n")
-
-        return f'''
-## Text:
-{sent_text}
-***
-## Embed:
-{sent_embed}
-***
-## Files:
-{sent_files}'''
 
     async def send_channel(self,
                            text: str,
@@ -778,7 +774,6 @@ Timestamp:  {f"{ets.day}.{ets.month}.{ets.year}  {ets.hour}:{ets.minute}:{ets.se
             try:
                 # Mode dictates to send new message or delete previous and then send new message or mode dictates edit but message was  never sent to this channel before
                 # Rate limit avoidance
-                await asyncio.sleep(C_RT_AVOID_DELAY)
                 if  self.mode in  {"send" , "clear-send"} or\
                     self.mode == "edit" and self.previous_message is None:
                     discord_sent_msg = await self.dm_channel.send(  text,
@@ -810,8 +805,8 @@ Timestamp:  {f"{ets.day}.{ets.month}.{ets.year}  {ets.hour}:{ets.minute}:{ets.se
                     elif ex.status == 404:      # Unknown object
                         if ex.code == 10008:    # Unknown message
                             self.previous_message  = None
-
-                        exit_condition = True
+                        else:
+                            exit_condition = True
                     else:
                         exit_condition = True
                 else:
@@ -823,14 +818,12 @@ Timestamp:  {f"{ets.day}.{ets.month}.{ets.year}  {ets.hour}:{ets.minute}:{ets.se
 
     async def send(self) -> Union[dict, None]:
         """"
-            ~  send  ~  
+            ~  send  ~
             @Info:
                 Sends the data into the DM channel of the user.
             @Return:
-                Returns a dictionary containing: 
-                - success: bool  -- True if successful or False on Falure
-                - reason: Exception -- [only if success is False] Exception that caused the message to not succeed
-                - data_str: str -- A stringified representation of sent data that is used to generate a markdown log
+                Returns a dictionary generated by the generate_log_context method
+                or the None object if message wasn't ready to be sent
         """
         self.timer.reset()
         self.timer.start()
@@ -868,6 +861,6 @@ Timestamp:  {f"{ets.day}.{ets.month}.{ets.year}  {ets.hour}:{ets.minute}:{ets.se
             context = await self.send_channel(text_to_send, embed_to_send, files_to_send)
 
             # Return sent data + failed and successful function for logging purposes
-            return {**context, "data_str": self.stringify_sent_data(text_to_send, embed_to_send, files_to_send)}
+            return self.generate_log_context(text_to_send, embed_to_send, files_to_send, **context)
 
         return None
