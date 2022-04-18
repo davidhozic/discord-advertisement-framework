@@ -136,6 +136,7 @@ class EMBED(discord.Embed):
                 with suppress(AttributeError,TypeError):
                     if (not callable(getattr(_object, key))
                         and not isinstance(getattr(_object.__class__, key), property)
+                        and getattr(_object,key) is not discord.embeds.EmptyEmbed
                     ):
                         setattr(ret, key, copy.deepcopy(getattr(_object,key)))
 
