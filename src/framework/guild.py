@@ -126,8 +126,8 @@ class BaseGUILD:
                     })
                 json.dump(appender_data, appender, indent=4)
 
-        except OSError as os_exception:
-            trace(f"Unable to save log. Exception: {os_exception}", TraceLEVELS.WARNING)
+        except Exception as exception:
+            trace(f"Unable to save log. Exception: {exception}", TraceLEVELS.WARNING)
 
 
 class GUILD(BaseGUILD):
