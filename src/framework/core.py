@@ -4,14 +4,13 @@
     and functions needed for the framework to run,
     as well as user function to control the framework
 """
-import asyncio
 from   typing import Literal, Callable, List
 from . const import *
 from . import tracing
 from . tracing import *
 from . import guild
 from . import client
-
+import asyncio
 
 
 #######################################################################
@@ -22,6 +21,7 @@ __all__ = (
     "shutdown"
 )
 
+
 #######################################################################
 # Globals   (These are all set in the framework.run function)
 #######################################################################
@@ -30,6 +30,7 @@ class GLOBALS:
         @Info: Contains the globally needed variables"""
     user_callback: Callable
     server_list: List
+
 
 #######################################################################
 # Tasks
@@ -73,6 +74,7 @@ async def initialize() -> bool:
         return False
 
     return True
+
 
 async def shutdown() -> None:
     """
