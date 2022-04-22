@@ -200,6 +200,7 @@ class GUILD(BaseGUILD):
 
             return True
 
+        trace(f"Unable to find guild with ID: {guild_id}", TraceLEVELS.ERROR)
         return False
 
     async def advertise(self,
