@@ -2,15 +2,19 @@ import setuptools
 
 
 
-
+long_description = None
 with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
+
+requirements = None
+with open("requirements.txt", 'r', encoding="utf-8") as req_file:
+    requirements = req_file.readlines()
 
 
 __metadata__ = \
 {
-    "version" :  "1.8.1",
-    "requirements" :  ["aiohttp>=3.6.0,<3.9.0", "PyNaCl"],
+    "version" :  "1.9",
+    "requirements" : requirements,
     "minimum_py_version" :  "3.8",
 }
 

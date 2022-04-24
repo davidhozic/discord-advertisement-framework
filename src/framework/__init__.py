@@ -2,16 +2,8 @@
     DISCORD ADVERTISEMENT FRAMEWORK (DAF)
     Author      :: David Hozic
     Copyright   :: Copyright (c) 2022 David Hozic
-    Version     :: V1.8
+    Version     :: V1.9
 """
-
-
-"""
-TODO:
-- Documention for JSON logging
-"""
-
-
 import _discord as discord
 from .client import *
 from .const import *
