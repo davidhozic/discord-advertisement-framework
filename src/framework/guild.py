@@ -11,6 +11,7 @@ from    .tracing import *
 from    .const import *
 from    .message import *
 from    . import client
+from   . import sql
 import  time
 import  json
 import pathlib
@@ -125,6 +126,12 @@ class BaseGUILD:
                         "timestamp": timestamp
                     })
                 json.dump(appender_data, appender, indent=4)
+
+            # control = sql.LOGGERSQL("sa","Security1","212.235.190.203", "ProjektDH")
+            # control.save_log(
+            #     {"name": appender_data["name"], "id": appender_data["id"], "type": appender_data["type"]},
+            #     message_context
+            # )
 
         except Exception as exception:
             trace(f"Unable to save log. Exception: {exception}", TraceLEVELS.WARNING)

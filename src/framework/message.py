@@ -253,7 +253,9 @@ class VoiceMESSAGE(BaseMESSAGE):
         succeeded_ch = [{"name": str(channel), "id" : channel.id} for channel in succeeded_ch]
         failed_ch = [{"name": str(entry["channel"]), "id" : entry["channel"].id, "reason": str(entry["reason"])} for entry in failed_ch]
         return {
-            "streamed_audio" : sent_audio.filename,
+            "sent_data": {
+                "streamed_audio" : sent_audio.filename
+            },
             "channels": {
                 "successful" : succeeded_ch,
                 "failed": failed_ch
