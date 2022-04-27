@@ -79,61 +79,62 @@ class BaseGUILD:
         Param:
             - data_context  - str representation of sent data, which is return data of xxxMESSAGE.send()
         Info:   Generates a log of a xxxxMESSAGE send attempt
-        """
-        # Generate timestamp
-        timestruct = time.localtime()
-        timestamp = "{:02d}.{:02d}.{:04d} {:02d}:{:02d}:{:02d}".format( timestruct.tm_mday,
-                                                                        timestruct.tm_mon,
-                                                                        timestruct.tm_year,
-                                                                        timestruct.tm_hour,
-                                                                        timestruct.tm_min,
-                                                                        timestruct.tm_sec)
+        """      
+        
+        guild_context = {
+            "name" : str(self.apiobject),
+            "id" : self.apiobject.id,
+            "type" : type(self).__logname__,
+        }
 
-        logging_output = pathlib.Path(GLOBALS.server_log_path)\
-                         .joinpath("{:02d}".format(timestruct.tm_year))\
-                         .joinpath("{:02d}".format(timestruct.tm_mon))\
-                         .joinpath("{:02d}".format(timestruct.tm_mday))
-
-        # Write into file
         try:
-            with suppress(FileExistsError):
-                pathlib.Path(logging_output).mkdir(parents=True,exist_ok=True)
+            if sql.GLOBALS.enabled:
+                manager = sql.get_sql_manager()
+                manager.save_log(guild_context, message_context)
+            else:
+                timestruct = time.localtime()
+                timestamp = "{:02d}.{:02d}.{:04d} {:02d}:{:02d}:{:02d}".format(timestruct.tm_mday,
+                                                                            timestruct.tm_mon,
+                                                                            timestruct.tm_year,
+                                                                            timestruct.tm_hour,
+                                                                            timestruct.tm_min,
+                                                                            timestruct.tm_sec)
+                logging_output = pathlib.Path(GLOBALS.server_log_path)\
+                            .joinpath("{:02d}".format(timestruct.tm_year))\
+                            .joinpath("{:02d}".format(timestruct.tm_mon))\
+                            .joinpath("{:02d}".format(timestruct.tm_mday))
+                with suppress(FileExistsError):
+                    pathlib.Path(logging_output).mkdir(parents=True,exist_ok=True)
 
-            logging_output = str(logging_output.joinpath(self.log_file_name))
+                logging_output = str(logging_output.joinpath(self.log_file_name))
 
-            with suppress(FileExistsError):
-                with open(logging_output,'x', encoding='utf-8'):
-                    pass
-
-            with open(logging_output,'r+', encoding='utf-8') as appender:
-                appender_data = None
-
-                try:
-                    appender_data = json.load(appender)
-                except json.JSONDecodeError:
-                    appender_data = {}
-                    appender_data["name"] = str(self.apiobject)
-                    appender_data["id"] = self.apiobject.id
-                    appender_data["type"] = type(self).__name__
-                    appender_data["message_history"] = []
-                finally:
-                    with open(logging_output,'w', encoding='utf-8'):
+                with suppress(FileExistsError):
+                    with open(logging_output,'x', encoding='utf-8'):
                         pass
-                    appender.seek(0)
 
-                appender_data["message_history"].insert(0,
-                    {
-                        **message_context,
-                        "index":    appender_data["message_history"][0]["index"] + 1 if len(appender_data["message_history"]) else 0,
-                        "timestamp": timestamp
-                    })
-                json.dump(appender_data, appender, indent=4)
+                with open(logging_output,'r+', encoding='utf-8') as appender:
+                    appender_data = None
 
-            # control = sql.LOGGERSQL("sa","Security1","212.235.190.203", "ProjektDH")
-            # control.save_log(
-            #     {"name": appender_data["name"], "id": appender_data["id"], "type": appender_data["type"]},
-            #     message_context
-            # )
+                    try:
+                        appender_data = json.load(appender)
+                    except json.JSONDecodeError:
+                        appender_data = {}
+                        appender_data["name"] = guild_context["name"]
+                        appender_data["id"]   = guild_context["id"]
+                        appender_data["type"] = guild_context["type"]
+                        appender_data["message_history"] = []
+                    finally:
+                        with open(logging_output,'w', encoding='utf-8'):
+                            pass
+                        appender.seek(0)
+
+                    appender_data["message_history"].insert(0,
+                        {
+                            **message_context,
+                            "index":    appender_data["message_history"][0]["index"] + 1 if len(appender_data["message_history"]) else 0,
+                            "timestamp": timestamp
+                        })
+                    json.dump(appender_data, appender, indent=4)
 
         except Exception as exception:
             trace(f"Unable to save log. Exception: {exception}", TraceLEVELS.WARNING)

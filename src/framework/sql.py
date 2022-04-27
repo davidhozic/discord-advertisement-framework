@@ -7,14 +7,17 @@
 """
 from  datetime   import datetime
 from  typing     import Literal
-from  sqlalchemy import JSON, BigInteger, Column, Identity, Integer, String, DateTime,ForeignKey, null, create_engine
+from requests import Session
+from  sqlalchemy import JSON, BigInteger, Column, Identity, Integer, String, DateTime,ForeignKey, create_engine
 from  sqlalchemy.orm import sessionmaker
 from  sqlalchemy.ext.declarative import declarative_base
+from  sqlalchemy_utils import create_database, database_exists
 from  .tracing import *
 
 __all__ = (
     "LOGGERSQL",
-    "register_type"
+    "register_type",
+    "get_sql_manager"
 )
 
 
@@ -93,7 +96,9 @@ class LOGGERSQL:
         @Param: void"""
         # Create engine for communicating with the SQL base
         try:
-            self.__engine = create_engine(f"mssql+pymssql://{self.username}:{self.__password}@{self.server}/{self.database}", echo=True)
+            self.__engine = create_engine(f"mssql+pymssql://{self.username}:{self.__password}@{self.server}/{self.database}", echo=False)
+            if not database_exists(self.__engine.url):
+                create_database(self.__engine.url)
         except Exception as ex:
             trace(f"Unable to start SQL engine. Reason:\n{ex}", TraceLEVELS.ERROR)
             return False
@@ -145,9 +150,9 @@ class LOGGERSQL:
             successful_ch = []
             failed_ch = []
             for channel in channels["successful"]:
-                successful_ch.append(MsgLogSuccCHANNEL(channel["id"], NotImplemented))
+                successful_ch.append(MessageLogCHANNEL(channel["id"], NotImplemented))
             for channel in channels["failed"]:
-                failed_ch.append(MsgLogFailCHANNEL(channel["id"], NotImplemented, channel["reason"]))
+                failed_ch.append(MessageLogCHANNEL(channel["id"], NotImplemented, channel["reason"]))
 
         with self.Session() as session:
             guild_type = session.query(GuildTYPE).filter(GuildTYPE.name == guild_type).first()
@@ -160,7 +165,7 @@ class LOGGERSQL:
                 message_mode = session.query(MessageMODE).filter(MessageMODE.name == message_mode).first()
                 log_object.message_mode = message_mode.ID
             else:
-                log_object.message_mode = null
+                log_object.message_mode = None
 
             session.add(log_object)
 
@@ -172,7 +177,6 @@ class LOGGERSQL:
                 session.add_all(successful_ch+failed_ch)
 
             session.commit()
-
 
 
 class MessageTYPE(LOGGERSQL.Base):
@@ -221,35 +225,17 @@ class MessageMODE(LOGGERSQL.Base):
     def __init__(self, name: str=None):
         self.name = name
 
-
-class MsgLogSuccCHANNEL(LOGGERSQL.Base):
+class MessageLogCHANNEL(LOGGERSQL.Base):
     """
     ~ SQL Table Descriptor Class ~
-    @Name: MsgLogSuccCHANNEL
-    @Info: Table for logging the successful channels of each message log.
+    @Name: MessageLogCHANNEL
+    @Info: Table for logging the channels of each message log (or if sending to DM was succesful or not).
     @Param:
         snowflake: int :: Discord's snowflake identificator
-        message_log_id :: The SQL ID of the message log to which this channel log belongs to"""
-
-    __tablename__ = "MsgLogSuccCHANNEL"
-    SnowflakeID = Column(BigInteger, primary_key=True)
-    MessageLogID = Column(Integer, ForeignKey("MessageLOG.ID", ondelete="CASCADE"), primary_key=True)
-
-    def __init__(self, snowflake: int=None, message_log_id: int=None):
-        self.SnowflakeID = snowflake
-        self.MessageLogID = message_log_id
-
-
-class MsgLogFailCHANNEL(LOGGERSQL.Base):
-    """
-    ~ SQL Table Descriptor Class ~
-    @Name: MsgLogFailCHANNEL
-    @Info: Table for logging the failed channels of each message log.
-    @Param:
-        snowflake: int :: Discord's snowflake identificator
-        message_log_id :: The SQL ID of the message log to which this channel log belongs to"""
-
-    __tablename__ = "MsgLogFailCHANNEL"
+        message_log_id :: The SQL ID of the message log to which this channel log belongs to
+        reason         :: The reason why sending was not successful, this is none if it did not fail"""
+        
+    __tablename__ = "MessageLogCHANNEL"
     SnowflakeID = Column(BigInteger, primary_key=True)
     MessageLogID = Column(Integer, ForeignKey("MessageLOG.ID", ondelete="CASCADE"), primary_key=True)
     reason = Column(String())
@@ -278,10 +264,11 @@ class MessageLOG(LOGGERSQL.Base):
     ID = Column(Integer, Identity(start=0, increment=1), primary_key=True)
     sent_data = Column(JSON)
     message_type = Column(Integer, ForeignKey("MessageTYPE.ID", ))
-    message_mode = Column(Integer, ForeignKey("MessageMODE.ID", ))
     guild_snowflakeID = Column(BigInteger)
-    guild_type = Column(Integer, ForeignKey("GuildTYPE.ID"))
-    timestamp = Column(DateTime)
+
+    message_mode = Column(Integer(), ForeignKey("MessageMODE.ID", )) # Only for TextMESSAGE and DirectMESSAGE
+    guild_type = Column(Integer(), ForeignKey("GuildTYPE.ID"))
+    timestamp = Column(DateTime())
 
     def __init__(self,
                  sent_data: str=None,
@@ -296,7 +283,7 @@ class MessageLOG(LOGGERSQL.Base):
         self.guild_type = guild_type
         self.timestamp = datetime.now().replace(microsecond=0)
 
-def initialize(mgr_object: LOGGERSQL):
+def initialize(mgr_object: LOGGERSQL) -> bool:
     """
     ~ function ~
     @Name: initialize
@@ -313,3 +300,6 @@ def initialize(mgr_object: LOGGERSQL):
 
     trace("Unable to setup SQL logging, file logs will be used instead.", TraceLEVELS.WARNING)
     return False
+
+def get_sql_manager() -> LOGGERSQL:
+    return GLOBALS.manager
