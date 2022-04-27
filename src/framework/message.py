@@ -8,6 +8,7 @@ from    .dtypes import *
 from    .tracing import *
 from    .const import *
 from    . import client
+from    . import sql
 import  random
 import  time
 import  asyncio
@@ -54,8 +55,19 @@ class TIMER:
         "Reset the timer"
         self.running = False
 
+# Dummy classes for message mods, to use with sql.register_type decorator
+@sql.register_type("MessageMODE")
+class _:
+    __logname__ = "send"
+@sql.register_type("MessageMODE")
+class _:
+    __logname__ = "edit"
+@sql.register_type("MessageMODE")
+class _:
+    __logname__ = "clear-send"
 
 class BaseMESSAGE:
+    __logname__ = "BaseMESSAGE"
     """
         ~  BaseMESSAGE  ~
         @Info:
@@ -196,7 +208,7 @@ class BaseMESSAGE:
 
         return True
 
-
+@sql.register_type("MessageTYPE")
 class VoiceMESSAGE(BaseMESSAGE):
     """
     Name: VoiceMESSAGE
@@ -226,6 +238,7 @@ class VoiceMESSAGE(BaseMESSAGE):
         "force_retry",
     )
 
+    __logname__ = "VoiceMESSAGE"
     __valid_data_types__ = {AUDIO}  # This is used in the BaseMESSAGE.initialize() to check if the passed data parameters are of correct type
 
     def __init__(self, start_period: Union[float, None],
@@ -363,6 +376,8 @@ class VoiceMESSAGE(BaseMESSAGE):
             return self.generate_log_context(audio_to_stream, succeded_channels, errored_channels)
         return None
 
+
+@sql.register_type("MessageTYPE")
 class TextMESSAGE(BaseMESSAGE):
     """
     Name: TextMESSAGE
@@ -400,7 +415,7 @@ class TextMESSAGE(BaseMESSAGE):
         "force_retry",
         "sent_messages"
     )
-
+    __logname__ = "TextMESSAGE"
     __valid_data_types__ = {str, EMBED, FILE}
 
     def __init__(self, start_period: Union[float, None],
@@ -615,6 +630,7 @@ class TextMESSAGE(BaseMESSAGE):
         return None
 
 
+@sql.register_type("MessageTYPE")
 class DirectMESSAGE(BaseMESSAGE):
     """~ BaseMESSAGE ~
         @Info:
@@ -647,7 +663,9 @@ class DirectMESSAGE(BaseMESSAGE):
         "previous_message",
         "dm_channel"
     )
+    __logname__ = "DirectMESSAGE"
     __valid_data_types__ = {str, EMBED, FILE}
+
     def __init__(self,
                  start_period: Union[float, None],
                  end_period: float,

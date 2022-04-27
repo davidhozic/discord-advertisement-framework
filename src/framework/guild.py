@@ -11,7 +11,7 @@ from    .tracing import *
 from    .const import *
 from    .message import *
 from    . import client
-from   . import sql
+from    . import sql
 import  time
 import  json
 import pathlib
@@ -40,6 +40,8 @@ class BaseGUILD:
         "t_messages",
         "vc_messages"
     )
+    __logname__ = "BaseGUILD"
+    
     def __init__(self,
                  snowflake: int,
                  generate_log: bool=False) -> None:
@@ -137,6 +139,7 @@ class BaseGUILD:
             trace(f"Unable to save log. Exception: {exception}", TraceLEVELS.WARNING)
 
 
+@sql.register_type("GuildTYPE")
 class GUILD(BaseGUILD):
     """
     Name: GUILD
@@ -155,6 +158,7 @@ class GUILD(BaseGUILD):
         "_generate_log",
         "log_file_name"
     )
+    __logname__ = "GUILD"
 
     def __init__(self,
                  guild_id: int,
@@ -231,6 +235,7 @@ class GUILD(BaseGUILD):
                     self.generate_log(**message_ret)
 
 
+@sql.register_type("GuildTYPE")
 class USER(BaseGUILD):
     """~ USER ~
         @Info:
@@ -248,6 +253,9 @@ class USER(BaseGUILD):
         "__messages",
         "log_file_name",
     )
+    
+    __logname__ = "USER"
+
     def __init__(self,
                  user_id: int,
                  messages_to_send: List[DirectMESSAGE],

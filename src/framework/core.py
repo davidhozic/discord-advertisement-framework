@@ -10,6 +10,7 @@ from . import tracing
 from . tracing import *
 from . import guild
 from . import client
+from . import sql
 import asyncio
 
 
@@ -81,8 +82,7 @@ async def shutdown() -> None:
     Name:   shutdown
     Params: void
     Return: None
-    Info:   Stops the framework
-    """
+    Info:   Stops the framework"""
     cl = client.get_client()
     await cl.close()
 
@@ -92,6 +92,7 @@ def run(token : str,
         is_user : bool =False,
         user_callback : bool=None,
         server_log_output : str ="History",
+        sql_manager: sql.LOGGERSQL=None,
         debug : bool=True) -> None:
     """
     @type  : function
@@ -105,12 +106,10 @@ def run(token : str,
         - debug             : bool      = Print trace message to the console,
                                           useful for debugging
 
-    @description: This function is the function that starts framework and starts advertising
-    """
-
+    @description: This function is the function that starts framework and starts advertising"""
     guild.GLOBALS.server_log_path = server_log_output       ## Logging folder
     tracing.m_use_debug = debug                             ## Print trace messages to the console for debugging purposes
     GLOBALS.server_list = server_list                       ## List of guild objects to iterate thru in the advertiser task
     GLOBALS.user_callback = user_callback                   ## Called after framework has started
-
+    sql.initialize(sql_manager)                             ## Initialize the SQL database
     client.initialize(token, bot=not is_user)
