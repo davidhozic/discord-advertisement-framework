@@ -70,7 +70,7 @@ async def initialize() -> bool:
         if not await server.initialize():
             GLOBALS.server_list.remove(server)
 
-    if not len(GLOBALS.server_list):
+    if len(GLOBALS.server_list) == 0:
         trace("No guilds could be parsed", TraceLEVELS.ERROR)
         return False
 

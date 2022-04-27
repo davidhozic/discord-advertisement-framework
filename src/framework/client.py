@@ -14,7 +14,8 @@ from    . import core
 #######################################################################
 # Globals
 #######################################################################
-m_client                 = None     # Pycord Client object
+class GLOBALS:
+    client = None     # Pycord Client object
 
 __all__ = (
     "CLIENT",
@@ -64,12 +65,11 @@ def initialize(token: str, *,
         @Info:
         The function initializes Pycord, the discord API wrapper.
     """
-    global m_client
     intents = discord.Intents.all()
-    m_client = CLIENT(intents=intents)
+    GLOBALS.client = CLIENT(intents=intents)
     if not bot:
         trace("Bot is an user account which is against discord's ToS",TraceLEVELS.WARNING)
-    m_client.run(token, bot=bot)
+    GLOBALS.client.run(token, bot=bot)
 
 
 def get_client() -> CLIENT:
@@ -80,4 +80,4 @@ def get_client() -> CLIENT:
     Info:   Returns the client object used by the framework,
             so the user wouldn't have to run 2 clients.
     """
-    return m_client
+    return GLOBALS.client

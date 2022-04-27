@@ -81,6 +81,8 @@ class LOGGERSQL:
         self.server = server
         self.database = database
         self.commit_buffer = []
+        self.__engine = None
+        self.Session  = None
 
     def initialize(self):
         """
@@ -100,7 +102,7 @@ class LOGGERSQL:
             self.Base.metadata.create_all(bind=self.__engine)
             self.Session = sessionmaker(bind=self.__engine)
         except Exception as ex:
-            trace(f"Unable to create all the SQL Tables. Reason:\n{ex}", TraceLEVELS.ERROR)        
+            trace(f"Unable to create all the SQL Tables. Reason:\n{ex}", TraceLEVELS.ERROR)
             return False
         # Insert the lookuptable values
         try:
@@ -111,7 +113,7 @@ class LOGGERSQL:
                         session.add(to_add)
                 session.commit()
         except Exception as ex:
-            trace(f"Unable to create lookuptables' rows. Reason{ex}", TraceLEVELS.ERROR)       
+            trace(f"Unable to create lookuptables' rows. Reason{ex}", TraceLEVELS.ERROR)
 
         return True
 
@@ -289,7 +291,7 @@ class MessageLOG(LOGGERSQL.Base):
                  guild_type: int=None):
         self.sent_data = sent_data
         self.message_type = message_type
-        self.message_mode = message_mode,
+        self.message_mode = message_mode
         self.guild_snowflakeID = guild_snowflake
         self.guild_type = guild_type
         self.timestamp = datetime.now().replace(microsecond=0)
@@ -300,7 +302,7 @@ def initialize(mgr_object: LOGGERSQL):
     @Name: initialize
     @Info: This function initializes the sql manager and also the selected database
            NOTE: If initialization fails, file logs will be used
-    @Param: 
+    @Param:
         mgr_object: LOGGERSQL :: SQL database manager object responsible for saving the logs
                                  into the SQL database"""
 
