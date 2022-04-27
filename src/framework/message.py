@@ -431,27 +431,22 @@ class TextMESSAGE(BaseMESSAGE):
         """
         succeeded_ch = [{"name": str(channel), "id" : channel.id} for channel in succeeded_ch]
         failed_ch = [{"name": str(entry["channel"]), "id" : entry["channel"].id, "reason": str(entry["reason"])} for entry in failed_ch]
-
-        #Generate embed
         if sent_embed is not None:
             EmptyEmbed = discord.embeds.EmptyEmbed
             sent_embed : dict = {
-                "title" : sent_embed.title if sent_embed.title is not EmptyEmbed else None,
-                "author" : sent_embed.author.name if sent_embed.author.name is not EmptyEmbed else None,
-                "thumbnail" : sent_embed.thumbnail.url if sent_embed.thumbnail.url is not EmptyEmbed else None,
-                "image" : sent_embed.image.url if sent_embed.image.url is not EmptyEmbed else None,
-                "description" : sent_embed.description if sent_embed.description is not EmptyEmbed else None,
-                "color" : sent_embed.colour if sent_embed.colour is not EmptyEmbed else None,
-                "fields" : sent_embed._fields if hasattr(sent_embed, "_fields") else None
+                "title" : sent_embed.title,
+                "author" : sent_embed.author.name,
+                "thumbnail" : sent_embed.thumbnail.ur,
+                "image" : sent_embed.image.url,
+                "description" : sent_embed.description,
+                "color" : sent_embed.colour,
+                "fields" : sent_embed._fields
             }
             for key in sent_embed.copy():
-                # Pop items that are None to reduce the log length
-                if sent_embed[key] is None:
+                if sent_embed[key] is EmptyEmbed:
                     sent_embed.pop(key)
 
-        # Generate files
         sent_files = [x.filename for x in sent_files]
-
         sent_data_context = {}
         if sent_text is not None:
             sent_data_context["text"] = sent_text
@@ -459,7 +454,6 @@ class TextMESSAGE(BaseMESSAGE):
             sent_data_context["embed"] = sent_embed
         if len(sent_files):
             sent_data_context["files"] = sent_files
-
         return {
             "sent_data": {
                 **sent_data_context
@@ -530,7 +524,7 @@ class TextMESSAGE(BaseMESSAGE):
 
             except Exception as ex:
                 # Failed to send message
-                exit_condition = True
+                _exit = True
                 if isinstance(ex, discord.HTTPException):
                     if ex.status == 429:  # Rate limit
                         retry_after = int(ex.response.headers["Retry-After"])  + 1
@@ -539,14 +533,14 @@ class TextMESSAGE(BaseMESSAGE):
                             self.force_retry["TIME"] = retry_after
                         else:                   # Normal (write) rate limit
                             await asyncio.sleep(retry_after)
-                            exit_condition = False
+                            _exit = False
                     elif ex.status == 404:      # Unknown object
                         if ex.code == 10008:    # Unknown message
                             self.sent_messages[channel.id]  = None
-                            exit_condition = False
+                            _exit = False
 
                 # Assume a fail
-                if exit_condition:
+                if _exit:
                     return {"success" : False, "reason" : ex}
 
     async def send(self) -> Union[dict,  None]:
@@ -677,31 +671,25 @@ class DirectMESSAGE(BaseMESSAGE):
                 succeeded_ch: List[discord.VoiceChannel] -- list of the successfuly streamed channels,
                 failed_ch: List[dict]   -- list of dictionaries contained the failed channel and the Exception
             @Info:
-                Generates a dictionary containing data that will be saved in the message log
-        """
-        #Generate embed
+                Generates a dictionary containing data that will be saved in the message log"""
         if sent_embed is not None:
             EmptyEmbed = discord.embeds.EmptyEmbed
             sent_embed : dict = {
-                "title" : sent_embed.title if sent_embed.title is not EmptyEmbed else None,
-                "author" : sent_embed.author.name if sent_embed.author.name is not EmptyEmbed else None,
-                "thumbnail" : sent_embed.thumbnail.url if sent_embed.thumbnail.url is not EmptyEmbed else None,
-                "image" : sent_embed.image.url if sent_embed.image.url is not EmptyEmbed else None,
-                "description" : sent_embed.description if sent_embed.description is not EmptyEmbed else None,
-                "color" : sent_embed.colour if sent_embed.colour is not EmptyEmbed else None,
-                "fields" : sent_embed._fields if hasattr(sent_embed, "_fields") else None
+                "title" : sent_embed.title,
+                "author" : sent_embed.author.name,
+                "thumbnail" : sent_embed.thumbnail.ur,
+                "image" : sent_embed.image.url,
+                "description" : sent_embed.description,
+                "color" : sent_embed.colour,
+                "fields" : sent_embed._fields
             }
             for key in sent_embed.copy():
-                # Pop items that are None to reduce the log length
-                if sent_embed[key] is None:
+                if sent_embed[key] is EmptyEmbed:
                     sent_embed.pop(key)
 
-        # Generate files
         sent_files = [x.filename for x in sent_files]
-
         if not success_context["success"]:
             success_context["reason"] = str(success_context["reason"])
-
         sent_data_context = {}
         if sent_text is not None:
             sent_data_context["text"] = sent_text
@@ -709,7 +697,6 @@ class DirectMESSAGE(BaseMESSAGE):
             sent_data_context["embed"] = sent_embed
         if len(sent_files):
             sent_data_context["files"] = sent_files
-
         return {
             "sent_data": {
                 **sent_data_context
@@ -779,28 +766,28 @@ class DirectMESSAGE(BaseMESSAGE):
 
             except Exception as ex:
                 # Failed to send message
-                exit_condition = True
+                _exit = True
                 if isinstance(ex, discord.HTTPException):
-                    if ex.status == 429:  # Rate limit
+                    if ex.status == 429 or ex.status == 403 and ex.code == 40003:  # Rate limit
                         retry_after = int(ex.response.headers["Retry-After"])  + 1
                         if ex.code == 20016:    # Slow Mode
                             self.force_retry["ENABLED"] = True
                             self.force_retry["TIME"] = retry_after
                         else:                   # Normal (write) rate limit
                             await asyncio.sleep(retry_after)
-                            exit_condition = False
+                            _exit = False
                     elif ex.status == 404:      # Unknown object
                         if ex.code == 10008:    # Unknown message
                             self.previous_message  = None
-                            exit_condition = False
+                            _exit = False
                     elif ex.status == 403:
                         if ex.code == 40003:
                             retry_after = int(ex.response.headers["Retry-After"])  + 1
                             await asyncio.sleep(retry_after)
-                            exit_condition = False
+                            _exit = False
 
                 # Assume a fail
-                if exit_condition:
+                if _exit:
                     return {"success" : False, "reason" : ex}
 
     async def send(self) -> Union[dict, None]:
