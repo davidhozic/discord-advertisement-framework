@@ -801,12 +801,15 @@ class DirectMESSAGE(BaseMESSAGE):
                         else:   # Normal (write) rate limit
                             # Rate limit but not slow mode -> put the framework to sleep as it won't be able to send any messages globaly
                             await asyncio.sleep(retry_after)
-
                     elif ex.status == 404:      # Unknown object
                         if ex.code == 10008:    # Unknown message
                             self.previous_message  = None
                         else:
                             exit_condition = True
+                    elif ex.status == 403:
+                        if ex.code == 40003:
+                            retry_after = int(ex.response.headers["Retry-After"])  + 1
+                            await asyncio.sleep(retry_after)
                     else:
                         exit_condition = True
                 else:
