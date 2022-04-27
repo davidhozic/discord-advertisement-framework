@@ -215,7 +215,7 @@ class GUILD(BaseGUILD):
             if message.is_ready():
                 message_ret = await message.send()
                 # Check if the message still has any channels (as they can be auto removed on 404 status)
-                if not len(message.channels):
+                if len(message.channels) == 0:
                     # Remove message from the list if it has not channels left
                     getattr(self, "t_messages" if mode == "text" else "vc_messages").remove(message)
                     trace(f"Removing a {type(message).__name__} because it's channels were removed, in guild {self.apiobject.name}(ID: {self.apiobject.id})")
@@ -267,7 +267,7 @@ class USER(BaseGUILD):
                     not await message.initialize(user_id=user_id)
                 ):
                     self.t_messages.remove(message)
-            if not len(self.t_messages):
+            if len(self.t_messages) == 0:
                 return False
             return True
 

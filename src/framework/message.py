@@ -3,7 +3,7 @@
     This module contains the definitions regarding the xxxMESSAGE class and
     all the functionality for sending data into discord channels.
 """
-from    typing import Dict, List, Union, Literal
+from    typing import List, Union, Literal
 from    .dtypes import *
 from    .tracing import *
 from    .const import *
@@ -490,7 +490,7 @@ class TextMESSAGE(BaseMESSAGE):
                 ch_i += 1
 
         return len(self.channels) > 0
-    
+
     async def send_channel(self,
                            channel: discord.TextChannel,
                            text: str,
@@ -530,27 +530,20 @@ class TextMESSAGE(BaseMESSAGE):
 
             except Exception as ex:
                 # Failed to send message
-                exit_condition = False
+                exit_condition = True
                 if isinstance(ex, discord.HTTPException):
-                    if ex.status == 429:    # Rate limit
+                    if ex.status == 429:  # Rate limit
                         retry_after = int(ex.response.headers["Retry-After"])  + 1
                         if ex.code == 20016:    # Slow Mode
                             self.force_retry["ENABLED"] = True
                             self.force_retry["TIME"] = retry_after
-                            exit_condition = True
-                        else:   # Normal (write) rate limit
-                            # Rate limit but not slow mode -> put the framework to sleep as it won't be able to send any messages globaly
+                        else:                   # Normal (write) rate limit
                             await asyncio.sleep(retry_after)
-
+                            exit_condition = False
                     elif ex.status == 404:      # Unknown object
                         if ex.code == 10008:    # Unknown message
                             self.sent_messages[channel.id]  = None
-                        else:
-                            exit_condition = True
-                    else:
-                        exit_condition = True
-                else:
-                    exit_condition = True
+                            exit_condition = False
 
                 # Assume a fail
                 if exit_condition:
@@ -774,46 +767,37 @@ class DirectMESSAGE(BaseMESSAGE):
             try:
                 # Mode dictates to send new message or delete previous and then send new message or mode dictates edit but message was  never sent to this channel before
                 # Rate limit avoidance
-                if  self.mode in  {"send" , "clear-send"} or\
-                    self.mode == "edit" and self.previous_message is None:
-                    discord_sent_msg = await self.dm_channel.send(  text,
-                                                            embed=embed,
-                                                            # Create discord.File objects here so it is catched by the except block and then logged
-                                                            files=[discord.File(fwFILE.filename) for fwFILE in files])
-                    self.previous_message = discord_sent_msg
+                if (self.mode in {"send" , "clear-send"} or
+                     self.mode == "edit" and self.previous_message is None
+                ):
+                    self.previous_message = await self.dm_channel.send(text, embed=embed, files=[discord.File(fwFILE.filename) for fwFILE in files])
 
                 # Mode is edit and message was already send to this channel
                 elif self.mode == "edit":
-                    await self.previous_message.edit(text,
-                                                     embed=embed)
+                    await self.previous_message.edit(text, embed=embed)
                 return {"success" : True}
 
             except Exception as ex:
                 # Failed to send message
-                exit_condition = False
+                exit_condition = True
                 if isinstance(ex, discord.HTTPException):
-                    if ex.status == 429:    # Rate limit
+                    if ex.status == 429:  # Rate limit
                         retry_after = int(ex.response.headers["Retry-After"])  + 1
                         if ex.code == 20016:    # Slow Mode
                             self.force_retry["ENABLED"] = True
                             self.force_retry["TIME"] = retry_after
-                            exit_condition = True
-                        else:   # Normal (write) rate limit
-                            # Rate limit but not slow mode -> put the framework to sleep as it won't be able to send any messages globaly
+                        else:                   # Normal (write) rate limit
                             await asyncio.sleep(retry_after)
+                            exit_condition = False
                     elif ex.status == 404:      # Unknown object
                         if ex.code == 10008:    # Unknown message
                             self.previous_message  = None
-                        else:
-                            exit_condition = True
+                            exit_condition = False
                     elif ex.status == 403:
                         if ex.code == 40003:
                             retry_after = int(ex.response.headers["Retry-After"])  + 1
                             await asyncio.sleep(retry_after)
-                    else:
-                        exit_condition = True
-                else:
-                    exit_condition = True
+                            exit_condition = False
 
                 # Assume a fail
                 if exit_condition:
@@ -846,9 +830,9 @@ class DirectMESSAGE(BaseMESSAGE):
         files_to_send  = []
         if data_to_send is not None:
             if not isinstance(data_to_send, (list, tuple, set)):
-                """ Put into a list for easier iteration.
-                    Technically only necessary if self.data  is a function (dynamic return),
-                    since normal (str, EMBED, FILE) get pre-checked in initialization."""
+                # Put into a list for easier iteration.
+                # Technically only necessary if self.data  is a function (dynamic return),
+                # since normal (str, EMBED, FILE) get pre-checked in initialization.
                 data_to_send = (data_to_send,)
 
             for element in data_to_send:
@@ -860,7 +844,6 @@ class DirectMESSAGE(BaseMESSAGE):
                     files_to_send.append(element)
 
         if text_to_send is not None or embed_to_send is not None or len(files_to_send) > 0:
-                # Clear previous messages sent to channel if mode is MODE_DELETE_SEND
             context = await self.send_channel(text_to_send, embed_to_send, files_to_send)
 
             # Return sent data + failed and successful function for logging purposes
