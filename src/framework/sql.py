@@ -64,7 +64,7 @@ class LOGGERSQL:
 
     Base = declarative_base()
     __slots__ = (
-        "__engine",
+        "engine",
         "Session",
         "commit_buffer",
         "username",
@@ -84,7 +84,7 @@ class LOGGERSQL:
         self.server = server
         self.database = database
         self.commit_buffer = []
-        self.__engine = None
+        self.engine = None
         self.Session  = None
 
     def initialize(self):
@@ -96,16 +96,16 @@ class LOGGERSQL:
         @Param: void"""
         # Create engine for communicating with the SQL base
         try:
-            self.__engine = create_engine(f"mssql+pymssql://{self.username}:{self.__password}@{self.server}/{self.database}", echo=False)
-            if not database_exists(self.__engine.url):
-                create_database(self.__engine.url)
+            self.engine = create_engine(f"mssql+pymssql://{self.username}:{self.__password}@{self.server}/{self.database}", echo=False)
+            if not database_exists(self.engine.url):
+                create_database(self.engine.url)
         except Exception as ex:
             trace(f"Unable to start SQL engine. Reason:\n{ex}", TraceLEVELS.ERROR)
             return False
         # Create tables and the session class bound to the engine
         try:
-            self.Base.metadata.create_all(bind=self.__engine)
-            self.Session = sessionmaker(bind=self.__engine)
+            self.Base.metadata.create_all(bind=self.engine)
+            self.Session = sessionmaker(bind=self.engine)
         except Exception as ex:
             trace(f"Unable to create all the SQL Tables. Reason:\n{ex}", TraceLEVELS.ERROR)
             return False
@@ -129,7 +129,7 @@ class LOGGERSQL:
                 },
                 {
                 "select" : r"SELECT * FROM ProjektDH.INFORMATION_SCHEMA.VIEWS WHERE TABLE_NAME = 'vMessageLogFullDETAIL'",
-                "stm"    : "VIEW vMessageLogFullDETAIL AS SELECT ml.ID, ml.sent_data SentData, mt.name MessageTYPE, ml.guild_snowflakeID GuildSnowflake, mm.name MessageMode, ml.success_info SuccessInfo, ml.[timestamp] [Timestamp] FROM MessageLOG ml JOIN MessageTYPE mt ON ml.message_type  = mt.ID JOIN GuildTYPE gt ON gt.ID = ml.guild_type JOIN MessageMODE mm ON mm.ID = ml.message_mode;"
+                "stm"    : "VIEW vMessageLogFullDETAIL AS SELECT ml.ID, ml.sent_data SentData, mt.name MessageTYPE, gt.name ,ml.guild_snowflakeID GuildSnowflake, mm.name MessageMode, ml.success_info SuccessInfo, ml.[timestamp] [Timestamp] FROM MessageLOG ml JOIN MessageTYPE mt ON ml.message_type  = mt.ID JOIN GuildTYPE gt ON gt.ID = ml.guild_type JOIN MessageMODE mm ON mm.ID = ml.message_mode;"
                 }
             ]
             with self.Session() as session:
