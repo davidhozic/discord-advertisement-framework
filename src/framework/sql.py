@@ -8,7 +8,7 @@
 from  datetime   import datetime
 from  typing     import Literal
 from requests import Session
-from  sqlalchemy import JSON, BigInteger, Column, Identity, Integer, String, DateTime,ForeignKey, create_engine
+from  sqlalchemy import JSON, BigInteger, Column, Identity, Integer, String, DateTime,ForeignKey, create_engine, text
 from  sqlalchemy.orm import sessionmaker
 from  sqlalchemy.ext.declarative import declarative_base
 from  sqlalchemy_utils import create_database, database_exists
@@ -118,7 +118,29 @@ class LOGGERSQL:
                         session.add(to_add)
                 session.commit()
         except Exception as ex:
-            trace(f"Unable to create lookuptables' rows. Reason{ex}", TraceLEVELS.ERROR)
+            trace(f"Unable to create lookuptables' rows. Reason: {ex}", TraceLEVELS.ERROR)
+        # Initialize views, procedures and functions
+        try:
+            stms = [ # list of dictionaries containing "select" which is the statement to return the item with the view, procedure name we are adding,
+                     # and "stm" which is the statement used to create view, procedure, which is concatenated to CREATE or ALTER 
+                {
+                "select" : r"SELECT * FROM ProjektDH.sys.procedures WHERE name = 'spFilterChannelSuccess'",
+                "stm"    : "PROCEDURE spFilterChannelSuccess(@min INT, @max INT) AS BEGIN SELECT * FROM (SELECT *, 	(100*CAST((SELECT COUNT(*) FROM OPENJSON(SuccessInfo, '$.successful')) AS real)/ 	((SELECT COUNT(*) FROM OPENJSON(SuccessInfo, '$.failed')  WHERE MessageTYPE != 'DirectMESSAGE')+(SELECT COUNT(*) FROM OPENJSON(SuccessInfo, '$.successful') WHERE MessageTYPE != 'DirectMESSAGE'))) relativeSuccess 	FROM vMessageLogFullDETAIL 	WHERE MessageTYPE != 'DirectMESSAGE') a 	WHERE relativeSuccess >= @min   AND relativeSuccess <= @max; END"
+                },
+                {
+                "select" : r"SELECT * FROM ProjektDH.INFORMATION_SCHEMA.VIEWS WHERE TABLE_NAME = 'vMessageLogFullDETAIL'",
+                "stm"    : "VIEW vMessageLogFullDETAIL AS SELECT ml.ID, ml.sent_data SentData, mt.name MessageTYPE, ml.guild_snowflakeID GuildSnowflake, mm.name MessageMode, ml.success_info SuccessInfo, ml.[timestamp] [Timestamp] FROM MessageLOG ml JOIN MessageTYPE mt ON ml.message_type  = mt.ID JOIN GuildTYPE gt ON gt.ID = ml.guild_type JOIN MessageMODE mm ON mm.ID = ml.message_mode;"
+                }
+            ]
+            with self.Session() as session:
+                for s in stms:
+                    if session.execute(text(s["select"])).first() is None:
+                        session.execute(text("CREATE " + s["stm"] ))
+                    else:
+                        session.execute(text("ALTER " + s["stm"] ))
+                session.commit()
+        except Exception as ex:
+            trace(f"Unable to create views, procedures and functions. Reason: {ex}", TraceLEVELS.ERROR)
 
         return True
 
@@ -142,17 +164,8 @@ class LOGGERSQL:
         guild_type: str = guild_context.pop("type")
         message_type: str = message_context.pop("type")
         message_mode = message_context.pop("mode", None)
-
         channels = message_context.pop("channels", None)
-        successful_ch = None
-        failed_ch     = None
-        if channels is not None:
-            successful_ch = []
-            failed_ch = []
-            for channel in channels["successful"]:
-                successful_ch.append(MessageLogCHANNEL(channel["id"], NotImplemented))
-            for channel in channels["failed"]:
-                failed_ch.append(MessageLogCHANNEL(channel["id"], NotImplemented, channel["reason"]))
+        dm_success_info = message_context.pop("success_info", None)
 
         with self.Session() as session:
             guild_type = session.query(GuildTYPE).filter(GuildTYPE.name == guild_type).first()
@@ -167,15 +180,12 @@ class LOGGERSQL:
             else:
                 log_object.message_mode = None
 
-            session.add(log_object)
-
             if channels is not None:
-                log_object = session.query(MessageLOG).order_by(MessageLOG.ID.desc()).first()
-                for channel in successful_ch + failed_ch:
-                    channel.MessageLogID = log_object.ID
+                log_object.success_info = channels
+            else:
+                log_object.success_info = dm_success_info
 
-                session.add_all(successful_ch+failed_ch)
-
+            session.add(log_object)
             session.commit()
 
 
@@ -225,26 +235,6 @@ class MessageMODE(LOGGERSQL.Base):
     def __init__(self, name: str=None):
         self.name = name
 
-class MessageLogCHANNEL(LOGGERSQL.Base):
-    """
-    ~ SQL Table Descriptor Class ~
-    @Name: MessageLogCHANNEL
-    @Info: Table for logging the channels of each message log (or if sending to DM was succesful or not).
-    @Param:
-        snowflake: int :: Discord's snowflake identificator
-        message_log_id :: The SQL ID of the message log to which this channel log belongs to
-        reason         :: The reason why sending was not successful, this is none if it did not fail"""
-        
-    __tablename__ = "MessageLogCHANNEL"
-    SnowflakeID = Column(BigInteger, primary_key=True)
-    MessageLogID = Column(Integer, ForeignKey("MessageLOG.ID", ondelete="CASCADE"), primary_key=True)
-    reason = Column(String())
-
-    def __init__(self, snowflake: int=None, message_log_id: int=None, reason: str=None):
-        self.SnowflakeID = snowflake
-        self.MessageLogID = message_log_id
-        self.reason = reason
-
 
 class MessageLOG(LOGGERSQL.Base):
     """
@@ -265,8 +255,8 @@ class MessageLOG(LOGGERSQL.Base):
     sent_data = Column(JSON)
     message_type = Column(Integer, ForeignKey("MessageTYPE.ID", ))
     guild_snowflakeID = Column(BigInteger)
-
     message_mode = Column(Integer(), ForeignKey("MessageMODE.ID", )) # Only for TextMESSAGE and DirectMESSAGE
+    success_info  = Column(JSON)
     guild_type = Column(Integer(), ForeignKey("GuildTYPE.ID"))
     timestamp = Column(DateTime())
 
@@ -274,12 +264,14 @@ class MessageLOG(LOGGERSQL.Base):
                  sent_data: str=None,
                  message_type: int=None,
                  message_mode: int=None,
+                 success_info: str=None,
                  guild_snowflake: int=None,
                  guild_type: int=None):
         self.sent_data = sent_data
         self.message_type = message_type
         self.message_mode = message_mode
         self.guild_snowflakeID = guild_snowflake
+        self.success_info = success_info
         self.guild_type = guild_type
         self.timestamp = datetime.now().replace(microsecond=0)
 
@@ -300,6 +292,7 @@ def initialize(mgr_object: LOGGERSQL) -> bool:
 
     trace("Unable to setup SQL logging, file logs will be used instead.", TraceLEVELS.WARNING)
     return False
+
 
 def get_sql_manager() -> LOGGERSQL:
     return GLOBALS.manager
