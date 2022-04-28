@@ -124,8 +124,8 @@ class LOGGERSQL:
                      # and "stm" which is the statement used to create view, procedure, which is concatenated to CREATE or ALTER 
                 {
                     "name" :   "vMessageLogFullDETAIL",
-                    "stm"    : r"""
-                                VIEW vMessageLogFullDETAIL AS
+                    "stm"    : """
+                                VIEW {} AS
                                     SELECT ml.ID ID, ml.sent_data SentData, mt.name MessageTYPE, gt.name GuildTYPE ,ml.guild_snowflakeID GuildSnowflake, gu.name GuildName, mm.name MessageMode, ml.success_info SuccessInfo, ml.[timestamp] [Timestamp]
                                     FROM MessageLOG ml JOIN MessageTYPE mt ON ml.message_type  = mt.ID
                                     JOIN GuildTYPE gt ON gt.ID = ml.guild_type
@@ -133,29 +133,27 @@ class LOGGERSQL:
                                     JOIN  GuildUSER gu ON gu.SnowflakeID = ml.guild_snowflakeID;"""
                 },
                 {
-                    "name" :   "spFilterChannelSuccess",
-                    "stm"    : r"""PROCEDURE spFilterChannelSuccess(@min INT, @max INT) AS 
-                                   BEGIN 
-                                        SELECT * FROM 
+                    "name" :   "fnFilterChannelSuccess",
+                    "stm"    : """FUNCTION {}(@min INT, @max INT) RETURNS TABLE AS 
+                                        RETURN SELECT * FROM 
                                         (
                                             SELECT *, 	(100*CAST((SELECT COUNT(*) FROM OPENJSON(SuccessInfo, '$.successful')) AS real)/
                                             ((SELECT COUNT(*) FROM OPENJSON(SuccessInfo, '$.failed')  WHERE GuildTYPE = 'GUILD')+(SELECT COUNT(*) FROM OPENJSON(SuccessInfo, '$.successful')
                                             WHERE GuildTYPE = 'GUILD'))) relativeSuccess 	FROM vMessageLogFullDETAIL 	WHERE GuildTYPE = 'GUILD'
                                         ) a 	
-                                        WHERE relativeSuccess >= @min   AND relativeSuccess <= @max; 
-                                   END"""
+                                        WHERE relativeSuccess >= @min   AND relativeSuccess <= @max;"""
                 },
                 {   
                     "name" :   "spGetChannels",
-                    "stm"    : r"""PROCEDURE spGetChannels(@MessageLogID INT, @Type NVARCHAR(20)) AS
+                    "stm"    : """PROCEDURE {}(@MessageLogID INT, @Type NVARCHAR(20)) AS
                                         SELECT * FROM OPENJSON(
-                                                                (SELECT SuccessInfo FROM vMessageLogFullDETAIL WHERE ID = 1),
+                                                                (SELECT SuccessInfo FROM vMessageLogFullDETAIL WHERE ID = @MessageLogID),
                                                                 '$.'  + @Type
                                                                )"""
                 },
                 {
                     "name" :   "fnCountChannels",
-                    "stm"  :   r"""FUNCTION fnCountChannels(@MessageLogID INT, @Type NVARCHAR(20)) RETURNS INT AS 
+                    "stm"  :   """FUNCTION {}(@MessageLogID INT, @Type NVARCHAR(20)) RETURNS INT AS 
                                         BEGIN 
                                             DECLARE @ret INT; 
                                             SELECT  @ret = COUNT(*) FROM OPENJSON((SELECT SuccessInfo FROM vMessageLogFullDETAIL WHERE ID = @MessageLogID), '$.' + @Type); 
@@ -167,9 +165,10 @@ class LOGGERSQL:
                 for s in stms:
                     # Union the 2 system tables containing views and procedures/functions, then select only the element that matches the item we want to create, it it returns None, it doesnt exist
                     if session.execute(text(f"SELECT * FROM (SELECT SPECIFIC_NAME AS Name  FROM INFORMATION_SCHEMA.ROUTINES UNION SELECT TABLE_NAME AS Name  FROM INFORMATION_SCHEMA.VIEWS) a WHERE Name= '{s['name']}'")).first() is None:
-                        session.execute(text("CREATE " + s["stm"] ))
+                        session.execute(text("CREATE " + s["stm"].format(s["name"]) ))
                     else:
-                        session.execute(text("ALTER " + s["stm"] ))
+                        session.execute(text("ALTER " + s["stm"].format(s["name"]) ))
+
                 session.commit()
         except Exception as ex:
             trace(f"Unable to create views, procedures and functions. Reason: {ex}", TraceLEVELS.ERROR)
