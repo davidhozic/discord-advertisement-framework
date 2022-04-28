@@ -145,11 +145,21 @@ class LOGGERSQL:
                 },
                 {   
                     "name" :   "spGetChannels",
-                    "stm"    : """PROCEDURE {}(@MessageLogID INT, @Type NVARCHAR(20)) AS
+                    "stm"    : """PROCEDURE spGetChannels(@MessageLogID INT, @Type NVARCHAR(50)) AS
+										IF @Type = 'successful'
+										
+                                        	SELECT * FROM OPENJSON(
+                                                                (SELECT SuccessInfo FROM vMessageLogFullDETAIL WHERE ID = @MessageLogID),
+                                                                '$.'  + @Type
+                                                               )
+                                            WITH(id BIGINT '$');
+                                        
+                                        ELSE
                                         SELECT * FROM OPENJSON(
                                                                 (SELECT SuccessInfo FROM vMessageLogFullDETAIL WHERE ID = @MessageLogID),
                                                                 '$.'  + @Type
-                                                               )"""
+                                                               )
+                                        WITH(id BIGINT '$.id', reason VARCHAR(100) '$.reason');"""
                 },
                 {
                     "name" :   "fnCountChannels",
@@ -238,7 +248,7 @@ class LOGGERSQL:
 
                 # Replace the channels json values with just ID values, names can be retrieved by the CHANNEL table
                 channels["successful"] = [channel["id"] for channel in channels["successful"]]
-                channels["failed"]     = [channel["id"] for channel in channels["failed"]]
+                channels["failed"]     = [{"id": channel["id"], "reason" : channel["reason"]} for channel in channels["failed"]]
                 log_object.success_info = channels
             else:
                 # The channels do not exist for this log [DirectMESSAGE], just log it's success value (and reason if failed)
