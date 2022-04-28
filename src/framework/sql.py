@@ -7,8 +7,7 @@
 """
 from  datetime   import datetime
 from  typing     import Literal
-from requests import Session
-from  sqlalchemy import JSON, BigInteger, Column, Identity, Integer, String, DateTime,ForeignKey, create_engine, text
+from  sqlalchemy import JSON, BigInteger, Column, Identity, Integer, String, DateTime,ForeignKey, create_engine, update, text
 from  sqlalchemy.orm import sessionmaker
 from  sqlalchemy.ext.declarative import declarative_base
 from  sqlalchemy_utils import create_database, database_exists
@@ -124,17 +123,50 @@ class LOGGERSQL:
             stms = [ # list of dictionaries containing "select" which is the statement to return the item with the view, procedure name we are adding,
                      # and "stm" which is the statement used to create view, procedure, which is concatenated to CREATE or ALTER 
                 {
-                "select" : r"SELECT * FROM ProjektDH.sys.procedures WHERE name = 'spFilterChannelSuccess'",
-                "stm"    : "PROCEDURE spFilterChannelSuccess(@min INT, @max INT) AS BEGIN SELECT * FROM (SELECT *, 	(100*CAST((SELECT COUNT(*) FROM OPENJSON(SuccessInfo, '$.successful')) AS real)/ 	((SELECT COUNT(*) FROM OPENJSON(SuccessInfo, '$.failed')  WHERE MessageTYPE != 'DirectMESSAGE')+(SELECT COUNT(*) FROM OPENJSON(SuccessInfo, '$.successful') WHERE MessageTYPE != 'DirectMESSAGE'))) relativeSuccess 	FROM vMessageLogFullDETAIL 	WHERE MessageTYPE != 'DirectMESSAGE') a 	WHERE relativeSuccess >= @min   AND relativeSuccess <= @max; END"
+                    "name" :   "vMessageLogFullDETAIL",
+                    "stm"    : r"""
+                                VIEW vMessageLogFullDETAIL AS
+                                    SELECT ml.ID ID, ml.sent_data SentData, mt.name MessageTYPE, gt.name GuildTYPE ,ml.guild_snowflakeID GuildSnowflake, gu.name GuildName, mm.name MessageMode, ml.success_info SuccessInfo, ml.[timestamp] [Timestamp]
+                                    FROM MessageLOG ml JOIN MessageTYPE mt ON ml.message_type  = mt.ID
+                                    JOIN GuildTYPE gt ON gt.ID = ml.guild_type
+                                    JOIN MessageMODE mm ON mm.ID = ml.message_mode
+                                    JOIN  GuildUSER gu ON gu.SnowflakeID = ml.guild_snowflakeID;"""
                 },
                 {
-                "select" : r"SELECT * FROM ProjektDH.INFORMATION_SCHEMA.VIEWS WHERE TABLE_NAME = 'vMessageLogFullDETAIL'",
-                "stm"    : "VIEW vMessageLogFullDETAIL AS SELECT ml.ID, ml.sent_data SentData, mt.name MessageTYPE, gt.name ,ml.guild_snowflakeID GuildSnowflake, mm.name MessageMode, ml.success_info SuccessInfo, ml.[timestamp] [Timestamp] FROM MessageLOG ml JOIN MessageTYPE mt ON ml.message_type  = mt.ID JOIN GuildTYPE gt ON gt.ID = ml.guild_type JOIN MessageMODE mm ON mm.ID = ml.message_mode;"
+                    "name" :   "spFilterChannelSuccess",
+                    "stm"    : r"""PROCEDURE spFilterChannelSuccess(@min INT, @max INT) AS 
+                                   BEGIN 
+                                        SELECT * FROM 
+                                        (
+                                            SELECT *, 	(100*CAST((SELECT COUNT(*) FROM OPENJSON(SuccessInfo, '$.successful')) AS real)/
+                                            ((SELECT COUNT(*) FROM OPENJSON(SuccessInfo, '$.failed')  WHERE GuildTYPE = 'GUILD')+(SELECT COUNT(*) FROM OPENJSON(SuccessInfo, '$.successful')
+                                            WHERE GuildTYPE = 'GUILD'))) relativeSuccess 	FROM vMessageLogFullDETAIL 	WHERE GuildTYPE = 'GUILD'
+                                        ) a 	
+                                        WHERE relativeSuccess >= @min   AND relativeSuccess <= @max; 
+                                   END"""
+                },
+                {   
+                    "name" :   "spGetChannels",
+                    "stm"    : r"""PROCEDURE spGetChannels(@MessageLogID INT, @Type NVARCHAR(20)) AS
+                                        SELECT * FROM OPENJSON(
+                                                                (SELECT SuccessInfo FROM vMessageLogFullDETAIL WHERE ID = 1),
+                                                                '$.'  + @Type
+                                                               )"""
+                },
+                {
+                    "name" :   "fnCountChannels",
+                    "stm"  :   r"""FUNCTION fnCountChannels(@MessageLogID INT, @Type NVARCHAR(20)) RETURNS INT AS 
+                                        BEGIN 
+                                            DECLARE @ret INT; 
+                                            SELECT  @ret = COUNT(*) FROM OPENJSON((SELECT SuccessInfo FROM vMessageLogFullDETAIL WHERE ID = @MessageLogID), '$.' + @Type); 
+                                            RETURN  @ret; 
+                                        END"""
                 }
             ]
             with self.Session() as session:
                 for s in stms:
-                    if session.execute(text(s["select"])).first() is None:
+                    # Union the 2 system tables containing views and procedures/functions, then select only the element that matches the item we want to create, it it returns None, it doesnt exist
+                    if session.execute(text(f"SELECT * FROM (SELECT SPECIFIC_NAME AS Name  FROM INFORMATION_SCHEMA.ROUTINES UNION SELECT TABLE_NAME AS Name  FROM INFORMATION_SCHEMA.VIEWS) a WHERE Name= '{s['name']}'")).first() is None:
                         session.execute(text("CREATE " + s["stm"] ))
                     else:
                         session.execute(text("ALTER " + s["stm"] ))
@@ -158,33 +190,61 @@ class LOGGERSQL:
             message_context: dict   ::  Context generated by the xMESSAGE object,
                                         see guild.xMESSAGE.generate_log_context() for more info"""
 
-        log_object = MessageLOG(sent_data=message_context.pop("sent_data"),
-                                guild_snowflake=guild_context.pop("id"))
-
+        
+        sent_data = message_context.pop("sent_data")                                
+        guild_snowflake = guild_context.pop("id")
+        guild_name = guild_context.pop("name")
         guild_type: str = guild_context.pop("type")
         message_type: str = message_context.pop("type")
         message_mode = message_context.pop("mode", None)
         channels = message_context.pop("channels", None)
         dm_success_info = message_context.pop("success_info", None)
 
+        log_object = MessageLOG(sent_data=sent_data,
+                                guild_snowflake=guild_snowflake)
+
         with self.Session() as session:
+            # Map GuildTYPE to an identificator
             guild_type = session.query(GuildTYPE).filter(GuildTYPE.name == guild_type).first()
             log_object.guild_type = guild_type.ID
-
+            # Map MessageTYPE to an identificator
             message_type = session.query(MessageTYPE).filter(MessageTYPE.name == message_type).first()
             log_object.message_type = message_type.ID
 
             if message_mode is not None:
+                # If message_mode exists [DirectMESSAGE and TextMESSAGE] then map the message_mode to an identificator
                 message_mode = session.query(MessageMODE).filter(MessageMODE.name == message_mode).first()
                 log_object.message_mode = message_mode.ID
             else:
                 log_object.message_mode = None
 
+            # Update GUILD/USER table
+            result = session.query(GuildUSER).where(GuildUSER.SnowflakeID == guild_snowflake).first()
+            if result is None:
+                new = GuildUSER(guild_snowflake, guild_name)
+                session.add(new)
+            else:
+                stm = update(GuildUSER).values(name=guild_name)
+
             if channels is not None:
+                # If channels exist [TextMESSAGE and VoiceMESSAGE], update the CHANNELS table with the correct name
+                # and only insert the channel Snowflake identificators into the message log
+                for channel in channels["successful"] + channels["failed"]:
+                    result = session.query(CHANNEL).where(CHANNEL.SnowflakeID == channel["id"]).first()
+                    if result is not None:
+                        session.execute(update(CHANNEL).where(CHANNEL.SnowflakeID == channel["id"]).values(name=channel["name"]))
+                    else:
+                        new_channel = CHANNEL(channel["id"], channel["name"], guild_snowflake)
+                        session.add(new_channel)
+
+                # Replace the channels json values with just ID values, names can be retrieved by the CHANNEL table
+                channels["successful"] = [channel["id"] for channel in channels["successful"]]
+                channels["failed"]     = [channel["id"] for channel in channels["failed"]]
                 log_object.success_info = channels
             else:
+                # The channels do not exist for this log [DirectMESSAGE], just log it's success value (and reason if failed)
                 log_object.success_info = dm_success_info
-
+ 
             session.add(log_object)
             session.commit()
 
@@ -218,6 +278,47 @@ class GuildTYPE(LOGGERSQL.Base):
 
     def __init__(self, name: str=None):
         self.name = name
+
+
+class GuildUSER(LOGGERSQL.Base):
+    """
+    ~ SQL Table Descriptor Class ~
+    @Name: GUILD
+    @Info: Guild
+    @Param: Table that represents GUILD and USER object inside the database
+        snowflake: int :: Snowflake identificator of the guild/user   
+        name: str      :: Name of the guild/user"""
+
+    __tablename__ = "GuildUSER"
+    SnowflakeID = Column(BigInteger, primary_key=True) 
+    name = Column(String)
+
+    def __init__(self,
+                 snowflake: int,
+                 name: str):
+        self.SnowflakeID = snowflake
+        self.name = name
+
+
+class CHANNEL(LOGGERSQL.Base):
+    """
+    ~ SQL Table Descriptor Class ~
+    @Name: CHANNEL
+    @Info: Maps the snowflake ID to a name and GUILD ID
+    @Param:
+        snowflake: int :: Snowflake identificator
+        name: str      :: Name of the channel
+        guild_id: int  :: Snowflake identificator pointing to a GUILD/USER"""
+
+    __tablename__ = "CHANNEL"
+    SnowflakeID = Column(BigInteger, primary_key=True) 
+    name = Column(String)
+    GuildID = Column(BigInteger, ForeignKey("GuildUSER.SnowflakeID"))
+
+    def __init__(self, snowflake: int, name: str, guild_id: int):
+        self.SnowflakeID = snowflake
+        self.name = name
+        self.GuildID = guild_id
 
 
 class MessageMODE(LOGGERSQL.Base):
