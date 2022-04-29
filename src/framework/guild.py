@@ -36,18 +36,20 @@ class BaseGUILD:
     __slots__ = (
         "apiobject",
         "_generate_log",
-        "log_file_name",
         "t_messages",
         "vc_messages"
     )
     __logname__ = "BaseGUILD"
     
+    @property
+    def log_file_name(self):
+        raise NotImplementedError
+
     def __init__(self,
                  snowflake: int,
                  generate_log: bool=False) -> None:
         self.apiobject = snowflake
         self._generate_log = generate_log
-        self.log_file_name = None
         self.t_messages = []
         self.vc_messages = []
 
@@ -73,7 +75,7 @@ class BaseGUILD:
         raise NotImplementedError
 
     def generate_log(self,
-                     **message_context) -> None:
+                     message_context: dict) -> None:
         """
         Name:   generate_log
         Param:
@@ -104,7 +106,7 @@ class BaseGUILD:
                             .joinpath("{:02d}".format(timestruct.tm_mon))\
                             .joinpath("{:02d}".format(timestruct.tm_mday))
                 with suppress(FileExistsError):
-                    pathlib.Path(logging_output).mkdir(parents=True,exist_ok=True)
+                    logging_output.mkdir(parents=True,exist_ok=True)
 
                 logging_output = str(logging_output.joinpath(self.log_file_name))
 
@@ -156,10 +158,13 @@ class GUILD(BaseGUILD):
         "t_messages",
         "vc_messages",
         "__messages",
-        "_generate_log",
-        "log_file_name"
+        "_generate_log"
     )
     __logname__ = "GUILD"
+
+    @property
+    def log_file_name(self):
+        return "".join(char if char not in C_FILE_NAME_FORBIDDEN_CHAR else "#" for char in self.apiobject.name) + ".json"
 
     def __init__(self,
                  guild_id: int,
@@ -193,8 +198,6 @@ class GUILD(BaseGUILD):
 
         if self.apiobject is not None:
         # Create a file name without the non allowed characters. Windows' list was choosen to generate the forbidden character because only forbids '/'
-            self.log_file_name = "".join(char if char not in C_FILE_NAME_FORBIDDEN_CHAR else "#" for char in self.apiobject.name) + ".json"
-
             for message in self.t_messages[:]:
                 # Iterate thru the slice text messages list and initialize each
                 # message object. If the message objects fails to initialize,
@@ -233,7 +236,7 @@ class GUILD(BaseGUILD):
                     trace(f"Removing a {type(message).__name__} because it's channels were removed, in guild {self.apiobject.name}(ID: {self.apiobject.id})")
 
                 if self._generate_log and message_ret is not None:
-                    self.generate_log(**message_ret)
+                    self.generate_log(message_ret)
 
 
 @sql.register_type("GuildTYPE")
@@ -251,11 +254,14 @@ class USER(BaseGUILD):
         "_generate_log",
         "t_messages",
         "vc_messages",
-        "__messages",
-        "log_file_name",
+        "__messages"
     )
     
     __logname__ = "USER"
+
+    @property
+    def log_file_name(self):
+        return "".join(char if char not in C_FILE_NAME_FORBIDDEN_CHAR else "#" for char in f"{self.apiobject.display_name}#{self.apiobject.discriminator}") + ".json"
 
     def __init__(self,
                  user_id: int,
@@ -277,7 +283,6 @@ class USER(BaseGUILD):
         self.apiobject = cl.get_user(user_id)
 
         if self.apiobject is not None:
-            self.log_file_name = "".join(char if char not in C_FILE_NAME_FORBIDDEN_CHAR else "#" for char in f"{self.apiobject.display_name}#{self.apiobject.discriminator}") + ".json"
             for message in self.t_messages[:]:
                 if (type(message) is not DirectMESSAGE or
                     not await message.initialize(user_id=user_id)
@@ -302,4 +307,4 @@ class USER(BaseGUILD):
             if message.is_ready():
                 message_ret = await message.send()
                 if self._generate_log and message_ret is not None:
-                    self.generate_log(**message_ret)
+                    self.generate_log(message_ret)
