@@ -7,7 +7,7 @@
 """
 from  datetime   import datetime
 from  typing     import Literal
-from  sqlalchemy import JSON, SmallInteger, BigInteger, Column, Identity, Integer, String, DateTime,ForeignKey, create_engine, update, text
+from  sqlalchemy import JSON, SmallInteger, BigInteger, Column, Identity, Integer, String, DateTime,ForeignKey, Boolean, create_engine, update, text
 from  sqlalchemy.orm import sessionmaker
 from  sqlalchemy.ext.declarative import declarative_base
 from  sqlalchemy_utils import create_database, database_exists
@@ -98,7 +98,7 @@ class LOGGERSQL:
                 "name" :   "vMessageLogFullDETAIL",
                 "stm"    : """
                             VIEW {} AS
-                                SELECT ml.ID ID, ml.sent_data SentData, mt.name MessageTYPE, gt.name GuildTYPE , gu.snowflake_id GuildID, gu.name GuildName, mm.name MessageMode, ml.success_info SuccessInfo, ml.[timestamp] [Timestamp]
+                                SELECT ml.ID ID, ml.sent_data SentData, mt.name MessageTYPE, gt.name GuildTYPE , gu.snowflake_id GuildID, gu.name GuildName, mm.name MessageMode, ml.DM_success DMSuccess, ml.DM_reason DMReason, ml.[timestamp] [Timestamp]
                                 FROM MessageLOG ml JOIN MessageTYPE mt ON ml.message_type  = mt.ID
                                 LEFT JOIN MessageMODE mm ON mm.ID = ml.message_mode
                                 JOIN GuildUSER gu ON gu.ID = ml.guild_id
@@ -179,8 +179,13 @@ class LOGGERSQL:
         message_mode = message_context.pop("mode", None)
         channels = message_context.pop("channels", None)
         dm_success_info = message_context.pop("success_info", None)
-
+        
         log_object = MessageLOG(sent_data=sent_data)
+        # Add DirectMESSAGE success information
+        if dm_success_info is not None:
+            log_object.DM_success = dm_success_info["success"]
+            if not log_object.DM_success:
+                log_object.DM_reason = dm_success_info["reason"]
 
         with self.Session() as session:
             # Map MessageTYPE to an identificator
@@ -208,7 +213,6 @@ class LOGGERSQL:
             log_object.guild_id = guild_lookup.ID
             
             # Save the message log
-            log_object.success_info = dm_success_info if channels is None else None
             session.add(log_object)
 
             if channels is not None:
@@ -344,20 +348,21 @@ class MessageLOG(LOGGERSQL.Base):
     message_type = Column(Integer, ForeignKey("MessageTYPE.ID", ))
     guild_id =     Column(SmallInteger, ForeignKey("GuildUSER.ID", ondelete="CASCADE"))
     message_mode = Column(Integer, ForeignKey("MessageMODE.ID" )) # Only for TextMESSAGE and DirectMESSAGE
-    success_info  = Column(JSON)
+    DM_success  = Column(Boolean)   # Only for DirectMESSAGE
+    DM_reason   = Column(String)    # Only for DirectMESSAGE
     timestamp = Column(DateTime)
 
     def __init__(self,
                  sent_data: str=None,
                  message_type: int=None,
                  message_mode: int=None,
-                 success_info: str=None,
+                 DM_success: tuple=(None, None),
                  guild_id: int=None):
         self.sent_data = sent_data
         self.message_type = message_type
         self.message_mode = message_mode
         self.guild_id = guild_id
-        self.success_info = success_info
+        self.DM_success, self.DM_reason = DM_success
         self.timestamp = datetime.now().replace(microsecond=0)
 
 
