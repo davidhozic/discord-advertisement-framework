@@ -100,9 +100,9 @@ class LOGGERSQL:
                             VIEW {} AS
                                 SELECT ml.ID ID, ml.sent_data SentData, mt.name MessageTYPE, gt.name GuildTYPE , gu.SnowflakeID GuildID, gu.name GuildName, mm.name MessageMode, ml.success_info SuccessInfo, ml.[timestamp] [Timestamp]
                                 FROM MessageLOG ml JOIN MessageTYPE mt ON ml.message_type  = mt.ID
-                                JOIN GuildTYPE gt ON gt.ID = ml.guild_type
                                 LEFT JOIN MessageMODE mm ON mm.ID = ml.message_mode
-                                JOIN GuildUSER gu ON gu.ID = ml.guild_id;"""
+                                JOIN GuildUSER gu ON gu.ID = ml.guild_id
+                               	JOIN GuildTYPE gt ON gu.guild_type = gt.ID ;"""
             },
             {
                 "name" :   "fnFilterChannelSuccess",
@@ -221,9 +221,6 @@ class LOGGERSQL:
         log_object = MessageLOG(sent_data=sent_data)
 
         with self.Session() as session:
-            # Map GuildTYPE to an identificator
-            guild_type = session.query(GuildTYPE).filter(GuildTYPE.name == guild_type).first()
-            log_object.guild_type = guild_type.ID
             # Map MessageTYPE to an identificator
             message_type = session.query(MessageTYPE).filter(MessageTYPE.name == message_type).first()
             log_object.message_type = message_type.ID
@@ -238,7 +235,8 @@ class LOGGERSQL:
             # Update GUILD/USER table
             result = session.query(GuildUSER).where(GuildUSER.SnowflakeID == guild_snowflake).first()
             if result is None:
-                new = GuildUSER(guild_snowflake, guild_name)
+                guild_type = session.query(GuildTYPE).filter(GuildTYPE.name == guild_type).first()
+                new = GuildUSER(guild_type.ID, guild_snowflake, guild_name)
                 session.add(new)
             else:
                 session.execute(update(GuildUSER).where(GuildUSER.SnowflakeID == guild_snowflake).values(name=guild_name))
@@ -311,15 +309,18 @@ class GuildUSER(LOGGERSQL.Base):
         name: str      :: Name of the guild/user"""
 
     __tablename__ = "GuildUSER"
-    ID = Column(SmallInteger, Identity(start=-32768,increment=1),primary_key=True)
+    ID = Column(SmallInteger, Identity(start=0,increment=1),primary_key=True)
     SnowflakeID = Column(BigInteger) 
     name = Column(String)
+    guild_type = Column(Integer, ForeignKey("GuildTYPE.ID"))
 
     def __init__(self,
+                 guild_type: int,
                  snowflake: int,
                  name: str):
         self.SnowflakeID = snowflake
         self.name = name
+        self.guild_type = guild_type
 
 
 class CHANNEL(LOGGERSQL.Base):
@@ -333,7 +334,7 @@ class CHANNEL(LOGGERSQL.Base):
         guild_id: int  :: Snowflake identificator pointing to a GUILD/USER"""
 
     __tablename__ = "CHANNEL"
-    ID = Column(SmallInteger, Identity(start=-32768,increment=1),primary_key=True)
+    ID = Column(SmallInteger, Identity(start=0,increment=1),primary_key=True)
     SnowflakeID = Column(BigInteger) 
     name = Column(String)
     GuildID = Column(SmallInteger, ForeignKey("GuildUSER.ID", ondelete="CASCADE"))
@@ -381,7 +382,6 @@ class MessageLOG(LOGGERSQL.Base):
     guild_id =     Column(SmallInteger, ForeignKey("GuildUSER.ID", ondelete="CASCADE"))
     message_mode = Column(Integer, ForeignKey("MessageMODE.ID" )) # Only for TextMESSAGE and DirectMESSAGE
     success_info  = Column(JSON)
-    guild_type = Column(Integer, ForeignKey("GuildTYPE.ID"))
     timestamp = Column(DateTime)
 
     def __init__(self,
@@ -389,14 +389,12 @@ class MessageLOG(LOGGERSQL.Base):
                  message_type: int=None,
                  message_mode: int=None,
                  success_info: str=None,
-                 guild_snowflake: int=None,
-                 guild_type: int=None):
+                 guild_id: int=None):
         self.sent_data = sent_data
         self.message_type = message_type
         self.message_mode = message_mode
-        self.guild_snowflakeID = guild_snowflake
+        self.guild_id = guild_id
         self.success_info = success_info
-        self.guild_type = guild_type
         self.timestamp = datetime.now().replace(microsecond=0)
 
 def initialize(mgr_object: LOGGERSQL) -> bool:
