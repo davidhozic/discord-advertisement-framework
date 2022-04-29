@@ -101,7 +101,7 @@ class LOGGERSQL:
                                 SELECT ml.ID ID, ml.sent_data SentData, mt.name MessageTYPE, gt.name GuildTYPE , gu.SnowflakeID GuildID, gu.name GuildName, mm.name MessageMode, ml.success_info SuccessInfo, ml.[timestamp] [Timestamp]
                                 FROM MessageLOG ml JOIN MessageTYPE mt ON ml.message_type  = mt.ID
                                 JOIN GuildTYPE gt ON gt.ID = ml.guild_type
-                                JOIN MessageMODE mm ON mm.ID = ml.message_mode
+                                LEFT JOIN MessageMODE mm ON mm.ID = ml.message_mode
                                 JOIN GuildUSER gu ON gu.ID = ml.guild_id;"""
             },
             {
