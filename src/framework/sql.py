@@ -103,6 +103,32 @@ class LOGGERSQL:
                                 LEFT JOIN MessageMODE mm ON mm.ID = ml.message_mode
                                 JOIN GuildUSER gu ON gu.ID = ml.guild_id
                                	JOIN GuildTYPE gt ON gu.guild_type = gt.ID ;"""
+            },
+            {
+                "name": "fnRelativeSuccess",
+                "stm": """FUNCTION {}(@log_id smallInt) RETURNS real AS -- Returns relative number of successful channels vs all channels
+                                BEGIN
+                                    DECLARE @ret real;
+                                    SELECT @ret = 100*CAST(successful as REAL) / all_ch
+                                    FROM
+                                    (
+                                        SELECT SUM(CASE WHEN reason IS NULL THEN 1 ELSE 0 END) successful, COUNT(channel_id) all_ch
+                                        FROM MessageChannelLOG mlc
+                                        WHERE log_ID = @log_id 
+                                        GROUP BY log_ID
+                                    ) a;
+                                    RETURN @ret;
+                                END"""
+            },
+            {
+                "name" : "spFilterBySuccessRate",
+                "stm" : """PROCEDURE {}(@min tinyint, @max tinyint) --  log_IDs where the success rate is between @min and @max
+                            AS
+                            BEGIN 
+                                SELECT *
+                                FROM MessageChannelLOG mcl FULL JOIN MessageLOG ml ON mcl.log_ID = ml.ID 
+                                WHERE dbo.fnRelativeSuccess(log_ID) IN (@min, @max);	
+                            END"""
             }
         ]
         with self.Session() as session:
