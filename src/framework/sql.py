@@ -98,49 +98,11 @@ class LOGGERSQL:
                 "name" :   "vMessageLogFullDETAIL",
                 "stm"    : """
                             VIEW {} AS
-                                SELECT ml.ID ID, ml.sent_data SentData, mt.name MessageTYPE, gt.name GuildTYPE , gu.SnowflakeID GuildID, gu.name GuildName, mm.name MessageMode, ml.success_info SuccessInfo, ml.[timestamp] [Timestamp]
+                                SELECT ml.ID ID, ml.sent_data SentData, mt.name MessageTYPE, gt.name GuildTYPE , gu.snowflake_id GuildID, gu.name GuildName, mm.name MessageMode, ml.success_info SuccessInfo, ml.[timestamp] [Timestamp]
                                 FROM MessageLOG ml JOIN MessageTYPE mt ON ml.message_type  = mt.ID
                                 LEFT JOIN MessageMODE mm ON mm.ID = ml.message_mode
                                 JOIN GuildUSER gu ON gu.ID = ml.guild_id
                                	JOIN GuildTYPE gt ON gu.guild_type = gt.ID ;"""
-            },
-            {
-                "name" :   "fnFilterChannelSuccess",
-                "stm"    : """FUNCTION {}(@min INT, @max INT) RETURNS TABLE AS 
-                                    RETURN SELECT * FROM 
-                                    (
-                                        SELECT *, 	(100*CAST((SELECT COUNT(*) FROM OPENJSON(SuccessInfo, '$.successful')) AS real)/
-                                        ((SELECT COUNT(*) FROM OPENJSON(SuccessInfo, '$.failed')  WHERE GuildTYPE = 'GUILD')+(SELECT COUNT(*) FROM OPENJSON(SuccessInfo, '$.successful')
-                                        WHERE GuildTYPE = 'GUILD'))) relativeSuccess 	FROM vMessageLogFullDETAIL 	WHERE GuildTYPE = 'GUILD'
-                                    ) a 	
-                                    WHERE relativeSuccess >= @min   AND relativeSuccess <= @max;"""
-            },
-            {   
-                "name" :   "spGetChannels",
-                "stm"    : """PROCEDURE spGetChannels(@MessageLogID INT, @Type NVARCHAR(50)) AS
-                                    IF @Type = 'successful'
-                                    
-                                        SELECT * FROM OPENJSON(
-                                                            (SELECT SuccessInfo FROM vMessageLogFullDETAIL WHERE ID = @MessageLogID),
-                                                            '$.'  + @Type
-                                                            )
-                                        WITH(id BIGINT '$');
-                                    
-                                    ELSE
-                                    SELECT * FROM OPENJSON(
-                                                            (SELECT SuccessInfo FROM vMessageLogFullDETAIL WHERE ID = @MessageLogID),
-                                                            '$.'  + @Type
-                                                            )
-                                    WITH(id BIGINT '$.id', reason VARCHAR(100) '$.reason');"""
-            },
-            {
-                "name" :   "fnCountChannels",
-                "stm"  :   """FUNCTION {}(@MessageLogID INT, @Type NVARCHAR(20)) RETURNS INT AS 
-                                    BEGIN 
-                                        DECLARE @ret INT; 
-                                        SELECT  @ret = COUNT(*) FROM OPENJSON((SELECT SuccessInfo FROM vMessageLogFullDETAIL WHERE ID = @MessageLogID), '$.' + @Type); 
-                                        RETURN  @ret; 
-                                    END"""
             }
         ]
         with self.Session() as session:
@@ -233,38 +195,36 @@ class LOGGERSQL:
                 log_object.message_mode = None
 
             # Update GUILD/USER table
-            result = session.query(GuildUSER).where(GuildUSER.SnowflakeID == guild_snowflake).first()
+            result = session.query(GuildUSER).where(GuildUSER.snowflake_id == guild_snowflake).first()
             if result is None:
                 guild_type = session.query(GuildTYPE).filter(GuildTYPE.name == guild_type).first()
                 new = GuildUSER(guild_type.ID, guild_snowflake, guild_name)
                 session.add(new)
             else:
-                session.execute(update(GuildUSER).where(GuildUSER.SnowflakeID == guild_snowflake).values(name=guild_name))
+                session.execute(update(GuildUSER).where(GuildUSER.snowflake_id == guild_snowflake).values(name=guild_name))
 
             # Reference the guild_id with ID from GuildUSER lookup table
-            guild_lookup = session.query(GuildUSER).where(GuildUSER.SnowflakeID == guild_snowflake).first()
+            guild_lookup = session.query(GuildUSER).where(GuildUSER.snowflake_id == guild_snowflake).first()
             log_object.guild_id = guild_lookup.ID
+            
+            # Save the message log
+            log_object.success_info = dm_success_info if channels is None else None
+            session.add(log_object)
 
             if channels is not None:
                 # If channels exist [TextMESSAGE and VoiceMESSAGE], update the CHANNELS table with the correct name
                 # and only insert the channel Snowflake identificators into the message log
                 for channel in channels["successful"] + channels["failed"]:
-                    result = session.query(CHANNEL).where(CHANNEL.SnowflakeID == channel["id"]).first()
+                    result = session.query(CHANNEL).where(CHANNEL.snowflake_id == channel["id"]).first()
                     if result is not None:
-                        session.execute(update(CHANNEL).where(CHANNEL.SnowflakeID == channel["id"]).values(name=channel["name"]))
+                        session.execute(update(CHANNEL).where(CHANNEL.snowflake_id == channel["id"]).values(name=channel["name"]))
                     else:
-                        new_channel = CHANNEL(channel["id"], channel["name"], guild_lookup.ID)
-                        session.add(new_channel)
+                        session.add(CHANNEL(channel["id"], channel["name"], guild_lookup.ID))
 
-                # Replace the channels json values with just ID values, names can be retrieved by the CHANNEL table
-                channels["successful"] = [channel["id"] for channel in channels["successful"]]
-                channels["failed"]     = [{"id": channel["id"], "reason" : channel["reason"]} for channel in channels["failed"]]
-                log_object.success_info = channels
-            else:
-                # The channels do not exist for this log [DirectMESSAGE], just log it's success value (and reason if failed)
-                log_object.success_info = dm_success_info
- 
-            session.add(log_object)
+                    # Add the channel to the MessageChannelLOG table
+                    channel_lookup = session.query(CHANNEL).where(CHANNEL.snowflake_id == channel["id"]).first()
+                    session.add(MessageChannelLOG(log_object.ID, channel_lookup.ID, channel.pop("reason", None)))
+
             session.commit()
 
 
@@ -310,7 +270,7 @@ class GuildUSER(LOGGERSQL.Base):
 
     __tablename__ = "GuildUSER"
     ID = Column(SmallInteger, Identity(start=0,increment=1),primary_key=True)
-    SnowflakeID = Column(BigInteger) 
+    snowflake_id = Column(BigInteger) 
     name = Column(String)
     guild_type = Column(Integer, ForeignKey("GuildTYPE.ID"))
 
@@ -318,7 +278,7 @@ class GuildUSER(LOGGERSQL.Base):
                  guild_type: int,
                  snowflake: int,
                  name: str):
-        self.SnowflakeID = snowflake
+        self.snowflake_id = snowflake
         self.name = name
         self.guild_type = guild_type
 
@@ -335,14 +295,17 @@ class CHANNEL(LOGGERSQL.Base):
 
     __tablename__ = "CHANNEL"
     ID = Column(SmallInteger, Identity(start=0,increment=1),primary_key=True)
-    SnowflakeID = Column(BigInteger) 
+    snowflake_id = Column(BigInteger) 
     name = Column(String)
-    GuildID = Column(SmallInteger, ForeignKey("GuildUSER.ID", ondelete="CASCADE"))
+    guild_id = Column(SmallInteger, ForeignKey("GuildUSER.ID", ondelete="CASCADE"))
 
-    def __init__(self, snowflake: int, name: str, guild_id: int):
-        self.SnowflakeID = snowflake
+    def __init__(self,
+                 snowflake: int,
+                 name: str,
+                 guild_id: int):
+        self.snowflake_id = snowflake
         self.name = name
-        self.GuildID = guild_id
+        self.guild_id = guild_id
 
 
 class MessageMODE(LOGGERSQL.Base):
@@ -396,6 +359,28 @@ class MessageLOG(LOGGERSQL.Base):
         self.guild_id = guild_id
         self.success_info = success_info
         self.timestamp = datetime.now().replace(microsecond=0)
+
+
+class MessageChannelLOG(LOGGERSQL.Base):
+    """
+    ~ SQL Table Descriptor Class ~
+    @Name: MessageChannelLOG
+    @Info: This is a table that contains a log of channels that are
+           linked to a certain message log.
+    @Param:
+        name: Name of the mode"""
+
+    __tablename__ = "MessageChannelLOG"
+    log_ID = Column(Integer, ForeignKey("MessageLOG.ID", ondelete="CASCADE"), primary_key=True)
+    channel_id = Column(SmallInteger, ForeignKey("CHANNEL.ID"), primary_key=True)
+    reason = Column(String)
+    def __init__(self,
+                 message_log_id: int,
+                 channel_id: int,
+                 reason: str=None):
+        self.log_ID = message_log_id
+        self.channel_id = channel_id
+        self.reason = reason
 
 def initialize(mgr_object: LOGGERSQL) -> bool:
     """
