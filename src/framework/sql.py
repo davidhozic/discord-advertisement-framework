@@ -241,7 +241,7 @@ class LOGGERSQL:
                 new = GuildUSER(guild_snowflake, guild_name)
                 session.add(new)
             else:
-                session.execute(update(GuildUSER).values(name=guild_name))
+                session.execute(update(GuildUSER).where(GuildUSER.SnowflakeID == guild_snowflake).values(name=guild_name))
 
             # Reference the guild_id with ID from GuildUSER lookup table
             guild_lookup = session.query(GuildUSER).where(GuildUSER.SnowflakeID == guild_snowflake).first()
