@@ -14,7 +14,7 @@ from  sqlalchemy_utils import create_database, database_exists
 from  .tracing import *
 
 __all__ = (
-    "LOGGERSQL",
+    "LoggerSQL",
     "register_type",
     "get_sql_manager"
 )
@@ -44,15 +44,14 @@ def register_type(lookuptable: Literal["GuildTYPE", "MessageTYPE", "MessageMODE"
             if item == lookuptable:
                 GLOBALS.lt_types.append( value(cls.__logname__) )
                 return cls
-        trace(f"Unable to to find lookuptable: {lookuptable}", TraceLEVELS.ERROR)
-        return cls
+        raise Exception(f"[SQL]: Unable to to find lookuptable: {lookuptable}")
     return _register_type
 
 
-class LOGGERSQL:
+class LoggerSQL:
     """
     ~ class ~
-    @Name: LOGGERSQL
+    @Name: LoggerSQL
     @Info: This class is used for controlling
            the SQL database used for messagge logs
     @Param:
@@ -153,18 +152,21 @@ class LOGGERSQL:
             self.engine = create_engine(f"mssql+pymssql://{self.username}:{self.__password}@{self.server}/{self.database}", echo=False)
             self.Session = sessionmaker(bind=self.engine)
             if not database_exists(self.engine.url):
+                trace("[SQL]: Creating database...", TraceLEVELS.NORMAL)
                 create_database(self.engine.url)
         except Exception as ex:
-            trace(f"Unable to start SQL engine. Reason:\n{ex}", TraceLEVELS.ERROR)
+            trace(f"[SQL]: Unable to start engine. Reason:\n{ex}", TraceLEVELS.ERROR)
             return False
         # Create tables and the session class bound to the engine
         try:
+            trace("[SQL]: Creating tables...", TraceLEVELS.NORMAL)
             self.Base.metadata.create_all(bind=self.engine)
         except Exception as ex:
-            trace(f"Unable to create all the SQL Tables. Reason:\n{ex}", TraceLEVELS.ERROR)
+            trace(f"[SQL]: Unable to create all the tables. Reason:\n{ex}", TraceLEVELS.ERROR)
             return False
         # Insert the lookuptable values
         try:
+            trace("[SQL]: Generating lookuptable values...", TraceLEVELS.NORMAL)
             with self.Session() as session:
                 for to_add in GLOBALS.lt_types:
                     existing = session.query(type(to_add)).filter_by(name=to_add.name).first()
@@ -172,13 +174,14 @@ class LOGGERSQL:
                         session.add(to_add)
                 session.commit()
         except Exception as ex:
-            trace(f"Unable to create lookuptables' rows. Reason: {ex}", TraceLEVELS.ERROR)
+            trace(f"[SQL]: Unable to create lookuptables' rows. Reason: {ex}", TraceLEVELS.ERROR)
             return False
         # Initialize views, procedures and functions
         try:
+            trace("[SQL]: Creating Views, Procedures & Functions", TraceLEVELS.NORMAL)
             self.create_analytic_objects()
         except Exception as ex:
-            trace(f"Unable to create views, procedures and functions. Reason: {ex}", TraceLEVELS.ERROR)
+            trace(f"[SQL]: Unable to create views, procedures and functions. Reason: {ex}", TraceLEVELS.ERROR)
 
         return True
 
@@ -258,7 +261,7 @@ class LOGGERSQL:
             session.commit()
 
 
-class MessageTYPE(LOGGERSQL.Base):
+class MessageTYPE(LoggerSQL.Base):
     """
     ~ SQL Table Descriptor Class ~
     @Name: MessageTYPE
@@ -273,7 +276,7 @@ class MessageTYPE(LOGGERSQL.Base):
         self.name = name
 
 
-class GuildTYPE(LOGGERSQL.Base):
+class GuildTYPE(LoggerSQL.Base):
     """
     ~ SQL Table Descriptor Class ~
     @Name: GuildTYPE
@@ -289,7 +292,7 @@ class GuildTYPE(LOGGERSQL.Base):
         self.name = name
 
 
-class GuildUSER(LOGGERSQL.Base):
+class GuildUSER(LoggerSQL.Base):
     """
     ~ SQL Table Descriptor Class ~
     @Name: GUILD
@@ -313,7 +316,7 @@ class GuildUSER(LOGGERSQL.Base):
         self.guild_type = guild_type
 
 
-class CHANNEL(LOGGERSQL.Base):
+class CHANNEL(LoggerSQL.Base):
     """
     ~ SQL Table Descriptor Class ~
     @Name: CHANNEL
@@ -338,7 +341,7 @@ class CHANNEL(LOGGERSQL.Base):
         self.guild_id = guild_id
 
 
-class MessageMODE(LOGGERSQL.Base):
+class MessageMODE(LoggerSQL.Base):
     """
     ~ SQL Table Descriptor Class ~
     @Name: MessageMODE
@@ -354,7 +357,7 @@ class MessageMODE(LOGGERSQL.Base):
         self.name = name
 
 
-class MessageLOG(LOGGERSQL.Base):
+class MessageLOG(LoggerSQL.Base):
     """
     ~ SQL Table Descriptor Class ~
     @Name: MessageLOG
@@ -392,7 +395,7 @@ class MessageLOG(LOGGERSQL.Base):
         self.timestamp = datetime.now().replace(microsecond=0)
 
 
-class MessageChannelLOG(LOGGERSQL.Base):
+class MessageChannelLOG(LoggerSQL.Base):
     """
     ~ SQL Table Descriptor Class ~
     @Name: MessageChannelLOG
@@ -413,24 +416,25 @@ class MessageChannelLOG(LOGGERSQL.Base):
         self.channel_id = channel_id
         self.reason = reason
 
-def initialize(mgr_object: LOGGERSQL) -> bool:
+def initialize(mgr_object: LoggerSQL) -> bool:
     """
     ~ function ~
     @Name: initialize
     @Info: This function initializes the sql manager and also the selected database
            NOTE: If initialization fails, file logs will be used
     @Param:
-        mgr_object: LOGGERSQL :: SQL database manager object responsible for saving the logs
+        mgr_object: LoggerSQL :: SQL database manager object responsible for saving the logs
                                  into the SQL database"""
-
+    trace("[SQL]: Initializing logging...", TraceLEVELS.NORMAL)
     GLOBALS.manager = mgr_object
-    if type(GLOBALS.manager) is LOGGERSQL and GLOBALS.manager.initialize():
+    if GLOBALS.manager.initialize():
         GLOBALS.enabled = True
+        trace("[SQL]: Initialization was successful!", TraceLEVELS.NORMAL)
         return True
 
     trace("Unable to setup SQL logging, file logs will be used instead.", TraceLEVELS.WARNING)
     return False
 
 
-def get_sql_manager() -> LOGGERSQL:
+def get_sql_manager() -> LoggerSQL:
     return GLOBALS.manager

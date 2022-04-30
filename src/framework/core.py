@@ -92,7 +92,7 @@ def run(token : str,
         is_user : bool =False,
         user_callback : bool=None,
         server_log_output : str ="History",
-        sql_manager: sql.LOGGERSQL=None,
+        sql_manager: sql.LoggerSQL=None,
         debug : bool=True) -> None:
     """
     @type  : function
