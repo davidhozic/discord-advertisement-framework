@@ -10,11 +10,11 @@ __metadata__ = \
 {
     "version" :  "1.9",
     "requirements" : [
-        "aiohttp>=3.6.0,<3.9.0"
-        "PyNaCl"
-        "pymssql"
-        "sqlalchemy[asyncio]"
-        "sqlalchemy_utils[asyncio]"
+        "aiohttp>=3.6.0,<3.9.0",
+        "PyNaCl",
+        "pymssql",
+        "sqlalchemy",
+        "sqlalchemy_utils"
     ],
     "minimum_py_version" :  "3.8",
 }
