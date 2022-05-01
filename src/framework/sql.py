@@ -6,7 +6,6 @@
     the framework.run function with the SqlCONTROLLER object.
 """
 from  datetime   import datetime
-import enum
 from  typing     import Literal
 from  sqlalchemy import (
                          JSON, SmallInteger, Integer, BigInteger, String, DateTime, Boolean,
@@ -17,7 +16,7 @@ from  sqlalchemy.orm import sessionmaker
 from  sqlalchemy.ext.declarative import declarative_base
 from  sqlalchemy_utils import create_database, database_exists
 from  .tracing import *
-import time
+
 
 __all__ = (
     "LoggerSQL",
@@ -118,7 +117,6 @@ class LoggerSQL:
         self.GuildTYPE   = {}
         ## Other object caching
         self.GuildUSER = {}
-        self.CHANNEL   = {}
 
     def create_analytic_objects(self):
         """
@@ -226,7 +224,8 @@ class LoggerSQL:
             trace(f"[SQL]: Unable to create views, procedures and functions. Reason: {ex}", TraceLEVELS.ERROR)
 
         return True
-    #@timeit
+
+
     def save_log(self,
                  guild_context: dict,
                  message_context: dict):
@@ -307,9 +306,11 @@ class LoggerSQL:
                         item = CHANNEL(channel["id"], channel["name"], guild_lookup) 
                         to_add_ch.append(item)
 
-                session.bulk_save_objects(to_add_ch)
-                session.flush()
-                to_add_ch = [(x.id, x.snowflake_id) for x in to_add_ch]
+                if len(to_add_ch) > 0:
+                    session.add_all(to_add_ch)
+                    session.flush()
+                    to_add_ch = [(x.id, x.snowflake_id) for x in to_add_ch]
+
                 to_add_ch_log = []
                 for channel in result + to_add_ch:
                     index = channels_snow.index(channel[1])
@@ -317,9 +318,7 @@ class LoggerSQL:
 
                 session.bulk_save_objects(to_add_ch_log)
 
-            start = time.time()
             session.commit()
-            print(f"Elapsed {(time.time()- start)*1000}")
 
 
 class MessageTYPE(LoggerSQL.Base):
