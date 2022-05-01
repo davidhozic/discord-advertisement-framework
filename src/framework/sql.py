@@ -25,16 +25,6 @@ __all__ = (
 )
 
 
-def timeit(fn):
-    def _runner(*arg, **kwarg):
-        startms = time.time()
-        ret = fn(*arg, **kwarg)
-        endmsg = time.time()
-        print(f"Ran for {(endmsg - startms)*1000}")
-        return ret
-    return _runner
-
-
 class GLOBALS:
     """~ class ~
     @Name: GLOBALS
@@ -164,6 +154,23 @@ class LoggerSQL:
                                 FROM MessageChannelLOG mcl FULL JOIN MessageLOG ml ON mcl.log_id = ml.id 
                                 WHERE dbo.fnRelativeSuccess(log_id) IN (@min, @max);	
                             END"""
+            },
+            {
+                "name" : "fnSentDataCounts",
+                "stm"  : """FUNCTION {}(@message_type nvarchar(50)=NULL) 
+                            /* Returns a table holding different send_data that was sent, with 
+                            the number of times this same data was sent (count)
+                            */
+                            RETURNS TABLE AS
+                                RETURN (SELECT sent_data, COUNT(sent_data) AS [count]
+                                FROM MessageLOG ml 
+                                WHERE ml.message_type IN
+                                (
+                                    SELECT id FROM MessageTYPE mt WHERE 
+                                    mt.name LIKE
+                                    (CASE WHEN @message_type IS NOT NULL THEN @message_type ELSE '%' END) 
+                                )
+                                GROUP BY sent_data);"""
             }
         ]
         with self.Session() as session:
@@ -208,7 +215,8 @@ class LoggerSQL:
                     existing = session.query(type(to_add)).filter_by(name=to_add.name).first()
                     if existing is None:
                         session.add(to_add)
-                        existing = session.query(type(to_add)).filter_by(name=to_add.name).first()
+                        session.flush()
+                        existing = to_add
                     
                     getattr(self, type(to_add).__name__)[to_add.name] = existing.id # Set the internal lookup values to later prevent time consuming queries
                 
@@ -493,7 +501,7 @@ def initialize(mgr_object: LoggerSQL) -> bool:
                                  into the SQL database"""
     trace("[SQL]: Initializing logging...", TraceLEVELS.NORMAL)
     GLOBALS.manager = mgr_object
-    if GLOBALS.manager.initialize():
+    if mgr_object is not None and mgr_object.initialize():
         GLOBALS.enabled = True
         trace("[SQL]: Initialization was successful!", TraceLEVELS.NORMAL)
         return True
