@@ -92,7 +92,10 @@ class LoggerSQL:
 
         "MessageMODE",
         "MessageTYPE",
-        "GuildTYPE"
+        "GuildTYPE",
+        
+        "GuildUSER",
+        "CHANNEL"
     )
 
     def __init__(self,
@@ -108,9 +111,14 @@ class LoggerSQL:
         self.commit_buffer = []
         self.engine = None
         self.Session  = None
+        # Caching (to avoid unneccessary queries)
+        ## Lookup table caching
         self.MessageMODE = {}
         self.MessageTYPE = {}
         self.GuildTYPE   = {}
+        ## Other object caching
+        self.GuildUSER = {}
+        self.CHANNEL   = {}
 
     def create_analytic_objects(self):
         """
@@ -218,7 +226,7 @@ class LoggerSQL:
             trace(f"[SQL]: Unable to create views, procedures and functions. Reason: {ex}", TraceLEVELS.ERROR)
 
         return True
-    @timeit
+    #@timeit
     def save_log(self,
                  guild_context: dict,
                  message_context: dict):
@@ -260,42 +268,58 @@ class LoggerSQL:
                 log_object.message_mode = None
 
             # Update GUILD/USER table
-            result = session.query(GuildUSER).filter(GuildUSER.snowflake_id == guild_snowflake).first()
+            result = None
+            if guild_snowflake not in self.GuildUSER:
+                result = session.query(GuildUSER.id).filter(GuildUSER.snowflake_id == guild_snowflake).first()
+                if result is not None:
+                    result = result[0]
+                    self.GuildUSER[guild_snowflake] = result
+            else:
+                result = self.GuildUSER[guild_snowflake]
+
             if result is None:
                 guild_type = self.GuildTYPE[guild_type]
                 result = GuildUSER(guild_type, guild_snowflake, guild_name)
                 session.add(result)
                 session.flush()
-
+                result = result.id
+                self.GuildUSER[guild_snowflake] = result
+                
             # Reference the guild_id with id from GuildUSER lookup table
-            guild_lookup = result.id
+            guild_lookup = result
             log_object.guild_id = guild_lookup
 
             # Save the message log
             session.add(log_object)
+            session.flush()
             if channels is not None:
                 # If channels exist [TextMESSAGE and VoiceMESSAGE], update the CHANNELS table with the correct name
                 # and only insert the channel Snowflake identificators into the message log
                 channels = channels["successful"] + channels["failed"]
                 channels_snow = [x["id"] for x in channels]
 
-                result = session.query(CHANNEL).filter(CHANNEL.snowflake_id.in_(channels_snow)).all()
-                result_snow = {x.snowflake_id for x in result}  # Snowflakes returned by querry
+                # Query the channels and add missing ones
+                result = session.query(CHANNEL.id, CHANNEL.snowflake_id).filter(CHANNEL.snowflake_id.in_(channels_snow)).all()
+                result_snow = {x[1] for x in result}  # Snowflakes returned by querry
+                to_add_ch = []
                 for channel in channels:
                     if channel["id"] not in result_snow:
                         item = CHANNEL(channel["id"], channel["name"], guild_lookup) 
-                        session.add(item)
-                        result.append(item)
+                        to_add_ch.append(item)
 
+                session.bulk_save_objects(to_add_ch)
                 session.flush()
-                to_add = []
-                for channel in result:
-                    index = channels_snow.index(channel.snowflake_id)
-                    to_add.append(MessageChannelLOG(log_object.id, channel.id, channels[index].pop("reason", None) ) )
+                to_add_ch = [(x.id, x.snowflake_id) for x in to_add_ch]
+                to_add_ch_log = []
+                for channel in result + to_add_ch:
+                    index = channels_snow.index(channel[1])
+                    to_add_ch_log.append(MessageChannelLOG(log_object.id, channel[0], channels[index].pop("reason", None) ) )
 
-                session.add_all(to_add)
+                session.bulk_save_objects(to_add_ch_log)
 
+            start = time.time()
             session.commit()
+            print(f"Elapsed {(time.time()- start)*1000}")
 
 
 class MessageTYPE(LoggerSQL.Base):
