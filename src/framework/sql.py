@@ -11,7 +11,7 @@ from  sqlalchemy import (
                          JSON, SmallInteger, Integer, BigInteger, String, DateTime, Boolean,
                          Column, Identity, ForeignKey,
                          create_engine, text
-                        )
+                        )               
 from  sqlalchemy.orm import sessionmaker
 from  sqlalchemy.ext.declarative import declarative_base
 from  sqlalchemy_utils import create_database, database_exists
@@ -247,90 +247,96 @@ class LoggerSQL:
                                         see guild.xMESSAGE.generate_log_context() for more info.
         @Return: Returns bool value indicating success (True) or failure (False)."""
 
-        try:
-            sent_data = message_context.pop("sent_data")
-            guild_snowflake = guild_context.pop("id")
-            guild_name = guild_context.pop("name")
-            guild_type: str = guild_context.pop("type")
-            message_type: str = message_context.pop("type")
-            message_mode = message_context.pop("mode", None)
-            channels = message_context.pop("channels", None)
-            dm_success_info = message_context.pop("success_info", None)
+        # Parse the data
+        sent_data = message_context.get("sent_data")
+        guild_snowflake = guild_context.get("id")
+        guild_name = guild_context.get("name")
+        guild_type: str = guild_context.get("type")
+        message_type: str = message_context.get("type")
+        message_mode = message_context.get("mode", None)
+        channels = message_context.get("channels", None)
+        dm_success_info = message_context.get("success_info", None)
 
-            log_object = MessageLOG(sent_data=sent_data)
-            # Add DirectMESSAGE success information
-            if dm_success_info is not None:
-                log_object.dm_success = dm_success_info["success"]
-                if not log_object.dm_success:
-                    log_object.dm_reason = dm_success_info["reason"]
+        # Maximum 3 tries to succeed, turn off base logging if it doesn't work
+        for tries in range(3):
+            try:
+                log_object = MessageLOG(sent_data=sent_data)
+                # Add DirectMESSAGE success information
+                if dm_success_info is not None:
+                    log_object.dm_success = dm_success_info["success"]
+                    if not log_object.dm_success:
+                        log_object.dm_reason = dm_success_info["reason"]
 
-            with self.Session() as session:
-                # Map MessageTYPE to an identificator
-                log_object.message_type = self.MessageTYPE[message_type]
-    
-                if message_mode is not None:
-                    # If message_mode exists [DirectMESSAGE and TextMESSAGE] then map the message_mode to an identificator
-                    log_object.message_mode = self.MessageMODE[message_mode]
-                else:
-                    log_object.message_mode = None
+                with self.Session() as session:
+                    # Map MessageTYPE to an identificator
+                    log_object.message_type = self.MessageTYPE[message_type]
+        
+                    if message_mode is not None:
+                        # If message_mode exists [DirectMESSAGE and TextMESSAGE] then map the message_mode to an identificator
+                        log_object.message_mode = self.MessageMODE[message_mode]
+                    else:
+                        log_object.message_mode = None
 
-                # Update GUILD/USER table
-                result = None
-                if guild_snowflake not in self.GuildUSER:
-                    result = session.query(GuildUSER.id).filter(GuildUSER.snowflake_id == guild_snowflake).first()
-                    if result is not None:
-                        result = result[0]
-                        self.GuildUSER[guild_snowflake] = result
-                else:
-                    result = self.GuildUSER[guild_snowflake]
+                    # Update GUILD/USER table
+                    result = None
+                    if guild_snowflake not in self.GuildUSER:
+                        result = session.query(GuildUSER.id).filter(GuildUSER.snowflake_id == guild_snowflake).first()
+                        if result is not None:
+                            result = result[0]
+                            self.GuildUSER[guild_snowflake] = result
+                    else:
+                        result = self.GuildUSER[guild_snowflake]
 
-                if result is None:
-                    guild_type = self.GuildTYPE[guild_type]
-                    result = GuildUSER(guild_type, guild_snowflake, guild_name)
-                    session.add(result)
-                    session.flush()
-                    result = result.id
-                    self.GuildUSER[guild_snowflake] = result
-                    
-                # Reference the guild_id with id from GuildUSER lookup table
-                guild_lookup = result
-                log_object.guild_id = guild_lookup
-
-                # Save the message log
-                session.add(log_object)
-                session.flush()
-                if channels is not None:
-                    # If channels exist [TextMESSAGE and VoiceMESSAGE], update the CHANNELS table with the correct name
-                    # and only insert the channel Snowflake identificators into the message log
-                    channels = channels["successful"] + channels["failed"]
-                    channels_snow = [x["id"] for x in channels]
-
-                    # Query the channels and add missing ones
-                    result = session.query(CHANNEL.id, CHANNEL.snowflake_id).filter(CHANNEL.snowflake_id.in_(channels_snow)).all()
-                    result_snow = {x[1] for x in result}  # Snowflakes returned by querry
-                    to_add_ch = []
-                    for channel in channels:
-                        if channel["id"] not in result_snow:
-                            item = CHANNEL(channel["id"], channel["name"], guild_lookup) 
-                            to_add_ch.append(item)
-
-                    if len(to_add_ch) > 0:
-                        session.add_all(to_add_ch)
+                    if result is None:
+                        guild_type = self.GuildTYPE[guild_type]
+                        result = GuildUSER(guild_type, guild_snowflake, guild_name)
+                        session.add(result)
                         session.flush()
-                        to_add_ch = [(x.id, x.snowflake_id) for x in to_add_ch]
+                        result = result.id
+                        self.GuildUSER[guild_snowflake] = result
+                        
+                    # Reference the guild_id with id from GuildUSER lookup table
+                    guild_lookup = result
+                    log_object.guild_id = guild_lookup
 
-                    to_add_ch_log = []
-                    for channel in result + to_add_ch:
-                        index = channels_snow.index(channel[1])
-                        to_add_ch_log.append(MessageChannelLOG(log_object.id, channel[0], channels[index].pop("reason", None) ) )
+                    # Save the message log
+                    session.add(log_object)
+                    session.flush()
+                    if channels is not None:
+                        # If channels exist [TextMESSAGE and VoiceMESSAGE], update the CHANNELS table with the correct name
+                        # and only insert the channel Snowflake identificators into the message log
+                        channels = channels["successful"] + channels["failed"]
+                        channels_snow = [x["id"] for x in channels]
 
-                    session.bulk_save_objects(to_add_ch_log)
+                        # Query the channels and add missing ones
+                        result = session.query(CHANNEL.id, CHANNEL.snowflake_id).filter(CHANNEL.snowflake_id.in_(channels_snow)).all()
+                        result_snow = {x[1] for x in result}  # Snowflakes returned by querry
+                        to_add_ch = []
+                        for channel in channels:
+                            if channel["id"] not in result_snow:
+                                item = CHANNEL(channel["id"], channel["name"], guild_lookup) 
+                                to_add_ch.append(item)
 
-                session.commit()
-                return True
-        except Exception as ex:
-            trace(f"Unable to save to databse {self.database}, saving to file instead", TraceLEVELS.WARNING)
-            return False
+                        if len(to_add_ch) > 0:
+                            session.add_all(to_add_ch)
+                            session.flush()
+                            to_add_ch = [(x.id, x.snowflake_id) for x in to_add_ch]
+
+                        to_add_ch_log = []
+                        for channel in result + to_add_ch:
+                            index = channels_snow.index(channel[1])
+                            to_add_ch_log.append(MessageChannelLOG(log_object.id, channel[0], channels[index].pop("reason", None) ) )
+
+                        session.bulk_save_objects(to_add_ch_log)
+
+                    session.commit()
+                    return True
+            except:
+                pass
+                   
+        trace(f"Unable to save to databse {self.database}. Switching to file logging", TraceLEVELS.WARNING)
+        GLOBALS.manager = None  # Turn off sql logging -> switch to file logs
+        return False
 
 
 class MessageTYPE(LoggerSQL.Base):
