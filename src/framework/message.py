@@ -448,20 +448,8 @@ class TextMESSAGE(BaseMESSAGE):
         """
         succeeded_ch = [{"name": str(channel), "id" : channel.id} for channel in succeeded_ch]
         failed_ch = [{"name": str(entry["channel"]), "id" : entry["channel"].id, "reason": str(entry["reason"])} for entry in failed_ch]
-        if sent_embed is not None:
-            EmptyEmbed = discord.embeds.EmptyEmbed
-            sent_embed : dict = {
-                "title" : sent_embed.title,
-                "author" : sent_embed.author.name,
-                "thumbnail" : sent_embed.thumbnail.ur,
-                "image" : sent_embed.image.url,
-                "description" : sent_embed.description,
-                "color" : sent_embed.colour,
-                "fields" : sent_embed._fields
-            }
-            for key in sent_embed.copy():
-                if sent_embed[key] is EmptyEmbed:
-                    sent_embed.pop(key)
+
+        sent_embed = sent_embed.to_dict() if sent_embed is not None else None
 
         sent_files = [x.filename for x in sent_files]
         sent_data_context = {}
@@ -692,21 +680,8 @@ class DirectMESSAGE(BaseMESSAGE):
                 failed_ch: List[dict]   -- list of dictionaries contained the failed channel and the Exception
             @Info:
                 Generates a dictionary containing data that will be saved in the message log"""
-        if sent_embed is not None:
-            EmptyEmbed = discord.embeds.EmptyEmbed
-            sent_embed : dict = {
-                "title" : sent_embed.title,
-                "author" : sent_embed.author.name,
-                "thumbnail" : sent_embed.thumbnail.ur,
-                "image" : sent_embed.image.url,
-                "description" : sent_embed.description,
-                "color" : sent_embed.colour,
-                "fields" : sent_embed._fields
-            }
-            for key in sent_embed.copy():
-                if sent_embed[key] is EmptyEmbed:
-                    sent_embed.pop(key)
-
+        
+        sent_embed = sent_embed.to_dict() if sent_embed is not None else None
         sent_files = [x.filename for x in sent_files]
         if not success_context["success"]:
             success_context["reason"] = str(success_context["reason"])

@@ -90,10 +90,11 @@ class BaseGUILD:
         }
 
         try:
-            if sql.GLOBALS.enabled:
-                manager = sql.get_sql_manager()
-                manager.save_log(guild_context, message_context)
-            else:
+            manager = sql.get_sql_manager()
+            if (
+                manager is None or # Short circuit evaluation
+                not manager.save_log(guild_context, message_context)
+            ):
                 timestruct = time.localtime()
                 timestamp = "{:02d}.{:02d}.{:04d} {:02d}:{:02d}:{:02d}".format(timestruct.tm_mday,
                                                                             timestruct.tm_mon,
