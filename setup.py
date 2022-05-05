@@ -6,16 +6,14 @@ long_description = None
 with open("./README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
+req = None
+with open("./requirements.txt" , 'r', encoding="utf-8") as rf:
+    req = rf.readlines()
+
 __metadata__ = \
 {
     "version" :  "1.9",
-    "requirements" : [
-        "aiohttp>=3.6.0,<3.9.0",
-        "PyNaCl",
-        "pymssql",
-        "sqlalchemy",
-        "sqlalchemy_utils"
-    ],
+    "requirements" : req,
     "minimum_py_version" :  "3.8",
 }
 
