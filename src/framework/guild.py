@@ -40,9 +40,13 @@ class BaseGUILD:
         "vc_messages"
     )
     __logname__ = "BaseGUILD"
-    
+
     @property
     def log_file_name(self):
+        """~ property (getter) ~
+        @Info: The method returns a string that transforms the xGUILD's discord name into
+               a string that contains only allowed character. This is a method instead of
+               property because the name can change overtime."""
         raise NotImplementedError
 
     def __init__(self,
@@ -81,8 +85,8 @@ class BaseGUILD:
         Param:
             - data_context  - str representation of sent data, which is return data of xxxMESSAGE.send()
         Info:   Generates a log of a xxxxMESSAGE send attempt
-        """      
-        
+        """
+
         guild_context = {
             "name" : str(self.apiobject),
             "id" : self.apiobject.id,
@@ -165,6 +169,10 @@ class GUILD(BaseGUILD):
 
     @property
     def log_file_name(self):
+        """~ property (getter) ~
+        @Info: The method returns a string that transforms the GUILD's discord name into
+               a string that contains only allowed character. This is a method instead of
+               property because the name can change overtime."""
         return "".join(char if char not in C_FILE_NAME_FORBIDDEN_CHAR else "#" for char in self.apiobject.name) + ".json"
 
     def __init__(self,
@@ -220,13 +228,11 @@ class GUILD(BaseGUILD):
         return False
 
     async def advertise(self,
-                        mode: Literal["text", "voice"]):
-        """
-            ~ advertise ~
+                        mode: Literal["text", "voice"]) -> None:
+        """~ advertise ~
             @Info:
             This is the main coroutine that is responsible for sending all the messages to this specificc guild,
-            it is called from the core module's advertiser task
-        """
+            it is called from the core module's advertiser task"""
         for message in self.t_messages if mode == "text" else self.vc_messages:
             if message.is_ready():
                 message_ret = await message.send()
@@ -254,14 +260,17 @@ class USER(BaseGUILD):
         "apiobject",
         "_generate_log",
         "t_messages",
-        "vc_messages",
         "__messages"
     )
-    
+
     __logname__ = "USER"
 
     @property
     def log_file_name(self):
+        """~ property (getter) ~
+        @Info: The method returns a string that transforms the USER's discord name into
+               a string that contains only allowed character. This is a method instead of
+               property because the name can change overtime."""
         return "".join(char if char not in C_FILE_NAME_FORBIDDEN_CHAR else "#" for char in f"{self.apiobject.display_name}#{self.apiobject.discriminator}") + ".json"
 
     def __init__(self,
@@ -297,15 +306,16 @@ class USER(BaseGUILD):
         return False
 
     async def advertise(self,
-                        mode: Literal["text", "voice"]):
+                        mode: Literal["text", "voice"]) -> None:
         """
             ~ advertise ~
             @Info:
             This is the main coroutine that is responsible for sending all the messages to this specificc guild,
             it is called from the core module's advertiser task
         """
-        for message in self.t_messages if mode == "text" else self.vc_messages:
-            if message.is_ready():
-                message_ret = await message.send()
-                if self._generate_log and message_ret is not None:
-                    self.generate_log(message_ret)
+        if mode == "text":  # Does not have voice messages, only text based (DirectMESSAGE)
+            for message in self.t_messages:
+                if message.is_ready():
+                    message_ret = await message.send()
+                    if self._generate_log and message_ret is not None:
+                        self.generate_log(message_ret)

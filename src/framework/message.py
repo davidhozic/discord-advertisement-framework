@@ -67,13 +67,11 @@ class _:
     __logname__ = "clear-send"
 
 class BaseMESSAGE:
-    __logname__ = "BaseMESSAGE"
-    """
-        ~  BaseMESSAGE  ~
+    """~  BaseMESSAGE  ~
         @Info:
         This is the base class for all the different classes that
-        represent a message you want to be sent into discord.
-    """
+        represent a message you want to be sent into discord."""
+
     __slots__ = (
         "randomized_time",
         "period",
@@ -82,6 +80,7 @@ class BaseMESSAGE:
         "force_retry",
         "data"
     )
+
     # The "__valid_data_types__" should be implemented in the INHERITED classes.
     # The set contains all the data types that the class is allowed to accept, this variable
     # is then checked for allowed data types in the "initialize" function bellow.
@@ -106,20 +105,19 @@ class BaseMESSAGE:
         self.data = data
 
     def generate_log_context(self):
-        """ ~ generate_log_context ~
-            @Info:
+        """ ~ method ~
+        @Name:generate_log_context
+        @Info:
             This method is used for generating a dictionary (later converted to json) of the
             data that is to be included in the message log. This is to be implemented inside the
-            inherited classes.
-        """
+            inherited classes."""
         raise NotImplementedError
 
     def is_ready(self) -> bool:
-        """
-        Name:   is_ready
-        Param:  void
-        Info:   This
-        """
+        """ ~ method ~
+        @Name:   is_ready
+        @Param:  void
+        @Info:   This method returns bool indicating if message is ready to be sent"""
         return not self.force_retry["ENABLED"] and self.timer.elapsed() > self.period or self.force_retry["ENABLED"] and self.timer.elapsed() > self.force_retry["TIME"]
 
     async def send_channel(self) -> dict:
@@ -133,7 +131,7 @@ class BaseMESSAGE:
         raise NotImplementedError
 
     async def send(self) -> dict:
-        """
+        """ ~ async method ~
         Name:   send to channels
         Param:  void
         Info:   This function should be implemented in the inherited class
@@ -141,20 +139,18 @@ class BaseMESSAGE:
         raise NotImplementedError
 
     async def initialize_channels(self) -> bool:
-        """
-            ~  initialize_channels  ~
-            This method initializes the implementation specific
-            api objects and checks for the correct channel inpit context.
-        """
+        """ ~ async method ~
+        @Name: initialize_channels
+        @Info: This method initializes the implementation specific
+               api objects and checks for the correct channel inpit context."""
         raise NotImplementedError
 
     async def initialize_data(self) -> bool:
-        """
-            ~  initialize_data  ~
-            This method checks for the correct data input to the xxxMESSAGE
-            object. The expected datatypes for specific implementation is
-            defined thru the static variable __valid_data_types__
-        """
+        """ ~ async method ~
+        @Name:  initialize_data
+        @Info:  This method checks for the correct data input to the xxxMESSAGE
+                object. The expected datatypes for specific implementation is
+                defined thru the static variable __valid_data_types__"""
         # Check for correct data types of the MESSAGE.data parameter
         if not isinstance(self.data, FunctionBaseCLASS):
             # This is meant only as a pre-check if the parameters are correct so you wouldn't eg. start
@@ -192,14 +188,14 @@ class BaseMESSAGE:
         return True
 
     async def initialize(self, **options) -> bool:
-        """
-            ~ initialize ~
-            @Info:
+        """ ~ async method ~
+        @Name: initialize
+        @Info:
             The initialize method initilizes the message object.
-            @Params:
-            - options ~ custom keyword arguments, this differes from inher. to inher. class that
-            is inherited from the BaseGUILD class and must be matched in the inherited class from BaseMESSAGE that
-            you want to use in that specific inherited class from BaseGUILD class"""
+        @Params:
+            options :: custom keyword arguments, this differes from inher. to inher. class that
+                       is inherited from the BaseGUILD class and must be matched in the inherited class from BaseMESSAGE that
+                       you want to use in that specific inherited class from BaseGUILD class"""
         if not await self.initialize_channels(**options):
             return False
 
@@ -210,24 +206,24 @@ class BaseMESSAGE:
 
 @sql.register_type("MessageTYPE")
 class VoiceMESSAGE(BaseMESSAGE):
-    """
+    """ ~ BaseMESSAGE class ~
     Name: VoiceMESSAGE
     Info: The VoiceMESSAGE object containts parameters which describe behaviour and data that will be sent to the channels.
     Params:
-    - Start Period , End Period (start_period, end_period) - These 2 parameters specify the period on which the messages will be played:
-    Start Period can be either:
-        - None - Messages will be sent on intervals specified by End period,
-        - Integer >= 0 - Messages will be sent on intervals randomly chosen between Start period and End period,
-          where the randomly chosen intervals will be re-randomized after each sent message.
-    - Data (data) - The data parameter is the actual data that will be sent using discord's API. The data types of this parameter can be:
-        - Path to an audio file (str)
-        - Function that accepts any amount of parameters and returns any of the above types.
-          To pass a function, YOU MUST USE THE framework.data_function decorator on the function before passing the function to the framework.
-    - Channel IDs (channel_ids) - List of IDs of all the channels you want data to be sent into.
-    - Start Now (start_now) - A bool variable that can be either True or False. If True, then the framework will send the message
-      as soon as it is run and then wait it's period before trying again. If False, then the message will not be sent immediatly after framework is ready,
-      but will instead wait for the period to elapse.
-    """
+        Start Period , End Period (start_period, end_period) :: These 2 parameters specify the period on which the messages will be played:
+            Start Period can be either:
+                :: None :: Messages will be sent on intervals specified by End period,
+                :: Integer >= 0 :: Messages will be sent on intervals randomly chosen between Start period and End period,
+                                   where the randomly chosen intervals will be re::randomized after each sent message.
+        Data (data) :: The data parameter is the actual data that will be sent using discord's API. The data types of this parameter can be:
+                        - Path to an audio file (str)
+                        - Function that accepts any amount of parameters and returns any of the above types.
+                          To pass a function, YOU MUST USE THE framework.data_function decorator on the function before passing the function to the framework.
+        Channel IDs (channel_ids) :: List of IDs of all the channels you want data to be sent into.
+        Start Now (start_now) :: A bool variable that can be either True or False. If True, then the framework will send the message
+                                 as soon as it is run and then wait it's period before trying again. If False, then the message will not be sent immediatly after framework is ready,
+                                 but will instead wait for the period to elapse."""
+
     __slots__ = (
         "randomized_time",
         "period",
@@ -255,14 +251,15 @@ class VoiceMESSAGE(BaseMESSAGE):
                              sent_audio: AUDIO,
                              succeeded_ch: List[discord.VoiceChannel],
                              failed_ch: List[dict]):
-        """ ~ generate_log_context ~
-            @Param:
-                sent_audio: AUDIO -- The audio that was streamed to the channels
-                succeeded_ch: List[discord.VoiceChannel] -- list of the successfuly streamed channels,
-                failed_ch: List[dict]   -- list of dictionaries contained the failed channel and the Exception
-            @Info:
-                Generates a dictionary containing data that will be saved in the message log
-        """
+        """ ~ method ~
+        @Name: generate_log_context
+        @Param:
+            sent_audio: AUDIO -- The audio that was streamed to the channels
+            succeeded_ch: List[discord.VoiceChannel] -- list of the successfuly streamed channels,
+            failed_ch: List[dict]   -- list of dictionaries contained the failed channel and the Exception
+        @Info:
+            Generates a dictionary containing data that will be saved in the message log"""
+
         succeeded_ch = [{"name": str(channel), "id" : channel.id} for channel in succeeded_ch]
         failed_ch = [{"name": str(entry["channel"]), "id" : entry["channel"].id, "reason": str(entry["reason"])} for entry in failed_ch]
         return {
@@ -277,6 +274,11 @@ class VoiceMESSAGE(BaseMESSAGE):
         }
 
     async def initialize_channels(self) -> bool:
+        """ ~ async method ~
+        @Name: initialize_channels
+        @Info: This method initializes the implementation specific
+               api objects and checks for the correct channel inpit context.
+        @Return: Bool - True on success"""
         ch_i = 0
         cl = client.get_client()
         while ch_i < len(self.channels):
@@ -298,6 +300,16 @@ class VoiceMESSAGE(BaseMESSAGE):
     async def send_channel(self,
                            channel: discord.VoiceChannel,
                            audio: AUDIO) -> dict:
+        """ ~ async method ~
+        @Name : send_channel
+        @Info:
+            Streams audio to specific channel
+        @Return:
+        - dict:
+            - "success" : bool ~ True if successful, else False
+            - "reason"  : Exception ~ Only present if "success" is False,
+                            contains the Exception returned by the send attempt."""
+
         stream = None
         voice_client = None
         try:
@@ -322,14 +334,13 @@ class VoiceMESSAGE(BaseMESSAGE):
                 await voice_client.disconnect()
 
     async def send(self) -> Union[dict,  None]:
-        """"
-            ~  send  ~
-            @Info:
-                Streams audio into the chanels
-            @Return:
-                Returns a dictionary generated by the generate_log_context method
-                or the None object if message wasn't ready to be sent
-        """
+        """" ~ async method ~
+        @Name send
+        @Info:
+            Streams audio into the chanels
+        @Return:
+            Returns a dictionary generated by the generate_log_context method
+            or the None object if message wasn't ready to be sent"""
         self.timer.reset()
         self.timer.start()
         self.force_retry["ENABLED"] = False
@@ -379,7 +390,7 @@ class VoiceMESSAGE(BaseMESSAGE):
 
 @sql.register_type("MessageTYPE")
 class TextMESSAGE(BaseMESSAGE):
-    """
+    """ ~ BaseMESSAGE class ~
     Name: TextMESSAGE
     Info: The TextMESSAGE object containts parameters which describe behaviour and data that will be sent to the channels.
     Params:
@@ -402,8 +413,7 @@ class TextMESSAGE(BaseMESSAGE):
                         a new one sent.
     - Start Now (start_now) - A bool variable that can be either True or False. If True, then the framework will send the message
       as soon as it is run and then wait it's period before trying again. If False, then the message will not be sent immediatly after framework is ready,
-      but will instead wait for the period to elapse.
-    """
+      but will instead wait for the period to elapse."""
     __slots__ = (
         "randomized_time",
         "period",
@@ -436,16 +446,17 @@ class TextMESSAGE(BaseMESSAGE):
                              sent_files : List[FILE],
                              succeeded_ch: List[Union[discord.TextChannel, discord.Thread]],
                              failed_ch: List[dict]):
-        """ ~ generate_log_context ~
-            @Param:
-                sent_text : str -- The text that was sent
-                sent_embed : EMBED  -- The embed that was sent
-                sent_files : List[FILE] -- List of files that were sent
-                succeeded_ch: List[discord.VoiceChannel] -- list of the successfuly streamed channels,
-                failed_ch: List[dict]   -- list of dictionaries contained the failed channel and the Exception
-            @Info:
-                Generates a dictionary containing data that will be saved in the message log
-        """
+        """ ~ method ~
+        @Name : generate_log_context
+        @Param:
+            sent_text : str -- The text that was sent
+            sent_embed : EMBED  -- The embed that was sent
+            sent_files : List[FILE] -- List of files that were sent
+            succeeded_ch: List[discord.VoiceChannel] -- list of the successfuly streamed channels,
+            failed_ch: List[dict]   -- list of dictionaries contained the failed channel and the Exception
+        @Info:
+            Generates a dictionary containing data that will be saved in the message log"""
+
         succeeded_ch = [{"name": str(channel), "id" : channel.id} for channel in succeeded_ch]
         failed_ch = [{"name": str(entry["channel"]), "id" : entry["channel"].id, "reason": str(entry["reason"])} for entry in failed_ch]
 
@@ -472,6 +483,11 @@ class TextMESSAGE(BaseMESSAGE):
         }
 
     async def initialize_channels(self) -> bool:
+        """ ~ async method ~
+        @Name: initialize_channels
+        @Info: This method initializes the implementation specific
+               api objects and checks for the correct channel inpit context.
+        @Return: Bool - True on success"""
         ch_i = 0
         cl = client.get_client()
         while ch_i < len(self.channels):
@@ -495,6 +511,15 @@ class TextMESSAGE(BaseMESSAGE):
                            text: str,
                            embed: EMBED,
                            files: List[FILE]) -> dict:
+        """ ~ async method ~
+        @Name : send_channel
+        @Info:
+            Sends data to specific channel.
+        @Return:
+        - dict:
+            - "success" : bool ~ True if successful, else False
+            - "reason"  : Exception ~ Only present if "success" is False,
+                            contains the Exception returned by the send attempt."""
 
         if self.mode == "clear-send" and self.sent_messages[channel.id] is not None:
             for tries in range(3):
@@ -549,14 +574,14 @@ class TextMESSAGE(BaseMESSAGE):
                     return {"success" : False, "reason" : ex}
 
     async def send(self) -> Union[dict,  None]:
-        """"
-            ~  send  ~
-            @Info:
-                Sends the data into the channels
-            @Return:
-                Returns a dictionary generated by the generate_log_context method
-                or the None object if message wasn't ready to be sent
-        """
+        """"~ async method ~
+        @Name: send
+        @Info:
+            Sends the data into the channels
+        @Return:
+            Returns a dictionary generated by the generate_log_context method
+            or the None object if message wasn't ready to be sent"""
+
         self.timer.reset()
         self.timer.start()
         self.force_retry["ENABLED"] = False
@@ -620,25 +645,25 @@ class TextMESSAGE(BaseMESSAGE):
 
 @sql.register_type("MessageTYPE")
 class DirectMESSAGE(BaseMESSAGE):
-    """~ BaseMESSAGE ~
-        @Info:
-        DirectMESSAGE represents a message that will be sent into direct messages
-        @Params:
-        - start_period, end_period:
-            dictate the sending period in seconds, if both are > 0, then the period is randomized
-            each send and that period will be between the specifiec parameters. If start_period is None,
-            the period will be equal to end_period.
-        - data:
-            Represents data that will be sent into the channels, the data types can be:
-            - str, EMBED, FILE, list of str, EMBED, FILE or a function (refer to README)
-        - mode:
-            Mode parameter dictates the behaviour of the way data is send. It can be:
-            - "send" ~ Each period a new message will be send to Discord,
-            - "edit" ~ Each period the previous message will be edited, or a new sent if the previous message does not exist/was deleted
-            - "clear-send" ~ Each period the previous message will be cleared and a new one sent to the channels.
-        - start_now:
-            Dictates if the message should be sent immediatly after framework start or if it should wait it's period first and then send
-        """
+    """ ~ BaseMESSAGE class ~
+    @Name: DirectMESSAGE
+    @Info:
+    DirectMESSAGE represents a message that will be sent into direct messages
+    @Params:
+    - start_period, end_period:
+        dictate the sending period in seconds, if both are > 0, then the period is randomized
+        each send and that period will be between the specifiec parameters. If start_period is None,
+        the period will be equal to end_period.
+    - data:
+        Represents data that will be sent into the channels, the data types can be:
+        - str, EMBED, FILE, list of str, EMBED, FILE or a function (refer to README)
+    - mode:
+        Mode parameter dictates the behaviour of the way data is send. It can be:
+        - "send" ~ Each period a new message will be send to Discord,
+        - "edit" ~ Each period the previous message will be edited, or a new sent if the previous message does not exist/was deleted
+        - "clear-send" ~ Each period the previous message will be cleared and a new one sent to the channels.
+    - start_now:
+        Dictates if the message should be sent immediatly after framework start or if it should wait it's period first and then send"""
 
     __slots__ = (
         "randomized_time",
@@ -671,16 +696,18 @@ class DirectMESSAGE(BaseMESSAGE):
                              sent_embed : EMBED,
                              sent_files : List[FILE],
                              **success_context):
-        """ ~ generate_log_context ~
-            @Param:
-                sent_text : str -- The text that was sent
-                sent_embed : EMBED  -- The embed that was sent
-                sent_files : List[FILE] -- List of files that were sent
-                succeeded_ch: List[discord.VoiceChannel] -- list of the successfuly streamed channels,
-                failed_ch: List[dict]   -- list of dictionaries contained the failed channel and the Exception
-            @Info:
-                Generates a dictionary containing data that will be saved in the message log"""
-        
+
+        """ ~ method ~
+        @Name: generate_log_context
+        @Param:
+            sent_text : str -- The text that was sent
+            sent_embed : EMBED  -- The embed that was sent
+            sent_files : List[FILE] -- List of files that were sent
+            succeeded_ch: List[discord.VoiceChannel] -- list of the successfuly streamed channels,
+            failed_ch: List[dict]   -- list of dictionaries contained the failed channel and the Exception
+        @Info:
+            Generates a dictionary containing data that will be saved in the message log"""
+
         sent_embed = sent_embed.to_dict() if sent_embed is not None else None
         sent_files = [x.filename for x in sent_files]
         if not success_context["success"]:
@@ -705,14 +732,15 @@ class DirectMESSAGE(BaseMESSAGE):
 
     async def initialize_channels(self,
                                   user_id) -> bool:
-        """~ initialize_channels ~
+        """ ~ async method ~
+        @Name: initialize_channels
         @Info:
         The method creates a direct message channel and
         returns True on success or False on failure
         @Parameters:
         - options ~ dictionary containing key with user_id
-                    (sent to by the USER instance's initialize method)
-        """
+                    (sent to by the USER instance's initialize method)"""
+
         cl = client.get_client()
         self.dm_channel = cl.get_user(user_id)
         if self.dm_channel is None:
@@ -723,16 +751,16 @@ class DirectMESSAGE(BaseMESSAGE):
                            text: str,
                            embed: EMBED,
                            files: List[FILE]) -> dict:
-        """
-            ~ send_channel ~
-            @Info:
-            Sends data to the DM channel (user).
-            @Return:
-            - dict:
-                - "success" : bool ~ True if successful, else False
-                - "reason"  : Exception ~ Only present if "success" is False,
-                              contains the Exception returned by the send attempt.
-        """
+        """ ~ async method ~
+        @Name : send_channel
+        @Info:
+        Sends data to the DM channel (user).
+        @Return:
+        - dict:
+            - "success" : bool ~ True if successful, else False
+            - "reason"  : Exception ~ Only present if "success" is False,
+                            contains the Exception returned by the send attempt."""
+
         if self.mode == "clear-send" and self.previous_message is not None:
             for tries in range(3):
                 try:
@@ -786,14 +814,14 @@ class DirectMESSAGE(BaseMESSAGE):
                     return {"success" : False, "reason" : ex}
 
     async def send(self) -> Union[dict, None]:
-        """"
-            ~  send  ~
-            @Info:
-                Sends the data into the DM channel of the user.
-            @Return:
-                Returns a dictionary generated by the generate_log_context method
-                or the None object if message wasn't ready to be sent
-        """
+        """" ~ async method ~
+        @Name: send
+        @Info:
+            Sends the data into the DM channel of the user.
+        @Return:
+            Returns a dictionary generated by the generate_log_context method
+            or the None object if message wasn't ready to be sent"""
+
         self.timer.reset()
         self.timer.start()
         self.force_retry["ENABLED"] = False
