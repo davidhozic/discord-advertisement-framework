@@ -8,6 +8,7 @@ from    .dtypes import *
 from    .tracing import *
 from    .const import *
 from    . import client
+from    . import sql
 import  random
 import  time
 import  asyncio
@@ -54,8 +55,19 @@ class TIMER:
         "Reset the timer"
         self.running = False
 
+# Dummy classes for message mods, to use with sql.register_type decorator
+@sql.register_type("MessageMODE")
+class _:
+    __logname__ = "send"
+@sql.register_type("MessageMODE")
+class _:
+    __logname__ = "edit"
+@sql.register_type("MessageMODE")
+class _:
+    __logname__ = "clear-send"
 
 class BaseMESSAGE:
+    __logname__ = "BaseMESSAGE"
     """
         ~  BaseMESSAGE  ~
         @Info:
@@ -196,7 +208,7 @@ class BaseMESSAGE:
 
         return True
 
-
+@sql.register_type("MessageTYPE")
 class VoiceMESSAGE(BaseMESSAGE):
     """
     Name: VoiceMESSAGE
@@ -226,6 +238,7 @@ class VoiceMESSAGE(BaseMESSAGE):
         "force_retry",
     )
 
+    __logname__ = "VoiceMESSAGE"
     __valid_data_types__ = {AUDIO}  # This is used in the BaseMESSAGE.initialize() to check if the passed data parameters are of correct type
 
     def __init__(self, start_period: Union[float, None],
@@ -253,7 +266,9 @@ class VoiceMESSAGE(BaseMESSAGE):
         succeeded_ch = [{"name": str(channel), "id" : channel.id} for channel in succeeded_ch]
         failed_ch = [{"name": str(entry["channel"]), "id" : entry["channel"].id, "reason": str(entry["reason"])} for entry in failed_ch]
         return {
-            "streamed_audio" : sent_audio.filename,
+            "sent_data": {
+                "streamed_audio" : sent_audio.filename
+            },
             "channels": {
                 "successful" : succeeded_ch,
                 "failed": failed_ch
@@ -361,6 +376,8 @@ class VoiceMESSAGE(BaseMESSAGE):
             return self.generate_log_context(audio_to_stream, succeded_channels, errored_channels)
         return None
 
+
+@sql.register_type("MessageTYPE")
 class TextMESSAGE(BaseMESSAGE):
     """
     Name: TextMESSAGE
@@ -398,7 +415,7 @@ class TextMESSAGE(BaseMESSAGE):
         "force_retry",
         "sent_messages"
     )
-
+    __logname__ = "TextMESSAGE"
     __valid_data_types__ = {str, EMBED, FILE}
 
     def __init__(self, start_period: Union[float, None],
@@ -431,20 +448,8 @@ class TextMESSAGE(BaseMESSAGE):
         """
         succeeded_ch = [{"name": str(channel), "id" : channel.id} for channel in succeeded_ch]
         failed_ch = [{"name": str(entry["channel"]), "id" : entry["channel"].id, "reason": str(entry["reason"])} for entry in failed_ch]
-        if sent_embed is not None:
-            EmptyEmbed = discord.embeds.EmptyEmbed
-            sent_embed : dict = {
-                "title" : sent_embed.title,
-                "author" : sent_embed.author.name,
-                "thumbnail" : sent_embed.thumbnail.ur,
-                "image" : sent_embed.image.url,
-                "description" : sent_embed.description,
-                "color" : sent_embed.colour,
-                "fields" : sent_embed._fields
-            }
-            for key in sent_embed.copy():
-                if sent_embed[key] is EmptyEmbed:
-                    sent_embed.pop(key)
+
+        sent_embed = sent_embed.to_dict() if sent_embed is not None else None
 
         sent_files = [x.filename for x in sent_files]
         sent_data_context = {}
@@ -613,6 +618,7 @@ class TextMESSAGE(BaseMESSAGE):
         return None
 
 
+@sql.register_type("MessageTYPE")
 class DirectMESSAGE(BaseMESSAGE):
     """~ BaseMESSAGE ~
         @Info:
@@ -645,7 +651,9 @@ class DirectMESSAGE(BaseMESSAGE):
         "previous_message",
         "dm_channel"
     )
+    __logname__ = "DirectMESSAGE"
     __valid_data_types__ = {str, EMBED, FILE}
+
     def __init__(self,
                  start_period: Union[float, None],
                  end_period: float,
@@ -672,21 +680,8 @@ class DirectMESSAGE(BaseMESSAGE):
                 failed_ch: List[dict]   -- list of dictionaries contained the failed channel and the Exception
             @Info:
                 Generates a dictionary containing data that will be saved in the message log"""
-        if sent_embed is not None:
-            EmptyEmbed = discord.embeds.EmptyEmbed
-            sent_embed : dict = {
-                "title" : sent_embed.title,
-                "author" : sent_embed.author.name,
-                "thumbnail" : sent_embed.thumbnail.ur,
-                "image" : sent_embed.image.url,
-                "description" : sent_embed.description,
-                "color" : sent_embed.colour,
-                "fields" : sent_embed._fields
-            }
-            for key in sent_embed.copy():
-                if sent_embed[key] is EmptyEmbed:
-                    sent_embed.pop(key)
-
+        
+        sent_embed = sent_embed.to_dict() if sent_embed is not None else None
         sent_files = [x.filename for x in sent_files]
         if not success_context["success"]:
             success_context["reason"] = str(success_context["reason"])

@@ -41,9 +41,12 @@
 - [**Decorators**](#decorators)
   - [framework.**data_function**](#frameworkdata_function)
 - [**Logging**](#logging)
-  - [**LOG OF SENT MESSAGES**](#log-of-sent-messages)
+  - [**Relational Database Log**](#relational-database-log)
+    - [**ER diagram of the logs**](#er-diagram-of-the-logs)
+    - [**Tables**:](#tables)
+  - [**JSON File Log**](#json-file-log)
     - [**Example**](#example-4)
-  - [**Trace messages**](#trace-messages)
+- [**Trace messages**](#trace-messages)
 - [**Regarding Pycord/discord.py**](#regarding-pycorddiscordpy)
 
 <br>
@@ -156,10 +159,12 @@ framework.GUILD(
 
 ## framework.**USER**
 The **USER** object represents a user to which **direct messages** will be sent.
+
 ### **Parameters**
 - **user_id** - identificator which can be obtain by enabling [developer mode](https://techswift.org/2020/09/17/how-to-enable-developer-mode-in-discord/) in discord's settings and afterwards right-clicking on the server/guild icon in the server list and clicking **"Copy ID"**,
 - **messages_to_send** - List of [**DirectMESSAGE**](#frameworkdirectmessage) objects
 - **generate_log** - bool variable, if True it will generate a file log for each message send attempt.
+
 ### **Example**
 ```py
 framework.USER(
@@ -198,6 +203,7 @@ this is more detaily defined in the inherited classes.
 
 ## framework.**TextMESSAGE**
 The **Text**MESSAGE class represents a message that will be sent into **text channels**.
+
 ### **Parameters**
 Additionaly to the [common parameters](#common-parameters) the **Text**MESSAGE accepts the following parameters:
 - **data** - The data parameter is the actual data that will be sent using discord's API. The **data types** of this parameter can be: 
@@ -426,8 +432,90 @@ It is used to fully shutdown the framework and then **exit** out of the program.
 <br>
 
 #  **Logging**
-## **LOG OF SENT MESSAGES**
 The framework allows to log sent messages for each GUILD/USER (if you set the "generate_log" to True inside the [**GUILD**](#frameworkguild) or [**USER**](#frameworkuser) object).
+There are 2 different types of logs:
+- [Relational database logs (MSSQL)](#relational-database-log)
+- [JSON file logs](#json-file-log)
+ 
+## **Relational Database Log**
+This type of logging enables saving logs to a remote server inside the database.<br>
+In addition to being smaller in size, they are also easier to manage and view, it also allows
+remote access to logs without using FTP or SSH.<br>
+### **ER diagram of the logs**
+![ER SQL diagram](documentation_dep/er_diagram_rdb.jpg)
+
+### **Tables**:
+*(If the attribute is underlined, it means it is a primary key).*
+- MessageLOG: <a id="dbmessagelog"></a><br>
+  This table contains the actual logs of sent messages, if the message type is **DirectMESSAGE**, then all the information is stored in this table.
+  If the types are **Voice/Text**MESSAGE, then part of the log (to which channels it sent), is saved in the [**MessageChannelLOG**](#dbmessagechannellog) table.
+
+  Attributes:
+  - <u>id</u>: int ~ This is an internal identificator of the log inside the database.
+  - sent_data: json ~ Contains the JSON representation of data that was sent using the message
+  - message_type: int ~ Foreign key identificator pointing to a entry inside the [**MessageTYPE**](#dbmessagetype) table.
+  - guild_id: int ~ (Internal id) Foreign key pointing to [**GuildUSER**](#dbguilduser) table
+  - message_mode: int ~ Foreign key pointing to [**MessageMODE**](#dbmessagemode) table. This is non-null only for [**DirectMESSAGE**](#frameworkdirectmessage) and [**TextMESSAGE**](#frameworktextmessage)
+  - dm_success: bit ~ Only for [**DirectMESSAGE**](#frameworkdirectmessage). This is set to 1 if the sent attempt was **successful** or 0 if the sent attempt was **unsuccessful**
+  - dM_reason: str ~  This not null only if **dm_success** is set to 0, in that case it contains the string representation of the error that caused the message send attempt to be unsuccessful.
+  - timestamp: datetime ~ The timestamp of the message send attempt.
+  
+  <br>
+- MessageTYPE: <a id="dbmessagetype"></a> <br>
+  This is a lookup table containing the the different message types that exist within the framework (xMESSAGE).
+  
+  Attributes:
+  - <u>id</u>: int ~ Internal identificator of the message type inside the database.
+  - name: str ~ The name of the actual message type.
+
+  <br>
+- GuildUSER: <a id="dbguilduser"></a> <br>
+  The table contains all the guilds/users the framework ever generated a log for.
+
+  Attributes:
+  - <u>id</u>: int ~ Internal identificator of the Guild/User inside the database.
+  - snowflake_id: int ~ The discord (snowflake) identificator of the User/Guild
+  - name: str ~ Name of the Guild/User
+  - guild_type: int ~ Foreign key pointing to [**GuildTYPE**](#dbguildtype) table.
+ 
+  <br>
+- MessageMODE: <a id="dbmessagemode"></a> <br>
+  This is a lookup table containing the the different message modes available by **Text/Direct**MESSAGE, it is set to null for **Voice**MESSAGE.
+  
+  Attributes:
+  - <u>id</u>: int ~ Internal identificator of the message mode inside the database.
+  - name: str ~ The name of the actual message mode.
+
+  <br>
+- GuildTYPE: <a id="dbguildtype"></a> <br>
+  This is a lookup table containing types of the guilds inside the framework (xGUILD).
+
+  Attributes:
+  - <u>id</u>: int ~  Internal identificator of the guild type inside the database.
+  - name: str ~ The name of the guild type.
+
+  <br>
+- CHANNEL: <a id="dbchannel"></a> <br>
+  The table contains all the channels that the framework ever advertised into.
+
+  Attributes:
+  - <u>id</u>: int ~ Internal identificator of the channel inside the database
+  - snowflake_id: int ~ The discord (snowflake) identificator representing specific channel
+  - name: str ~ The name of the channel
+  - guild_id: int ~ Foreign key pointing to a row inside the [GuildUSER](#dbguilduser) table. It points to a guild that the channel is part of.
+
+  <br>
+- MessageChannelLOG: <a id="dbmessagechannellog"></a> <br>
+  Since messages can send into multiple channels, each MessageLOG has multiple channels which
+  cannot be stored inside the [**MessageLOG**](#dbmessagelog) unless json was to be used.
+  This is why this table exists. It contains channels of each [**MessageLOG**](#dbmessagelog).
+
+  Attributes:
+  - <u>log_id</u>: int ~ Foreign key pointing to a row inside [**MessageLOG**](#dbmessagelog) (to which log this channel log belongs to).
+  - <u>channel_id</u>  ~ Foreign key pointing to a row inside the [**CHANNEL**](#dbchannel) table.
+
+
+## **JSON File Log**
 The logs are writen in the JSON format and saved into a .json file, that has the name of the guild or an user you were sending messages into.
 The .json files are fragmantated by day and stored into folder "Year/Month/Day", this means that each day a new json file will be generated for that specific day for easier managing,
 for example, if today is 13.07.2022, the log will be saved into the file that is located in 
@@ -438,7 +526,7 @@ History
 │       └───13
 |           └─── #David's dungeon.json
 ```
-
+The logs are saved in the following format (json keys):
 - name  -- The display name of the guild or an user
 - id    -- The discord's snowflake ID of the guild or the user
 - type  -- The type of object that created this log ([GUILD](#frameworkguild) or [USER](#frameworkuser))
@@ -579,7 +667,7 @@ History
 }
 ```
 
-## **Trace messages**
+# **Trace messages**
 In case you feel like the framework is not doing it's job properly, eg. you feel like some messages aren't being send or the framework just stops without advertising, the framework offers **console logging** of **trace** messages. Trace messages can be **informative** (eg. which account is logged in), they can be **warnings** (eg. some channels could not be found),<br>
 or they can be **errors**. <br>
 Most of the trace messages won't stop the framework but will only removed the failed objects and print it to the console, becase you could, eg. get kicked from a server resulting in some channels<br>

@@ -2,16 +2,8 @@
     DISCORD ADVERTISEMENT FRAMEWORK (DAF)
     Author      :: David Hozic
     Copyright   :: Copyright (c) 2022 David Hozic
-    Version     :: V1.8
+    Version     :: V1.9
 """
-
-
-"""
-TODO:
-- Documention for JSON logging
-"""
-
-
 import _discord as discord
 from .client import *
 from .const import *
@@ -20,3 +12,11 @@ from .dtypes import *
 from .guild import *
 from .message import *
 from .tracing import *
+from .sql import *
+
+"""
+TODO:
+- SQL logging for USER and DirectMESSAGE (test and fix)
+- Documentation
+- Linting
+"""

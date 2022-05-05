@@ -11,6 +11,7 @@ from    .tracing import *
 from    .const import *
 from    .message import *
 from    . import client
+from    . import sql
 import  time
 import  json
 import pathlib
@@ -35,16 +36,20 @@ class BaseGUILD:
     __slots__ = (
         "apiobject",
         "_generate_log",
-        "log_file_name",
         "t_messages",
         "vc_messages"
     )
+    __logname__ = "BaseGUILD"
+    
+    @property
+    def log_file_name(self):
+        raise NotImplementedError
+
     def __init__(self,
                  snowflake: int,
                  generate_log: bool=False) -> None:
         self.apiobject = snowflake
         self._generate_log = generate_log
-        self.log_file_name = None
         self.t_messages = []
         self.vc_messages = []
 
@@ -70,66 +75,75 @@ class BaseGUILD:
         raise NotImplementedError
 
     def generate_log(self,
-                     **message_context) -> None:
+                     message_context: dict) -> None:
         """
         Name:   generate_log
         Param:
             - data_context  - str representation of sent data, which is return data of xxxMESSAGE.send()
         Info:   Generates a log of a xxxxMESSAGE send attempt
-        """
-        # Generate timestamp
-        timestruct = time.localtime()
-        timestamp = "{:02d}.{:02d}.{:04d} {:02d}:{:02d}:{:02d}".format( timestruct.tm_mday,
-                                                                        timestruct.tm_mon,
-                                                                        timestruct.tm_year,
-                                                                        timestruct.tm_hour,
-                                                                        timestruct.tm_min,
-                                                                        timestruct.tm_sec)
+        """      
+        
+        guild_context = {
+            "name" : str(self.apiobject),
+            "id" : self.apiobject.id,
+            "type" : type(self).__logname__,
+        }
 
-        logging_output = pathlib.Path(GLOBALS.server_log_path)\
-                         .joinpath("{:02d}".format(timestruct.tm_year))\
-                         .joinpath("{:02d}".format(timestruct.tm_mon))\
-                         .joinpath("{:02d}".format(timestruct.tm_mday))
-
-        # Write into file
         try:
-            with suppress(FileExistsError):
-                pathlib.Path(logging_output).mkdir(parents=True,exist_ok=True)
+            manager = sql.get_sql_manager()
+            if (
+                manager is None or # Short circuit evaluation
+                not manager.save_log(guild_context, message_context)
+            ):
+                timestruct = time.localtime()
+                timestamp = "{:02d}.{:02d}.{:04d} {:02d}:{:02d}:{:02d}".format(timestruct.tm_mday,
+                                                                            timestruct.tm_mon,
+                                                                            timestruct.tm_year,
+                                                                            timestruct.tm_hour,
+                                                                            timestruct.tm_min,
+                                                                            timestruct.tm_sec)
+                logging_output = pathlib.Path(GLOBALS.server_log_path)\
+                            .joinpath("{:02d}".format(timestruct.tm_year))\
+                            .joinpath("{:02d}".format(timestruct.tm_mon))\
+                            .joinpath("{:02d}".format(timestruct.tm_mday))
+                with suppress(FileExistsError):
+                    logging_output.mkdir(parents=True,exist_ok=True)
 
-            logging_output = str(logging_output.joinpath(self.log_file_name))
+                logging_output = str(logging_output.joinpath(self.log_file_name))
 
-            with suppress(FileExistsError):
-                with open(logging_output,'x', encoding='utf-8'):
-                    pass
-
-            with open(logging_output,'r+', encoding='utf-8') as appender:
-                appender_data = None
-
-                try:
-                    appender_data = json.load(appender)
-                except json.JSONDecodeError:
-                    appender_data = {}
-                    appender_data["name"] = str(self.apiobject)
-                    appender_data["id"] = self.apiobject.id
-                    appender_data["type"] = type(self).__name__
-                    appender_data["message_history"] = []
-                finally:
-                    with open(logging_output,'w', encoding='utf-8'):
+                with suppress(FileExistsError):
+                    with open(logging_output,'x', encoding='utf-8'):
                         pass
-                    appender.seek(0)
 
-                appender_data["message_history"].insert(0,
-                    {
-                        **message_context,
-                        "index":    appender_data["message_history"][0]["index"] + 1 if len(appender_data["message_history"]) else 0,
-                        "timestamp": timestamp
-                    })
-                json.dump(appender_data, appender, indent=4)
+                with open(logging_output,'r+', encoding='utf-8') as appender:
+                    appender_data = None
+
+                    try:
+                        appender_data = json.load(appender)
+                    except json.JSONDecodeError:
+                        appender_data = {}
+                        appender_data["name"] = guild_context["name"]
+                        appender_data["id"]   = guild_context["id"]
+                        appender_data["type"] = guild_context["type"]
+                        appender_data["message_history"] = []
+                    finally:
+                        with open(logging_output,'w', encoding='utf-8'):
+                            pass
+                        appender.seek(0)
+
+                    appender_data["message_history"].insert(0,
+                        {
+                            **message_context,
+                            "index":    appender_data["message_history"][0]["index"] + 1 if len(appender_data["message_history"]) else 0,
+                            "timestamp": timestamp
+                        })
+                    json.dump(appender_data, appender, indent=4)
 
         except Exception as exception:
             trace(f"Unable to save log. Exception: {exception}", TraceLEVELS.WARNING)
 
 
+@sql.register_type("GuildTYPE")
 class GUILD(BaseGUILD):
     """
     Name: GUILD
@@ -145,9 +159,13 @@ class GUILD(BaseGUILD):
         "t_messages",
         "vc_messages",
         "__messages",
-        "_generate_log",
-        "log_file_name"
+        "_generate_log"
     )
+    __logname__ = "GUILD"
+
+    @property
+    def log_file_name(self):
+        return "".join(char if char not in C_FILE_NAME_FORBIDDEN_CHAR else "#" for char in self.apiobject.name) + ".json"
 
     def __init__(self,
                  guild_id: int,
@@ -181,8 +199,6 @@ class GUILD(BaseGUILD):
 
         if self.apiobject is not None:
         # Create a file name without the non allowed characters. Windows' list was choosen to generate the forbidden character because only forbids '/'
-            self.log_file_name = "".join(char if char not in C_FILE_NAME_FORBIDDEN_CHAR else "#" for char in self.apiobject.name) + ".json"
-
             for message in self.t_messages[:]:
                 # Iterate thru the slice text messages list and initialize each
                 # message object. If the message objects fails to initialize,
@@ -221,9 +237,10 @@ class GUILD(BaseGUILD):
                     trace(f"Removing a {type(message).__name__} because it's channels were removed, in guild {self.apiobject.name}(ID: {self.apiobject.id})")
 
                 if self._generate_log and message_ret is not None:
-                    self.generate_log(**message_ret)
+                    self.generate_log(message_ret)
 
 
+@sql.register_type("GuildTYPE")
 class USER(BaseGUILD):
     """~ USER ~
         @Info:
@@ -238,9 +255,15 @@ class USER(BaseGUILD):
         "_generate_log",
         "t_messages",
         "vc_messages",
-        "__messages",
-        "log_file_name",
+        "__messages"
     )
+    
+    __logname__ = "USER"
+
+    @property
+    def log_file_name(self):
+        return "".join(char if char not in C_FILE_NAME_FORBIDDEN_CHAR else "#" for char in f"{self.apiobject.display_name}#{self.apiobject.discriminator}") + ".json"
+
     def __init__(self,
                  user_id: int,
                  messages_to_send: List[DirectMESSAGE],
@@ -261,7 +284,6 @@ class USER(BaseGUILD):
         self.apiobject = cl.get_user(user_id)
 
         if self.apiobject is not None:
-            self.log_file_name = "".join(char if char not in C_FILE_NAME_FORBIDDEN_CHAR else "#" for char in f"{self.apiobject.display_name}#{self.apiobject.discriminator}") + ".json"
             for message in self.t_messages[:]:
                 if (type(message) is not DirectMESSAGE or
                     not await message.initialize(user_id=user_id)
@@ -286,4 +308,4 @@ class USER(BaseGUILD):
             if message.is_ready():
                 message_ret = await message.send()
                 if self._generate_log and message_ret is not None:
-                    self.generate_log(**message_ret)
+                    self.generate_log(message_ret)

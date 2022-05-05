@@ -1,16 +1,21 @@
-import setuptools
+import setuptools, os
 
 
 
-
-with open("README.md", "r", encoding="utf-8") as fh:
+long_description = None
+with open("./README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
-
 
 __metadata__ = \
 {
-    "version" :  "1.8.1",
-    "requirements" :  ["aiohttp>=3.6.0,<3.9.0", "PyNaCl"],
+    "version" :  "1.9",
+    "requirements" : [
+        "aiohttp>=3.6.0,<3.9.0",
+        "PyNaCl",
+        "pymssql",
+        "sqlalchemy",
+        "sqlalchemy_utils"
+    ],
     "minimum_py_version" :  "3.8",
 }
 
