@@ -410,6 +410,8 @@ class VoiceMESSAGE(BaseMESSAGE):
                 channel = data["channel"]
                 if (isinstance(reason, discord.HTTPException) and
                     reason.code in {10003, 50013} # Unknown, Permissions
+                    or
+                    type(reason) is discord.Forbidden
                 ):
                     self.channels.remove(channel)
                     trace(f"Channel {channel.name}(ID: {channel.id}) {'was deleted' if reason.code == 10003 else 'does not have permissions'}, removing it from the send list", TraceLEVELS.WARNING)
@@ -668,7 +670,9 @@ class TextMESSAGE(BaseMESSAGE):
                 reason = data["reason"]
                 channel = data["channel"]
                 if (isinstance(reason, discord.HTTPException) and
-                    context["reason"].code in {10003, 50013} # Unknown, Permissions
+                    reason.code in {10003, 50013} # Unknown, Permissions
+                    or
+                    type(reason) is discord.Forbidden
                 ):
                     self.channels.remove(channel)
                     trace(f"Channel {channel.name}(ID: {channel.id}) {'was deleted' if reason.code == 10003 else 'does not have permissions'}, removing it from the send list", TraceLEVELS.WARNING)
@@ -895,7 +899,9 @@ class DirectMESSAGE(BaseMESSAGE):
             # DM error handling
             if (context["success"] is False and
                 isinstance(context["reason"], discord.HTTPException) and
-                context["reason"].code in {50007, 10001, 10003} # 	Cannot send messages to this user, Unknown account, Unknown channel
+                context["reason"].code in {50007, 10001, 10003}
+                or
+                type(context["reason"]) is discord.Forbidden # 	Cannot send messages to this user, Unknown account, Unknown channel
             ):
                 self.dm_channel = None   # Will check this in the USER object
 
