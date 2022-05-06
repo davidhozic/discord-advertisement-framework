@@ -9,6 +9,7 @@ from    .tracing import *
 from    .const import *
 from    . import client
 from    . import sql
+from    requests import Response
 import  random
 import  time
 import  asyncio
@@ -104,9 +105,29 @@ class BaseMESSAGE:
         self.force_retry = {"ENABLED" : start_now, "TIME" : 0}  # This is used in both TextMESSAGE and VoiceMESSAGE for compatability purposes
         self.data = data
 
+    def generate_exception(self, 
+                           status: int,
+                           code: int,
+                           description: str,
+                           cls: discord.HTTPException):
+        """ ~ method ~
+        @Name: generate_exception
+        @Info: Generates a discord.HTTPException inherited class exception object
+        @Param:
+            status: int ~ Atatus code of the exception
+            code: int ~ Actual error code
+            description: str ~ The textual description of the error
+            cls: discord.HTTPException ~ Inherited class to make exception from"""
+        resp = Response()
+        resp.status = status
+        resp.status_code = status
+        resp.reason = cls.__name__
+        ex = cls(resp, {"message" : description, "code" : code})
+        return ex
+
     def generate_log_context(self):
         """ ~ method ~
-        @Name:generate_log_context
+        @Name: generate_log_context
         @Info:
             This method is used for generating a dictionary (later converted to json) of the
             data that is to be included in the message log. This is to be implemented inside the
@@ -313,6 +334,11 @@ class VoiceMESSAGE(BaseMESSAGE):
         stream = None
         voice_client = None
         try:
+            # Check if client has permissions before attempting to join
+            ch_perms = channel.permissions_for(channel.guild.get_member(client.get_client().user.id))
+            if not all([ch_perms.connect, ch_perms.stream, ch_perms.speak]):
+                raise self.generate_exception(403, 50013, "You lack permissions to perform that action", discord.Forbidden)
+
             # Try to open file first as FFMpegOpusAudio doesn't raise exception if file does not exist
             with open(audio.filename, "rb"):
                 pass
@@ -324,6 +350,8 @@ class VoiceMESSAGE(BaseMESSAGE):
                 await asyncio.sleep(1)
             return {"success": True}
         except Exception as ex:
+            if client.get_client().get_channel(channel.id) is None:
+                ex = self.generate_exception(404, 10003, "Channel was deleted", discord.NotFound)
             return {"success": False, "reason": ex}
         finally:
             if stream is not None:
@@ -380,9 +408,11 @@ class VoiceMESSAGE(BaseMESSAGE):
             for data in errored_channels:
                 reason = data["reason"]
                 channel = data["channel"]
-                if isinstance(reason, discord.HTTPException) and reason.status == 404 and reason.code == 10003:
+                if (isinstance(reason, discord.HTTPException) and
+                    reason.code in {10003, 50013} # Unknown, Permissions
+                ):
                     self.channels.remove(channel)
-                    trace(f"Channel {channel.name}(ID: {channel.id}) was deleted, removing it from the send list", TraceLEVELS.WARNING)
+                    trace(f"Channel {channel.name}(ID: {channel.id}) {'was deleted' if reason.code == 10003 else 'does not have permissions'}, removing it from the send list", TraceLEVELS.WARNING)
 
             return self.generate_log_context(audio_to_stream, succeded_channels, errored_channels)
         return None
@@ -520,23 +550,27 @@ class TextMESSAGE(BaseMESSAGE):
             - "success" : bool ~ True if successful, else False
             - "reason"  : Exception ~ Only present if "success" is False,
                             contains the Exception returned by the send attempt."""
+        try:
+            # Check if we have permissions
+            ch_perms = channel.permissions_for(channel.guild.get_member(client.get_client().user.id))
+            if ch_perms.send_messages is False:
+                raise self.generate_exception(403, 50013, "You lack permissions to perform that action", discord.Forbidden)
+            
+            # Clear previous message in case of clear-send
+            if self.mode == "clear-send" and self.sent_messages[channel.id] is not None:
+                for tries in range(3):
+                    try:
+                        # Delete discord message that originated from this MESSAGE object
+                        await self.sent_messages[channel.id].delete()
+                        self.sent_messages[channel.id] = None
+                        break
+                    except discord.HTTPException as ex:
+                        if ex.status == 429:
+                            await asyncio.sleep(int(ex.response.headers["Retry-After"])  + 1)
 
-        if self.mode == "clear-send" and self.sent_messages[channel.id] is not None:
-            for tries in range(3):
-                try:
-                    # Delete discord message that originated from this MESSAGE object
-                    await self.sent_messages[channel.id].delete()
-                    self.sent_messages[channel.id] = None
-                    break
-                except discord.HTTPException as ex:
-                    if ex.status == 429:
-                        await asyncio.sleep(int(ex.response.headers["Retry-After"])  + 1)
-
-        # Send/Edit messages
-        for tries in range(3):  # Maximum 3 tries (if rate limit)
-            try:
+            # Send/Edit message
+            for tries in range(3):  # Maximum 3 tries (if rate limit)
                 # Mode dictates to send new message or delete previous and then send new message or mode dictates edit but message was  never sent to this channel before
-                # Rate limit avoidance
                 if  (self.mode in  {"send" , "clear-send"} or
                     self.mode == "edit" and self.sent_messages[channel.id] is None
                     ):
@@ -552,26 +586,26 @@ class TextMESSAGE(BaseMESSAGE):
 
                 return {"success" : True}
 
-            except Exception as ex:
-                # Failed to send message
-                _exit = True
-                if isinstance(ex, discord.HTTPException):
-                    if ex.status == 429:  # Rate limit
-                        retry_after = int(ex.response.headers["Retry-After"])  + 1
-                        if ex.code == 20016:    # Slow Mode
-                            self.force_retry["ENABLED"] = True
-                            self.force_retry["TIME"] = retry_after
-                        else:                   # Normal (write) rate limit
-                            await asyncio.sleep(retry_after)
-                            _exit = False
-                    elif ex.status == 404:      # Unknown object
-                        if ex.code == 10008:    # Unknown message
-                            self.sent_messages[channel.id]  = None
-                            _exit = False
+        except Exception as ex:
+            # Failed to send message
+            _exit = True
+            if isinstance(ex, discord.HTTPException):
+                if ex.status == 429:  # Rate limit
+                    retry_after = int(ex.response.headers["Retry-After"])  + 1
+                    if ex.code == 20016:    # Slow Mode
+                        self.force_retry["ENABLED"] = True
+                        self.force_retry["TIME"] = retry_after
+                    else:                   # Normal (write) rate limit
+                        await asyncio.sleep(retry_after)
+                        _exit = False
+                elif ex.status == 404:      # Unknown object
+                    if ex.code == 10008:    # Unknown message
+                        self.sent_messages[channel.id]  = None
+                        _exit = False
 
-                # Assume a fail
-                if _exit:
-                    return {"success" : False, "reason" : ex}
+            # Assume a fail
+            if _exit:
+                return {"success" : False, "reason" : ex}
 
     async def send(self) -> Union[dict,  None]:
         """"~ async method ~
@@ -633,9 +667,11 @@ class TextMESSAGE(BaseMESSAGE):
             for data in errored_channels:
                 reason = data["reason"]
                 channel = data["channel"]
-                if isinstance(reason, discord.HTTPException) and reason.status == 404 and reason.code == 10003:
+                if (isinstance(reason, discord.HTTPException) and
+                    context["reason"].code in {10003, 50013} # Unknown, Permissions
+                ):
                     self.channels.remove(channel)
-                    trace(f"Channel {channel.name}(ID: {channel.id}) was deleted, removing it from the send list", TraceLEVELS.WARNING)
+                    trace(f"Channel {channel.name}(ID: {channel.id}) {'was deleted' if reason.code == 10003 else 'does not have permissions'}, removing it from the send list", TraceLEVELS.WARNING)
 
             # Return sent data + failed and successful function for logging purposes
             return self.generate_log_context(text_to_send, embed_to_send, files_to_send, succeded_channels, errored_channels)
@@ -855,6 +891,13 @@ class DirectMESSAGE(BaseMESSAGE):
 
         if text_to_send is not None or embed_to_send is not None or len(files_to_send) > 0:
             context = await self.send_channel(text_to_send, embed_to_send, files_to_send)
+            
+            # DM error handling
+            if (context["success"] is False and
+                isinstance(context["reason"], discord.HTTPException) and
+                context["reason"].code in {50007, 10001, 10003} # 	Cannot send messages to this user, Unknown account, Unknown channel
+            ):
+                self.dm_channel = None   # Will check this in the USER object
 
             # Return sent data + failed and successful function for logging purposes
             return self.generate_log_context(text_to_send, embed_to_send, files_to_send, **context)
