@@ -321,6 +321,7 @@ class USER(BaseGUILD):
         if mode == "text":  # Does not have voice messages, only text based (DirectMESSAGE)
             for message in self.t_messages:
                 if message.is_ready():
+                    message.reset_timer()
                     message_ret = await message.send()
                     if self._generate_log and message_ret is not None:
                         self.generate_log(message_ret)
