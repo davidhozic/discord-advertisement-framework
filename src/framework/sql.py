@@ -7,11 +7,13 @@
 """
 from  datetime   import datetime
 from  typing     import Literal
+from  contextlib import suppress
 from  sqlalchemy import (
                          JSON, SmallInteger, Integer, BigInteger, String, DateTime, Boolean,
                          Column, Identity, ForeignKey,
                          create_engine, text
-                        )               
+                        )
+from sqlalchemy.exc  import ProgrammingError
 from  sqlalchemy.orm import sessionmaker
 from  sqlalchemy.ext.declarative import declarative_base
 from  sqlalchemy_utils import create_database, database_exists
@@ -77,7 +79,7 @@ class LoggerSQL:
         "__password",
         "server",
         "database",
-        
+
         # Caching dictionaries
         "MessageMODE",
         "MessageTYPE",
@@ -155,7 +157,7 @@ class LoggerSQL:
             },
             {
                 "name" : "fnSentDataCounts",
-                "stm"  : """FUNCTION {}(@message_type nvarchar(50)=NULL) 
+                "stm"  : """FUNCTION {}(@message_type nvarchar(50)=NULL)
                             /* Returns a table holding different send_data that was sent, with 
                             the number of times this same data was sent (count)
                             */
@@ -215,9 +217,9 @@ class LoggerSQL:
                         session.add(to_add)
                         session.flush()
                         existing = to_add
-                    
+
                     getattr(self, type(to_add).__name__)[to_add.name] = existing.id # Set the internal lookup values to later prevent time consuming queries
-                
+
                 session.commit()
         except Exception as ex:
             trace(f"[SQL]: Unable to create lookuptables' rows. Reason: {ex}", TraceLEVELS.ERROR)
@@ -230,7 +232,6 @@ class LoggerSQL:
             trace(f"[SQL]: Unable to create views, procedures and functions. Reason: {ex}", TraceLEVELS.ERROR)
 
         return True
-
 
     def save_log(self,
                  guild_context: dict,
@@ -259,7 +260,7 @@ class LoggerSQL:
 
         # Maximum 3 tries to succeed, turn off base logging if it doesn't work
         for tries in range(3):
-            try:
+            with suppress(ProgrammingError):
                 log_object = MessageLOG(sent_data=sent_data)
                 # Add DirectMESSAGE success information
                 if dm_success_info is not None:
@@ -270,7 +271,7 @@ class LoggerSQL:
                 with self.Session() as session:
                     # Map MessageTYPE to an identificator
                     log_object.message_type = self.MessageTYPE[message_type]
-        
+
                     if message_mode is not None:
                         # If message_mode exists [DirectMESSAGE and TextMESSAGE] then map the message_mode to an identificator
                         log_object.message_mode = self.MessageMODE[message_mode]
@@ -294,7 +295,7 @@ class LoggerSQL:
                         session.flush()
                         result = result.id
                         self.GuildUSER[guild_snowflake] = result
-                        
+
                     # Reference the guild_id with id from GuildUSER lookup table
                     guild_lookup = result
                     log_object.guild_id = guild_lookup
@@ -314,7 +315,7 @@ class LoggerSQL:
                         to_add_ch = []
                         for channel in channels:
                             if channel["id"] not in result_snow:
-                                item = CHANNEL(channel["id"], channel["name"], guild_lookup) 
+                                item = CHANNEL(channel["id"], channel["name"], guild_lookup)
                                 to_add_ch.append(item)
 
                         if len(to_add_ch) > 0:
@@ -331,9 +332,7 @@ class LoggerSQL:
 
                     session.commit()
                     return True
-            except:
-                pass
-                   
+
         trace(f"Unable to save to databse {self.database}. Switching to file logging", TraceLEVELS.WARNING)
         GLOBALS.manager = None  # Turn off sql logging -> switch to file logs
         return False
@@ -347,7 +346,7 @@ class MessageTYPE(LoggerSQL.Base):
     @Param:
         name: Name of the xMESSAGE class"""
     __tablename__ = "MessageTYPE"
-    
+
     id = Column(SmallInteger, Identity(start=0, increment=1), primary_key=True)
     name = Column(String(20), unique=True)
 
@@ -364,7 +363,7 @@ class GuildTYPE(LoggerSQL.Base):
         name: Name of the xGUILD class"""
 
     __tablename__ = "GuildTYPE"
-    
+
     id = Column(SmallInteger, Identity(start=0, increment=1), primary_key=True)
     name = Column(String(20), unique=True)
 
@@ -382,7 +381,7 @@ class GuildUSER(LoggerSQL.Base):
         name: str      :: Name of the guild/user"""
 
     __tablename__ = "GuildUSER"
-    
+
     id = Column(SmallInteger, Identity(start=0,increment=1),primary_key=True)
     snowflake_id = Column(BigInteger)
     name = Column(String)
@@ -431,7 +430,7 @@ class MessageMODE(LoggerSQL.Base):
         name: Name of the mode"""
 
     __tablename__ = "MessageMODE"
-    
+
     id = Column(SmallInteger, Identity(start=0, increment=1), primary_key=True)
     name = Column(String(20), unique=True)
 
@@ -454,7 +453,7 @@ class MessageLOG(LoggerSQL.Base):
         guild_type: int         :: id pointing to a row inside the GuildTYPE lookup table"""
 
     __tablename__ = "MessageLOG"
-    
+
     id = Column(Integer, Identity(start=0, increment=1), primary_key=True)
     sent_data = Column(JSON)
     message_type = Column(SmallInteger, ForeignKey("MessageTYPE.id", ))
@@ -488,7 +487,7 @@ class MessageChannelLOG(LoggerSQL.Base):
         name: Name of the mode"""
 
     __tablename__ = "MessageChannelLOG"
-    
+
     log_id = Column(Integer, ForeignKey("MessageLOG.id", ondelete="CASCADE"), primary_key=True)
     channel_id = Column(SmallInteger, ForeignKey("CHANNEL.id"), primary_key=True)
     reason = Column(String)
