@@ -52,6 +52,7 @@ class UNIFILE:
             with open(filename, "rb") as l_openedfile:
                 self.fdata = l_openedfile.read()
 
+
 def serialize(obj):
     """
     ~  serialize  ~
@@ -61,29 +62,28 @@ def serialize(obj):
         an eg. FTP server that then decodes it.
         This is only used by the message generator.
     """
-    ret = None
-    with suppress(Exception):
-        ret = {
-            "text" : obj.text,
-            "channel" : obj.channel,
-            "files" : [
-                {"fname" : file.fname, "fdata" : base64.b64encode(file.fdata).decode("ascii")} for file in obj.files
-            ] if obj.files is not None else None,
-            "embed" : {
-                    "title" : obj.embed.title if discord.Embed.Empty != obj.embed.title and not isinstance(obj.embed.title, discord.embeds.EmbedProxy) else discord.embeds.EmptyEmbed,
-                    "author" : {"name": obj.embed.author.name, "icon_url": obj.embed.author.icon_url},
-                    "thumbnail" : obj.embed.thumbnail.url,
-                    "image" : obj.embed.image.url,
-                    "fields" : [
-                        {"inline" : field.inline, "name": field.name, "value": field.value} for field in obj.embed.fields
-                    ]
-                } if obj.embed is not None else None,
-            "send_date" : {
-                "seconds" : obj.send_date.timestamp(),
-                "tz" :  obj.send_date.tzinfo
-            }
-        }
-    return json.dumps(ret)
+    ret = {
+        "text" : obj.text,
+        "channel" : obj.channel,
+        "embed" : {
+                "title" : obj.embed.title,
+                "author" : {"name": obj.embed.author.name, "icon_url": obj.embed.author.icon_url},
+                "thumbnail" : obj.embed.thumbnail.url,
+                "url" : obj.embed.url,
+                "image" : obj.embed.image.url,
+                "fields" : [
+                    {"inline" : field.inline, "name": field.name, "value": field.value} for field in obj.embed.fields
+                ]
+            } if obj.embed is not None else None,
+        "send_date" : {
+            "seconds" : obj.send_date.timestamp()
+        },
+        "files" : [
+            {"fname" : file.fname, "fdata" : base64.b64encode(file.fdata).decode("ascii")} for file in obj.files
+        ] if obj.files is not None else None,
+    }
+    return json.dumps(ret, indent=4)
+
 
 def deserialize(data):
     """
@@ -93,26 +93,24 @@ def deserialize(data):
         This function is used to convert a json file representing a scheduled message
         into a UNIMESSAGE object which is a scheduled message object.
     """
-    ret = None
-    with suppress(Exception):
-        ret = UNIMESSAGE()
-        d = json.loads(data)
-        ret.text = d["text"]
-        ret.channel = d["channel"]
-        ret.send_date = datetime.datetime.fromtimestamp(d["send_date"]["seconds"], d["send_date"]["tz"])
-        if d["files"] is not None:
-            ret.files = []
-            for file in d["files"]:
-                ret.files.append(UNIFILE(file["fname"], base64.b64decode(file["fdata"])))
-        if d["embed"] is not None:
-            ret.embed = discord.Embed()
-            ret.embed.title = d["embed"]["title"]
-            ret.embed.set_author(name=d["embed"]["author"]["name"], icon_url=d["embed"]["author"]["icon_url"])
-            ret.embed.set_thumbnail(url=d["embed"]["thumbnail"])
-            ret.embed.set_image(url=d["embed"]["image"]) 
-            ret.embed._fields = d["embed"]["fields"]
+    ret = UNIMESSAGE()
+    d = json.loads(data)
+    ret.text = d["text"]
+    ret.channel = d["channel"]
+    ret.send_date = datetime.datetime.fromtimestamp(d["send_date"]["seconds"])
+    if d["files"] is not None:
+        ret.files = []
+        for file in d["files"]:
+            ret.files.append(UNIFILE(file["fname"], base64.b64decode(file["fdata"])))
+    if d["embed"] is not None:
+        ret.embed = discord.Embed()
+        ret.embed.title = d["embed"]["title"]
+        ret.embed.url = d["embed"]["url"]
+        ret.embed.set_author(name=d["embed"]["author"]["name"], icon_url=d["embed"]["author"]["icon_url"])
+        ret.embed.set_thumbnail(url=d["embed"]["thumbnail"])
+        ret.embed.set_image(url=d["embed"]["image"]) 
+        ret.embed._fields = d["embed"]["fields"]
     return ret
-
 
 async def parser():
     """
@@ -131,7 +129,7 @@ async def parser():
                     message_contex = None
                     #os.system("sudo chmod 777 OBV/UPLOAD_FILES_HERE/ -R") # For debugging
                     with suppress(Exception):
-                        with open(filepath,"r") as op_file:
+                        with open(filepath,"r", encoding="utf-8") as op_file:
                             message_contex = deserialize(op_file.read())
 
                     # Successfully parsed
