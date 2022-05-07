@@ -92,17 +92,17 @@ class BaseMESSAGE:
                 end_period : float,
                 data,
                 start_now : bool=True):
-
-        if start_period is None:            # If start_period is none -> period will not be randomized
+        # If start_period is none -> period will not be randomized
+        if start_period is None:            
             self.randomized_time = False
             self.period = end_period
         else:
             self.randomized_time = True
             self.random_range = (start_period, end_period)
-            self.period = random.randrange(*self.random_range)  # This will happen after each sending as well
+            self.period = random.randrange(*self.random_range)
 
         self.timer = TIMER()
-        self.force_retry = {"ENABLED" : start_now, "TIME" : 0}  # This is used in both TextMESSAGE and VoiceMESSAGE for compatability purposes
+        self.force_retry = {"ENABLED" : start_now, "TIME" : 0}
         self.data = data
 
     def generate_exception(self, 
@@ -147,7 +147,8 @@ class BaseMESSAGE:
         @Name:   is_ready
         @Param:  void
         @Info:   This method returns bool indicating if message is ready to be sent"""
-        return not self.force_retry["ENABLED"] and self.timer.elapsed() > self.period or self.force_retry["ENABLED"] and self.timer.elapsed() > self.force_retry["TIME"]
+        return (not self.force_retry["ENABLED"] and self.timer.elapsed() > self.period or
+                self.force_retry["ENABLED"] and self.timer.elapsed() > self.force_retry["TIME"])
 
     def reset_timer(self) -> None:
         """ ~ method ~
@@ -257,11 +258,12 @@ class VoiceMESSAGE(BaseMESSAGE):
         Data (data) :: The data parameter is the actual data that will be sent using discord's API. The data types of this parameter can be:
                         - Path to an audio file (str)
                         - Function that accepts any amount of parameters and returns any of the above types.
-                          To pass a function, YOU MUST USE THE framework.data_function decorator on the function before passing the function to the framework.
+                          To pass a function, YOU MUST USE THE framework.data_function decorator on the function before
+                          passing the function to the framework.
         Channel IDs (channel_ids) :: List of IDs of all the channels you want data to be sent into.
         Start Now (start_now) :: A bool variable that can be either True or False. If True, then the framework will send the message
-                                 as soon as it is run and then wait it's period before trying again. If False, then the message will not be sent immediatly after framework is ready,
-                                 but will instead wait for the period to elapse."""
+                                 as soon as it is run and then wait it's period before trying again. If False, then the message will
+                                 not be sent immediatly after framework is ready, but will instead wait for the period to elapse."""
 
     __slots__ = (
         "randomized_time",
@@ -300,7 +302,8 @@ class VoiceMESSAGE(BaseMESSAGE):
             Generates a dictionary containing data that will be saved in the message log"""
 
         succeeded_ch = [{"name": str(channel), "id" : channel.id} for channel in succeeded_ch]
-        failed_ch = [{"name": str(entry["channel"]), "id" : entry["channel"].id, "reason": str(entry["reason"])} for entry in failed_ch]
+        failed_ch = [{"name": str(entry["channel"]), "id" : entry["channel"].id,
+                     "reason": str(entry["reason"])} for entry in failed_ch]
         return {
             "sent_data": {
                 "streamed_audio" : audio.filename
@@ -451,8 +454,8 @@ class TextMESSAGE(BaseMESSAGE):
           To pass a function, YOU MUST USE THE framework.data_function decorator on the function before passing the function to the framework.
     - Channel IDs (channel_ids) - List of IDs of all the channels you want data to be sent into.
     - Send mode (mode) - Parameter that defines how message will be sent to a channel. It can be "send" - each period a new message will be sent,
-                        "edit" - each period the previously send message will be edited (if it exists) or "clear-send" - previous message will be deleted and
-                        a new one sent.
+                        "edit" - each period the previously send message will be edited (if it exists)
+                        or "clear-send" - previous message will be deleted and a new one sent.
     - Start Now (start_now) - A bool variable that can be either True or False. If True, then the framework will send the message
       as soon as it is run and then wait it's period before trying again. If False, then the message will not be sent immediatly after framework is ready,
       but will instead wait for the period to elapse."""
@@ -500,7 +503,8 @@ class TextMESSAGE(BaseMESSAGE):
             Generates a dictionary containing data that will be saved in the message log"""
 
         succeeded_ch = [{"name": str(channel), "id" : channel.id} for channel in succeeded_ch]
-        failed_ch = [{"name": str(entry["channel"]), "id" : entry["channel"].id, "reason": str(entry["reason"])} for entry in failed_ch]
+        failed_ch = [{"name": str(entry["channel"]), "id" : entry["channel"].id,
+                     "reason": str(entry["reason"])} for entry in failed_ch]
 
         embed = embed.to_dict() if embed is not None else None
 
@@ -845,7 +849,8 @@ class DirectMESSAGE(BaseMESSAGE):
                 if (self.mode in {"send" , "clear-send"} or
                      self.mode == "edit" and self.previous_message is None
                 ):
-                    self.previous_message = await self.dm_channel.send(text, embed=embed, files=[discord.File(fwFILE.filename) for fwFILE in files])
+                    self.previous_message = await self.dm_channel.send(text, embed=embed,
+                                                                       files=[discord.File(fwFILE.filename) for fwFILE in files])
 
                 # Mode is edit and message was already send to this channel
                 elif self.mode == "edit":
