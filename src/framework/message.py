@@ -639,7 +639,7 @@ class TextMESSAGE(BaseMESSAGE):
                 return {"success" : True}
 
         except Exception as ex:
-            if handle_error(ex) is False:
+            if await handle_error(ex) is False:
                 return {"success" : False, "reason" : ex}
 
     async def send(self) -> Union[dict,  None]:
@@ -858,7 +858,7 @@ class DirectMESSAGE(BaseMESSAGE):
                 return {"success" : True}
 
             except Exception as ex:
-                if handle_error(ex) is False:
+                if await handle_error(ex) is False:
                     return {"success" : False, "reason" : ex}
 
     async def send(self) -> Union[dict, None]:

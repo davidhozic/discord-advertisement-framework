@@ -129,7 +129,8 @@ class EMBED(discord.Embed):
         ret = EMBED()
         # Copy attributes but not special methods to the new EMBED. "dir" is used instead of "vars" because the object does not support the function.
         for key in EMBED.__slots__:
-            setattr(ret, key, copy.deepcopy(getattr(_object,key, None)))
+            if hasattr(ret, key):
+                setattr(ret, key, copy.deepcopy(getattr(_object,key)))
 
         return ret
 
