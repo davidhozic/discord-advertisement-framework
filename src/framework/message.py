@@ -421,13 +421,12 @@ class VoiceMESSAGE(BaseMESSAGE):
             for data in errored_channels:
                 reason = data["reason"]
                 channel = data["channel"]
-                if (isinstance(reason, discord.HTTPException) and
-                    reason.code in {10003, 50013} # Unknown, Permissions
-                    or
-                    type(reason) is discord.Forbidden
-                ):
-                    self.channels.remove(channel)
-                    trace(f"Channel {channel.name}(ID: {channel.id}) {'was deleted' if reason.code == 10003 else 'does not have permissions'}, removing it from the send list", TraceLEVELS.WARNING)
+                if isinstance(reason, discord.HTTPException):
+                    if (reason.status == 403 or
+                        reason.code in {10003, 50013} # Unknown, Permissions
+                    ):
+                        self.channels.remove(channel)
+                        trace(f"Channel {channel.name}(ID: {channel.id}) {'was deleted' if reason.code == 10003 else 'does not have permissions'}, removing it from the send list", TraceLEVELS.WARNING)
 
             return self.generate_log_context(**_data_to_send, succeeded_ch=succeded_channels, failed_ch=errored_channels)
         return None
@@ -669,7 +668,7 @@ class TextMESSAGE(BaseMESSAGE):
                 reason = data["reason"]
                 channel = data["channel"]
                 if isinstance(reason, discord.HTTPException):
-                    if (reason.code == 403 or                    # Forbidden
+                    if (reason.status == 403 or                    # Forbidden
                         reason.code in {50007, 10001, 10003}     # Not Forbidden, but bad error codes
                     ):
                         self.channels.remove(channel)
@@ -810,12 +809,12 @@ class DirectMESSAGE(BaseMESSAGE):
         async def handle_error(ex: Exception):
             handled = False
             if isinstance(ex, discord.HTTPException):
-                if ex.status == 429 or ex.status == 403 and ex.code == 40003:  # Rate limit
+                if ex.status == 429 or ex.code == 40003:
                     retry_after = int(ex.response.headers["Retry-After"])  + 1
                     if ex.code == 20016:    # Slow Mode
                         self.force_retry["ENABLED"] = True
                         self.force_retry["TIME"] = retry_after
-                    else:                   # Normal (write) rate limit
+                    else:
                         await asyncio.sleep(retry_after)
                         handled = True
                 elif ex.status == 404:      # Unknown object
