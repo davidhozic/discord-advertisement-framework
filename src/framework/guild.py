@@ -15,6 +15,7 @@ from    . import sql
 import  time
 import  json
 import pathlib
+import asyncio
 
 __all__ = (
     "GUILD",
@@ -233,18 +234,23 @@ class GUILD(BaseGUILD):
             @Info:
             This is the main coroutine that is responsible for sending all the messages to this specificc guild,
             it is called from the core module's advertiser task"""
-        for message in self.t_messages if mode == "text" else self.vc_messages:
+        msg_list = self.t_messages if mode == "text" else self.vc_messages
+        marked_del = []
+
+        for message in msg_list:
             if message.is_ready():
                 message_ret = await message.send()
                 # Check if the message still has any channels (as they can be auto removed on 404 status)
                 if len(message.channels) == 0:
-                    # Remove message from the list if it has not channels left
-                    getattr(self, "t_messages" if mode == "text" else "vc_messages").remove(message)
-                    trace(f"Removing a {type(message).__name__} because it's channels were removed, in guild {self.apiobject.name}(ID: {self.apiobject.id})")
-
+                    marked_del.append(message) # All channels were removed (either not found or forbidden) -> remove message from send list
                 if self._generate_log and message_ret is not None:
                     self.generate_log(message_ret)
+                await asyncio.sleep(C_RATE_LIMIT_AVOID_DELAY)
 
+        # Cleanup messages marked for removal
+        for message in marked_del:
+            msg_list.remove(message)
+            trace(f"Removing a {type(message).__name__} because it's channels were removed, in guild {self.apiobject.name}(ID: {self.apiobject.id})")
 
 @sql.register_type("GuildTYPE")
 class USER(BaseGUILD):
@@ -311,11 +317,18 @@ class USER(BaseGUILD):
             ~ advertise ~
             @Info:
             This is the main coroutine that is responsible for sending all the messages to this specificc guild,
-            it is called from the core module's advertiser task
-        """
+            it is called from the core module's advertiser task"""
         if mode == "text":  # Does not have voice messages, only text based (DirectMESSAGE)
             for message in self.t_messages:
                 if message.is_ready():
+                    message.reset_timer()
                     message_ret = await message.send()
                     if self._generate_log and message_ret is not None:
                         self.generate_log(message_ret)
+                    
+                    await asyncio.sleep(C_RATE_LIMIT_AVOID_DELAY)
+
+                    if message.dm_channel is None:
+                        self.t_messages.clear()            # Remove all messages since that they all share the same user and will fail
+                        trace(f"Removing all messages for user {self.apiobject.display_name}#{self.apiobject.discriminator} (ID: {self.apiobject.id}) because we do not have permissions to send to that user.", TraceLEVELS.WARNING)
+                        break

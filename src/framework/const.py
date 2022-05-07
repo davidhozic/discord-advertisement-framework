@@ -9,5 +9,6 @@ C_MINUTE_TO_SECOND = 60
 
 C_TASK_SLEEP_DELAY   = 0.010  # Advertiser task sleep
 C_VC_CONNECT_TIMEOUT = 3    # Timeout of voice channels
+C_RATE_LIMIT_AVOID_DELAY = 1
 
 C_FILE_NAME_FORBIDDEN_CHAR = ('<','>','"','/','\\','|','?','*',":")
