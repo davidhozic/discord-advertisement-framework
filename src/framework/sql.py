@@ -171,12 +171,29 @@ class LoggerSQL:
                                     (CASE WHEN @message_type IS NOT NULL THEN @message_type ELSE '%' END) 
                                 )
                                 GROUP BY sent_data);"""
+            },
+            {
+                "name" : "tr_delete_msg_log",
+                "stm"  : """TRIGGER {} ON MessageChannelLOG FOR DELETE
+                            AS
+                            /* Trigger deletes a MessageLOG row matching the deleted channel log in case all the rows of MessageChannelLOG
+                            * referencing that specific MessageLOG row were deleted
+                            */
+                            BEGIN
+                                DECLARE @MessageLogID smallint;
+                                SELECT @MessageLogID = del.log_id FROM DELETED del;
+                                IF (SELECT COUNT(*) FROM MessageChannelLOG mlc WHERE mlc.log_id = @MessageLogID) = 0
+                                BEGIN 
+                                    PRINT 'Deleting message log (ID: '+ CAST(@MessageLogID as nvarchar(max)) +') because all of the channel logs referencing it were deleted';
+                                    DELETE FROM MessageLOG WHERE id = @MessageLogID;
+                                END
+                            END"""
             }
         ]
         with self.Session() as session:
             for statement in stms:
                 # Union the 2 system tables containing views and procedures/functions, then select only the element that matches the item we want to create, it it returns None, it doesnt exist
-                if session.execute(text(f"SELECT * FROM (SELECT SPECIFIC_NAME AS Name  FROM INFORMATION_SCHEMA.ROUTINES UNION SELECT TABLE_NAME AS Name  FROM INFORMATION_SCHEMA.VIEWS) a WHERE Name= '{statement['name']}'")).first() is None:
+                if session.execute(text(f"SELECT * FROM sys.all_objects WHERE name= '{statement['name']}'")).first() is None:
                     session.execute(text("CREATE " + statement["stm"].format(statement["name"]) ))
                 else:
                     session.execute(text("ALTER " + statement["stm"].format(statement["name"]) ))
