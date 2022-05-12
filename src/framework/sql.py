@@ -12,6 +12,7 @@ from  sqlalchemy import (
                          Column, Identity, ForeignKey,
                          create_engine, text
                         )
+from sqlalchemy.exc  import ProgrammingError                        
 from  sqlalchemy.orm import sessionmaker
 from  sqlalchemy.ext.declarative import declarative_base
 from  sqlalchemy_utils import create_database, database_exists
@@ -138,13 +139,12 @@ class LoggerSQL:
         @Param: void"""
         stms = [
             {   "name" :   "vMessageLogFullDETAIL",
-                "stm"    : """
-                            VIEW {} AS
-                                SELECT ml.id id, ml.sent_data SentData, mt.name MessageTYPE, gt.name GuildTYPE , gu.snowflake_id GuildID, gu.name GuildName, mm.name MessageMode, ml.dm_success DMSuccess, ml.dm_reason DMReason, ml.[timestamp] [Timestamp]
+                "stm"    : """VIEW {} AS
+                                SELECT ml.id id, (SELECT content FROM DataHistory dh WHERE dh.id = ml.sent_data) sent_data, mt.name message_type, gt.name guild_type , gu.snowflake_id guild_id, gu.name guild_name, mm.name message_mode, ml.dm_reason dm_reason, ml.[timestamp] [Timestamp]
                                 FROM MessageLOG ml JOIN MessageTYPE mt ON ml.message_type  = mt.id
                                 LEFT JOIN MessageMODE mm ON mm.id = ml.message_mode
                                 JOIN GuildUSER gu ON gu.id = ml.guild_id
-                               	JOIN GuildTYPE gt ON gu.guild_type = gt.id ;"""
+                                JOIN GuildTYPE gt ON gu.guild_type = gt.id"""
             },
             {
                 "name": "fnRelativeSuccess",
@@ -332,14 +332,14 @@ class LoggerSQL:
         guild_name = guild_context.get("name")
         guild_type: str = guild_context.get("type")
         message_type: str = message_context.get("type")
-        message_mode = message_context.get("mode", None)
+        message_mode = message_context.get("mode", "null")
         channels = message_context.get("channels", None)
         dm_success_info = message_context.get("success_info", None)
-        dm_success_info_reason = None
+        dm_success_info_reason = "null"
 
         # Maximum 3 tries to succeed, turn off base logging if it doesn't work
         for tries in range(3):
-            #with suppress(ProgrammingError):
+            with suppress(ProgrammingError):
                 # Add DirectMESSAGE success information
                 if dm_success_info is not None:
                     if "reason" in dm_success_info:
@@ -373,13 +373,15 @@ class LoggerSQL:
                     if channels is not None:
                         # If channels exist [TextMESSAGE and VoiceMESSAGE], update the CHANNELS table with the correct name
                         # and only insert the channel Snowflake identificators into the message log
-                        channels = json.dumps(channels["successful"] + channels["failed"])
+                        channels = f"'{json.dumps(channels['successful'] + channels['failed'])}'"
                         # Query the channels and add missing ones
                         stms += f"EXEC sp_insert_channels {channels}, {guild_lookup};"
-                        
+                    else:
+                        channels = "null"
+                    
                     # Execute raw sql call for faster saving of the log
-                    stms += f"EXEC sp_save_log '{json.dumps(sent_data)}','{message_type}',{guild_snowflake},'{message_mode}','{dm_success_info_reason}',{channels};COMMIT;"
-                    session.execute(text(stms))
+                    stms += f"EXEC sp_save_log '{json.dumps(sent_data)}','{message_type}',{guild_snowflake},{message_mode},{dm_success_info_reason},{channels};COMMIT;"
+                    self.engine.execute(text(stms))
                     return True
 
         trace(f"Unable to save to databse {self.database}. Switching to file logging", TraceLEVELS.WARNING)
@@ -498,8 +500,8 @@ class MessageLOG(LoggerSQL.Base):
         sent_data: str          :: JSONized data that was sent by the xMESSAGE object
         message_type: int       :: id pointing to a row inside the MessageTYPE lookup table
         message_mode: int       :: id pointing to a row inside the MessageMODE lookup table
-        guild_snowflake: int    :: Discord's snowflake identificator descripting the guild object (or user)
-        guild_type: int         :: id pointing to a row inside the GuildTYPE lookup table"""
+        dm_reason: str          :: If DM sent succeeded, it is null, if it failed it contains a string description of the error
+        guild_id: int           :: Internal database id of the guild this message was advertised to"""
 
     __tablename__ = "MessageLOG"
 
@@ -508,7 +510,6 @@ class MessageLOG(LoggerSQL.Base):
     message_type = Column(SmallInteger, ForeignKey("MessageTYPE.id", ))
     guild_id =     Column(SmallInteger, ForeignKey("GuildUSER.id", ondelete="CASCADE"))
     message_mode = Column(SmallInteger, ForeignKey("MessageMODE.id" )) # [TextMESSAGE, DirectMESSAGE]
-    dm_success  = Column(Boolean) # [DirectMESSAGE]
     dm_reason   = Column(NVARCHAR)  # [DirectMESSAGE]
     timestamp = Column(DateTime)
 
@@ -516,13 +517,13 @@ class MessageLOG(LoggerSQL.Base):
                  sent_data: str=None,
                  message_type: int=None,
                  message_mode: int=None,
-                 dm_success: tuple=(None, None),
+                 dm_reason: str=None,
                  guild_id: int=None):
         self.sent_data = sent_data
         self.message_type = message_type
         self.message_mode = message_mode
+        self.dm_reason = dm_reason
         self.guild_id = guild_id
-        self.dm_success, self.dm_reason = dm_success
         self.timestamp = datetime.now().replace(microsecond=0)
 
 
