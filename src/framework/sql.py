@@ -1,5 +1,4 @@
-"""
-    ~    sql    ~
+"""~    sql    ~
     The sql module contains definitions related to the
     relational database logging that is available in this shiller.
     It is only used if the sql logging is enabled by passing
@@ -9,16 +8,16 @@ from  datetime   import datetime
 from  typing     import Literal
 from  contextlib import suppress
 from  sqlalchemy import (
-                         JSON, SmallInteger, Integer, BigInteger, String, DateTime, Boolean,
+                         SmallInteger, Integer, BigInteger, NVARCHAR, DateTime, Boolean,
                          Column, Identity, ForeignKey,
                          create_engine, text
                         )
-from sqlalchemy.exc  import ProgrammingError
 from  sqlalchemy.orm import sessionmaker
 from  sqlalchemy.ext.declarative import declarative_base
 from  sqlalchemy_utils import create_database, database_exists
 from  .tracing import *
-
+import time
+import json
 
 __all__ = (
     "LoggerSQL",
@@ -27,18 +26,24 @@ __all__ = (
 )
 
 
+def timeit(fnc):
+    def _timeit(*args, **kwargs):
+        start = time.time()
+        ret = fnc(*args, **kwargs)
+        end = time.time()
+        print(f"Took {(end-start)*1000} ms")
+        return ret
+    return _timeit
+
 class GLOBALS:
     """~ class ~
-    @Name: GLOBALS
     @Info: Stores global module variables """
     manager  = None
     lt_types = []
 
 
 def register_type(lookuptable: Literal["GuildTYPE", "MessageTYPE", "MessageMODE"]):
-    """
-    ~ Decorator ~
-    @Name: register_type
+    """~ Decorator ~
     @Info:
         This is a function that returns a decorator which will create a row inside
         <lookuptable> table. The name of the inserted item is defined with the __logname__ variable
@@ -59,9 +64,7 @@ def register_type(lookuptable: Literal["GuildTYPE", "MessageTYPE", "MessageMODE"
 
 
 class LoggerSQL:
-    """
-    ~ class ~
-    @Name: LoggerSQL
+    """~ class ~
     @Info: This class is used for controlling
            the SQL database used for messagge logs
     @Param:
@@ -108,10 +111,26 @@ class LoggerSQL:
         ## Other object caching
         self.GuildUSER = {}
 
-    def create_analytic_objects(self):
+    def create_data_types(self):
         """
-        ~ Method ~
-        @Name: create_analytic_objects
+        ~ Method
+        @Info: Creates user-defined SQL data types"""
+        stms = [
+            {
+                "name": "dt_channel",
+                "stm":  "dt_channel AS TABLE(name nvarchar(max), snowflake bigint, reason nvarchar(max))"
+            }
+        ]
+        with self.Session() as session:
+            for statement in stms:
+                # Union the 2 system tables containing views and procedures/functions, then select only the element that matches the item we want to create, it it returns None, it doesnt exist
+                if session.execute(text(f"SELECT * FROM sys.types WHERE name= '{statement['name']}'")).first() is None:
+                    session.execute(text("CREATE TYPE " + statement["stm"].format(statement["name"]) ))
+
+            
+
+    def create_analytic_objects(self):
+        """~ Method ~
         @Info: Creates Stored Procedures, Views and Functions via SQL code.
                The method iterates thru a list, first checking if the object exists
                 -> if it does exist, it uses ALTER + "stm", if it doesn't exist,
@@ -156,23 +175,6 @@ class LoggerSQL:
                             END"""
             },
             {
-                "name" : "fnSentDataCounts",
-                "stm"  : """FUNCTION {}(@message_type nvarchar(50)=NULL)
-                            /* Returns a table holding different send_data that was sent, with 
-                            the number of times this same data was sent (count)
-                            */
-                            RETURNS TABLE AS
-                                RETURN (SELECT sent_data, COUNT(sent_data) AS [count]
-                                FROM MessageLOG ml 
-                                WHERE ml.message_type IN
-                                (
-                                    SELECT id FROM MessageTYPE mt WHERE 
-                                    mt.name LIKE
-                                    (CASE WHEN @message_type IS NOT NULL THEN @message_type ELSE '%' END) 
-                                )
-                                GROUP BY sent_data);"""
-            },
-            {
                 "name" : "tr_delete_msg_log",
                 "stm"  : """TRIGGER {} ON MessageChannelLOG FOR DELETE
                             AS
@@ -188,6 +190,51 @@ class LoggerSQL:
                                     DELETE FROM MessageLOG WHERE id = @MessageLogID;
                                 END
                             END"""
+            },
+            {
+                "name" : "sp_save_log",
+                "stm" : """PROCEDURE {}(@sent_data nvarchar(max),
+                                        @message_type nvarchar(max),
+                                        @guild_snowflake bigint,
+                                        @message_mode nvarchar(max),
+                                        @dm_reason nvarchar(max),
+                                        @channels ntext) AS
+            /* Procedure that saves the log							 
+            * This is done within sql instead of python for speed optimization
+            */
+            BEGIN
+                DECLARE @existing_data_id int;
+                DECLARE @message_type_id  smallint = (SELECT id FROM MessageTYPE mt WHERE mt.name = @message_type);
+                DECLARE @guild_id         smallint = (SELECT id FROM GuildUSER gu WHERE gu.snowflake_id = @guild_snowflake);
+                DECLARE @message_mode_id  smallint = (SELECT id FROM MessageMODE mm WHERE mm.name = @message_mode);
+                DECLARE @last_log_id      int;
+
+                SELECT @existing_data_id = id FROM DataHISTORY dh WHERE dh.content = @sent_data;	
+                
+                IF @existing_data_id IS NULL
+                BEGIN
+                    INSERT INTO DataHISTORY(content) VALUES(@sent_data);
+                    SELECT @existing_data_id = id FROM DataHISTORY dh WHERE dh.content = @sent_data;
+                END
+                
+                INSERT INTO MessageLOG(sent_data, message_type, guild_id, message_mode, dm_reason, [timestamp]) VALUES(
+                    @existing_data_id, @message_type_id, @guild_id, @message_mode_id, @dm_reason, GETDATE()
+                );
+                SET @last_log_id = SCOPE_IDENTITY();
+                
+                INSERT INTO MessageChannelLOG (log_id, channel_id, reason)
+                SELECT @last_log_id, (SELECT CHANNEL.id FROM CHANNEL WHERE CHANNEL.snowflake_id = dc.id), reason FROM OPENJSON(@channels) WITH(name nvarchar(max), id bigint, reason nvarchar(max)) dc
+            END"""
+            },
+            {
+                "name": "sp_insert_channels",
+                "stm":"""PROCEDURE {}(@channels ntext, @guild_id bigint) AS
+                        -- Procedure adds missing channels to the CHANNEL table
+                        BEGIN
+                            INSERT INTO CHANNEL(snowflake_id, name, guild_id)
+                            SELECT id, name, @guild_id FROM OPENJSON(@channels) WITH(id bigint, name nvarchar(max))
+                            WHERE id NOT IN (SELECT snowflake_id FROM CHANNEL);
+                        END"""
             }
         ]
         with self.Session() as session:
@@ -198,49 +245,64 @@ class LoggerSQL:
                 else:
                     session.execute(text("ALTER " + statement["stm"].format(statement["name"]) ))
 
-            session.commit()
+            
+
+    def generate_lookup_values(self):
+        """~ Method ~
+        @Info: Generates the lookup values for all the different classes the @register_type decorator was used on.
+        """
+        with self.Session() as session:
+            for to_add in GLOBALS.lt_types:
+                existing = session.query(type(to_add)).filter_by(name=to_add.name).first()
+                if existing is None:
+                    session.add(to_add)
+                    session.flush()
+                    existing = to_add
+
+                getattr(self, type(to_add).__name__)[to_add.name] = existing.id # Set the internal lookup values to later prevent time consuming queries
+
+            
+
+    def create_tables(self):
+        """~ Method ~
+        @Info: Creates tables from the SQLAlchemy's descriptor classes"""
+        self.Base.metadata.create_all(bind=self.engine)
 
     def initialize(self):
-        """
-        ~ Method ~
-        @Name: initialize
+        """~ Method ~
         @Info: This method initializes the connection to the database, creates the missing tables
                and fills the lookuptables with types defined by the register_type(lookup_table) function.
         @Param: void"""
         # Create engine for communicating with the SQL base
         try:
             self.engine = create_engine(f"mssql+pymssql://{self.username}:{self.__password}@{self.server}/{self.database}", echo=False)
-            self.Session = sessionmaker(bind=self.engine)
+            self.Session = sessionmaker(bind=self.engine, autoflush=True, autocommit=True)
             if not database_exists(self.engine.url):
                 trace("[SQL]: Creating database...", TraceLEVELS.NORMAL)
                 create_database(self.engine.url)
         except Exception as ex:
-            trace(f"[SQL]: Unable to start engine. Reason:\n{ex}", TraceLEVELS.ERROR)
+            trace(f"[SQL]: Unable to start engine. Reason: {ex}", TraceLEVELS.ERROR)
             return False
         # Create tables and the session class bound to the engine
         try:
             trace("[SQL]: Creating tables...", TraceLEVELS.NORMAL)
-            self.Base.metadata.create_all(bind=self.engine)
+            self.create_tables()
         except Exception as ex:
-            trace(f"[SQL]: Unable to create all the tables. Reason:\n{ex}", TraceLEVELS.ERROR)
+            trace(f"[SQL]: Unable to create all the tables. Reason: {ex}", TraceLEVELS.ERROR)
             return False
         # Insert the lookuptable values
         try:
             trace("[SQL]: Generating lookuptable values...", TraceLEVELS.NORMAL)
-            with self.Session() as session:
-                for to_add in GLOBALS.lt_types:
-                    existing = session.query(type(to_add)).filter_by(name=to_add.name).first()
-                    if existing is None:
-                        session.add(to_add)
-                        session.flush()
-                        existing = to_add
+            self.generate_lookup_values()
 
-                    getattr(self, type(to_add).__name__)[to_add.name] = existing.id # Set the internal lookup values to later prevent time consuming queries
-
-                session.commit()
         except Exception as ex:
             trace(f"[SQL]: Unable to create lookuptables' rows. Reason: {ex}", TraceLEVELS.ERROR)
             return False
+        try:
+            trace("[SQL]: Creating user-defined data types", TraceLEVELS.NORMAL)
+            self.create_data_types()
+        except Exception as ex:
+            trace(f"[SQL]: Unable to create user-defined data types. Reason:{ex}", TraceLEVELS.ERROR)
         # Initialize views, procedures and functions
         try:
             trace("[SQL]: Creating Views, Procedures & Functions", TraceLEVELS.NORMAL)
@@ -250,12 +312,11 @@ class LoggerSQL:
 
         return True
 
+    @timeit
     def save_log(self,
                  guild_context: dict,
                  message_context: dict) -> bool:
-        """
-        ~ Method ~
-        @Name: save_log
+        """~ Method ~
         @Info: This method saves the log generated by
                the xGUILD object into the database
         @Param:
@@ -274,27 +335,18 @@ class LoggerSQL:
         message_mode = message_context.get("mode", None)
         channels = message_context.get("channels", None)
         dm_success_info = message_context.get("success_info", None)
+        dm_success_info_reason = None
 
         # Maximum 3 tries to succeed, turn off base logging if it doesn't work
         for tries in range(3):
-            with suppress(ProgrammingError):
-                log_object = MessageLOG(sent_data=sent_data)
+            #with suppress(ProgrammingError):
                 # Add DirectMESSAGE success information
                 if dm_success_info is not None:
-                    log_object.dm_success = dm_success_info["success"]
-                    if not log_object.dm_success:
-                        log_object.dm_reason = dm_success_info["reason"]
-
+                    if "reason" in dm_success_info:
+                        dm_success_info_reason = dm_success_info["reason"]
+                
                 with self.Session() as session:
                     # Map MessageTYPE to an identificator
-                    log_object.message_type = self.MessageTYPE[message_type]
-
-                    if message_mode is not None:
-                        # If message_mode exists [DirectMESSAGE and TextMESSAGE] then map the message_mode to an identificator
-                        log_object.message_mode = self.MessageMODE[message_mode]
-                    else:
-                        log_object.message_mode = None
-
                     # Update GUILD/USER table
                     result = None
                     if guild_snowflake not in self.GuildUSER:
@@ -304,50 +356,30 @@ class LoggerSQL:
                             self.GuildUSER[guild_snowflake] = result
                     else:
                         result = self.GuildUSER[guild_snowflake]
-
+                    
                     if result is None:
                         guild_type = self.GuildTYPE[guild_type]
                         result = GuildUSER(guild_type, guild_snowflake, guild_name)
                         session.add(result)
                         session.flush()
+                        
                         result = result.id
                         self.GuildUSER[guild_snowflake] = result
 
                     # Reference the guild_id with id from GuildUSER lookup table
                     guild_lookup = result
-                    log_object.guild_id = guild_lookup
 
-                    # Save the message log
-                    session.add(log_object)
-                    session.flush()
+                    stms = ""
                     if channels is not None:
                         # If channels exist [TextMESSAGE and VoiceMESSAGE], update the CHANNELS table with the correct name
                         # and only insert the channel Snowflake identificators into the message log
-                        channels = channels["successful"] + channels["failed"]
-                        channels_snow = [x["id"] for x in channels]
-
+                        channels = json.dumps(channels["successful"] + channels["failed"])
                         # Query the channels and add missing ones
-                        result = session.query(CHANNEL.id, CHANNEL.snowflake_id).filter(CHANNEL.snowflake_id.in_(channels_snow)).all()
-                        result_snow = {x[1] for x in result}  # Snowflakes returned by querry
-                        to_add_ch = []
-                        for channel in channels:
-                            if channel["id"] not in result_snow:
-                                item = CHANNEL(channel["id"], channel["name"], guild_lookup)
-                                to_add_ch.append(item)
-
-                        if len(to_add_ch) > 0:
-                            session.add_all(to_add_ch)
-                            session.flush()
-                            to_add_ch = [(x.id, x.snowflake_id) for x in to_add_ch]
-
-                        to_add_ch_log = []
-                        for channel in result + to_add_ch:
-                            index = channels_snow.index(channel[1])
-                            to_add_ch_log.append(MessageChannelLOG(log_object.id, channel[0], channels[index].pop("reason", None) ) )
-
-                        session.bulk_save_objects(to_add_ch_log)
-
-                    session.commit()
+                        stms += f"EXEC sp_insert_channels {channels}, {guild_lookup};"
+                        
+                    # Execute raw sql call for faster saving of the log
+                    stms += f"EXEC sp_save_log '{json.dumps(sent_data)}','{message_type}',{guild_snowflake},'{message_mode}','{dm_success_info_reason}',{channels};COMMIT;"
+                    session.execute(text(stms))
                     return True
 
         trace(f"Unable to save to databse {self.database}. Switching to file logging", TraceLEVELS.WARNING)
@@ -356,25 +388,21 @@ class LoggerSQL:
 
 
 class MessageTYPE(LoggerSQL.Base):
-    """
-    ~ SQL Table Descriptor Class ~
-    @Name: MessageTYPE
+    """~ SQL Table Descriptor Class ~
     @Info: Lookup table for storing xMESSAGE types
     @Param:
         name: Name of the xMESSAGE class"""
     __tablename__ = "MessageTYPE"
 
     id = Column(SmallInteger, Identity(start=0, increment=1), primary_key=True)
-    name = Column(String(20), unique=True)
+    name = Column(NVARCHAR(20), unique=True)
 
     def __init__(self, name: str=None):
         self.name = name
 
 
 class GuildTYPE(LoggerSQL.Base):
-    """
-    ~ SQL Table Descriptor Class ~
-    @Name: GuildTYPE
+    """~ SQL Table Descriptor Class ~
     @Info: Lookup table for storing xGUILD types
     @Param:
         name: Name of the xGUILD class"""
@@ -382,16 +410,14 @@ class GuildTYPE(LoggerSQL.Base):
     __tablename__ = "GuildTYPE"
 
     id = Column(SmallInteger, Identity(start=0, increment=1), primary_key=True)
-    name = Column(String(20), unique=True)
+    name = Column(NVARCHAR(20), unique=True)
 
     def __init__(self, name: str=None):
         self.name = name
 
 
 class GuildUSER(LoggerSQL.Base):
-    """
-    ~ SQL Table Descriptor Class ~
-    @Name: GUILD
+    """~ SQL Table Descriptor Class ~
     @Info: Guild
     @Param: Table that represents GUILD and USER object inside the database
         snowflake: int :: Snowflake identificator of the guild/user
@@ -401,7 +427,7 @@ class GuildUSER(LoggerSQL.Base):
 
     id = Column(SmallInteger, Identity(start=0,increment=1),primary_key=True)
     snowflake_id = Column(BigInteger)
-    name = Column(String)
+    name = Column(NVARCHAR)
     guild_type = Column(SmallInteger, ForeignKey("GuildTYPE.id"))
 
     def __init__(self,
@@ -414,9 +440,7 @@ class GuildUSER(LoggerSQL.Base):
 
 
 class CHANNEL(LoggerSQL.Base):
-    """
-    ~ SQL Table Descriptor Class ~
-    @Name: CHANNEL
+    """~ SQL Table Descriptor Class ~
     @Info: Maps the snowflake id to a name and GUILD id
     @Param:
         snowflake: int :: Snowflake identificator
@@ -426,7 +450,7 @@ class CHANNEL(LoggerSQL.Base):
     __tablename__ = "CHANNEL"
     id = Column(SmallInteger, Identity(start=0,increment=1),primary_key=True)
     snowflake_id = Column(BigInteger)
-    name = Column(String)
+    name = Column(NVARCHAR)
     guild_id = Column(SmallInteger, ForeignKey("GuildUSER.id", ondelete="CASCADE"))
 
     def __init__(self,
@@ -439,9 +463,7 @@ class CHANNEL(LoggerSQL.Base):
 
 
 class MessageMODE(LoggerSQL.Base):
-    """
-    ~ SQL Table Descriptor Class ~
-    @Name: MessageMODE
+    """~ SQL Table Descriptor Class ~
     @Info: Lookup table for storing different message send modes [TextMESSAGE, DirectMESSAGE]
     @Param:
         name: Name of the mode"""
@@ -449,16 +471,26 @@ class MessageMODE(LoggerSQL.Base):
     __tablename__ = "MessageMODE"
 
     id = Column(SmallInteger, Identity(start=0, increment=1), primary_key=True)
-    name = Column(String(20), unique=True)
+    name = Column(NVARCHAR(20), unique=True)
 
     def __init__(self, name: str=None):
         self.name = name
 
+class DataHISTORY(LoggerSQL.Base):
+    """~ SQL Table Descriptor Class ~
+    @Info:
+        This table is used for storing all the different data(JSON) that was ever sent (to reduce redundancy -> and file size in the MessageLOG)."""
+    __tablename__ = "DataHISTORY"
+    
+    id = Column(Integer, Identity(start=0, increment=1), primary_key= True)
+    content = Column(NVARCHAR)
+    
+    def __init__(self,
+                 content: str):
+        self.content = content
 
 class MessageLOG(LoggerSQL.Base):
-    """
-    ~ SQL Table Descriptor Class ~
-    @Name: MessageLOG
+    """~ SQL Table Descriptor Class ~
     @Info: The logging table containing information for each message send attempt.
            NOTE: This table is missing successful and failed channels (or DM success status)
                   that is because those are a seperate table
@@ -472,12 +504,12 @@ class MessageLOG(LoggerSQL.Base):
     __tablename__ = "MessageLOG"
 
     id = Column(Integer, Identity(start=0, increment=1), primary_key=True)
-    sent_data = Column(JSON)
+    sent_data = Column(Integer, ForeignKey("DataHISTORY.id"))
     message_type = Column(SmallInteger, ForeignKey("MessageTYPE.id", ))
     guild_id =     Column(SmallInteger, ForeignKey("GuildUSER.id", ondelete="CASCADE"))
     message_mode = Column(SmallInteger, ForeignKey("MessageMODE.id" )) # [TextMESSAGE, DirectMESSAGE]
     dm_success  = Column(Boolean) # [DirectMESSAGE]
-    dm_reason   = Column(String)  # [DirectMESSAGE]
+    dm_reason   = Column(NVARCHAR)  # [DirectMESSAGE]
     timestamp = Column(DateTime)
 
     def __init__(self,
@@ -495,9 +527,7 @@ class MessageLOG(LoggerSQL.Base):
 
 
 class MessageChannelLOG(LoggerSQL.Base):
-    """
-    ~ SQL Table Descriptor Class ~
-    @Name: MessageChannelLOG
+    """~ SQL Table Descriptor Class ~
     @Info: This is a table that contains a log of channels that are
            linked to a certain message log.
     @Param:
@@ -507,7 +537,7 @@ class MessageChannelLOG(LoggerSQL.Base):
 
     log_id = Column(Integer, ForeignKey("MessageLOG.id", ondelete="CASCADE"), primary_key=True)
     channel_id = Column(SmallInteger, ForeignKey("CHANNEL.id"), primary_key=True)
-    reason = Column(String)
+    reason = Column(NVARCHAR)
     def __init__(self,
                  message_log_id: int,
                  channel_id: int,
@@ -519,7 +549,6 @@ class MessageChannelLOG(LoggerSQL.Base):
 
 def initialize(mgr_object: LoggerSQL) -> bool:
     """~ function ~
-    @Name: initialize
     @Info: This function initializes the sql manager and also the selected database
            NOTE: If initialization fails, file logs will be used
     @Param:
@@ -538,7 +567,6 @@ def initialize(mgr_object: LoggerSQL) -> bool:
 
 def get_sql_manager() -> LoggerSQL:
     """~ function ~
-    @Name: get_sql_manager
     @Info: Returns the LoggerSQL object that was originally
            passed to the framework.run(...) function"""
     return GLOBALS.manager
