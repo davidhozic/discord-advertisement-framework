@@ -239,6 +239,7 @@ class GUILD(BaseGUILD):
 
         for message in msg_list:
             if message.is_ready():
+                message.reset_timer()
                 message_ret = await message.send()
                 # Check if the message still has any channels (as they can be auto removed on 404 status)
                 if len(message.channels) == 0:
