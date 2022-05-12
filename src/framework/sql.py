@@ -232,8 +232,8 @@ class LoggerSQL:
                         -- Procedure adds missing channels to the CHANNEL table
                         BEGIN
                             INSERT INTO CHANNEL(snowflake_id, name, guild_id)
-                            SELECT id, name, @guild_id FROM OPENJSON(@channels) WITH(id bigint, name nvarchar(max))
-                            WHERE id NOT IN (SELECT snowflake_id FROM CHANNEL);
+                            SELECT id, name, @guild_id FROM OPENJSON(@channels) WITH(id bigint, name nvarchar(max)) chjson
+                            WHERE NOT EXISTS(SELECT snowflake_id FROM CHANNEL WHERE snowflake_id = chjson.id);
                         END"""
             }
         ]
