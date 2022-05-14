@@ -8,7 +8,7 @@ from  datetime   import datetime
 from  typing     import Literal
 from  contextlib import suppress
 from  sqlalchemy import (
-                         SmallInteger, Integer, BigInteger, NVARCHAR, DateTime, Boolean,
+                         SmallInteger, Integer, BigInteger, NVARCHAR, DateTime,
                          Column, Identity, ForeignKey,
                          create_engine, text
                         )
@@ -26,15 +26,14 @@ __all__ = (
     "get_sql_manager"
 )
 
-
-def timeit(fnc):
-    def _timeit(*args, **kwargs):
-        start = time.time()
-        ret = fnc(*args, **kwargs)
-        end = time.time()
-        print(f"Took {(end-start)*1000} ms")
-        return ret
-    return _timeit
+# def timeit(fnc):
+#     def _timeit(*args, **kwargs):
+#         start = time.time()
+#         ret = fnc(*args, **kwargs)
+#         end = time.time()
+#         print(f"Took {(end-start)*1000} ms")
+#         return ret
+#     return _timeit
 
 class GLOBALS:
     """~ class ~
@@ -231,9 +230,18 @@ class LoggerSQL:
                 "stm":"""PROCEDURE {}(@channels ntext, @guild_id bigint) AS
                         -- Procedure adds missing channels to the CHANNEL table
                         BEGIN
+	                        DECLARE @channels_t TABLE(id bigint, name nvarchar(max));
+	                        
+	                       INSERT INTO @channels_t(id, name)
+	                       SELECT a.id, a.name FROM OPENJSON(@channels) WITH(id bigint, name nvarchar(max)) a;
+	                       
                             INSERT INTO CHANNEL(snowflake_id, name, guild_id)
-                            SELECT id, name, @guild_id FROM OPENJSON(@channels) WITH(id bigint, name nvarchar(max)) chjson
+                            SELECT id, name, @guild_id FROM @channels_t chjson
                             WHERE NOT EXISTS(SELECT snowflake_id FROM CHANNEL WHERE snowflake_id = chjson.id);
+
+                            UPDATE CHANNEL
+                            SET name = chjson.name
+                            FROM CHANNEL JOIN @channels_t chjson ON chjson.id = CHANNEL.snowflake_id
                         END"""
             }
         ]
@@ -312,7 +320,7 @@ class LoggerSQL:
 
         return True
 
-    @timeit
+    #@timeit
     def save_log(self,
                  guild_context: dict,
                  message_context: dict) -> bool:
@@ -332,10 +340,10 @@ class LoggerSQL:
         guild_name = guild_context.get("name")
         guild_type: str = guild_context.get("type")
         message_type: str = message_context.get("type")
-        message_mode = message_context.get("mode", "null")
+        message_mode = message_context.get("mode", None)
         channels = message_context.get("channels", None)
         dm_success_info = message_context.get("success_info", None)
-        dm_success_info_reason = "null"
+        dm_success_info_reason = None
 
         # Maximum 3 tries to succeed, turn off base logging if it doesn't work
         for tries in range(3):
@@ -373,15 +381,21 @@ class LoggerSQL:
                     if channels is not None:
                         # If channels exist [TextMESSAGE and VoiceMESSAGE], update the CHANNELS table with the correct name
                         # and only insert the channel Snowflake identificators into the message log
-                        channels = f"'{json.dumps(channels['successful'] + channels['failed'])}'"
+                        channels = f"{json.dumps(channels['successful'] + channels['failed'])}"
                         # Query the channels and add missing ones
-                        stms += f"EXEC sp_insert_channels {channels}, {guild_lookup};"
+                        stms += f"EXEC sp_insert_channels :channels, :guild_id;"
                     else:
-                        channels = "null"
+                        channels = None
                     
                     # Execute raw sql call for faster saving of the log
-                    stms += f"EXEC sp_save_log '{json.dumps(sent_data)}','{message_type}',{guild_snowflake},{message_mode},{dm_success_info_reason},{channels};COMMIT;"
-                    self.engine.execute(text(stms))
+                    stms += f"EXEC sp_save_log :data, :message_type, :guild_snowflake, :message_mode, :dm_reason, :channels;COMMIT;"
+                    self.engine.execute(text(stms), channels=channels,
+                                                    data=json.dumps(sent_data),
+                                                    message_type=message_type,
+                                                    guild_id=guild_lookup,
+                                                    guild_snowflake=guild_snowflake,
+                                                    message_mode=message_mode,
+                                                    dm_reason=dm_success_info_reason)
                     return True
 
         trace(f"Unable to save to databse {self.database}. Switching to file logging", TraceLEVELS.WARNING)
