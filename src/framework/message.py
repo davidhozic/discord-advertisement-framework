@@ -601,28 +601,26 @@ class TextMESSAGE(BaseMESSAGE):
                         handled = True
             return handled
 
-        try:
-            # Check if we have permissions
-            ch_perms = channel.permissions_for(channel.guild.get_member(client.get_client().user.id))
-            if ch_perms.send_messages is False:
-                raise self.generate_exception(403, 50013, "You lack permissions to perform that action", discord.Forbidden)
-            
-            # Clear previous message in case of clear-send
-            if self.mode == "clear-send" and self.sent_messages[channel.id] is not None:
-                for tries in range(3):
-                    try:
-                        # Delete discord message that originated from this MESSAGE object
-                        await self.sent_messages[channel.id].delete()
-                        self.sent_messages[channel.id] = None
-                        break
-                    except discord.HTTPException as ex:
-                        if ex.status == 429:
-                            await asyncio.sleep(int(ex.response.headers["Retry-After"])  + 1)
+        # Clear previous message in case of clear-send
+        if self.mode == "clear-send" and self.sent_messages[channel.id] is not None:
+            for tries in range(3):
+                try:
+                    # Delete discord message that originated from this MESSAGE object
+                    await self.sent_messages[channel.id].delete()
+                    self.sent_messages[channel.id] = None
+                    break
+                except discord.HTTPException as ex:
+                    if ex.status == 429:
+                        await asyncio.sleep(int(ex.response.headers["Retry-After"])  + 1)
 
-            # Send/Edit message
-            for tries in range(3):  # Maximum 3 tries (if rate limit)
-                # Mode dictates to send new message or delete previous and then send new message or mode dictates edit but message was  never sent to this channel before
-                if  (self.mode in  {"send" , "clear-send"} or
+        ch_perms = channel.permissions_for(channel.guild.get_member(client.get_client().user.id))
+        for tries in range(3):  # Maximum 3 tries (if rate limit)
+            try:
+                if ch_perms.send_messages is False: # Check if we have permissions
+                    raise self.generate_exception(403, 50013, "You lack permissions to perform that action", discord.Forbidden)
+        
+                # Send/Edit message
+                if  (self.mode in  {"send" , "clear-send"} or # Mode dictates to send new message or delete previous and then send new message or mode dictates edit but message was  never sent to this channel before
                     self.mode == "edit" and self.sent_messages[channel.id] is None
                     ):
                     discord_sent_msg = await channel.send(  text,
@@ -637,9 +635,9 @@ class TextMESSAGE(BaseMESSAGE):
 
                 return {"success" : True}
 
-        except Exception as ex:
-            if await handle_error(ex) is False:
-                return {"success" : False, "reason" : ex}
+            except Exception as ex:
+                if await handle_error(ex) is False:
+                    return {"success" : False, "reason" : ex}
 
     async def send(self) -> Union[dict,  None]:
         """"~ async method ~
