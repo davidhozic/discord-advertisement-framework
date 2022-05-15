@@ -39,6 +39,7 @@ class GLOBALS:
     """~ class ~
     @Info: Stores global module variables """
     manager  = None
+    enabled = False
     lt_types = []
 
 
@@ -126,8 +127,6 @@ class LoggerSQL:
                 # Union the 2 system tables containing views and procedures/functions, then select only the element that matches the item we want to create, it it returns None, it doesnt exist
                 if session.execute(text(f"SELECT * FROM sys.types WHERE name= '{statement['name']}'")).first() is None:
                     session.execute(text("CREATE TYPE " + statement["stm"].format(statement["name"]) ))
-
-            
 
     def create_analytic_objects(self):
         """~ Method ~
@@ -253,8 +252,6 @@ class LoggerSQL:
                 else:
                     session.execute(text("ALTER " + statement["stm"].format(statement["name"]) ))
 
-            
-
     def generate_lookup_values(self):
         """~ Method ~
         @Info: Generates the lookup values for all the different classes the @register_type decorator was used on.
@@ -268,8 +265,6 @@ class LoggerSQL:
                     existing = to_add
 
                 getattr(self, type(to_add).__name__)[to_add.name] = existing.id # Set the internal lookup values to later prevent time consuming queries
-
-            
 
     def create_tables(self):
         """~ Method ~
@@ -334,6 +329,13 @@ class LoggerSQL:
                                         see guild.xMESSAGE.generate_log_context() for more info.
         @Return: Returns bool value indicating success (True) or failure (False)."""
 
+        async def handle_error(exception: Exception) -> bool:
+            """~ async function ~
+            @Info: Used to handle errors that happen in the save_log method.
+            @Return: Returns BOOL indicating if logging to the base should be attempted again."""
+            status = False
+            return status
+
         # Parse the data
         sent_data = message_context.get("sent_data")
         guild_snowflake = guild_context.get("id")
@@ -347,7 +349,7 @@ class LoggerSQL:
 
         # Maximum 3 tries to succeed, turn off base logging if it doesn't work
         for tries in range(3):
-            with suppress(ProgrammingError):
+            try:
                 # Add DirectMESSAGE success information
                 if dm_success_info is not None:
                     if "reason" in dm_success_info:
@@ -398,8 +400,12 @@ class LoggerSQL:
                                                     dm_reason=dm_success_info_reason)
                     return True
 
+            except Exception as ex:
+                if not handle_error(ex):
+                    break
+
         trace(f"Unable to save to databse {self.database}. Switching to file logging", TraceLEVELS.WARNING)
-        GLOBALS.manager = None  # Turn off sql logging -> switch to file logs
+        GLOBALS.enabled = False
         return False
 
 
@@ -570,12 +576,12 @@ def initialize(mgr_object: LoggerSQL) -> bool:
         mgr_object: LoggerSQL :: SQL database manager object responsible for saving the logs
                                  into the SQL database"""
     trace("[SQL]: Initializing logging...", TraceLEVELS.NORMAL)
-    GLOBALS.manager = mgr_object
     if mgr_object is not None and mgr_object.initialize():
         trace("[SQL]: Initialization was successful!", TraceLEVELS.NORMAL)
+        GLOBALS.enabled = True
+        GLOBALS.manager = mgr_object
         return True
 
-    mgr_object = None # Set to None in case we got here from failed initialization (None is used as enabled/disabled indicator)
     trace("Unable to setup SQL logging, file logs will be used instead.", TraceLEVELS.WARNING)
     return False
 
@@ -583,5 +589,6 @@ def initialize(mgr_object: LoggerSQL) -> bool:
 def get_sql_manager() -> LoggerSQL:
     """~ function ~
     @Info: Returns the LoggerSQL object that was originally
-           passed to the framework.run(...) function"""
-    return GLOBALS.manager
+           passed to the framework.run(...) function 
+           or None if the SQL logging is disabled"""
+    return GLOBALS.manager if GLOBALS.enabled else None
