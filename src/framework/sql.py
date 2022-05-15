@@ -181,7 +181,7 @@ class LoggerSQL:
                             * referencing that specific MessageLOG row were deleted
                             */
                             BEGIN
-                                DECLARE @MessageLogID smallint;
+                                DECLARE @MessageLogID int;
                                 SELECT @MessageLogID = del.log_id FROM DELETED del;
                                 IF (SELECT COUNT(*) FROM MessageChannelLOG mlc WHERE mlc.log_id = @MessageLogID) = 0
                                 BEGIN 
