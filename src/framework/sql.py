@@ -397,53 +397,50 @@ class LoggerSQL:
                     if "reason" in dm_success_info:
                         dm_success_info_reason = dm_success_info["reason"]
                 
-                with self.SESSION() as session:
-                    # Map MessageTYPE to an identificator
-                    # Update GUILD/USER table
-                    result = None
-                    if guild_snowflake not in self.GuildUSER:
+                # Map MessageTYPE to an identificator
+                # Update GUILD/USER table
+                result = None
+                if guild_snowflake not in self.GuildUSER:
+                    with self.SESSION.begin() as session:
                         result = session.query(GuildUSER.id).filter(GuildUSER.snowflake_id == guild_snowflake).first()
                         if result is not None:
                             result = result[0]
                             self.GuildUSER[guild_snowflake] = result
-                    else:
-                        result = self.GuildUSER[guild_snowflake]
-                    
-                    if result is None:
-                        guild_type = self.GuildTYPE[guild_type]
-                        result = GuildUSER(guild_type, guild_snowflake, guild_name)
-                        session.add(result)
-                        session.flush()
-                        
-                        result = result.id
-                        self.GuildUSER[guild_snowflake] = result
+                        else:
+                            guild_type = self.GuildTYPE[guild_type]
+                            result = GuildUSER(guild_type, guild_snowflake, guild_name)
+                            session.add(result)
+                            session.flush()
+                            result = result.id
+                            self.GuildUSER[guild_snowflake] = result
+                else:
+                    result = self.GuildUSER[guild_snowflake]
 
-                    # Reference the guild_id with id from GuildUSER lookup table
-                    guild_lookup = result
-
-                    stms = ""
-                    channels_str = None
-                    if channels is not None:
-                        # If channels exist [TextMESSAGE and VoiceMESSAGE], update the CHANNELS table with the correct name
-                        # and only insert the channel Snowflake identificators into the message log
-                        channels_str = f"{json.dumps(channels['successful'] + channels['failed'])}"
-                    
-                    # Execute raw sql call for faster saving of the log
-                    stms += f"EXEC sp_save_log :data, :message_type, :guild_id, :message_mode, :dm_reason, :channels; COMMIT;"
-                    session.execute(text(stms), {"channels":channels_str,
-                                                    "data":json.dumps(sent_data),
-                                                    "message_type":message_type,
-                                                    "guild_id":guild_lookup,
-                                                    "message_mode":message_mode,
-                                                    "dm_reason":dm_success_info_reason})
-                    return True
+                # Reference the guild_id with id from GuildUSER lookup table
+                guild_lookup = result
+                stms = ""
+                channels_str = None
+                if channels is not None:
+                    # If channels exist [TextMESSAGE and VoiceMESSAGE], update the CHANNELS table with the correct name
+                    # and only insert the channel Snowflake identificators into the message log
+                    channels_str = f"{json.dumps(channels['successful'] + channels['failed'])}"
+                
+                # Execute raw sql call for faster saving of the log
+                stms += f"EXEC sp_save_log :data, :message_type, :guild_id, :message_mode, :dm_reason, :channels; COMMIT"
+                self.engine.execute(text(stms), {"channels":channels_str,
+                                                "data":json.dumps(sent_data),
+                                                "message_type":message_type,
+                                                "guild_id":guild_lookup,
+                                                "message_mode":message_mode,
+                                                "dm_reason":dm_success_info_reason})
+                return True
 
             except SQLAlchemyError as ex:
                 ex = ex.orig.args[1].decode()
                 trace(f"Attempt to save into the database failed , retrying. Tries left: {2 - tries}", TraceLEVELS.WARNING)
                 if not handle_error(ex):
                     break
-            except:
+            except Exception as ex:
                 break
 
         trace(f"Unable to save to databse {self.database}. Switching to file logging", TraceLEVELS.WARNING)
