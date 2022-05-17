@@ -26,13 +26,23 @@ __all__ = (
     "get_sql_manager"
 )
 
-def timeit(fnc):
-    def _timeit(*args, **kwargs):
-        start = time.time()
-        ret = fnc(*args, **kwargs)
-        end = time.time()
-        print(f"Took {(end-start)*1000} ms")
-        return ret
+from numpy import average
+def timeit(samples):
+    def _timeit(fnc):
+        samples = []
+        def __timeit(*args, **kwargs):
+            start = time.time()
+            ret = fnc(*args, **kwargs)
+            end = time.time()
+            ms = (end-start)*1000
+            
+            samples.append(ms)
+            if len(samples) == samples:
+                print(f"Took {average(samples)} ms on average")
+                samples.clear()
+            return ret
+        return __timeit
+
     return _timeit
 
 class GLOBALS:
@@ -112,6 +122,26 @@ class LoggerSQL:
         ## Other object caching
         self.GuildUSER = {}
 
+    def create_data_types(self) -> bool:
+        """~ Method ~
+        @Info: Creates datatypes that are used by the framework to log messages"""
+        stms = [
+            {
+                "name" : "t_channels",
+                "stm"  : "TYPE {} AS TABLE(id bigint, name nvarchar(max), reason nvarchar(max));"
+            }
+        ]
+        with suppress(SQLAlchemyError):
+            with self.SESSION() as session:
+                for statement in stms:
+                    # Union the 2 system tables containing views and procedures/functions, then select only the element that matches the item we want to create, it it returns None, it doesnt exist
+                    if session.execute(text(f"SELECT name FROM sys.types WHERE name='{statement['name']}'")).first() is None:
+                        session.execute(text("CREATE " + statement["stm"].format(statement["name"]) ))
+
+            return True
+        
+        return False
+
     def create_analytic_objects(self) -> bool:
         """~ Method ~
         @Info: Creates Stored Procedures, Views and Functions via SQL code.
@@ -120,7 +150,8 @@ class LoggerSQL:
                    it uses CREATE + "stm" command to create the object inside the SQL database.
         @Param: void"""
         stms = [
-            {   "name" :   "vMessageLogFullDETAIL",
+            {   
+                "name" :   "vMessageLogFullDETAIL",
                 "stm"    : """VIEW {} AS
                                 SELECT ml.id id, (SELECT content FROM DataHistory dh WHERE dh.id = ml.sent_data) sent_data, mt.name message_type, gt.name guild_type , gu.snowflake_id guild_id, gu.name guild_name, mm.name message_mode, ml.dm_reason dm_reason, ml.[timestamp] [timestamp]
                                 FROM MessageLOG ml JOIN MessageTYPE mt ON ml.message_type  = mt.id
@@ -174,65 +205,67 @@ class LoggerSQL:
                             END"""
             },
             {
-                "name" : "sp_save_log",
-                "stm" : """PROCEDURE {}(@sent_data nvarchar(max),
-                                        @message_type nvarchar(max),
-                                        @guild_snowflake bigint,
-                                        @message_mode nvarchar(max),
-                                        @dm_reason nvarchar(max),
-                                        @channels ntext) AS
-            /* Procedure that saves the log							 
-            * This is done within sql instead of python for speed optimization
-            */
-            BEGIN
-                DECLARE @existing_data_id int;
-                DECLARE @message_type_id  smallint = (SELECT id FROM MessageTYPE mt WHERE mt.name = @message_type);
-                DECLARE @guild_id         smallint = (SELECT id FROM GuildUSER gu WHERE gu.snowflake_id = @guild_snowflake);
-                DECLARE @message_mode_id  smallint = (SELECT id FROM MessageMODE mm WHERE mm.name = @message_mode);
-                DECLARE @last_log_id      int;
-
-                SELECT @existing_data_id = id FROM DataHISTORY dh WHERE dh.content = @sent_data;	
-                
-                IF @existing_data_id IS NULL
-                BEGIN
-                    INSERT INTO DataHISTORY(content) VALUES(@sent_data);
-                    SELECT @existing_data_id = id FROM DataHISTORY dh WHERE dh.content = @sent_data;
-                END
-                
-                INSERT INTO MessageLOG(sent_data, message_type, guild_id, message_mode, dm_reason, [timestamp]) VALUES(
-                    @existing_data_id, @message_type_id, @guild_id, @message_mode_id, @dm_reason, GETDATE()
-                );
-                SET @last_log_id = SCOPE_IDENTITY();
-                
-                INSERT INTO MessageChannelLOG (log_id, channel_id, reason)
-                SELECT @last_log_id, (SELECT CHANNEL.id FROM CHANNEL WHERE CHANNEL.snowflake_id = dc.id), reason FROM OPENJSON(@channels) WITH(name nvarchar(max), id bigint, reason nvarchar(max)) dc
-            END"""
-            },
-            {
                 "name": "sp_insert_channels",
-                "stm":"""PROCEDURE {}(@channels ntext, @guild_id bigint) AS
+                "stm":"""PROCEDURE {}(@channels t_channels READONLY, @guild_id bigint) AS
                         -- Procedure adds missing channels to the CHANNEL table
                         BEGIN
-	                        DECLARE @channels_t TABLE(id bigint, name nvarchar(max));
-	                        
-	                       INSERT INTO @channels_t(id, name)
-	                       SELECT a.id, a.name FROM OPENJSON(@channels) WITH(id bigint, name nvarchar(max)) a;
 	                       
                             INSERT INTO CHANNEL(snowflake_id, name, guild_id)
-                            SELECT id, name, @guild_id FROM @channels_t chjson
+                            SELECT id, name, @guild_id FROM @channels chjson
                             WHERE NOT EXISTS(SELECT snowflake_id FROM CHANNEL WHERE snowflake_id = chjson.id);
 
                             UPDATE CHANNEL
                             SET name = chjson.name
-                            FROM CHANNEL JOIN @channels_t chjson ON chjson.id = CHANNEL.snowflake_id
+                            FROM CHANNEL JOIN @channels chjson ON chjson.id = CHANNEL.snowflake_id
                         END"""
+            },
+            {
+                "name" : "sp_save_log",
+                "stm" : """PROCEDURE {}(@sent_data nvarchar(max),
+                                        @message_type nvarchar(max),
+                                        @guild_id smallint,
+                                        @message_mode nvarchar(max),
+                                        @dm_reason nvarchar(max),
+                                        @channels ntext) AS
+                /* Procedure that saves the log							 
+                * This is done within sql instead of python for speed optimization
+                */
+                BEGIN
+                    DECLARE @existing_data_id int;
+                    DECLARE @message_type_id  smallint = (SELECT id FROM MessageTYPE mt WHERE mt.name = @message_type);
+                    DECLARE @message_mode_id  smallint = (SELECT id FROM MessageMODE mm WHERE mm.name = @message_mode);
+                    DECLARE @last_log_id      int;
+
+                    DECLARE @channels_t t_channels;
+                                
+                    INSERT INTO @channels_t(id, name)
+                    SELECT a.id, a.name FROM OPENJSON(@channels) WITH(id bigint, name nvarchar(max)) a;
+
+                    EXEC sp_insert_channels @channels_t, @guild_id;
+
+                    SELECT @existing_data_id = id FROM DataHISTORY dh WHERE dh.content = @sent_data;	
+                    
+                    IF @existing_data_id IS NULL
+                    BEGIN
+                        INSERT INTO DataHISTORY(content) VALUES(@sent_data);
+                        SELECT @existing_data_id = id FROM DataHISTORY dh WHERE dh.content = @sent_data;
+                    END
+                    
+                    INSERT INTO MessageLOG(sent_data, message_type, guild_id, message_mode, dm_reason, [timestamp]) VALUES(
+                        @existing_data_id, @message_type_id, @guild_id, @message_mode_id, @dm_reason, GETDATE()
+                    );
+                    SET @last_log_id = SCOPE_IDENTITY();
+                    
+                    INSERT INTO MessageChannelLOG (log_id, channel_id, reason)
+                    SELECT @last_log_id, (SELECT CHANNEL.id FROM CHANNEL WHERE CHANNEL.snowflake_id = dc.id), reason FROM @channels_t dc
+                END"""
             }
         ]
-        with suppress():
+        with suppress(SQLAlchemyError):
             with self.SESSION() as session:
                 for statement in stms:
                     # Union the 2 system tables containing views and procedures/functions, then select only the element that matches the item we want to create, it it returns None, it doesnt exist
-                    if session.execute(text(f"SELECT * FROM sys.all_objects WHERE name= '{statement['name']}'")).first() is None:
+                    if session.execute(text(f"SELECT name FROM sys.all_objects WHERE name='{statement['name']}'")).first() is None:
                         session.execute(text("CREATE " + statement["stm"].format(statement["name"]) ))
                     else:
                         session.execute(text("ALTER " + statement["stm"].format(statement["name"]) ))
@@ -244,7 +277,7 @@ class LoggerSQL:
         """~ Method ~
         @Info: Generates the lookup values for all the different classes the @register_type decorator was used on.
         """
-        with suppress():
+        with suppress(SQLAlchemyError):
             with self.SESSION() as session:
                 for to_add in GLOBALS.lt_types:
                     existing = session.query(type(to_add)).filter_by(name=to_add.name).first()
@@ -261,7 +294,7 @@ class LoggerSQL:
     def create_tables(self) -> bool:
         """~ Method ~
         @Info: Creates tables from the SQLAlchemy's descriptor classes"""
-        with suppress():
+        with suppress(SQLAlchemyError):
             self.Base.metadata.create_all(bind=self.engine)
             return True
         
@@ -270,9 +303,9 @@ class LoggerSQL:
     def begin_engine(self) -> bool:
         """~ Method ~
         @Info: Creates engine and the databatabase"""
-        with suppress():
+        with suppress(SQLAlchemyError):
             self.engine = create_engine(f"mssql+pymssql://{self.username}:{self.__password}@{self.server}/{self.database}", echo=False)
-            self.SESSION = sessionmaker(bind=self.engine, autoflush=True, autocommit=True)
+            self.SESSION = sessionmaker(bind=self.engine)
             if not database_exists(self.engine.url):
                 trace("[SQL]: Creating database...", TraceLEVELS.NORMAL)
                 create_database(self.engine.url)
@@ -285,6 +318,7 @@ class LoggerSQL:
         @Info: This method initializes the connection to the database, creates the missing tables
                and fills the lookuptables with types defined by the register_type(lookup_table) function.
         @Param: void"""
+
         # Create engine for communicating with the SQL base
         if not self.begin_engine():
             trace("[SQL]: Unable to start engine.", TraceLEVELS.ERROR)
@@ -302,14 +336,21 @@ class LoggerSQL:
             trace("[SQL]: Unable to create lookuptables' rows.", TraceLEVELS.ERROR)
             return False
 
+        # Create datatypes
+        trace("[SQL]: Creating data types", TraceLEVELS.NORMAL)
+        if not self.create_data_types():
+            trace("[SQL]: Unable to data types", TraceLEVELS.ERROR)
+            return False
+
         # Initialize views, procedures and functions
         trace("[SQL]: Creating Views, Procedures & Functions", TraceLEVELS.NORMAL)
         if not self.create_analytic_objects():
             trace("[SQL]: Unable to create views, procedures and functions.", TraceLEVELS.ERROR)
+            return False
 
         return True
 
-    @timeit
+    @timeit(25)
     def save_log(self,
                  guild_context: dict,
                  message_context: dict) -> bool:
@@ -382,16 +423,13 @@ class LoggerSQL:
                         # If channels exist [TextMESSAGE and VoiceMESSAGE], update the CHANNELS table with the correct name
                         # and only insert the channel Snowflake identificators into the message log
                         channels_str = f"{json.dumps(channels['successful'] + channels['failed'])}"
-                        # Query the channels and add missing ones
-                        stms += f"EXEC sp_insert_channels :channels, :guild_id;"
                     
                     # Execute raw sql call for faster saving of the log
-                    stms += f"EXEC sp_save_log :data, :message_type, :guild_snowflake, :message_mode, :dm_reason, :channels;COMMIT;"
+                    stms += f"EXEC sp_save_log :data, :message_type, :guild_id, :message_mode, :dm_reason, :channels;COMMIT;"
                     self.engine.execute(text(stms), channels=channels_str,
                                                     data=json.dumps(sent_data),
                                                     message_type=message_type,
                                                     guild_id=guild_lookup,
-                                                    guild_snowflake=guild_snowflake,
                                                     message_mode=message_mode,
                                                     dm_reason=dm_success_info_reason)
                     return True
