@@ -29,8 +29,8 @@ __all__ = (
 class GLOBALS:
     """ ~  GLOBALS  ~
         @Info: Contains the globally needed variables"""
-    user_callback: Callable
-    server_list: List
+    user_callback: Callable = None
+    server_list: List = None
 
 
 #######################################################################
@@ -74,6 +74,8 @@ async def initialize() -> bool:
         trace("No guilds could be parsed", TraceLEVELS.ERROR)
         return False
 
+    asyncio.create_task(advertiser("text"))
+    asyncio.create_task(advertiser("voice"))
     return True
 
 

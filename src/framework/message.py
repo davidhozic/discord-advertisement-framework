@@ -386,6 +386,7 @@ class VoiceMESSAGE(BaseMESSAGE):
                 await asyncio.sleep(1)
             return {"success": True}
         except Exception as ex:
+            trace(f"Unable to play audio, reason: {ex}", TraceLEVELS.NORMAL)
             if client.get_client().get_channel(channel.id) is None:
                 ex = self.generate_exception(404, 10003, "Channel was deleted", discord.NotFound)
             return {"success": False, "reason": ex}

@@ -12,7 +12,7 @@ from  sqlalchemy import (
                          Column, Identity, ForeignKey,
                          create_engine, text
                         )
-from sqlalchemy.exc  import ProgrammingError                        
+from sqlalchemy.exc  import SQLAlchemyError                        
 from  sqlalchemy.orm import sessionmaker
 from  sqlalchemy.ext.declarative import declarative_base
 from  sqlalchemy_utils import create_database, database_exists
@@ -26,14 +26,14 @@ __all__ = (
     "get_sql_manager"
 )
 
-# def timeit(fnc):
-#     def _timeit(*args, **kwargs):
-#         start = time.time()
-#         ret = fnc(*args, **kwargs)
-#         end = time.time()
-#         print(f"Took {(end-start)*1000} ms")
-#         return ret
-#     return _timeit
+def timeit(fnc):
+    def _timeit(*args, **kwargs):
+        start = time.time()
+        ret = fnc(*args, **kwargs)
+        end = time.time()
+        print(f"Took {(end-start)*1000} ms")
+        return ret
+    return _timeit
 
 class GLOBALS:
     """~ class ~
@@ -77,7 +77,7 @@ class LoggerSQL:
     Base = declarative_base()
     __slots__ = (
         "engine",
-        "Session",
+        "SESSION",
         "commit_buffer",
         "username",
         "__password",
@@ -103,7 +103,7 @@ class LoggerSQL:
         self.database = database
         self.commit_buffer = []
         self.engine = None
-        self.Session  = None
+        self.SESSION  = None
         # Caching (to avoid unneccessary queries)
         ## Lookup table caching
         self.MessageMODE = {}
@@ -112,23 +112,7 @@ class LoggerSQL:
         ## Other object caching
         self.GuildUSER = {}
 
-    def create_data_types(self):
-        """
-        ~ Method
-        @Info: Creates user-defined SQL data types"""
-        stms = [
-            {
-                "name": "dt_channel",
-                "stm":  "dt_channel AS TABLE(name nvarchar(max), snowflake bigint, reason nvarchar(max))"
-            }
-        ]
-        with self.Session() as session:
-            for statement in stms:
-                # Union the 2 system tables containing views and procedures/functions, then select only the element that matches the item we want to create, it it returns None, it doesnt exist
-                if session.execute(text(f"SELECT * FROM sys.types WHERE name= '{statement['name']}'")).first() is None:
-                    session.execute(text("CREATE TYPE " + statement["stm"].format(statement["name"]) ))
-
-    def create_analytic_objects(self):
+    def create_analytic_objects(self) -> bool:
         """~ Method ~
         @Info: Creates Stored Procedures, Views and Functions via SQL code.
                The method iterates thru a list, first checking if the object exists
@@ -138,7 +122,7 @@ class LoggerSQL:
         stms = [
             {   "name" :   "vMessageLogFullDETAIL",
                 "stm"    : """VIEW {} AS
-                                SELECT ml.id id, (SELECT content FROM DataHistory dh WHERE dh.id = ml.sent_data) sent_data, mt.name message_type, gt.name guild_type , gu.snowflake_id guild_id, gu.name guild_name, mm.name message_mode, ml.dm_reason dm_reason, ml.[timestamp] [Timestamp]
+                                SELECT ml.id id, (SELECT content FROM DataHistory dh WHERE dh.id = ml.sent_data) sent_data, mt.name message_type, gt.name guild_type , gu.snowflake_id guild_id, gu.name guild_name, mm.name message_mode, ml.dm_reason dm_reason, ml.[timestamp] [timestamp]
                                 FROM MessageLOG ml JOIN MessageTYPE mt ON ml.message_type  = mt.id
                                 LEFT JOIN MessageMODE mm ON mm.id = ml.message_mode
                                 JOIN GuildUSER gu ON gu.id = ml.guild_id
@@ -244,78 +228,88 @@ class LoggerSQL:
                         END"""
             }
         ]
-        with self.Session() as session:
-            for statement in stms:
-                # Union the 2 system tables containing views and procedures/functions, then select only the element that matches the item we want to create, it it returns None, it doesnt exist
-                if session.execute(text(f"SELECT * FROM sys.all_objects WHERE name= '{statement['name']}'")).first() is None:
-                    session.execute(text("CREATE " + statement["stm"].format(statement["name"]) ))
-                else:
-                    session.execute(text("ALTER " + statement["stm"].format(statement["name"]) ))
+        with suppress():
+            with self.SESSION() as session:
+                for statement in stms:
+                    # Union the 2 system tables containing views and procedures/functions, then select only the element that matches the item we want to create, it it returns None, it doesnt exist
+                    if session.execute(text(f"SELECT * FROM sys.all_objects WHERE name= '{statement['name']}'")).first() is None:
+                        session.execute(text("CREATE " + statement["stm"].format(statement["name"]) ))
+                    else:
+                        session.execute(text("ALTER " + statement["stm"].format(statement["name"]) ))
+            return True
+        
+        return False
 
-    def generate_lookup_values(self):
+    def generate_lookup_values(self) -> bool:
         """~ Method ~
         @Info: Generates the lookup values for all the different classes the @register_type decorator was used on.
         """
-        with self.Session() as session:
-            for to_add in GLOBALS.lt_types:
-                existing = session.query(type(to_add)).filter_by(name=to_add.name).first()
-                if existing is None:
-                    session.add(to_add)
-                    session.flush()
-                    existing = to_add
+        with suppress():
+            with self.SESSION() as session:
+                for to_add in GLOBALS.lt_types:
+                    existing = session.query(type(to_add)).filter_by(name=to_add.name).first()
+                    if existing is None:
+                        session.add(to_add)
+                        session.flush()
+                        existing = to_add
 
-                getattr(self, type(to_add).__name__)[to_add.name] = existing.id # Set the internal lookup values to later prevent time consuming queries
+                    getattr(self, type(to_add).__name__)[to_add.name] = existing.id # Set the internal lookup values to later prevent time consuming queries
+            return True
 
-    def create_tables(self):
+        return False
+
+    def create_tables(self) -> bool:
         """~ Method ~
         @Info: Creates tables from the SQLAlchemy's descriptor classes"""
-        self.Base.metadata.create_all(bind=self.engine)
+        with suppress():
+            self.Base.metadata.create_all(bind=self.engine)
+            return True
+        
+        return False
+    
+    def begin_engine(self) -> bool:
+        """~ Method ~
+        @Info: Creates engine and the databatabase"""
+        with suppress():
+            self.engine = create_engine(f"mssql+pymssql://{self.username}:{self.__password}@{self.server}/{self.database}", echo=False)
+            self.SESSION = sessionmaker(bind=self.engine, autoflush=True, autocommit=True)
+            if not database_exists(self.engine.url):
+                trace("[SQL]: Creating database...", TraceLEVELS.NORMAL)
+                create_database(self.engine.url)
+            return True
+        
+        return False
 
-    def initialize(self):
+    def initialize(self) -> bool:
         """~ Method ~
         @Info: This method initializes the connection to the database, creates the missing tables
                and fills the lookuptables with types defined by the register_type(lookup_table) function.
         @Param: void"""
         # Create engine for communicating with the SQL base
-        try:
-            self.engine = create_engine(f"mssql+pymssql://{self.username}:{self.__password}@{self.server}/{self.database}", echo=False)
-            self.Session = sessionmaker(bind=self.engine, autoflush=True, autocommit=True)
-            if not database_exists(self.engine.url):
-                trace("[SQL]: Creating database...", TraceLEVELS.NORMAL)
-                create_database(self.engine.url)
-        except Exception as ex:
-            trace(f"[SQL]: Unable to start engine. Reason: {ex}", TraceLEVELS.ERROR)
+        if not self.begin_engine():
+            trace("[SQL]: Unable to start engine.", TraceLEVELS.ERROR)
             return False
+        
         # Create tables and the session class bound to the engine
-        try:
-            trace("[SQL]: Creating tables...", TraceLEVELS.NORMAL)
-            self.create_tables()
-        except Exception as ex:
-            trace(f"[SQL]: Unable to create all the tables. Reason: {ex}", TraceLEVELS.ERROR)
+        trace("[SQL]: Creating tables...", TraceLEVELS.NORMAL)
+        if not self.create_tables():
+            trace("[SQL]: Unable to create all the tables.", TraceLEVELS.ERROR)
             return False
-        # Insert the lookuptable values
-        try:
-            trace("[SQL]: Generating lookuptable values...", TraceLEVELS.NORMAL)
-            self.generate_lookup_values()
 
-        except Exception as ex:
-            trace(f"[SQL]: Unable to create lookuptables' rows. Reason: {ex}", TraceLEVELS.ERROR)
+        # Insert the lookuptable values        
+        trace("[SQL]: Generating lookuptable values...", TraceLEVELS.NORMAL)
+        if not self.generate_lookup_values():
+            trace("[SQL]: Unable to create lookuptables' rows.", TraceLEVELS.ERROR)
             return False
-        try:
-            trace("[SQL]: Creating user-defined data types", TraceLEVELS.NORMAL)
-            self.create_data_types()
-        except Exception as ex:
-            trace(f"[SQL]: Unable to create user-defined data types. Reason:{ex}", TraceLEVELS.ERROR)
+
         # Initialize views, procedures and functions
-        try:
-            trace("[SQL]: Creating Views, Procedures & Functions", TraceLEVELS.NORMAL)
-            self.create_analytic_objects()
-        except Exception as ex:
-            trace(f"[SQL]: Unable to create views, procedures and functions. Reason: {ex}", TraceLEVELS.ERROR)
+        trace("[SQL]: Creating Views, Procedures & Functions", TraceLEVELS.NORMAL)
+        if not self.create_analytic_objects():
+            trace("[SQL]: Unable to create views, procedures and functions.", TraceLEVELS.ERROR)
 
         return True
 
-    #@timeit
+    @timeit
     def save_log(self,
                  guild_context: dict,
                  message_context: dict) -> bool:
@@ -329,12 +323,15 @@ class LoggerSQL:
                                         see guild.xMESSAGE.generate_log_context() for more info.
         @Return: Returns bool value indicating success (True) or failure (False)."""
 
-        async def handle_error(exception: Exception) -> bool:
+        def handle_error(exception: str) -> bool:
             """~ async function ~
             @Info: Used to handle errors that happen in the save_log method.
             @Return: Returns BOOL indicating if logging to the base should be attempted again."""
-            status = False
-            return status
+            res = False
+            if "Invalid object name" in exception:  # SQLAlchemy's error codes are too broad, so string comparison is used.
+                res = self.create_tables()
+            
+            return res
 
         # Parse the data
         sent_data = message_context.get("sent_data")
@@ -355,7 +352,7 @@ class LoggerSQL:
                     if "reason" in dm_success_info:
                         dm_success_info_reason = dm_success_info["reason"]
                 
-                with self.Session() as session:
+                with self.SESSION() as session:
                     # Map MessageTYPE to an identificator
                     # Update GUILD/USER table
                     result = None
@@ -380,18 +377,17 @@ class LoggerSQL:
                     guild_lookup = result
 
                     stms = ""
+                    channels_str = None
                     if channels is not None:
                         # If channels exist [TextMESSAGE and VoiceMESSAGE], update the CHANNELS table with the correct name
                         # and only insert the channel Snowflake identificators into the message log
-                        channels = f"{json.dumps(channels['successful'] + channels['failed'])}"
+                        channels_str = f"{json.dumps(channels['successful'] + channels['failed'])}"
                         # Query the channels and add missing ones
                         stms += f"EXEC sp_insert_channels :channels, :guild_id;"
-                    else:
-                        channels = None
                     
                     # Execute raw sql call for faster saving of the log
                     stms += f"EXEC sp_save_log :data, :message_type, :guild_snowflake, :message_mode, :dm_reason, :channels;COMMIT;"
-                    self.engine.execute(text(stms), channels=channels,
+                    self.engine.execute(text(stms), channels=channels_str,
                                                     data=json.dumps(sent_data),
                                                     message_type=message_type,
                                                     guild_id=guild_lookup,
@@ -400,9 +396,13 @@ class LoggerSQL:
                                                     dm_reason=dm_success_info_reason)
                     return True
 
-            except Exception as ex:
+            except SQLAlchemyError as ex:
+                ex = ex.orig.args[1].decode()
+                trace(f"Attempt to save into the database failed , retrying. Tries left: {2 - tries}", TraceLEVELS.WARNING)
                 if not handle_error(ex):
                     break
+            except:
+                break
 
         trace(f"Unable to save to databse {self.database}. Switching to file logging", TraceLEVELS.WARNING)
         GLOBALS.enabled = False
