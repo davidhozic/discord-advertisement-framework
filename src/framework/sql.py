@@ -27,7 +27,7 @@ __all__ = (
 )
 
 from numpy import average
-def timeit(samples):
+def timeit(num):
     def _timeit(fnc):
         samples = []
         def __timeit(*args, **kwargs):
@@ -37,7 +37,7 @@ def timeit(samples):
             ms = (end-start)*1000
             
             samples.append(ms)
-            if len(samples) == samples:
+            if len(samples) == num:
                 print(f"Took {average(samples)} ms on average")
                 samples.clear()
             return ret
@@ -350,7 +350,7 @@ class LoggerSQL:
 
         return True
 
-    @timeit(25)
+    @timeit(5)
     def save_log(self,
                  guild_context: dict,
                  message_context: dict) -> bool:
