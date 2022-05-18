@@ -27,25 +27,25 @@ __all__ = (
     "get_sql_manager"
 )
 
-from numpy import average
-import time
-def timeit(num):
-    def _timeit(fnc):
-        samples = []
-        def __timeit(*args, **kwargs):
-            start = time.time()
-            ret = fnc(*args, **kwargs)
-            end = time.time()
-            ms = (end-start)*1000
+# from numpy import average
+# import time
+# def timeit(num):
+#     def _timeit(fnc):
+#         samples = []
+#         def __timeit(*args, **kwargs):
+#             start = time.time()
+#             ret = fnc(*args, **kwargs)
+#             end = time.time()
+#             ms = (end-start)*1000
             
-            samples.append(ms)
-            if len(samples) == num:
-                print(f"Took {average(samples)} ms on average")
-                samples.clear()
-            return ret
-        return __timeit
+#             samples.append(ms)
+#             if len(samples) == num:
+#                 print(f"Took {average(samples)} ms on average")
+#                 samples.clear()
+#             return ret
+#         return __timeit
 
-    return _timeit
+#     return _timeit
 
 class GLOBALS:
     """~ class ~
@@ -365,7 +365,7 @@ class LoggerSQL:
 
         return True
 
-    @timeit(3)
+    #@timeit(3)
     def save_log(self,
                  guild_context: dict,
                  message_context: dict) -> bool:                 
