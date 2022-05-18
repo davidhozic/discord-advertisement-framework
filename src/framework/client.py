@@ -43,11 +43,6 @@ class CLIENT(discord.Client):
         if await core.initialize():
             # Initialization was successful, so create the advertiser task and start advertising.
             trace("Successful initialization!",TraceLEVELS.NORMAL)
-            asyncio.gather(
-                # Tasks for sending text messages/voice messages
-                asyncio.create_task(core.advertiser("text")),
-                asyncio.create_task(core.advertiser("voice"))
-            )
         else:
             # Initialization failed, close everything
             await core.shutdown()

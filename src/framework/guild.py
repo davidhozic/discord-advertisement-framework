@@ -163,7 +163,7 @@ class GUILD(BaseGUILD):
         "apiobject",
         "t_messages",
         "vc_messages",
-        "__messages",
+        "_messages",
         "_generate_log"
     )
     __logname__ = "GUILD"
@@ -180,7 +180,7 @@ class GUILD(BaseGUILD):
                  guild_id: int,
                  messages_to_send: List[Union[TextMESSAGE, VoiceMESSAGE]],
                  generate_log: bool=False):
-        self.__messages = messages_to_send
+        self._messages = messages_to_send
         super().__init__(guild_id, generate_log)
 
     async def initialize(self) -> bool:
@@ -193,14 +193,14 @@ class GUILD(BaseGUILD):
         Info:   The function initializes all the GUILD objects (and other objects inside the GUILD object reccurssively).
                 It tries to get the discord.Guild object from the self.guild id and then tries to initialize the MESSAGE objects.
         """
-        for message in self.__messages:
+        for message in self._messages:
             if type(message) is TextMESSAGE:
                 self.t_messages.append(message)
             elif type(message) is VoiceMESSAGE:
                 self.vc_messages.append(message)
             else:
                 trace(f"Invalid xxxMESSAGE type: {type(message).__name__}, expected  {TextMESSAGE.__name__} or {VoiceMESSAGE.__name__}", TraceLEVELS.ERROR)
-        del self.__messages
+        del self._messages
 
         guild_id = self.apiobject
         cl = client.get_client()
@@ -267,7 +267,7 @@ class USER(BaseGUILD):
         "apiobject",
         "_generate_log",
         "t_messages",
-        "__messages"
+        "_messages"
     )
 
     __logname__ = "USER"
@@ -285,15 +285,15 @@ class USER(BaseGUILD):
                  messages_to_send: List[DirectMESSAGE],
                  generate_log: bool = False) -> None:
         super().__init__(user_id, generate_log)
-        self.__messages = messages_to_send
+        self._messages = messages_to_send
 
     async def initialize(self) -> bool:
-        for message in self.__messages:
+        for message in self._messages:
             if type(message) is DirectMESSAGE:
                 self.t_messages.append(message)
             else:
                 trace(f"Invalid xxxMESSAGE type: {type(message).__name__}, expected  {DirectMESSAGE.__name__}", TraceLEVELS.ERROR)
-        del self.__messages
+        del self._messages
 
         user_id = self.apiobject
         cl = client.get_client()
