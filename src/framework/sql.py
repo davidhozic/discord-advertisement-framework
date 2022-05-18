@@ -5,20 +5,20 @@
     the framework.run function with the SqlCONTROLLER object.
 """
 from  datetime   import datetime
-from  typing     import Literal
+from  typing     import Literal, Any
 from  contextlib import suppress
 from  sqlalchemy import (
                          SmallInteger, Integer, BigInteger, NVARCHAR, DateTime,
                          Column, Identity, ForeignKey,
                          create_engine, text
                         )
-from sqlalchemy.exc  import SQLAlchemyError                        
+from  sqlalchemy.exc  import SQLAlchemyError                        
 from  sqlalchemy.orm import sessionmaker, Session
 from  sqlalchemy.ext.declarative import declarative_base
 from  sqlalchemy_utils import create_database, database_exists
 from  .tracing import *
-import time
 import json
+import re
 
 
 __all__ = (
@@ -27,24 +27,25 @@ __all__ = (
     "get_sql_manager"
 )
 
-from numpy import average
-def timeit(num):
-    def _timeit(fnc):
-        samples = []
-        def __timeit(*args, **kwargs):
-            start = time.time()
-            ret = fnc(*args, **kwargs)
-            end = time.time()
-            ms = (end-start)*1000
+# from numpy import average
+# import time
+# def timeit(num):
+#     def _timeit(fnc):
+#         samples = []
+#         def __timeit(*args, **kwargs):
+#             start = time.time()
+#             ret = fnc(*args, **kwargs)
+#             end = time.time()
+#             ms = (end-start)*1000
             
-            samples.append(ms)
-            if len(samples) == num:
-                print(f"Took {average(samples)} ms on average")
-                samples.clear()
-            return ret
-        return __timeit
+#             samples.append(ms)
+#             if len(samples) == num:
+#                 print(f"Took {average(samples)} ms on average")
+#                 samples.clear()
+#             return ret
+#         return __timeit
 
-    return _timeit
+#     return _timeit
 
 class GLOBALS:
     """~ class ~
@@ -88,13 +89,12 @@ class LoggerSQL:
     Base = declarative_base()
     __slots__ = (
         "engine",
-        "SESSION",
+        "sessionmaker",
         "commit_buffer",
         "username",
         "__password",
         "server",
         "database",
-
         # Caching dictionaries
         "MessageMODE",
         "MessageTYPE",
@@ -114,7 +114,7 @@ class LoggerSQL:
         self.database = database
         self.commit_buffer = []
         self.engine = None
-        self.SESSION  = None
+        self.sessionmaker  = None
         # Caching (to avoid unneccessary queries)
         ## Lookup table caching
         self.MessageMODE = {}
@@ -122,6 +122,20 @@ class LoggerSQL:
         self.GuildTYPE   = {}
         ## Other object caching
         self.GuildUSER = {}
+    
+    def add_to_cache(self, table: Base, key: Any, value: Any) -> None:
+        """~ Method ~
+        @Info: Adds a value to the internal cache of a certain table"""
+        getattr(self, table.__name__)[key] = value
+
+    def clear_cache(self, *to_clear) -> None:
+        """~ Method ~
+        @Info: Clears the caching dicitonaries inside the object that match any of the tables"""
+        if not len(to_clear):  # Clear all cached tables if nothing was passead
+            to_clear = self.__slots__
+        tables = [k for k in globals() if k in to_clear]  # Serch for classes in the module's namespace
+        for k in tables:
+            getattr(self, k).clear()
 
     def create_data_types(self) -> bool:
         """~ Method ~
@@ -135,7 +149,7 @@ class LoggerSQL:
             }
         ]
         with suppress(SQLAlchemyError):
-            with self.SESSION.begin() as session:
+            with self.sessionmaker.begin() as session:
                 for statement in stms:
                     if session.execute(text(f"SELECT name FROM sys.types WHERE name=:name"), {"name":statement["name"]}).first() is None:
                         session.execute(text("CREATE " + statement["stm"].format(statement["name"]) ))
@@ -264,7 +278,7 @@ class LoggerSQL:
             }
         ]
         with suppress(SQLAlchemyError):
-            with self.SESSION.begin() as session:
+            with self.sessionmaker.begin() as session:
                 for statement in stms:
                     # Union the 2 system tables containing views and procedures/functions, then select only the element that matches the item we want to create, it it returns None, it doesnt exist
                     if session.execute(text(f"SELECT name FROM sys.all_objects WHERE name=:name"), {"name":statement["name"]}).first() is None:
@@ -279,16 +293,17 @@ class LoggerSQL:
         """~ Method ~
         @Info: Generates the lookup values for all the different classes the @register_type decorator was used on.
         """
+        session : Session
         with suppress(SQLAlchemyError):
-            with self.SESSION.begin() as session:
+            with self.sessionmaker.begin() as session:
                 for to_add in GLOBALS.lt_types:
-                    existing = session.query(type(to_add)).filter_by(name=to_add.name).first()
+                    #existing = session.query(type(to_add)).filter_by(name=to_add.name).first()
+                    existing = session.query(type(to_add)).where(type(to_add).name == to_add.name).first()
                     if existing is None:
                         session.add(to_add)
                         session.flush()
                         existing = to_add
-
-                    getattr(self, type(to_add).__name__)[to_add.name] = existing.id # Set the internal lookup values to later prevent time consuming queries
+                    self.add_to_cache(type(to_add), to_add.name, existing.id)
             return True
 
         return False
@@ -307,7 +322,7 @@ class LoggerSQL:
         @Info: Creates engine and the databatabase"""
         with suppress(SQLAlchemyError):
             self.engine = create_engine(f"mssql+pymssql://{self.username}:{self.__password}@{self.server}/{self.database}", echo=False)
-            self.SESSION = sessionmaker(bind=self.engine, autocommit=True, autoflush=True)
+            self.sessionmaker = sessionmaker(bind=self.engine, autocommit=True, autoflush=True)
             if not database_exists(self.engine.url):
                 trace("[SQL]: Creating database...", TraceLEVELS.NORMAL)
                 create_database(self.engine.url)
@@ -352,7 +367,7 @@ class LoggerSQL:
 
         return True
 
-    @timeit(5)
+    #@timeit(15)
     def save_log(self,
                  guild_context: dict,
                  message_context: dict) -> bool:                 
@@ -365,6 +380,7 @@ class LoggerSQL:
             message_context: dict   ::  Context generated by the xMESSAGE object,
                                         see guild.xMESSAGE.generate_log_context() for more info.
         @Return: Returns bool value indicating success (True) or failure (False)."""
+
         def handle_error(exception: str) -> bool:
             """~ async function ~
             @Info: Used to handle errors that happen in the save_log method.
@@ -372,7 +388,11 @@ class LoggerSQL:
             res = False
             if "Invalid object name" in exception:  # SQLAlchemy's error codes are too broad, so string comparison is used.
                 res = self.create_tables()
-            
+            elif "The INSERT statement conflicted" in exception:
+                table = re.search(r'(?<=table "dbo.).*(?=")', exception)
+                if table is not None:
+                    self.clear_cache(table.group(0))
+                res = self.generate_lookup_values() if "GuildUSER" not in exception else True
             return res
 
         # Typing
@@ -400,34 +420,33 @@ class LoggerSQL:
                 # Map MessageTYPE to an identificator
                 # Update GUILD/USER table
                 result = None
-                if guild_snowflake not in self.GuildUSER:
-                    with self.SESSION.begin() as session:
+                with self.sessionmaker() as session:
+                    if guild_snowflake not in self.GuildUSER:
                         result = session.query(GuildUSER.id).filter(GuildUSER.snowflake_id == guild_snowflake).first()
                         if result is not None:
                             result = result[0]
-                            self.GuildUSER[guild_snowflake] = result
+                            self.add_to_cache(GuildUSER, guild_snowflake, result)
                         else:
                             guild_type = self.GuildTYPE[guild_type]
                             result = GuildUSER(guild_type, guild_snowflake, guild_name)
                             session.add(result)
                             session.flush()
                             result = result.id
-                            self.GuildUSER[guild_snowflake] = result
-                else:
-                    result = self.GuildUSER[guild_snowflake]
+                            self.add_to_cache(GuildUSER, guild_snowflake, result)
+                    else:
+                        result = self.GuildUSER[guild_snowflake]
 
-                # Reference the guild_id with id from GuildUSER lookup table
-                guild_lookup = result
-                stms = ""
-                channels_str = None
-                if channels is not None:
-                    # If channels exist [TextMESSAGE and VoiceMESSAGE], update the CHANNELS table with the correct name
-                    # and only insert the channel Snowflake identificators into the message log
-                    channels_str = f"{json.dumps(channels['successful'] + channels['failed'])}"
-                
-                # Execute raw sql call for faster saving of the log
-                stms += f"EXEC sp_save_log :data, :message_type, :guild_id, :message_mode, :dm_reason, :channels; COMMIT"
-                self.engine.execute(text(stms), {"channels":channels_str,
+                    # Reference the guild_id with id from GuildUSER lookup table
+                    guild_lookup = result
+                    channels_str = None
+                    if channels is not None:
+                        # If channels exist [TextMESSAGE and VoiceMESSAGE], update the CHANNELS table with the correct name
+                        # and only insert the channel Snowflake identificators into the message log
+                        channels_str = f"{json.dumps(channels['successful'] + channels['failed'])}"
+                    
+                    # Execute raw sql call for faster saving of the log
+                    stm= f"EXEC sp_save_log :data, :message_type, :guild_id, :message_mode, :dm_reason, :channels; COMMIT;"
+                    session.execute(text(stm), {"channels":channels_str,
                                                 "data":json.dumps(sent_data),
                                                 "message_type":message_type,
                                                 "guild_id":guild_lookup,
@@ -512,7 +531,7 @@ class CHANNEL(LoggerSQL.Base):
     id = Column(SmallInteger, Identity(start=0,increment=1),primary_key=True)
     snowflake_id = Column(BigInteger)
     name = Column(NVARCHAR)
-    guild_id = Column(SmallInteger, ForeignKey("GuildUSER.id", ondelete="CASCADE"))
+    guild_id = Column(SmallInteger, ForeignKey("GuildUSER.id"))
 
     def __init__(self,
                  snowflake: int,
@@ -567,7 +586,7 @@ class MessageLOG(LoggerSQL.Base):
     id = Column(Integer, Identity(start=0, increment=1), primary_key=True)
     sent_data = Column(Integer, ForeignKey("DataHISTORY.id"))
     message_type = Column(SmallInteger, ForeignKey("MessageTYPE.id", ))
-    guild_id =     Column(SmallInteger, ForeignKey("GuildUSER.id", ondelete="CASCADE"))
+    guild_id =     Column(SmallInteger, ForeignKey("GuildUSER.id"))
     message_mode = Column(SmallInteger, ForeignKey("MessageMODE.id" )) # [TextMESSAGE, DirectMESSAGE]
     dm_reason   = Column(NVARCHAR)  # [DirectMESSAGE]
     timestamp = Column(DateTime)
