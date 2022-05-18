@@ -9,12 +9,10 @@ from    .tracing import *
 from    .const import *
 from    . import client
 from    . import sql
-from    requests import Response
 import  random
 import  time
 import  asyncio
 import  _discord as discord
-
 
 __all__ = (
     "TextMESSAGE",
@@ -118,6 +116,7 @@ class BaseMESSAGE:
             code: int ~ Actual error code
             description: str ~ The textual description of the error
             cls: discord.HTTPException ~ Inherited class to make exception from"""
+        class Response() : pass
         resp = Response()
         resp.status = status
         resp.status_code = status
