@@ -14,11 +14,18 @@ import  time
 import  asyncio
 import  _discord as discord
 
+
 __all__ = (
     "TextMESSAGE",
     "VoiceMESSAGE",
-    "DirectMESSAGE"
+    "DirectMESSAGE",
+    "update_ratelimit_delay"
 )
+
+class GLOBALS:
+    """ ~ Storage Class ~
+    @Info: Contains the global variables of this module"""
+    rlim_avoid_delay = 0
 
 
 class TIMER:
@@ -116,8 +123,7 @@ class BaseMESSAGE:
             code: int ~ Actual error code
             description: str ~ The textual description of the error
             cls: discord.HTTPException ~ Inherited class to make exception from"""
-        class Response() : pass
-        resp = Response()
+        resp = Exception()
         resp.status = status
         resp.status_code = status
         resp.reason = cls.__name__
@@ -588,11 +594,13 @@ class TextMESSAGE(BaseMESSAGE):
             handled = False
             if isinstance(ex, discord.HTTPException):
                 if ex.status == 429:  # Rate limit
-                    retry_after = int(ex.response.headers["Retry-After"])  + 1
+                    retry_after = int(ex.response.headers["Retry-After"]) * C_RATE_LIMIT_SAFETY_FACTOR
                     if ex.code == 20016:    # Slow Mode
                         self.force_retry["ENABLED"] = True
                         self.force_retry["TIME"] = retry_after
                     else:                   # Normal (write) rate limit
+                        trace(f"Rate limited, sleeping for {retry_after} seconds", TraceLEVELS.WARNING)
+                        update_ratelimit_delay(factor=C_RATE_LIMIT_GROWTH_FACTOR)
                         await asyncio.sleep(retry_after)
                         handled = True
                 elif ex.status == 404:      # Unknown object
@@ -655,6 +663,7 @@ class TextMESSAGE(BaseMESSAGE):
             # Send to channels
             for channel in self.channels:
                 # Clear previous messages sent to channel if mode is MODE_DELETE_SEND
+                await asyncio.sleep(GLOBALS.rlim_avoid_delay)
                 context = await self.send_channel(channel, **_data_to_send)
                 if context["success"]:
                     succeded_channels.append(channel)
@@ -667,7 +676,7 @@ class TextMESSAGE(BaseMESSAGE):
                 channel = data["channel"]
                 if isinstance(reason, discord.HTTPException):
                     if (reason.status == 403 or                    # Forbidden
-                        reason.code in {50007, 10001, 10003}     # Not Forbidden, but bad error codes
+                        reason.code in {50007, 10003}     # Not Forbidden, but bad error codes
                     ):
                         self.channels.remove(channel)
                         trace(f"Channel {channel.name}(ID: {channel.id}) {'was deleted' if reason.code == 10003 else 'does not have permissions'}, removing it from the send list", TraceLEVELS.WARNING)
@@ -808,11 +817,12 @@ class DirectMESSAGE(BaseMESSAGE):
             handled = False
             if isinstance(ex, discord.HTTPException):
                 if ex.status == 429 or ex.code == 40003:
-                    retry_after = int(ex.response.headers["Retry-After"])  + 1
+                    retry_after = int(ex.response.headers["Retry-After"])  * C_RATE_LIMIT_SAFETY_FACTOR
                     if ex.code == 20016:    # Slow Mode
                         self.force_retry["ENABLED"] = True
                         self.force_retry["TIME"] = retry_after
                     else:
+                        trace(f"Rate limited, sleeping for {retry_after} seconds", TraceLEVELS.WARNING)
                         await asyncio.sleep(retry_after)
                         handled = True
                 elif ex.status == 404:      # Unknown object
@@ -821,7 +831,9 @@ class DirectMESSAGE(BaseMESSAGE):
                         handled = True
                 elif ex.status == 403:
                     if ex.code == 40003:
-                        retry_after = int(ex.response.headers["Retry-After"])  + 1
+                        retry_after = int(ex.response.headers["Retry-After"])  * C_RATE_LIMIT_SAFETY_FACTOR
+                        trace(f"Rate limited, sleeping for {retry_after} seconds", TraceLEVELS.WARNING)
+                        update_ratelimit_delay(factor=C_RATE_LIMIT_GROWTH_FACTOR)
                         await asyncio.sleep(retry_after)
                         handled = True
 
@@ -886,14 +898,30 @@ class DirectMESSAGE(BaseMESSAGE):
                     _data_to_send["files"].append(element)
 
         if any(_data_to_send.values()):
+            await asyncio.sleep(GLOBALS.rlim_avoid_delay)
             context = await self.send_channel(**_data_to_send)
-            reason  = context.get("reason")
-            if isinstance(reason, discord.HTTPException):
-                if (reason.code == 403 or                    # Forbidden
-                    reason.code in {50007, 10001, 10003}     # Not Forbidden, but bad error codes
-                ):
-                    self.dm_channel = None
+            if context["success"] is False:
+                reason  = context["reason"]
+                if isinstance(reason, discord.HTTPException):
+                    if (reason.code == 403 or                    # Forbidden
+                        reason.code in {50007, 10001, 10003}     # Not Forbidden, but bad error codes
+                    ):
+                        self.dm_channel = None
 
             return self.generate_log_context(**_data_to_send, **context)
 
         return None
+
+
+def update_ratelimit_delay(time: int=None,
+                           factor: int=None):
+    """~ Function ~
+    @Info: Sets the delay (in seconds) between each channel send attempt, to avoid rate limit
+    @Param:
+    - time: int ~ Ammount of time in seconds to update the rate limit avoidance delay with
+    - factor: int ~ The factor to INCREMENT (multiply) the current ratelimit delay with"""
+    if time is not None:
+        GLOBALS.rlim_avoid_delay = time
+
+    if factor is not None:
+        GLOBALS.rlim_avoid_delay = GLOBALS.rlim_avoid_delay * (1 + factor) if GLOBALS.rlim_avoid_delay > 0 else 1

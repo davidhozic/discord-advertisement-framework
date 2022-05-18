@@ -15,7 +15,7 @@ from    . import sql
 import  time
 import  json
 import pathlib
-import asyncio
+
 
 __all__ = (
     "GUILD",
@@ -246,7 +246,6 @@ class GUILD(BaseGUILD):
                     marked_del.append(message) # All channels were removed (either not found or forbidden) -> remove message from send list
                 if self._generate_log and message_ret is not None:
                     self.generate_log(message_ret)
-                await asyncio.sleep(C_RATE_LIMIT_AVOID_DELAY)
 
         # Cleanup messages marked for removal
         for message in marked_del:
@@ -327,7 +326,6 @@ class USER(BaseGUILD):
                     if self._generate_log and message_ret is not None:
                         self.generate_log(message_ret)
                     
-                    await asyncio.sleep(C_RATE_LIMIT_AVOID_DELAY)
 
                     if message.dm_channel is None:
                         self.t_messages.clear()            # Remove all messages since that they all share the same user and will fail
