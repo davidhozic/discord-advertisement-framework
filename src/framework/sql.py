@@ -252,8 +252,8 @@ class LoggerSQL:
 
                     DECLARE @channels_t t_channels;
                                 
-                    INSERT INTO @channels_t(id, name)
-                    SELECT a.id, a.name FROM OPENJSON(@channels) WITH(id bigint, name nvarchar(max)) a;
+                    INSERT INTO @channels_t(id, name, reason)
+                    SELECT a.id, a.name, a.reason FROM OPENJSON(@channels) WITH(id bigint, name nvarchar(max), reason nvarchar(max)) a;
 
                     EXEC sp_insert_channels @channels_t, @guild_id;
 
@@ -391,8 +391,6 @@ class LoggerSQL:
                 if table is not None:
                     self.clear_cache(table.group(0))
                 res = self.generate_lookup_values() if "GuildUSER" not in exception else True
-            elif "DBPROCESS is dead" in exception:
-                res = True
 
             return res
 
