@@ -19,7 +19,7 @@ from  sqlalchemy_utils import create_database, database_exists
 from  .tracing import *
 import json
 import re
-
+import copy
 
 __all__ = (
     "LoggerSQL",
@@ -238,9 +238,9 @@ class LoggerSQL:
             {
                 "name" : "sp_save_log",
                 "stm" : """PROCEDURE {}(@sent_data nvarchar(max),
-                                        @message_type nvarchar(max),
+                                        @message_type smallint,
                                         @guild_id smallint,
-                                        @message_mode nvarchar(max),
+                                        @message_mode smallint,
                                         @dm_reason nvarchar(max),
                                         @channels ntext) AS
                 /* Procedure that saves the log							 
@@ -248,8 +248,6 @@ class LoggerSQL:
                 */
                 BEGIN
                     DECLARE @existing_data_id int;
-                    DECLARE @message_type_id  smallint = (SELECT id FROM MessageTYPE mt WHERE mt.name = @message_type);
-                    DECLARE @message_mode_id  smallint = (SELECT id FROM MessageMODE mm WHERE mm.name = @message_mode);
                     DECLARE @last_log_id      int;
 
                     DECLARE @channels_t t_channels;
@@ -268,7 +266,7 @@ class LoggerSQL:
                     END
                     
                     INSERT INTO MessageLOG(sent_data, message_type, guild_id, message_mode, dm_reason, [timestamp]) VALUES(
-                        @existing_data_id, @message_type_id, @guild_id, @message_mode_id, @dm_reason, GETDATE()
+                        @existing_data_id, @message_type, @guild_id, @message_mode, @dm_reason, GETDATE()
                     );
                     SET @last_log_id = SCOPE_IDENTITY();
                     
@@ -294,10 +292,10 @@ class LoggerSQL:
         @Info: Generates the lookup values for all the different classes the @register_type decorator was used on.
         """
         session : Session
+        
         with suppress(SQLAlchemyError):
             with self.sessionmaker.begin() as session:
-                for to_add in GLOBALS.lt_types:
-                    #existing = session.query(type(to_add)).filter_by(name=to_add.name).first()
+                for to_add in copy.deepcopy(GLOBALS.lt_types):  # Deepcopied to prevent SQLAlchemy from deleting the data
                     existing = session.query(type(to_add)).where(type(to_add).name == to_add.name).first()
                     if existing is None:
                         session.add(to_add)
@@ -308,11 +306,11 @@ class LoggerSQL:
 
         return False
 
-    def create_tables(self) -> bool:
+    def create_tables(self, tables=None) -> bool:
         """~ Method ~
         @Info: Creates tables from the SQLAlchemy's descriptor classes"""
         with suppress(SQLAlchemyError):
-            self.Base.metadata.create_all(bind=self.engine)
+            self.Base.metadata.create_all(bind=self.engine, tables=tables)
             return True
         
         return False
@@ -386,13 +384,16 @@ class LoggerSQL:
             @Info: Used to handle errors that happen in the save_log method.
             @Return: Returns BOOL indicating if logging to the base should be attempted again."""
             res = False
-            if "Invalid object name" in exception:  # SQLAlchemy's error codes are too broad, so string comparison is used.
+            if "Invalid object name" in exception:
                 res = self.create_tables()
             elif "The INSERT statement conflicted" in exception:
                 table = re.search(r'(?<=table "dbo.).*(?=")', exception)
                 if table is not None:
                     self.clear_cache(table.group(0))
                 res = self.generate_lookup_values() if "GuildUSER" not in exception else True
+            elif "DBPROCESS is dead" in exception:
+                res = True
+
             return res
 
         # Typing
@@ -421,6 +422,7 @@ class LoggerSQL:
                 # Update GUILD/USER table
                 result = None
                 with self.sessionmaker() as session:
+                    session.begin()
                     if guild_snowflake not in self.GuildUSER:
                         result = session.query(GuildUSER.id).filter(GuildUSER.snowflake_id == guild_snowflake).first()
                         if result is not None:
@@ -448,9 +450,9 @@ class LoggerSQL:
                     stm= f"EXEC sp_save_log :data, :message_type, :guild_id, :message_mode, :dm_reason, :channels; COMMIT;"
                     session.execute(text(stm), {"channels":channels_str,
                                                 "data":json.dumps(sent_data),
-                                                "message_type":message_type,
+                                                "message_type":self.MessageTYPE[message_type],
                                                 "guild_id":guild_lookup,
-                                                "message_mode":message_mode,
+                                                "message_mode":self.MessageMODE[message_mode],
                                                 "dm_reason":dm_success_info_reason})
                 return True
 
@@ -585,9 +587,9 @@ class MessageLOG(LoggerSQL.Base):
 
     id = Column(Integer, Identity(start=0, increment=1), primary_key=True)
     sent_data = Column(Integer, ForeignKey("DataHISTORY.id"))
-    message_type = Column(SmallInteger, ForeignKey("MessageTYPE.id", ))
+    message_type = Column(SmallInteger, ForeignKey("MessageTYPE.id"), nullable=False)
     guild_id =     Column(SmallInteger, ForeignKey("GuildUSER.id"))
-    message_mode = Column(SmallInteger, ForeignKey("MessageMODE.id" )) # [TextMESSAGE, DirectMESSAGE]
+    message_mode = Column(SmallInteger, ForeignKey("MessageMODE.id"), nullable=False) # [TextMESSAGE, DirectMESSAGE]
     dm_reason   = Column(NVARCHAR)  # [DirectMESSAGE]
     timestamp = Column(DateTime)
 
