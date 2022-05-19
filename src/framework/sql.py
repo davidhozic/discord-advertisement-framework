@@ -365,7 +365,7 @@ class LoggerSQL:
 
         return True
 
-    #@timeit(15)
+    #@timeit(3)
     def save_log(self,
                  guild_context: dict,
                  message_context: dict) -> bool:                 

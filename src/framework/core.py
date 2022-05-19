@@ -11,6 +11,7 @@ from . tracing import *
 from . import guild
 from . import client
 from . import sql
+from . import message
 import asyncio
 
 
@@ -113,5 +114,8 @@ def run(token : str,
     tracing.m_use_debug = debug                             ## Print trace messages to the console for debugging purposes
     GLOBALS.server_list = server_list                       ## List of guild objects to iterate thru in the advertiser task
     GLOBALS.user_callback = user_callback                   ## Called after framework has started
+    if is_user:                                             ## Set rate limit avoidance timeout to prevent hitting the rate limit (in case client is an user account)
+        message.update_ratelimit_delay(C_RATE_LIMIT_INITIAL_USERS)
+        
     sql.initialize(sql_manager)                             ## Initialize the SQL database
     client.initialize(token, bot=not is_user)

@@ -90,14 +90,14 @@ class EmbedFIELD:
 class EMBED(discord.Embed):
     """
     Derrived class of discord.Embed with easier definition
-    Parameters:
-        Added parameters:
-            - author_name       : str           -- Name of embed author
-            - author_icon       : str           -- Url to author image
+    @Parameters:
+        - Added parameters:
+            - author_name       : str           -- Name of embed author,
+            - author_icon       : str           -- Url to author image,
             - image             : str           -- Url of image to be placed at the end of the embed
             - thumbnail         : str           -- Url of image that will be placed at the top right of embed
             - fields            : list          -- List of EmbedFIELD objects
-        Inherited from discord.Embed:
+        - Inherited from discord.Embed:
             - For the other, original params see https://docs.pycord.dev/en/master/api.html?highlight=discord%20embed#discord.Embed
 
     """
