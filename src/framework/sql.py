@@ -230,21 +230,32 @@ class LoggerSQL:
                         SELECT @existing_data_id = id FROM DataHISTORY dh WHERE dh.content = @sent_data;
                     END
                     
-                    INSERT INTO MessageLOG(sent_data, message_type, guild_id, message_mode, dm_reason, [timestamp]) VALUES(
-                        @existing_data_id, @message_type, @guild_id, @message_mode, @dm_reason, GETDATE()
-                    );
-                   
-                    SET @last_log_id = SCOPE_IDENTITY();
+                    BEGIN TRY
+	                    INSERT INTO MessageLOG(sent_data, message_type, guild_id, message_mode, dm_reason, [timestamp]) VALUES(
+	                        @existing_data_id, @message_type, @guild_id, @message_mode, @dm_reason, GETDATE()
+	                    );
+	                                      		
+	                   SET @last_log_id = SCOPE_IDENTITY();
+	                    
+	                   IF @channels IS NOT NULL
+	                   BEGIN
+	                        DECLARE @channels_t t_channel_list;            
+	                        
+	                        INSERT INTO @channels_t(id, reason)
+	                        SELECT a.id, a.reason FROM OPENJSON(@channels) WITH(id int, reason nvarchar(max)) a;
+	                    	INSERT INTO MessageChannelLOG (log_id, channel_id, reason)
+	                   		SELECT @last_log_id, ch.id, ch.reason FROM @channels_t ch;
+	                   END
+	                   COMMIT;
+	                   BEGIN TRAN;
+
+	                END TRY
+                    BEGIN CATCH
+                   		ROLLBACK;
+                   		BEGIN TRAN;
+                        THROW;                   		
+                    END CATCH
                     
-                   IF @channels IS NOT NULL
-                   BEGIN
-                        DECLARE @channels_t t_channel_list;            
-                        
-                        INSERT INTO @channels_t(id, reason)
-                        SELECT a.id, a.reason FROM OPENJSON(@channels) WITH(id int, reason nvarchar(max)) a;
-                    	INSERT INTO MessageChannelLOG (log_id, channel_id, reason)
-                   		SELECT @last_log_id, ch.id, ch.reason FROM @channels_t ch;
-                   END
                 END"""
             }
         ]
@@ -304,8 +315,8 @@ class LoggerSQL:
         """~ Method ~
         @Info: Creates engine"""
         with suppress(SQLAlchemyError):
-            self.engine = create_engine(f"mssql+pymssql://{self.username}:{self.__password}@{self.server}/{self.database}", echo=False)
-            self._sessionmaker = sessionmaker(bind=self.engine, autocommit=True)
+            self.engine = create_engine(f"mssql+pymssql://{self.username}:{self.__password}@{self.server}/{self.database}", echo=False, future=True)
+            self._sessionmaker = sessionmaker(bind=self.engine)
             return True
 
         return False
@@ -479,21 +490,29 @@ class LoggerSQL:
                                                 ])
 
                 # Execute the saved procedure that saves the log
-                stm = "EXEC sp_save_log %(data)s, %(message_type)s, %(guild_id)s, %(message_mode)s, %(dm_reason)s, %(channels)s;COMMIT;BEGIN TRAN;"
-                self.cursor.execute(stm, {"channels":channels_str,
-                                    "data":json.dumps(sent_data),
-                                    "message_type":self.MessageTYPE.get(message_type, None),
-                                    "guild_id":guild_id,
-                                    "message_mode":self.MessageMODE.get(message_mode, None),
-                                    "dm_reason":dm_success_info_reason})
+                #stm = "EXEC sp_save_log %(data)s, %(message_type)s, %(guild_id)s, %(message_mode)s, %(dm_reason)s, %(channels)s;"
+                # self.cursor.execute(stm, {"channels":channels_str,
+                #                     "data":json.dumps(sent_data),
+                #                     "message_type":self.MessageTYPE.get(message_type, None),
+                #                     "guild_id":guild_id,
+                #                     "message_mode":self.MessageMODE.get(message_mode, None),
+                #                     "dm_reason":dm_success_info_reason})
+                args = (json.dumps(sent_data),
+                        self.MessageTYPE.get(message_type, None),
+                        guild_id,
+                        self.MessageMODE.get(message_mode, None),
+                        dm_success_info_reason,
+                        channels_str)
+                self.cursor.callproc("sp_save_log", args)
 
                 return True
-
+            
             except Exception as ex:
                 if not isinstance(ex, (SQLAlchemyError, DatabaseError)):
                     break
                 if isinstance(ex, SQLAlchemyError):
                     ex = ex.orig
+
                 code = ex.args[0]
                 message = ex.args[1].decode()
                 trace(f"[SQL]: Attempt to save into the database failed , retrying. Tries left: {C_FAIL_RETRIES - tries}", TraceLEVELS.WARNING)
