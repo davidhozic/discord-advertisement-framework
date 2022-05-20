@@ -1,5 +1,6 @@
 aiohttp
 PyNaCl
-pymssql
+sqlalchemy-pytds
 sqlalchemy
 sqlalchemy_utils
+python-tds
