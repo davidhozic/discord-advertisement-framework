@@ -22,11 +22,7 @@ from  .const import *
 import json
 import copy
 import re
-"""
-TODO:
-- Add caching to channels
-- Add  GUILD/CHANNEL insert methods
-"""
+import time
 
 
 __all__ = (
@@ -35,25 +31,25 @@ __all__ = (
     "get_sql_manager"
 )
 
-from numpy import average
-import time
-def timeit(num):
-    def _timeit(fnc):
-        samples = []
-        def __timeit(*args, **kwargs):
-            start = time.time()
-            ret = fnc(*args, **kwargs)
-            end = time.time()
-            ms = (end-start)*1000
-            
-            samples.append(ms)
-            if len(samples) == num:
-                print(f"Took {average(samples)} ms on average")
-                samples.clear()
-            return ret
-        return __timeit
 
-    return _timeit
+# from numpy import average
+# def timeit(num):
+#     def _timeit(fnc):
+#         samples = []
+#         def __timeit(*args, **kwargs):
+#             start = time.time()
+#             ret = fnc(*args, **kwargs)
+#             end = time.time()
+#             ms = (end-start)*1000
+            
+#             samples.append(ms)
+#             if len(samples) == num:
+#                 print(f"Took {average(samples)} ms on average")
+#                 samples.clear()
+#             return ret
+#         return __timeit
+
+#     return _timeit
 
 class GLOBALS:
     """~ class ~
@@ -124,7 +120,7 @@ class LoggerSQL:
         self.server = server
         self.database = database
         self.commit_buffer = []
-        self.engine = None,
+        self.engine = None
         self.cursor = None
         self._sessionmaker  = None
         # Caching (to avoid unneccessary queries)
@@ -145,7 +141,7 @@ class LoggerSQL:
     def clear_cache(self, *to_clear) -> None:
         """~ Method ~
         @Info: Clears the caching dicitonaries inside the object that match any of the tables"""
-        if not len(to_clear):  # Clear all cached tables if nothing was passead
+        if len(to_clear) == 0:  # Clear all cached tables if nothing was passead
             to_clear = self.__slots__
         tables = [k for k in globals() if k in to_clear]  # Serch for classes in the module's namespace
         for k in tables:
@@ -415,8 +411,8 @@ class LoggerSQL:
             with self._sessionmaker.begin() as session:
                 session: Session
                 result = session.query(CHANNEL.id, CHANNEL.snowflake_id).where(CHANNEL.snowflake_id.in_(not_cached_snow)).all()
-                for id, snowflake_id in result:
-                    self.add_to_cache(CHANNEL, snowflake_id, id)
+                for internal_id, snowflake_id in result:
+                    self.add_to_cache(CHANNEL, snowflake_id, internal_id)
                 to_add = [CHANNEL(x["id"], x["name"], guild_id) for x in not_cached if x["id"] not in self.CHANNEL]
                 if len(to_add):
                     session.add_all(to_add)
@@ -424,7 +420,7 @@ class LoggerSQL:
                     for channel in to_add:
                         self.add_to_cache(CHANNEL, channel.snowflake_id, channel.id)
 
-    @timeit(5)
+    #@timeit(15)
     def save_log(self,
                  guild_context: dict,
                  message_context: dict) -> bool:                 
