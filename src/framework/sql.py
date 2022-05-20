@@ -153,10 +153,6 @@ class LoggerSQL:
         session: Session
         
         stms = [
-            {
-                "name" : "t_channel_list",
-                "stm"  : "TYPE {} AS TABLE(id int, reason nvarchar(max));"
-            }
         ]
         with suppress(SQLAlchemyError):
             trace("[SQL]: Creating data types...", TraceLEVELS.NORMAL)
@@ -234,13 +230,9 @@ class LoggerSQL:
 	                   SET @last_log_id = SCOPE_IDENTITY();
 	                    
 	                   IF @channels IS NOT NULL
-	                   BEGIN
-	                        DECLARE @channels_t t_channel_list;            
-	                        
-	                        INSERT INTO @channels_t(id, reason)
-	                        SELECT a.id, a.reason FROM OPENJSON(@channels) WITH(id int, reason nvarchar(max)) a;
+	                   BEGIN        
 	                    	INSERT INTO MessageChannelLOG (log_id, channel_id, reason)
-	                   		SELECT @last_log_id, ch.id, ch.reason FROM @channels_t ch;
+	                   		SELECT @last_log_id, ch.id, ch.reason FROM OPENJSON(@channels) WITH(id int, reason nvarchar(max)) ch;
 	                   END
 	                   COMMIT;
 	                   BEGIN TRAN;
