@@ -15,15 +15,14 @@ from  sqlalchemy import (
 from  sqlalchemy.exc  import SQLAlchemyError
 from  sqlalchemy.orm import sessionmaker, Session
 from  sqlalchemy.ext.declarative import declarative_base
-from  sqlalchemy_utils import create_database, database_exists
-from  pymssql._pymssql import DatabaseError
+from  pytds import DatabaseError
 from  .tracing import *
 from  .const import *
 import json
 import copy
 import re
 import time
-
+import pytds
 
 __all__ = (
     "LoggerSQL",
@@ -153,6 +152,10 @@ class LoggerSQL:
         session: Session
         
         stms = [
+            {
+                "name": "t_tmp_channel_log",
+                "stm": "TYPE {} AS TABLE(id int, reason nvarchar(max))"
+            }
         ]
         with suppress(SQLAlchemyError):
             trace("[SQL]: Creating data types...", TraceLEVELS.NORMAL)
@@ -206,7 +209,7 @@ class LoggerSQL:
                                         @guild_id smallint,
                                         @message_mode smallint,
                                         @dm_reason nvarchar(max),
-                                        @channels nvarchar(max)) AS
+                                        @channels t_tmp_channel_log READONLY) AS
                 /* Procedure that saves the log							 
                 * This is done within sql instead of python for speed optimization
                 */
@@ -228,11 +231,14 @@ class LoggerSQL:
 	                    );
 	                                      		
 	                   SET @last_log_id = SCOPE_IDENTITY();
-	                    
-	                   IF @channels IS NOT NULL
+	                   
+	                   DECLARE @existance tinyint;
+                	   SELECT @existance = (CASE WHEN EXISTS(SELECT TOP(1) 1 FROM @channels) THEN 1 ELSE 0 END)
+                	   
+	                   IF @existance = 1
 	                   BEGIN        
 	                    	INSERT INTO MessageChannelLOG (log_id, channel_id, reason)
-	                   		SELECT @last_log_id, ch.id, ch.reason FROM OPENJSON(@channels) WITH(id int, reason nvarchar(max)) ch;
+	                   		SELECT @last_log_id, ch.id, ch.reason FROM @channels ch --OPENJSON(@channels) WITH(id int, reason nvarchar(max)) ch;
 	                   END
 	                   COMMIT;
 	                   BEGIN TRAN;
@@ -303,21 +309,21 @@ class LoggerSQL:
         """~ Method ~
         @Info: Creates engine"""
         with suppress(SQLAlchemyError):
-            self.engine = create_engine(f"mssql+pymssql://{self.username}:{self.__password}@{self.server}/{self.database}", echo=False, future=True)
+            self.engine = create_engine(f"mssql+pytds://{self.username}:{self.__password}@{self.server}/{self.database}", echo=False, future=True)
             self._sessionmaker = sessionmaker(bind=self.engine)
             return True
 
         return False
 
-    def create_database(self) -> bool:
-        """ ~ Method ~
-        @Info: Creates database if it doesn't exist"""
-        with suppress(SQLAlchemyError):
-            trace("[SQL]: Creating database...", TraceLEVELS.NORMAL)
-            if not database_exists(self.engine.url):
-                create_database(self.engine.url)
-            return True
-        return False
+    # def create_database(self) -> bool:
+    #     """ ~ Method ~
+    #     @Info: Creates database if it doesn't exist"""
+    #     with suppress(SQLAlchemyError):
+    #         trace("[SQL]: Creating database...", TraceLEVELS.NORMAL)
+    #         if not database_exists(self.engine.url):
+    #             create_database(self.engine.url)
+    #         return True
+    #     return False
 
     def initialize(self) -> bool:
         """~ Method ~
@@ -330,9 +336,9 @@ class LoggerSQL:
             trace("[SQL]: Unable to start engine.", TraceLEVELS.ERROR)
             return False
         
-        if not self.create_database():
-            trace("[SQL]: Unable to create database")
-            return False
+        # if not self.create_database():
+        #     trace("[SQL]: Unable to create database")
+        #     return False
         
         # Create tables and the session class bound to the engine
         if not self.create_tables():
@@ -412,7 +418,7 @@ class LoggerSQL:
                     for channel in to_add:
                         self.add_to_cache(CHANNEL, channel.snowflake_id, channel.id)
 
-    #@timeit(15)
+    #@timeit(5)
     def save_log(self,
                  guild_context: dict,
                  message_context: dict) -> bool:                 
@@ -472,26 +478,18 @@ class LoggerSQL:
                 if channels is not None:
                     # Insert channels into the database and cache if it doesn't exist
                     self.insert_channels(channels, guild_id)
-                    channels_str = json.dumps([{
-                                                        "id" : self.CHANNEL.get(d["id"],None),
-                                                        "reason" : d.get("reason", None)} for d in channels
-                                                ])
+                    channels_str = pytds.TableValuedParam("t_tmp_channel_log",rows=[(
+                                        self.CHANNEL.get(d["id"],None),
+                                        d.get("reason", None)) for d in channels
+                                    ])
 
                 # Execute the saved procedure that saves the log
-                #stm = "EXEC sp_save_log %(data)s, %(message_type)s, %(guild_id)s, %(message_mode)s, %(dm_reason)s, %(channels)s;"
-                # self.cursor.execute(stm, {"channels":channels_str,
-                #                     "data":json.dumps(sent_data),
-                #                     "message_type":self.MessageTYPE.get(message_type, None),
-                #                     "guild_id":guild_id,
-                #                     "message_mode":self.MessageMODE.get(message_mode, None),
-                #                     "dm_reason":dm_success_info_reason})
-                args = (json.dumps(sent_data),
-                        self.MessageTYPE.get(message_type, None),
-                        guild_id,
-                        self.MessageMODE.get(message_mode, None),
-                        dm_success_info_reason,
-                        channels_str)
-                self.cursor.callproc("sp_save_log", args)
+                self.cursor.callproc("sp_save_log", (json.dumps(sent_data),
+                                                     self.MessageTYPE.get(message_type, None),
+                                                     guild_id,
+                                                     self.MessageMODE.get(message_mode, None),
+                                                     dm_success_info_reason,
+                                                     channels_str))
 
                 return True
             
@@ -501,9 +499,9 @@ class LoggerSQL:
                 if isinstance(ex, SQLAlchemyError):
                     ex = ex.orig
 
-                code = ex.args[0]
-                message = ex.args[1].decode()
-                trace(f"[SQL]: Attempt to save into the database failed , retrying. Tries left: {C_FAIL_RETRIES - tries}", TraceLEVELS.WARNING)
+                code = ex.number
+                message = ex.text
+                trace(f"[SQL]: Attempt to save into the database failed , retrying. Tries left: {C_FAIL_RETRIES - 1 - tries}", TraceLEVELS.WARNING)
                 if not handle_error(code, message):
                     break
         
