@@ -16,3 +16,12 @@ C_RATE_LIMIT_GROWTH_FACTOR = 1.25   # Factor with which to increment the ratelim
 C_RATE_LIMIT_SAFETY_FACTOR = 2    # In case of a rate limit, wait times this more
 
 C_FILE_NAME_FORBIDDEN_CHAR = ('<','>','"','/','\\','|','?','*',":")
+
+
+
+
+
+
+# SQL CONFIGURATION
+C_FAIL_RETRIES = 10
+C_RECOVERY_TIME = 0.25
