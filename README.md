@@ -1,19 +1,18 @@
 #  **DISCORD ADVERTISEMENT FRAMEWORK (BOT) - DAF**
 ![PyPI](https://img.shields.io/pypi/v/discord-advert-framework?color=green&style=for-the-badge)
-[![PyPI - Downloads](https://img.shields.io/pypi/dm/discord-advert-framework?style=for-the-badge)](https://pypi.org/project/Discord-Advert-Framework/)
 [![CodeFactor Grade](https://img.shields.io/codefactor/grade/github/davidhozic/discord-advertisement-framework?style=for-the-badge)](https://www.codefactor.io/repository/github/davidhozic/discord-advertisement-framework)
 
 The Discord advertisement framework is a tool that allows easy advertising on Discord.
 
+# **FULL documentation**
+For documentation on all the object in the framework and section on **GETTING STARTED** see **[DOC.md](https://github.com/davidhozic/discord-advertisement-framework/blob/master/DOC.md)**
+
 # **Key features**
 - Periodic advertisement to **DMs**, **Text channels** and **Voice channels**
 - Advertising with either static data or **dynamic data** (function call)
-- JSON logs of sent messages
+- Logging of send attempts with **JSON** file logs or to a **SQL** server (Microsoft SQL Server only).
 - Ability to add additional application layers with help of asyncio
-
-
-# **FULL documentation**
-The **full documentation** can be found in **[DOC.md](https://github.com/davidhozic/discord-advertisement-framework/blob/master/DOC.md)**
+- Easy to setup
 
 
 # **Installation**
