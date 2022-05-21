@@ -8,7 +8,7 @@ The Discord advertisement framework is a tool that allows easy advertising on Di
 For documentation on all the object in the framework and section on **GETTING STARTED** see **[DOC.md](https://github.com/davidhozic/discord-advertisement-framework/blob/master/DOC.md)**
 
 # **Key features**
-- Periodic advertisement to **DMs**, **Text channels** and **Voice channels**
+- Periodic advertisement to **Direct (Private) Messages**, **Text channels** and **Voice channels**
 - Advertising with either static data or **dynamic data** (function call)
 - Logging of send attempts with **JSON** file logs or to a **SQL** server (Microsoft SQL Server only).
 - Ability to add additional application layers with help of asyncio
