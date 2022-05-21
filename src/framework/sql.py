@@ -30,6 +30,9 @@ __all__ = (
     "get_sql_manager"
 )
 
+"""
+TODO:
+- Recover if views, functions, or procedures where removed"""
 
 # from numpy import average
 # def timeit(num):
