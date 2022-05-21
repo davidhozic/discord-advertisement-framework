@@ -370,11 +370,11 @@ class LoggerSQL:
     def get_insert_guild(self,
                     snowflake: int,
                     name: str,
-                    _type: str):
+                    _type: str) -> int:
         """~ Method ~
         @Info:
-        Retreives the guild id from snowflake id, if it doesn't exist yet, it creates it
-        """
+        Inserts the guild into the db if it doesn't exist,
+        adds it to cache and returns it's internal db id from cache."""
         result = None          
         if snowflake not in self.GuildUSER:
             with self._sessionmaker.begin() as session:
@@ -394,13 +394,14 @@ class LoggerSQL:
             result = self.GuildUSER[snowflake]
         return result
 
-    def insert_channels(self,
+    def get_insert_channels(self,
                         channels: List[dict],
-                        guild_id: int):
+                        guild_id: int) -> List[dict]:
         """~ Method ~
         @Info: 
             - Adds missing channels to the database, where it then caches those added,
-              to avoid unnecessary quaries if all channels exist
+              to avoid unnecessary quaries if all channels exist and then returns
+              a list of dicitonaries containing internal DB id and reason why sending failed.
         @Param:
         - channels: List[dict[id, name]] ~ List of dictionaries containing snowflake_id and name of the channel"""
         not_cached = [{"id": x["id"], "name": x["name"]} for x in channels  if x["id"] not in self.CHANNEL] # Get snowflakes that are not cached
@@ -417,8 +418,9 @@ class LoggerSQL:
                     session.flush()
                     for channel in to_add:
                         self.add_to_cache(CHANNEL, channel.snowflake_id, channel.id)
+        return [(self.CHANNEL.get(d["id"],None),
+                 d.get("reason", None))  for d in channels]
 
-    #@timeit(5)
     def save_log(self,
                  guild_context: dict,
                  message_context: dict) -> bool:                 
@@ -467,7 +469,7 @@ class LoggerSQL:
             if "reason" in dm_success_info:
                 dm_success_info_reason = dm_success_info["reason"]
 
-        channels_str = None
+        _channels = pytds.default
         if channels is not None:
             channels = channels['successful'] + channels['failed']
 
@@ -477,19 +479,15 @@ class LoggerSQL:
                 guild_id = self.get_insert_guild(guild_snowflake, guild_name, guild_type)
                 if channels is not None:
                     # Insert channels into the database and cache if it doesn't exist
-                    self.insert_channels(channels, guild_id)
-                    channels_str = pytds.TableValuedParam("t_tmp_channel_log",rows=[(
-                                        self.CHANNEL.get(d["id"],None),
-                                        d.get("reason", None)) for d in channels
-                                    ])
-
+                    _channels = self.get_insert_channels(channels, guild_id)
+                    _channels = pytds.TableValuedParam("t_tmp_channel_log", rows=_channels)
                 # Execute the saved procedure that saves the log
                 self.cursor.callproc("sp_save_log", (json.dumps(sent_data),
                                                      self.MessageTYPE.get(message_type, None),
                                                      guild_id,
                                                      self.MessageMODE.get(message_mode, None),
                                                      dm_success_info_reason,
-                                                     channels_str))
+                                                     _channels))
 
                 return True
             
@@ -630,7 +628,7 @@ class MessageLOG(LoggerSQL.Base):
     sent_data = Column(Integer, ForeignKey("DataHISTORY.id"))
     message_type = Column(SmallInteger, ForeignKey("MessageTYPE.id"), nullable=False)
     guild_id =     Column(SmallInteger, ForeignKey("GuildUSER.id"), nullable=False)
-    message_mode = Column(SmallInteger, ForeignKey("MessageMODE.id"), nullable=False) # [TextMESSAGE, DirectMESSAGE]
+    message_mode = Column(SmallInteger, ForeignKey("MessageMODE.id")) # [TextMESSAGE, DirectMESSAGE]
     dm_reason   = Column(NVARCHAR)  # [DirectMESSAGE]
     timestamp = Column(DateTime)
 
