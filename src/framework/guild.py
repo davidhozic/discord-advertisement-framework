@@ -15,7 +15,7 @@ from    . import sql
 import  time
 import  json
 import pathlib
-
+import os
 
 __all__ = (
     "GUILD",
@@ -116,13 +116,13 @@ class BaseGUILD:
 
                 logging_output = str(logging_output.joinpath(self.log_file_name))
 
-                with suppress(FileExistsError):
-                    with open(logging_output,'x', encoding='utf-8'):
-                        pass
+                # with suppress(FileExistsError):
+                #     with open(logging_output,'x', encoding='utf-8'):
+                #         pass
 
-                with open(logging_output,'r+', encoding='utf-8') as appender:
+                with open(logging_output,'a+', encoding='utf-8') as appender:
                     appender_data = None
-
+                    appender.seek(0)
                     try:
                         appender_data = json.load(appender)
                     except json.JSONDecodeError:
@@ -132,9 +132,8 @@ class BaseGUILD:
                         appender_data["type"] = guild_context["type"]
                         appender_data["message_history"] = []
                     finally:
-                        with open(logging_output,'w', encoding='utf-8'):
-                            pass
                         appender.seek(0)
+                        appender.truncate(0)
 
                     appender_data["message_history"].insert(0,
                         {
