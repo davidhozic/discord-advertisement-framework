@@ -15,13 +15,14 @@ from  sqlalchemy import (
 from  sqlalchemy.exc  import SQLAlchemyError
 from  sqlalchemy.orm import sessionmaker, Session
 from  sqlalchemy.ext.declarative import declarative_base
-from  pytds import DatabaseError
+from  pytds import DatabaseError, ClosedConnectionError
 from  .tracing import *
 from  .const import *
 import json
 import copy
 import re
 import time
+import asyncio
 import pytds
 
 __all__ = (
@@ -149,6 +150,29 @@ class LoggerSQL:
         for k in tables:
             getattr(self, k).clear()
 
+    def reconnect_after(self, time: int):
+        """ ~ Method ~
+        @Info: reconnects the SQL manager to the database after <time>.
+        @Params:
+            - time: int ~ Time in seconds after which reconnect"""
+        async def _reconnect():
+            """
+            ~ Coroutine ~
+            @Info: Tries to reconnect after <time>, if it failed,
+                   it retries after <time>"""
+            for tries in range(C_RECONNECT_ATTEMPTS):
+                trace(f"[SQL]: Retrying to connect in {time} seconds.")
+                await asyncio.sleep(time)
+                trace(f"[SQL]: Reconnecting to database {self.database}.")
+                if self.initialize():
+                    trace(f"[SQL]: Reconnected to the database {self.database}.")
+                    GLOBALS.enabled = True
+                    return             
+
+            trace(f"[SQL]: Failed to reconnect in {C_RECONNECT_ATTEMPTS} attempts, SQL logging is now disabled.")
+
+        asyncio.create_task(_reconnect())
+
     def create_data_types(self) -> bool:
         """~ Method ~
         @Info: Creates datatypes that are used by the framework to log messages"""
@@ -260,11 +284,7 @@ class LoggerSQL:
             trace("[SQL]: Creating Views, Procedures & Functions...", TraceLEVELS.NORMAL)
             with self._sessionmaker.begin() as session:
                 for statement in stms:
-                    # Union the 2 system tables containing views and procedures/functions, then select only the element that matches the item we want to create, it it returns None, it doesnt exist
-                    if session.execute(text(f"SELECT name FROM sys.all_objects WHERE name=:name"), {"name":statement["name"]}).first() is None:
-                        session.execute(text("CREATE " + statement["stm"].format(statement["name"]) ))
-                    else:
-                        session.execute(text("ALTER " + statement["stm"].format(statement["name"]) ))
+                    session.execute(text("CREATE OR ALTER " + statement["stm"].format(statement["name"]) ))
             return True
 
         return False
@@ -405,8 +425,10 @@ class LoggerSQL:
             - Adds missing channels to the database, where it then caches those added,
               to avoid unnecessary quaries if all channels exist and then returns
               a list of dicitonaries containing internal DB id and reason why sending failed.
+
         @Param:
         - channels: List[dict[id, name]] ~ List of dictionaries containing snowflake_id and name of the channel"""
+
         not_cached = [{"id": x["id"], "name": x["name"]} for x in channels  if x["id"] not in self.CHANNEL] # Get snowflakes that are not cached
         not_cached_snow = [x["id"] for x in not_cached]
         if len(not_cached):
@@ -423,7 +445,7 @@ class LoggerSQL:
                         self.add_to_cache(CHANNEL, channel.snowflake_id, channel.id)
         return [(self.CHANNEL.get(d["id"],None),
                  d.get("reason", None))  for d in channels]
-
+    
     def save_log(self,
                  guild_context: dict,
                  message_context: dict) -> bool:                 
@@ -442,17 +464,21 @@ class LoggerSQL:
             @Info: Used to handle errors that happen in the save_log method.
             @Return: Returns BOOL indicating if logging to the base should be attempted again."""
             res = False
-            if exception == 208:
+            if exception == 208:            # Invalid object name (table deleted)
                 res = self.create_tables()
-            elif exception == 515:
-                res = self.generate_lookup_values()
-            elif exception in {547, 515}:
+            elif exception in {547, 515}:   # Constraint conflict, NULL value 
                 r_table = re.search(r'(?<=table "dbo.).+(?=")', message)
                 if r_table is not None:
                     self.clear_cache(r_table.group(0))  # Clears only the affected table cache 
                 else:
                     self.clear_cache()  # Clears all caching tables
                 res = self.generate_lookup_values()
+            elif exception in {-1, 2, 53}:  # Diconnect error, reconnect after period
+                trace(f"[SQL]: Server is disconnected.", TraceLEVELS.WARNING)
+                self.reconnect_after(C_RECONNECT_TIME)
+                GLOBALS.enabled = False
+            elif exception == 2812:
+                res = self.create_analytic_objects()
 
             time.sleep(C_RECOVERY_TIME)
             return res
@@ -495,10 +521,15 @@ class LoggerSQL:
                 return True
             
             except Exception as ex:
-                if not isinstance(ex, (SQLAlchemyError, DatabaseError)):
+                if not isinstance(ex, (SQLAlchemyError, DatabaseError, ClosedConnectionError)):
                     break
+
                 if isinstance(ex, SQLAlchemyError):
                     ex = ex.orig
+
+                if isinstance(ex, ClosedConnectionError):
+                    ex.text = ex.args[0]
+                    ex.number = 53  # Because only text is returned
 
                 code = ex.number
                 message = ex.text
