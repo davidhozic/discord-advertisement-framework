@@ -16,6 +16,7 @@ from  sqlalchemy.exc  import SQLAlchemyError
 from  sqlalchemy.orm import sessionmaker, Session
 from  sqlalchemy.ext.declarative import declarative_base
 from  pytds import DatabaseError, ClosedConnectionError
+from   asyncio import AbstractEventLoop
 from  .tracing import *
 from  .timing import *
 from  .const import *
@@ -39,6 +40,9 @@ class GLOBALS:
     manager  = None
     enabled = False
     lt_types = []
+
+    # Reconnection related
+    rc_loop: AbstractEventLoop = None
 
 
 def register_type(lookuptable: Literal["GuildTYPE", "MessageTYPE", "MessageMODE"]):
@@ -140,16 +144,16 @@ class LoggerSQL:
             @Info: Tries to reconnect after <time>, if it failed,
                    it retries after <time>"""
             for tries in range(C_RECONNECT_ATTEMPTS):
-                trace(f"[SQL]: Retrying to connect in {time} seconds.")
-                await asyncio.sleep(time)
                 trace(f"[SQL]: Reconnecting to database {self.database}.")
-                if self.initialize():
+                if self.connect_cursor():
                     trace(f"[SQL]: Reconnected to the database {self.database}.")
                     GLOBALS.enabled = True
-                    return             
-
+                    return
+                trace(f"[SQL]: Retrying to connect in {time} seconds.")
+                await asyncio.sleep(time)       
             trace(f"[SQL]: Failed to reconnect in {C_RECONNECT_ATTEMPTS} attempts, SQL logging is now disabled.")
 
+        GLOBALS.enabled = False
         asyncio.create_task(_reconnect())
 
     def create_data_types(self) -> bool:
@@ -311,7 +315,7 @@ class LoggerSQL:
         """~ Method ~
         @Info: Creates engine"""
         with suppress(SQLAlchemyError):
-            self.engine = create_engine(f"mssql+pytds://{self.username}:{self.__password}@{self.server}/{self.database}", echo=False, future=True)
+            self.engine = create_engine(f"mssql+pytds://{self.username}:{self.__password}@{self.server}/{self.database}", echo=False, future=True, pool_pre_ping=True)
             self._sessionmaker = sessionmaker(bind=self.engine)
             return True
 
@@ -453,9 +457,7 @@ class LoggerSQL:
                     self.clear_cache()  # Clears all caching tables
                 res = self.generate_lookup_values()
             elif exception in {-1, 2, 53}:  # Diconnect error, reconnect after period
-                trace(f"[SQL]: Server is disconnected.", TraceLEVELS.WARNING)
-                self.reconnect_after(C_RECONNECT_TIME)
-                GLOBALS.enabled = False
+                    self.reconnect_after(C_RECONNECT_TIME)
             elif exception == 2812:
                 res = self.create_analytic_objects()
 
@@ -516,7 +518,7 @@ class LoggerSQL:
                 if not handle_error(code, message):
                     break
         
-        trace(f"Unable to save to databse {self.database}. Switching to file logging", TraceLEVELS.WARNING)
+        trace(f"Unable to save to SQL, saving to file instead", TraceLEVELS.WARNING)
         GLOBALS.enabled = False
         return False
 
