@@ -7,10 +7,10 @@ from    typing import List, Union, Literal
 from    .dtypes import *
 from    .tracing import *
 from    .const import *
+from    .timing import *
 from    . import client
 from    . import sql
 import  random
-import  time
 import  asyncio
 import  _discord as discord
 
@@ -28,39 +28,6 @@ class GLOBALS:
     rlim_avoid_delay = 0
 
 
-class TIMER:
-    """
-    TIMER
-    Info : Used in MESSAGE objects as a send timer
-    """
-    __slots__ = (
-        "running",
-        "startms"
-    )
-
-    def __init__(self):
-        "Initiate the timer"
-        self.running = False
-        self.startms = 0
-
-    def start(self):
-        "Start the timer"
-        if not self.running:
-            self.running = True
-            self.startms = time.time()
-
-    def elapsed(self):
-        """Return the timer elapsed from last reset
-           and starts the timer if not already stared"""
-        if self.running:
-            return time.time() - self.startms
-        self.start()
-        return 0
-
-    def reset (self):
-        "Reset the timer"
-        self.running = False
-
 # Dummy classes for message mods, to use with sql.register_type decorator
 @sql.register_type("MessageMODE")
 class _:
@@ -71,6 +38,7 @@ class _:
 @sql.register_type("MessageMODE")
 class _:
     __logname__ = "clear-send"
+
 
 class BaseMESSAGE:
     """~  BaseMESSAGE  ~
