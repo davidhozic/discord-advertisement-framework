@@ -428,7 +428,7 @@ class LoggerSQL:
                         self.add_to_cache(CHANNEL, channel.snowflake_id, channel.id)
         return [(self.CHANNEL.get(d["id"],None),
                  d.get("reason", None))  for d in channels]
-    @timeit(1)
+
     def save_log(self,
                  guild_context: dict,
                  message_context: dict) -> bool:                 
