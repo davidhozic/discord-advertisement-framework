@@ -47,13 +47,13 @@
 - [**Decorators**](#decorators)
   - [framework.**data_function**](#frameworkdata_function)
 - [**Logging**](#logging)
-  - [**Relational Database Log**](#relational-database-log)
-    - [**Usage**](#usage)
-    - [**Features**](#features)
-    - [**ER diagram of the logs**](#er-diagram-of-the-logs)
-    - [**Tables**:](#tables)
-  - [**JSON File Log**](#json-file-log)
-    - [**Example**](#example-4)
+- [**Relational Database Log**](#relational-database-log)
+  - [**Usage**](#usage)
+  - [**Features**](#features)
+  - [**ER diagram of the logs**](#er-diagram-of-the-logs)
+  - [**Tables**:](#tables)
+- [**JSON File Log**](#json-file-log)
+  - [**Example**](#example-4)
 - [**Trace messages**](#trace-messages)
 
 <br>
@@ -596,11 +596,11 @@ There are 2 different types of logs:
 - [Relational database logs (MSSQL)](#relational-database-log)
 - [JSON file logs](#json-file-log)
  
-## **Relational Database Log**
+# **Relational Database Log**
 This type of logging enables saving logs to a remote server inside the database. Currently **only Microsoft SQL server is supported.**<br>
 In addition to being smaller in size, they are also easier to manage and view and proccess.
 
-### **Usage**
+## **Usage**
 To use a SQL base for logging, you need to pass the [**run()**](#frameworkrun) function with the
 sql_manager parameter and pass it the [**LoggerSQL**](#frameworkloggersql) object.
 ```py
@@ -614,21 +614,22 @@ sql_manager parameter and pass it the [**LoggerSQL**](#frameworkloggersql) objec
   )
 ```
 
-### **Features**
+## **Features**
 - Automatic creation of tables, procedures, functions, views, triggers
 - Caching for faster logging
 - Low redundancy for reduced file size
 - Automatic error recovery:
+  - Automatic reconnect on disconnect ~ Retries 3 times in delays of 5 minutes, then switches to file logging
   - If tables are deleted, they are automatically recreated
   - If cached values get corrupted, they are automatically recached
-  - If server gets disconnected (or other unhandable errors), the framework switches to file logging
+  - If there are other unhandable errors, the framework switches to file logging
 
 **\*NOTE:** The database must already exist! However it can be completly empty, no need to manually create the schema.
 
-### **ER diagram of the logs**
+## **ER diagram of the logs**
 ![ER SQL diagram](documentation_src/er_diagram.png)
 
-### **Tables**:
+## **Tables**:
 *(If the attribute is bold, it means it is a primary key).*
 - MessageLOG: <a id="dbmessagelog"></a><br>
   This table contains the actual logs of sent messages, if the message type is **DirectMESSAGE**, then all the information is stored in this table.
@@ -710,7 +711,7 @@ sql_manager parameter and pass it the [**LoggerSQL**](#frameworkloggersql) objec
   - **channel_id**  ~ Foreign key pointing to a row inside the [**CHANNEL**](#dbchannel) table.
 
 
-## **JSON File Log**
+# **JSON File Log**
 The logs are writen in the JSON format and saved into a .json file, that has the name of the guild or an user you were sending messages into.
 The .json files are fragmantated by day and stored into folder "Year/Month/Day", this means that each day a new json file will be generated for that specific day for easier managing,
 for example, if today is 13.07.2022, the log will be saved into the file that is located in 
@@ -779,7 +780,7 @@ The logs are saved in the following format (json keys):
     - index -- Index of the log, new items are added to the top of the list
     - timestamp -- The timestamp of the message
 
-### **Example**
+## **Example**
 ```json
 {
     "name": "\\David's dungeon",
