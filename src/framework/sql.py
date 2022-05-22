@@ -17,6 +17,7 @@ from  sqlalchemy.orm import sessionmaker, Session
 from  sqlalchemy.ext.declarative import declarative_base
 from  pytds import DatabaseError, ClosedConnectionError
 from  .tracing import *
+from  .timing import *
 from  .const import *
 import json
 import copy
@@ -31,28 +32,6 @@ __all__ = (
     "get_sql_manager"
 )
 
-"""
-TODO:
-- Recover if views, functions, or procedures where removed"""
-
-# from numpy import average
-# def timeit(num):
-#     def _timeit(fnc):
-#         samples = []
-#         def __timeit(*args, **kwargs):
-#             start = time.time()
-#             ret = fnc(*args, **kwargs)
-#             end = time.time()
-#             ms = (end-start)*1000
-            
-#             samples.append(ms)
-#             if len(samples) == num:
-#                 print(f"Took {average(samples)} ms on average")
-#                 samples.clear()
-#             return ret
-#         return __timeit
-
-#     return _timeit
 
 class GLOBALS:
     """~ class ~
@@ -445,7 +424,7 @@ class LoggerSQL:
                         self.add_to_cache(CHANNEL, channel.snowflake_id, channel.id)
         return [(self.CHANNEL.get(d["id"],None),
                  d.get("reason", None))  for d in channels]
-    
+    @timeit(1)
     def save_log(self,
                  guild_context: dict,
                  message_context: dict) -> bool:                 
