@@ -136,11 +136,8 @@ async def parser():
                     if message_contex is not None:
                         if message_contex.send_date <= datetime.datetime.now():
                             m_awaiting_send.append ( message_contex )
-
-                    if message_contex is None or message_contex.send_date <= datetime.datetime.now():
-                        with suppress(FileNotFoundError):
-                            os.remove(filepath)
-
+                            with suppress(FileNotFoundError):
+                                os.remove(filepath)
                 else:
                     with suppress(FileNotFoundError):
                         os.remove(filepath)
@@ -227,7 +224,7 @@ def get_data(ch_id):
                                                                                                                     l_tr_datum.hour,
                                                                                                                     l_tr_datum.minute))
                                                                                                                     
-                l_ret.append( l_fw_embed ) 
+                l_ret.append( l_fw_embed )
             return l_ret
 
     return None
@@ -236,7 +233,7 @@ def get_data(ch_id):
 async def main():
     """
     ~  main  ~
-    @Param: void
+    @Param: voidem
     @Info:
         This is the callback function that is called after the framework is run,
         it starts the json file parser where the json files contain the scheduled message
@@ -255,7 +252,7 @@ servers = [
         fw.GUILD (
             guild_id=guild["SERVER-ID"], 
             messages_to_send= [
-                fw.TextMESSAGE(None, 5, get_data(ch_id), [ch_id], "send", True) for ch_id in guild["CHANNEL-IDs"]
+                fw.TextMESSAGE(None, 1, get_data(ch_id), [ch_id], "send", True) for ch_id in guild["CHANNEL-IDs"]
             ],
             generate_log=True
         ) for guild in conf.WHITELISTED_GUILDS   
