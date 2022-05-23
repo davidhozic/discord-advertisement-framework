@@ -57,6 +57,7 @@
 - [**Trace messages**](#trace-messages)
 
 <br>
+
 ## **Introduction**
 Welcome to the Discord Advertisement Framework.<br>
 If you ever needed a tool that allows you to advertise by **automatically sending messages to discord channels (text, voice and direct messages)**, this is the tool for you.
