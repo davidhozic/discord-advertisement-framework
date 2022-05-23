@@ -1,39 +1,45 @@
 # **Discord Advertisement Framework (Bot)**
-## **Table of contents**
+
 - [**Discord Advertisement Framework (Bot)**](#discord-advertisement-framework-bot)
-  - [**Table of contents**](#table-of-contents)
   - [**Introduction**](#introduction)
   - [**Examples**](#examples)
+- [**Compatability with Pycord (discord.py) API wrapper**](#compatability-with-pycord-discordpy-api-wrapper)
+- [**Getting Started**](#getting-started)
+  - [**Defining the server list**](#defining-the-server-list)
+  - [**Starting the framework**](#starting-the-framework)
+  - [**Obtaining account TOKEN**](#obtaining-account-token)
 - [**Creatable objects**](#creatable-objects)
-  - [framework.**EMBED**](#frameworkembed)
+  - [framework.**LoggerSQL**](#frameworkloggersql)
     - [**Parameters**](#parameters)
+  - [framework.**EMBED**](#frameworkembed)
+    - [**Parameters**](#parameters-1)
     - [**Methods**](#methods)
   - [framework.**EmbedFIELD**](#frameworkembedfield)
-    - [**Parameters**](#parameters-1)
-  - [framework.**FILE**](#frameworkfile)
     - [**Parameters**](#parameters-2)
-  - [framework.**AUDIO**](#frameworkaudio)
+  - [framework.**FILE**](#frameworkfile)
     - [**Parameters**](#parameters-3)
-  - [framework.**GUILD**](#frameworkguild)
+  - [framework.**AUDIO**](#frameworkaudio)
     - [**Parameters**](#parameters-4)
-  - [framework.**USER**](#frameworkuser)
+  - [framework.**GUILD**](#frameworkguild)
     - [**Parameters**](#parameters-5)
+  - [framework.**USER**](#frameworkuser)
+    - [**Parameters**](#parameters-6)
     - [**Example**](#example)
   - [framework.**xxxMESSAGE**](#frameworkxxxmessage)
     - [**xxxMESSAGE types**](#xxxmessage-types)
     - [**Common parameters**](#common-parameters)
   - [framework.**TextMESSAGE**](#frameworktextmessage)
-    - [**Parameters**](#parameters-6)
+    - [**Parameters**](#parameters-7)
     - [**Example**](#example-1)
   - [framework.**DirectMESSAGE**](#frameworkdirectmessage)
-    - [**Parameters**](#parameters-7)
+    - [**Parameters**](#parameters-8)
     - [**Example**](#example-2)
   - [framework.**VoiceMESSAGE**](#frameworkvoicemessage)
-    - [**Parameters**](#parameters-8)
+    - [**Parameters**](#parameters-9)
     - [**Example**](#example-3)
 - [**Functions**](#functions)
   - [framework.**run(...)**](#frameworkrun)
-    - [**Parameters**](#parameters-9)
+    - [**Parameters**](#parameters-10)
   - [framework.**get_client()**](#frameworkget_client)
     - [**Description**](#description)
   - [framework.**shutdown()**](#frameworkshutdown)
@@ -41,10 +47,14 @@
 - [**Decorators**](#decorators)
   - [framework.**data_function**](#frameworkdata_function)
 - [**Logging**](#logging)
-  - [**LOG OF SENT MESSAGES**](#log-of-sent-messages)
-    - [**Example**](#example-4)
-  - [**Trace messages**](#trace-messages)
-- [**Regarding Pycord/discord.py**](#regarding-pycorddiscordpy)
+- [**Relational Database Log**](#relational-database-log)
+  - [**Usage**](#usage)
+  - [**Features**](#features)
+  - [**ER diagram of the logs**](#er-diagram-of-the-logs)
+  - [**Tables**:](#tables)
+- [**JSON File Log**](#json-file-log)
+  - [**Example**](#example-4)
+- [**Trace messages**](#trace-messages)
 
 <br>
 
@@ -68,10 +78,161 @@ Because I believe reading documention can be a bit boring, I prepaired some exam
 Examples folder: [Examples folder](Examples).
 <br>
 
-For help with the object parameters see [**Creatable Objects**](#creatable-objects).
+# **Compatability with Pycord (discord.py) API wrapper**
+This framework uses [**PYCORD**](https://docs.pycord.dev/en/master/) to function, which is a discord API wrapper written in python. <br>
+Because of this it is very easy to use Pycord along side the framework.<br>
+All you need to do to use Pycord is import the library from the framework and if you want to use the started client, call the framework.get_client() function
+```py
+import framework as fw
+from framework import discord
+
+async def main():
+  embed = discord.Embed()  # Directly from Pycord 
+  client = fw.get_client()  # Gets the client object
+  for guild in client.guilds:
+    for channel in guild.channels:
+        print(channel.name)
+
+fw.run(
+  token="JSMXqAHWQHRnSHQHJNFMQIHGQHJWDASH134SJDHS2", # Example account token
+  server_list=[...],
+  user_callback=main
+)
+
+```
+
+# **Getting Started**
+This section tells you how to quickly setup everything and begin shilling. <br>
+
+## **Defining the server list**
+First you need to import the framework and define the server (GUILD/USER) list.
+```py
+import framework as fw
+
+servers = [
+    ...
+]
+
+```
+The list should contain [**GUILD**](#frameworkguild) or/and [**USER**](#frameworkuser) objects. <br>
+```py
+import framework as fw
+
+servers = [
+  fw.GUILD(
+    guild_id=snowflake_id_here,
+    messages_to_send=[
+      fw.TextMESSAGE(...),
+      fw.TextMESSAGE(...),
+      fw.VoiceMESSAGE(...)
+    ],
+    generate_log = True
+  ),
+
+  fw.USER(
+    user_id=snowflake_id_here,
+    messages_to_send=[
+      fw.DirectMESSAGE(...),
+      fw.DirectMESSAGE(...),
+      fw.DirectMESSAGE(...)
+    ],
+    generate_log = True
+  )
+]
+```
+**For help with other parameters and more detailed description of what each parameter does,
+see [**xxxMESSAGE**](#frameworkxxxmessage) and [**GUILD**](#frameworkguild), [**USER**](#frameworkuser)**
+
+The list can also be defined automatically via the user callback function (see [**run()** function](#frameworkrun))
+```py
+import framework as fw
+
+servers = []
+
+async def main():
+    cl = fw.get_client()    
+
+    for guild in cl.guilds: # See Pycord API: https://docs.pycord.dev/en/master/api.html
+        channels = []
+        for channel in guild.text_channels:
+            if "shill" in channel.name.lower(): # Creates a id list of channels that have "shill" in the name
+                channels.append(channel.id)
+        servers.append(                             # For each guild, adds a new object
+            fw.GUILD(
+                guild_id=guild.id,
+                messages_to_send=[
+                    # Sends "Buy the new shovel!"" every 60 seconds"
+                    fw.TextMESSAGE(None, 60, "Buy the new shovel!", channels, "send", True)
+                ],
+                generate_log=True
+            )
+        )
+```
+
+## **Starting the framework**
+After you've defined the server list, all you need to do now is start the framework
+by running the [**run()**](#frameworkrun) function and the framework will be shilling.
+```py
+import framework as fw
+
+servers = []
+
+async def main():
+    cl = fw.get_client()    
+
+    for guild in cl.guilds: # See Pycord API: https://docs.pycord.dev/en/master/api.html
+        channels = []
+        for channel in guild.text_channels:
+            if "shill" in channel.name.lower(): # Creates a id list of channels that have "shill" in the name
+                channels.append(channel.id)
+        servers.append(                             # For each guild, adds a new object
+            fw.GUILD(
+                guild_id=guild.id,
+                messages_to_send=[
+                    # Sends "Buy the new shovel!"" every 60 seconds"
+                    fw.TextMESSAGE(None, 60, "Buy the new shovel!", channels, "send", True)
+                ],
+                generate_log=True
+            )
+        )
+
+fw.run(
+  token="YOUR_TOKEN_HERE",
+  is_user=False,
+  server_list=servers,
+  user_callback=main
+)
+```
+The [**run()**](#frameworkrun) function takes other parameters as well, for more details see [**framework.run()**](#frameworkrun).
+
+## **Obtaining account TOKEN**
+To obtain the token for a **BOT** account go to [Discord Developer Portal](https://discord.com/developers/applications), to your application -> bot and copy the token. <br>
+To obtain the token for an **USER** account see [YouTube - obtaining user token](https://www.youtube.com/results?search_query=discord+user+account+token). 
+If the token is for an **USER** account you also need to set `is_user` to `True` inside the [**framework.run()**](#frameworkrun) function.
 <br>
 
 #  **Creatable objects**
+## framework.**LoggerSQL**
+This class is used to create the SQL manager objects in case you want to use SQL based logging instead of file logging.
+It is used as the *sql_manager* argument to the [framework.**run()**](#frameworkrun) function.<br>
+
+**\*NOTE:** The database must already exist! However it can be completly empty, no need to manually create the schema.
+
+For more details see [**Logging**](#logging).
+
+### **Parameters**
+- username: str   - username to login with
+- password: str   - password to login with
+- server ip/url: str - IP address or URL to the server
+- database: str - Name of the database
+
+```py
+fw.run(...,
+       sql_manager=fw.LoggerSQL("david", "cooldude", "mysupersecretserver.com", "my_database"),
+       ...)
+```
+
+
 ## framework.**EMBED**
 
 | **NOTE**<br>                                                       |
@@ -156,10 +317,12 @@ framework.GUILD(
 
 ## framework.**USER**
 The **USER** object represents a user to which **direct messages** will be sent.
+
 ### **Parameters**
 - **user_id** - identificator which can be obtain by enabling [developer mode](https://techswift.org/2020/09/17/how-to-enable-developer-mode-in-discord/) in discord's settings and afterwards right-clicking on the server/guild icon in the server list and clicking **"Copy ID"**,
 - **messages_to_send** - List of [**DirectMESSAGE**](#frameworkdirectmessage) objects
 - **generate_log** - bool variable, if True it will generate a file log for each message send attempt.
+
 ### **Example**
 ```py
 framework.USER(
@@ -198,6 +361,7 @@ this is more detaily defined in the inherited classes.
 
 ## framework.**TextMESSAGE**
 The **Text**MESSAGE class represents a message that will be sent into **text channels**.
+
 ### **Parameters**
 Additionaly to the [common parameters](#common-parameters) the **Text**MESSAGE accepts the following parameters:
 - **data** - The data parameter is the actual data that will be sent using discord's API. The **data types** of this parameter can be: 
@@ -326,20 +490,22 @@ framework.VoiceMESSAGE(
 # **Functions**
 ## framework.**run(...)** 
 ### **Parameters**
-- token             : str       = access token for account
-- server_list       : list      = List of [framework.GUILD](#frameworkguild) objects
-- is_user           : bool      = Set to True if token is from an user account and not a bot account
-- user_callback     : function  = User callback async function (gets called after framework is ran)
-- server_log_output : str       = Path where the server log files will be created
-- debug             : bool      = Print trace message to the console,
-                                    usefull for debugging if you feel like something is not working
+- token             : str       - access token for account
+- server_list       : list      - List of [framework.GUILD](#frameworkguild) objects
+- is_user           : bool      - Set to True if token is from an user account and not a bot account
+- user_callback     : function  - User callback async function (gets called after framework is ran, but before initialization of any objects)
+- server_log_output : str       - Path where the server log files will be created (in case SQL logging is not used)
+- sql_manager       : [LoggerSQL](#frameworkloggersql) - SQL controller object used to save logs into the database
+- debug             : bool      - Print trace message to the console,
+                                  usefull for debugging if you feel like something is not working
 ```py
 framework.run(  token="your_token_here",                # MANDATORY
                 server_list = [framework.GUILD(...),    # MANDATORY
                                 framework.GUILD(...)],
                 is_user=False,                          # OPTIONAL
                 user_callback=None,                     # OPTIONAL
-                server_log_output="History"             # OPTIONAL
+                server_log_output="History"             # OPTIONAL,
+                sql_manager=framework.LoggerSQL(...),   # OPTIONAL,
                 debug=True)                             # OPTIONAL
 ``` 
 <br>
@@ -362,7 +528,7 @@ It is used to fully shutdown the framework and then **exit** out of the program.
 
 ## framework.**data_function**
 
-- This decorator accepts a function as it's parameter and then returns a object that will be called by the framework. To use an <u>user defined function as parameter</u> to the [framework.TextMESSAGE/framework.VoiceMESSAGE/DirectMESSAGE](#frameworkxxxmessage) data parameter, you **MUST** use this decorator beforehand. Please see the **Examples** folder.
+- This decorator accepts a function as it's parameter and then returns a object that will be called by the framework. To use an **user defined function as parameter** to the [framework.TextMESSAGE/framework.VoiceMESSAGE/DirectMESSAGE](#frameworkxxxmessage) data parameter, you **MUST** use this decorator beforehand. Please see the **Examples** folder.
 - Usage:
     ```py
     import datetime
@@ -426,8 +592,127 @@ It is used to fully shutdown the framework and then **exit** out of the program.
 <br>
 
 #  **Logging**
-## **LOG OF SENT MESSAGES**
 The framework allows to log sent messages for each GUILD/USER (if you set the "generate_log" to True inside the [**GUILD**](#frameworkguild) or [**USER**](#frameworkuser) object).
+There are 2 different types of logs:
+- [Relational database logs (MSSQL)](#relational-database-log)
+- [JSON file logs](#json-file-log)
+ 
+# **Relational Database Log**
+This type of logging enables saving logs to a remote server inside the database. Currently **only Microsoft SQL server is supported.**<br>
+In addition to being smaller in size, they are also easier to manage and view and proccess.
+
+## **Usage**
+To use a SQL base for logging, you need to pass the [**run()**](#frameworkrun) function with the
+sql_manager parameter and pass it the [**LoggerSQL**](#frameworkloggersql) object.
+```py
+  import framework as fw
+  
+  ...
+
+  fw.run(
+    ...,
+    sql_manager=fw.LoggerSQL("username", "password", "server_ip_url", "database_name")
+  )
+```
+
+## **Features**
+- Automatic creation of tables, procedures, functions, views, triggers
+- Caching for faster logging
+- Low redundancy for reduced file size
+- Automatic error recovery:
+  - Automatic reconnect on disconnect ~ Retries 3 times in delays of 5 minutes, then switches to file logging
+  - If tables are deleted, they are automatically recreated
+  - If cached values get corrupted, they are automatically recached
+  - If there are other unhandable errors, the framework switches to file logging
+
+**\*NOTE:** The database must already exist! However it can be completly empty, no need to manually create the schema.
+
+## **ER diagram of the logs**
+![ER SQL diagram](documentation_src/er_diagram.png)
+
+## **Tables**:
+*(If the attribute is bold, it means it is a primary key).*
+- MessageLOG: <a id="dbmessagelog"></a><br>
+  This table contains the actual logs of sent messages, if the message type is **DirectMESSAGE**, then all the information is stored in this table.
+  If the types are **Voice/Text**MESSAGE, then part of the log (to which channels it sent), is saved in the [**MessageChannelLOG**](#dbmessagechannellog) table.
+
+  Attributes:
+  - **id**: int ~ This is an internal identificator of the log inside the database.
+  - sent_data: int ~ Foreign key pointing to a row inside the [**DataHISTORY**](#dbdatahistory) table.
+  - message_type: int ~ Foreign key identificator pointing to a entry inside the [**MessageTYPE**](#dbmessagetype) table.
+  - guild_id: int ~ (Internal id) Foreign key pointing to [**GuildUSER**](#dbguilduser) table
+  - message_mode: int ~ Foreign key pointing to [**MessageMODE**](#dbmessagemode) table. This is non-null only for [**DirectMESSAGE**](#frameworkdirectmessage) and [**TextMESSAGE**](#frameworktextmessage)
+  - dm_success: bit ~ Only for [**DirectMESSAGE**](#frameworkdirectmessage). This is set to 1 if the sent attempt was **successful** or 0 if the sent attempt was **unsuccessful**
+  - dM_reason: str ~  This not null only if **dm_success** is set to 0, in that case it contains the string representation of the error that caused the message send attempt to be unsuccessful.
+  - timestamp: datetime ~ The timestamp of the message send attempt.
+  
+  <br>
+- DatHISTORY: <a id="dbdatahistory"></a> <br>
+  This table contains all the **different** data that was ever advertised. Every element is **unique** and is not replicated.
+  This table exist to reduce reduncancy and file size of the logs whenever same data is advertised multiple times.
+  When a log is created, it is first checked if the data sent was already sent before, if it was the id to the existing DataHISTORY row is used,
+  else a new row is created.
+  
+  Attributes:
+  - **id**: int ~ Internal identificator of data inside the database.
+  - content: str ~ Actual data that was sent.
+
+  <br>
+- MessageTYPE: <a id="dbmessagetype"></a> <br>
+  This is a lookup table containing the the different message types that exist within the framework (xMESSAGE).
+  
+  Attributes:
+  - **id**: int ~ Internal identificator of the message type inside the database.
+  - name: str ~ The name of the actual message type.
+
+  <br>
+- GuildUSER: <a id="dbguilduser"></a> <br>
+  The table contains all the guilds/users the framework ever generated a log for.
+
+  Attributes:
+  - **id**: int ~ Internal identificator of the Guild/User inside the database.
+  - snowflake_id: int ~ The discord (snowflake) identificator of the User/Guild
+  - name: str ~ Name of the Guild/User
+  - guild_type: int ~ Foreign key pointing to [**GuildTYPE**](#dbguildtype) table.
+ 
+  <br>
+- MessageMODE: <a id="dbmessagemode"></a> <br>
+  This is a lookup table containing the the different message modes available by **Text/Direct**MESSAGE, it is set to null for **Voice**MESSAGE.
+  
+  Attributes:
+  - **id**: int ~ Internal identificator of the message mode inside the database.
+  - name: str ~ The name of the actual message mode.
+
+  <br>
+- GuildTYPE: <a id="dbguildtype"></a> <br>
+  This is a lookup table containing types of the guilds inside the framework (xGUILD).
+
+  Attributes:
+  - **id**: int ~  Internal identificator of the guild type inside the database.
+  - name: str ~ The name of the guild type.
+
+  <br>
+- CHANNEL: <a id="dbchannel"></a> <br>
+  The table contains all the channels that the framework ever advertised into.
+
+  Attributes:
+  - **id**: int ~ Internal identificator of the channel inside the database
+  - snowflake_id: int ~ The discord (snowflake) identificator representing specific channel
+  - name: str ~ The name of the channel
+  - guild_id: int ~ Foreign key pointing to a row inside the [GuildUSER](#dbguilduser) table. It points to a guild that the channel is part of.
+
+  <br>
+- MessageChannelLOG: <a id="dbmessagechannellog"></a> <br>
+  Since messages can send into multiple channels, each MessageLOG has multiple channels which
+  cannot be stored inside the [**MessageLOG**](#dbmessagelog) unless json was to be used.
+  This is why this table exists. It contains channels of each [**MessageLOG**](#dbmessagelog).
+
+  Attributes:
+  - **log_id**: int ~ Foreign key pointing to a row inside [**MessageLOG**](#dbmessagelog) (to which log this channel log belongs to).
+  - **channel_id**  ~ Foreign key pointing to a row inside the [**CHANNEL**](#dbchannel) table.
+
+
+# **JSON File Log**
 The logs are writen in the JSON format and saved into a .json file, that has the name of the guild or an user you were sending messages into.
 The .json files are fragmantated by day and stored into folder "Year/Month/Day", this means that each day a new json file will be generated for that specific day for easier managing,
 for example, if today is 13.07.2022, the log will be saved into the file that is located in 
@@ -438,7 +723,7 @@ History
 │       └───13
 |           └─── #David's dungeon.json
 ```
-
+The logs are saved in the following format (json keys):
 - name  -- The display name of the guild or an user
 - id    -- The discord's snowflake ID of the guild or the user
 - type  -- The type of object that created this log ([GUILD](#frameworkguild) or [USER](#frameworkuser))
@@ -496,7 +781,7 @@ History
     - index -- Index of the log, new items are added to the top of the list
     - timestamp -- The timestamp of the message
 
-### **Example**
+## **Example**
 ```json
 {
     "name": "\\David's dungeon",
@@ -579,19 +864,9 @@ History
 }
 ```
 
-## **Trace messages**
+# **Trace messages**
 In case you feel like the framework is not doing it's job properly, eg. you feel like some messages aren't being send or the framework just stops without advertising, the framework offers **console logging** of **trace** messages. Trace messages can be **informative** (eg. which account is logged in), they can be **warnings** (eg. some channels could not be found),<br>
 or they can be **errors**. <br>
 Most of the trace messages won't stop the framework but will only removed the failed objects and print it to the console, becase you could, eg. get kicked from a server resulting in some channels<br>
 not being found.<br><br>
 To **enable** trace messages, set the **debug** option to True inside the **[framework.run](#frameworkrun)** function.
-<br>
-
-# **Regarding Pycord/discord.py**
-The DAF requires a discord API wrapper to work. <br>
-The module used by the DAF is called Pycord (previously discord.py) which works great except it does not allow user accounts to login, so I modified to work with user accounts.
-When you install the DAF, the modified Pycord version is installed with it.<br>
-**If you wish to use the Pycord/discord module in your program, you can import it like this:**
-```py
-from framework import discord
-```

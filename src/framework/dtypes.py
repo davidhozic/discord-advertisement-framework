@@ -90,14 +90,14 @@ class EmbedFIELD:
 class EMBED(discord.Embed):
     """
     Derrived class of discord.Embed with easier definition
-    Parameters:
-        Added parameters:
-            - author_name       : str           -- Name of embed author
-            - author_icon       : str           -- Url to author image
+    @Parameters:
+        - Added parameters:
+            - author_name       : str           -- Name of embed author,
+            - author_icon       : str           -- Url to author image,
             - image             : str           -- Url of image to be placed at the end of the embed
             - thumbnail         : str           -- Url of image that will be placed at the top right of embed
             - fields            : list          -- List of EmbedFIELD objects
-        Inherited from discord.Embed:
+        - Inherited from discord.Embed:
             - For the other, original params see https://docs.pycord.dev/en/master/api.html?highlight=discord%20embed#discord.Embed
 
     """
@@ -122,13 +122,11 @@ class EMBED(discord.Embed):
 
     @staticmethod
     def from_discord_embed(_object : discord.Embed):
-        """
+        """ ~ static method ~
         Name:   from_discord_embed
         Type:   static method
         Param:
-            - object : discord.Embed | discord.Embed (same type) -- The discord Embed object you want converted into the framework.EMBED class
-        """
-
+            - object : discord.Embed | discord.Embed (same type) -- The discord Embed object you want converted into the framework.EMBED class"""
         ret = EMBED()
         # Copy attributes but not special methods to the new EMBED. "dir" is used instead of "vars" because the object does not support the function.
         for key in dir(_object):
@@ -139,7 +137,6 @@ class EMBED(discord.Embed):
                         and getattr(_object,key) is not discord.embeds.EmptyEmbed
                     ):
                         setattr(ret, key, copy.deepcopy(getattr(_object,key)))
-
 
         return ret
 

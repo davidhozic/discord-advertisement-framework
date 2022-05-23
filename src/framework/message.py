@@ -3,13 +3,14 @@
     This module contains the definitions regarding the xxxMESSAGE class and
     all the functionality for sending data into discord channels.
 """
-from    typing import Dict, List, Union, Literal
+from    typing import List, Union, Literal
 from    .dtypes import *
 from    .tracing import *
 from    .const import *
+from    .timing import *
 from    . import client
+from    . import sql
 import  random
-import  time
 import  asyncio
 import  _discord as discord
 
@@ -17,51 +18,34 @@ import  _discord as discord
 __all__ = (
     "TextMESSAGE",
     "VoiceMESSAGE",
-    "DirectMESSAGE"
+    "DirectMESSAGE",
+    "update_ratelimit_delay"
 )
 
+class GLOBALS:
+    """ ~ Storage Class ~
+    @Info: Contains the global variables of this module"""
+    rlim_avoid_delay = 0
 
-class TIMER:
-    """
-    TIMER
-    Info : Used in MESSAGE objects as a send timer
-    """
-    __slots__ = (
-        "running",
-        "startms"
-    )
 
-    def __init__(self):
-        "Initiate the timer"
-        self.running = False
-        self.startms = 0
-
-    def start(self):
-        "Start the timer"
-        if not self.running:
-            self.running = True
-            self.startms = time.time()
-
-    def elapsed(self):
-        """Return the timer elapsed from last reset
-           and starts the timer if not already stared"""
-        if self.running:
-            return time.time() - self.startms
-        self.start()
-        return 0
-
-    def reset (self):
-        "Reset the timer"
-        self.running = False
+# Dummy classes for message mods, to use with sql.register_type decorator
+@sql.register_type("MessageMODE")
+class _:
+    __logname__ = "send"
+@sql.register_type("MessageMODE")
+class _:
+    __logname__ = "edit"
+@sql.register_type("MessageMODE")
+class _:
+    __logname__ = "clear-send"
 
 
 class BaseMESSAGE:
-    """
-        ~  BaseMESSAGE  ~
+    """~  BaseMESSAGE  ~
         @Info:
         This is the base class for all the different classes that
-        represent a message you want to be sent into discord.
-    """
+        represent a message you want to be sent into discord."""
+
     __slots__ = (
         "randomized_time",
         "period",
@@ -70,6 +54,7 @@ class BaseMESSAGE:
         "force_retry",
         "data"
     )
+
     # The "__valid_data_types__" should be implemented in the INHERITED classes.
     # The set contains all the data types that the class is allowed to accept, this variable
     # is then checked for allowed data types in the "initialize" function bellow.
@@ -80,35 +65,73 @@ class BaseMESSAGE:
                 end_period : float,
                 data,
                 start_now : bool=True):
-
-        if start_period is None:            # If start_period is none -> period will not be randomized
+        # If start_period is none -> period will not be randomized
+        if start_period is None:            
             self.randomized_time = False
             self.period = end_period
         else:
             self.randomized_time = True
             self.random_range = (start_period, end_period)
-            self.period = random.randrange(*self.random_range)  # This will happen after each sending as well
+            self.period = random.randrange(*self.random_range)
 
         self.timer = TIMER()
-        self.force_retry = {"ENABLED" : start_now, "TIME" : 0}  # This is used in both TextMESSAGE and VoiceMESSAGE for compatability purposes
+        self.force_retry = {"ENABLED" : start_now, "TIME" : 0}
         self.data = data
 
+    def generate_exception(self, 
+                           status: int,
+                           code: int,
+                           description: str,
+                           cls: discord.HTTPException):
+        """ ~ method ~
+        @Name: generate_exception
+        @Info: Generates a discord.HTTPException inherited class exception object
+        @Param:
+            status: int ~ Atatus code of the exception
+            code: int ~ Actual error code
+            description: str ~ The textual description of the error
+            cls: discord.HTTPException ~ Inherited class to make exception from"""
+        resp = Exception()
+        resp.status = status
+        resp.status_code = status
+        resp.reason = cls.__name__
+        ex = cls(resp, {"message" : description, "code" : code})
+        return ex
+
     def generate_log_context(self):
-        """ ~ generate_log_context ~
-            @Info:
+        """ ~ method ~
+        @Name: generate_log_context
+        @Info:
             This method is used for generating a dictionary (later converted to json) of the
             data that is to be included in the message log. This is to be implemented inside the
-            inherited classes.
-        """
+            inherited classes."""
+        raise NotImplementedError
+    
+    def get_data(self) -> dict:
+        """ ~ method ~
+        @Name:  get_data
+        @Info: Returns a dictionary of keyword arguments that is then expanded
+               into other functions (send_channel, generate_log)
+               This is to be implemented in inherited classes due to different data_types"""
         raise NotImplementedError
 
     def is_ready(self) -> bool:
-        """
-        Name:   is_ready
-        Param:  void
-        Info:   This
-        """
-        return not self.force_retry["ENABLED"] and self.timer.elapsed() > self.period or self.force_retry["ENABLED"] and self.timer.elapsed() > self.force_retry["TIME"]
+        """ ~ method ~
+        @Name:   is_ready
+        @Param:  void
+        @Info:   This method returns bool indicating if message is ready to be sent"""
+        return (not self.force_retry["ENABLED"] and self.timer.elapsed() > self.period or
+                self.force_retry["ENABLED"] and self.timer.elapsed() > self.force_retry["TIME"])
+
+    def reset_timer(self) -> None:
+        """ ~ method ~
+        @Name: restart_time
+        @Info: Resets internal timer (and force period)"""
+        self.timer.reset()
+        self.timer.start()
+        self.force_retry["ENABLED"] = False
+        if self.randomized_time is True:
+            self.period = random.randrange(*self.random_range)
 
     async def send_channel(self) -> dict:
         """                  ~ send_channel ~
@@ -121,7 +144,7 @@ class BaseMESSAGE:
         raise NotImplementedError
 
     async def send(self) -> dict:
-        """
+        """ ~ async method ~
         Name:   send to channels
         Param:  void
         Info:   This function should be implemented in the inherited class
@@ -129,20 +152,18 @@ class BaseMESSAGE:
         raise NotImplementedError
 
     async def initialize_channels(self) -> bool:
-        """
-            ~  initialize_channels  ~
-            This method initializes the implementation specific
-            api objects and checks for the correct channel inpit context.
-        """
+        """ ~ async method ~
+        @Name: initialize_channels
+        @Info: This method initializes the implementation specific
+               api objects and checks for the correct channel inpit context."""
         raise NotImplementedError
 
     async def initialize_data(self) -> bool:
-        """
-            ~  initialize_data  ~
-            This method checks for the correct data input to the xxxMESSAGE
-            object. The expected datatypes for specific implementation is
-            defined thru the static variable __valid_data_types__
-        """
+        """ ~ async method ~
+        @Name:  initialize_data
+        @Info:  This method checks for the correct data input to the xxxMESSAGE
+                object. The expected datatypes for specific implementation is
+                defined thru the static variable __valid_data_types__"""
         # Check for correct data types of the MESSAGE.data parameter
         if not isinstance(self.data, FunctionBaseCLASS):
             # This is meant only as a pre-check if the parameters are correct so you wouldn't eg. start
@@ -180,14 +201,14 @@ class BaseMESSAGE:
         return True
 
     async def initialize(self, **options) -> bool:
-        """
-            ~ initialize ~
-            @Info:
+        """ ~ async method ~
+        @Name: initialize
+        @Info:
             The initialize method initilizes the message object.
-            @Params:
-            - options ~ custom keyword arguments, this differes from inher. to inher. class that
-            is inherited from the BaseGUILD class and must be matched in the inherited class from BaseMESSAGE that
-            you want to use in that specific inherited class from BaseGUILD class"""
+        @Params:
+            options :: custom keyword arguments, this differes from inher. to inher. class that
+                       is inherited from the BaseGUILD class and must be matched in the inherited class from BaseMESSAGE that
+                       you want to use in that specific inherited class from BaseGUILD class"""
         if not await self.initialize_channels(**options):
             return False
 
@@ -196,26 +217,27 @@ class BaseMESSAGE:
 
         return True
 
-
+@sql.register_type("MessageTYPE")
 class VoiceMESSAGE(BaseMESSAGE):
-    """
+    """ ~ BaseMESSAGE class ~
     Name: VoiceMESSAGE
     Info: The VoiceMESSAGE object containts parameters which describe behaviour and data that will be sent to the channels.
     Params:
-    - Start Period , End Period (start_period, end_period) - These 2 parameters specify the period on which the messages will be played:
-    Start Period can be either:
-        - None - Messages will be sent on intervals specified by End period,
-        - Integer >= 0 - Messages will be sent on intervals randomly chosen between Start period and End period,
-          where the randomly chosen intervals will be re-randomized after each sent message.
-    - Data (data) - The data parameter is the actual data that will be sent using discord's API. The data types of this parameter can be:
-        - Path to an audio file (str)
-        - Function that accepts any amount of parameters and returns any of the above types.
-          To pass a function, YOU MUST USE THE framework.data_function decorator on the function before passing the function to the framework.
-    - Channel IDs (channel_ids) - List of IDs of all the channels you want data to be sent into.
-    - Start Now (start_now) - A bool variable that can be either True or False. If True, then the framework will send the message
-      as soon as it is run and then wait it's period before trying again. If False, then the message will not be sent immediatly after framework is ready,
-      but will instead wait for the period to elapse.
-    """
+        Start Period , End Period (start_period, end_period) :: These 2 parameters specify the period on which the messages will be played:
+            Start Period can be either:
+                :: None :: Messages will be sent on intervals specified by End period,
+                :: Integer >= 0 :: Messages will be sent on intervals randomly chosen between Start period and End period,
+                                   where the randomly chosen intervals will be re::randomized after each sent message.
+        Data (data) :: The data parameter is the actual data that will be sent using discord's API. The data types of this parameter can be:
+                        - Path to an audio file (str)
+                        - Function that accepts any amount of parameters and returns any of the above types.
+                          To pass a function, YOU MUST USE THE framework.data_function decorator on the function before
+                          passing the function to the framework.
+        Channel IDs (channel_ids) :: List of IDs of all the channels you want data to be sent into.
+        Start Now (start_now) :: A bool variable that can be either True or False. If True, then the framework will send the message
+                                 as soon as it is run and then wait it's period before trying again. If False, then the message will
+                                 not be sent immediatly after framework is ready, but will instead wait for the period to elapse."""
+
     __slots__ = (
         "randomized_time",
         "period",
@@ -226,6 +248,7 @@ class VoiceMESSAGE(BaseMESSAGE):
         "force_retry",
     )
 
+    __logname__ = "VoiceMESSAGE"
     __valid_data_types__ = {AUDIO}  # This is used in the BaseMESSAGE.initialize() to check if the passed data parameters are of correct type
 
     def __init__(self, start_period: Union[float, None],
@@ -239,21 +262,25 @@ class VoiceMESSAGE(BaseMESSAGE):
         self.channels = channel_ids
 
     def generate_log_context(self,
-                             sent_audio: AUDIO,
+                             audio: AUDIO,
                              succeeded_ch: List[discord.VoiceChannel],
                              failed_ch: List[dict]):
-        """ ~ generate_log_context ~
-            @Param:
-                sent_audio: AUDIO -- The audio that was streamed to the channels
-                succeeded_ch: List[discord.VoiceChannel] -- list of the successfuly streamed channels,
-                failed_ch: List[dict]   -- list of dictionaries contained the failed channel and the Exception
-            @Info:
-                Generates a dictionary containing data that will be saved in the message log
-        """
+        """ ~ method ~
+        @Name: generate_log_context
+        @Param:
+            audio: AUDIO -- The audio that was streamed to the channels
+            succeeded_ch: List[discord.VoiceChannel] -- list of the successfuly streamed channels,
+            failed_ch: List[dict]   -- list of dictionaries contained the failed channel and the Exception
+        @Info:
+            Generates a dictionary containing data that will be saved in the message log"""
+
         succeeded_ch = [{"name": str(channel), "id" : channel.id} for channel in succeeded_ch]
-        failed_ch = [{"name": str(entry["channel"]), "id" : entry["channel"].id, "reason": str(entry["reason"])} for entry in failed_ch]
+        failed_ch = [{"name": str(entry["channel"]), "id" : entry["channel"].id,
+                     "reason": str(entry["reason"])} for entry in failed_ch]
         return {
-            "streamed_audio" : sent_audio.filename,
+            "sent_data": {
+                "streamed_audio" : audio.filename
+            },
             "channels": {
                 "successful" : succeeded_ch,
                 "failed": failed_ch
@@ -261,7 +288,28 @@ class VoiceMESSAGE(BaseMESSAGE):
             "type" : type(self).__name__
         }
 
+    def get_data(self) -> dict:
+        """ ~ method ~
+        @Name:  get_data
+        @Info: Returns a dictionary of keyword arguments that is then expanded
+               into other functions (send_channel, generate_log)"""
+        data = None
+        _data_to_send = {}
+        data = self.data.get_data() if isinstance(self.data, FunctionBaseCLASS) else self.data
+        if data is not None:
+            if not isinstance(data, (list, tuple, set)):
+                data = (data,)
+            for element in data:
+                if isinstance(element, AUDIO):
+                    _data_to_send["audio"] = element
+        return _data_to_send
+
     async def initialize_channels(self) -> bool:
+        """ ~ async method ~
+        @Name: initialize_channels
+        @Info: This method initializes the implementation specific
+               api objects and checks for the correct channel inpit context.
+        @Return: Bool - True on success"""
         ch_i = 0
         cl = client.get_client()
         while ch_i < len(self.channels):
@@ -283,9 +331,23 @@ class VoiceMESSAGE(BaseMESSAGE):
     async def send_channel(self,
                            channel: discord.VoiceChannel,
                            audio: AUDIO) -> dict:
+        """ ~ async method ~
+        @Name : send_channel
+        @Info:
+            Streams audio to specific channel
+        @Return:
+        - dict:
+            - "success" : bool ~ True if successful, else False
+            - "reason"  : Exception ~ Only present if "success" is False,
+                            contains the Exception returned by the send attempt."""
         stream = None
         voice_client = None
         try:
+            # Check if client has permissions before attempting to join
+            ch_perms = channel.permissions_for(channel.guild.get_member(client.get_client().user.id))
+            if not all([ch_perms.connect, ch_perms.stream, ch_perms.speak]):
+                raise self.generate_exception(403, 50013, "You lack permissions to perform that action", discord.Forbidden)
+
             # Try to open file first as FFMpegOpusAudio doesn't raise exception if file does not exist
             with open(audio.filename, "rb"):
                 pass
@@ -297,6 +359,9 @@ class VoiceMESSAGE(BaseMESSAGE):
                 await asyncio.sleep(1)
             return {"success": True}
         except Exception as ex:
+            trace(f"Unable to play audio, reason: {ex}", TraceLEVELS.NORMAL)
+            if client.get_client().get_channel(channel.id) is None:
+                ex = self.generate_exception(404, 10003, "Channel was deleted", discord.NotFound)
             return {"success": False, "reason": ex}
         finally:
             if stream is not None:
@@ -307,44 +372,20 @@ class VoiceMESSAGE(BaseMESSAGE):
                 await voice_client.disconnect()
 
     async def send(self) -> Union[dict,  None]:
-        """"
-            ~  send  ~
-            @Info:
-                Streams audio into the chanels
-            @Return:
-                Returns a dictionary generated by the generate_log_context method
-                or the None object if message wasn't ready to be sent
-        """
-        self.timer.reset()
-        self.timer.start()
-        self.force_retry["ENABLED"] = False
-        if self.randomized_time is True:
-            self.period = random.randrange(*self.random_range)
-
-        data_to_send  = None
-        if isinstance(self.data, FunctionBaseCLASS):
-            data_to_send = self.data.get_data()
-        else:
-            data_to_send = self.data
-
-        audio_to_stream = None
-        if data_to_send is not None:
-            # These block isn't really neccessary as it really only accepts one type and that is AUDIO,
-            # but it is written like this to make it analog to the TextMESSAGE parsing code in the send
-            if not isinstance(data_to_send, (list, tuple, set)):
-                # Put into a list for easier iteration
-                data_to_send = (data_to_send,)
-
-            for element in data_to_send:
-                if type(element) is AUDIO:
-                    audio_to_stream = element
-
-        if audio_to_stream is not None:
+        """" ~ async method ~
+        @Name send
+        @Info:
+            Streams audio into the chanels
+        @Return:
+            Returns a dictionary generated by the generate_log_context method
+            or the None object if message wasn't ready to be sent"""
+        _data_to_send = self.get_data()
+        if any(_data_to_send.values()):
             errored_channels = []
             succeded_channels= []
 
             for channel in self.channels:
-                context = await self.send_channel(channel, audio_to_stream)
+                context = await self.send_channel(channel, **_data_to_send)
                 if context["success"]:
                     succeded_channels.append(channel)
                 else:
@@ -354,15 +395,20 @@ class VoiceMESSAGE(BaseMESSAGE):
             for data in errored_channels:
                 reason = data["reason"]
                 channel = data["channel"]
-                if isinstance(reason, discord.HTTPException) and reason.status == 404 and reason.code == 10003:
-                    self.channels.remove(channel)
-                    trace(f"Channel {channel.name}(ID: {channel.id}) was deleted, removing it from the send list", TraceLEVELS.WARNING)
+                if isinstance(reason, discord.HTTPException):
+                    if (reason.status == 403 or
+                        reason.code in {10003, 50013} # Unknown, Permissions
+                    ):
+                        self.channels.remove(channel)
+                        trace(f"Channel {channel.name}(ID: {channel.id}) {'was deleted' if reason.code == 10003 else 'does not have permissions'}, removing it from the send list", TraceLEVELS.WARNING)
 
-            return self.generate_log_context(audio_to_stream, succeded_channels, errored_channels)
+            return self.generate_log_context(**_data_to_send, succeeded_ch=succeded_channels, failed_ch=errored_channels)
         return None
 
+
+@sql.register_type("MessageTYPE")
 class TextMESSAGE(BaseMESSAGE):
-    """
+    """ ~ BaseMESSAGE class ~
     Name: TextMESSAGE
     Info: The TextMESSAGE object containts parameters which describe behaviour and data that will be sent to the channels.
     Params:
@@ -381,12 +427,11 @@ class TextMESSAGE(BaseMESSAGE):
           To pass a function, YOU MUST USE THE framework.data_function decorator on the function before passing the function to the framework.
     - Channel IDs (channel_ids) - List of IDs of all the channels you want data to be sent into.
     - Send mode (mode) - Parameter that defines how message will be sent to a channel. It can be "send" - each period a new message will be sent,
-                        "edit" - each period the previously send message will be edited (if it exists) or "clear-send" - previous message will be deleted and
-                        a new one sent.
+                        "edit" - each period the previously send message will be edited (if it exists)
+                        or "clear-send" - previous message will be deleted and a new one sent.
     - Start Now (start_now) - A bool variable that can be either True or False. If True, then the framework will send the message
       as soon as it is run and then wait it's period before trying again. If False, then the message will not be sent immediatly after framework is ready,
-      but will instead wait for the period to elapse.
-    """
+      but will instead wait for the period to elapse."""
     __slots__ = (
         "randomized_time",
         "period",
@@ -398,7 +443,7 @@ class TextMESSAGE(BaseMESSAGE):
         "force_retry",
         "sent_messages"
     )
-
+    __logname__ = "TextMESSAGE"
     __valid_data_types__ = {str, EMBED, FILE}
 
     def __init__(self, start_period: Union[float, None],
@@ -414,52 +459,36 @@ class TextMESSAGE(BaseMESSAGE):
         self.sent_messages = {ch_id : None for ch_id in channel_ids}
 
     def generate_log_context(self,
-                             sent_text : str,
-                             sent_embed : EMBED,
-                             sent_files : List[FILE],
+                             text : str,
+                             embed : EMBED,
+                             files : List[FILE],
                              succeeded_ch: List[Union[discord.TextChannel, discord.Thread]],
                              failed_ch: List[dict]):
-        """ ~ generate_log_context ~
-            @Param:
-                sent_text : str -- The text that was sent
-                sent_embed : EMBED  -- The embed that was sent
-                sent_files : List[FILE] -- List of files that were sent
-                succeeded_ch: List[discord.VoiceChannel] -- list of the successfuly streamed channels,
-                failed_ch: List[dict]   -- list of dictionaries contained the failed channel and the Exception
-            @Info:
-                Generates a dictionary containing data that will be saved in the message log
-        """
+        """ ~ method ~
+        @Name : generate_log_context
+        @Param:
+            text : str -- The text that was sent
+            embed : EMBED  -- The embed that was sent
+            files : List[FILE] -- List of files that were sent
+            succeeded_ch: List[discord.VoiceChannel] -- list of the successfuly streamed channels,
+            failed_ch: List[dict]   -- list of dictionaries contained the failed channel and the Exception
+        @Info:
+            Generates a dictionary containing data that will be saved in the message log"""
+
         succeeded_ch = [{"name": str(channel), "id" : channel.id} for channel in succeeded_ch]
-        failed_ch = [{"name": str(entry["channel"]), "id" : entry["channel"].id, "reason": str(entry["reason"])} for entry in failed_ch]
+        failed_ch = [{"name": str(entry["channel"]), "id" : entry["channel"].id,
+                     "reason": str(entry["reason"])} for entry in failed_ch]
 
-        #Generate embed
-        if sent_embed is not None:
-            EmptyEmbed = discord.embeds.EmptyEmbed
-            sent_embed : dict = {
-                "title" : sent_embed.title if sent_embed.title is not EmptyEmbed else None,
-                "author" : sent_embed.author.name if sent_embed.author.name is not EmptyEmbed else None,
-                "thumbnail" : sent_embed.thumbnail.url if sent_embed.thumbnail.url is not EmptyEmbed else None,
-                "image" : sent_embed.image.url if sent_embed.image.url is not EmptyEmbed else None,
-                "description" : sent_embed.description if sent_embed.description is not EmptyEmbed else None,
-                "color" : sent_embed.colour if sent_embed.colour is not EmptyEmbed else None,
-                "fields" : sent_embed._fields if hasattr(sent_embed, "_fields") else None
-            }
-            for key in sent_embed.copy():
-                # Pop items that are None to reduce the log length
-                if sent_embed[key] is None:
-                    sent_embed.pop(key)
+        embed = embed.to_dict() if embed is not None else None
 
-        # Generate files
-        sent_files = [x.filename for x in sent_files]
-
+        files = [x.filename for x in files]
         sent_data_context = {}
-        if sent_text is not None:
-            sent_data_context["text"] = sent_text
-        if sent_embed is not None:
-            sent_data_context["embed"] = sent_embed
-        if len(sent_files):
-            sent_data_context["files"] = sent_files
-
+        if text is not None:
+            sent_data_context["text"] = text
+        if embed is not None:
+            sent_data_context["embed"] = embed
+        if len(files):
+            sent_data_context["files"] = files
         return {
             "sent_data": {
                 **sent_data_context
@@ -471,8 +500,32 @@ class TextMESSAGE(BaseMESSAGE):
             "type" : type(self).__name__,
             "mode" : self.mode,
         }
+    
+    def get_data(self) -> dict:
+        """ ~ method ~
+        @Name:  get_data
+        @Info: Returns a dictionary of keyword arguments that is then expanded
+               into other functions (send_channel, generate_log)"""
+        data = self.data.get_data() if isinstance(self.data, FunctionBaseCLASS) else self.data
+        _data_to_send = {"embed": None, "text": None, "files": []}
+        if data is not None:
+            if not isinstance(data, (list, tuple, set)):
+                data = (data,)
+            for element in data:
+                if isinstance(element, str):
+                    _data_to_send["text"] = element
+                elif isinstance(element, EMBED):
+                    _data_to_send["embed"] = element
+                elif isinstance(element, FILE):
+                    _data_to_send["files"].append(element)
+        return _data_to_send
 
     async def initialize_channels(self) -> bool:
+        """ ~ async method ~
+        @Name: initialize_channels
+        @Info: This method initializes the implementation specific
+               api objects and checks for the correct channel inpit context.
+        @Return: Bool - True on success"""
         ch_i = 0
         cl = client.get_client()
         while ch_i < len(self.channels):
@@ -490,13 +543,41 @@ class TextMESSAGE(BaseMESSAGE):
                 ch_i += 1
 
         return len(self.channels) > 0
-    
+
     async def send_channel(self,
                            channel: discord.TextChannel,
                            text: str,
                            embed: EMBED,
                            files: List[FILE]) -> dict:
+        """ ~ async method ~
+        @Name : send_channel
+        @Info:
+            Sends data to specific channel.
+        @Return:
+        - dict:
+            - "success" : bool ~ True if successful, else False
+            - "reason"  : Exception ~ Only present if "success" is False,
+                            contains the Exception returned by the send attempt."""
+        async def handle_error(ex: Exception):
+            handled = False
+            if isinstance(ex, discord.HTTPException):
+                if ex.status == 429:  # Rate limit
+                    retry_after = int(ex.response.headers["Retry-After"]) * C_RATE_LIMIT_SAFETY_FACTOR
+                    if ex.code == 20016:    # Slow Mode
+                        self.force_retry["ENABLED"] = True
+                        self.force_retry["TIME"] = retry_after
+                    else:                   # Normal (write) rate limit
+                        trace(f"Rate limited, sleeping for {retry_after} seconds", TraceLEVELS.WARNING)
+                        update_ratelimit_delay(factor=C_RATE_LIMIT_GROWTH_FACTOR)
+                        await asyncio.sleep(retry_after)
+                        handled = True
+                elif ex.status == 404:      # Unknown object
+                    if ex.code == 10008:    # Unknown message
+                        self.sent_messages[channel.id]  = None
+                        handled = True
+            return handled
 
+        # Clear previous message in case of clear-send
         if self.mode == "clear-send" and self.sent_messages[channel.id] is not None:
             for tries in range(3):
                 try:
@@ -508,12 +589,14 @@ class TextMESSAGE(BaseMESSAGE):
                     if ex.status == 429:
                         await asyncio.sleep(int(ex.response.headers["Retry-After"])  + 1)
 
-        # Send/Edit messages
+        ch_perms = channel.permissions_for(channel.guild.get_member(client.get_client().user.id))
         for tries in range(3):  # Maximum 3 tries (if rate limit)
             try:
-                # Mode dictates to send new message or delete previous and then send new message or mode dictates edit but message was  never sent to this channel before
-                # Rate limit avoidance
-                if  (self.mode in  {"send" , "clear-send"} or
+                if ch_perms.send_messages is False: # Check if we have permissions
+                    raise self.generate_exception(403, 50013, "You lack permissions to perform that action", discord.Forbidden)
+        
+                # Send/Edit message
+                if  (self.mode in  {"send" , "clear-send"} or # Mode dictates to send new message or delete previous and then send new message or mode dictates edit but message was  never sent to this channel before
                     self.mode == "edit" and self.sent_messages[channel.id] is None
                     ):
                     discord_sent_msg = await channel.send(  text,
@@ -529,84 +612,27 @@ class TextMESSAGE(BaseMESSAGE):
                 return {"success" : True}
 
             except Exception as ex:
-                # Failed to send message
-                exit_condition = False
-                if isinstance(ex, discord.HTTPException):
-                    if ex.status == 429:    # Rate limit
-                        retry_after = int(ex.response.headers["Retry-After"])  + 1
-                        if ex.code == 20016:    # Slow Mode
-                            self.force_retry["ENABLED"] = True
-                            self.force_retry["TIME"] = retry_after
-                            exit_condition = True
-                        else:   # Normal (write) rate limit
-                            # Rate limit but not slow mode -> put the framework to sleep as it won't be able to send any messages globaly
-                            await asyncio.sleep(retry_after)
-
-                    elif ex.status == 404:      # Unknown object
-                        if ex.code == 10008:    # Unknown message
-                            self.sent_messages[channel.id]  = None
-                        else:
-                            exit_condition = True
-                    else:
-                        exit_condition = True
-                else:
-                    exit_condition = True
-
-                # Assume a fail
-                if exit_condition:
+                if await handle_error(ex) is False:
                     return {"success" : False, "reason" : ex}
 
     async def send(self) -> Union[dict,  None]:
-        """"
-            ~  send  ~
-            @Info:
-                Sends the data into the channels
-            @Return:
-                Returns a dictionary generated by the generate_log_context method
-                or the None object if message wasn't ready to be sent
-        """
-        self.timer.reset()
-        self.timer.start()
-        self.force_retry["ENABLED"] = False
-        if self.randomized_time is True:
-            self.period = random.randrange(*self.random_range)
-
-        # Parse data from the data parameter
-        data_to_send  = None
-        if isinstance(self.data, FunctionBaseCLASS):
-            data_to_send = self.data.get_data()
-        else:
-            data_to_send = self.data
-
-        embed_to_send = None
-        text_to_send  = None
-        files_to_send  = []
-        if data_to_send is not None:
-            if not isinstance(data_to_send, (list, tuple, set)):
-                # Put into a list for easier iteration.
-                # Technically only necessary if self.data  is a function (dynamic return),
-                # since normal (str, EMBED, FILE) get pre-checked in initialization.
-                data_to_send = (data_to_send,)
-
-            for element in data_to_send:
-                if isinstance(element, str):
-                    text_to_send = element
-                elif isinstance(element, EMBED):
-                    embed_to_send = element
-                elif isinstance(element, FILE):
-                    files_to_send.append(element)
-
-        # Send messages
-        if text_to_send is not None or embed_to_send is not None or len(files_to_send) > 0:
+        """"~ async method ~
+        @Name: send
+        @Info:
+            Sends the data into the channels
+        @Return:
+            Returns a dictionary generated by the generate_log_context method
+            or the None object if message wasn't ready to be sent"""
+        _data_to_send = self.get_data()
+        if any(_data_to_send.values()):
             errored_channels = []
             succeded_channels= []
 
             # Send to channels
             for channel in self.channels:
                 # Clear previous messages sent to channel if mode is MODE_DELETE_SEND
-                context = await self.send_channel(channel, text_to_send,
-                                                  embed_to_send,
-                                                  files_to_send)
+                await asyncio.sleep(GLOBALS.rlim_avoid_delay)
+                context = await self.send_channel(channel, **_data_to_send)
                 if context["success"]:
                     succeded_channels.append(channel)
                 else:
@@ -616,36 +642,40 @@ class TextMESSAGE(BaseMESSAGE):
             for data in errored_channels:
                 reason = data["reason"]
                 channel = data["channel"]
-                if isinstance(reason, discord.HTTPException) and reason.status == 404 and reason.code == 10003:
-                    self.channels.remove(channel)
-                    trace(f"Channel {channel.name}(ID: {channel.id}) was deleted, removing it from the send list", TraceLEVELS.WARNING)
+                if isinstance(reason, discord.HTTPException):
+                    if (reason.status == 403 or                    # Forbidden
+                        reason.code in {50007, 10003}     # Not Forbidden, but bad error codes
+                    ):
+                        self.channels.remove(channel)
+                        trace(f"Channel {channel.name}(ID: {channel.id}) {'was deleted' if reason.code == 10003 else 'does not have permissions'}, removing it from the send list", TraceLEVELS.WARNING)
 
             # Return sent data + failed and successful function for logging purposes
-            return self.generate_log_context(text_to_send, embed_to_send, files_to_send, succeded_channels, errored_channels)
+            return self.generate_log_context(**_data_to_send, succeeded_ch=succeded_channels, failed_ch=errored_channels)
 
         return None
 
 
+@sql.register_type("MessageTYPE")
 class DirectMESSAGE(BaseMESSAGE):
-    """~ BaseMESSAGE ~
-        @Info:
-        DirectMESSAGE represents a message that will be sent into direct messages
-        @Params:
-        - start_period, end_period:
-            dictate the sending period in seconds, if both are > 0, then the period is randomized
-            each send and that period will be between the specifiec parameters. If start_period is None,
-            the period will be equal to end_period.
-        - data:
-            Represents data that will be sent into the channels, the data types can be:
-            - str, EMBED, FILE, list of str, EMBED, FILE or a function (refer to README)
-        - mode:
-            Mode parameter dictates the behaviour of the way data is send. It can be:
-            - "send" ~ Each period a new message will be send to Discord,
-            - "edit" ~ Each period the previous message will be edited, or a new sent if the previous message does not exist/was deleted
-            - "clear-send" ~ Each period the previous message will be cleared and a new one sent to the channels.
-        - start_now:
-            Dictates if the message should be sent immediatly after framework start or if it should wait it's period first and then send
-        """
+    """ ~ BaseMESSAGE class ~
+    @Name: DirectMESSAGE
+    @Info:
+    DirectMESSAGE represents a message that will be sent into direct messages
+    @Params:
+    - start_period, end_period:
+        dictate the sending period in seconds, if both are > 0, then the period is randomized
+        each send and that period will be between the specifiec parameters. If start_period is None,
+        the period will be equal to end_period.
+    - data:
+        Represents data that will be sent into the channels, the data types can be:
+        - str, EMBED, FILE, list of str, EMBED, FILE or a function (refer to README)
+    - mode:
+        Mode parameter dictates the behaviour of the way data is send. It can be:
+        - "send" ~ Each period a new message will be send to Discord,
+        - "edit" ~ Each period the previous message will be edited, or a new sent if the previous message does not exist/was deleted
+        - "clear-send" ~ Each period the previous message will be cleared and a new one sent to the channels.
+    - start_now:
+        Dictates if the message should be sent immediatly after framework start or if it should wait it's period first and then send"""
 
     __slots__ = (
         "randomized_time",
@@ -658,7 +688,9 @@ class DirectMESSAGE(BaseMESSAGE):
         "previous_message",
         "dm_channel"
     )
+    __logname__ = "DirectMESSAGE"
     __valid_data_types__ = {str, EMBED, FILE}
+
     def __init__(self,
                  start_period: Union[float, None],
                  end_period: float,
@@ -672,51 +704,33 @@ class DirectMESSAGE(BaseMESSAGE):
         self.previous_message = None
 
     def generate_log_context(self,
-                             sent_text : str,
-                             sent_embed : EMBED,
-                             sent_files : List[FILE],
+                             text : str,
+                             embed : EMBED,
+                             files : List[FILE],
                              **success_context):
-        """ ~ generate_log_context ~
-            @Param:
-                sent_text : str -- The text that was sent
-                sent_embed : EMBED  -- The embed that was sent
-                sent_files : List[FILE] -- List of files that were sent
-                succeeded_ch: List[discord.VoiceChannel] -- list of the successfuly streamed channels,
-                failed_ch: List[dict]   -- list of dictionaries contained the failed channel and the Exception
-            @Info:
-                Generates a dictionary containing data that will be saved in the message log
-        """
-        #Generate embed
-        if sent_embed is not None:
-            EmptyEmbed = discord.embeds.EmptyEmbed
-            sent_embed : dict = {
-                "title" : sent_embed.title if sent_embed.title is not EmptyEmbed else None,
-                "author" : sent_embed.author.name if sent_embed.author.name is not EmptyEmbed else None,
-                "thumbnail" : sent_embed.thumbnail.url if sent_embed.thumbnail.url is not EmptyEmbed else None,
-                "image" : sent_embed.image.url if sent_embed.image.url is not EmptyEmbed else None,
-                "description" : sent_embed.description if sent_embed.description is not EmptyEmbed else None,
-                "color" : sent_embed.colour if sent_embed.colour is not EmptyEmbed else None,
-                "fields" : sent_embed._fields if hasattr(sent_embed, "_fields") else None
-            }
-            for key in sent_embed.copy():
-                # Pop items that are None to reduce the log length
-                if sent_embed[key] is None:
-                    sent_embed.pop(key)
 
-        # Generate files
-        sent_files = [x.filename for x in sent_files]
+        """ ~ method ~
+        @Name: generate_log_context
+        @Param:
+            text : str -- The text that was sent
+            embed : EMBED  -- The embed that was sent
+            files : List[FILE] -- List of files that were sent
+            succeeded_ch: List[discord.VoiceChannel] -- list of the successfuly streamed channels,
+            failed_ch: List[dict]   -- list of dictionaries contained the failed channel and the Exception
+        @Info:
+            Generates a dictionary containing data that will be saved in the message log"""
 
+        embed = embed.to_dict() if embed is not None else None
+        files = [x.filename for x in files]
         if not success_context["success"]:
             success_context["reason"] = str(success_context["reason"])
-
         sent_data_context = {}
-        if sent_text is not None:
-            sent_data_context["text"] = sent_text
-        if sent_embed is not None:
-            sent_data_context["embed"] = sent_embed
-        if len(sent_files):
-            sent_data_context["files"] = sent_files
-
+        if text is not None:
+            sent_data_context["text"] = text
+        if embed is not None:
+            sent_data_context["embed"] = embed
+        if len(files):
+            sent_data_context["files"] = files
         return {
             "sent_data": {
                 **sent_data_context
@@ -728,16 +742,25 @@ class DirectMESSAGE(BaseMESSAGE):
             "mode" : self.mode
         }
 
+    def get_data(self) -> dict:
+        """ ~ method ~
+        @Name:  get_data
+        @Info: Returns a dictionary of keyword arguments that is then expanded
+               into other functions (send_channel, generate_log).
+               This is exactly the same as in TextMESSAGE"""
+        return TextMESSAGE.get_data(self)
+
     async def initialize_channels(self,
                                   user_id) -> bool:
-        """~ initialize_channels ~
+        """ ~ async method ~
+        @Name: initialize_channels
         @Info:
         The method creates a direct message channel and
         returns True on success or False on failure
         @Parameters:
         - options ~ dictionary containing key with user_id
-                    (sent to by the USER instance's initialize method)
-        """
+                    (sent to by the USER instance's initialize method)"""
+
         cl = client.get_client()
         self.dm_channel = cl.get_user(user_id)
         if self.dm_channel is None:
@@ -748,16 +771,42 @@ class DirectMESSAGE(BaseMESSAGE):
                            text: str,
                            embed: EMBED,
                            files: List[FILE]) -> dict:
-        """
-            ~ send_channel ~
-            @Info:
-            Sends data to the DM channel (user).
-            @Return:
-            - dict:
-                - "success" : bool ~ True if successful, else False
-                - "reason"  : Exception ~ Only present if "success" is False,
-                              contains the Exception returned by the send attempt.
-        """
+        """ ~ async method ~
+        @Name : send_channel
+        @Info:
+        Sends data to the DM channel (user).
+        @Return:
+        - dict:
+            - "success" : bool ~ True if successful, else False
+            - "reason"  : Exception ~ Only present if "success" is False,
+                            contains the Exception returned by the send attempt."""
+
+        async def handle_error(ex: Exception):
+            handled = False
+            if isinstance(ex, discord.HTTPException):
+                if ex.status == 429 or ex.code == 40003:
+                    retry_after = int(ex.response.headers["Retry-After"])  * C_RATE_LIMIT_SAFETY_FACTOR
+                    if ex.code == 20016:    # Slow Mode
+                        self.force_retry["ENABLED"] = True
+                        self.force_retry["TIME"] = retry_after
+                    else:
+                        trace(f"Rate limited, sleeping for {retry_after} seconds", TraceLEVELS.WARNING)
+                        await asyncio.sleep(retry_after)
+                        handled = True
+                elif ex.status == 404:      # Unknown object
+                    if ex.code == 10008:    # Unknown message
+                        self.previous_message  = None
+                        handled = True
+                elif ex.status == 403:
+                    if ex.code == 40003:
+                        retry_after = int(ex.response.headers["Retry-After"])  * C_RATE_LIMIT_SAFETY_FACTOR
+                        trace(f"Rate limited, sleeping for {retry_after} seconds", TraceLEVELS.WARNING)
+                        update_ratelimit_delay(factor=C_RATE_LIMIT_GROWTH_FACTOR)
+                        await asyncio.sleep(retry_after)
+                        handled = True
+
+            return handled
+
         if self.mode == "clear-send" and self.previous_message is not None:
             for tries in range(3):
                 try:
@@ -774,63 +823,29 @@ class DirectMESSAGE(BaseMESSAGE):
             try:
                 # Mode dictates to send new message or delete previous and then send new message or mode dictates edit but message was  never sent to this channel before
                 # Rate limit avoidance
-                if  self.mode in  {"send" , "clear-send"} or\
-                    self.mode == "edit" and self.previous_message is None:
-                    discord_sent_msg = await self.dm_channel.send(  text,
-                                                            embed=embed,
-                                                            # Create discord.File objects here so it is catched by the except block and then logged
-                                                            files=[discord.File(fwFILE.filename) for fwFILE in files])
-                    self.previous_message = discord_sent_msg
+                if (self.mode in {"send" , "clear-send"} or
+                     self.mode == "edit" and self.previous_message is None
+                ):
+                    self.previous_message = await self.dm_channel.send(text, embed=embed,
+                                                                       files=[discord.File(fwFILE.filename) for fwFILE in files])
 
                 # Mode is edit and message was already send to this channel
                 elif self.mode == "edit":
-                    await self.previous_message.edit(text,
-                                                     embed=embed)
+                    await self.previous_message.edit(text, embed=embed)
                 return {"success" : True}
 
             except Exception as ex:
-                # Failed to send message
-                exit_condition = False
-                if isinstance(ex, discord.HTTPException):
-                    if ex.status == 429:    # Rate limit
-                        retry_after = int(ex.response.headers["Retry-After"])  + 1
-                        if ex.code == 20016:    # Slow Mode
-                            self.force_retry["ENABLED"] = True
-                            self.force_retry["TIME"] = retry_after
-                            exit_condition = True
-                        else:   # Normal (write) rate limit
-                            # Rate limit but not slow mode -> put the framework to sleep as it won't be able to send any messages globaly
-                            await asyncio.sleep(retry_after)
-
-                    elif ex.status == 404:      # Unknown object
-                        if ex.code == 10008:    # Unknown message
-                            self.previous_message  = None
-                        else:
-                            exit_condition = True
-                    else:
-                        exit_condition = True
-                else:
-                    exit_condition = True
-
-                # Assume a fail
-                if exit_condition:
+                if await handle_error(ex) is False or tries == 2:
                     return {"success" : False, "reason" : ex}
 
     async def send(self) -> Union[dict, None]:
-        """"
-            ~  send  ~
-            @Info:
-                Sends the data into the DM channel of the user.
-            @Return:
-                Returns a dictionary generated by the generate_log_context method
-                or the None object if message wasn't ready to be sent
-        """
-        self.timer.reset()
-        self.timer.start()
-        self.force_retry["ENABLED"] = False
-        if self.randomized_time is True:
-            self.period = random.randrange(*self.random_range)
-
+        """" ~ async method ~
+        @Name: send
+        @Info:
+            Sends the data into the DM channel of the user.
+        @Return:
+            Returns a dictionary generated by the generate_log_context method
+            or the None object if message wasn't ready to be sent"""
         # Parse data from the data parameter
         data_to_send  = None
         if isinstance(self.data, FunctionBaseCLASS):
@@ -838,29 +853,43 @@ class DirectMESSAGE(BaseMESSAGE):
         else:
             data_to_send = self.data
 
-        embed_to_send = None
-        text_to_send  = None
-        files_to_send  = []
+        _data_to_send = {"embed": None, "text": None, "files": []}
         if data_to_send is not None:
             if not isinstance(data_to_send, (list, tuple, set)):
-                """ Put into a list for easier iteration.
-                    Technically only necessary if self.data  is a function (dynamic return),
-                    since normal (str, EMBED, FILE) get pre-checked in initialization."""
                 data_to_send = (data_to_send,)
-
             for element in data_to_send:
                 if isinstance(element, str):
-                    text_to_send = element
+                    _data_to_send["text"] = element
                 elif isinstance(element, EMBED):
-                    embed_to_send = element
+                    _data_to_send["embed"] = element
                 elif isinstance(element, FILE):
-                    files_to_send.append(element)
+                    _data_to_send["files"].append(element)
 
-        if text_to_send is not None or embed_to_send is not None or len(files_to_send) > 0:
-                # Clear previous messages sent to channel if mode is MODE_DELETE_SEND
-            context = await self.send_channel(text_to_send, embed_to_send, files_to_send)
+        if any(_data_to_send.values()):
+            await asyncio.sleep(GLOBALS.rlim_avoid_delay)
+            context = await self.send_channel(**_data_to_send)
+            if context["success"] is False:
+                reason  = context["reason"]
+                if isinstance(reason, discord.HTTPException):
+                    if (reason.code == 403 or                    # Forbidden
+                        reason.code in {50007, 10001, 10003}     # Not Forbidden, but bad error codes
+                    ):
+                        self.dm_channel = None
 
-            # Return sent data + failed and successful function for logging purposes
-            return self.generate_log_context(text_to_send, embed_to_send, files_to_send, **context)
+            return self.generate_log_context(**_data_to_send, **context)
 
         return None
+
+
+def update_ratelimit_delay(time: int=None,
+                           factor: int=None):
+    """~ Function ~
+    @Info: Sets the delay (in seconds) between each channel send attempt, to avoid rate limit
+    @Param:
+    - time: int ~ Ammount of time in seconds to update the rate limit avoidance delay with
+    - factor: int ~ The factor to INCREMENT (multiply) the current ratelimit delay with"""
+    if time is not None:
+        GLOBALS.rlim_avoid_delay = time
+
+    if factor is not None:
+        GLOBALS.rlim_avoid_delay = GLOBALS.rlim_avoid_delay * (1 + factor) if GLOBALS.rlim_avoid_delay > 0 else 1

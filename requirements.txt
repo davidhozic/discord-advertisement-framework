@@ -1,0 +1,5 @@
+aiohttp
+PyNaCl
+python-tds
+sqlalchemy-pytds
+sqlalchemy
