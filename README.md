@@ -32,65 +32,63 @@ python3 -m pip install discord-advert-framework
 
 # **Example**
 ```py
-import  framework, secret
-from framework import discord
+"""
+~ Example file ~
+This file shows how you can make a script that automatically generates the server
+list based on the `allowed_strings` list (contains strings that must appear in the channel name we want to shill into).
+
+We pass the framework a user_callback function named `find_advertisement_channels` which autofills the `servers` list with GUILD objects.
+"""
+import framework as fw
 
 
+# Create a list in which we will automatically add guilds
+allowed_strings = {"shill", "advert", "promo"}
+data_to_shill = (     # Example data set
+                "Hello World", 
+                fw.EMBED(title="Example Embed",
+                         color=fw.EMBED.Color.blue(),
+                         description="This is a test embed")
+                )
 
-############################################################################################
-#                               GUILD MESSAGES DEFINITION                                  #
-############################################################################################
 
-# File object representing file that will be sent
-l_file1 = framework.FILE("./Examples/main_send_file.py")
-l_file2 = framework.FILE("./Examples/main_send_multiple.py")
+servers = []
 
-## Embedded
-l_embed = framework.EMBED(
-author_name="Developer",
-author_icon="https://solarsystem.nasa.gov/system/basic_html_elements/11561_Sun.png",
-fields=\
-    [
-        framework.EmbedFIELD("Test 1", "Hello World", True),
-        framework.EmbedFIELD("Test 2", "Hello World 2", True),
-        framework.EmbedFIELD("Test 3", "Hello World 3", True),
-        framework.EmbedFIELD("No Inline", "This is without inline", False),
-        framework.EmbedFIELD("Test 4", "Hello World 4", True),
-        framework.EmbedFIELD("Test 5", "Hello World 5", True)
-    ]
+async def find_advertisement_channels():
+    # This function get's called after discord has been conencted but
+    # framework not yet initialized
+    client = fw.get_client()  # Returns the client to send commands to discord, for more info about client see https://docs.pycord.dev/en/master/api.html?highlight=discord%20client#discord.Client
+
+    # Iterate thru all the guilds and channels
+    # All of the objects inside the client are objects from the libarary Pycord which is an API wrapper used by this framework https://docs.pycord.dev/en/master/index.html
+    for guild in client.guilds:
+        channels_to_shill = []  # Channels that we will shill into for this guild
+
+        fw.trace(f"Channels found for guild {guild.name}: {[channel.name for channel in channels_to_shill]}")
+        for channel in guild.text_channels: # Only search text channels
+            chname = channel.name
+            if any([string in chname for string in allowed_strings]): # Make a list with bool values where we check if string from `allowed_strings` is in the channel name,
+                                                                      # and then check if any of the expressions were True (there indeed is a channel with one of those strings)
+                channels_to_shill.append(channel.id) # .id because the framework accepts ids
+
+        # Append a new GUILD object with one text message that is sent to the channels that were found in the previous section        
+        servers.append(
+            fw.GUILD(
+                guild_id=guild.id,
+                messages_to_send=[
+                    # Shill every minute, send `data_to_shill` into `channels_to_shill`. "send" - send new message each period, `True` - start now
+                    fw.TextMESSAGE(None, 1 * fw.C_MINUTE_TO_SECOND, data_to_shill, channels_to_shill, "send", True)
+                ],
+                generate_log=True
+            )
+        )
+    
+    fw.trace(f"Shilling into {len(servers)} guild{'s' if len(servers) > 1 else ''}")
+
+
+fw.run(
+    token="OSDSJ44JNnnJNJ2NJDBWQUGHSHFAJSHDUQHFDBADVAHJVERAHGDVAHJSVDE",   # Example token
+    server_list=servers,
+    user_callback=find_advertisement_channels
 )
-
-
-guilds = [
-    framework.GUILD(
-        guild_id=123456789,                                 # ID of server (guild)
-        messages_to_send=[                                  # List MESSAGE objects
-            framework.TextMESSAGE(
-                              start_period=None,            # If None, messages will be send on a fixed period (end period)
-                              end_period=15,                # If start_period is None, it dictates the fixed sending period,
-                                                            # If start period is defined, it dictates the maximum limit of randomized period
-                              data=["Hello World",          # Data you want to sent to the function (Can be of types : str, embed, file, list of types to the left
-                                    l_file1,                # or function that returns any of above types(or returns None if you don't have any data to send yet),
-                                    l_file2,                # where if you pass a function you need to use the framework.FUNCTION decorator on top of it ).
-                                    l_embed],           
-                              channel_ids=[123456789],      # List of ids of all the channels you want this message to be sent into
-                              mode="send",                  # "send" will send a new message every time, "edit" will edit the previous message, "clear-send" will delete
-                                                            # the previous message and then send a new one
-                              start_now=True                # Start sending now (True) or wait until period
-                              ),  
-        ],
-        generate_log=True           ## Generate file log of sent messages (and failed attempts) for this server 
-    )
-]
-
-                                     
-############################################################################################
-
-if __name__ == "__main__":
-    framework.run(  token="BOT TOKEN",              # MANDATORY,
-                    server_list=guilds,             # MANDATORY
-                    is_user=False,                  # OPTIONAL
-                    user_callback=None,             # OPTIONAL
-                    server_log_output="History",    # OPTIONAL
-                    debug=True)                     # OPTIONAL
 ```
