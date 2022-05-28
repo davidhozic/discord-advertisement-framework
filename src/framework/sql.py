@@ -459,10 +459,12 @@ class LoggerSQL:
             elif exception in {-1, 2, 53}:  # Diconnect error, reconnect after period
                     self.reconnect_after(C_RECONNECT_TIME)
             elif exception == 2812:
-                res = self.create_analytic_objects()
+                res = self.create_data_types() # Create data types
+                if res:
+                    res = self.create_analytic_objects() # Creates procedures, functions and views
 
             time.sleep(C_RECOVERY_TIME)
-            return res
+            return res  # Returns if the error was handled or not
 
         # Parse the data
         sent_data = message_context.get("sent_data")
@@ -492,17 +494,17 @@ class LoggerSQL:
                     _channels = self.get_insert_channels(channels, guild_id)
                     _channels = pytds.TableValuedParam("t_tmp_channel_log", rows=_channels)
                 # Execute the saved procedure that saves the log
-                self.cursor.callproc("sp_save_log", (json.dumps(sent_data),
+                self.cursor.callproc("sp_save_log", (json.dumps(sent_data), 
                                                      self.MessageTYPE.get(message_type, None),
                                                      guild_id,
                                                      self.MessageMODE.get(message_mode, None),
                                                      dm_success_info_reason,
-                                                     _channels))
+                                                     _channels)) # Execute the stored procedure
 
                 return True
             
             except Exception as ex:
-                if not isinstance(ex, (SQLAlchemyError, DatabaseError, ClosedConnectionError)):
+                if not isinstance(ex, (SQLAlchemyError, DatabaseError, ClosedConnectionError)): # If it's not a database error
                     break
 
                 if isinstance(ex, SQLAlchemyError):
@@ -511,10 +513,11 @@ class LoggerSQL:
                 if isinstance(ex, ClosedConnectionError):
                     ex.text = ex.args[0]
                     ex.number = 53  # Because only text is returned
-
+                          
+                trace(f"[SQL]: Saving log failed. {ex.number} - {ex.text}. Retrying... (Tries left: {C_FAIL_RETRIES - tries - 1})")
                 code = ex.number
                 message = ex.text
-                trace(f"[SQL]: Attempt to save into the database failed , retrying. Tries left: {C_FAIL_RETRIES - 1 - tries}", TraceLEVELS.WARNING)
+
                 if not handle_error(code, message):
                     break
         
