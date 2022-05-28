@@ -455,8 +455,8 @@ class TextMESSAGE(BaseMESSAGE):
         super().__init__(start_period, end_period, start_now)
         self.data = data
         self.mode = mode
-        self.channels = channel_ids
-        self.sent_messages = {ch_id : None for ch_id in channel_ids}
+        self.channels = channel_ids.copy()  # Copy the list so that initialization won't affect the original list
+        self.sent_messages = {ch_id : None for ch_id in channel_ids} # Dictionary for storing last sent message for each channel
 
     def generate_log_context(self,
                              text : str,
