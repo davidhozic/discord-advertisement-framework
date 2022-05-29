@@ -35,17 +35,16 @@ class CLIENT(discord.Client):
             Info : Tasks that is started by pycord when you have been
                    successfully logged into discord.
         """
-        trace(f"Logged in as {self.user}", TraceLEVELS.NORMAL)
-
-        if core.GLOBALS.user_callback is not None:   # If user callback function was specified
-            await core.GLOBALS.user_callback() # Call user provided function after framework has started
+        trace(f"[CLIENT]: Logged in as {self.user}", TraceLEVELS.NORMAL)
 
         if await core.initialize():
             # Initialization was successful, so create the advertiser task and start advertising.
-            trace("Successful initialization!",TraceLEVELS.NORMAL)
-        else:
-            # Initialization failed, close everything
-            await core.shutdown()
+            trace("[CLIENT]: Successful initialization!",TraceLEVELS.NORMAL)
+
+        callback = core.get_user_callback()
+        if callback is not None:   # If user callback function was specified
+            trace("[CLIENT]: Starting user callback function", TraceLEVELS.NORMAL)
+            asyncio.create_task(callback)  # Create the user callback task
 
 
 def initialize(token: str, *,

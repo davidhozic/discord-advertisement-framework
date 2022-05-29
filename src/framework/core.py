@@ -4,7 +4,7 @@
     and functions needed for the framework to run,
     as well as user function to control the framework
 """
-from   typing import Literal, Callable, List
+from   typing import Iterable, Literal, Callable, List, Set, overload
 from . const import *
 from . import tracing
 from . tracing import *
@@ -20,10 +20,15 @@ import asyncio
 #######################################################################
 __all__ = (
     "run",
-    "shutdown"
+    "shutdown",
+    "add_object",
+    "remove_object"
 )
 
-
+"""
+TODO:
+    - Documentation for add_object and remove_object
+"""
 #######################################################################
 # Globals   (These are all set in the framework.run function)
 #######################################################################
@@ -49,7 +54,7 @@ async def advertiser(message_type: Literal["text", "voice"]) -> None:
     """
     while True:
         await asyncio.sleep(C_TASK_SLEEP_DELAY)
-        for guild_user in GLOBALS.server_list:
+        for guild_user in GLOBALS.server_list.copy(): # Copy the list to prevent issues with the list being modified 
             await guild_user.advertise(message_type)
 
 
@@ -72,12 +77,90 @@ async def initialize() -> bool:
             GLOBALS.server_list.remove(server)
 
     if len(GLOBALS.server_list) == 0:
-        trace("No guilds could be parsed", TraceLEVELS.ERROR)
-        return False
+        trace("[CORE]: No guilds could be parsed from the start.", TraceLEVELS.WARNING)
 
     asyncio.create_task(advertiser("text"))
     asyncio.create_task(advertiser("voice"))
     return True
+
+
+@overload
+async def add_object(obj: guild.BaseGUILD) -> bool: 
+    """
+    Name:   add_object
+    Params: obj ~ guild to add to the framework
+    Return: bool
+    Info:   Adds an GUILD/USER to the framework"""
+    ...
+@overload
+async def add_object(obj: message.BaseMESSAGE, guild_id: int) -> bool:
+    """
+    Name:   add_object
+    Params: obj ~ message to add to the framework
+            guild_id ~ guild id of the guild to add the message to
+    Return: bool
+    Info:   Adds a MESSAGE to the framework"""    
+    ...
+async def add_object(obj, guild_id=None) -> bool:    
+    if isinstance(obj, guild.BaseGUILD):
+        if obj.apiobject in [x.apiobject.id for x in GLOBALS.server_list]:
+            trace(f"[CORE]: Guild with id: {obj.apiobject} is already in the list", TraceLEVELS.ERROR)
+            return False
+        if not await obj.initialize():
+            return False
+        GLOBALS.server_list.append(obj)
+        return True
+    elif isinstance(obj, message.BaseMESSAGE):
+        if guild_id is None:
+            return False 
+        guild_user: guild.BaseGUILD # Typing hint
+        for guild_user in GLOBALS.server_list:
+            if guild_user.apiobject.id == guild_id:
+                if await guild_user.add_message(obj):
+                    return True
+                trace(f"[CORE]: Unable to add message to guild {guild_user.apiobject}(ID: {guild_user.apiobject.id})", TraceLEVELS.ERROR)
+
+        trace(f"[CORE]: Could not find guild with id: {guild_id}", TraceLEVELS.ERROR)
+
+    return False
+
+
+@overload
+def remove_object(data: int) -> bool: 
+    """
+    Name:   remove_object
+    Params: guild_id ~ id of the guild to remove
+    Return: None
+    Info:   Removes a guild from the framework that has the given guild_id"""
+    ...
+@overload
+def remove_object(data: Iterable) -> bool:
+    """
+    Name:   remove_object
+    Params: channel_ids ~ set of channel ids to look for in the message 
+    Return: bool
+    Info:   Remove messages that contain any of the channel ids in the set"""
+    ...
+def remove_object(data) -> bool:    
+    if isinstance(data, int): # Guild id
+        for guild_user in GLOBALS.server_list:
+            if guild_user.apiobject.id == data:
+                GLOBALS.server_list.remove(guild_user)
+                return True
+    
+        trace(f"[CORE]: Could not find guild with id: {data}", TraceLEVELS.WARNING)
+        return False
+
+    elif isinstance(data, Iterable):
+        for guild_user in GLOBALS.server_list:
+            if isinstance(guild_user, guild.GUILD): # USER doesn't have channels
+                for message in guild_user.t_messages + guild_user.vc_messages:
+                    msg_channels = [x.id for x in message.channels] # Generate snowflake list
+                    if any(x in msg_channels for x in data): # If any of the channels in the set are in the message channel list
+                        guild_user.remove_message(message) 
+        return True
+
+    return False
 
 
 async def shutdown() -> None:
@@ -88,6 +171,15 @@ async def shutdown() -> None:
     Info:   Stops the framework"""
     cl = client.get_client()
     await cl.close()
+
+
+def get_user_callback() -> Callable:
+    """
+    Name:   get_user_callback
+    Params: void
+    Return: Callable
+    Info:   Returns the user callback function"""
+    return GLOBALS.user_callback
 
 
 def run(token : str,
@@ -113,7 +205,7 @@ def run(token : str,
     guild.GLOBALS.server_log_path = server_log_output       ## Logging folder
     tracing.m_use_debug = debug                             ## Print trace messages to the console for debugging purposes
     GLOBALS.server_list = server_list                       ## List of guild objects to iterate thru in the advertiser task
-    GLOBALS.user_callback = user_callback                   ## Called after framework has started
+    GLOBALS.user_callback = user_callback()                   ## Called after framework has started
     if is_user:                                             ## Set rate limit avoidance timeout to prevent hitting the rate limit (in case client is an user account)
         message.update_ratelimit_delay(C_RATE_LIMIT_INITIAL_USERS)
         

@@ -58,6 +58,13 @@ class BaseGUILD:
         self.t_messages = []
         self.vc_messages = []
 
+    async def add_message(self, message):
+        """~  add_message  ~
+        @Info:   Adds a message to the message list
+        @Param:  message ~ message object to add
+        """
+        raise NotImplementedError
+
     async def initialize(self) -> bool:
         """
         ~  initialize  ~
@@ -144,7 +151,7 @@ class BaseGUILD:
                     json.dump(appender_data, appender, indent=4)
 
         except Exception as exception:
-            trace(f"Unable to save log. Exception: {exception}", TraceLEVELS.WARNING)
+            trace(f"[{type(self).__name__}]: Unable to save log. Exception: {exception}", TraceLEVELS.WARNING)
 
 
 @sql.register_type("GuildTYPE")
@@ -182,6 +189,39 @@ class GUILD(BaseGUILD):
         self._messages = messages_to_send
         super().__init__(guild_id, generate_log)
 
+    async def add_message(self, message: Union[TextMESSAGE, VoiceMESSAGE]):
+        """~  add_message  ~
+        @Info:   Adds a message to the message list
+        @Param:  message ~ message object to add
+        """
+        if not isinstance(message, (TextMESSAGE, VoiceMESSAGE)):
+            trace(f"[GUILD]: Invalid xxxMESSAGE type: {type(message).__name__}, expected  {TextMESSAGE.__name__} or {VoiceMESSAGE.__name__}", TraceLEVELS.ERROR)
+            return False
+
+        if not await message.initialize():
+            return False
+
+        if isinstance(message, TextMESSAGE):
+            self.t_messages.append(message)
+        elif isinstance(message, VoiceMESSAGE):
+            self.vc_messages.append(message)
+
+        return True
+    
+    def remove_message(self, message: Union[TextMESSAGE, VoiceMESSAGE]):
+        """~ remove_message ~
+        @Info:   Removes a message from the message list
+        @Param:  message ~ message object to remove
+        """
+        if isinstance(message, TextMESSAGE):
+            self.t_messages.remove(message)
+            return True
+        elif isinstance(message, VoiceMESSAGE):
+            self.vc_messages.remove(message)
+            return True
+
+        return False
+
     async def initialize(self) -> bool:
         """
         Name:   initialize
@@ -192,43 +232,21 @@ class GUILD(BaseGUILD):
         Info:   The function initializes all the GUILD objects (and other objects inside the GUILD object reccurssively).
                 It tries to get the discord.Guild object from the self.guild id and then tries to initialize the MESSAGE objects.
         """
-        for message in self._messages:
-            if type(message) is TextMESSAGE:
-                self.t_messages.append(message)
-            elif type(message) is VoiceMESSAGE:
-                self.vc_messages.append(message)
-            else:
-                trace(f"Invalid xxxMESSAGE type: {type(message).__name__}, expected  {TextMESSAGE.__name__} or {VoiceMESSAGE.__name__}", TraceLEVELS.ERROR)
-        del self._messages
-
         guild_id = self.apiobject
         cl = client.get_client()
         self.apiobject = cl.get_guild(guild_id)
 
         if self.apiobject is not None:
-        # Create a file name without the non allowed characters. Windows' list was choosen to generate the forbidden character because only forbids '/'
-            for message in self.t_messages[:]:
-                # Iterate thru the slice text messages list and initialize each
-                # message object. If the message objects fails to initialize,
-                # then it is removed from the original list.
-                if not await message.initialize():
-                    self.t_messages.remove(message)
-
-            for message in self.vc_messages[:]:
-                # Same as above but for voice messages
-                if not await message.initialize():
-                    self.vc_messages.remove(message)
-
-            if not len(self.t_messages) + len(self.vc_messages):
-                return False
+            for message in self._messages:
+                await self.add_message(message)
 
             return True
 
-        trace(f"Unable to find guild with ID: {guild_id}", TraceLEVELS.ERROR)
+        trace(f"[GUILD]: Unable to find guild with ID: {guild_id}", TraceLEVELS.ERROR)
         return False
 
     async def advertise(self,
-                        mode: Literal["text", "voice"]) -> None:
+                        mode: Literal["text", "voice"]):
         """~ advertise ~
             @Info:
             This is the main coroutine that is responsible for sending all the messages to this specificc guild,
@@ -236,7 +254,7 @@ class GUILD(BaseGUILD):
         msg_list = self.t_messages if mode == "text" else self.vc_messages
         marked_del = []
 
-        for message in msg_list:
+        for message in msg_list.copy(): # Copy the avoid issues with the list being modified while iterating
             if message.is_ready():
                 message.reset_timer()
                 message_ret = await message.send()
@@ -248,8 +266,10 @@ class GUILD(BaseGUILD):
 
         # Cleanup messages marked for removal
         for message in marked_del:
-            msg_list.remove(message)
-            trace(f"Removing a {type(message).__name__} because it's channels were removed, in guild {self.apiobject.name}(ID: {self.apiobject.id})")
+            if message in msg_list:
+                msg_list.remove(message)
+            trace(f"[GUILD]: Removing a {type(message).__name__} because it's channels were removed, in guild {self.apiobject.name}(ID: {self.apiobject.id})")
+
 
 @sql.register_type("GuildTYPE")
 class USER(BaseGUILD):
@@ -285,29 +305,31 @@ class USER(BaseGUILD):
         super().__init__(user_id, generate_log)
         self._messages = messages_to_send
 
-    async def initialize(self) -> bool:
-        for message in self._messages:
-            if type(message) is DirectMESSAGE:
-                self.t_messages.append(message)
-            else:
-                trace(f"Invalid xxxMESSAGE type: {type(message).__name__}, expected  {DirectMESSAGE.__name__}", TraceLEVELS.ERROR)
-        del self._messages
+    async def add_message(self, message):
+        """~  add_message  ~
+        @Info:   Adds a message to the message list
+        @Param:  message ~ message object to add
+        """
+        if not isinstance(message, DirectMESSAGE):
+            trace(f"[USER]: Invalid xxxMESSAGE type: {type(message).__name__}, expected  {DirectMESSAGE.__name__}", TraceLEVELS.ERROR)
+            return False
+        if not await message.initialize(user_id=self.apiobject.id):
+            return False
+        self.t_messages.append(message)
+        return True
 
+    async def initialize(self) -> bool:
         user_id = self.apiobject
         cl = client.get_client()
         self.apiobject = cl.get_user(user_id)
 
         if self.apiobject is not None:
-            for message in self.t_messages[:]:
-                if (type(message) is not DirectMESSAGE or
-                    not await message.initialize(user_id=user_id)
-                ):
-                    self.t_messages.remove(message)
-            if len(self.t_messages) == 0:
-                return False
+            for message in self._messages:
+                await self.add_message(message)
+
             return True
 
-        trace(f"Unable to create DM with user id: {user_id}", TraceLEVELS.ERROR)
+        trace(f"[USER]: Unable to create DM with user id: {user_id}", TraceLEVELS.ERROR)
         return False
 
     async def advertise(self,
@@ -318,14 +340,13 @@ class USER(BaseGUILD):
             This is the main coroutine that is responsible for sending all the messages to this specificc guild,
             it is called from the core module's advertiser task"""
         if mode == "text":  # Does not have voice messages, only text based (DirectMESSAGE)
-            for message in self.t_messages:
+            for message in self.t_messages.copy(): # Copy the avoid issues with the list being modified while iterating
                 if message.is_ready():
                     message.reset_timer()
                     message_ret = await message.send()
                     if self._generate_log and message_ret is not None:
                         self.generate_log(message_ret)
                     
-
                     if message.dm_channel is None:
                         self.t_messages.clear()            # Remove all messages since that they all share the same user and will fail
                         trace(f"Removing all messages for user {self.apiobject.display_name}#{self.apiobject.discriminator} (ID: {self.apiobject.id}) because we do not have permissions to send to that user.", TraceLEVELS.WARNING)
