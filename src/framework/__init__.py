@@ -16,5 +16,6 @@ from .sql import *
 
 """
 TODO:
-    - Documentation
+    - Documentation website, split into multiple pages
+    - Documentation shilling mode / manual mode
 """
