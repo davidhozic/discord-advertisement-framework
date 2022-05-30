@@ -21,35 +21,31 @@ data_to_shill = (     # Example data set
 servers = []
 
 async def find_advertisement_channels():
-    # This function get's called after discord has been conencted but
-    # framework not yet initialized
-    client = fw.get_client()  # Returns the client to send commands to discord, for more info about client see https://docs.pycord.dev/en/master/api.html?highlight=discord%20client#discord.Client
-
-    # Iterate thru all the guilds and channels
-    # All of the objects inside the client are objects from the libarary Pycord which is an API wrapper used by this framework https://docs.pycord.dev/en/master/index.html
-    for guild in client.guilds:
-        channels_to_shill = []  # Channels that we will shill into for this guild
-
-        fw.trace(f"Channels found for guild {guild.name}: {[channel.name for channel in channels_to_shill]}")
-        for channel in guild.text_channels: # Only search text channels
-            chname = channel.name
-            if any([string in chname for string in allowed_strings]): # Make a list with bool values where we check if string from `allowed_strings` is in the channel name,
-                                                                      # and then check if any of the expressions were True (there indeed is a channel with one of those strings)
-                channels_to_shill.append(channel.id) # .id because the framework accepts ids
-
-        # Append a new GUILD object with one text message that is sent to the channels that were found in the previous section        
-        servers.append(
+    # Returns the client to send commands to discord, for more info about client see https://docs.pycord.dev/en/master/api.html?highlight=discord%20client#discord.Client
+    client = fw.get_client()  
+    
+    for guild in client.guilds:  # Iterate thru all the guilds where the bot is in
+        channels = []
+        for i, channel in enumerate(guild.text_channels): # Iterate thru all the text channels in the guild
+            if any([x in channel.name for x in allowed_strings]): # Check if any of the strings in allowed_strings are in the channel name
+                channels.append(channel.id) # If so, add the channel id to the list
+        
+        # Add the guild to the internal shilling list
+        await fw.core.add_object(   
             fw.GUILD(
-                guild_id=guild.id,
-                messages_to_send=[
-                    # Shill every minute, send `data_to_shill` into `channels_to_shill`. "send" - send new message each period, `True` - start now
-                    fw.TextMESSAGE(None, 1 * fw.C_MINUTE_TO_SECOND, data_to_shill, channels_to_shill, "send", True)
+                guild.id,                               # Guild id
+                [                                       # List of messages
+                    fw.TextMESSAGE(None,                    # Start period
+                                   5,                       # End period
+                                   data_to_shill,           # Data that will be sent
+                                   channels,                # List of channels to send the message to            
+                                   "send",                  # Sending moode (send, edit, clear-send)
+                                   True                     # Should the message be sent immediately after adding it to the list
+                    )                                   
                 ],
-                generate_log=True
+                True                                    # Should the framework generate a log of sent messages for this guild
             )
         )
-    
-    fw.trace(f"Shilling into {len(servers)} guild{'s' if len(servers) > 1 else ''}")
 
 
 fw.run(

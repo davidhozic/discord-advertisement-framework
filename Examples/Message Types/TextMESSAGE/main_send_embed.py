@@ -1,4 +1,5 @@
 import  framework as fw, secret
+from framework import discord
 ############################################################################################
 #                               EMBED VARIABLE DEFINITON                                   #
 ############################################################################################
@@ -73,9 +74,10 @@ guilds = [
 ############################################################################################
 
 if __name__ == "__main__":
-    fw.run(  token=secret.C_TOKEN,           # MANDATORY,
-                    server_list=guilds,             # MANDATORY
-                    is_user=False,                  # OPTIONAL
-                    user_callback=None,             # OPTIONAL
-                    server_log_output="History",    # OPTIONAL
-                    debug=True)                     # OPTIONAL
+    fw.run(         token=secret.C_TOKEN,               # MANDATORY
+                    intents=discord.Intents.default(),  # OPTIONAL (see https://docs.pycord.dev/en/master/intents.html)
+                    server_list=guilds,                 # MANDATORY
+                    is_user=False,                      # OPTIONAL
+                    user_callback=None,                 # OPTIONAL
+                    server_log_output="History",        # OPTIONAL
+                    debug=True)                         # OPTIONAL
