@@ -47,6 +47,7 @@ class BaseMESSAGE:
         represent a message you want to be sent into discord."""
 
     __slots__ = (
+        "initialized",
         "randomized_time",
         "period",
         "random_range",
@@ -77,6 +78,7 @@ class BaseMESSAGE:
         self.timer = TIMER()
         self.force_retry = {"ENABLED" : start_now, "TIME" : 0}
         self.data = data
+        self.initialized = False
 
     def generate_exception(self, 
                            status: int,
@@ -209,12 +211,16 @@ class BaseMESSAGE:
             options :: custom keyword arguments, this differes from inher. to inher. class that
                        is inherited from the BaseGUILD class and must be matched in the inherited class from BaseMESSAGE that
                        you want to use in that specific inherited class from BaseGUILD class"""
+        if self.initialized:
+            return True
+
         if not await self.initialize_channels(**options):
             return False
 
         if not await self.initialize_data():
             return False
 
+        self.initialized = True
         return True
 
 @sql.register_type("MessageTYPE")
@@ -259,7 +265,7 @@ class VoiceMESSAGE(BaseMESSAGE):
 
         super().__init__(start_period, end_period, start_now)
         self.data = data
-        self.channels = set(channel_ids) # Auto remove duplicates
+        self.channels = list(set(channel_ids)) # Auto remove duplicates
 
     def generate_log_context(self,
                              audio: AUDIO,
@@ -454,7 +460,7 @@ class TextMESSAGE(BaseMESSAGE):
         super().__init__(start_period, end_period, start_now)
         self.data = data
         self.mode = mode
-        self.channels = set(channel_ids) # Automatically removes duplicates
+        self.channels = list(set(channel_ids)) # Automatically removes duplicates
         self.sent_messages = {ch_id : None for ch_id in channel_ids} # Dictionary for storing last sent message for each channel
 
     def generate_log_context(self,
