@@ -37,15 +37,14 @@ class CLIENT(discord.Client):
         """
         trace(f"[CLIENT]: Logged in as {self.user}", TraceLEVELS.NORMAL)
 
-        if await core.initialize():
-            # Initialization was successful, so create the advertiser task and start advertising.
-            trace("[CLIENT]: Successful initialization!",TraceLEVELS.NORMAL)
-
         callback = core.get_user_callback()
         if callback is not None:   # If user callback function was specified
             trace("[CLIENT]: Starting user callback function", TraceLEVELS.NORMAL)
             asyncio.create_task(callback)  # Create the user callback task
 
+        if await core.initialize():
+            # Initialization was successful, so create the advertiser task and start advertising.
+            trace("[CLIENT]: Successful initialization! Framework is now running",TraceLEVELS.NORMAL)
 
 def initialize(token: str, *,
                bot: bool,

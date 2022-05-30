@@ -36,8 +36,8 @@ class GLOBALS:
     """ ~  GLOBALS  ~
         @Info: Contains the globally needed variables"""
     user_callback: Callable = None
-    server_list: List[guild.BaseGUILD] = None
-
+    server_list: List[guild.BaseGUILD] = []
+    temp_server_list: List[guild.BaseGUILD] = None # Holds the guilds that are awaiting initialization (set in framework.run and cleared after initialization)
 
 #######################################################################
 # Tasks
@@ -72,11 +72,12 @@ async def initialize() -> bool:
     Info:       Function that initializes the guild objects and
                 then returns True on success or False on failure.
     """
-    for server in GLOBALS.server_list[:]: # Copy the list to prevent issues with the list items being removed
-        if not await server.initialize():
-            GLOBALS.server_list.remove(server) 
+    trace("[CORE]: Initializing servers", TraceLEVELS.NORMAL)
+    for server in GLOBALS.temp_server_list:
+        await add_object(server) # Add each guild to the shilling list
 
     # Create advertiser tasks
+    trace("[CORE]: Creating advertiser tasks", TraceLEVELS.NORMAL)
     asyncio.create_task(advertiser("text"))
     asyncio.create_task(advertiser("voice"))
     return True
@@ -101,8 +102,8 @@ async def add_object(obj: message.BaseMESSAGE, guild_id: int) -> bool:
     ...
 async def add_object(obj, guild_id=None) -> bool:    
     if isinstance(obj, guild.BaseGUILD):
-        if obj.apiobject in [x.apiobject.id for x in GLOBALS.server_list]:
-            trace(f"[CORE]: Guild with id: {obj.apiobject} is already in the list", TraceLEVELS.ERROR)
+        if obj in GLOBALS.server_list:
+            trace(f"[CORE]: Guild with id: {obj.snowflake} is already in the list", TraceLEVELS.ERROR)
             return False
         if not await obj.initialize():
             return False
@@ -113,10 +114,10 @@ async def add_object(obj, guild_id=None) -> bool:
             return False 
         guild_user: guild.BaseGUILD # Typing hint
         for guild_user in GLOBALS.server_list:
-            if guild_user.apiobject.id == guild_id:
+            if guild_user.snowflake == guild_id:
                 if await guild_user.add_message(obj):
                     return True
-                trace(f"[CORE]: Unable to add message to guild {guild_user.apiobject}(ID: {guild_user.apiobject.id})", TraceLEVELS.ERROR)
+                trace(f"[CORE]: Unable to add message to guild {guild_user.apiobject}(ID: {guild_user.snowflake})", TraceLEVELS.ERROR)
 
         trace(f"[CORE]: Could not find guild with id: {guild_id}", TraceLEVELS.ERROR)
 
@@ -142,7 +143,7 @@ def remove_object(data: Iterable) -> bool:
 def remove_object(data):    
     if isinstance(data, int): # Guild id
         for guild_user in GLOBALS.server_list:
-            if guild_user.apiobject.id == data:
+            if guild_user.snowflake == data:
                 GLOBALS.server_list.remove(guild_user)
                 return True
     
@@ -204,10 +205,15 @@ def run(token : str,
     @description: This function is the function that starts framework and starts advertising"""
     guild.GLOBALS.server_log_path = server_log_output               # Logging folder
     tracing.m_use_debug = debug                                     # Print trace messages to the console for debugging purposes
-    GLOBALS.server_list = server_list                               # List of guild objects to iterate thru in the advertiser task
+    GLOBALS.temp_server_list = server_list                          # List of guild objects to iterate thru in the advertiser task
     GLOBALS.user_callback = user_callback()                         # Called after framework has started
     if is_user:                                                     # Set rate limit avoidance timeout to prevent hitting the rate limit (in case client is an user account)
         message.update_ratelimit_delay(C_RATE_LIMIT_INITIAL_USERS)
 
+    if sql_manager is not None:
+        sql.initialize(sql_manager) # Initialize the SQL database
+    else:
+        trace("[CORE]: No SQL manager provided, logging will be JSON based", TraceLEVELS.WARNING)
+
+
     client.initialize(token, bot=not is_user, intents=intents)
-    sql.initialize(sql_manager)                                     # Initialize the SQL database

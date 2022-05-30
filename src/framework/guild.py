@@ -33,9 +33,13 @@ class GLOBALS:
 class BaseGUILD:
     """ ~ BaseGUILD ~
         BaseGUILD object is used for creating inherited classes that work like a guild"""
-    __slots__ = (
+
+    __slots__ = (       # Faster attribute access
+        "initialized",
         "apiobject",
+        "snowflake",
         "_generate_log",
+        "_messages",
         "t_messages",
         "vc_messages"
     )
@@ -52,10 +56,20 @@ class BaseGUILD:
     def __init__(self,
                  snowflake: int,
                  generate_log: bool=False) -> None:
-        self.apiobject = snowflake
+        self.initialized = False
+        self.apiobject = None
+        self.snowflake = snowflake
         self._generate_log = generate_log
         self.t_messages: List[Union[TextMESSAGE, DirectMESSAGE]] = []
         self.vc_messages: List[VoiceMESSAGE] = []
+
+    def __eq__(self, other) -> bool:
+        """
+        ~  __eq__  ~
+        @Return: bool - Returns True if objects have the same snowflake
+        @Info:   The function is used to compare two objects
+        """
+        return self.snowflake == other.snowflake
 
     async def add_message(self, message):
         """~  add_message  ~
@@ -96,7 +110,7 @@ class BaseGUILD:
 
         guild_context = {
             "name" : str(self.apiobject),
-            "id" : self.apiobject.id,
+            "id" : self.snowflake,
             "type" : type(self).__logname__,
         }
 
@@ -164,14 +178,8 @@ class GUILD(BaseGUILD):
     - List of TextMESSAGE/VoiceMESSAGE objects
     - Generate file log - bool variable, if True it will generate a file log for each message send attempt.
     """
-    __slots__ = (
-        "apiobject",
-        "t_messages",
-        "vc_messages",
-        "_messages",
-        "_generate_log"
-    )
     __logname__ = "GUILD"
+    __slots__   = set()  # Removes __dict__ (prevents dynamic attributes)
 
     @property
     def log_file_name(self):
@@ -228,10 +236,12 @@ class GUILD(BaseGUILD):
         Return: bool:
                 - Returns True if the initialization was successful
                 - Returns False if failed, indicating the object should be removed from the server_list
-        Info:   The function initializes all the GUILD objects (and other objects inside the GUILD object reccurssively).
-                It tries to get the discord.Guild object from the self.guild id and then tries to initialize the MESSAGE objects.
+        Info:   This function initializes the API related objects and then tries to initialize the MESSAGE objects.
         """
-        guild_id = self.apiobject
+        if self.initialized: # Already initialized
+            return True
+
+        guild_id = self.snowflake
         cl = client.get_client()
         self.apiobject = cl.get_guild(guild_id)
 
@@ -239,6 +249,7 @@ class GUILD(BaseGUILD):
             for message in self._messages:
                 await self.add_message(message)
 
+            self.initialized = True
             return True
 
         trace(f"[GUILD]: Unable to find guild with ID: {guild_id}", TraceLEVELS.ERROR)
@@ -267,7 +278,7 @@ class GUILD(BaseGUILD):
         for message in marked_del:
             if message in msg_list:
                 msg_list.remove(message)
-            trace(f"[GUILD]: Removing a {type(message).__name__} because it's channels were removed, in guild {self.apiobject.name}(ID: {self.apiobject.id})")
+            trace(f"[GUILD]: Removing a {type(message).__name__} because it's channels were removed, in guild {self.apiobject.name}(ID: {self.snowflake})")
 
 
 @sql.register_type("GuildTYPE")
@@ -280,14 +291,9 @@ class USER(BaseGUILD):
         - messages: list ~ list of DirectMESSAGE objects which
                            represent messages that will be sent to the DM
         - generate_log: bool ~ dictates if log should be generated for each sent message"""
-    __slots__ = (
-        "apiobject",
-        "_generate_log",
-        "t_messages",
-        "_messages"
-    )
 
     __logname__ = "USER"
+    __slots__   = set()  # Removes __dict__ (prevents dynamic attributes)
 
     @property
     def log_file_name(self):
@@ -312,20 +318,32 @@ class USER(BaseGUILD):
         if not isinstance(message, DirectMESSAGE):
             trace(f"[USER]: Invalid xxxMESSAGE type: {type(message).__name__}, expected  {DirectMESSAGE.__name__}", TraceLEVELS.ERROR)
             return False
-        if not await message.initialize(user_id=self.apiobject.id):
+        if not await message.initialize(user_id=self.snowflake):
             return False
         self.t_messages.append(message)
         return True
 
     async def initialize(self) -> bool:
-        user_id = self.apiobject
+        """
+        Name:   initialize
+        Param:  void
+        Return: bool:
+                - Returns True if the initialization was successful
+                - Returns False if failed, indicating the object should be removed from the server_list
+        Info:   This function initializes the API related objects and then tries to initialize the MESSAGE objects.
+        """
+        if self.initialized: # Already initialized
+            return True
+
+        user_id = self.snowflake
         cl = client.get_client()
         self.apiobject = cl.get_user(user_id)
 
         if self.apiobject is not None:
             for message in self._messages:
                 await self.add_message(message)
-
+            
+            self.initialized = True
             return True
 
         trace(f"[USER]: Unable to create DM with user id: {user_id}", TraceLEVELS.ERROR)
@@ -348,5 +366,5 @@ class USER(BaseGUILD):
                     
                     if message.dm_channel is None:
                         self.t_messages.clear()            # Remove all messages since that they all share the same user and will fail
-                        trace(f"Removing all messages for user {self.apiobject.display_name}#{self.apiobject.discriminator} (ID: {self.apiobject.id}) because we do not have permissions to send to that user.", TraceLEVELS.WARNING)
+                        trace(f"Removing all messages for user {self.apiobject.display_name}#{self.apiobject.discriminator} (ID: {self.snowflake}) because we do not have permissions to send to that user.", TraceLEVELS.WARNING)
                         break
