@@ -3,7 +3,7 @@
     This module contains the definitions regarding the xxxMESSAGE class and
     all the functionality for sending data into discord channels.
 """
-from    typing import List, Union, Literal
+from    typing import List, Union, Literal, Iterable, Any
 from    .dtypes import *
 from    .tracing import *
 from    .const import *
@@ -171,7 +171,7 @@ class BaseMESSAGE:
             # The parameters also get checked/parsed each period right before the send.
 
             # Convert any arguments passed into a list of arguments
-            if  isinstance(self.data, (list, tuple, set)):
+            if  isinstance(self.data, Iterable):
                 self.data = list(self.data)   # Convert into a regular list to allow removal of items
             else:
                 self.data = [self.data]       # Place into a list for iteration, to avoid additional code
@@ -254,12 +254,12 @@ class VoiceMESSAGE(BaseMESSAGE):
     def __init__(self, start_period: Union[float, None],
                  end_period: float,
                  data: AUDIO,
-                 channel_ids: List[int],
+                 channel_ids: Iterable[int],
                  start_now: bool = True):
 
         super().__init__(start_period, end_period, start_now)
         self.data = data
-        self.channels = channel_ids
+        self.channels = set(channel_ids) # Auto remove duplicates
 
     def generate_log_context(self,
                              audio: AUDIO,
@@ -447,14 +447,14 @@ class TextMESSAGE(BaseMESSAGE):
 
     def __init__(self, start_period: Union[float, None],
                  end_period: float,
-                 data: Union[str, EMBED, FILE,List[Union[str, EMBED, FILE]]],
-                 channel_ids: List[int],
+                 data: Union[str, EMBED, FILE, List[Union[str, EMBED, FILE]]],
+                 channel_ids: Iterable[int],
                  mode: Literal["send", "edit", "clear-send"] = "send",
                  start_now: bool = True):
         super().__init__(start_period, end_period, start_now)
         self.data = data
         self.mode = mode
-        self.channels = channel_ids.copy()  # Copy the list so that initialization won't affect the original list
+        self.channels = set(channel_ids) # Automatically removes duplicates
         self.sent_messages = {ch_id : None for ch_id in channel_ids} # Dictionary for storing last sent message for each channel
 
     def generate_log_context(self,

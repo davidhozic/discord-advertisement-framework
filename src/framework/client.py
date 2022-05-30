@@ -48,7 +48,8 @@ class CLIENT(discord.Client):
 
 
 def initialize(token: str, *,
-               bot: bool):
+               bot: bool,
+               intents: discord.Intents) -> bool:
     """
         ~  initialize  ~
         @Param:
@@ -59,10 +60,9 @@ def initialize(token: str, *,
         @Info:
         The function initializes Pycord, the discord API wrapper.
     """
-    intents = discord.Intents.all()
     GLOBALS.client = CLIENT(intents=intents)
     if not bot:
-        trace("Bot is an user account which is against discord's ToS",TraceLEVELS.WARNING)
+        trace("[CLIENT]: Bot is an user account which is against discord's ToS",TraceLEVELS.WARNING)
     GLOBALS.client.run(token, bot=bot)
 
 

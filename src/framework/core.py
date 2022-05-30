@@ -5,6 +5,7 @@
     as well as user function to control the framework
 """
 from   typing import Iterable, Literal, Callable, List, Set, overload
+from   _discord import Intents
 from . const import *
 from . import tracing
 from . tracing import *
@@ -13,7 +14,6 @@ from . import client
 from . import sql
 from . import message
 import asyncio
-
 
 #######################################################################
 # Exports
@@ -36,7 +36,7 @@ class GLOBALS:
     """ ~  GLOBALS  ~
         @Info: Contains the globally needed variables"""
     user_callback: Callable = None
-    server_list: List = None
+    server_list: List[guild.BaseGUILD] = None
 
 
 #######################################################################
@@ -54,7 +54,7 @@ async def advertiser(message_type: Literal["text", "voice"]) -> None:
     """
     while True:
         await asyncio.sleep(C_TASK_SLEEP_DELAY)
-        for guild_user in GLOBALS.server_list.copy(): # Copy the list to prevent issues with the list being modified 
+        for guild_user in GLOBALS.server_list: # Copy the list to prevent issues with the list being modified 
             await guild_user.advertise(message_type)
 
 
@@ -72,13 +72,11 @@ async def initialize() -> bool:
     Info:       Function that initializes the guild objects and
                 then returns True on success or False on failure.
     """
-    for server in GLOBALS.server_list[:]:
+    for server in GLOBALS.server_list[:]: # Copy the list to prevent issues with the list items being removed
         if not await server.initialize():
-            GLOBALS.server_list.remove(server)
+            GLOBALS.server_list.remove(server) 
 
-    if len(GLOBALS.server_list) == 0:
-        trace("[CORE]: No guilds could be parsed from the start.", TraceLEVELS.WARNING)
-
+    # Create advertiser tasks
     asyncio.create_task(advertiser("text"))
     asyncio.create_task(advertiser("voice"))
     return True
@@ -141,7 +139,7 @@ def remove_object(data: Iterable) -> bool:
     Return: bool
     Info:   Remove messages that contain any of the channel ids in the set"""
     ...
-def remove_object(data) -> bool:    
+def remove_object(data):    
     if isinstance(data, int): # Guild id
         for guild_user in GLOBALS.server_list:
             if guild_user.apiobject.id == data:
@@ -183,7 +181,8 @@ def get_user_callback() -> Callable:
 
 
 def run(token : str,
-        server_list : list,
+        intents: Intents=Intents.default(),
+        server_list : list=[],
         is_user : bool =False,
         user_callback : bool=None,
         server_log_output : str ="History",
@@ -194,6 +193,7 @@ def run(token : str,
     @name  : run
     @params:
         - token             : str       = access token for account
+        - intents           : Intents   = Discord Intents object (API permissions)
         - server_list       : list      = List of framework.GUILD objects
         - is_user           : bool      = Is the token from an user account
         - user_callback     : function  = Function to call on run
@@ -202,12 +202,12 @@ def run(token : str,
                                           useful for debugging
 
     @description: This function is the function that starts framework and starts advertising"""
-    guild.GLOBALS.server_log_path = server_log_output       ## Logging folder
-    tracing.m_use_debug = debug                             ## Print trace messages to the console for debugging purposes
-    GLOBALS.server_list = server_list                       ## List of guild objects to iterate thru in the advertiser task
-    GLOBALS.user_callback = user_callback()                   ## Called after framework has started
-    if is_user:                                             ## Set rate limit avoidance timeout to prevent hitting the rate limit (in case client is an user account)
+    guild.GLOBALS.server_log_path = server_log_output               # Logging folder
+    tracing.m_use_debug = debug                                     # Print trace messages to the console for debugging purposes
+    GLOBALS.server_list = server_list                               # List of guild objects to iterate thru in the advertiser task
+    GLOBALS.user_callback = user_callback()                         # Called after framework has started
+    if is_user:                                                     # Set rate limit avoidance timeout to prevent hitting the rate limit (in case client is an user account)
         message.update_ratelimit_delay(C_RATE_LIMIT_INITIAL_USERS)
-        
-    sql.initialize(sql_manager)                             ## Initialize the SQL database
-    client.initialize(token, bot=not is_user)
+
+    client.initialize(token, bot=not is_user, intents=intents)
+    sql.initialize(sql_manager)                                     # Initialize the SQL database

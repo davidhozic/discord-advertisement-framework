@@ -15,7 +15,6 @@ from    . import sql
 import  time
 import  json
 import pathlib
-import os
 
 __all__ = (
     "GUILD",
@@ -55,8 +54,8 @@ class BaseGUILD:
                  generate_log: bool=False) -> None:
         self.apiobject = snowflake
         self._generate_log = generate_log
-        self.t_messages = []
-        self.vc_messages = []
+        self.t_messages: List[Union[TextMESSAGE, DirectMESSAGE]] = []
+        self.vc_messages: List[VoiceMESSAGE] = []
 
     async def add_message(self, message):
         """~  add_message  ~
@@ -254,7 +253,7 @@ class GUILD(BaseGUILD):
         msg_list = self.t_messages if mode == "text" else self.vc_messages
         marked_del = []
 
-        for message in msg_list.copy(): # Copy the avoid issues with the list being modified while iterating
+        for message in msg_list: # Copy the avoid issues with the list being modified while iterating
             if message.is_ready():
                 message.reset_timer()
                 message_ret = await message.send()
