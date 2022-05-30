@@ -138,7 +138,7 @@ def remove_object(data: Iterable) -> bool:
     Name:   remove_object
     Params: channel_ids ~ set of channel ids to look for in the message 
     Return: bool
-    Info:   Remove messages that contain any of the channel ids in the set"""
+    Info:   Remove messages that containt all the given channel ids (data itearable)"""
     ...
 def remove_object(data):    
     if isinstance(data, int): # Guild id
@@ -155,7 +155,7 @@ def remove_object(data):
             if isinstance(guild_user, guild.GUILD): # USER doesn't have channels
                 for message in guild_user.t_messages + guild_user.vc_messages:
                     msg_channels = [x.id for x in message.channels] # Generate snowflake list
-                    if any(x in msg_channels for x in data): # If any of the channels in the set are in the message channel list
+                    if all(x in msg_channels for x in data): # If any of the channels in the set are in the message channel list
                         guild_user.remove_message(message) 
         return True
 

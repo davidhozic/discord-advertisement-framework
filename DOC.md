@@ -4,11 +4,11 @@
 - [**Introduction**](#introduction)
     - [Key Features:](#key-features)
   - [**Examples**](#examples)
-- [**Compatibility with PyCord (discord.py) API wrapper**](#compatibility-with-pycord-discordpy-api-wrapper)
 - [**Getting Started**](#getting-started)
   - [**Defining the server list**](#defining-the-server-list)
   - [**Starting the framework**](#starting-the-framework)
   - [**Obtaining account TOKEN**](#obtaining-account-token)
+- [**Compatibility with PyCord (discord.py) API wrapper**](#compatibility-with-pycord-discordpy-api-wrapper)
 - [**Functions**](#functions)
   - [framework.**run(...)**](#frameworkrun)
     - [**Parameters**](#parameters)
@@ -17,10 +17,10 @@
   - [framework.**shutdown()**](#frameworkshutdown)
     - [**Description**](#description-1)
   - [framework.**add_object**](#frameworkadd_object)
-    - [**Desciption**](#desciption)
+    - [**Description**](#description-2)
     - [**Return**](#return)
   - [framework.**remove_object**](#frameworkremove_object)
-    - [Desciption](#desciption-1)
+    - [Description](#description-3)
     - [Return](#return-1)
 - [**Decorators**](#decorators)
   - [framework.**data_function**](#frameworkdata_function)
@@ -321,7 +321,7 @@ async def add_object(obj: message.BaseMESSAGE, guild_id: int) -> bool:
 ## framework.**remove_object**
 ### Description
 It accepts either **guild_id**, in that case it will remove the guild object that matches  the guild_id from the shilling list,
-or a **iterable (list) of integers**, in that case it will remove the MESSAGE objects that contain all of the channels in the iterable.
+or a **iterable (list) of integers**, in that case it will remove the MESSAGE objects that contain all of the channels in the iterable (data) passed to the remove_object function.
 
 ### Return
 Returns True on success or False on failure.

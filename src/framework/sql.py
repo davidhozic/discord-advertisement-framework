@@ -189,11 +189,12 @@ class LoggerSQL:
             {   
                 "name" :   "vMessageLogFullDETAIL",
                 "stm"    : """VIEW {} AS
-                                SELECT ml.id id, (SELECT content FROM DataHistory dh WHERE dh.id = ml.sent_data) sent_data, mt.name message_type, gt.name guild_type , gu.snowflake_id guild_id, gu.name guild_name, mm.name message_mode, ml.dm_reason dm_reason, ml.[timestamp] [timestamp]
+                                SELECT ml.id id, dh.content sent_data, mt.name message_type, gt.name guild_type , gu.snowflake_id guild_id, gu.name guild_name, mm.name message_mode, ml.dm_reason dm_reason, ml.[timestamp] [timestamp]
                                 FROM MessageLOG ml JOIN MessageTYPE mt ON ml.message_type  = mt.id
                                 LEFT JOIN MessageMODE mm ON mm.id = ml.message_mode
                                 JOIN GuildUSER gu ON gu.id = ml.guild_id
-                                JOIN GuildTYPE gt ON gu.guild_type = gt.id"""
+                                JOIN GuildTYPE gt ON gu.guild_type = gt.id
+                                JOIN DataHistory dh ON dh.id = ml.sent_data"""
             },
             {
                 "name" : "tr_delete_msg_log",
