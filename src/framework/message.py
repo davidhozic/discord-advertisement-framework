@@ -875,7 +875,7 @@ class DirectMESSAGE(BaseMESSAGE):
             if context["success"] is False:
                 reason  = context["reason"]
                 if isinstance(reason, discord.HTTPException):
-                    if (reason.code == 403 or                    # Forbidden
+                    if (reason.status == 403 or                    # Forbidden
                         reason.code in {50007, 10001, 10003}     # Not Forbidden, but bad error codes
                     ):
                         self.dm_channel = None
