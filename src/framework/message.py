@@ -756,7 +756,7 @@ class DirectMESSAGE(BaseMESSAGE):
         return TextMESSAGE.get_data(self)
 
     async def initialize_channels(self,
-                                  user_id) -> bool:
+                                  user: discord.User) -> bool:
         """ ~ async method ~
         @Name: initialize_channels
         @Info:
@@ -766,8 +766,7 @@ class DirectMESSAGE(BaseMESSAGE):
         - options ~ dictionary containing key with user_id
                     (sent to by the USER instance's initialize method)"""
 
-        cl = client.get_client()
-        self.dm_channel = cl.get_user(user_id)
+        self.dm_channel = user
         if self.dm_channel is None:
             return False
         return True
