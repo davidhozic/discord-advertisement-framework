@@ -173,7 +173,7 @@ class BaseMESSAGE:
             # The parameters also get checked/parsed each period right before the send.
 
             # Convert any arguments passed into a list of arguments
-            if  isinstance(self.data, Iterable):
+            if isinstance(self.data, (list, tuple, set)):
                 self.data = list(self.data)   # Convert into a regular list to allow removal of items
             else:
                 self.data = [self.data]       # Place into a list for iteration, to avoid additional code
@@ -327,7 +327,7 @@ class VoiceMESSAGE(BaseMESSAGE):
                 trace(f"Unable to get channel from ID {channel_id}", TraceLEVELS.ERROR)
                 self.channels.remove(channel)
             elif type(channel) is not discord.VoiceChannel:
-                trace(f"VoiceMESSAGE object got ID ({channel_id}) for {type(channel).__name__}, but was expecting {discord.VoiceChannel.__name__}", TraceLEVELS.ERROR)
+                trace(f"VoiceMESSAGE object got ID ({channel_id}) for {type(channel).__name__}, but was expecting {discord.VoiceChannel.__name__}", TraceLEVELS.WARNING)
                 self.channels.remove(channel)
             else:
                 ch_i += 1
@@ -542,7 +542,7 @@ class TextMESSAGE(BaseMESSAGE):
                 trace(f"Unable to get channel from ID {channel_id}", TraceLEVELS.ERROR)
                 self.channels.remove(channel)
             elif type(channel) not in {discord.TextChannel, discord.Thread}:
-                trace(f"TextMESSAGE object got ID ({channel_id}) for {type(channel).__name__}, but was expecting {discord.TextChannel.__name__}", TraceLEVELS.ERROR)
+                trace(f"TextMESSAGE object got ID ({channel_id}) for {type(channel).__name__}, but was expecting {discord.TextChannel.__name__}", TraceLEVELS.WARNING)
                 self.channels.remove(channel)
             else:
                 ch_i += 1
@@ -756,7 +756,7 @@ class DirectMESSAGE(BaseMESSAGE):
         return TextMESSAGE.get_data(self)
 
     async def initialize_channels(self,
-                                  user_id) -> bool:
+                                  user: discord.User) -> bool:
         """ ~ async method ~
         @Name: initialize_channels
         @Info:
@@ -766,8 +766,7 @@ class DirectMESSAGE(BaseMESSAGE):
         - options ~ dictionary containing key with user_id
                     (sent to by the USER instance's initialize method)"""
 
-        cl = client.get_client()
-        self.dm_channel = cl.get_user(user_id)
+        self.dm_channel = user
         if self.dm_channel is None:
             return False
         return True
@@ -876,7 +875,7 @@ class DirectMESSAGE(BaseMESSAGE):
             if context["success"] is False:
                 reason  = context["reason"]
                 if isinstance(reason, discord.HTTPException):
-                    if (reason.code == 403 or                    # Forbidden
+                    if (reason.status == 403 or                    # Forbidden
                         reason.code in {50007, 10001, 10003}     # Not Forbidden, but bad error codes
                     ):
                         self.dm_channel = None

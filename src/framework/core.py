@@ -25,10 +25,6 @@ __all__ = (
     "remove_object"
 )
 
-"""
-TODO:
-    - Documentation for add_object and remove_object
-"""
 #######################################################################
 # Globals   (These are all set in the framework.run function)
 #######################################################################
@@ -125,7 +121,7 @@ async def add_object(obj, guild_id=None) -> bool:
 
 
 @overload
-def remove_object(data: int) -> bool: 
+def remove_object(guild_id: int) -> bool: 
     """
     Name:   remove_object
     Params: guild_id ~ id of the guild to remove
@@ -133,7 +129,7 @@ def remove_object(data: int) -> bool:
     Info:   Removes a guild from the framework that has the given guild_id"""
     ...
 @overload
-def remove_object(data: Iterable) -> bool:
+def remove_object(channel_ids: Iterable) -> bool:
     """
     Name:   remove_object
     Params: channel_ids ~ set of channel ids to look for in the message 

@@ -318,7 +318,7 @@ class USER(BaseGUILD):
         if not isinstance(message, DirectMESSAGE):
             trace(f"[USER]: Invalid xxxMESSAGE type: {type(message).__name__}, expected  {DirectMESSAGE.__name__}", TraceLEVELS.ERROR)
             return False
-        if not await message.initialize(user_id=self.snowflake):
+        if not await message.initialize(user=self.apiobject):
             return False
         self.t_messages.append(message)
         return True
@@ -337,7 +337,7 @@ class USER(BaseGUILD):
 
         user_id = self.snowflake
         cl = client.get_client()
-        self.apiobject = cl.get_user(user_id)
+        self.apiobject = await cl.fetch_user(user_id)
 
         if self.apiobject is not None:
             for message in self._messages:
@@ -357,7 +357,7 @@ class USER(BaseGUILD):
             This is the main coroutine that is responsible for sending all the messages to this specificc guild,
             it is called from the core module's advertiser task"""
         if mode == "text":  # Does not have voice messages, only text based (DirectMESSAGE)
-            for message in self.t_messages.copy(): # Copy the avoid issues with the list being modified while iterating
+            for message in self.t_messages: # Copy the avoid issues with the list being modified while iterating
                 if message.is_ready():
                     message.reset_timer()
                     message_ret = await message.send()

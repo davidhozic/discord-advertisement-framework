@@ -5,7 +5,7 @@
 The Discord advertisement framework is a tool that allows easy advertising on Discord.
 
 # **FULL documentation**
-For documentation on all the object in the framework and section on **GETTING STARTED** see **[DOC.md](https://github.com/davidhozic/discord-advertisement-framework/blob/master/DOC.md)**
+For documentation see [**WIKI**](https://github.com/davidhozic/discord-advertisement-framework/wiki/Introduction)
 
 # **Key features**
 - Periodic advertisement to **Direct (Private) Messages**, **Text channels** and **Voice channels**

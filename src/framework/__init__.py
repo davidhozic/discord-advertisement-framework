@@ -14,8 +14,3 @@ from .message import *
 from .tracing import *
 from .sql import *
 
-"""
-TODO:
-    - Documentation website, split into multiple pages
-    - Documentation shilling mode / manual mode
-"""
