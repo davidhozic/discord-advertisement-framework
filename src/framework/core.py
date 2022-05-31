@@ -182,23 +182,24 @@ def get_user_callback() -> Callable:
 
 
 def run(token : str,
-        intents: Intents=Intents.default(),
         server_list : list=[],
         is_user : bool =False,
         user_callback : bool=None,
         server_log_output : str ="History",
         sql_manager: sql.LoggerSQL=None,
+        intents: Intents=Intents.default(),
         debug : bool=True) -> None:
     """
     @type  : function
     @name  : run
     @params:
         - token             : str       = access token for account
-        - intents           : Intents   = Discord Intents object (API permissions)
         - server_list       : list      = List of framework.GUILD objects
         - is_user           : bool      = Is the token from an user account
         - user_callback     : function  = Function to call on run
         - server_log_output : str       = Path where the server log files will be created
+        - sql_manager       : LoggerSQL = SQL manager object that will save into the database
+        - intents           : Intents   = Discord Intents object (API permissions)
         - debug             : bool      = Print trace message to the console,
                                           useful for debugging
 
@@ -206,7 +207,8 @@ def run(token : str,
     guild.GLOBALS.server_log_path = server_log_output               # Logging folder
     tracing.m_use_debug = debug                                     # Print trace messages to the console for debugging purposes
     GLOBALS.temp_server_list = server_list                          # List of guild objects to iterate thru in the advertiser task
-    GLOBALS.user_callback = user_callback()                         # Called after framework has started
+    if user_callback is not None:
+        GLOBALS.user_callback = user_callback()                         # Called after framework has started
     if is_user:                                                     # Set rate limit avoidance timeout to prevent hitting the rate limit (in case client is an user account)
         message.update_ratelimit_delay(C_RATE_LIMIT_INITIAL_USERS)
 

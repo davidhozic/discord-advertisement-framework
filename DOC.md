@@ -261,13 +261,13 @@ fw.run(
                                   usefull for debugging if you feel like something is not working
 ```py
 framework.run(  token="your_token_here",                # MANDATORY
-                intents=discord.Intents.default()       # OPTIONAL
                 server_list = [framework.GUILD(...),    # OPTIONAL (if not provided, the objects need to be added via add_object function)
                                 framework.GUILD(...)],
                 is_user=False,                          # OPTIONAL
                 user_callback=None,                     # OPTIONAL
-                server_log_output="History"             # OPTIONAL,
-                sql_manager=framework.LoggerSQL(...),   # OPTIONAL,
+                server_log_output="History"             # OPTIONAL
+                sql_manager=framework.LoggerSQL(...),   # OPTIONAL
+                intents=discord.Intents.default(),      # OPTIONAL
                 debug=True)                             # OPTIONAL
 ```
 
