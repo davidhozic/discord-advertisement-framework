@@ -1,0 +1,27 @@
+diff --git a/src/_discord/client.py b/src/_discord/client.py
+index a83ce35..ce204c3 100644
+--- a/src/_discord/client.py
++++ b/src/_discord/client.py
+@@ -1569,6 +1569,10 @@ class Client:
+         """
+         data = await self.http.get_user(user_id)
+         return User(state=self._connection, data=data)
++    
++    async def fetch_relationships(self) -> List[User]:
++        data = await self.http.get_relationships()
++        return [User(state=self._connection, data=d["user"]) for d in data]
+ 
+     async def fetch_channel(self, channel_id: int, /) -> Union[GuildChannel, PrivateChannel, Thread]:
+         """|coro|
+diff --git a/src/_discord/http.py b/src/_discord/http.py
+index 8a71412..6a2528b 100644
+--- a/src/_discord/http.py
++++ b/src/_discord/http.py
+@@ -2474,3 +2474,6 @@ class HTTPClient:
+ 
+     def get_user(self, user_id: Snowflake) -> Response[user.User]:
+         return self.request(Route("GET", "/users/{user_id}", user_id=user_id))
++
++    def get_relationships(self) -> Response[List[user.User]]:
++        return self.request(Route("GET", "/users/@me/relationships"))
+\ No newline at end of file

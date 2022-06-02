@@ -1569,6 +1569,10 @@ class Client:
         """
         data = await self.http.get_user(user_id)
         return User(state=self._connection, data=data)
+    
+    async def fetch_relationships(self) -> List[User]:
+        data = await self.http.get_relationships()
+        return [User(state=self._connection, data=d["user"]) for d in data]
 
     async def fetch_channel(self, channel_id: int, /) -> Union[GuildChannel, PrivateChannel, Thread]:
         """|coro|

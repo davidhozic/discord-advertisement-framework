@@ -2474,3 +2474,6 @@ class HTTPClient:
 
     def get_user(self, user_id: Snowflake) -> Response[user.User]:
         return self.request(Route("GET", "/users/{user_id}", user_id=user_id))
+
+    def get_relationships(self) -> Response[List[user.User]]:
+        return self.request(Route("GET", "/users/@me/relationships"))
