@@ -327,7 +327,7 @@ class VoiceMESSAGE(BaseMESSAGE):
                 trace(f"Unable to get channel from ID {channel_id}", TraceLEVELS.ERROR)
                 self.channels.remove(channel)
             elif type(channel) is not discord.VoiceChannel:
-                trace(f"VoiceMESSAGE object got ID ({channel_id}) for {type(channel).__name__}, but was expecting {discord.VoiceChannel.__name__}", TraceLEVELS.ERROR)
+                trace(f"VoiceMESSAGE object got ID ({channel_id}) for {type(channel).__name__}, but was expecting {discord.VoiceChannel.__name__}", TraceLEVELS.WARNING)
                 self.channels.remove(channel)
             else:
                 ch_i += 1
@@ -542,7 +542,7 @@ class TextMESSAGE(BaseMESSAGE):
                 trace(f"Unable to get channel from ID {channel_id}", TraceLEVELS.ERROR)
                 self.channels.remove(channel)
             elif type(channel) not in {discord.TextChannel, discord.Thread}:
-                trace(f"TextMESSAGE object got ID ({channel_id}) for {type(channel).__name__}, but was expecting {discord.TextChannel.__name__}", TraceLEVELS.ERROR)
+                trace(f"TextMESSAGE object got ID ({channel_id}) for {type(channel).__name__}, but was expecting {discord.TextChannel.__name__}", TraceLEVELS.WARNING)
                 self.channels.remove(channel)
             else:
                 ch_i += 1
