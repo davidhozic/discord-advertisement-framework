@@ -173,7 +173,7 @@ class BaseMESSAGE:
             # The parameters also get checked/parsed each period right before the send.
 
             # Convert any arguments passed into a list of arguments
-            if  isinstance(self.data, Iterable):
+            if isinstance(self.data, list, tuple, set):
                 self.data = list(self.data)   # Convert into a regular list to allow removal of items
             else:
                 self.data = [self.data]       # Place into a list for iteration, to avoid additional code
