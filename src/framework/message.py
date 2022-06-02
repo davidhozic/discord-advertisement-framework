@@ -795,6 +795,7 @@ class DirectMESSAGE(BaseMESSAGE):
                         self.force_retry["TIME"] = retry_after
                     else:
                         trace(f"Rate limited, sleeping for {retry_after} seconds", TraceLEVELS.WARNING)
+                        update_ratelimit_delay(factor=C_RATE_LIMIT_GROWTH_FACTOR)
                         await asyncio.sleep(retry_after)
                         handled = True
                 elif ex.status == 404:      # Unknown object
