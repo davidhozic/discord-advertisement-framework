@@ -25,10 +25,6 @@ __all__ = (
     "remove_object"
 )
 
-"""
-TODO:
-    - Documentation for add_object and remove_object
-"""
 #######################################################################
 # Globals   (These are all set in the framework.run function)
 #######################################################################
