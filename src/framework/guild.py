@@ -337,7 +337,9 @@ class USER(BaseGUILD):
 
         user_id = self.snowflake
         cl = client.get_client()
-        self.apiobject = await cl.fetch_user(user_id)
+        self.apiobject = cl.get_user(user_id)
+        if self.apiobject is None: # User not found in cache, try to fetch from API
+            cl.fetch_user(user_id)
 
         if self.apiobject is not None:
             for message in self._messages:

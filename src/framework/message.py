@@ -584,15 +584,8 @@ class TextMESSAGE(BaseMESSAGE):
 
         # Clear previous message in case of clear-send
         if self.mode == "clear-send" and self.sent_messages[channel.id] is not None:
-            for tries in range(3):
-                try:
-                    # Delete discord message that originated from this MESSAGE object
-                    await self.sent_messages[channel.id].delete()
-                    self.sent_messages[channel.id] = None
-                    break
-                except discord.HTTPException as ex:
-                    if ex.status == 429:
-                        await asyncio.sleep(int(ex.response.headers["Retry-After"])  + 1)
+            await self.sent_messages[channel.id].delete()
+            self.sent_messages[channel.id] = None
 
         ch_perms = channel.permissions_for(channel.guild.get_member(client.get_client().user.id))
         for tries in range(3):  # Maximum 3 tries (if rate limit)
@@ -802,26 +795,12 @@ class DirectMESSAGE(BaseMESSAGE):
                     if ex.code == 10008:    # Unknown message
                         self.previous_message  = None
                         handled = True
-                elif ex.status == 403:
-                    if ex.code == 40003:
-                        retry_after = int(ex.response.headers["Retry-After"])  * C_RATE_LIMIT_SAFETY_FACTOR
-                        trace(f"Rate limited, sleeping for {retry_after} seconds", TraceLEVELS.WARNING)
-                        update_ratelimit_delay(factor=C_RATE_LIMIT_GROWTH_FACTOR)
-                        await asyncio.sleep(retry_after)
-                        handled = True
 
             return handled
 
         if self.mode == "clear-send" and self.previous_message is not None:
-            for tries in range(3):
-                try:
-                    # Delete discord message that originated from this MESSAGE object
-                    await self.previous_message.delete()
-                    self.previous_message = None
-                    break
-                except discord.HTTPException as ex:
-                    if ex.status == 429:
-                        await asyncio.sleep(int(ex.response.headers["Retry-After"])  + 1)
+            self.previous_message.delete()
+            self.previous_message = None
 
         # Send/Edit messages
         for tries in range(3):  # Maximum 3 tries (if rate limit)
