@@ -367,6 +367,8 @@ class VoiceMESSAGE(BaseMESSAGE):
         except Exception as ex:
             if client.get_client().get_channel(channel.id) is None:
                 ex = self.generate_exception(404, 10003, "Channel was deleted", discord.NotFound)
+            else:
+                ex = self.generate_exception(500, 0, "Timeout error", discord.HTTPException)
             return {"success": False, "reason": ex}
         finally:
             if stream is not None:
