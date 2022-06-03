@@ -114,6 +114,7 @@ async def add_object(obj, guild_id=None) -> bool:
                 if await guild_user.add_message(obj):
                     return True
                 trace(f"[CORE]: Unable to add message to guild {guild_user.apiobject}(ID: {guild_user.snowflake})", TraceLEVELS.ERROR)
+                return False
 
         trace(f"[CORE]: Could not find guild with id: {guild_id}", TraceLEVELS.ERROR)
 
