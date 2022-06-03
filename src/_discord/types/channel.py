@@ -71,10 +71,6 @@ class TextChannel(_BaseGuildChannel, _TextChannelOptional):
     type: Literal[0]
 
 
-class ForumChannel(_BaseGuildChannel, _TextChannelOptional):
-    type: Literal[15]
-
-
 class NewsChannel(_BaseGuildChannel, _TextChannelOptional):
     type: Literal[5]
 
@@ -136,7 +132,6 @@ GuildChannel = Union[
     CategoryChannel,
     StageChannel,
     ThreadChannel,
-    ForumChannel,
 ]
 
 
