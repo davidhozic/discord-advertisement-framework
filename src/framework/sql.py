@@ -427,8 +427,15 @@ class LoggerSQL:
                     session.flush()
                     for channel in to_add:
                         self.add_to_cache(CHANNEL, channel.snowflake_id, channel.id)
-        return [(self.CHANNEL.get(d["id"],None),
-                 d.get("reason", None))  for d in channels]
+        
+        ret = [(self.CHANNEL.get(d["id"],None), d.get("reason", None))  for d in channels]
+        #For some reason pytds doesn't like when a row with a NULL column value is followed by a row with a non NULL column value
+        for channel in ret.copy():
+            if channel[1] is None:
+                ret.append(ret.pop(0))
+            else:
+                break
+        return ret
 
     def save_log(self,
                  guild_context: dict,
