@@ -713,8 +713,6 @@ def initialize(mgr_object: LoggerSQL) -> bool:
         GLOBALS.enabled = True
         GLOBALS.manager = mgr_object
         return True
-
-    trace("Unable to setup SQL logging, file logs will be used instead.", TraceLEVELS.WARNING)
     return False
 
 

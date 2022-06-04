@@ -6,6 +6,7 @@
 """
 from   typing import Iterable, Literal, Callable, List, Set, overload
 from   _discord import Intents
+from   contextlib import suppress
 from . const import *
 from . import tracing
 from . tracing import *
@@ -14,6 +15,7 @@ from . import client
 from . import sql
 from . import message
 import asyncio
+
 
 #######################################################################
 # Exports
@@ -34,6 +36,7 @@ class GLOBALS:
     user_callback: Callable = None
     server_list: List[guild.BaseGUILD] = []
     temp_server_list: List[guild.BaseGUILD] = None # Holds the guilds that are awaiting initialization (set in framework.run and cleared after initialization)
+    sql_manager: sql.LoggerSQL = None
 
 #######################################################################
 # Tasks
@@ -68,6 +71,19 @@ async def initialize() -> bool:
     Info:       Function that initializes the guild objects and
                 then returns True on success or False on failure.
     """
+    # Initialize the message module
+    _client = client.get_client()
+    await message.initialize(is_user= not _client.user.bot)
+    
+    # Initialize the SQL module
+    sql_manager = GLOBALS.sql_manager
+    if sql_manager is not None:
+        if not sql.initialize(sql_manager): # Initialize the SQL database
+            trace("[CORE]: Unable to initialize the SQL manager, JSON logs will be used.", TraceLEVELS.ERROR)
+    else:
+        trace("[CORE]: No SQL manager provided, logging will be JSON based", TraceLEVELS.WARNING)
+
+    # Initialize the servers (and their message objects)
     trace("[CORE]: Initializing servers", TraceLEVELS.NORMAL)
     for server in GLOBALS.temp_server_list:
         await add_object(server) # Add each guild to the shilling list
@@ -77,11 +93,14 @@ async def initialize() -> bool:
     asyncio.create_task(advertiser("text"))
     asyncio.create_task(advertiser("voice"))
 
+    # Create the user callback task
     callback = get_user_callback()
-    if callback is not None:   # If user callback function was specified
+    if callback is not None:
         trace("[CORE]: Starting user callback function", TraceLEVELS.NORMAL)
-        asyncio.create_task(callback)  # Create the user callback task
+        asyncio.create_task(callback)
 
+    del GLOBALS.sql_manager
+    del GLOBALS.temp_server_list
     return True
 
 
@@ -210,13 +229,8 @@ def run(token : str,
     guild.GLOBALS.server_log_path = server_log_output               # Logging folder
     tracing.m_use_debug = debug                                     # Print trace messages to the console for debugging purposes
     GLOBALS.temp_server_list = server_list                          # List of guild objects to iterate thru in the advertiser task
+    GLOBALS.sql_manager = sql_manager                               # SQL manager object
     if user_callback is not None:
-        GLOBALS.user_callback = user_callback()                         # Called after framework has started
-
-    if sql_manager is not None:
-        sql.initialize(sql_manager) # Initialize the SQL database
-    else:
-        trace("[CORE]: No SQL manager provided, logging will be JSON based", TraceLEVELS.WARNING)
-
+        GLOBALS.user_callback = user_callback()                     # Called after framework has started
 
     client.initialize(token, bot=not is_user, intents=intents)

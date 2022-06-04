@@ -37,13 +37,9 @@ class CLIENT(discord.Client):
         """
         trace(f"[CLIENT]: Logged in as {self.user}", TraceLEVELS.NORMAL)
         
-        # Initialize modules
-        if (
-            await message.initialize(is_user=not self.user.bot) and
-            await core.initialize()
-        ):
-            # Initialization was successful, so create the advertiser task and start advertising.
-            trace("[CLIENT]: Successful initialization! Framework is now running",TraceLEVELS.NORMAL)
+        # Initialize all the modules from the core module
+        asyncio.create_task(core.initialize())
+        
 
 def initialize(token: str, *,
                bot: bool,
