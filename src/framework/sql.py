@@ -41,9 +41,6 @@ class GLOBALS:
     enabled = False
     lt_types = []
 
-    # Reconnection related
-    rc_loop: AbstractEventLoop = None
-
 
 def register_type(lookuptable: Literal["GuildTYPE", "MessageTYPE", "MessageMODE"]):
     """~ Decorator ~
