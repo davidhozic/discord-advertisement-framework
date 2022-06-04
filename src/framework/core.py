@@ -76,6 +76,12 @@ async def initialize() -> bool:
     trace("[CORE]: Creating advertiser tasks", TraceLEVELS.NORMAL)
     asyncio.create_task(advertiser("text"))
     asyncio.create_task(advertiser("voice"))
+
+    callback = get_user_callback()
+    if callback is not None:   # If user callback function was specified
+        trace("[CORE]: Starting user callback function", TraceLEVELS.NORMAL)
+        asyncio.create_task(callback)  # Create the user callback task
+
     return True
 
 
@@ -114,6 +120,7 @@ async def add_object(obj, guild_id=None) -> bool:
                 if await guild_user.add_message(obj):
                     return True
                 trace(f"[CORE]: Unable to add message to guild {guild_user.apiobject}(ID: {guild_user.snowflake})", TraceLEVELS.ERROR)
+                return False
 
         trace(f"[CORE]: Could not find guild with id: {guild_id}", TraceLEVELS.ERROR)
 
@@ -205,8 +212,6 @@ def run(token : str,
     GLOBALS.temp_server_list = server_list                          # List of guild objects to iterate thru in the advertiser task
     if user_callback is not None:
         GLOBALS.user_callback = user_callback()                         # Called after framework has started
-    if is_user:                                                     # Set rate limit avoidance timeout to prevent hitting the rate limit (in case client is an user account)
-        message.update_ratelimit_delay(C_RATE_LIMIT_INITIAL_USERS)
 
     if sql_manager is not None:
         sql.initialize(sql_manager) # Initialize the SQL database

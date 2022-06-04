@@ -18,14 +18,14 @@ import  _discord as discord
 __all__ = (
     "TextMESSAGE",
     "VoiceMESSAGE",
-    "DirectMESSAGE",
-    "update_ratelimit_delay"
+    "DirectMESSAGE"
 )
 
+
 class GLOBALS:
-    """ ~ Storage Class ~
-    @Info: Contains the global variables of this module"""
-    rlim_avoid_delay = 0
+    """ ~  GLOBALS  ~
+        @Info: Contains the globally needed variables"""
+    is_user = True
 
 
 # Dummy classes for message mods, to use with sql.register_type decorator
@@ -367,6 +367,8 @@ class VoiceMESSAGE(BaseMESSAGE):
         except Exception as ex:
             if client.get_client().get_channel(channel.id) is None:
                 ex = self.generate_exception(404, 10003, "Channel was deleted", discord.NotFound)
+            else:
+                ex = self.generate_exception(500, 0, "Timeout error", discord.HTTPException)
             return {"success": False, "reason": ex}
         finally:
             if stream is not None:
@@ -548,6 +550,28 @@ class TextMESSAGE(BaseMESSAGE):
                 ch_i += 1
 
         return len(self.channels) > 0
+    
+    async def handle_error(self, channel: Union[discord.TextChannel, discord.Thread], ex: Exception):
+        """ ~ async method ~
+        @Name: handle_error
+        @Info: This method handles the error that occured during the execution of the function.
+        @Param:
+            ex : Exception -- The exception that occured
+        @Return: Bool - True on success"""
+        handled = False
+        if isinstance(ex, discord.HTTPException):
+            if ex.status == 429:  # Rate limit
+                retry_after = int(ex.response.headers["Retry-After"]) * C_RATE_LIMIT_SAFETY_FACTOR
+                if ex.code == 20016:    # Slow Mode
+                    self.force_retry["ENABLED"] = True
+                    self.force_retry["TIME"] = retry_after
+                    trace(f"{channel.name} is in slow mode, retrying in {retry_after} seconds", TraceLEVELS.WARNING)
+                handled = True
+            elif ex.status == 404:      # Unknown object
+                if ex.code == 10008:    # Unknown message
+                    self.sent_messages[channel.id]  = None
+                    handled = True
+        return handled
 
     async def send_channel(self,
                            channel: discord.TextChannel,
@@ -563,36 +587,11 @@ class TextMESSAGE(BaseMESSAGE):
             - "success" : bool ~ True if successful, else False
             - "reason"  : Exception ~ Only present if "success" is False,
                             contains the Exception returned by the send attempt."""
-        async def handle_error(ex: Exception):
-            handled = False
-            if isinstance(ex, discord.HTTPException):
-                if ex.status == 429:  # Rate limit
-                    retry_after = int(ex.response.headers["Retry-After"]) * C_RATE_LIMIT_SAFETY_FACTOR
-                    if ex.code == 20016:    # Slow Mode
-                        self.force_retry["ENABLED"] = True
-                        self.force_retry["TIME"] = retry_after
-                    else:                   # Normal (write) rate limit
-                        trace(f"Rate limited, sleeping for {retry_after} seconds", TraceLEVELS.WARNING)
-                        update_ratelimit_delay(factor=C_RATE_LIMIT_GROWTH_FACTOR)
-                        await asyncio.sleep(retry_after)
-                        handled = True
-                elif ex.status == 404:      # Unknown object
-                    if ex.code == 10008:    # Unknown message
-                        self.sent_messages[channel.id]  = None
-                        handled = True
-            return handled
 
         # Clear previous message in case of clear-send
         if self.mode == "clear-send" and self.sent_messages[channel.id] is not None:
-            for tries in range(3):
-                try:
-                    # Delete discord message that originated from this MESSAGE object
-                    await self.sent_messages[channel.id].delete()
-                    self.sent_messages[channel.id] = None
-                    break
-                except discord.HTTPException as ex:
-                    if ex.status == 429:
-                        await asyncio.sleep(int(ex.response.headers["Retry-After"])  + 1)
+            await self.sent_messages[channel.id].delete()
+            self.sent_messages[channel.id] = None
 
         ch_perms = channel.permissions_for(channel.guild.get_member(client.get_client().user.id))
         for tries in range(3):  # Maximum 3 tries (if rate limit)
@@ -617,7 +616,7 @@ class TextMESSAGE(BaseMESSAGE):
                 return {"success" : True}
 
             except Exception as ex:
-                if await handle_error(ex) is False:
+                if not await self.handle_error(ex):
                     return {"success" : False, "reason" : ex}
 
     async def send(self) -> Union[dict,  None]:
@@ -636,7 +635,8 @@ class TextMESSAGE(BaseMESSAGE):
             # Send to channels
             for channel in self.channels:
                 # Clear previous messages sent to channel if mode is MODE_DELETE_SEND
-                await asyncio.sleep(GLOBALS.rlim_avoid_delay)
+                if GLOBALS.is_user:
+                    await asyncio.sleep(C_USER_WAIT_TIME)
                 context = await self.send_channel(channel, **_data_to_send)
                 if context["success"]:
                     succeded_channels.append(channel)
@@ -771,6 +771,27 @@ class DirectMESSAGE(BaseMESSAGE):
             return False
         return True
 
+    async def handle_error(self, ex: Exception):
+        """ ~ async method ~
+        @Name: handle_error
+        @Info:
+        The method handles the error that occured during the send_channel method.
+        @Parameters:
+        - ex ~ Exception instance"""
+        handled = False
+        if isinstance(ex, discord.HTTPException):
+            if ex.status == 429 or ex.code == 40003: # Too Many Requests or opening DMs too fast
+                retry_after = float(ex.response.headers["Retry-After"])  * C_RATE_LIMIT_SAFETY_FACTOR
+                trace(f"Rate limited, sleeping for {retry_after} seconds", TraceLEVELS.WARNING)
+                await asyncio.sleep(retry_after)
+                handled = True
+            elif ex.status == 404:      # Unknown object
+                if ex.code == 10008:    # Unknown message
+                    self.previous_message  = None
+                    handled = True
+
+        return handled
+
     async def send_channel(self,
                            text: str,
                            embed: EMBED,
@@ -785,43 +806,9 @@ class DirectMESSAGE(BaseMESSAGE):
             - "reason"  : Exception ~ Only present if "success" is False,
                             contains the Exception returned by the send attempt."""
 
-        async def handle_error(ex: Exception):
-            handled = False
-            if isinstance(ex, discord.HTTPException):
-                if ex.status == 429 or ex.code == 40003:
-                    retry_after = int(ex.response.headers["Retry-After"])  * C_RATE_LIMIT_SAFETY_FACTOR
-                    if ex.code == 20016:    # Slow Mode
-                        self.force_retry["ENABLED"] = True
-                        self.force_retry["TIME"] = retry_after
-                    else:
-                        trace(f"Rate limited, sleeping for {retry_after} seconds", TraceLEVELS.WARNING)
-                        update_ratelimit_delay(factor=C_RATE_LIMIT_GROWTH_FACTOR)
-                        await asyncio.sleep(retry_after)
-                        handled = True
-                elif ex.status == 404:      # Unknown object
-                    if ex.code == 10008:    # Unknown message
-                        self.previous_message  = None
-                        handled = True
-                elif ex.status == 403:
-                    if ex.code == 40003:
-                        retry_after = int(ex.response.headers["Retry-After"])  * C_RATE_LIMIT_SAFETY_FACTOR
-                        trace(f"Rate limited, sleeping for {retry_after} seconds", TraceLEVELS.WARNING)
-                        update_ratelimit_delay(factor=C_RATE_LIMIT_GROWTH_FACTOR)
-                        await asyncio.sleep(retry_after)
-                        handled = True
-
-            return handled
-
         if self.mode == "clear-send" and self.previous_message is not None:
-            for tries in range(3):
-                try:
-                    # Delete discord message that originated from this MESSAGE object
-                    await self.previous_message.delete()
-                    self.previous_message = None
-                    break
-                except discord.HTTPException as ex:
-                    if ex.status == 429:
-                        await asyncio.sleep(int(ex.response.headers["Retry-After"])  + 1)
+            self.previous_message.delete()
+            self.previous_message = None
 
         # Send/Edit messages
         for tries in range(3):  # Maximum 3 tries (if rate limit)
@@ -840,7 +827,7 @@ class DirectMESSAGE(BaseMESSAGE):
                 return {"success" : True}
 
             except Exception as ex:
-                if await handle_error(ex) is False or tries == 2:
+                if await self.handle_error(ex) is False or tries == 2:
                     return {"success" : False, "reason" : ex}
 
     async def send(self) -> Union[dict, None]:
@@ -871,7 +858,8 @@ class DirectMESSAGE(BaseMESSAGE):
                     _data_to_send["files"].append(element)
 
         if any(_data_to_send.values()):
-            await asyncio.sleep(GLOBALS.rlim_avoid_delay)
+            if GLOBALS.is_user:
+                await asyncio.sleep(C_USER_WAIT_TIME)
             context = await self.send_channel(**_data_to_send)
             if context["success"] is False:
                 reason  = context["reason"]
@@ -886,15 +874,13 @@ class DirectMESSAGE(BaseMESSAGE):
         return None
 
 
-def update_ratelimit_delay(time: int=None,
-                           factor: int=None):
-    """~ Function ~
-    @Info: Sets the delay (in seconds) between each channel send attempt, to avoid rate limit
-    @Param:
-    - time: int ~ Ammount of time in seconds to update the rate limit avoidance delay with
-    - factor: int ~ The factor to INCREMENT (multiply) the current ratelimit delay with"""
-    if time is not None:
-        GLOBALS.rlim_avoid_delay = time
 
-    if factor is not None:
-        GLOBALS.rlim_avoid_delay = GLOBALS.rlim_avoid_delay * (1 + factor) if GLOBALS.rlim_avoid_delay > 0 else 1
+async def initialize(is_user: bool) -> bool:
+    """ ~ async function ~
+    @Name: initialize
+    @Info:
+        Initializes the module.
+    @Parameters:
+        - is_user: bool ~ True if the class is used for a user, else False"""
+    GLOBALS.is_user = is_user
+    return True

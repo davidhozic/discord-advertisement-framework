@@ -8,7 +8,7 @@ import  asyncio
 import  _discord as discord
 from    .tracing import *
 from    . import core
-
+from    . import message
 
 
 #######################################################################
@@ -36,13 +36,12 @@ class CLIENT(discord.Client):
                    successfully logged into discord.
         """
         trace(f"[CLIENT]: Logged in as {self.user}", TraceLEVELS.NORMAL)
-
-        callback = core.get_user_callback()
-        if callback is not None:   # If user callback function was specified
-            trace("[CLIENT]: Starting user callback function", TraceLEVELS.NORMAL)
-            asyncio.create_task(callback)  # Create the user callback task
-
-        if await core.initialize():
+        
+        # Initialize modules
+        if (
+            await message.initialize(is_user=not self.user.bot) and
+            await core.initialize()
+        ):
             # Initialization was successful, so create the advertiser task and start advertising.
             trace("[CLIENT]: Successful initialization! Framework is now running",TraceLEVELS.NORMAL)
 
