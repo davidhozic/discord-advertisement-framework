@@ -765,9 +765,11 @@ class DirectMESSAGE(BaseMESSAGE):
         @Parameters:
         - options ~ dictionary containing key with user_id
                     (sent to by the USER instance's initialize method)"""
-
-        self.dm_channel = user.dm_channel if user.dm_channel is not None else await user.create_dm()
-        if self.dm_channel is None:
+        try:
+            self.dm_channel = user.dm_channel if user.dm_channel is not None else await user.create_dm()
+            if self.dm_channel is None:
+                return False
+        except discord.HTTPException as ex:
             return False
         return True
 
