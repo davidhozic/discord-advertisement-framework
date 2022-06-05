@@ -41,9 +41,6 @@ class GLOBALS:
     enabled = False
     lt_types = []
 
-    # Reconnection related
-    rc_loop: AbstractEventLoop = None
-
 
 def register_type(lookuptable: Literal["GuildTYPE", "MessageTYPE", "MessageMODE"]):
     """~ Decorator ~
@@ -225,18 +222,19 @@ class LoggerSQL:
                 * This is done within sql instead of python for speed optimization
                 */
                 BEGIN
-	                DECLARE @existing_data_id int = NULL;
-                   	DECLARE @last_log_id      int = NULL;
+	                BEGIN TRY
+                        DECLARE @existing_data_id int = NULL;
+                   	    DECLARE @last_log_id      int = NULL;
 
-                	SELECT @existing_data_id = id FROM DataHISTORY dh WHERE dh.content = @sent_data;	
+                	    SELECT @existing_data_id = id FROM DataHISTORY dh WHERE dh.content = @sent_data;	
                   
-                    IF @existing_data_id IS NULL
-                    BEGIN
-                        INSERT INTO DataHISTORY(content) VALUES(@sent_data);
-                        SELECT @existing_data_id = id FROM DataHISTORY dh WHERE dh.content = @sent_data;
-                    END
+                        IF @existing_data_id IS NULL
+                        BEGIN
+                            INSERT INTO DataHISTORY(content) VALUES(@sent_data);
+                            SELECT @existing_data_id = id FROM DataHISTORY dh WHERE dh.content = @sent_data;
+                        END
                     
-                    BEGIN TRY
+                    
 	                    INSERT INTO MessageLOG(sent_data, message_type, guild_id, message_mode, dm_reason, [timestamp]) VALUES(
 	                        @existing_data_id, @message_type, @guild_id, @message_mode, @dm_reason, GETDATE()
 	                    );
@@ -260,7 +258,6 @@ class LoggerSQL:
                    		BEGIN TRAN;
                         THROW;                   		
                     END CATCH
-                    
                 END"""
             }
         ]
@@ -713,8 +710,6 @@ def initialize(mgr_object: LoggerSQL) -> bool:
         GLOBALS.enabled = True
         GLOBALS.manager = mgr_object
         return True
-
-    trace("Unable to setup SQL logging, file logs will be used instead.", TraceLEVELS.WARNING)
     return False
 
 
