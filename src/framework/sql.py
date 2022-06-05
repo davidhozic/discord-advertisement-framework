@@ -313,7 +313,9 @@ class LoggerSQL:
         """~ Method ~
         @Info: Creates engine"""
         with suppress(SQLAlchemyError):
-            self.engine = create_engine(f"mssql+pytds://{self.username}:{self.__password}@{self.server}/{self.database}", echo=False, future=True, pool_pre_ping=True)
+            self.engine = create_engine(f"mssql+pytds://{self.username}:{self.__password}@{self.server}/{self.database}",
+                                        echo=False,future=True, pool_pre_ping=True,
+                                        connect_args={"login_timeout" : C_CONNECTOR_TIMEOUT, "timeout" : C_CONNECTOR_TIMEOUT})
             self._sessionmaker = sessionmaker(bind=self.engine)
             return True
 
