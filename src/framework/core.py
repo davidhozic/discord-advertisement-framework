@@ -134,6 +134,7 @@ async def add_object(obj, guild_id=None) -> bool:
         return True
     elif isinstance(obj, message.BaseMESSAGE):
         if guild_id is None:
+            trace("[CORE]: guild_id is required to add a message", TraceLEVELS.ERROR)
             return False 
         guild_user: guild.BaseGUILD # Typing hint
         for guild_user in GLOBALS.server_list:
