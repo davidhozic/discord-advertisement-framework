@@ -101,6 +101,8 @@ async def initialize() -> bool:
 
     del GLOBALS.sql_manager
     del GLOBALS.temp_server_list
+
+    trace("[CORE]: Initialization complete.", TraceLEVELS.NORMAL)
     return True
 
 
