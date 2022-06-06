@@ -15,8 +15,11 @@ from  sqlalchemy import (
 from  sqlalchemy.exc  import SQLAlchemyError
 from  sqlalchemy.orm import sessionmaker, Session
 from  sqlalchemy.ext.declarative import declarative_base
-from  pytds import DatabaseError, ClosedConnectionError
-from   asyncio import AbstractEventLoop
+from  pytds import (
+                    ClosedConnectionError,
+                    TimeoutError,
+                    Error as PyTDSError
+                   )
 from  .tracing import *
 from  .timing import *
 from  .const import *
@@ -140,17 +143,18 @@ class LoggerSQL:
             ~ Coroutine ~
             @Info: Tries to reconnect after <time>, if it failed,
                    it retries after <time>"""
-            for tries in range(C_RECONNECT_ATTEMPTS):
+            for tries in range(SQL_RECONNECT_ATTEMPTS):
+                trace(f"[SQL]: Retrying to connect in {time} seconds.")
+                await asyncio.sleep(time) 
                 trace(f"[SQL]: Reconnecting to database {self.database}.")
                 if self.connect_cursor():
                     trace(f"[SQL]: Reconnected to the database {self.database}.")
                     GLOBALS.enabled = True
-                    return
-                trace(f"[SQL]: Retrying to connect in {time} seconds.")
-                await asyncio.sleep(time)       
-            trace(f"[SQL]: Failed to reconnect in {C_RECONNECT_ATTEMPTS} attempts, SQL logging is now disabled.")
+                    return      
+            trace(f"[SQL]: Failed to reconnect in {SQL_RECONNECT_ATTEMPTS} attempts, SQL logging is now disabled.")
 
         GLOBALS.enabled = False
+        self.cursor.close()
         asyncio.create_task(_reconnect())
 
     def create_data_types(self) -> bool:
@@ -164,7 +168,7 @@ class LoggerSQL:
                 "stm": "TYPE {} AS TABLE(id int, reason nvarchar(max))"
             }
         ]
-        with suppress(SQLAlchemyError):
+        with suppress(SQLAlchemyError, TimeoutError, PyTDSError):
             trace("[SQL]: Creating data types...", TraceLEVELS.NORMAL)
             with self._sessionmaker.begin() as session:
                 for statement in stms:
@@ -185,39 +189,104 @@ class LoggerSQL:
         stms = [
             {   
                 "name" :   "vMessageLogFullDETAIL",
-                "stm"    : """VIEW {} AS
-                                SELECT ml.id id, dh.content sent_data, mt.name message_type, gt.name guild_type , gu.snowflake_id guild_id, gu.name guild_name, mm.name message_mode, ml.dm_reason dm_reason, ml.[timestamp] [timestamp]
-                                FROM MessageLOG ml JOIN MessageTYPE mt ON ml.message_type  = mt.id
-                                LEFT JOIN MessageMODE mm ON mm.id = ml.message_mode
-                                JOIN GuildUSER gu ON gu.id = ml.guild_id
-                                JOIN GuildTYPE gt ON gu.guild_type = gt.id
-                                JOIN DataHistory dh ON dh.id = ml.sent_data"""
+                "stm"    : """
+                VIEW {} AS
+                SELECT ml.id id, dh.content sent_data, mt.name message_type, gt.name guild_type , gu.snowflake_id guild_id, gu.name guild_name, mm.name message_mode, ml.dm_reason dm_reason, ml.[timestamp] [timestamp]
+                FROM MessageLOG ml JOIN MessageTYPE mt ON ml.message_type  = mt.id
+                LEFT JOIN MessageMODE mm ON mm.id = ml.message_mode
+                JOIN GuildUSER gu ON gu.id = ml.guild_id
+                JOIN GuildTYPE gt ON gu.guild_type = gt.id
+                JOIN DataHistory dh ON dh.id = ml.sent_data"""
             },
             {
                 "name" : "tr_delete_msg_log",
-                "stm"  : """TRIGGER {} ON MessageChannelLOG FOR DELETE
-                            AS
-                            /* Trigger deletes a MessageLOG row matching the deleted channel log in case all the rows of MessageChannelLOG
-                            * referencing that specific MessageLOG row were deleted
-                            */
-                            BEGIN
-                                DECLARE @MessageLogID int;
-                                SELECT @MessageLogID = del.log_id FROM DELETED del;
-                                IF (SELECT COUNT(*) FROM MessageChannelLOG mlc WHERE mlc.log_id = @MessageLogID) = 0
-                                BEGIN 
-                                    PRINT 'Deleting message log (ID: '+ CAST(@MessageLogID as nvarchar(max)) +') because all of the channel logs referencing it were deleted';
-                                    DELETE FROM MessageLOG WHERE id = @MessageLogID;
-                                END
-                            END"""
+                "stm"  : """
+                TRIGGER {} ON MessageChannelLOG FOR DELETE
+                AS
+                /* Trigger deletes a MessageLOG row matching the deleted channel log in case all the rows of MessageChannelLOG
+                * referencing that specific MessageLOG row were deleted
+                */
+                BEGIN
+                    DECLARE @MessageLogID int;
+                    SELECT @MessageLogID = del.log_id FROM DELETED del;
+                    IF (SELECT COUNT(*) FROM MessageChannelLOG mlc WHERE mlc.log_id = @MessageLogID) = 0
+                    BEGIN 
+                        PRINT 'Deleting message log (ID: '+ CAST(@MessageLogID as nvarchar(max)) +') because all of the channel logs referencing it were deleted';
+                        DELETE FROM MessageLOG WHERE id = @MessageLogID;
+                    END
+                END"""
+            },
+            {
+                "name" : "fn_log_success_rate",
+                "stm"  : """
+                FUNCTION {}(@log_id int) 
+                RETURNS decimal(8,5) AS
+                BEGIN
+                    /*
+                    * ~ function ~
+                    * @Info: Returns relative number of successful channels for specific log_id. 
+                    * 		  If the log_id does not appear in the table, it returns 1/
+                    */
+                    DECLARE @rate decimal(8,5);
+
+                    IF (SELECT CAST(COUNT(*) AS decimal(8,5)) FROM MessageChannelLOG WHERE log_id = @log_id) = 0
+                        RETURN 1;
+                    
+                    SELECT @rate = (SELECT CAST(COUNT(*) AS decimal(8,5)) FROM MessageChannelLOG WHERE log_id = @log_id AND reason IS NULL) /
+                                (SELECT COUNT(*) FROM MessageChannelLOG WHERE log_id = @log_id)
+
+                    RETURN @rate;
+                END"""
+            },
+            {
+                "name" : "fn_guilduser_success_rate",
+                "stm"  : """
+                FUNCTION {}(@snowflake_id bigint,
+                            @limit int = 1000) 
+                RETURNS decimal(8,5) AS
+                BEGIN 
+                    /* ~ function ~
+                    * @Info: Returns relative number of fully successful attempts for specific guild/user.
+                    * 	      If guild/user is not found or there are no logs for the guild/user, returns 1.
+                    */
+                    DECLARE @internal_id smallint, @guild_type nvarchar(20), @rate decimal(8,5);
+
+                    SELECT  @internal_id = gu.id, 
+                            @guild_type = gt.name 
+                    FROM GuildUSER gu JOIN GuildTYPE gt ON gu.guild_type = gt.id
+                    WHERE snowflake_id = @snowflake_id;
+                    
+                    IF @internal_id IS NULL OR (SELECT COUNT(*) FROM MessageLOG WHERE guild_id = @internal_id) = 0 OR @limit = 0
+                        RETURN 1;
+                        
+                    IF @guild_type = 'GUILD'
+                    BEGIN
+                        WITH tmp_table AS (SELECT TOP (@limit) id FROM MessageLOG WHERE guild_id = @internal_id ORDER BY id DESC)	 -- Get all the rows that match the internal guild/user id
+                            SELECT @rate = 
+                                (SELECT CAST(COUNT(*) AS decimal(8,5)) FROM tmp_table WHERE dbo.fn_log_success_rate(id) = 1) / 
+                                (SELECT COUNT(*) FROM tmp_table); -- fully successful vs all
+                    END
+                    
+                    ELSE IF @guild_type = 'USER' 
+                    BEGIN
+                        WITH tmp_table AS (SELECT TOP (@limit) dm_reason FROM MessageLOG WHERE guild_id = @internal_id ORDER BY id DESC)	 -- Get all the rows that match the internal guild/user id
+                            SELECT @rate = 
+                                (SELECT CAST(COUNT(*) AS decimal(8,5)) FROM tmp_table WHERE dm_reason IS  NULL) /  -- If dm_reason is NULL, then the send attempt was successful
+                                (SELECT COUNT(*) FROM tmp_table); -- successful vs all
+                    END
+                    
+                    RETURN @rate;
+                END"""
             },
             {
                 "name" : "sp_save_log",
-                "stm" : """PROCEDURE {}(@sent_data nvarchar(max),
-                                        @message_type smallint,
-                                        @guild_id smallint,
-                                        @message_mode smallint,
-                                        @dm_reason nvarchar(max),
-                                        @channels t_tmp_channel_log READONLY) AS
+                "stm" : """
+                PROCEDURE {}(@sent_data nvarchar(max),
+                             @message_type smallint,
+                             @guild_id smallint,
+                             @message_mode smallint,
+                             @dm_reason nvarchar(max),
+                             @channels t_tmp_channel_log READONLY) AS
                 /* Procedure that saves the log							 
                 * This is done within sql instead of python for speed optimization
                 */
@@ -261,7 +330,7 @@ class LoggerSQL:
                 END"""
             }
         ]
-        with suppress(SQLAlchemyError):
+        with suppress(SQLAlchemyError, TimeoutError, PyTDSError):
             trace("[SQL]: Creating Views, Procedures & Functions...", TraceLEVELS.NORMAL)
             with self._sessionmaker.begin() as session:
                 for statement in stms:
@@ -276,7 +345,7 @@ class LoggerSQL:
         """
         session : Session
         
-        with suppress(SQLAlchemyError):
+        with suppress(SQLAlchemyError, TimeoutError, PyTDSError):
             trace("[SQL]: Generating lookuptable values...", TraceLEVELS.NORMAL)
             with self._sessionmaker.begin() as session:
                 for to_add in copy.deepcopy(GLOBALS.lt_types):  # Deepcopied to prevent SQLAlchemy from deleting the data
@@ -293,7 +362,7 @@ class LoggerSQL:
     def create_tables(self, tables=None) -> bool:
         """~ Method ~
         @Info: Creates tables from the SQLAlchemy's descriptor classes"""
-        with suppress(SQLAlchemyError):
+        with suppress(SQLAlchemyError, TimeoutError, PyTDSError):
             trace("[SQL]: Creating tables...", TraceLEVELS.NORMAL)
             self.Base.metadata.create_all(bind=self.engine, tables=tables)
             return True
@@ -303,7 +372,7 @@ class LoggerSQL:
     def connect_cursor(self) -> bool:
         """ ~ Method ~
         @Info: Creates a cursor for the database (for faster communication)"""
-        with suppress(SQLAlchemyError):
+        with suppress(SQLAlchemyError, TimeoutError, PyTDSError):
             trace("[SQL]: Connecting the cursor...", TraceLEVELS.NORMAL)
             self.cursor = self.engine.raw_connection().cursor()
             return True
@@ -312,10 +381,10 @@ class LoggerSQL:
     def begin_engine(self) -> bool:
         """~ Method ~
         @Info: Creates engine"""
-        with suppress(SQLAlchemyError):
+        with suppress(SQLAlchemyError, TimeoutError, PyTDSError):
             self.engine = create_engine(f"mssql+pytds://{self.username}:{self.__password}@{self.server}/{self.database}",
                                         echo=False,future=True, pool_pre_ping=True,
-                                        connect_args={"login_timeout" : C_CONNECTOR_TIMEOUT, "timeout" : C_CONNECTOR_TIMEOUT})
+                                        connect_args={"login_timeout" : SQL_CONNECTOR_TIMEOUT, "timeout" : SQL_CONNECTOR_TIMEOUT})
             self._sessionmaker = sessionmaker(bind=self.engine)
             return True
 
@@ -324,7 +393,7 @@ class LoggerSQL:
     # def create_database(self) -> bool:
     #     """ ~ Method ~
     #     @Info: Creates database if it doesn't exist"""
-    #     with suppress(SQLAlchemyError):
+    #     with suppress(SQLAlchemyError, TimeoutError, PyTDSError):
     #         trace("[SQL]: Creating database...", TraceLEVELS.NORMAL)
     #         if not database_exists(self.engine.url):
     #             create_database(self.engine.url)
@@ -435,36 +504,58 @@ class LoggerSQL:
             else:
                 break
         return ret
-     
+    
+    def stop_engine(self):
+        """~ Method ~
+        @Info: Closes the engine and the cursor"""
+        self.cursor.close()
+        self.engine.dispose()
+        GLOBALS.enabled = False
+
     def handle_error(self,
                      exception: int, message: str) -> bool:
         """~ function ~
         @Info: Used to handle errors that happen in the save_log method.
         @Return: Returns BOOL indicating if logging to the base should be attempted again."""
         res = False
-        if exception == 208:            # Invalid object name (table deleted)
-            res = self.create_tables()
-        elif exception in {547, 515}:   # Constraint conflict, NULL value 
-            r_table = re.search(r'(?<=table "dbo.).+(?=")', message)
-            if r_table is not None:
-                self.clear_cache(r_table.group(0))  # Clears only the affected table cache 
-            else:
-                self.clear_cache()  # Clears all caching tables
-            res = self.generate_lookup_values()
-        elif exception in {-1, 2, 53}:  # Diconnect error, reconnect after period
-                self.reconnect_after(C_RECONNECT_TIME)
-        elif exception == 2812:
-            res = self.create_data_types() # Create data types
-            if res:
-                res = self.create_analytic_objects() # Creates procedures, functions and views
-        elif exception == 2801: # Object was altered (via external source) after procedure was compiled
-            res = True # Just retry
-        elif exception == 1205: # Transaction deadlocked
-            with suppress(SQLAlchemyError):
-                with self._sessionmaker() as session:
-                    session.commit() # Just commit
-                res = True
-        time.sleep(C_RECOVERY_TIME)
+        # Tries to handle the error x times (breaks instantly if successful or if it's a unhandabe error)
+        for tries in range(SQL_MAX_EHANDLE_ATTEMPTS):
+            time.sleep(SQL_RECOVERY_TIME) # Wait a bit before trying again
+            
+            # Handle the error
+            if exception == 208:            # Invalid object name (table deleted)
+                res = self.create_tables()
+            elif exception in {547, 515}:   # Constraint conflict, NULL value 
+                r_table = re.search(r'(?<=table "dbo.).+(?=")', message)
+                if r_table is not None:
+                    self.clear_cache(r_table.group(0))  # Clears only the affected table cache 
+                else:
+                    self.clear_cache()  # Clears all caching tables
+                res = self.generate_lookup_values()
+            elif exception in {-1, 2, 53}:  # Diconnect error, reconnect after period
+                    self.reconnect_after(SQL_RECONNECT_TIME)
+                    break
+            elif exception == 2812:
+                res = self.create_data_types() # Create data types
+                if res:
+                    res = self.create_analytic_objects() # Creates procedures, functions and views
+            elif exception == 2801: # Object was altered (via external source) after procedure was compiled
+                res = True # Just retry
+            elif exception == 1205: # Transaction deadlocked
+                with suppress(SQLAlchemyError, TimeoutError, PyTDSError):
+                    with self._sessionmaker() as session:
+                        session.commit() # Just commit
+                    res = True
+            else: # Unhandable error
+                break
+            
+            if res: # Handled successfully
+                break
+
+        # Could not handle the error, switch to file logging
+        if not res and exception not in {-1, 2, 53}:
+            self.stop_engine()
+
         return res  # Returns if the error was handled or not
 
     def save_log(self,
@@ -499,7 +590,7 @@ class LoggerSQL:
         if channels is not None:
             channels = channels['successful'] + channels['failed']
 
-        for tries in range(C_FAIL_RETRIES):
+        for tries in range(SQL_MAX_SAVE_ATTEMPTS):
             try:
                 # Insert guild into the database and cache if it doesn't exist
                 guild_id = self.get_insert_guild(guild_snowflake, guild_name, guild_type)
@@ -518,25 +609,21 @@ class LoggerSQL:
                 return True
             
             except Exception as ex:
-                if not isinstance(ex, (SQLAlchemyError, DatabaseError, ClosedConnectionError)): # If it's not a database error
-                    break
-
                 if isinstance(ex, SQLAlchemyError):
                     ex = ex.orig
 
                 if isinstance(ex, ClosedConnectionError):
                     ex.text = ex.args[0]
                     ex.number = 53  # Because only text is returned
-                          
-                trace(f"[SQL]: Saving log failed. {ex.number} - {ex.text}. Retrying... (Tries left: {C_FAIL_RETRIES - tries - 1})")
-                code = ex.number
-                message = ex.text
 
+
+                code = ex.number  if hasattr(ex, "number") else -1
+                message = ex.text if hasattr(ex, "text")   else str(ex)
+                trace(f"[SQL]: Saving log failed. {code} - {message}. Attempting recovery... (Tries left: {SQL_MAX_SAVE_ATTEMPTS - tries - 1})")
                 if not self.handle_error(code, message):
                     break
         
-        trace(f"Unable to save to SQL, saving to file instead", TraceLEVELS.WARNING)
-        GLOBALS.enabled = False
+        trace(f"[SQL]: Saving log failed. Saving to file instead.")
         return False
 
 
