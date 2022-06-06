@@ -1,0 +1,133 @@
+{
+    "name": "\\David's dungeon",
+    "id": 863071397207212052,
+    "type": "GUILD",
+    "message_history": [
+        {
+            "sent_data": {
+                "text": "https://i.imgflip.com/56bhvt.gif"
+            },
+            "channels": {
+                "successful": [
+                    {
+                        "name": "sp",
+                        "id": 978332728615378984
+                    }
+                ],
+                "failed": []
+            },
+            "type": "TextMESSAGE",
+            "mode": "edit",
+            "index": 6,
+            "timestamp": "23.05.2022 18:28:15"
+        },
+        {
+            "sent_data": {
+                "text": "http://static1.squarespace.com/static/60503ac20951e15087fbe7b8/60504609ee9c445722c9dd4e/60e3f9b541eb1b01e8e46854/1627103366283/RalphRoll.gif?format=1500w"
+            },
+            "channels": {
+                "successful": [
+                    {
+                        "name": "sp",
+                        "id": 978332728615378984
+                    }
+                ],
+                "failed": []
+            },
+            "type": "TextMESSAGE",
+            "mode": "edit",
+            "index": 5,
+            "timestamp": "23.05.2022 18:28:09"
+        },
+        {
+            "sent_data": {
+                "text": "https://bit.ly/3u5D8Dt"
+            },
+            "channels": {
+                "successful": [
+                    {
+                        "name": "sp",
+                        "id": 978332728615378984
+                    }
+                ],
+                "failed": []
+            },
+            "type": "TextMESSAGE",
+            "mode": "edit",
+            "index": 4,
+            "timestamp": "23.05.2022 18:28:04"
+        },
+        {
+            "sent_data": {
+                "text": "https://www.gifcen.com/wp-content/uploads/2022/03/rickroll-gif-4.gif"
+            },
+            "channels": {
+                "successful": [
+                    {
+                        "name": "sp",
+                        "id": 978332728615378984
+                    }
+                ],
+                "failed": []
+            },
+            "type": "TextMESSAGE",
+            "mode": "edit",
+            "index": 3,
+            "timestamp": "23.05.2022 18:27:59"
+        },
+        {
+            "sent_data": {
+                "text": "https://static.wikia.nocookie.net/a1dea591-8a10-4c02-a573-5321c601c129"
+            },
+            "channels": {
+                "successful": [
+                    {
+                        "name": "sp",
+                        "id": 978332728615378984
+                    }
+                ],
+                "failed": []
+            },
+            "type": "TextMESSAGE",
+            "mode": "edit",
+            "index": 2,
+            "timestamp": "23.05.2022 18:27:54"
+        },
+        {
+            "sent_data": {
+                "text": "https://bit.ly/3sHrjQZ"
+            },
+            "channels": {
+                "successful": [
+                    {
+                        "name": "sp",
+                        "id": 978332728615378984
+                    }
+                ],
+                "failed": []
+            },
+            "type": "TextMESSAGE",
+            "mode": "edit",
+            "index": 1,
+            "timestamp": "23.05.2022 18:27:49"
+        },
+        {
+            "sent_data": {
+                "text": "https://i.pinimg.com/originals/b7/fb/80/b7fb80122cf46d0e584f3a0768aef282.gif"
+            },
+            "channels": {
+                "successful": [
+                    {
+                        "name": "sp",
+                        "id": 978332728615378984
+                    }
+                ],
+                "failed": []
+            },
+            "type": "TextMESSAGE",
+            "mode": "edit",
+            "index": 0,
+            "timestamp": "23.05.2022 18:27:44"
+        }
+    ]
+}

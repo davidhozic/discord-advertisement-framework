@@ -1,46 +1,12 @@
-#  **DISCORD ADVERTISEMENT FRAMEWORK (BOT) - DAF**
-![PyPI](https://img.shields.io/pypi/v/discord-advert-framework?color=green&style=for-the-badge)
-[![CodeFactor Grade](https://img.shields.io/codefactor/grade/github/davidhozic/discord-advertisement-framework?style=for-the-badge)](https://www.codefactor.io/repository/github/davidhozic/discord-advertisement-framework)
-
-The Discord advertisement framework is a tool that allows easy advertising on Discord.
-
-# **FULL documentation**
-For documentation see [**WIKI**](https://github.com/davidhozic/discord-advertisement-framework/wiki/Introduction)
-
-# **Key features**
-- Periodic advertisement to **Direct (Private) Messages**, **Text channels** and **Voice channels**
-- Advertising with either static data or **dynamic data** (function call)
-- Logging of send attempts with **JSON** file logs or to a **SQL** server (Microsoft SQL Server only).
-- Ability to add additional application layers with help of asyncio
-- Easy to setup
-
-
-# **Installation**
-To install the framework use one of the following:
-```py
-# Windows
-python -m pip install discord-advert-framework
-```
-```py
-# Windows
-py -3 -m pip install discord-advert-framework
-```
-```py
-# Linux
-python3 -m pip install discord-advert-framework
-```
-
-# **Example**
-```py
 """
 ~ Example file ~
 This file shows how you can make a script that automatically generates the server
 list based on the `allowed_strings` list (contains strings that must appear in the channel name we want to shill into).
 
-We pass the framework a user_callback function named `find_advertisement_channels` which autofills the servers list with GUILD objects.
+We pass the framework a user_callback function named `find_advertisement_channels` which autofills the `servers` list with GUILD objects.
 """
 import framework as fw
-
+import secret
 
 # Create a list in which we will automatically add guilds
 allowed_strings = {"shill", "advert", "promo"}
@@ -60,7 +26,7 @@ async def find_advertisement_channels():
     
     for guild in client.guilds:  # Iterate thru all the guilds where the bot is in
         channels = []
-        for channel in guild.text_channels: # Iterate thru all the text channels in the guild
+        for i, channel in enumerate(guild.text_channels): # Iterate thru all the text channels in the guild
             if any([x in channel.name for x in allowed_strings]): # Check if any of the strings in allowed_strings are in the channel name
                 channels.append(channel.id) # If so, add the channel id to the list
         
@@ -83,8 +49,7 @@ async def find_advertisement_channels():
 
 
 fw.run(
-    token="OSDSJ44JNnnJNJ2NJDBWQUGHSHFAJSHDUQHFDBADVAHJVERAHGDVAHJSVDE",   # Example token
+    token=secret.C_TOKEN,   # Example token
     server_list=servers,
     user_callback=find_advertisement_channels
 )
-```

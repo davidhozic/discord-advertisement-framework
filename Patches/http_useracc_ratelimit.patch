@@ -1,0 +1,38 @@
+diff --git a/src/_discord/http.py b/src/_discord/http.py
+index 08def4c..b964c51 100644
+--- a/src/_discord/http.py
++++ b/src/_discord/http.py
+@@ -237,7 +237,7 @@ class HTTPClient:
+         }
+ 
+         if self.token is not None:
+-            headers["Authorization"] = f"Bot {self.token}"
++            headers["Authorization"] = f"Bot {self.token}" if self.is_bot else self.token
+         # some checking if it's a JSON request
+         if "json" in kwargs:
+             headers["Content-Type"] = "application/json"
+@@ -313,7 +313,7 @@ class HTTPClient:
+ 
+                         # we are being rate limited
+                         if response.status == 429:
+-                            if not response.headers.get("Via") or isinstance(data, str):
++                            if not response.headers.get("Via") or isinstance(data, str) or (hasattr(response, "code") and response.code == 40003):
+                                 # Banned by Cloudflare more than likely.
+                                 raise HTTPException(response, data)
+ 
+@@ -394,13 +394,14 @@ class HTTPClient:
+ 
+     # login management
+ 
+-    async def static_login(self, token: str) -> user.User:
++    async def static_login(self, token: str, *, bot: bool) -> user.User:
+         # Necessary to get aiohttp to stop complaining about session creation
+         self.__session = aiohttp.ClientSession(
+             connector=self.connector, ws_response_class=DiscordClientWebSocketResponse
+         )
+         old_token = self.token
+         self.token = token
++        self.is_bot = bot
+ 
+         try:
+             data = await self.request(Route("GET", "/users/@me"))

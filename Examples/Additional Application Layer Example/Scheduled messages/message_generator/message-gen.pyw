@@ -64,6 +64,7 @@ class MAIN_MENU:
         [
             # Title
             [Text("Embed title:", size=(12,None)), Input(size=(90,None), key="-EMBED-TITLE-INPUT-")],
+            [Text("Title link:", size=(12,None)), Input(size=(90,None), key="-EMBED-TITLE-LINK-INPUT-")],
             # Author
             [Text("Author name: ", size=(12,None)), Input(C_DEFAULT_AUTHOR_NAME, size=(90,None), key="-EMBED-AUTHOR-NAME-INPUT-")],
             [Text("Author icon url: ", size=(12,None)), Input(C_DEFAULT_AUTHOR_IMG, size=(90,None), key="-EMBED-AUTHOR-IMG-INPUT-")],
@@ -119,14 +120,14 @@ def serialize(obj):
                 "title" : obj.embed.title,
                 "author" : {"name": obj.embed.author.name, "icon_url": obj.embed.author.icon_url},
                 "thumbnail" : obj.embed.thumbnail.url,
+                "url" : obj.embed.url,
                 "image" : obj.embed.image.url,
                 "fields" : [
                     {"inline" : field.inline, "name": field.name, "value": field.value} for field in obj.embed.fields
                 ]
             } if obj.embed is not None else None,
         "send_date" : {
-            "seconds" : obj.send_date.timestamp(),
-            "tz" :  obj.send_date.tzinfo
+            "seconds" : obj.send_date.timestamp()
         },
         "files" : [
             {"fname" : file.fname, "fdata" : base64.b64encode(file.fdata).decode("ascii")} for file in obj.files
@@ -139,7 +140,7 @@ def deserialize(data):
     d = json.loads(data)
     ret.text = d["text"]
     ret.channel = d["channel"]
-    ret.send_date = datetime.datetime.fromtimestamp(d["send_date"]["seconds"], d["send_date"]["tz"])
+    ret.send_date = datetime.datetime.fromtimestamp(d["send_date"]["seconds"])
     if d["files"] is not None:
         ret.files = []
         for file in d["files"]:
@@ -147,11 +148,11 @@ def deserialize(data):
     if d["embed"] is not None:
         ret.embed = discord.Embed()
         ret.embed.title = d["embed"]["title"]
+        ret.embed.url = d["embed"]["url"]
         ret.embed.set_author(name=d["embed"]["author"]["name"], icon_url=d["embed"]["author"]["icon_url"])
         ret.embed.set_thumbnail(url=d["embed"]["thumbnail"])
         ret.embed.set_image(url=d["embed"]["image"]) 
         ret.embed._fields = d["embed"]["fields"]
-    
     return ret
                     
 def main_loop():
@@ -179,7 +180,7 @@ def main_loop():
             l_file = l_values[l_key]
             l_msg = None
             MAIN_MENU.c_window.Element("-OPEN-FILE-").update("")
-            with open(l_file, "r") as l_file:
+            with open(l_file, "r", encoding="utf-8") as l_file:
                 l_msg =  deserialize(l_file.read())
             
             # Generate embeds table
@@ -193,12 +194,14 @@ def main_loop():
                 MAIN_MENU.c_window.Element("-EMBED-AUTHOR-NAME-INPUT-").update(l_msg.embed.author.name)
                 MAIN_MENU.c_window.Element("-EMBED-THUMBNAIL-INPUT-").update(l_msg.embed.thumbnail.url)
                 MAIN_MENU.c_window.Element("-EMBED-TITLE-INPUT-").update(l_msg.embed.title)
+                MAIN_MENU.c_window.Element("-EMBED-TITLE-LINK-INPUT-").update(l_msg.embed.url)
             else:
                 MAIN_MENU.c_window.Element("-EMBED-AUTHOR-IMG-INPUT-").update("")
                 MAIN_MENU.c_window.Element("-EMBED-IMAGE-INPUT-").update("")
                 MAIN_MENU.c_window.Element("-EMBED-AUTHOR-NAME-INPUT-").update("")
                 MAIN_MENU.c_window.Element("-EMBED-THUMBNAIL-INPUT-").update("")
                 MAIN_MENU.c_window.Element("-EMBED-TITLE-INPUT-").update("")
+                MAIN_MENU.c_window.Element("-EMBED-TITLE-LINK-INPUT-").update("")
 
             
             # Generate file table
@@ -243,6 +246,8 @@ def main_loop():
                     l_embed = discord.Embed(color=discord.Color.green())
                     # Set title
                     l_embed.title = l_values["-EMBED-TITLE-INPUT-"]
+                    # Set title link
+                    l_embed.url = l_values["-EMBED-TITLE-LINK-INPUT-"]
                     # Set author
                     l_embed.set_author(name=l_values['-EMBED-AUTHOR-NAME-INPUT-'], icon_url=l_values["-EMBED-AUTHOR-IMG-INPUT-"])
                     # Set embed image
@@ -257,7 +262,7 @@ def main_loop():
                 if UNIFILE.all_files:
                     l_files = UNIFILE.all_files
 
-                with open(l_values['-SAVE-'], "w") as l_file:
+                with open(l_values['-SAVE-'], "w", encoding="utf-8") as l_file:
                     l_msg_object = UNIMESSAGE(l_text, l_embed, l_files,l_scheduled_time, l_channel)
                     l_file.write(serialize(l_msg_object))
             except Exception as ex:
