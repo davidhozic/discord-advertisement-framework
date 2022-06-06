@@ -12,7 +12,7 @@ with open("./requirements.txt" , 'r', encoding="utf-8") as rf:
 
 __metadata__ = \
 {
-    "version" :  "1.9.rc1",
+    "version" :  "1.9.rc2",
     "requirements" : req,
     "minimum_py_version" :  "3.8",
 }
