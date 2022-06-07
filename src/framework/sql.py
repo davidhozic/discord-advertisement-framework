@@ -371,15 +371,6 @@ class LoggerSQL:
             return True
         
         return False
-    
-    def create_schema(self):
-        """~ Method ~
-        @Info: Creates the schema for the database (tables, views, funcions, procedures, triggers, etc.)"""
-        res = False
-        trace("[SQL]: Creating schema...", TraceLEVELS.NORMAL)
-        if self.create_tables():
-            res = self.create_analytic_objects()
-        return res
 
     def connect_cursor(self) -> bool:
         """ ~ Method ~
@@ -428,7 +419,7 @@ class LoggerSQL:
         #     return False
         
         # Create tables and the session class bound to the engine
-        if not self.create_schema():
+        if not self.create_tables():
             trace("[SQL]: Unable to create all the tables.", TraceLEVELS.ERROR)
             return False
 
@@ -533,8 +524,9 @@ class LoggerSQL:
         res = False
         time.sleep(SQL_RECOVERY_TIME)
         # Handle the error
-        if exception == 208:            # Invalid object name (table deleted)
-            res = self.create_schema()
+        if exception == 208:  # Invalid object name (table deleted)
+            if self.create_tables() and self.create_data_types() and self.create_analytic_objects():
+                res = True
         elif exception in {547, 515}:   # Constraint conflict, NULL value 
             r_table = re.search(r'(?<=table "dbo.).+(?=")', message)
             if r_table is not None:
@@ -545,9 +537,8 @@ class LoggerSQL:
         elif exception in {-1, 2, 53}:  # Diconnect error, reconnect after period
                 self.reconnect_after(SQL_RECONNECT_TIME, loop)
         elif exception == 2812:
-            res = self.create_data_types() # Create data types
-            if res:
-                res = self.create_analytic_objects() # Creates procedures, functions and views
+            if self.create_data_types() and self.create_analytic_objects():
+                res = True
         elif exception == 2801: # Object was altered (via external source) after procedure was compiled
             res = True # Just retry
         elif exception == 1205: # Transaction deadlocked
@@ -679,7 +670,7 @@ class GuildUSER(LoggerSQL.Base):
 
     __tablename__ = "GuildUSER"
 
-    id = Column(SmallInteger, Identity(start=0,increment=1),primary_key=True)
+    id = Column(Integer, Identity(start=0,increment=1),primary_key=True)
     snowflake_id = Column(BigInteger)
     name = Column(NVARCHAR)
     guild_type = Column(SmallInteger, ForeignKey("GuildTYPE.id"), nullable=False)
@@ -702,10 +693,10 @@ class CHANNEL(LoggerSQL.Base):
         guild_id: int  :: Snowflake identificator pointing to a GUILD/USER"""
 
     __tablename__ = "CHANNEL"
-    id = Column(SmallInteger, Identity(start=0,increment=1),primary_key=True)
+    id = Column(Integer, Identity(start=0,increment=1),primary_key=True)
     snowflake_id = Column(BigInteger)
     name = Column(NVARCHAR)
-    guild_id = Column(SmallInteger, ForeignKey("GuildUSER.id"), nullable=False)
+    guild_id = Column(Integer, ForeignKey("GuildUSER.id"), nullable=False)
 
     def __init__(self,
                  snowflake: int,
@@ -760,7 +751,7 @@ class MessageLOG(LoggerSQL.Base):
     id = Column(Integer, Identity(start=0, increment=1), primary_key=True)
     sent_data = Column(Integer, ForeignKey("DataHISTORY.id"))
     message_type = Column(SmallInteger, ForeignKey("MessageTYPE.id"), nullable=False)
-    guild_id =     Column(SmallInteger, ForeignKey("GuildUSER.id"), nullable=False)
+    guild_id =     Column(Integer, ForeignKey("GuildUSER.id"), nullable=False)
     message_mode = Column(SmallInteger, ForeignKey("MessageMODE.id")) # [TextMESSAGE, DirectMESSAGE]
     dm_reason   = Column(NVARCHAR)  # [DirectMESSAGE]
     timestamp = Column(DateTime)
@@ -789,7 +780,7 @@ class MessageChannelLOG(LoggerSQL.Base):
     __tablename__ = "MessageChannelLOG"
 
     log_id = Column(Integer, ForeignKey("MessageLOG.id", ondelete="CASCADE"), primary_key=True)
-    channel_id = Column(SmallInteger, ForeignKey("CHANNEL.id"), primary_key=True)
+    channel_id = Column(Integer, ForeignKey("CHANNEL.id"), primary_key=True)
     reason = Column(NVARCHAR)
     def __init__(self,
                  message_log_id: int,
