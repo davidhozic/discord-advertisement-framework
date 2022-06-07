@@ -252,7 +252,7 @@ class LoggerSQL:
                     * @Info: Returns relative number of fully successful attempts for specific guild/user.
                     * 	      If guild/user is not found or there are no logs for the guild/user, returns 1.
                     */
-                    DECLARE @internal_id smallint, @guild_type nvarchar(20), @rate decimal(8,5);
+                    DECLARE @internal_id int, @guild_type nvarchar(20), @rate decimal(8,5);
 
                     SELECT  @internal_id = gu.id, 
                             @guild_type = gt.name 
@@ -286,7 +286,7 @@ class LoggerSQL:
                 "stm" : """
                 PROCEDURE {}(@sent_data nvarchar(max),
                              @message_type smallint,
-                             @guild_id smallint,
+                             @guild_id int,
                              @message_mode smallint,
                              @dm_reason nvarchar(max),
                              @channels t_tmp_channel_log READONLY) AS
