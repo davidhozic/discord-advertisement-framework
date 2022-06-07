@@ -14,7 +14,7 @@ from    . import client
 from    . import sql
 import  time
 import  json
-import pathlib
+import  pathlib
 
 __all__ = (
     "GUILD",
@@ -99,8 +99,8 @@ class BaseGUILD:
         """
         raise NotImplementedError
 
-    def generate_log(self,
-                     message_context: dict) -> None:
+    async def generate_log(self,
+                           message_context: dict) -> None:
         """
         Name:   generate_log
         Param:
@@ -117,8 +117,8 @@ class BaseGUILD:
         try:
             manager = sql.get_sql_manager()
             if (
-                manager is None or # Short circuit evaluation
-                not manager.save_log(guild_context, message_context)
+                manager is None or  # Short circuit evaluation
+                not await manager.save_log(guild_context, message_context)
             ):
                 timestruct = time.localtime()
                 timestamp = "{:02d}.{:02d}.{:04d} {:02d}:{:02d}:{:02d}".format(timestruct.tm_mday,
@@ -272,7 +272,7 @@ class GUILD(BaseGUILD):
                 if len(message.channels) == 0:
                     marked_del.append(message) # All channels were removed (either not found or forbidden) -> remove message from send list
                 if self._generate_log and message_ret is not None:
-                    self.generate_log(message_ret)
+                    await self.generate_log(message_ret)
 
         # Cleanup messages marked for removal
         for message in marked_del:
@@ -364,7 +364,7 @@ class USER(BaseGUILD):
                     message.reset_timer()
                     message_ret = await message.send()
                     if self._generate_log and message_ret is not None:
-                        self.generate_log(message_ret)
+                        await self.generate_log(message_ret)
                     
                     if message.dm_channel is None:
                         self.t_messages.clear()            # Remove all messages since that they all share the same user and will fail
