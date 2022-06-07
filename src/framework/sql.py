@@ -91,7 +91,6 @@ class LoggerSQL:
         "MessageMODE",
         "MessageTYPE",
         "GuildTYPE",
-
         "GuildUSER",
         "CHANNEL"
     )
@@ -135,29 +134,31 @@ class LoggerSQL:
         for k in tables:
             getattr(self, k).clear()
 
-    def reconnect_after(self, time: int):
+    def reconnect_after(self, wait: int, loop: asyncio.AbstractEventLoop) -> None:
         """ ~ Method ~
         @Info: reconnects the SQL manager to the database after <time>.
         @Params:
             - time: int ~ Time in seconds after which reconnect"""
-        async def _reconnect():
+        def _reconnect():
             """
             ~ Coroutine ~
-            @Info: Tries to reconnect after <time>, if it failed,
-                   it retries after <time>"""
+            @Info: Tries to reconnect after <wait>, if it failed,
+                   it retries after <wait>"""
             for tries in range(SQL_RECONNECT_ATTEMPTS):
-                trace(f"[SQL]: Retrying to connect in {time} seconds.")
-                await asyncio.sleep(time) 
                 trace(f"[SQL]: Reconnecting to database {self.database}.")
                 if self.connect_cursor():
                     trace(f"[SQL]: Reconnected to the database {self.database}.")
                     GLOBALS.enabled = True
-                    return      
+                    return
+                if tries != SQL_RECONNECT_ATTEMPTS - 1: # Don't wait if it's the last attempt
+                    trace(f"[SQL]: Retrying to connect in {wait} seconds.")
+                    time.sleep(wait) 
+
             trace(f"[SQL]: Failed to reconnect in {SQL_RECONNECT_ATTEMPTS} attempts, SQL logging is now disabled.")
 
         GLOBALS.enabled = False
         self.cursor.close()
-        asyncio.create_task(_reconnect())
+        loop.run_in_executor(None, _reconnect)
 
     def create_data_types(self) -> bool:
         """~ Method ~
@@ -361,20 +362,29 @@ class LoggerSQL:
 
         return False
 
-    def create_tables(self, tables=None) -> bool:
+    def create_tables(self) -> bool:
         """~ Method ~
         @Info: Creates tables from the SQLAlchemy's descriptor classes"""
         with suppress(SQLAlchemyError, TimeoutError, PyTDSError):
             trace("[SQL]: Creating tables...", TraceLEVELS.NORMAL)
-            self.Base.metadata.create_all(bind=self.engine, tables=tables)
+            self.Base.metadata.create_all(bind=self.engine)
             return True
         
         return False
     
+    def create_schema(self):
+        """~ Method ~
+        @Info: Creates the schema for the database (tables, views, funcions, procedures, triggers, etc.)"""
+        res = False
+        trace("[SQL]: Creating schema...", TraceLEVELS.NORMAL)
+        if self.create_tables():
+            res = self.create_analytic_objects()
+        return res
+
     def connect_cursor(self) -> bool:
         """ ~ Method ~
         @Info: Creates a cursor for the database (for faster communication)"""
-        with suppress(SQLAlchemyError, TimeoutError, PyTDSError):
+        with suppress(Exception):
             trace("[SQL]: Connecting the cursor...", TraceLEVELS.NORMAL)
             self.cursor = self.engine.raw_connection().cursor()
             return True
@@ -418,7 +428,7 @@ class LoggerSQL:
         #     return False
         
         # Create tables and the session class bound to the engine
-        if not self.create_tables():
+        if not self.create_schema():
             trace("[SQL]: Unable to create all the tables.", TraceLEVELS.ERROR)
             return False
 
@@ -515,7 +525,8 @@ class LoggerSQL:
         GLOBALS.enabled = False
 
     def handle_error(self,
-                     exception: int, message: str) -> bool:
+                     exception: int, message: str,
+                     loop: asyncio.AbstractEventLoop) -> bool:
         """~ function ~
         @Info: Used to handle errors that happen in the save_log method.
         @Return: Returns BOOL indicating if logging to the base should be attempted again."""
@@ -523,7 +534,7 @@ class LoggerSQL:
         time.sleep(SQL_RECOVERY_TIME)
         # Handle the error
         if exception == 208:            # Invalid object name (table deleted)
-            res = self.create_tables()
+            res = self.create_schema()
         elif exception in {547, 515}:   # Constraint conflict, NULL value 
             r_table = re.search(r'(?<=table "dbo.).+(?=")', message)
             if r_table is not None:
@@ -532,7 +543,7 @@ class LoggerSQL:
                 self.clear_cache()  # Clears all caching tables
             res = self.generate_lookup_values()
         elif exception in {-1, 2, 53}:  # Diconnect error, reconnect after period
-                self.reconnect_after(SQL_RECONNECT_TIME)
+                self.reconnect_after(SQL_RECONNECT_TIME, loop)
         elif exception == 2812:
             res = self.create_data_types() # Create data types
             if res:
@@ -587,6 +598,11 @@ class LoggerSQL:
         # This is to avoid eg. procedures being called while they are being created,
         # handle error being called from different tasks, etc.
         async with self.lock: 
+            if not GLOBALS.enabled:
+                # While current task was waiting for lock to be released, 
+                # some other task disabled the logging due to an unhandable error
+                return False
+
             for tries in range(SQL_MAX_SAVE_ATTEMPTS):
                 try:
                     # Insert guild into the database and cache if it doesn't exist
@@ -607,7 +623,7 @@ class LoggerSQL:
                 
                 except Exception as ex:
                     if isinstance(ex, SQLAlchemyError):
-                        ex = ex.orig
+                        ex = ex.orig  # Get the original exception
 
                     if isinstance(ex, ClosedConnectionError):
                         ex.text = ex.args[0]
@@ -618,10 +634,10 @@ class LoggerSQL:
                     trace(f"[SQL]: Saving log failed. {code} - {message}. Attempting recovery... (Tries left: {SQL_MAX_SAVE_ATTEMPTS - tries - 1})")
                     loop = asyncio.get_event_loop()
                     # Run in executor to prevent blocking
-                    if not await loop.run_in_executor(None, self.handle_error, code, message):
+                    if not await loop.run_in_executor(None, self.handle_error, code, message, asyncio.get_event_loop()):
                         break
         
-        trace(f"[SQL]: Saving log failed. Saving to file instead.")
+        trace(f"[SQL]: Saving log failed. Switching to file logging.")
         return False
 
 
