@@ -5,7 +5,7 @@
 """
 from enum import Enum, auto
 import time
-
+from threading import Lock
 
 __all__ = (
     "TraceLEVELS",
@@ -13,6 +13,7 @@ __all__ = (
 )
 
 m_use_debug = None
+m_lock = Lock()
 
 class TraceLEVELS(Enum):
     """
@@ -31,12 +32,13 @@ def trace(message: str,
     - level   : TraceLEVELS = Level of the trace
     """
     if m_use_debug:
-        timestruct = time.localtime()
-        timestamp = "Date: {:02d}.{:02d}.{:04d} Time:{:02d}:{:02d}"
-        timestamp = timestamp.format(timestruct.tm_mday,
-                                     timestruct.tm_mon,
-                                     timestruct.tm_year,
-                                     timestruct.tm_hour,
-                                     timestruct.tm_min)
-        l_trace = f"{timestamp}\nTrace level: {level.name}\nMessage: {message}\n"
-        print(l_trace)
+        with m_lock:
+            timestruct = time.localtime()
+            timestamp = "Date: {:02d}.{:02d}.{:04d} Time:{:02d}:{:02d}"
+            timestamp = timestamp.format(timestruct.tm_mday,
+                                        timestruct.tm_mon,
+                                        timestruct.tm_year,
+                                        timestruct.tm_hour,
+                                        timestruct.tm_min)
+            l_trace = f"{timestamp}\nTrace level: {level.name}\nMessage: {message}\n"
+            print(l_trace)

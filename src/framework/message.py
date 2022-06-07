@@ -561,7 +561,7 @@ class TextMESSAGE(BaseMESSAGE):
         handled = False
         if isinstance(ex, discord.HTTPException):
             if ex.status == 429:  # Rate limit
-                retry_after = int(ex.response.headers["Retry-After"]) * C_RATE_LIMIT_SAFETY_FACTOR
+                retry_after = int(ex.response.headers["Retry-After"]) * RLIM_SAFETY_FACTOR
                 if ex.code == 20016:    # Slow Mode
                     self.force_retry["ENABLED"] = True
                     self.force_retry["TIME"] = retry_after
@@ -636,7 +636,7 @@ class TextMESSAGE(BaseMESSAGE):
             for channel in self.channels:
                 # Clear previous messages sent to channel if mode is MODE_DELETE_SEND
                 if GLOBALS.is_user:
-                    await asyncio.sleep(C_USER_WAIT_TIME)
+                    await asyncio.sleep(RLIM_USER_WAIT_TIME)
                 context = await self.send_channel(channel, **data_to_send)
                 if context["success"]:
                     succeded_channels.append(channel)
@@ -783,7 +783,7 @@ class DirectMESSAGE(BaseMESSAGE):
         handled = False
         if isinstance(ex, discord.HTTPException):
             if ex.status == 429 or ex.code == 40003: # Too Many Requests or opening DMs too fast
-                retry_after = float(ex.response.headers["Retry-After"])  * C_RATE_LIMIT_SAFETY_FACTOR
+                retry_after = float(ex.response.headers["Retry-After"])  * RLIM_SAFETY_FACTOR
                 trace(f"Rate limited, sleeping for {retry_after} seconds", TraceLEVELS.WARNING)
                 await asyncio.sleep(retry_after)
                 handled = True
@@ -792,7 +792,7 @@ class DirectMESSAGE(BaseMESSAGE):
                     self.previous_message  = None
                     handled = True
             elif ex.status == 400: # Bad Request
-                await asyncio.sleep(C_USER_WAIT_TIME * 5) # To avoid triggering selfbot detection
+                await asyncio.sleep(RLIM_USER_WAIT_TIME * 5) # To avoid triggering selfbot detection
 
         return handled
 
@@ -845,7 +845,7 @@ class DirectMESSAGE(BaseMESSAGE):
         data_to_send = self.get_data()
         if any(data_to_send.values()):
             if GLOBALS.is_user:
-                await asyncio.sleep(C_USER_WAIT_TIME)
+                await asyncio.sleep(RLIM_USER_WAIT_TIME)
             context = await self.send_channel(**data_to_send)
             if context["success"] is False:
                 reason  = context["reason"]
