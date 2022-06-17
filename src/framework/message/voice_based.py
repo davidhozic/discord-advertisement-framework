@@ -20,7 +20,7 @@ __all__ = (
 
 @sql.register_type("MessageTYPE")
 class VoiceMESSAGE(BaseMESSAGE):
-    """ ~ BaseMESSAGE class ~
+    """ ~ VoiceMESSAGE class ~
     Name: VoiceMESSAGE
     Info: The VoiceMESSAGE object containts parameters which describe behaviour and data that will be sent to the channels.
     Params:
@@ -149,10 +149,7 @@ class VoiceMESSAGE(BaseMESSAGE):
             if not all([ch_perms.connect, ch_perms.stream, ch_perms.speak]):
                 raise self.generate_exception(403, 50013, "You lack permissions to perform that action", discord.Forbidden)
 
-            # Try to open file first as FFMpegOpusAudio doesn't raise exception if file does not exist
-            with open(audio.filename, "rb"):
-                pass
-            stream = discord.FFmpegOpusAudio(audio.filename)
+            stream = discord.FFmpegOpusAudio(await audio.get_url())
 
             voice_client = await channel.connect(timeout=C_VC_CONNECT_TIMEOUT)
             voice_client.play(stream)
@@ -160,7 +157,9 @@ class VoiceMESSAGE(BaseMESSAGE):
                 await asyncio.sleep(1)
             return {"success": True}
         except Exception as ex:
-            if client.get_client().get_channel(channel.id) is None:
+            if isinstance(ex, FileExistsError):
+                pass # Don't change error
+            elif client.get_client().get_channel(channel.id) is None:
                 ex = self.generate_exception(404, 10003, "Channel was deleted", discord.NotFound)
             else:
                 ex = self.generate_exception(500, 0, "Timeout error", discord.HTTPException)

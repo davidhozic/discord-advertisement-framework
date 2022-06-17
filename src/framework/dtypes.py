@@ -3,11 +3,14 @@
     The module contains defintions regarding the data types
     you can send using the xxxMESSAGE objects.
 """
-from typing import List, Union
-from contextlib import suppress
-import copy
-import datetime
-import _discord as discord
+from    typing      import List, Union
+from    contextlib  import suppress
+import  copy
+import  datetime
+import  _discord    as discord
+import  youtube_dl  as ytdl
+import  asyncio
+from    pathlib     import Path
 
 
 __all__ = (
@@ -24,23 +27,17 @@ __all__ = (
 # Decorators
 #######################################################################
 class FunctionBaseCLASS:
-    """
-    type: dummy class
-    name: FunctionBaseCLASS
-    info: Used as a base class to FunctionCLASS which gets created in framework.data_function decorator.
-          Because the FunctionCLASS is inaccessible outside the data_function decorator,
-          this class is used to detect if the MESSAGE.data parameter is of function type,
-          because the function isinstance also returns True when comparing
-          the object to it's class or to the base class from which the object class is inherited from.
-    """
+    """ ~ class ~
+    @Info: Used as a base class to FunctionCLASS which gets created in framework.data_function decorator.
+           Because the FunctionCLASS is inaccessible outside the data_function decorator,
+           this class is used to detect if the MESSAGE.data parameter is of function type,
+           because the function isinstance also returns True when comparing
+           the object to it's class or to the base class from which the object class is inherited from."""
 
 def data_function(fnc):
-    """
-    type:   Decorator
-    name:   data_function
-    info:   Decorator used to create a framework FunctionCLASS class for function
-    return: FunctionCLASS
-    """
+    """ ~ decorator ~
+    @Info:   Decorator used to create a framework FunctionCLASS class for function
+    @Return: FunctionCLASS"""
     class FunctionCLASS(FunctionBaseCLASS):
         """"
         Name:  FunctionCLASS
@@ -72,13 +69,13 @@ def data_function(fnc):
 # Other
 #######################################################################
 class EmbedFIELD:
-    """
-    Embedded field class for use in EMBED object constructor
-    Parameters:
-    -  Name         : str    -- Name of the field
-    -  Content      : str    -- Content of the embedded field
-    -  Inline       : bool   -- Make this field appear in the same line as the previous field
-    """
+    """ ~ class ~
+    @Info:
+        Embedded field class for use in EMBED object constructor
+    @Param:
+        -  Name: str      :: Name of the field
+        -  Content: str   :: Content of the embedded field
+        -  Inline: bool   :: Make this field appear in the same line as the previous field"""
     def __init__(self,
                  name : str,
                  content : str,
@@ -88,15 +85,15 @@ class EmbedFIELD:
         self.inline = inline
 
 class EMBED(discord.Embed):
-    """
-    Derrived class of discord.Embed with easier definition
-    @Parameters:
+    """ ~ class ~
+    @Info: Derrived class of discord.Embed with easier definition
+    @Parame:
         - Added parameters:
-            - author_name       : str           -- Name of embed author,
-            - author_icon       : str           -- Url to author image,
-            - image             : str           -- Url of image to be placed at the end of the embed
-            - thumbnail         : str           -- Url of image that will be placed at the top right of embed
-            - fields            : list          -- List of EmbedFIELD objects
+            - author_name       : str           :: Name of embed author,
+            - author_icon       : str           :: Url to author image,
+            - image             : str           :: Url of image to be placed at the end of the embed
+            - thumbnail         : str           :: Url of image that will be placed at the top right of embed
+            - fields            : list          :: List of EmbedFIELD objects
         - Inherited from discord.Embed:
             - For the other, original params see https://docs.pycord.dev/en/master/api.html?highlight=discord%20embed#discord.Embed
 
@@ -123,10 +120,9 @@ class EMBED(discord.Embed):
     @staticmethod
     def from_discord_embed(_object : discord.Embed):
         """ ~ static method ~
-        Name:   from_discord_embed
-        Type:   static method
-        Param:
-            - object : discord.Embed | discord.Embed (same type) -- The discord Embed object you want converted into the framework.EMBED class"""
+        @Info: Creates an EMBED object from a discord.Embed object
+        @Param:
+            - object : discord.Embed | discord.Embed (same type) :: The discord Embed object you want converted into the framework.EMBED class"""
         ret = EMBED()
         # Copy attributes but not special methods to the new EMBED. "dir" is used instead of "vars" because the object does not support the function.
         for key in dir(_object):
@@ -180,28 +176,83 @@ class EMBED(discord.Embed):
 
 
 class FILE:
-    """
-    Name:   FILE
-    Param:
-        -   filename:
-            string path to the file you want to send
+    """ ~ FILE ~
+    @Param:
+        -   filename: str :: string path to the file you want to send
 
-    Info:   FILE object used as a data parameter to the MESSAGE objects.
+    @Info:   FILE object used as a data parameter to the MESSAGE objects.
             This is needed aposed to a normal file object because this way,
-            you can edit the file after the framework has already been started.
-    """
+            you can edit the file after the framework has already been started."""
     __slots__ = ("filename",)
     def __init__(self,
                  filename):
         self.filename = filename
 
 
-class AUDIO(FILE):
-    """
-    Name: AUDIO
-    Param:
-        -   filename:
-            string path to the audio you want to stream
-    Info: Represents an audio parameter that is used in the VoiceMESSAGE data parameterer
-    """
-    __slots__ = ("filename",)
+# Youtube streaming 
+ytdl.utils.bug_reports_message = lambda: "" # Suppress bug report message.
+class AUDIO(ytdl.YoutubeDL):
+    """~ class ~
+    @Info:
+        Used for streaming audio from file or YouTube.
+    @Param:
+        - filename: str :: The path to the file you want to stream or the url to the youtube video."""
+
+    ytdl_options = {
+        "format": "bestaudio/best",
+        "outtmpl": "%(extractor)s-%(id)s-%(title)s.%(ext)s",
+        "restrictfilenames": True,
+        "noplaylist": True,
+        "nocheckcertificate": True,
+        "ignoreerrors": False,
+        "logtostderr": False,
+        "quiet": True,
+        "no_warnings": True,
+        "default_search": "auto",
+        "source_address": "0.0.0.0",  # Bind to ipv4 since ipv6 addresses cause issues at certain times
+    }
+    def __init__(self, filename: str) -> None:
+        super().__init__(AUDIO.ytdl_options)
+        self.orig = filename # Original filename (url gets modified by ytdl)
+        self.url = filename  
+        self.stream = False  # Stream from youtube
+        self.title = None    # Title of the song, only for youtube streams
+        self.prep = False    # URL was prepared from youtube
+        if "youtube.com" in self.url.lower(): # If the url contains http, assume it's a youtube link
+            self.stream = True
+
+    @property
+    def filename(self):
+        """~ property ~
+        @Info:
+            Returns the filename of the file or the name of a youtube video with the link"""
+        if self.stream:
+            return {
+                "type:" : "Youtube",
+                "title": self.title,
+                "url": self.orig
+            }
+        return {
+            "type:" : "File",
+            "filename": self.orig
+        }
+
+    async def get_url(self) -> str:
+        """~ async method ~
+        @Info:
+            Returns the url of the audio file.
+            If the url is a file path, it will return the file path or raise an exception if the file does not exist."""
+        if not self.prep: # self.prep is True only if the url was prepared from youtube, it is always false for file paths.
+            if self.stream:
+                loop = asyncio.get_event_loop()
+                data = await loop.run_in_executor(None, lambda: self.extract_info(self.url, download=False))
+                if "entries" in data:
+                    data = data["entries"][0] # Is a playlist, get the first entry
+                self.url = data["url"]
+                self.title = data["title"]
+                self.prep = True # Set prep to true so that the url is not regenerated.
+
+            elif not Path(self.url).is_file():
+                raise FileExistsError(f"File '{self.url}' does not exist.")
+            
+        return self.url
