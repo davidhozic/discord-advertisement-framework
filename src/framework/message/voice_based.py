@@ -17,6 +17,11 @@ __all__ = (
     "VoiceMESSAGE",
 )
 
+class GLOBALS:
+    """ ~ class ~
+    @Info:
+        Contains global variables used in the voice messaging."""
+    voice_client: discord.VoiceClient = None
 
 @sql.register_type("MessageTYPE")
 class VoiceMESSAGE(BaseMESSAGE):
@@ -37,13 +42,15 @@ class VoiceMESSAGE(BaseMESSAGE):
         Channel IDs (channel_ids) :: List of IDs of all the channels you want data to be sent into.
         Start Now (start_now) :: A bool variable that can be either True or False. If True, then the framework will send the message
                                  as soon as it is run and then wait it's period before trying again. If False, then the message will
-                                 not be sent immediatly after framework is ready, but will instead wait for the period to elapse."""
+                                 not be sent immediatly after framework is ready, but will instead wait for the period to elapse.
+        Volume (volume) :: The volume in percentage (5-100%) of the audio that will be streamed. The default value is 50%."""
 
     __slots__ = (
         "randomized_time",
         "period",
         "random_range",
         "data",
+        "volume",
         "channels",
         "timer",
         "force_retry",
@@ -56,10 +63,13 @@ class VoiceMESSAGE(BaseMESSAGE):
                  end_period: float,
                  data: AUDIO,
                  channel_ids: Iterable[int],
-                 start_now: bool = True):
+                 start_now: bool = True,
+                 volume=50):
 
         super().__init__(start_period, end_period, start_now)
         self.data = data
+        # TODO: Update documentation to reflect the new volume parameter
+        self.volume = max(5, min(100, volume)) # Clamp the volume to 5-100 % 
         self.channels = list(set(channel_ids)) # Auto remove duplicates
 
     def generate_log_context(self,
@@ -142,18 +152,22 @@ class VoiceMESSAGE(BaseMESSAGE):
             - "reason"  : Exception ~ Only present if "success" is False,
                             contains the Exception returned by the send attempt."""
         stream = None
-        voice_client = None
         try:
             # Check if client has permissions before attempting to join
             ch_perms = channel.permissions_for(channel.guild.get_member(client.get_client().user.id))
             if not all([ch_perms.connect, ch_perms.stream, ch_perms.speak]):
                 raise self.generate_exception(403, 50013, "You lack permissions to perform that action", discord.Forbidden)
 
-            stream = discord.FFmpegOpusAudio(await audio.get_url())
+            if GLOBALS.voice_client is None or not GLOBALS.voice_client.is_connected():
+                GLOBALS.voice_client = await channel.connect(timeout=C_VC_CONNECT_TIMEOUT)
+            else:
+                await GLOBALS.voice_client.move_to(channel)
 
-            voice_client = await channel.connect(timeout=C_VC_CONNECT_TIMEOUT)
-            voice_client.play(stream)
-            while voice_client.is_playing():
+            stream = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(audio.url), volume=self.volume/100)
+
+            GLOBALS.voice_client.play(stream)
+
+            while GLOBALS.voice_client.is_playing():
                 await asyncio.sleep(1)
             return {"success": True}
         except Exception as ex:
@@ -165,12 +179,11 @@ class VoiceMESSAGE(BaseMESSAGE):
                 ex = self.generate_exception(500, 0, "Timeout error", discord.HTTPException)
             return {"success": False, "reason": ex}
         finally:
-            if stream is not None:
-                stream.cleanup()
-            if voice_client is not None:
-                # Note (TODO): Should remove this in the future. Currently it disconnects instead moving to a different channel, because using
-                #         .move_to(channel) method causes some sorts of "thread leak" (new threads keep getting created, waiting for pycord to fix this).
-                await voice_client.disconnect()
+            # TODO: Remove this in the future when Pycord fixes move_to bug
+            if GLOBALS.voice_client is not None and GLOBALS.voice_client.is_connected():
+                await GLOBALS.voice_client.disconnect()
+                GLOBALS.voice_client = None
+                await asyncio.sleep(1) # Avoid sudden disconnect and connect to a new channel
 
     async def send(self) -> Union[dict,  None]:
         """" ~ async method ~

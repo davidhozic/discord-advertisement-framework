@@ -191,10 +191,12 @@ class FILE:
 
 # Youtube streaming 
 ytdl.utils.bug_reports_message = lambda: "" # Suppress bug report message.
+# TODO: Update documentation to reflect youtube streaming
 class AUDIO(ytdl.YoutubeDL):
     """~ class ~
     @Info:
         Used for streaming audio from file or YouTube.
+        NOTE: Using a youtube video, will cause the shilling start to be delayed due to youtube data extraction.
     @Param:
         - filename: str :: The path to the file you want to stream or the url to the youtube video."""
 
@@ -212,13 +214,17 @@ class AUDIO(ytdl.YoutubeDL):
     }
     def __init__(self, filename: str) -> None:
         super().__init__(AUDIO.ytdl_options)
-        self.orig = filename # Original filename (url gets modified by ytdl)
-        self.url = filename  
-        self.stream = False  # Stream from youtube
-        self.title = None    # Title of the song, only for youtube streams
-        self.prep = False    # URL was prepared from youtube
-        if "youtube.com" in self.url.lower(): # If the url contains http, assume it's a youtube link
+        self.orig = filename
+        self.stream = False
+        if "youtube.com" in self.orig.lower(): # If the url contains http, assume it's a youtube link
             self.stream = True
+            data = self.extract_info(self.orig, download=False) 
+            if "entries" in data:
+                data = data["entries"][0] # Is a playlist, get the first entry
+            self.url = data["url"]
+            self.title = data["title"]
+        else:
+            self.url = filename
 
     @property
     def filename(self):
@@ -235,23 +241,3 @@ class AUDIO(ytdl.YoutubeDL):
             "type:" : "File",
             "filename": self.orig
         }
-
-    async def get_url(self) -> str:
-        """~ async method ~
-        @Info:
-            Returns the url of the audio file.
-            If the url is a file path, it will return the file path or raise an exception if the file does not exist."""
-        if not self.prep: # self.prep is True only if the url was prepared from youtube, it is always false for file paths.
-            if self.stream:
-                loop = asyncio.get_event_loop()
-                data = await loop.run_in_executor(None, lambda: self.extract_info(self.url, download=False))
-                if "entries" in data:
-                    data = data["entries"][0] # Is a playlist, get the first entry
-                self.url = data["url"]
-                self.title = data["title"]
-                self.prep = True # Set prep to true so that the url is not regenerated.
-
-            elif not Path(self.url).is_file():
-                raise FileExistsError(f"File '{self.url}' does not exist.")
-            
-        return self.url
