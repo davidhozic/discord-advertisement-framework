@@ -191,7 +191,7 @@ class FILE:
 
 # Youtube streaming 
 ytdl.utils.bug_reports_message = lambda: "" # Suppress bug report message.
-# TODO: Update documentation to reflect youtube streaming
+
 class AUDIO(ytdl.YoutubeDL):
     """~ class ~
     @Info:

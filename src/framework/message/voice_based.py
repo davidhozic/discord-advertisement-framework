@@ -68,7 +68,7 @@ class VoiceMESSAGE(BaseMESSAGE):
 
         super().__init__(start_period, end_period, start_now)
         self.data = data
-        # TODO: Update documentation to reflect the new volume parameter
+
         self.volume = max(5, min(100, volume)) # Clamp the volume to 5-100 % 
         self.channels = list(set(channel_ids)) # Auto remove duplicates
 
@@ -179,7 +179,6 @@ class VoiceMESSAGE(BaseMESSAGE):
                 ex = self.generate_exception(500, 0, "Timeout error", discord.HTTPException)
             return {"success": False, "reason": ex}
         finally:
-            # TODO: Remove this in the future when Pycord fixes move_to bug
             if GLOBALS.voice_client is not None and GLOBALS.voice_client.is_connected():
                 await GLOBALS.voice_client.disconnect()
                 GLOBALS.voice_client = None
