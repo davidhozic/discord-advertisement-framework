@@ -6,8 +6,8 @@
 """
 from   typing import Iterable, Literal, Callable, List, Set, overload
 from   _discord import Intents
-from   contextlib import suppress
 from . const import *
+from . exceptions import *
 from . import tracing
 from . tracing import *
 from . import guild
@@ -79,7 +79,7 @@ async def initialize() -> bool:
     sql_manager = GLOBALS.sql_manager
     if sql_manager is not None:
         if not sql.initialize(sql_manager): # Initialize the SQL database
-            trace("[CORE]: Unable to initialize the SQL manager, JSON logs will be used.", TraceLEVELS.ERROR)
+            raise DAFInitError("Unable to initialize the SQL manager, JSON logs will be used.")
     else:
         trace("[CORE]: No SQL manager provided, logging will be JSON based", TraceLEVELS.WARNING)
 
@@ -99,15 +99,15 @@ async def initialize() -> bool:
         trace("[CORE]: Starting user callback function", TraceLEVELS.NORMAL)
         asyncio.create_task(callback)
 
-    del GLOBALS.sql_manager
-    del GLOBALS.temp_server_list
+    del GLOBALS.sql_manager         # Variable is no longer needed, instead the sql_manager inside sql.py is used
+    del GLOBALS.temp_server_list    # Variable is no longer needed
 
     trace("[CORE]: Initialization complete.", TraceLEVELS.NORMAL)
     return True
 
 
 @overload
-async def add_object(obj: guild.BaseGUILD) -> bool: 
+async def add_object(obj: guild.BaseGUILD) -> None: 
     """
     Name:   add_object
     Params: obj ~ guild to add to the framework
@@ -115,42 +115,39 @@ async def add_object(obj: guild.BaseGUILD) -> bool:
     Info:   Adds an GUILD/USER to the framework"""
     ...
 @overload
-async def add_object(obj: message.BaseMESSAGE, guild_id: int) -> bool:
+async def add_object(obj: message.BaseMESSAGE, guild_id: int) -> None:
     """
     Name:   add_object
     Params: obj ~ message to add to the framework
             guild_id ~ guild id of the guild to add the message to
-    Return: bool
+    Return: None
     Info:   Adds a MESSAGE to the framework"""    
     ...
-async def add_object(obj, guild_id=None) -> bool:    
+async def add_object(obj, guild_id=None):    
     if isinstance(obj, guild.BaseGUILD):
         if obj in GLOBALS.server_list:
-            trace(f"[CORE]: Guild with id: {obj.snowflake} is already in the list", TraceLEVELS.ERROR)
-            return False
-        if not await obj.initialize():
-            return False
+            raise DAFAlreadyAddedError(f"Guild with snowflake `{obj.snowflake}` is already added to the framework.")
+
+        await obj.initialize()
         GLOBALS.server_list.append(obj)
-        return True
+
     elif isinstance(obj, message.BaseMESSAGE):
         if guild_id is None:
-            trace("[CORE]: guild_id is required to add a message", TraceLEVELS.ERROR)
-            return False 
-        guild_user: guild.BaseGUILD # Typing hint
+            raise DAFMissingParameterError("`guild_id` is required to add a message. Only the xMESSAGE object was provided.")
+
         for guild_user in GLOBALS.server_list:
             if guild_user.snowflake == guild_id:
-                if await guild_user.add_message(obj):
-                    return True
-                trace(f"[CORE]: Unable to add message to guild {guild_user.apiobject}(ID: {guild_user.snowflake})", TraceLEVELS.ERROR)
-                return False
+                await guild_user.add_message(obj)
+                return
 
-        trace(f"[CORE]: Could not find guild with id: {guild_id}", TraceLEVELS.ERROR)
-
-    return False
+        raise DAFNotFoundError(f"Guild with snowflake `{guild_id}` was not found in the framework.")
+    
+    else:
+        raise DAFInvalidParameterError(f"Invalid object type `{type(obj)}`.")
 
 
 @overload
-def remove_object(guild_id: int) -> bool: 
+def remove_object(guild_id: int) -> None: 
     """
     Name:   remove_object
     Params: guild_id ~ id of the guild to remove
@@ -158,7 +155,7 @@ def remove_object(guild_id: int) -> bool:
     Info:   Removes a guild from the framework that has the given guild_id"""
     ...
 @overload
-def remove_object(channel_ids: Iterable) -> bool:
+def remove_object(channel_ids: Iterable) -> None:
     """
     Name:   remove_object
     Params: channel_ids ~ set of channel ids to look for in the message 
@@ -170,21 +167,17 @@ def remove_object(data):
         for guild_user in GLOBALS.server_list:
             if guild_user.snowflake == data:
                 GLOBALS.server_list.remove(guild_user)
-                return True
-    
-        trace(f"[CORE]: Could not find guild with id: {data}", TraceLEVELS.WARNING)
-        return False
+                break
 
-    elif isinstance(data, Iterable):
+    elif isinstance(data, Iterable): # Channel ids
         for guild_user in GLOBALS.server_list:
             if isinstance(guild_user, guild.GUILD): # USER doesn't have channels
                 for message in guild_user.t_messages + guild_user.vc_messages:
                     msg_channels = [x.id for x in message.channels] # Generate snowflake list
                     if all(x in msg_channels for x in data): # If any of the channels in the set are in the message channel list
                         guild_user.remove_message(message) 
-        return True
-
-    return False
+    else:
+        raise DAFInvalidParameterError(f"Invalid parameter type `{type(data)}`.")
 
 
 async def shutdown() -> None:

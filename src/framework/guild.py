@@ -7,6 +7,8 @@
 
 from    contextlib import suppress
 from    typing import Literal, Union, List
+
+from    .exceptions import *
 from    .tracing import *
 from    .const import *
 from    .message import *
@@ -78,7 +80,7 @@ class BaseGUILD:
         """
         raise NotImplementedError
 
-    async def initialize(self) -> bool:
+    async def initialize(self):
         """
         ~  initialize  ~
         @Return: bool:
@@ -202,19 +204,15 @@ class GUILD(BaseGUILD):
         @Param:  message ~ message object to add
         """
         if not isinstance(message, (TextMESSAGE, VoiceMESSAGE)):
-            trace(f"[GUILD]: Invalid xxxMESSAGE type: {type(message).__name__}, expected  {TextMESSAGE.__name__} or {VoiceMESSAGE.__name__}", TraceLEVELS.ERROR)
-            return False
+            raise DAFInvalidParameterError(f"Invalid xxxMESSAGE type: {type(message).__name__}, expected  {TextMESSAGE.__name__} or {VoiceMESSAGE.__name__}")
 
-        if not await message.initialize():
-            return False
+        await message.initialize()
 
         if isinstance(message, TextMESSAGE):
             self.t_messages.append(message)
         elif isinstance(message, VoiceMESSAGE):
             self.vc_messages.append(message)
 
-        return True
-    
     def remove_message(self, message: Union[TextMESSAGE, VoiceMESSAGE]):
         """~ remove_message ~
         @Info:   Removes a message from the message list
@@ -222,14 +220,14 @@ class GUILD(BaseGUILD):
         """
         if isinstance(message, TextMESSAGE):
             self.t_messages.remove(message)
-            return True
+            return
         elif isinstance(message, VoiceMESSAGE):
             self.vc_messages.remove(message)
-            return True
+            return
 
-        return False
+        raise DAFInvalidParameterError(f"Invalid message type {type(message)}")
 
-    async def initialize(self) -> bool:
+    async def initialize(self):
         """
         Name:   initialize
         Param:  void
@@ -239,7 +237,7 @@ class GUILD(BaseGUILD):
         Info:   This function initializes the API related objects and then tries to initialize the MESSAGE objects.
         """
         if self.initialized: # Already initialized
-            return True
+            return
 
         guild_id = self.snowflake
         cl = client.get_client()
@@ -250,10 +248,9 @@ class GUILD(BaseGUILD):
                 await self.add_message(message)
 
             self.initialized = True
-            return True
+            return
 
-        trace(f"[GUILD]: Unable to find guild with ID: {guild_id}", TraceLEVELS.ERROR)
-        return False
+        raise DAFNotFoundError("Unable to find guild with ID: {guild_id}")
 
     async def advertise(self,
                         mode: Literal["text", "voice"]):
@@ -278,7 +275,7 @@ class GUILD(BaseGUILD):
         for message in marked_del:
             if message in msg_list:
                 msg_list.remove(message)
-            trace(f"[GUILD]: Removing a {type(message).__name__} because it's channels were removed, in guild {self.apiobject.name}(ID: {self.snowflake})")
+            trace(f"[GUILD]: Removing a {type(message).__name__} because it's channels were removed, in guild {self.apiobject.name}(ID: {self.snowflake})", TraceLEVELS.WARNING)
 
 
 @sql.register_type("GuildTYPE")
@@ -316,14 +313,12 @@ class USER(BaseGUILD):
         @Param:  message ~ message object to add
         """
         if not isinstance(message, DirectMESSAGE):
-            trace(f"[USER]: Invalid xxxMESSAGE type: {type(message).__name__}, expected  {DirectMESSAGE.__name__}", TraceLEVELS.ERROR)
-            return False
-        if not await message.initialize(user=self.apiobject):
-            return False
-        self.t_messages.append(message)
-        return True
+            raise DAFInvalidParameterError(f"Invalid xxxMESSAGE type: {type(message).__name__}, expected  {DirectMESSAGE.__name__}")
 
-    async def initialize(self) -> bool:
+        await message.initialize(user=self.apiobject)
+        self.t_messages.append(message)
+
+    async def initialize(self):
         """
         Name:   initialize
         Param:  void
@@ -333,7 +328,7 @@ class USER(BaseGUILD):
         Info:   This function initializes the API related objects and then tries to initialize the MESSAGE objects.
         """
         if self.initialized: # Already initialized
-            return True
+            return
 
         user_id = self.snowflake
         cl = client.get_client()
@@ -346,10 +341,9 @@ class USER(BaseGUILD):
                 await self.add_message(message)
             
             self.initialized = True
-            return True
+            return
 
-        trace(f"[USER]: Unable to create DM with user id: {user_id}", TraceLEVELS.ERROR)
-        return False
+        raise DAFNotFoundError(f"[USER]: Unable to create DM with user id: {user_id}")
 
     async def advertise(self,
                         mode: Literal["text", "voice"]) -> None:

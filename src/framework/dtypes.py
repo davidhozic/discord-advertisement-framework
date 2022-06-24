@@ -9,8 +9,7 @@ import  copy
 import  datetime
 import  _discord    as discord
 import  youtube_dl  as ytdl
-import  asyncio
-from    pathlib     import Path
+from   .exceptions import *
 
 
 __all__ = (
@@ -218,7 +217,10 @@ class AUDIO(ytdl.YoutubeDL):
         self.stream = False
         if "youtube.com" in self.orig.lower(): # If the url contains http, assume it's a youtube link
             self.stream = True
-            data = self.extract_info(self.orig, download=False) 
+            try:
+                data = self.extract_info(self.orig, download=False) 
+            except ytdl.DownloadError:
+                raise DAFNotFoundError(f'The audio from "{self.orig}" could not be streamed')
             if "entries" in data:
                 data = data["entries"][0] # Is a playlist, get the first entry
             self.url = data["url"]
