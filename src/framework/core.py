@@ -36,7 +36,8 @@ class GLOBALS:
     user_callback: Callable = None
     server_list: List[guild.BaseGUILD] = []
     temp_server_list: List[guild.BaseGUILD] = None # Holds the guilds that are awaiting initialization (set in framework.run and cleared after initialization)
-    sql_manager: sql.LoggerSQL = None
+    sql_manager: sql.LoggerSQL = None,
+    is_user: bool = False
 
 #######################################################################
 # Tasks
@@ -73,7 +74,6 @@ async def initialize() -> bool:
     """
     # Initialize the message module
     _client = client.get_client()
-    await message.initialize(is_user= not _client.user.bot)
     
     # Initialize the SQL module
     sql_manager = GLOBALS.sql_manager
@@ -233,6 +233,7 @@ def run(token : str,
     tracing.m_use_debug = debug                                     # Print trace messages to the console for debugging purposes
     GLOBALS.temp_server_list = server_list                          # List of guild objects to iterate thru in the advertiser task
     GLOBALS.sql_manager = sql_manager                               # SQL manager object
+    GLOBALS.is_user = is_user                                       # Is the token from an user account
     if user_callback is not None:
         GLOBALS.user_callback = user_callback()                     # Called after framework has started
 
