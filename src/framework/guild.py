@@ -7,13 +7,13 @@
 
 from    contextlib import suppress
 from    typing import Literal, Union, List
-
 from    .exceptions import *
 from    .tracing import *
 from    .const import *
 from    .message import *
 from    . import client
 from    . import sql
+import  _discord as discord
 import  time
 import  json
 import  pathlib
@@ -225,7 +225,7 @@ class GUILD(BaseGUILD):
             self.vc_messages.remove(message)
             return
 
-        raise DAFInvalidParameterError(f"Invalid message type {type(message)}")
+        raise DAFInvalidParameterError(f"Invalid xxxMESSAGE type: {type(message).__name__}, expected  {TextMESSAGE.__name__} or {VoiceMESSAGE.__name__}")
 
     async def initialize(self):
         """
@@ -250,7 +250,7 @@ class GUILD(BaseGUILD):
             self.initialized = True
             return
 
-        raise DAFNotFoundError("Unable to find guild with ID: {guild_id}")
+        raise DAFNotFoundError(f"Unable to find guild with ID: {guild_id}")
 
     async def advertise(self,
                         mode: Literal["text", "voice"]):
@@ -334,8 +334,10 @@ class USER(BaseGUILD):
         cl = client.get_client()
         self.apiobject = cl.get_user(user_id)
         if self.apiobject is None: # User not found in cache, try to fetch from API
-            self.apiobject = await cl.fetch_user(user_id)
+            with suppress(discord.HTTPException):
+                self.apiobject = await cl.fetch_user(user_id)
 
+        # Api object was found
         if self.apiobject is not None:
             for message in self._messages:
                 await self.add_message(message)
@@ -343,6 +345,7 @@ class USER(BaseGUILD):
             self.initialized = True
             return
 
+        # Api object wasn't found, even after direct API call to discord.
         raise DAFNotFoundError(f"[USER]: Unable to create DM with user id: {user_id}")
 
     async def advertise(self,

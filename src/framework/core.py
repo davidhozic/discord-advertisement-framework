@@ -61,7 +61,7 @@ async def advertiser(message_type: Literal["text", "voice"]) -> None:
 #######################################################################
 # Functions
 #######################################################################
-async def initialize() -> bool:
+async def initialize():
     """
     Name:       initialize
     Parameters: void
@@ -72,21 +72,21 @@ async def initialize() -> bool:
     Info:       Function that initializes the guild objects and
                 then returns True on success or False on failure.
     """
-    # Initialize the message module
-    _client = client.get_client()
-    
     # Initialize the SQL module
     sql_manager = GLOBALS.sql_manager
     if sql_manager is not None:
         if not sql.initialize(sql_manager): # Initialize the SQL database
-            raise DAFInitError("Unable to initialize the SQL manager, JSON logs will be used.")
+            raise trace("Unable to initialize the SQL manager, JSON logs will be used.", TraceLEVELS.WARNING)
     else:
-        trace("[CORE]: No SQL manager provided, logging will be JSON based", TraceLEVELS.WARNING)
+        trace("[CORE]: No SQL manager provided, logging will be JSON based", TraceLEVELS.NORMAL)
 
     # Initialize the servers (and their message objects)
     trace("[CORE]: Initializing servers", TraceLEVELS.NORMAL)
     for server in GLOBALS.temp_server_list:
-        await add_object(server) # Add each guild to the shilling list
+        try:
+            await add_object(server) # Add each guild to the shilling list
+        except DAFError as ex:
+            trace(ex)
 
     # Create advertiser tasks
     trace("[CORE]: Creating advertiser tasks", TraceLEVELS.NORMAL)
@@ -103,7 +103,6 @@ async def initialize() -> bool:
     del GLOBALS.temp_server_list    # Variable is no longer needed
 
     trace("[CORE]: Initialization complete.", TraceLEVELS.NORMAL)
-    return True
 
 
 @overload

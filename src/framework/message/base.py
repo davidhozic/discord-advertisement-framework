@@ -6,6 +6,7 @@ from    typing import Union
 from    ..dtypes import *
 from    ..tracing import *
 from    ..timing import *
+from    ..exceptions import *
 import  random
 import  _discord as discord
 
@@ -128,14 +129,14 @@ class BaseMESSAGE:
                 and should send the message to all the channels."""
         raise NotImplementedError
 
-    async def initialize_channels(self) -> bool:
+    async def initialize_channels(self):
         """ ~ async method ~
         @Name: initialize_channels
         @Info: This method initializes the implementation specific
                api objects and checks for the correct channel inpit context."""
         raise NotImplementedError
 
-    async def initialize_data(self) -> bool:
+    async def initialize_data(self):
         """ ~ async method ~
         @Name:  initialize_data
         @Info:  This method checks for the correct data input to the xxxMESSAGE
@@ -165,19 +166,17 @@ class BaseMESSAGE:
                 if (
                         type(data) not in type(self).__valid_data_types__
                     ):
-                    if isinstance(self.data, FunctionBaseCLASS):
-                        trace(f"The function can only be used on the data parameter directly, not in a list\nFunction: {data.func_name}", TraceLEVELS.ERROR)
-                        self.data.clear()
-                        break
+                    if isinstance(data, FunctionBaseCLASS):
+                        raise DAFInvalidParameterError(f"The function can only be used on the data parameter directly, not in a iterable. Function: {data.func_name}")
                     else:
                         trace(f"INVALID DATA PARAMETER PASSED!\nArgument is of type : {type(data).__name__}\nSee README.md for allowed data types", TraceLEVELS.WARNING)
-                        self.data.remove(data)
+                        raise DAFInvalidParameterError(f"Invalid data type {type(data).__name__}. Allowed types: {type(self).__valid_data_types__}")
 
-            return len(self.data) > 0
+            if len(self.data) == 0:
+                raise DAFMissingParameterError(f"No parameters were passed")
 
-        return True
 
-    async def initialize(self, **options) -> bool:
+    async def initialize(self, **options):
         """ ~ async method ~
         @Name: initialize
         @Info:
@@ -187,13 +186,8 @@ class BaseMESSAGE:
                        is inherited from the BaseGUILD class and must be matched in the inherited class from BaseMESSAGE that
                        you want to use in that specific inherited class from BaseGUILD class"""
         if self.initialized:
-            return True
+            return
 
-        if not await self.initialize_channels(**options):
-            return False
-
-        if not await self.initialize_data():
-            return False
-
+        await self.initialize_channels(**options)
+        await self.initialize_data()
         self.initialized = True
-        return True

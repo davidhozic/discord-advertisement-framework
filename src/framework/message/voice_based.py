@@ -2,13 +2,14 @@
 @info:
     Contains definitions related to voice messaging."""
 
-from   .base      import *
-from   ..         import client
-from   ..         import sql
-from   ..dtypes   import *
-from   ..tracing  import *
-from   ..const    import *
-from   typing     import List, Iterable, Union
+from   .base        import *
+from   ..           import client
+from   ..           import sql
+from   ..dtypes     import *
+from   ..tracing    import *
+from   ..const      import *
+from   ..exceptions import *
+from   typing       import List, Iterable, Union
 import asyncio
 import _discord as discord
 
@@ -132,12 +133,12 @@ class VoiceMESSAGE(BaseMESSAGE):
                 trace(f"Unable to get channel from ID {channel_id}", TraceLEVELS.ERROR)
                 self.channels.remove(channel)
             elif type(channel) is not discord.VoiceChannel:
-                trace(f"VoiceMESSAGE object got ID ({channel_id}) for {type(channel).__name__}, but was expecting {discord.VoiceChannel.__name__}", TraceLEVELS.WARNING)
-                self.channels.remove(channel)
+                raise DAFInvalidParameterError(f"VoiceMESSAGE object got ID ({channel_id}) for {type(channel).__name__}, but was expecting discord.VoiceChannel")
             else:
                 ch_i += 1
 
-        return len(self.channels) > 0
+        if not len(self.channels):
+            raise DAFMissingParameterError(f"No channels were passed to {type(self)} object")
 
     async def send_channel(self,
                            channel: discord.VoiceChannel,

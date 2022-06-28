@@ -2,14 +2,15 @@
 @Info:
     Contains definitions for message classes that are text based (TextMESSAGE & DirectMESSAGE)."""
 
-from   .base      import *
-from   ..         import client
-from   ..         import sql
-from   ..dtypes   import *
-from   ..tracing  import *
-from   ..const    import *
-from   ..         import core
-from   typing     import List, Iterable, Union, Literal
+from   .base        import *
+from   ..           import client
+from   ..           import sql
+from   ..dtypes     import *
+from   ..tracing    import *
+from   ..const      import *
+from   ..exceptions import *
+from   ..           import core
+from   typing       import List, Iterable, Union, Literal
 import asyncio
 import _discord as discord
 
@@ -134,7 +135,7 @@ class TextMESSAGE(BaseMESSAGE):
                     _data_to_send["files"].append(element)
         return _data_to_send
 
-    async def initialize_channels(self) -> bool:
+    async def initialize_channels(self):
         """ ~ async method ~
         @Name: initialize_channels
         @Info: This method initializes the implementation specific
@@ -151,14 +152,14 @@ class TextMESSAGE(BaseMESSAGE):
                 trace(f"Unable to get channel from ID {channel_id}", TraceLEVELS.ERROR)
                 self.channels.remove(channel)
             elif type(channel) not in {discord.TextChannel, discord.Thread}:
-                trace(f"TextMESSAGE object got ID ({channel_id}) for {type(channel).__name__}, but was expecting {discord.TextChannel.__name__}", TraceLEVELS.WARNING)
-                self.channels.remove(channel)
+                raise DAFInvalidParameterError(f"TextMESSAGE object got ID ({channel_id}) for {type(channel).__name__}, but was expecting discord.TextChannel or discord.Thread")
             else:
                 ch_i += 1
 
-        return len(self.channels) > 0
+        if not len(self.channels):
+            raise DAFMissingParameterError(f"No channels were passed to {type(self)} object")
     
-    async def handle_error(self, channel: Union[discord.TextChannel, discord.Thread], ex: Exception):
+    async def handle_error(self, channel: Union[discord.TextChannel, discord.Thread], ex: Exception) -> bool:
         """ ~ async method ~
         @Name: handle_error
         @Info: This method handles the error that occured during the execution of the function.
@@ -363,7 +364,7 @@ class DirectMESSAGE(BaseMESSAGE):
         return TextMESSAGE.get_data(self)
 
     async def initialize_channels(self,
-                                  user: discord.User) -> bool:
+                                  user: discord.User):
         """ ~ async method ~
         @Name: initialize_channels
         @Info:
@@ -375,10 +376,9 @@ class DirectMESSAGE(BaseMESSAGE):
         try:
             self.dm_channel = user.dm_channel if user.dm_channel is not None else await user.create_dm()
             if self.dm_channel is None:
-                return False
+                raise DAFInitError(f"Unable to create DM with user {user.display_name}")
         except discord.HTTPException as ex:
-            return False
-        return True
+            raise DAFInitError(f"Unable to create DM with user {user.display_name}")
 
     async def handle_error(self, ex: Exception):
         """ ~ async method ~
@@ -421,7 +421,7 @@ class DirectMESSAGE(BaseMESSAGE):
             try:
                 # Deletes previous message if it exists and mode is "clear-send"
                 if self.mode == "clear-send" and self.previous_message is not None:
-                    self.previous_message.delete()
+                    await self.previous_message.delete()
                     self.previous_message = None
 
                 # Sends a new message
