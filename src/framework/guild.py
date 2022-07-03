@@ -93,7 +93,7 @@ class BaseGUILD:
 
     async def advertise(self,
                         mode: Literal["text", "voice"]):
-        """~ coro ~
+        """~ async method
         - @Info:
             - This is the main coroutine that is responsible for sending all the messages to this specificc guild,
               it is called from the core module's advertiser task
@@ -102,7 +102,7 @@ class BaseGUILD:
 
     async def generate_log(self,
                            message_context: dict) -> None:
-        """~ coro ~
+        """~ async method
         - @Param:
             - data_context  ~ string representation of sent data, which is the return data of xxxMESSAGE.send()
         - @Info:   Generates a log of a xxxxMESSAGE send attempt either in file or in a SQL database"""
@@ -238,7 +238,7 @@ class GUILD(BaseGUILD):
         raise DAFInvalidParameterError(f"Invalid xxxMESSAGE type: {type(message).__name__}, expected  {TextMESSAGE.__name__} or {VoiceMESSAGE.__name__}", DAF_INVALID_TYPE)
 
     async def initialize(self):
-        """ ~ coro ~
+        """ ~ async method
         - @Info:   This function initializes the API related objects and then tries to initialize the MESSAGE objects.
         - @Exceptions:
             - <class DAFNotFoundError code=DAF_GUILD_ID_NOT_FOUND> ~ Raised when the guild_id wasn't found
@@ -261,7 +261,7 @@ class GUILD(BaseGUILD):
 
     async def advertise(self,
                         mode: Literal["text", "voice"]):
-        """~ coro ~
+        """~ async method
         - @Info:
             - This is the main coroutine that is responsible for sending all the messages to this specificc guild,
               it is called from the core module's advertiser task"""
@@ -329,7 +329,7 @@ class USER(BaseGUILD):
         self.t_messages.append(message)
 
     async def initialize(self):
-        """ ~ coro ~
+        """ ~ async method
         - @Info: This function initializes the API related objects and then tries to initialize the MESSAGE objects.
         - @Exceptions:
             - <class DAFNotFoundError code=DAF_USER_CREATE_DM> ~ Raised when the user_id wasn't found
@@ -359,7 +359,7 @@ class USER(BaseGUILD):
 
     async def advertise(self,
                         mode: Literal["text", "voice"]) -> None:
-        """ ~ coro ~
+        """ ~ async method
         - @Info:
             - This is the main coroutine that is responsible for sending all the messages to this specificc guild,
               it is called from the core module's advertiser task"""

@@ -20,31 +20,31 @@ __all__ = (
 
 class GLOBALS:
     """ ~ class ~
-    @Info:
-        Contains global variables used in the voice messaging."""
+    - @Info: Contains global variables used in the voice messaging."""
     voice_client: discord.VoiceClient = None
 
 @sql.register_type("MessageTYPE")
 class VoiceMESSAGE(BaseMESSAGE):
-    """ ~ VoiceMESSAGE class ~
-    Name: VoiceMESSAGE
-    Info: The VoiceMESSAGE object containts parameters which describe behaviour and data that will be sent to the channels.
-    Params:
-        Start Period , End Period (start_period, end_period) :: These 2 parameters specify the period on which the messages will be played:
-            Start Period can be either:
-                :: None :: Messages will be sent on intervals specified by End period,
-                :: Integer >= 0 :: Messages will be sent on intervals randomly chosen between Start period and End period,
-                                   where the randomly chosen intervals will be re::randomized after each sent message.
-        Data (data) :: The data parameter is the actual data that will be sent using discord's API. The data types of this parameter can be:
-                        - Path to an audio file (str)
-                        - Function that accepts any amount of parameters and returns any of the above types.
-                          To pass a function, YOU MUST USE THE framework.data_function decorator on the function before
-                          passing the function to the framework.
-        Channel IDs (channel_ids) :: List of IDs of all the channels you want data to be sent into.
-        Start Now (start_now) :: A bool variable that can be either True or False. If True, then the framework will send the message
+    """ ~ class ~
+    - @Name: VoiceMESSAGE
+    - @Info: The VoiceMESSAGE object containts parameters which describe behaviour and data that will be sent to the channels.
+    - @Params:
+        - start_period, end_period ~ These 2 parameters specify the period on which the messages will be played:
+            - start_period can be either:
+                - None ~ Messages will be sent on intervals specified by End period,
+                - Integer >= 0 ~ Messages will be sent on intervals randomly chosen between Start period and End period,
+                                 where the randomly chosen intervals will be re::randomized after each sent message.
+        - data ~ The data parameter is the actual data that will be sent using discord's API. The data types of this parameter can be:
+            - Path to an audio file (str)
+            - Youtube link (str)
+            - Function that accepts any amount of parameters and returns any of the above types.
+                    To pass a function, YOU MUST USE THE framework.data_function decorator on the function before
+                    passing the function to the framework.
+        - channel_ids ~ List of IDs of all the channels you want data to be sent into.
+        - start_now ~ A bool variable that can be either True or False. If True, then the framework will send the message
                                  as soon as it is run and then wait it's period before trying again. If False, then the message will
                                  not be sent immediatly after framework is ready, but will instead wait for the period to elapse.
-        Volume (volume) :: The volume in percentage (5-100%) of the audio that will be streamed. The default value is 50%."""
+        - volume ~ The volume in percentage (5-100%) of the audio that will be streamed. The default value is 50%."""
 
     __slots__ = (
         "randomized_time",
@@ -57,7 +57,7 @@ class VoiceMESSAGE(BaseMESSAGE):
         "force_retry",
     )
 
-    __logname__ = "VoiceMESSAGE"
+    __logname__ = "VoiceMESSAGE"    # For sql.register_type
     __valid_data_types__ = {AUDIO}  # This is used in the BaseMESSAGE.initialize() to check if the passed data parameters are of correct type
 
     def __init__(self, start_period: Union[float, None],
@@ -65,7 +65,7 @@ class VoiceMESSAGE(BaseMESSAGE):
                  data: AUDIO,
                  channel_ids: Iterable[int],
                  start_now: bool = True,
-                 volume=50):
+                 volume: int=50):
 
         super().__init__(start_period, end_period, start_now)
         self.data = data
@@ -78,13 +78,12 @@ class VoiceMESSAGE(BaseMESSAGE):
                              succeeded_ch: List[discord.VoiceChannel],
                              failed_ch: List[dict]):
         """ ~ method ~
-        @Name: generate_log_context
-        @Param:
-            audio: AUDIO -- The audio that was streamed to the channels
-            succeeded_ch: List[discord.VoiceChannel] -- list of the successfuly streamed channels,
-            failed_ch: List[dict]   -- list of dictionaries contained the failed channel and the Exception
-        @Info:
-            Generates a dictionary containing data that will be saved in the message log"""
+        - @Name: generate_log_context
+        - @Param:
+            - audio ~The audio that was streamed to the channels
+            - succeeded_ch ~ list of the successfuly streamed channels,
+            - failed_ch ~ list of dictionaries contained the failed channel and the Exception
+        - @Info: Generates a dictionary containing data that will be saved in the message log"""
 
         succeeded_ch = [{"name": str(channel), "id" : channel.id} for channel in succeeded_ch]
         failed_ch = [{"name": str(entry["channel"]), "id" : entry["channel"].id,
@@ -102,9 +101,9 @@ class VoiceMESSAGE(BaseMESSAGE):
 
     def get_data(self) -> dict:
         """ ~ method ~
-        @Name:  get_data
-        @Info: Returns a dictionary of keyword arguments that is then expanded
-               into other functions (send_channel, generate_log)"""
+        - @Name:  get_data
+        - @Info: Returns a dictionary of keyword arguments that is then expanded
+                 into other functions (send_channel, generate_log)"""
         data = None
         _data_to_send = {}
         data = self.data.get_data() if isinstance(self.data, FunctionBaseCLASS) else self.data
@@ -118,10 +117,13 @@ class VoiceMESSAGE(BaseMESSAGE):
 
     async def initialize_channels(self) -> bool:
         """ ~ async method ~
-        @Name: initialize_channels
-        @Info: This method initializes the implementation specific
-               api objects and checks for the correct channel inpit context.
-        @Return: Bool - True on success"""
+        - @Name:  initialize_channels
+        - @Info:  This method initializes the implementation specific
+                  api objects and checks for the correct channel inpit context.
+        - @Return: True on success
+        - @Exceptions:
+            - <class DAFInvalidParameterError code=DAF_INVALID_TYPE> ~ Raised when the object obtained from a channel id is not of type discord.VoiceChannel
+            - <class DAFMissingParameterError code=DAF_MISSING_PARAMETER> ~ Raised when no channels could be obtained from the given channel ids"""
         ch_i = 0
         cl = client.get_client()
         while ch_i < len(self.channels):
@@ -138,20 +140,20 @@ class VoiceMESSAGE(BaseMESSAGE):
                 ch_i += 1
 
         if not len(self.channels):
-            raise DAFMissingParameterError(f"No channels were passed to {type(self)} object", DAF_MISSING_PARAMETER)
+            raise DAFMissingParameterError(f"No valid channels were passed to {type(self)} object", DAF_MISSING_PARAMETER)
 
     async def send_channel(self,
                            channel: discord.VoiceChannel,
                            audio: AUDIO) -> dict:
         """ ~ async method ~
-        @Name : send_channel
-        @Info:
+        - @Name : send_channel
+        - @Info:
             Streams audio to specific channel
-        @Return:
-        - dict:
-            - "success" : bool ~ True if successful, else False
-            - "reason"  : Exception ~ Only present if "success" is False,
-                            contains the Exception returned by the send attempt."""
+        - @Return:
+            - dict:
+                - "success" ~ True if successful, else False
+                - "reason"  ~ Only present if "success" is False,
+                              contains the Exception returned by the send attempt."""
         stream = None
         try:
             # Check if client has permissions before attempting to join
@@ -187,12 +189,11 @@ class VoiceMESSAGE(BaseMESSAGE):
 
     async def send(self) -> Union[dict,  None]:
         """" ~ async method ~
-        @Name send
-        @Info:
-            Streams audio into the chanels
-        @Return:
+        - @Name send
+        - @Info: Streams audio into the chanels
+        - @Return:
             Returns a dictionary generated by the generate_log_context method
-            or the None object if message wasn't ready to be sent"""
+            or the None object if message wasn't ready to be sent (data_function returned None)"""
         _data_to_send = self.get_data()
         if any(_data_to_send.values()):
             errored_channels = []

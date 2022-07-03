@@ -1,4 +1,4 @@
-""" ~ module ~
+""" ~ exceptions ~
 @Info: This module contains the definitons related to errors
        that can be raised inside the framework."""
 
