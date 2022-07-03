@@ -133,12 +133,12 @@ class VoiceMESSAGE(BaseMESSAGE):
                 trace(f"Unable to get channel from ID {channel_id}", TraceLEVELS.ERROR)
                 self.channels.remove(channel)
             elif type(channel) is not discord.VoiceChannel:
-                raise DAFInvalidParameterError(f"VoiceMESSAGE object got ID ({channel_id}) for {type(channel).__name__}, but was expecting discord.VoiceChannel")
+                raise DAFInvalidParameterError(f"VoiceMESSAGE object got ID ({channel_id}) for {type(channel).__name__}, but was expecting discord.VoiceChannel", DAF_INVALID_TYPE)
             else:
                 ch_i += 1
 
         if not len(self.channels):
-            raise DAFMissingParameterError(f"No channels were passed to {type(self)} object")
+            raise DAFMissingParameterError(f"No channels were passed to {type(self)} object", DAF_MISSING_PARAMETER)
 
     async def send_channel(self,
                            channel: discord.VoiceChannel,

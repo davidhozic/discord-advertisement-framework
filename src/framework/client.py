@@ -8,7 +8,6 @@ import  asyncio
 import  _discord as discord
 from    .tracing import *
 from    . import core
-from    . import message
 
 
 #######################################################################

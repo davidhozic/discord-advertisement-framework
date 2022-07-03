@@ -152,12 +152,12 @@ class TextMESSAGE(BaseMESSAGE):
                 trace(f"Unable to get channel from ID {channel_id}", TraceLEVELS.ERROR)
                 self.channels.remove(channel)
             elif type(channel) not in {discord.TextChannel, discord.Thread}:
-                raise DAFInvalidParameterError(f"TextMESSAGE object got ID ({channel_id}) for {type(channel).__name__}, but was expecting discord.TextChannel or discord.Thread")
+                raise DAFInvalidParameterError(f"TextMESSAGE object got ID ({channel_id}) for {type(channel).__name__}, but was expecting discord.TextChannel or discord.Thread", DAF_INVALID_TYPE)
             else:
                 ch_i += 1
 
         if not len(self.channels):
-            raise DAFMissingParameterError(f"No channels were passed to {type(self)} object")
+            raise DAFMissingParameterError(f"No channels were passed to {type(self)} object", DAF_MISSING_PARAMETER)
     
     async def handle_error(self, channel: Union[discord.TextChannel, discord.Thread], ex: Exception) -> bool:
         """ ~ async method ~
@@ -376,9 +376,9 @@ class DirectMESSAGE(BaseMESSAGE):
         try:
             self.dm_channel = user.dm_channel if user.dm_channel is not None else await user.create_dm()
             if self.dm_channel is None:
-                raise DAFInitError(f"Unable to create DM with user {user.display_name}")
+                raise DAFInitError(f"Unable to create DM with user {user.display_name}", DAF_USER_CREATE_DM)
         except discord.HTTPException as ex:
-            raise DAFInitError(f"Unable to create DM with user {user.display_name}")
+            raise DAFInitError(f"Unable to create DM with user {user.display_name}", DAF_USER_CREATE_DM)
 
     async def handle_error(self, ex: Exception):
         """ ~ async method ~

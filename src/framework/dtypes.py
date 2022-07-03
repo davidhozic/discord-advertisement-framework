@@ -220,7 +220,7 @@ class AUDIO(ytdl.YoutubeDL):
             try:
                 data = self.extract_info(self.orig, download=False) 
             except ytdl.DownloadError:
-                raise DAFNotFoundError(f'The audio from "{self.orig}" could not be streamed')
+                raise DAFNotFoundError(f'The audio from "{self.orig}" could not be streamed', DAF_YOUTUBE_STREAM_ERROR)
             if "entries" in data:
                 data = data["entries"][0] # Is a playlist, get the first entry
             self.url = data["url"]

@@ -204,7 +204,7 @@ class GUILD(BaseGUILD):
         @Param:  message ~ message object to add
         """
         if not isinstance(message, (TextMESSAGE, VoiceMESSAGE)):
-            raise DAFInvalidParameterError(f"Invalid xxxMESSAGE type: {type(message).__name__}, expected  {TextMESSAGE.__name__} or {VoiceMESSAGE.__name__}")
+            raise DAFInvalidParameterError(f"Invalid xxxMESSAGE type: {type(message).__name__}, expected  {TextMESSAGE.__name__} or {VoiceMESSAGE.__name__}", DAF_INVALID_TYPE)
 
         await message.initialize()
 
@@ -225,7 +225,7 @@ class GUILD(BaseGUILD):
             self.vc_messages.remove(message)
             return
 
-        raise DAFInvalidParameterError(f"Invalid xxxMESSAGE type: {type(message).__name__}, expected  {TextMESSAGE.__name__} or {VoiceMESSAGE.__name__}")
+        raise DAFInvalidParameterError(f"Invalid xxxMESSAGE type: {type(message).__name__}, expected  {TextMESSAGE.__name__} or {VoiceMESSAGE.__name__}", DAF_INVALID_TYPE)
 
     async def initialize(self):
         """
@@ -250,7 +250,7 @@ class GUILD(BaseGUILD):
             self.initialized = True
             return
 
-        raise DAFNotFoundError(f"Unable to find guild with ID: {guild_id}")
+        raise DAFNotFoundError(f"Unable to find guild with ID: {guild_id}", DAF_GUILD_ID_NOT_FOUND)
 
     async def advertise(self,
                         mode: Literal["text", "voice"]):
@@ -313,7 +313,7 @@ class USER(BaseGUILD):
         @Param:  message ~ message object to add
         """
         if not isinstance(message, DirectMESSAGE):
-            raise DAFInvalidParameterError(f"Invalid xxxMESSAGE type: {type(message).__name__}, expected  {DirectMESSAGE.__name__}")
+            raise DAFInvalidParameterError(f"Invalid xxxMESSAGE type: {type(message).__name__}, expected  {DirectMESSAGE.__name__}", DAF_INVALID_TYPE)
 
         await message.initialize(user=self.apiobject)
         self.t_messages.append(message)
@@ -346,7 +346,7 @@ class USER(BaseGUILD):
             return
 
         # Api object wasn't found, even after direct API call to discord.
-        raise DAFNotFoundError(f"[USER]: Unable to create DM with user id: {user_id}")
+        raise DAFNotFoundError(f"[USER]: Unable to create DM with user id: {user_id}", DAF_USER_CREATE_DM)
 
     async def advertise(self,
                         mode: Literal["text", "voice"]) -> None:

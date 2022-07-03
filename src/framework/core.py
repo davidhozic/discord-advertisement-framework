@@ -125,24 +125,24 @@ async def add_object(obj: message.BaseMESSAGE, guild_id: int) -> None:
 async def add_object(obj, guild_id=None):    
     if isinstance(obj, guild.BaseGUILD):
         if obj in GLOBALS.server_list:
-            raise DAFAlreadyAddedError(f"Guild with snowflake `{obj.snowflake}` is already added to the framework.")
+            raise DAFAlreadyAddedError(f"Guild with snowflake `{obj.snowflake}` is already added to the framework.", DAF_GUILD_ALREADY_ADDED)
 
         await obj.initialize()
         GLOBALS.server_list.append(obj)
 
     elif isinstance(obj, message.BaseMESSAGE):
         if guild_id is None:
-            raise DAFMissingParameterError("`guild_id` is required to add a message. Only the xMESSAGE object was provided.")
+            raise DAFMissingParameterError("`guild_id` is required to add a message. Only the xMESSAGE object was provided.", DAF_GUILD_ID_REQUIRED)
 
         for guild_user in GLOBALS.server_list:
             if guild_user.snowflake == guild_id:
                 await guild_user.add_message(obj)
                 return
 
-        raise DAFNotFoundError(f"Guild with snowflake `{guild_id}` was not found in the framework.")
+        raise DAFNotFoundError(f"Guild with snowflake `{guild_id}` was not found in the framework.", DAF_GUILD_ID_NOT_FOUND)
     
     else:
-        raise DAFInvalidParameterError(f"Invalid object type `{type(obj)}`.")
+        raise DAFInvalidParameterError(f"Invalid object type `{type(obj)}`.", DAF_INVALID_TYPE)
 
 
 @overload
@@ -176,7 +176,7 @@ def remove_object(data):
                     if all(x in msg_channels for x in data): # If any of the channels in the set are in the message channel list
                         guild_user.remove_message(message) 
     else:
-        raise DAFInvalidParameterError(f"Invalid parameter type `{type(data)}`.")
+        raise DAFInvalidParameterError(f"Invalid parameter type `{type(data)}`.", DAF_INVALID_TYPE)
 
 
 async def shutdown() -> None:

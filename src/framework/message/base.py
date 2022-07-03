@@ -167,13 +167,13 @@ class BaseMESSAGE:
                         type(data) not in type(self).__valid_data_types__
                     ):
                     if isinstance(data, FunctionBaseCLASS):
-                        raise DAFInvalidParameterError(f"The function can only be used on the data parameter directly, not in a iterable. Function: {data.func_name}")
+                        raise DAFInvalidParameterError(f"The function can only be used on the data parameter directly, not in a iterable. Function: {data.func_name}", DAF_INVALID_TYPE)
                     else:
                         trace(f"INVALID DATA PARAMETER PASSED!\nArgument is of type : {type(data).__name__}\nSee README.md for allowed data types", TraceLEVELS.WARNING)
-                        raise DAFInvalidParameterError(f"Invalid data type {type(data).__name__}. Allowed types: {type(self).__valid_data_types__}")
+                        raise DAFInvalidParameterError(f"Invalid data type {type(data).__name__}. Allowed types: {type(self).__valid_data_types__}", DAF_INVALID_TYPE)
 
             if len(self.data) == 0:
-                raise DAFMissingParameterError(f"No parameters were passed")
+                raise DAFMissingParameterError(f"No data parameters were passed", DAF_MISSING_PARAMETER)
 
 
     async def initialize(self, **options):
