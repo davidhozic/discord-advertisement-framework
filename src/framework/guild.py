@@ -17,6 +17,8 @@ import  _discord as discord
 import  time
 import  json
 import  pathlib
+import  os
+import  shutil
 
 __all__ = (
     "GUILD",
@@ -27,14 +29,17 @@ __all__ = (
 # Globals
 #######################################################################
 class GLOBALS:
-    """ ~  GLOBALS  ~
-        Contains the global variables for the module"""
+    """ ~  class  ~
+    - @Info: Contains the global variables for the module"""
     server_log_path = None
 
 
 class BaseGUILD:
-    """ ~ BaseGUILD ~
-        BaseGUILD object is used for creating inherited classes that work like a guild"""
+    """ ~ class ~
+    - @Info: BaseGUILD object is used for creating inherited classes that work like a guild
+    - @Param: 
+        - snowflake    ~ The snowflake of the guild
+        - generate_log ~ Whether or not to generate a log file for the guild"""
 
     __slots__ = (       # Faster attribute access
         "initialized",
@@ -45,12 +50,12 @@ class BaseGUILD:
         "t_messages",
         "vc_messages"
     )
-    __logname__ = "BaseGUILD"
+    __logname__ = "BaseGUILD" # Dummy to demonstrate correct definition for @sql.register_type decorator
 
     @property
     def log_file_name(self):
         """~ property (getter) ~
-        @Info: The method returns a string that transforms the xGUILD's discord name into
+        - @Info: The method returns a string that transforms the xGUILD's discord name into
                a string that contains only allowed character. This is a method instead of
                property because the name can change overtime."""
         raise NotImplementedError
@@ -67,48 +72,41 @@ class BaseGUILD:
 
     def __eq__(self, other) -> bool:
         """
-        ~  __eq__  ~
-        @Return: bool - Returns True if objects have the same snowflake
-        @Info:   The function is used to compare two objects
-        """
+        ~  operator method  ~
+        - @Return: ~ Returns True if objects have the same snowflake or False otherwise
+        - @Info:   The function is used to compare two objects"""
         return self.snowflake == other.snowflake
 
     async def add_message(self, message):
-        """~  add_message  ~
-        @Info:   Adds a message to the message list
-        @Param:  message ~ message object to add
-        """
+        """~  coro  ~
+        - @Info:   Adds a message to the message list
+        - @Param:  message ~ message object to add"""
         raise NotImplementedError
 
     async def initialize(self):
-        """
-        ~  initialize  ~
-        @Return: bool:
+        """~  coro  ~
+        - @Return: bool:
                 - Returns True if the initialization was successful
                 - Returns False if failed, indicating the object should be removed from the server_list
-        @Info:   The function initializes all the <IMPLEMENTATION> objects (and other objects inside the  <IMPLEMENTATION> object reccurssively).
-                 It tries to get the  discord.<IMPLEMENTATION> object from the self.<implementation>_id and then tries to initialize the MESSAGE objects.
-        """
+        - @Info: The function initializes all the <IMPLEMENTATION> objects (and other objects inside the  <IMPLEMENTATION> object reccurssively).
+                 It tries to get the  discord.<IMPLEMENTATION> object from the self.<implementation>_id and then tries to initialize the MESSAGE objects."""
         raise NotImplementedError
 
     async def advertise(self,
                         mode: Literal["text", "voice"]):
-        """
-            ~ advertise ~
-            @Info:
-            This is the main coroutine that is responsible for sending all the messages to this specificc guild,
-            it is called from the core module's advertiser task
+        """~ coro ~
+        - @Info:
+            - This is the main coroutine that is responsible for sending all the messages to this specificc guild,
+              it is called from the core module's advertiser task
         """
         raise NotImplementedError
 
     async def generate_log(self,
                            message_context: dict) -> None:
-        """
-        Name:   generate_log
-        Param:
-            - data_context  - str representation of sent data, which is return data of xxxMESSAGE.send()
-        Info:   Generates a log of a xxxxMESSAGE send attempt
-        """
+        """~ coro ~
+        - @Param:
+            - data_context  ~ string representation of sent data, which is the return data of xxxMESSAGE.send()
+        - @Info:   Generates a log of a xxxxMESSAGE send attempt either in file or in a SQL database"""
 
         guild_context = {
             "name" : str(self.apiobject),
@@ -117,6 +115,7 @@ class BaseGUILD:
         }
 
         try:
+            # Try to obtain the sql manager. If it returns None (sql logging disabled), save into file
             manager = sql.get_sql_manager()
             if (
                 manager is None or  # Short circuit evaluation
@@ -138,24 +137,27 @@ class BaseGUILD:
 
                 logging_output = str(logging_output.joinpath(self.log_file_name))
 
-                # with suppress(FileExistsError):
-                #     with open(logging_output,'x', encoding='utf-8'):
-                #         pass
-
+                # Open the file in append mode instead of read to auto create the file if it doesn't exist
+                # and instead of write to prevent truncation of the file.
                 with open(logging_output,'a+', encoding='utf-8') as appender:
                     appender_data = None
-                    appender.seek(0)
+                    appender.seek(0) # Append moves cursor to the end of the file
                     try:
                         appender_data = json.load(appender)
                     except json.JSONDecodeError:
+                        # No valid json in the file, create new data
+                        # and create a .old file to store this invalid data
+                        # Copy-paste to .old file to prevent data loss
+                        shutil.copyfile(logging_output, f"{logging_output}.old")
+
+                        # Create new data
                         appender_data = {}
                         appender_data["name"] = guild_context["name"]
                         appender_data["id"]   = guild_context["id"]
                         appender_data["type"] = guild_context["type"]
                         appender_data["message_history"] = []
                     finally:
-                        appender.seek(0)
-                        appender.truncate(0)
+                        appender.seek(0) # Reset cursor to the beginning of the file after reading
 
                     appender_data["message_history"].insert(0,
                         {
@@ -164,29 +166,30 @@ class BaseGUILD:
                             "timestamp": timestamp
                         })
                     json.dump(appender_data, appender, indent=4)
+                    appender.truncate(appender.tell() + 1) # Remove any old data
 
         except Exception as exception:
+            # Any uncautch exception (prevent from complete framework stop)
             trace(f"[{type(self).__name__}]: Unable to save log. Exception: {exception}", TraceLEVELS.WARNING)
 
 
 @sql.register_type("GuildTYPE")
 class GUILD(BaseGUILD):
-    """
-    Name: GUILD
-    Info: The GUILD object represents a server to which messages will be sent.
-    Params:
-    - Guild ID - identificator which can be obtained by enabling developer mode in discord's settings and
-                 afterwards right-clicking on the server/guild icon in the server list and clicking "Copy ID",
-    - List of TextMESSAGE/VoiceMESSAGE objects
-    - Generate file log - bool variable, if True it will generate a file log for each message send attempt.
-    """
-    __logname__ = "GUILD"
-    __slots__   = set()  # Removes __dict__ (prevents dynamic attributes)
+    """ ~ class ~
+    - @Info: The GUILD object represents a server to which messages will be sent.
+    - @Param:
+        - guild_id ~ identificator which can be obtained by enabling developer mode in discord's settings and
+                     afterwards right-clicking on the server/guild icon in the server list and clicking "Copy ID",
+        - messages_to_send ~List of TextMESSAGE/VoiceMESSAGE objects
+        - generate_log ~ bool variable, if True it will generate a file log for each message send attempt."""
+    
+    __logname__ = "GUILD" # For sql.register_type
+    __slots__   = set()   # Removes __dict__ (prevents dynamic attributes)
 
     @property
     def log_file_name(self):
         """~ property (getter) ~
-        @Info: The method returns a string that transforms the GUILD's discord name into
+        - @Info: The method returns a string that transforms the GUILD's discord name into
                a string that contains only allowed character. This is a method instead of
                property because the name can change overtime."""
         return "".join(char if char not in C_FILE_NAME_FORBIDDEN_CHAR else "#" for char in self.apiobject.name) + ".json"
@@ -199,10 +202,12 @@ class GUILD(BaseGUILD):
         super().__init__(guild_id, generate_log)
 
     async def add_message(self, message: Union[TextMESSAGE, VoiceMESSAGE]):
-        """~  add_message  ~
-        @Info:   Adds a message to the message list
-        @Param:  message ~ message object to add
-        """
+        """~  coro  ~
+        - @Info:   Adds a message to the message list
+        - @Param:  message ~ message object to add
+        - @Exceptions:
+            - <class DAFInvalidParameterError code=DAF_INVALID_TYPE> ~ Raised when the message is not of type TextMESSAGE or VoiceMESSAGE
+            - Other exceptions from message.initialize() method"""
         if not isinstance(message, (TextMESSAGE, VoiceMESSAGE)):
             raise DAFInvalidParameterError(f"Invalid xxxMESSAGE type: {type(message).__name__}, expected  {TextMESSAGE.__name__} or {VoiceMESSAGE.__name__}", DAF_INVALID_TYPE)
 
@@ -214,10 +219,11 @@ class GUILD(BaseGUILD):
             self.vc_messages.append(message)
 
     def remove_message(self, message: Union[TextMESSAGE, VoiceMESSAGE]):
-        """~ remove_message ~
-        @Info:   Removes a message from the message list
-        @Param:  message ~ message object to remove
-        """
+        """~ method ~
+        - @Info:   Removes a message from the message list
+        - @Param:  message ~ message object to remove
+        - @Exceptions:
+            - <class DAFInvalidParameterError code=DAF_INVALID_TYPE> ~ Raised when the message is not of type TextMESSAGE or VoiceMESSAGE"""
         if isinstance(message, TextMESSAGE):
             self.t_messages.remove(message)
             return
@@ -228,15 +234,12 @@ class GUILD(BaseGUILD):
         raise DAFInvalidParameterError(f"Invalid xxxMESSAGE type: {type(message).__name__}, expected  {TextMESSAGE.__name__} or {VoiceMESSAGE.__name__}", DAF_INVALID_TYPE)
 
     async def initialize(self):
-        """
-        Name:   initialize
-        Param:  void
-        Return: bool:
-                - Returns True if the initialization was successful
-                - Returns False if failed, indicating the object should be removed from the server_list
-        Info:   This function initializes the API related objects and then tries to initialize the MESSAGE objects.
-        """
-        if self.initialized: # Already initialized
+        """ ~ coro ~
+        - @Info:   This function initializes the API related objects and then tries to initialize the MESSAGE objects.
+        - @Exceptions:
+            - <class DAFNotFoundError code=DAF_GUILD_ID_NOT_FOUND> ~ Raised when the guild_id wasn't found
+            - Other exceptions from .add_message(message_object) method"""
+        if self.initialized: # Already initialized, just return
             return
 
         guild_id = self.snowflake
@@ -254,10 +257,10 @@ class GUILD(BaseGUILD):
 
     async def advertise(self,
                         mode: Literal["text", "voice"]):
-        """~ advertise ~
-            @Info:
-            This is the main coroutine that is responsible for sending all the messages to this specificc guild,
-            it is called from the core module's advertiser task"""
+        """~ coro ~
+        - @Info:
+            - This is the main coroutine that is responsible for sending all the messages to this specificc guild,
+              it is called from the core module's advertiser task"""
         msg_list = self.t_messages if mode == "text" else self.vc_messages
         marked_del = []
 
@@ -280,22 +283,22 @@ class GUILD(BaseGUILD):
 
 @sql.register_type("GuildTYPE")
 class USER(BaseGUILD):
-    """~ USER ~
-        @Info:
-        The USER objects represents a Discord user/member.
-        @Params:
-        - user_id: int ~ id of the user you want to DM,
-        - messages: list ~ list of DirectMESSAGE objects which
-                           represent messages that will be sent to the DM
-        - generate_log: bool ~ dictates if log should be generated for each sent message"""
+    """~ class ~
+    - @Info:
+        - The USER objects represents a Discord user/member.
+    - @Params:
+        - user_id ~ id of the user you want to DM,
+        - messages ~ list of DirectMESSAGE objects which
+                            represent messages that will be sent to the DM
+        - generate_log ~ dictates if log should be generated for each sent message"""
 
-    __logname__ = "USER"
+    __logname__ = "USER" # For sql.register_type
     __slots__   = set()  # Removes __dict__ (prevents dynamic attributes)
 
     @property
     def log_file_name(self):
         """~ property (getter) ~
-        @Info: The method returns a string that transforms the USER's discord name into
+        - @Info: The method returns a string that transforms the USER's discord name into
                a string that contains only allowed character. This is a method instead of
                property because the name can change overtime."""
         return "".join(char if char not in C_FILE_NAME_FORBIDDEN_CHAR else "#" for char in f"{self.apiobject.display_name}#{self.apiobject.discriminator}") + ".json"
@@ -308,9 +311,12 @@ class USER(BaseGUILD):
         self._messages = messages_to_send
 
     async def add_message(self, message):
-        """~  add_message  ~
-        @Info:   Adds a message to the message list
-        @Param:  message ~ message object to add
+        """~  coro  ~
+        - @Info:   Adds a message to the message list
+        - @Param:  message ~ message object to add
+        - @Exceptions:
+            - <class DAFInvalidParameterError code=DAF_INVALID_TYPE> ~ Raised when the message is not of type DirectMESSAGE
+            - Other exceptions from message.initialize() method
         """
         if not isinstance(message, DirectMESSAGE):
             raise DAFInvalidParameterError(f"Invalid xxxMESSAGE type: {type(message).__name__}, expected  {DirectMESSAGE.__name__}", DAF_INVALID_TYPE)
@@ -319,25 +325,24 @@ class USER(BaseGUILD):
         self.t_messages.append(message)
 
     async def initialize(self):
+        """ ~ coro ~
+        - @Info: This function initializes the API related objects and then tries to initialize the MESSAGE objects.
+        - @Exceptions:
+            - <class DAFNotFoundError code=DAF_USER_CREATE_DM> ~ Raised when the user_id wasn't found
+            - Other exceptions from .add_message(message_object) method
         """
-        Name:   initialize
-        Param:  void
-        Return: bool:
-                - Returns True if the initialization was successful
-                - Returns False if failed, indicating the object should be removed from the server_list
-        Info:   This function initializes the API related objects and then tries to initialize the MESSAGE objects.
-        """
-        if self.initialized: # Already initialized
+        if self.initialized: # Already initialized, just return
             return
 
         user_id = self.snowflake
         cl = client.get_client()
-        self.apiobject = cl.get_user(user_id)
-        if self.apiobject is None: # User not found in cache, try to fetch from API
+        self.apiobject = cl.get_user(user_id) # Get object from cache
+        if self.apiobject is None: 
+            # User not found in cache, try to fetch from API
             with suppress(discord.HTTPException):
                 self.apiobject = await cl.fetch_user(user_id)
 
-        # Api object was found
+        # Api object was found in cache or fetched from API -> initialize messages
         if self.apiobject is not None:
             for message in self._messages:
                 await self.add_message(message)
@@ -350,11 +355,10 @@ class USER(BaseGUILD):
 
     async def advertise(self,
                         mode: Literal["text", "voice"]) -> None:
-        """
-            ~ advertise ~
-            @Info:
-            This is the main coroutine that is responsible for sending all the messages to this specificc guild,
-            it is called from the core module's advertiser task"""
+        """ ~ coro ~
+        - @Info:
+            - This is the main coroutine that is responsible for sending all the messages to this specificc guild,
+              it is called from the core module's advertiser task"""
         if mode == "text":  # Does not have voice messages, only text based (DirectMESSAGE)
             for message in self.t_messages: # Copy the avoid issues with the list being modified while iterating
                 if message.is_ready():
