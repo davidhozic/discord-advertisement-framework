@@ -157,7 +157,7 @@ class TextMESSAGE(BaseMESSAGE):
                 ch_i += 1
 
         if not len(self.channels):
-            raise DAFMissingParameterError(f"No channels were passed to {type(self)} object", DAF_MISSING_PARAMETER)
+            raise DAFMissingParameterError(f"No valid channels were passed to {type(self)} object", DAF_MISSING_PARAMETER)
     
     async def handle_error(self, channel: Union[discord.TextChannel, discord.Thread], ex: Exception) -> bool:
         """ ~ async method ~

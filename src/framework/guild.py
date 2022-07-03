@@ -17,7 +17,6 @@ import  _discord as discord
 import  time
 import  json
 import  pathlib
-import  os
 import  shutil
 
 __all__ = (
@@ -137,9 +136,13 @@ class BaseGUILD:
 
                 logging_output = str(logging_output.joinpath(self.log_file_name))
 
-                # Open the file in append mode instead of read to auto create the file if it doesn't exist
-                # and instead of write to prevent truncation of the file.
-                with open(logging_output,'a+', encoding='utf-8') as appender:
+                # Create file if it doesn't exist
+                fresh_file = False
+                with suppress(FileExistsError), open(logging_output, "x", encoding="utf-8"):
+                    fresh_file = True
+
+                # Write to file
+                with open(logging_output,'r+', encoding='utf-8') as appender:
                     appender_data = None
                     appender.seek(0) # Append moves cursor to the end of the file
                     try:
@@ -148,8 +151,9 @@ class BaseGUILD:
                         # No valid json in the file, create new data
                         # and create a .old file to store this invalid data
                         # Copy-paste to .old file to prevent data loss
-                        shutil.copyfile(logging_output, f"{logging_output}.old")
-
+                        if not fresh_file: ## Failed because the file was just created, no need to copy-paste
+                            # File not newly created, and has invalid data
+                            shutil.copyfile(logging_output, f"{logging_output}.old")
                         # Create new data
                         appender_data = {}
                         appender_data["name"] = guild_context["name"]
@@ -164,9 +168,9 @@ class BaseGUILD:
                             **message_context,
                             "index":    appender_data["message_history"][0]["index"] + 1 if len(appender_data["message_history"]) else 0,
                             "timestamp": timestamp
-                        })
+                        })                
                     json.dump(appender_data, appender, indent=4)
-                    appender.truncate(appender.tell() + 1) # Remove any old data
+                    appender.truncate() # Remove any old data
 
         except Exception as exception:
             # Any uncautch exception (prevent from complete framework stop)
