@@ -8,7 +8,6 @@ import  asyncio
 import  _discord as discord
 from    .tracing import *
 from    . import core
-from    . import message
 
 
 #######################################################################
@@ -43,7 +42,7 @@ class CLIENT(discord.Client):
 
 def initialize(token: str, *,
                bot: bool,
-               intents: discord.Intents) -> bool:
+               intents: discord.Intents):
     """
         ~  initialize  ~
         @Param:

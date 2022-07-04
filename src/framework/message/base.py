@@ -6,6 +6,7 @@ from    typing import Union
 from    ..dtypes import *
 from    ..tracing import *
 from    ..timing import *
+from    ..exceptions import *
 import  random
 import  _discord as discord
 
@@ -17,9 +18,9 @@ __all__ = (
 
 class BaseMESSAGE:
     """~  BaseMESSAGE  ~
-        @Info:
-        This is the base class for all the different classes that
-        represent a message you want to be sent into discord."""
+        - @Info:
+            - This is the base class for all the different classes that
+              represent a message you want to be sent into discord."""
 
     __slots__ = (
         "initialized",
@@ -61,13 +62,13 @@ class BaseMESSAGE:
                            description: str,
                            cls: discord.HTTPException):
         """ ~ method ~
-        @Name: generate_exception
-        @Info: Generates a discord.HTTPException inherited class exception object
-        @Param:
-            status: int ~ Atatus code of the exception
-            code: int ~ Actual error code
-            description: str ~ The textual description of the error
-            cls: discord.HTTPException ~ Inherited class to make exception from"""
+        - @Name: generate_exception
+        - @Info: Generates a discord.HTTPException inherited class exception object
+        - @Param:
+            - status ~ Atatus code of the exception
+            - code ~ Actual error code
+            - description ~ The textual description of the error
+            - cls ~ Inherited class to make exception from"""
         resp = Exception()
         resp.status = status
         resp.status_code = status
@@ -77,8 +78,8 @@ class BaseMESSAGE:
 
     def generate_log_context(self):
         """ ~ method ~
-        @Name: generate_log_context
-        @Info:
+        - @Name: generate_log_context
+        - @Info:
             This method is used for generating a dictionary (later converted to json) of the
             data that is to be included in the message log. This is to be implemented inside the
             inherited classes."""
@@ -86,24 +87,24 @@ class BaseMESSAGE:
     
     def get_data(self) -> dict:
         """ ~ method ~
-        @Name:  get_data
-        @Info: Returns a dictionary of keyword arguments that is then expanded
+        - @Name:  get_data
+        - @Info: Returns a dictionary of keyword arguments that is then expanded
                into other functions (send_channel, generate_log)
                This is to be implemented in inherited classes due to different data_types"""
         raise NotImplementedError
 
     def is_ready(self) -> bool:
         """ ~ method ~
-        @Name:   is_ready
-        @Param:  void
-        @Info:   This method returns bool indicating if message is ready to be sent"""
+        - @Name:   is_ready
+        - @Param:  void
+        - @Info:   This method returns bool indicating if message is ready to be sent"""
         return (not self.force_retry["ENABLED"] and self.timer.elapsed() > self.period or
                 self.force_retry["ENABLED"] and self.timer.elapsed() > self.force_retry["TIME"])
 
     def reset_timer(self) -> None:
         """ ~ method ~
-        @Name: restart_time
-        @Info: Resets internal timer (and force period)"""
+        - @Name: restart_time
+        - @Info: Resets internal timer (and force period)"""
         self.timer.reset()
         self.timer.start()
         self.force_retry["ENABLED"] = False
@@ -111,36 +112,37 @@ class BaseMESSAGE:
             self.period = random.randrange(*self.random_range)
 
     async def send_channel(self) -> dict:
-        """                  ~ send_channel ~
-            @Info:
+        """ ~ async method ~
+        - @Info:
             Sends data to a specific channel, this is seperate from send
             for eaiser implementation of simmilar inherited classes
-            @Return:
-            The method returns a dictionary containing : {"success": bool, "reason": discord.HTTPException}
-            """
+        - @Return:
+            The method returns a dictionary containing : {"success": bool, "reason": discord.HTTPException}"""
         raise NotImplementedError
 
     async def send(self) -> dict:
         """ ~ async method ~
-        Name:   send to channels
-        Param:  void
-        Info:   This function should be implemented in the inherited class
-                and should send the message to all the channels."""
+        - @Info:   This function should be implemented in the inherited class
+                   and should send the message to all the channels."""
         raise NotImplementedError
 
-    async def initialize_channels(self) -> bool:
+    async def initialize_channels(self):
         """ ~ async method ~
-        @Name: initialize_channels
-        @Info: This method initializes the implementation specific
-               api objects and checks for the correct channel inpit context."""
+        - @Name: initialize_channels
+        - @Info: This method initializes the implementation specific
+                 api objects and checks for the correct channel inpit context."""
         raise NotImplementedError
 
-    async def initialize_data(self) -> bool:
+    async def initialize_data(self):
         """ ~ async method ~
-        @Name:  initialize_data
-        @Info:  This method checks for the correct data input to the xxxMESSAGE
-                object. The expected datatypes for specific implementation is
-                defined thru the static variable __valid_data_types__"""
+        - @Name:  initialize_data
+        - @Info:  This method checks for the correct data input to the xxxMESSAGE
+                  object. The expected datatypes for specific implementation is
+                  defined thru the static variable __valid_data_types__
+        - @Exceptions:
+            - <class DAFInvalidParameterError code=DAF_INVALID_TYPE> ~ Raised when a parameter is of invalid type
+            - <class DAFMissingParameterError code=DAF_MISSING_PARAMETER> ~ Raised when no data parameters were passed."""
+
         # Check for correct data types of the MESSAGE.data parameter
         if not isinstance(self.data, FunctionBaseCLASS):
             # This is meant only as a pre-check if the parameters are correct so you wouldn't eg. start
@@ -165,35 +167,26 @@ class BaseMESSAGE:
                 if (
                         type(data) not in type(self).__valid_data_types__
                     ):
-                    if isinstance(self.data, FunctionBaseCLASS):
-                        trace(f"The function can only be used on the data parameter directly, not in a list\nFunction: {data.func_name}", TraceLEVELS.ERROR)
-                        self.data.clear()
-                        break
+                    if isinstance(data, FunctionBaseCLASS):
+                        raise DAFInvalidParameterError(f"The function can only be used on the data parameter directly, not in a iterable. Function: {data.func_name}", DAF_INVALID_TYPE)
                     else:
                         trace(f"INVALID DATA PARAMETER PASSED!\nArgument is of type : {type(data).__name__}\nSee README.md for allowed data types", TraceLEVELS.WARNING)
-                        self.data.remove(data)
+                        raise DAFInvalidParameterError(f"Invalid data type {type(data).__name__}. Allowed types: {type(self).__valid_data_types__}", DAF_INVALID_TYPE)
 
-            return len(self.data) > 0
+            if len(self.data) == 0:
+                raise DAFMissingParameterError(f"No data parameters were passed", DAF_MISSING_PARAMETER)
 
-        return True
 
-    async def initialize(self, **options) -> bool:
+    async def initialize(self, **options):
         """ ~ async method ~
         @Name: initialize
-        @Info:
+        - @Info:
             The initialize method initilizes the message object.
-        @Params:
-            options :: custom keyword arguments, this differes from inher. to inher. class that
-                       is inherited from the BaseGUILD class and must be matched in the inherited class from BaseMESSAGE that
-                       you want to use in that specific inherited class from BaseGUILD class"""
+        - @Params:
+            - options ~ keyword arguments sent to initialize_channels() from an inherited (from BaseGUILD) class, contains extra init options."""
         if self.initialized:
-            return True
+            return
 
-        if not await self.initialize_channels(**options):
-            return False
-
-        if not await self.initialize_data():
-            return False
-
+        await self.initialize_channels(**options)
+        await self.initialize_data()
         self.initialized = True
-        return True
