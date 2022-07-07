@@ -43,12 +43,12 @@ class BaseMESSAGE:
                 data,
                 start_now : bool=True):
         # If start_period is none -> period will not be randomized
+        self.random_range = [start_period, end_period] # Tracked for usage in .update() method
         if start_period is None:            
             self.randomized_time = False
             self.period = end_period
         else:
             self.randomized_time = True
-            self.random_range = (start_period, end_period)
             self.period = random.randrange(*self.random_range)
 
         self.timer = TIMER()
@@ -62,7 +62,6 @@ class BaseMESSAGE:
                            description: str,
                            cls: discord.HTTPException):
         """ ~ method ~
-        - @Name: generate_exception
         - @Info: Generates a discord.HTTPException inherited class exception object
         - @Param:
             - status ~ Atatus code of the exception
@@ -78,7 +77,6 @@ class BaseMESSAGE:
 
     def generate_log_context(self):
         """ ~ method ~
-        - @Name: generate_log_context
         - @Info:
             This method is used for generating a dictionary (later converted to json) of the
             data that is to be included in the message log. This is to be implemented inside the
@@ -87,7 +85,6 @@ class BaseMESSAGE:
     
     def get_data(self) -> dict:
         """ ~ method ~
-        - @Name:  get_data
         - @Info: Returns a dictionary of keyword arguments that is then expanded
                into other functions (send_channel, generate_log)
                This is to be implemented in inherited classes due to different data_types"""
@@ -95,7 +92,6 @@ class BaseMESSAGE:
 
     def is_ready(self) -> bool:
         """ ~ method ~
-        - @Name:   is_ready
         - @Param:  void
         - @Info:   This method returns bool indicating if message is ready to be sent"""
         return (not self.force_retry["ENABLED"] and self.timer.elapsed() > self.period or
@@ -103,7 +99,6 @@ class BaseMESSAGE:
 
     def reset_timer(self) -> None:
         """ ~ method ~
-        - @Name: restart_time
         - @Info: Resets internal timer (and force period)"""
         self.timer.reset()
         self.timer.start()
@@ -128,14 +123,13 @@ class BaseMESSAGE:
 
     async def initialize_channels(self):
         """ ~ async method ~
-        - @Name: initialize_channels
+
         - @Info: This method initializes the implementation specific
                  api objects and checks for the correct channel inpit context."""
         raise NotImplementedError
 
     async def initialize_data(self):
         """ ~ async method ~
-        - @Name:  initialize_data
         - @Info:  This method checks for the correct data input to the xxxMESSAGE
                   object. The expected datatypes for specific implementation is
                   defined thru the static variable __valid_data_types__
@@ -179,7 +173,6 @@ class BaseMESSAGE:
 
     async def initialize(self, **options):
         """ ~ async method ~
-        @Name: initialize
         - @Info:
             The initialize method initilizes the message object.
         - @Params:
@@ -190,3 +183,34 @@ class BaseMESSAGE:
         await self.initialize_channels(**options)
         await self.initialize_data()
         self.initialized = True
+
+    async def update(self, init_options: dict = {},**kwargs):
+        """ ~ async method ~
+        - @Added in v1.9.5
+        - @Info:
+            This method is used for updating properties the object was initialated with.
+        - @Params:
+            - The allowed parameters are the initialization parameters first used on creation of the object AND 
+            - init_options ~ Contains the initialization options used in .initialize() method for reainitializing certain objects.
+                             This is implementation specific and not necessarily available.
+        - @Exception:
+            - <class DAFInvalidParameterError code=DAF_UPDATE_PARAMETER_ERROR> ~ Invalid keyword argument was passed
+            - Other exceptions raised from .initialize() method"""
+        init_keys = list(self.__init__.__annotations__.keys())
+        init_keys.remove("start_now") # Doesn't make sense to update this
+          
+        for k, v in kwargs.items():
+            if k not in init_keys:
+                raise DAFInvalidParameterError(f"Keyword argument `{k}` was passed which is not allowed. The update method only accepts the following keyword arguments: {init_keys}", DAF_UPDATE_PARAMETER_ERROR)
+            # Keys that don't match the internal variables
+            if k == "start_period":
+                self.random_range[0] = v
+            elif k == "end_period":
+                self.random_range[1] = v
+            else:
+                # Key matches internal variable
+                setattr(self, k, v)  # Update the data dictionary with new values
+
+        # Reinitialize
+        BaseMESSAGE.__init__(self, self.random_range[0] , self.random_range[1], self.data, False) # Call the base init method to reset the variables
+        await self.initialize(**init_options)

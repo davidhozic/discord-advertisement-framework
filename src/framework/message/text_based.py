@@ -39,7 +39,7 @@ class TextMESSAGE(BaseMESSAGE):
             if more than 1 string or embeds are sent, the framework will only consider the last found).
             - Function that accepts any amount of parameters and returns any of the above types.
             To pass a function, YOU MUST USE THE framework.data_function decorator on the function before passing the function to the framework.
-        - channel_ids ~ List of IDs of all the channels you want data to be sent into.
+        - channels ~ List of IDs of all the channels you want data to be sent into.
         - mode ~ Parameter that defines how message will be sent to a channel. It can be "send" - each period a new message will be sent,
                             "edit" - each period the previously send message will be edited (if it exists)
                             or "clear-send" - previous message will be deleted and a new one sent.
@@ -64,14 +64,14 @@ class TextMESSAGE(BaseMESSAGE):
     def __init__(self, start_period: Union[float, None],
                  end_period: float,
                  data: Union[str, EMBED, FILE, List[Union[str, EMBED, FILE]]],
-                 channel_ids: Iterable[int],
+                 channels: Iterable[int],
                  mode: Literal["send", "edit", "clear-send"] = "send",
                  start_now: bool = True):
         super().__init__(start_period, end_period, start_now)
         self.data = data
         self.mode = mode
-        self.channels = list(set(channel_ids)) # Automatically removes duplicates
-        self.sent_messages = {ch_id : None for ch_id in channel_ids} # Dictionary for storing last sent message for each channel
+        self.channels = list(set(channels)) # Automatically removes duplicates
+        self.sent_messages = {ch_id : None for ch_id in channels} # Dictionary for storing last sent message for each channel
 
     def generate_log_context(self,
                              text : str,
@@ -139,22 +139,24 @@ class TextMESSAGE(BaseMESSAGE):
         - @Name: initialize_channels
         - @Info: This method initializes the implementation specific
                  api objects and checks for the correct channel inpit context.
-        - @Return ~ Returns True on success
         - @Exceptions:
-            - <DAFInvalidParameterError code=DAF_INVALID_TYPE> ~ Raised when the object retrieved from channel_ids is not a discord.TextChannel or discord.Thread object.
+            - <DAFInvalidParameterError code=DAF_INVALID_TYPE> ~ Raised when the object retrieved from channels is not a discord.TextChannel or discord.Thread object.
             - <DAFMissingParameterError code=DAF_MISSING_PARAMETER> ~ Raised when no valid channels were parsed."""
         ch_i = 0
         cl = client.get_client()
         while ch_i < len(self.channels):
-            channel_id = self.channels[ch_i]
-            channel = cl.get_channel(channel_id)
-            self.channels[ch_i] = channel
+            channel = self.channels[ch_i]
+            if isinstance(channel, discord.abc.GuildChannel):
+                channel_id = channel.id
+            else:
+                channel_id = channel
+                channel = self.channels[ch_i] = cl.get_channel(channel_id)
 
             if channel is None:
                 trace(f"Unable to get channel from ID {channel_id}", TraceLEVELS.ERROR)
                 self.channels.remove(channel)
             elif type(channel) not in {discord.TextChannel, discord.Thread}:
-                raise DAFInvalidParameterError(f"TextMESSAGE object got ID ({channel_id}) for {type(channel).__name__}, but was expecting discord.TextChannel or discord.Thread", DAF_INVALID_TYPE)
+                raise DAFInvalidParameterError(f"TextMESSAGE object received channel type of {type(channel).__name__}, but was expecting discord.TextChannel or discord.Thread", DAF_INVALID_TYPE)
             else:
                 ch_i += 1
 
@@ -266,7 +268,7 @@ class TextMESSAGE(BaseMESSAGE):
             return self.generate_log_context(**data_to_send, succeeded_ch=succeded_channels, failed_ch=errored_channels)
 
         return None
-
+ 
 
 @sql.register_type("MessageTYPE")
 class DirectMESSAGE(BaseMESSAGE):

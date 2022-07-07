@@ -1,6 +1,7 @@
 """ ~ exceptions ~
-@Info: This module contains the definitons related to errors
-       that can be raised inside the framework."""
+- @Added in v1.9.5
+- @Info: This module contains the definitons related to errors
+         that can be raised inside the framework."""
 
 # TODO: Documentation
 
@@ -56,7 +57,8 @@ DAF_USER_CREATE_DM              = 3
 DAF_INVALID_TYPE                = 4 # Object of invalid type was given
 DAF_YOUTUBE_STREAM_ERROR        = 5 # The given youtube link could not be streamed (AUDIO, VoiceMESSAGE)
 DAF_FILE_NOT_FOUND              = 6 # The given file was not found
-## Missing error codes
-DAF_MISSING_PARAMETER           = 7 # The parameter(s) is(are) missing
 ## Other
-DAF_SQL_LOOKUPTABLE_NOT_FOUND   = 8 # The lookup table was not found
+DAF_SQL_LOOKUPTABLE_NOT_FOUND   = 7 # The lookup table was not found
+## Parameter specific errors
+DAF_UPDATE_PARAMETER_ERROR      = 8 # The update method only accepts the following keyword arguments
+DAF_MISSING_PARAMETER           = 9 # The parameter(s) is(are) missing

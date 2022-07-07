@@ -40,7 +40,7 @@ class VoiceMESSAGE(BaseMESSAGE):
             - Function that accepts any amount of parameters and returns any of the above types.
                     To pass a function, YOU MUST USE THE framework.data_function decorator on the function before
                     passing the function to the framework.
-        - channel_ids ~ List of IDs of all the channels you want data to be sent into.
+        - channels ~ List of IDs of all the channels you want data to be sent into.
         - start_now ~ A bool variable that can be either True or False. If True, then the framework will send the message
                                  as soon as it is run and then wait it's period before trying again. If False, then the message will
                                  not be sent immediatly after framework is ready, but will instead wait for the period to elapse.
@@ -63,7 +63,7 @@ class VoiceMESSAGE(BaseMESSAGE):
     def __init__(self, start_period: Union[float, None],
                  end_period: float,
                  data: AUDIO,
-                 channel_ids: Iterable[int],
+                 channels: Iterable[int],
                  start_now: bool = True,
                  volume: int=50):
 
@@ -71,7 +71,7 @@ class VoiceMESSAGE(BaseMESSAGE):
         self.data = data
 
         self.volume = max(5, min(100, volume)) # Clamp the volume to 5-100 % 
-        self.channels = list(set(channel_ids)) # Auto remove duplicates
+        self.channels = list(set(channels)) # Auto remove duplicates
 
     def generate_log_context(self,
                              audio: AUDIO,
