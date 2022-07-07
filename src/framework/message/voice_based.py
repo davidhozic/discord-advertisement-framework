@@ -49,7 +49,8 @@ class VoiceMESSAGE(BaseMESSAGE):
     __slots__ = (
         "randomized_time",
         "period",
-        "random_range",
+        "start_period",
+        "end_period",
         "data",
         "volume",
         "channels",
@@ -127,15 +128,18 @@ class VoiceMESSAGE(BaseMESSAGE):
         ch_i = 0
         cl = client.get_client()
         while ch_i < len(self.channels):
-            channel_id = self.channels[ch_i]
-            channel = cl.get_channel(channel_id)
-            self.channels[ch_i] = channel
+            channel = self.channels[ch_i]
+            if isinstance(channel, discord.abc.GuildChannel):
+                channel_id = channel.id
+            else:
+                channel_id = channel
+                channel = self.channels[ch_i] = cl.get_channel(channel_id)
 
             if channel is None:
                 trace(f"Unable to get channel from ID {channel_id}", TraceLEVELS.ERROR)
                 self.channels.remove(channel)
-            elif type(channel) is not discord.VoiceChannel:
-                raise DAFInvalidParameterError(f"VoiceMESSAGE object got ID ({channel_id}) for {type(channel).__name__}, but was expecting discord.VoiceChannel", DAF_INVALID_TYPE)
+            elif type(channel) not in {discord.VoiceChannel}:
+                raise DAFInvalidParameterError(f"TextMESSAGE object received channel type of {type(channel).__name__}, but was expecting VoiceChannel", DAF_INVALID_TYPE)
             else:
                 ch_i += 1
 
@@ -219,3 +223,15 @@ class VoiceMESSAGE(BaseMESSAGE):
 
             return self.generate_log_context(**_data_to_send, succeeded_ch=succeded_channels, failed_ch=errored_channels)
         return None
+
+    async def update(self, **kwargs):
+        """ ~ async method ~
+        - @Added in v1.9.5
+        - @Info:
+            Used for chaning the initialization parameters the object was initialized with.
+        - @Params:
+            - The allowed parameters are the initialization parameters first used on creation of the object.
+        - @Exception:
+            - <class DAFInvalidParameterError code=DAF_UPDATE_PARAMETER_ERROR> ~ Invalid keyword argument was passed
+            - Other exceptions raised from .initialize() method"""
+        await super().update(**kwargs) # No additional modifications are required

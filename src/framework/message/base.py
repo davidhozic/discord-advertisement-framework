@@ -2,6 +2,7 @@
 @Info:
     Contains base definitions for different message classes."""
 
+from    contextlib import suppress
 from    typing import Union
 from    ..dtypes import *
 from    ..tracing import *
@@ -9,6 +10,7 @@ from    ..timing import *
 from    ..exceptions import *
 import  random
 import  _discord as discord
+import  copy
 
 
 __all__ = (
@@ -26,7 +28,8 @@ class BaseMESSAGE:
         "initialized",
         "randomized_time",
         "period",
-        "random_range",
+        "start_period",
+        "end_period",
         "timer",
         "force_retry",
         "data"
@@ -43,13 +46,14 @@ class BaseMESSAGE:
                 data,
                 start_now : bool=True):
         # If start_period is none -> period will not be randomized
-        self.random_range = [start_period, end_period] # Tracked for usage in .update() method
+        self.start_period = start_period
+        self.end_period   = end_period
         if start_period is None:            
             self.randomized_time = False
             self.period = end_period
         else:
             self.randomized_time = True
-            self.period = random.randrange(*self.random_range)
+            self.period = random.randrange(self.start_period, self.end_period)
 
         self.timer = TIMER()
         self.force_retry = {"ENABLED" : start_now, "TIME" : 0}
@@ -104,7 +108,7 @@ class BaseMESSAGE:
         self.timer.start()
         self.force_retry["ENABLED"] = False
         if self.randomized_time is True:
-            self.period = random.randrange(*self.random_range)
+            self.period = random.randrange(self.start_period, self.end_period)
 
     async def send_channel(self) -> dict:
         """ ~ async method ~
@@ -184,11 +188,11 @@ class BaseMESSAGE:
         await self.initialize_data()
         self.initialized = True
 
-    async def update(self, init_options: dict = {},**kwargs):
+    async def update(self, *, init_options: dict = {},**kwargs):
         """ ~ async method ~
         - @Added in v1.9.5
         - @Info:
-            This method is used for updating properties the object was initialated with.
+            Used for chaning the initialization parameters the object was initialized with.
         - @Params:
             - The allowed parameters are the initialization parameters first used on creation of the object AND 
             - init_options ~ Contains the initialization options used in .initialize() method for reainitializing certain objects.
@@ -197,20 +201,28 @@ class BaseMESSAGE:
             - <class DAFInvalidParameterError code=DAF_UPDATE_PARAMETER_ERROR> ~ Invalid keyword argument was passed
             - Other exceptions raised from .initialize() method"""
         init_keys = list(self.__init__.__annotations__.keys())
-        init_keys.remove("start_now") # Doesn't make sense to update this
-          
-        for k, v in kwargs.items():
-            if k not in init_keys:
-                raise DAFInvalidParameterError(f"Keyword argument `{k}` was passed which is not allowed. The update method only accepts the following keyword arguments: {init_keys}", DAF_UPDATE_PARAMETER_ERROR)
-            # Keys that don't match the internal variables
-            if k == "start_period":
-                self.random_range[0] = v
-            elif k == "end_period":
-                self.random_range[1] = v
-            else:
-                # Key matches internal variable
-                setattr(self, k, v)  # Update the data dictionary with new values
+        init_keys.remove("start_now")   # Doesn't make sense to update this
+        current_state = copy.copy(self) # Make a copy of the current object for restoration in case of update failure
 
-        # Reinitialize
-        BaseMESSAGE.__init__(self, self.random_range[0] , self.random_range[1], self.data, False) # Call the base init method to reset the variables
-        await self.initialize(**init_options)
+        try:  
+            for k in kwargs:
+                if k not in init_keys:
+                    raise DAFInvalidParameterError(f"Keyword argument `{k}` was passed which is not allowed. The update method only accepts the following keyword arguments: {init_keys}", DAF_UPDATE_PARAMETER_ERROR)
+            # Most of the variables inside the object have the same names as in the __init__ function.
+            # This section stores attributes, that are the same, into the `internal_vars` dictionary and
+            # then calls the __init__ method with the same parameters, with the exception of start_period, end_period and start_now parameters
+            internal_vars = {}
+            for k in self.__init__.__annotations__:
+                # Store the attributes that match the __init__ parameters into `internal_vars`
+                with suppress(AttributeError):
+                    # Ignore those that are not in the `internal_vars`
+                    internal_vars[k] = kwargs[k] if k in kwargs else getattr(self, k)
+
+            # Call the implementation __init__ function and then initialize API related things
+            self.__init__(**internal_vars, start_now=False)
+            await self.initialize(**init_options)
+        except Exception:
+            # In case of failure, restore to original attributes
+            for k in type(self).__slots__:
+                setattr(self, k, getattr(current_state, k))
+            raise

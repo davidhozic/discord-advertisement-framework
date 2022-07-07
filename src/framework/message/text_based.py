@@ -50,7 +50,8 @@ class TextMESSAGE(BaseMESSAGE):
     __slots__ = (
         "randomized_time",
         "period",
-        "random_range",
+        "start_period",
+        "end_period",
         "data",
         "channels",
         "timer",
@@ -71,7 +72,7 @@ class TextMESSAGE(BaseMESSAGE):
         self.data = data
         self.mode = mode
         self.channels = list(set(channels)) # Automatically removes duplicates
-        self.sent_messages = {ch_id : None for ch_id in channels} # Dictionary for storing last sent message for each channel
+        self.sent_messages = {} # Dictionary for storing last sent message for each channel
 
     def generate_log_context(self,
                              text : str,
@@ -181,7 +182,7 @@ class TextMESSAGE(BaseMESSAGE):
                 handled = True
             elif ex.status == 404:      # Unknown object
                 if ex.code == 10008:    # Unknown message
-                    self.sent_messages[channel.id]  = None
+                    self.sent_messages[channel.id] = None
                     handled = True
         return handled
 
@@ -206,13 +207,13 @@ class TextMESSAGE(BaseMESSAGE):
                     raise self.generate_exception(403, 50013, "You lack permissions to perform that action", discord.Forbidden)
 
                 # Delete previous message if clear-send mode is choosen and message exists
-                if self.mode == "clear-send" and self.sent_messages[channel.id] is not None:
+                if self.mode == "clear-send" and self.sent_messages.get(channel.id, None) is not None:
                     await self.sent_messages[channel.id].delete()
                     self.sent_messages[channel.id] = None
 
                 # Send/Edit message
                 if  (self.mode in  {"send" , "clear-send"} or # Mode dictates to send new message or delete previous and then send new message or mode dictates edit but message was  never sent to this channel before
-                    self.mode == "edit" and self.sent_messages[channel.id] is None
+                    self.mode == "edit" and self.sent_messages.get(channel.id, None) is None
                     ):
                     discord_sent_msg = await channel.send(  text,
                                                             embed=embed,
@@ -268,6 +269,18 @@ class TextMESSAGE(BaseMESSAGE):
             return self.generate_log_context(**data_to_send, succeeded_ch=succeded_channels, failed_ch=errored_channels)
 
         return None
+
+    async def update(self, **kwargs):
+        """ ~ async method ~
+        - @Added in v1.9.5
+        - @Info:
+            Used for chaning the initialization parameters the object was initialized with.
+        - @Params:
+            - The allowed parameters are the initialization parameters first used on creation of the object.
+        - @Exception:
+            - <class DAFInvalidParameterError code=DAF_UPDATE_PARAMETER_ERROR> ~ Invalid keyword argument was passed
+            - Other exceptions raised from .initialize() method"""
+        await super().update(**kwargs) # No additional modifications are required
  
 
 @sql.register_type("MessageTYPE")
@@ -294,7 +307,8 @@ class DirectMESSAGE(BaseMESSAGE):
     __slots__ = (
         "randomized_time",
         "period",
-        "random_range",
+        "start_period",
+        "end_period",
         "timer",
         "force_retry",
         "data",
