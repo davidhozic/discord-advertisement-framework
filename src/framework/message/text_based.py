@@ -275,6 +275,7 @@ class TextMESSAGE(BaseMESSAGE):
         - @Added in v1.9.5
         - @Info:
             Used for chaning the initialization parameters the object was initialized with.
+            NOTE: Upon updating, the internal state of objects get's reset, meaning you basically have a brand new created object.
         - @Params:
             - The allowed parameters are the initialization parameters first used on creation of the object
         - @Exception:
@@ -483,6 +484,7 @@ class DirectMESSAGE(BaseMESSAGE):
         - @Added in v1.9.5
         - @Info:
             Used for chaning the initialization parameters the object was initialized with.
+            NOTE: Upon updating, the internal state of objects get's reset, meaning you basically have a brand new created object.
         - @Params:
             - The allowed parameters are the initialization parameters first used on creation of the object
         - @Exception:
