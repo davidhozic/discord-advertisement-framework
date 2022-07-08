@@ -2,14 +2,16 @@
 @info:
     Contains definitions related to voice messaging."""
 
+from re import L
 from   .base        import *
-from   ..           import client
-from   ..           import sql
 from   ..dtypes     import *
 from   ..tracing    import *
 from   ..const      import *
 from   ..exceptions import *
 from   typing       import List, Iterable, Union
+from   ..           import client
+from   ..           import sql
+from   ..           import core
 import asyncio
 import _discord as discord
 
@@ -70,7 +72,6 @@ class VoiceMESSAGE(BaseMESSAGE):
 
         super().__init__(start_period, end_period, start_now)
         self.data = data
-
         self.volume = max(5, min(100, volume)) # Clamp the volume to 5-100 % 
         self.channels = list(set(channels)) # Auto remove duplicates
 
@@ -178,7 +179,7 @@ class VoiceMESSAGE(BaseMESSAGE):
                 await asyncio.sleep(1)
             return {"success": True}
         except Exception as ex:
-            if isinstance(ex, FileExistsError):
+            if isinstance(ex, (FileExistsError, discord.Forbidden)):
                 pass # Don't change error
             elif client.get_client().get_channel(channel.id) is None:
                 ex = self.generate_exception(404, 10003, "Channel was deleted", discord.NotFound)
@@ -230,8 +231,10 @@ class VoiceMESSAGE(BaseMESSAGE):
         - @Info:
             Used for chaning the initialization parameters the object was initialized with.
         - @Params:
-            - The allowed parameters are the initialization parameters first used on creation of the object.
+            - The allowed parameters are the initialization parameters first used on creation of the object AND 
+            - init_options ~ Contains the initialization options used in .initialize() method for reainitializing certain objects.
+                             This is implementation specific and not necessarily available.
         - @Exception:
             - <class DAFInvalidParameterError code=DAF_UPDATE_PARAMETER_ERROR> ~ Invalid keyword argument was passed
             - Other exceptions raised from .initialize() method"""
-        await super().update(**kwargs) # No additional modifications are required
+        await core.update(self, **kwargs) # No additional modifications are required

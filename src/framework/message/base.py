@@ -8,6 +8,7 @@ from    ..dtypes import *
 from    ..tracing import *
 from    ..timing import *
 from    ..exceptions import *
+from    .. import core
 import  random
 import  _discord as discord
 import  copy
@@ -32,7 +33,7 @@ class BaseMESSAGE:
         "end_period",
         "timer",
         "force_retry",
-        "data"
+        "data",
     )
 
     # The "__valid_data_types__" should be implemented in the INHERITED classes.
@@ -127,7 +128,6 @@ class BaseMESSAGE:
 
     async def initialize_channels(self):
         """ ~ async method ~
-
         - @Info: This method initializes the implementation specific
                  api objects and checks for the correct channel inpit context."""
         raise NotImplementedError
@@ -174,21 +174,7 @@ class BaseMESSAGE:
             if len(self.data) == 0:
                 raise DAFMissingParameterError(f"No data parameters were passed", DAF_MISSING_PARAMETER)
 
-
-    async def initialize(self, **options):
-        """ ~ async method ~
-        - @Info:
-            The initialize method initilizes the message object.
-        - @Params:
-            - options ~ keyword arguments sent to initialize_channels() from an inherited (from BaseGUILD) class, contains extra init options."""
-        if self.initialized:
-            return
-
-        await self.initialize_channels(**options)
-        await self.initialize_data()
-        self.initialized = True
-
-    async def update(self, *, init_options: dict = {},**kwargs):
+    async def update(self, init_options={}, **kwargs):
         """ ~ async method ~
         - @Added in v1.9.5
         - @Info:
@@ -200,29 +186,19 @@ class BaseMESSAGE:
         - @Exception:
             - <class DAFInvalidParameterError code=DAF_UPDATE_PARAMETER_ERROR> ~ Invalid keyword argument was passed
             - Other exceptions raised from .initialize() method"""
-        init_keys = list(self.__init__.__annotations__.keys())
-        init_keys.remove("start_now")   # Doesn't make sense to update this
-        current_state = copy.copy(self) # Make a copy of the current object for restoration in case of update failure
+        raise NotImplementedError
+        
+    async def initialize(self, **options):
+        """ ~ async method ~
+        - @Info:
+            The initialize method initilizes the message object.
+        - @Params:
+            - options ~ keyword arguments sent to initialize_channels() from an inherited (from BaseGUILD) class, contains extra init options.
+        - @Exceptions:
+            - Exceptions raised from .initialize_channels() and .initialize_data() methods"""
+        if self.initialized:
+            return
 
-        try:  
-            for k in kwargs:
-                if k not in init_keys:
-                    raise DAFInvalidParameterError(f"Keyword argument `{k}` was passed which is not allowed. The update method only accepts the following keyword arguments: {init_keys}", DAF_UPDATE_PARAMETER_ERROR)
-            # Most of the variables inside the object have the same names as in the __init__ function.
-            # This section stores attributes, that are the same, into the `internal_vars` dictionary and
-            # then calls the __init__ method with the same parameters, with the exception of start_period, end_period and start_now parameters
-            internal_vars = {}
-            for k in self.__init__.__annotations__:
-                # Store the attributes that match the __init__ parameters into `internal_vars`
-                with suppress(AttributeError):
-                    # Ignore those that are not in the `internal_vars`
-                    internal_vars[k] = kwargs[k] if k in kwargs else getattr(self, k)
-
-            # Call the implementation __init__ function and then initialize API related things
-            self.__init__(**internal_vars, start_now=False)
-            await self.initialize(**init_options)
-        except Exception:
-            # In case of failure, restore to original attributes
-            for k in type(self).__slots__:
-                setattr(self, k, getattr(current_state, k))
-            raise
+        await self.initialize_channels(**options)
+        await self.initialize_data()
+        self.initialized = True

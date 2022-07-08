@@ -6,13 +6,14 @@
 """
 
 from    contextlib import suppress
-from    typing import Literal, Union, List
+from    typing import Literal, Union, List, Optional
 from    .exceptions import *
 from    .tracing import *
 from    .const import *
 from    .message import *
 from    . import client
 from    . import sql
+from    . import core
 import  _discord as discord
 import  time
 import  json
@@ -44,7 +45,7 @@ class BaseGUILD:
         "initialized",
         "apiobject",
         "snowflake",
-        "_generate_log",
+        "logging",
         "_messages",
         "t_messages",
         "vc_messages"
@@ -58,14 +59,25 @@ class BaseGUILD:
                a string that contains only allowed character. This is a method instead of
                property because the name can change overtime."""
         raise NotImplementedError
+    
+    @property
+    def messages(self):
+        """
+        ~ property (getter) ~
+        - @Info: Returns all the messages inside the object.
+        """
+        return self.t_messages + self.vc_messages
 
     def __init__(self,
                  snowflake: int,
-                 generate_log: bool=False) -> None:
+                 messages: Optional[List]=[],
+                 logging: Optional[bool]=False) -> None:
+
         self.initialized = False
         self.apiobject = None
         self.snowflake = snowflake
-        self._generate_log = generate_log
+        self.logging = logging
+        self._messages = messages
         self.t_messages: List[Union[TextMESSAGE, DirectMESSAGE]] = []
         self.vc_messages: List[VoiceMESSAGE] = []
 
@@ -98,6 +110,18 @@ class BaseGUILD:
             - This is the main coroutine that is responsible for sending all the messages to this specificc guild,
               it is called from the core module's advertiser task
         """
+        raise NotImplementedError
+
+    async def update(self, **kwargs):
+        """ ~ async method ~
+        - @Added in v1.9.5
+        - @Info:
+            Used for chaning the initialization parameters the object was initialized with.
+        - @Params:
+            - The allowed parameters are the initialization parameters first used on creation of the object
+        - @Exception:
+            - <class DAFInvalidParameterError code=DAF_UPDATE_PARAMETER_ERROR> ~ Invalid keyword argument was passed
+            - Other exceptions raised from .initialize() method"""
         raise NotImplementedError
 
     async def generate_log(self,
@@ -184,12 +208,18 @@ class GUILD(BaseGUILD):
     - @Param:
         - guild_id ~ identificator which can be obtained by enabling developer mode in discord's settings and
                      afterwards right-clicking on the server/guild icon in the server list and clicking "Copy ID",
-        - messages_to_send ~List of TextMESSAGE/VoiceMESSAGE objects
-        - generate_log ~ bool variable, if True it will generate a file log for each message send attempt."""
+        - messages ~List of TextMESSAGE/VoiceMESSAGE objects
+        - logging ~ bool variable, if True it will generate a file log for each message send attempt."""
     
     __logname__ = "GUILD" # For sql.register_type
     __slots__   = set()   # Removes __dict__ (prevents dynamic attributes)
 
+    def __init__(self,
+                 guild_id: int,
+                 messages: Optional[List[Union[TextMESSAGE, VoiceMESSAGE]]]=[],
+                 logging: Optional[bool]=False):
+        super().__init__(guild_id, messages, logging)
+    
     @property
     def log_file_name(self):
         """~ property (getter) ~
@@ -197,14 +227,7 @@ class GUILD(BaseGUILD):
                a string that contains only allowed character. This is a method instead of
                property because the name can change overtime."""
         return "".join(char if char not in C_FILE_NAME_FORBIDDEN_CHAR else "#" for char in self.apiobject.name) + ".json"
-
-    def __init__(self,
-                 guild_id: int,
-                 messages_to_send: List[Union[TextMESSAGE, VoiceMESSAGE]],
-                 generate_log: bool=False):
-        self._messages = messages_to_send
-        super().__init__(guild_id, generate_log)
-
+    
     async def add_message(self, message: Union[TextMESSAGE, VoiceMESSAGE]):
         """~  coro  ~
         - @Info:   Adds a message to the message list
@@ -275,7 +298,7 @@ class GUILD(BaseGUILD):
                 # Check if the message still has any channels (as they can be auto removed on 404 status)
                 if len(message.channels) == 0:
                     marked_del.append(message) # All channels were removed (either not found or forbidden) -> remove message from send list
-                if self._generate_log and message_ret is not None:
+                if self.logging and message_ret is not None:
                     await self.generate_log(message_ret)
 
         # Cleanup messages marked for removal
@@ -284,6 +307,25 @@ class GUILD(BaseGUILD):
                 msg_list.remove(message)
             trace(f"[GUILD]: Removing a {type(message).__name__} because it's channels were removed, in guild {self.apiobject.name}(ID: {self.snowflake})", TraceLEVELS.WARNING)
 
+    async def update(self, **kwargs):
+        """ ~ async method ~
+        - @Added in v1.9.5
+        - @Info:
+            Used for chaning the initialization parameters the object was initialized with.
+            First the guild is updated and then all the message objects are updated
+        - @Params:
+            - The allowed parameters are the initialization parameters first used on creation of the object
+        - @Exception:
+            - <class DAFInvalidParameterError code=DAF_UPDATE_PARAMETER_ERROR> ~ Invalid keyword argument was passed
+            - Other exceptions raised from .initialize() method"""
+        # Update the guild
+        if "guild_id" not in kwargs:
+            kwargs["guild_id"] = self.snowflake
+        await core.update(self, **kwargs)
+        # Update messages
+        for message in self.messages:
+            await core.update(message)
+        
 
 @sql.register_type("GuildTYPE")
 class USER(BaseGUILD):
@@ -294,7 +336,7 @@ class USER(BaseGUILD):
         - user_id ~ id of the user you want to DM,
         - messages ~ list of DirectMESSAGE objects which
                             represent messages that will be sent to the DM
-        - generate_log ~ dictates if log should be generated for each sent message"""
+        - logging ~ dictates if log should be generated for each sent message"""
 
     __logname__ = "USER" # For sql.register_type
     __slots__   = set()  # Removes __dict__ (prevents dynamic attributes)
@@ -309,10 +351,9 @@ class USER(BaseGUILD):
 
     def __init__(self,
                  user_id: int,
-                 messages_to_send: List[DirectMESSAGE],
-                 generate_log: bool = False) -> None:
-        super().__init__(user_id, generate_log)
-        self._messages = messages_to_send
+                 messages: Optional[List[DirectMESSAGE]]=[],
+                 logging: bool = False) -> None:
+        super().__init__(user_id, messages, logging)
 
     async def add_message(self, message):
         """~  coro  ~
@@ -368,10 +409,29 @@ class USER(BaseGUILD):
                 if message.is_ready():
                     message.reset_timer()
                     message_ret = await message.send()
-                    if self._generate_log and message_ret is not None:
+                    if self.logging and message_ret is not None:
                         await self.generate_log(message_ret)
                     
                     if message.dm_channel is None:
                         self.t_messages.clear()            # Remove all messages since that they all share the same user and will fail
                         trace(f"Removing all messages for user {self.apiobject.display_name}#{self.apiobject.discriminator} (ID: {self.snowflake}) because we do not have permissions to send to that user.", TraceLEVELS.WARNING)
                         break
+    
+    async def update(self, **kwargs):
+        """ ~ async method ~
+        - @Added in v1.9.5
+        - @Info:
+            Used for chaning the initialization parameters the object was initialized with.
+            First the user is updated and then all the message objects are updated
+        - @Params:
+            - The allowed parameters are the initialization parameters first used on creation of the object
+        - @Exception:
+            - <class DAFInvalidParameterError code=DAF_UPDATE_PARAMETER_ERROR> ~ Invalid keyword argument was passed
+            - Other exceptions raised from .initialize() method"""
+        # Update the guild
+        if "user_id" not in kwargs:
+            kwargs["user_id"] = self.snowflake
+        await core.update(self, **kwargs)
+        # Update messages
+        for message in self.messages:
+            await core.update(message, init_options={"user" : self.apiobject})

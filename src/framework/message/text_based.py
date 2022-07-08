@@ -276,11 +276,11 @@ class TextMESSAGE(BaseMESSAGE):
         - @Info:
             Used for chaning the initialization parameters the object was initialized with.
         - @Params:
-            - The allowed parameters are the initialization parameters first used on creation of the object.
+            - The allowed parameters are the initialization parameters first used on creation of the object
         - @Exception:
             - <class DAFInvalidParameterError code=DAF_UPDATE_PARAMETER_ERROR> ~ Invalid keyword argument was passed
             - Other exceptions raised from .initialize() method"""
-        await super().update(**kwargs) # No additional modifications are required
+        await core.update(self, **kwargs) # No additional modifications are required
  
 
 @sql.register_type("MessageTYPE")
@@ -314,7 +314,7 @@ class DirectMESSAGE(BaseMESSAGE):
         "data",
         "mode",
         "previous_message",
-        "dm_channel"
+        "dm_channel",
     )
     __logname__ = "DirectMESSAGE"
     __valid_data_types__ = {str, EMBED, FILE}
@@ -389,7 +389,8 @@ class DirectMESSAGE(BaseMESSAGE):
         - @Exceptions:
             - <DAFInitError code=DAF_USER_CREATE_DM> ~ Raised when the direct message channel could not be created"""
         try:
-            self.dm_channel = await user.create_dm()
+            await user.create_dm()
+            self.dm_channel: discord.User = user
         except discord.HTTPException as ex:
             raise DAFInitError(f"Unable to create DM with user {user.display_name}", DAF_USER_CREATE_DM)
 
@@ -476,3 +477,15 @@ class DirectMESSAGE(BaseMESSAGE):
             return self.generate_log_context(**data_to_send, **context)
 
         return None
+
+    async def update(self, **kwargs):
+        """ ~ async method ~
+        - @Added in v1.9.5
+        - @Info:
+            Used for chaning the initialization parameters the object was initialized with.
+        - @Params:
+            - The allowed parameters are the initialization parameters first used on creation of the object
+        - @Exception:
+            - <class DAFInvalidParameterError code=DAF_UPDATE_PARAMETER_ERROR> ~ Invalid keyword argument was passed
+            - Other exceptions raised from .initialize() method"""
+        await core.update(self, init_options={"user" : self.dm_channel}, **kwargs) # No additional modifications are required
