@@ -22,9 +22,13 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 """
 
+import inspect
 from typing import Any, Dict, List, Literal, Optional, Union
+from enum import Enum
 
-from ..enums import ChannelType, SlashCommandOptionType
+from ..abc import GuildChannel
+from ..channel import TextChannel, VoiceChannel, StageChannel, CategoryChannel, Thread
+from ..enums import ChannelType, SlashCommandOptionType, Enum as DiscordEnum
 
 __all__ = (
     "ThreadOption",
@@ -33,16 +37,24 @@ __all__ = (
     "option",
 )
 
-channel_type_map = {
-    "TextChannel": ChannelType.text,
-    "VoiceChannel": ChannelType.voice,
-    "StageChannel": ChannelType.stage_voice,
-    "CategoryChannel": ChannelType.category,
-    "Thread": ChannelType.public_thread,
+CHANNEL_TYPE_MAP = {
+    TextChannel: ChannelType.text,
+    VoiceChannel: ChannelType.voice,
+    StageChannel: ChannelType.stage_voice,
+    CategoryChannel: ChannelType.category,
+    Thread: ChannelType.public_thread,
 }
 
 
 class ThreadOption:
+    """Represents a class that can be passed as the input_type for an Option class.
+
+    Parameters
+    -----------
+    thread_type: Literal["public", "private", "news"]
+        The thread type to expect for this options input.
+    """
+
     def __init__(self, thread_type: Literal["public", "private", "news"]):
         type_map = {
             "public": ChannelType.public_thread,
@@ -50,10 +62,6 @@ class ThreadOption:
             "news": ChannelType.news_thread,
         }
         self._type = type_map[thread_type]
-
-    @property
-    def __name__(self):
-        return "ThreadOption"
 
 
 class Option:
@@ -80,12 +88,12 @@ class Option:
     ----------
     input_type: :class:`Any`
         The type of input that is expected for this option.
-    description: :class:`str`
-        The description of this option.
-        Must be 100 characters or fewer.
     name: :class:`str`
         The name of this option visible in the UI.
         Inherits from the variable name if not provided as a parameter.
+    description: Optional[:class:`str`]
+        The description of this option.
+        Must be 100 characters or fewer.
     choices: Optional[List[Union[:class:`Any`, :class:`OptionChoice`]]]
         The list of available choices for this option.
         Can be a list of values or :class:`OptionChoice` objects (which represent a name:value pair).
@@ -100,6 +108,12 @@ class Option:
     max_value: Optional[:class:`int`]
         The maximum value that can be entered.
         Only applies to Options with an input_type of ``int`` or ``float``.
+    min_length: Optional[:class:`int`]
+        The minimum length of the string that can be entered. Must be between 0 and 6000 (inclusive).
+        Only applies to Options with an input_type of ``str``.
+    max_length: Optional[:class:`int`]
+        The maximum length of the string that can be entered. Must be between 1 and 6000 (inclusive).
+        Only applies to Options with an input_type of ``str``.
     autocomplete: Optional[:class:`Any`]
         The autocomplete handler for the option. Accepts an iterable of :class:`str`, a callable (sync or async) that takes a
         single argument of :class:`AutocompleteContext`, or a coroutine. Must resolve to an iterable of :class:`str`.
@@ -115,18 +129,28 @@ class Option:
         See `here <https://discord.com/developers/docs/reference#locales>`_ for a list of valid locales.
     """
 
-    def __init__(self, input_type: Any, /, description: str = None, **kwargs) -> None:
+    def __init__(self, input_type: Any = str, /, description: Optional[str] = None, **kwargs) -> None:
         self.name: Optional[str] = kwargs.pop("name", None)
         if self.name is not None:
             self.name = str(self.name)
+        self._parameter_name = self.name  # default
         self.description = description or "No description provided"
         self.converter = None
         self._raw_type = input_type
         self.channel_types: List[ChannelType] = kwargs.pop("channel_types", [])
+        enum_choices = []
         if not isinstance(input_type, SlashCommandOptionType):
             if hasattr(input_type, "convert"):
                 self.converter = input_type
+                self._raw_type = str
                 input_type = SlashCommandOptionType.string
+            elif isinstance(input_type, type) and issubclass(input_type, (Enum, DiscordEnum)):
+                enum_choices = [OptionChoice(e.name, e.value) for e in input_type]
+                if len(enum_choices) != len([elem for elem in enum_choices if elem.value.__class__ == enum_choices[0].value.__class__]):
+                    enum_choices = [OptionChoice(e.name, str(e.value)) for e in input_type]
+                    input_type = SlashCommandOptionType.string
+                else:
+                    input_type = SlashCommandOptionType.from_datatype(enum_choices[0].value.__class__)
             else:
                 try:
                     _type = SlashCommandOptionType.from_datatype(input_type)
@@ -140,23 +164,33 @@ class Option:
                 else:
                     if _type == SlashCommandOptionType.channel:
                         if not isinstance(input_type, tuple):
-                            input_type = (input_type,)
+                            if hasattr(input_type, "__args__"):  # Union
+                                input_type = input_type.__args__
+                            else:
+                                input_type = (input_type,)
                         for i in input_type:
-                            if i.__name__ == "GuildChannel":
+                            if i is GuildChannel:
                                 continue
                             if isinstance(i, ThreadOption):
                                 self.channel_types.append(i._type)
                                 continue
 
-                            channel_type = channel_type_map[i.__name__]
+                            channel_type = CHANNEL_TYPE_MAP[i]
                             self.channel_types.append(channel_type)
                     input_type = _type
         self.input_type = input_type
         self.required: bool = kwargs.pop("required", True) if "default" not in kwargs else False
         self.default = kwargs.pop("default", None)
-        self.choices: List[OptionChoice] = [
+        self.choices: List[OptionChoice] = enum_choices or [
             o if isinstance(o, OptionChoice) else OptionChoice(o) for o in kwargs.pop("choices", list())
         ]
+
+        if description is not None:
+            self.description = description
+        elif issubclass(self._raw_type, Enum) and (doc := inspect.getdoc(self._raw_type)) is not None:
+            self.description = doc
+        else:
+            self.description = "No description provided"
 
         if self.input_type == SlashCommandOptionType.integer:
             minmax_types = (int, type(None))
@@ -166,13 +200,39 @@ class Option:
             minmax_types = (type(None),)
         minmax_typehint = Optional[Union[minmax_types]]  # type: ignore
 
+        if self.input_type == SlashCommandOptionType.string:
+            minmax_length_types = (int, type(None))
+        else:
+            minmax_length_types = (type(None),)
+        minmax_length_typehint = Optional[Union[minmax_length_types]] # type: ignore
+
         self.min_value: minmax_typehint = kwargs.pop("min_value", None)
         self.max_value: minmax_typehint = kwargs.pop("max_value", None)
+        self.min_length: minmax_length_typehint = kwargs.pop("min_length", None)
+        self.max_length: minmax_length_typehint = kwargs.pop("max_length", None)
 
-        if not isinstance(self.min_value, minmax_types) and self.min_value is not None:
+        if (input_type != SlashCommandOptionType.integer and input_type != SlashCommandOptionType.number
+                and (self.min_value or self.max_value)):
+            raise AttributeError("Option does not take min_value or max_value if not of type "
+                                 "SlashCommandOptionType.integer or SlashCommandOptionType.number")
+        if input_type != SlashCommandOptionType.string and (self.min_length or self.max_length):
+            raise AttributeError('Option does not take min_length or max_length if not of type str')
+
+        if self.min_value is not None and not isinstance(self.min_value, minmax_types):
             raise TypeError(f'Expected {minmax_typehint} for min_value, got "{type(self.min_value).__name__}"')
-        if not (isinstance(self.max_value, minmax_types) or self.min_value is None):
+        if self.max_value is not None and not isinstance(self.max_value, minmax_types):
             raise TypeError(f'Expected {minmax_typehint} for max_value, got "{type(self.max_value).__name__}"')
+
+        if self.min_length is not None:
+            if not isinstance(self.min_length, minmax_length_types):
+                raise TypeError(f'Expected {minmax_length_typehint} for min_length, got "{type(self.min_length).__name__}"')
+            if self.min_length < 0 or self.min_length > 6000:
+                raise AttributeError("min_length must be between 0 and 6000 (inclusive)")
+        if self.max_length is not None:
+            if not isinstance(self.max_length, minmax_length_types):
+                raise TypeError(f'Expected {minmax_length_typehint} for max_length, got "{type(self.max_length).__name__}"')
+            if self.max_length < 1 or self.max_length > 6000:
+                raise AttributeError("max_length must between 1 and 6000 (inclusive)")
 
         self.autocomplete = kwargs.pop("autocomplete", None)
 
@@ -198,6 +258,10 @@ class Option:
             as_dict["min_value"] = self.min_value
         if self.max_value is not None:
             as_dict["max_value"] = self.max_value
+        if self.min_length is not None:
+            as_dict["min_length"] = self.min_length
+        if self.max_length is not None:
+            as_dict["max_length"] = self.max_length
 
         return as_dict
 
@@ -222,17 +286,18 @@ class OptionChoice:
         See `here <https://discord.com/developers/docs/reference#locales>`_ for a list of valid locales.
     """
 
-    def __init__(self, name: str, value: Optional[Union[str, int, float]] = None,
-                 name_localizations: Optional[Dict[str, str]] = None):
+    def __init__(
+        self,
+        name: str,
+        value: Optional[Union[str, int, float]] = None,
+        name_localizations: Optional[Dict[str, str]] = None,
+    ):
         self.name = str(name)
         self.value = value if value is not None else name
         self.name_localizations = name_localizations
 
     def to_dict(self) -> Dict[str, Union[str, int, float]]:
-        as_dict = {
-            "name": self.name,
-            "value": self.value
-        }
+        as_dict = {"name": self.name, "value": self.value}
         if self.name_localizations is not None:
             as_dict["name_localizations"] = self.name_localizations
 

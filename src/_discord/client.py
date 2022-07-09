@@ -53,7 +53,7 @@ from .appinfo import AppInfo
 from .backoff import ExponentialBackoff
 from .channel import PartialMessageable, _threaded_channel_factory
 from .emoji import Emoji
-from .enums import ChannelType, Status, VoiceRegion
+from .enums import ChannelType, Status
 from .errors import *
 from .flags import ApplicationFlags, Intents
 from .gateway import *
@@ -483,7 +483,7 @@ class Client:
 
     # login state management
 
-    async def login(self, token: str, *, bot: bool) -> None:
+    async def login(self, token: str) -> None:
         """|coro|
 
         Logs in the client with the specified credentials.
@@ -511,7 +511,7 @@ class Client:
 
         _log.info("logging in using static token")
 
-        data = await self.http.static_login(token.strip(), bot=bot)
+        data = await self.http.static_login(token.strip())
         self._connection.user = ClientUser(state=self._connection, data=data)
 
     async def connect(self, *, reconnect: bool = True) -> None:
@@ -644,7 +644,7 @@ class Client:
         self._connection.clear()
         self.http.recreate()
 
-    async def start(self, token: str, *, bot: bool = True, reconnect: bool = True) -> None:
+    async def start(self, token: str, *, reconnect: bool = True) -> None:
         """|coro|
 
         A shorthand coroutine for :meth:`login` + :meth:`connect`.
@@ -654,7 +654,7 @@ class Client:
         TypeError
             An unexpected keyword argument was received.
         """
-        await self.login(token, bot=bot)
+        await self.login(token)
         await self.connect(reconnect=reconnect)
 
     def run(self, *args: Any, **kwargs: Any) -> None:
@@ -1319,7 +1319,6 @@ class Client:
         self,
         *,
         name: str,
-        region: Union[VoiceRegion, str] = VoiceRegion.us_west,
         icon: bytes = MISSING,
         code: str = MISSING,
     ) -> Guild:
@@ -1333,9 +1332,6 @@ class Client:
         ----------
         name: :class:`str`
             The name of the guild.
-        region: :class:`.VoiceRegion`
-            The region for the voice communication server.
-            Defaults to :attr:`.VoiceRegion.us_west`.
         icon: Optional[:class:`bytes`]
             The :term:`py:bytes-like object` representing the icon. See :meth:`.ClientUser.edit`
             for more details on what is expected.
@@ -1362,12 +1358,10 @@ class Client:
         else:
             icon_base64 = None
 
-        region_value = str(region)
-
         if code:
-            data = await self.http.create_from_template(code, name, region_value, icon_base64)
+            data = await self.http.create_from_template(code, name, icon_base64)
         else:
-            data = await self.http.create_guild(name, region_value, icon_base64)
+            data = await self.http.create_guild(name, icon_base64)
         return Guild(data=data, state=self._connection)
 
     async def fetch_stage_instance(self, channel_id: int, /) -> StageInstance:
@@ -1569,10 +1563,6 @@ class Client:
         """
         data = await self.http.get_user(user_id)
         return User(state=self._connection, data=data)
-    
-    async def fetch_relationships(self) -> List[User]:
-        data = await self.http.get_relationships()
-        return [User(state=self._connection, data=d["user"]) for d in data]
 
     async def fetch_channel(self, channel_id: int, /) -> Union[GuildChannel, PrivateChannel, Thread]:
         """|coro|

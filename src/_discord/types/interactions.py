@@ -35,6 +35,7 @@ from .message import Attachment
 from .role import Role
 from .snowflake import Snowflake
 from .user import User
+from ..permissions import Permissions
 
 if TYPE_CHECKING:
     from .message import AllowedMentions, Message
@@ -85,7 +86,7 @@ class ApplicationCommandOptionChoice(_ApplicationCommandOptionChoiceOptional):
     value: Union[str, int]
 
 
-ApplicationCommandPermissionType = Literal[1, 2]
+ApplicationCommandPermissionType = Literal[1, 2, 3]
 
 
 class ApplicationCommandPermissions(TypedDict):
@@ -202,6 +203,7 @@ class _InteractionOptional(TypedDict, total=False):
     message: Message
     locale: str
     guild_locale: str
+    app_permissions: Permissions
 
 
 class Interaction(_InteractionOptional):
