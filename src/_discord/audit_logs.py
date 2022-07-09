@@ -143,6 +143,12 @@ def _transform_avatar(entry: AuditLogEntry, data: Optional[str]) -> Optional[Ass
     return Asset._from_avatar(entry._state, entry._target_id, data)  # type: ignore
 
 
+def _transform_scheduled_event_cover(entry: AuditLogEntry, data: Optional[str]) -> Optional[Asset]:
+    if data is None:
+        return None
+    return Asset._from_scheduled_event_cover(entry._state, entry._target_id, data)
+
+
 def _guild_hash_transformer(
     path: str,
 ) -> Callable[[AuditLogEntry, Optional[str]], Optional[Asset]]:
@@ -227,7 +233,6 @@ class AuditLogChanges:
             "default_notifications",
             _enum_transformer(enums.NotificationLevel),
         ),
-        "region": (None, _enum_transformer(enums.VoiceRegion)),
         "rtc_region": (None, _enum_transformer(enums.VoiceRegion)),
         "video_quality_mode": (None, _enum_transformer(enums.VideoQualityMode)),
         "privacy_level": (None, _enum_transformer(enums.StagePrivacyLevel)),
@@ -238,6 +243,8 @@ class AuditLogChanges:
             "location_type",
             _enum_transformer(enums.ScheduledEventLocationType),
         ),
+        "command_id": ("command_id", _transform_snowflake),
+        "image_hash": ("cover", _transform_scheduled_event_cover),
     }
 
     def __init__(
@@ -594,5 +601,5 @@ class AuditLogEntry(Hashable):
     def _convert_target_thread(self, target_id: int) -> Union[Thread, Object]:
         return self.guild.get_thread(target_id) or Object(id=target_id)
 
-    def _convert_target_scheduled_event(self, target_id: int) -> Union[ScheduledEvent, None]:
+    def _convert_target_scheduled_event(self, target_id: int) -> Union[ScheduledEvent, Object]:
         return self.guild.get_scheduled_event(target_id) or Object(id=target_id)

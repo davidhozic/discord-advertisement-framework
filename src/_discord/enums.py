@@ -25,7 +25,17 @@ DEALINGS IN THE SOFTWARE.
 
 import types
 from collections import namedtuple
-from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Type, TypeVar, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    ClassVar,
+    Dict,
+    List,
+    Optional,
+    Type,
+    TypeVar,
+    Union,
+)
 
 __all__ = (
     "Enum",
@@ -222,6 +232,7 @@ class MessageType(Enum):
     thread_starter_message = 21
     guild_invite_reminder = 22
     context_menu_command = 23
+    auto_moderation_action = 24
 
 
 class VoiceRegion(Enum):
@@ -370,6 +381,11 @@ class AuditLogAction(Enum):
     thread_create = 110
     thread_update = 111
     thread_delete = 112
+    application_command_permission_update = 121
+    auto_moderation_rule_create = 140
+    auto_moderation_rule_update = 141
+    auto_moderation_rule_delete = 142 
+    auto_moderation_block_message = 143
 
     @property
     def category(self) -> Optional[AuditLogActionCategory]:
@@ -421,6 +437,11 @@ class AuditLogAction(Enum):
             AuditLogAction.thread_create: AuditLogActionCategory.create,
             AuditLogAction.thread_update: AuditLogActionCategory.update,
             AuditLogAction.thread_delete: AuditLogActionCategory.delete,
+            AuditLogAction.application_command_permission_update: AuditLogActionCategory.update,
+            AuditLogAction.auto_moderation_rule_create: AuditLogActionCategory.create,
+            AuditLogAction.auto_moderation_rule_update: AuditLogActionCategory.update,
+            AuditLogAction.auto_moderation_rule_delete: AuditLogActionCategory.delete,
+            AuditLogAction.auto_moderation_block_message: None,
         }
         return lookup[self]
 
@@ -457,6 +478,10 @@ class AuditLogAction(Enum):
             return "scheduled_event"
         elif v < 113:
             return "thread"
+        elif v < 122:
+            return "application_command_permission"
+        elif v < 144:
+            return "auto_moderation_rule"
 
 
 class UserFlags(Enum):
@@ -685,8 +710,12 @@ class SlashCommandOptionType(Enum):
         if issubclass(datatype, float):
             return cls.number
 
-        # TODO: Improve the error message
-        raise TypeError(f"Invalid class {datatype} used as an input type for an Option")
+        from .commands.context import ApplicationContext
+
+        if not issubclass(datatype, ApplicationContext):  # TODO: prevent ctx being passed here in cog commands
+            raise TypeError(
+                f"Invalid class {datatype} used as an input type for an Option"
+            )  # TODO: Improve the error message
 
 
 class EmbeddedActivity(Enum):
@@ -746,6 +775,29 @@ class ScheduledEventLocationType(Enum):
     voice = 2
     external = 3
 
+    
+class AutoModTriggerType(Enum):
+    keyword = 1
+    harmful_link = 2
+    spam = 3
+    keyword_preset = 4
+    
+
+class AutoModEventType(Enum):
+    message_send = 1
+    
+    
+class AutoModActionType(Enum):
+    block_message = 1
+    send_alert_message = 2
+    timeout = 3
+    
+    
+class AutoModKeywordPresetType(Enum):
+    profanity = 1
+    sexual_content = 2
+    slurs = 3
+    
 
 T = TypeVar("T")
 

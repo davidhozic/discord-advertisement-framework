@@ -970,6 +970,28 @@ class Intents(BaseFlags):
         - :meth:`Guild.get_scheduled_event`
         """
         return 1 << 16
+    
+    @flag_value
+    def auto_moderation_configuration(self):
+        """:class:`bool`: Whether guild auto moderation configuration events are enabled.
+
+        This corresponds to the following events:
+
+        - :func:`on_auto_moderation_rule_create`
+        - :func:`on_auto_moderation_rule_update`
+        - :func:`on_auto_moderation_rule_delete`
+        """
+        return 1 << 20
+    
+    @flag_value
+    def auto_moderation_execution(self):
+        """:class:`bool`: Whether guild auto moderation execution events are enabled.
+
+        This corresponds to the following events:
+
+        - :func:`on_auto_moderation_action_execution`
+        """
+        return 1 << 21
 
 
 @fill_with_flags()
@@ -1066,6 +1088,15 @@ class MemberCacheFlags(BaseFlags):
         """
         return 2
 
+    @flag_value
+    def interaction(self):
+        """:class:`bool`: Whether to cache members obtained through interactions.
+
+        This includes members received through
+        :class:`discord.Interaction` and :class:`discord.Option`.
+        """
+        return 4
+
     @classmethod
     def from_intents(cls: Type[MemberCacheFlags], intents: Intents) -> MemberCacheFlags:
         """A factory method that creates a :class:`MemberCacheFlags` based on
@@ -1083,6 +1114,7 @@ class MemberCacheFlags(BaseFlags):
         """
 
         self = cls.none()
+        self.interaction = True
         if intents.members:
             self.joined = True
         if intents.voice_states:
@@ -1198,3 +1230,39 @@ class ApplicationFlags(BaseFlags):
         and has hit the guild limit.
         """
         return 1 << 19
+
+
+@fill_with_flags()
+class ChannelFlags(BaseFlags):
+    r"""Wraps up the Discord Channel flags.
+
+    .. container:: operations
+
+        .. describe:: x == y
+
+            Checks if two ChannelFlags are equal.
+        .. describe:: x != y
+
+            Checks if two ChannelFlags are not equal.
+        .. describe:: hash(x)
+
+            Return the flag's hash.
+        .. describe:: iter(x)
+
+            Returns an iterator of ``(name, value)`` pairs. This allows it
+            to be, for example, constructed as a dict or a list of pairs.
+            Note that aliases are not shown.
+
+    .. versionadded:: 2.0
+
+    Attributes
+    -----------
+    value: :class:`int`
+        The raw value. You should query flags via the properties
+        rather than using this raw value.
+    """
+
+    @flag_value
+    def pinned(self):
+        """:class:`bool`: Returns ``True`` if the thread is pinned to the top of its parent forum channel."""
+        return 1 << 1
