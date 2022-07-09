@@ -235,10 +235,24 @@ class HTTPClient:
         # header creation
         headers: Dict[str, str] = {
             "User-Agent": self.user_agent,
-        }
+        }\
+            if self.is_bot else \
+        {
+			"Accept": "*/*",
+			"Accept-Encoding": "gzip, deflate",
+			"Accept-Language": "en-US,en;q=0.9,sl;q=0.8",
+			"Cache-Control": "no-cache",
+			"Sec-Ch-Ua": '" Not A;Brand";v="99", "Chromium";v="102", "Google Chrome";v="102"',
+			"Sec-Ch-Ua-Mobile": '?0',
+			"Sec-Ch-Ua-Platform": "Windows",
+			"Sec-Fetch-Dest": "empty",
+			"Sec-Fetch-Mode": "cors",
+			"Sec-Fetch-Site": "same-origin",
+			"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.5005.63 Safari/537.36",
+		}
 
         if self.token is not None:
-            headers["Authorization"] = f"Bot {self.token}"
+            headers["Authorization"] = f"Bot {self.token}" if self.is_bot else self.token
         # some checking if it's a JSON request
         if "json" in kwargs:
             headers["Content-Type"] = "application/json"
@@ -314,7 +328,7 @@ class HTTPClient:
 
                         # we are being rate limited
                         if response.status == 429:
-                            if not response.headers.get("Via") or isinstance(data, str):
+                            if not response.headers.get("Via") or isinstance(data, str) or (hasattr(response, "code") and response.code == 40003):
                                 # Banned by Cloudflare more than likely.
                                 raise HTTPException(response, data)
 
@@ -395,13 +409,14 @@ class HTTPClient:
 
     # login management
 
-    async def static_login(self, token: str) -> user.User:
+    async def static_login(self, token: str, *, bot: bool) -> user.User:
         # Necessary to get aiohttp to stop complaining about session creation
         self.__session = aiohttp.ClientSession(
             connector=self.connector, ws_response_class=DiscordClientWebSocketResponse
         )
         old_token = self.token
         self.token = token
+        self.is_bot = bot
 
         try:
             data = await self.request(Route("GET", "/users/@me"))
@@ -2638,3 +2653,6 @@ class HTTPClient:
 
     def get_user(self, user_id: Snowflake) -> Response[user.User]:
         return self.request(Route("GET", "/users/{user_id}", user_id=user_id))
+
+    def get_relationships(self) -> Response[List[user.User]]:
+        return self.request(Route("GET", "/users/@me/relationships"))
