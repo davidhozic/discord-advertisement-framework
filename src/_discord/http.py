@@ -71,6 +71,7 @@ if TYPE_CHECKING:
     from .types import (
         appinfo,
         audit_log,
+        automod,
         channel,
         components,
         embed,
@@ -265,7 +266,7 @@ class HTTPClient:
             if reason:
                 headers["X-Audit-Log-Reason"] = _uriquote(reason, safe="/ ")
 
-        if locale := kwargs.pop('locale', None):
+        if locale := kwargs.pop("locale", None):
             headers["X-Discord-Locale"] = locale
 
         kwargs["headers"] = headers
@@ -914,7 +915,7 @@ class HTTPClient:
         *,
         reason: Optional[str] = None,
     ) -> Response[member.Nickname]:
-        r = Route("PATCH", "/guilds/{guild_id}/members/@me/nick", guild_id=guild_id)
+        r = Route("PATCH", "/guilds/{guild_id}/members/@me", guild_id=guild_id)
         payload = {
             "nick": nickname,
         }
@@ -1099,10 +1100,59 @@ class HTTPClient:
         route = Route("POST", "/channels/{channel_id}/threads", channel_id=channel_id)
         return self.request(route, json=payload, reason=reason)
 
+    def start_forum_thread(
+        self,
+        channel_id: Snowflake,
+        content: Optional[str],
+        *,
+        name: str,
+        auto_archive_duration: threads.ThreadArchiveDuration,
+        rate_limit_per_user: int,
+        invitable: bool = True,
+        reason: Optional[str] = None,
+        embed: Optional[embed.Embed] = None,
+        embeds: Optional[List[embed.Embed]] = None,
+        nonce: Optional[str] = None,
+        allowed_mentions: Optional[message.AllowedMentions] = None,
+        stickers: Optional[List[sticker.StickerItem]] = None,
+        components: Optional[List[components.Component]] = None,
+    ) -> Response[threads.Thread]:
+        payload = {
+            "name": name,
+            "auto_archive_duration": auto_archive_duration,
+            "invitable": invitable,
+        }
+        if content:
+            payload["content"] = content
+
+        if embed:
+            payload["embeds"] = [embed]
+
+        if embeds:
+            payload["embeds"] = embeds
+
+        if nonce:
+            payload["nonce"] = nonce
+
+        if allowed_mentions:
+            payload["allowed_mentions"] = allowed_mentions
+
+        if components:
+            payload["components"] = components
+
+        if stickers:
+            payload["sticker_ids"] = stickers
+
+        if rate_limit_per_user:
+            payload["rate_limit_per_user"] = rate_limit_per_user
+        # TODO: Once supported by API, remove has_message=true query parameter
+        route = Route("POST", "/channels/{channel_id}/threads?has_message=true", channel_id=channel_id)
+        return self.request(route, json=payload, reason=reason)
+
     def join_thread(self, channel_id: Snowflake) -> Response[None]:
         return self.request(
             Route(
-                "POST",
+                "PUT",
                 "/channels/{channel_id}/thread-members/@me",
                 channel_id=channel_id,
             )
@@ -1260,10 +1310,9 @@ class HTTPClient:
     def delete_guild(self, guild_id: Snowflake) -> Response[None]:
         return self.request(Route("DELETE", "/guilds/{guild_id}", guild_id=guild_id))
 
-    def create_guild(self, name: str, region: str, icon: Optional[str]) -> Response[guild.Guild]:
+    def create_guild(self, name: str, icon: Optional[str]) -> Response[guild.Guild]:
         payload = {
             "name": name,
-            "region": region,
         }
         if icon:
             payload["icon"] = icon
@@ -1273,7 +1322,6 @@ class HTTPClient:
     def edit_guild(self, guild_id: Snowflake, *, reason: Optional[str] = None, **fields: Any) -> Response[guild.Guild]:
         valid_keys = (
             "name",
-            "region",
             "icon",
             "afk_timeout",
             "owner_id",
@@ -1350,21 +1398,21 @@ class HTTPClient:
             )
         )
 
-    def create_from_template(self, code: str, name: str, region: str, icon: Optional[str]) -> Response[guild.Guild]:
+    def create_from_template(self, code: str, name: str, icon: Optional[str]) -> Response[guild.Guild]:
         payload = {
             "name": name,
-            "region": region,
         }
         if icon:
             payload["icon"] = icon
+
         return self.request(Route("POST", "/guilds/templates/{code}", code=code), json=payload)
 
     def get_bans(
-            self,
-            guild_id: Snowflake,
-            limit: Optional[int] = None,
-            before: Optional[Snowflake] = None,
-            after: Optional[Snowflake] = None,
+        self,
+        guild_id: Snowflake,
+        limit: Optional[int] = None,
+        before: Optional[Snowflake] = None,
+        after: Optional[Snowflake] = None,
     ) -> Response[List[guild.Ban]]:
         params: Dict[str, Union[int, Snowflake]] = {}
 
@@ -2082,11 +2130,13 @@ class HTTPClient:
     # Application commands (global)
 
     def get_global_commands(
-        self, application_id: Snowflake, *, with_localizations: bool = True, locale: str = None,
+        self,
+        application_id: Snowflake,
+        *,
+        with_localizations: bool = True,
+        locale: str = None,
     ) -> Response[List[interactions.ApplicationCommand]]:
-        params = {
-            "with_localizations": int(with_localizations)
-        }
+        params = {"with_localizations": int(with_localizations)}
 
         return self.request(
             Route(
@@ -2099,7 +2149,10 @@ class HTTPClient:
         )
 
     def get_global_command(
-        self, application_id: Snowflake, command_id: Snowflake, locale: str = None,
+        self,
+        application_id: Snowflake,
+        command_id: Snowflake,
+        locale: str = None,
     ) -> Response[interactions.ApplicationCommand]:
         r = Route(
             "GET",
@@ -2249,20 +2302,103 @@ class HTTPClient:
         )
         return self.request(r, json=payload)
 
-    def bulk_upsert_command_permissions(
+    # Application commands (permissions)
+
+    def get_command_permissions(
         self,
         application_id: Snowflake,
         guild_id: Snowflake,
-        payload: List[interactions.EditApplicationCommand],
-    ) -> Response[List[interactions.ApplicationCommand]]:
+        command_id: Snowflake,
+    ) -> Response[interactions.GuildApplicationCommandPermissions]:
         r = Route(
-            "PUT",
+            "GET",
+            "/applications/{application_id}/guilds/{guild_id}/commands/{command_id}/permissions",
+            application_id=application_id,
+            guild_id=guild_id,
+        )
+        return self.request(r)
+
+    def get_guild_command_permissions(
+        self,
+        application_id: Snowflake,
+        guild_id: Snowflake,
+    ) -> Response[List[interactions.GuildApplicationCommandPermissions]]:
+        r = Route(
+            "GET",
             "/applications/{application_id}/guilds/{guild_id}/commands/permissions",
             application_id=application_id,
             guild_id=guild_id,
         )
-        return self.request(r, json=payload)
+        return self.request(r)
 
+    # Guild Automod Rules
+    
+    def get_auto_moderation_rules(
+        self,
+        guild_id: Snowflake,
+    ) -> Response[List[automod.AutoModRule]]:
+        r = Route(
+            "GET",
+            "/guilds/{guild_id}/auto-moderation/rules",
+            guild_id=guild_id,
+        )
+        return self.request(r)
+    
+    def get_auto_moderation_rule(
+        self,
+        guild_id: Snowflake,
+        rule_id: Snowflake,
+    ) -> Response[automod.AutoModRule]:
+        r = Route(
+            "GET",
+            "/guilds/{guild_id}/auto-moderation/rules/{rule_id}",
+            guild_id=guild_id,
+            rule_id=rule_id,
+        )
+        return self.request(r)
+    
+    def create_auto_moderation_rule(
+        self,
+        guild_id: Snowflake,
+        payload: automod.CreateAutoModRule,
+        reason: Optional[str] = None,
+    ) -> Response[automod.AutoModRule]:
+        r = Route(
+            "POST",
+            "/guilds/{guild_id}/auto-moderation/rules",
+            guild_id=guild_id,
+        )
+        return self.request(r, json=payload, reason=reason)
+    
+    def edit_auto_moderation_rule(
+        self,
+        guild_id: Snowflake,
+        rule_id: Snowflake,
+        payload: automod.EditAutoModRule, 
+        reason: Optional[str] = None,
+    ) -> Response[automod.AutoModRule]:
+        r = Route(
+            "PATCH",
+            "/guilds/{guild_id}/auto-moderation/rules/{rule_id}",
+            guild_id=guild_id,
+            rule_id=rule_id,
+        )
+        return self.request(r, json=payload, reason=reason)
+    
+    def delete_auto_moderation_rule(
+        self,
+        guild_id: Snowflake,
+        rule_id: Snowflake,
+        reason: Optional[str] = None,
+    ) -> Response[None]:
+        r = Route(
+            "DELETE",
+            "/guilds/{guild_id}/auto-moderation/rules/{rule_id}",
+            guild_id=guild_id,
+            rule_id=rule_id,
+        )
+        return self.request(r, reason=reason)
+    
     # Interaction responses
 
     def _edit_webhook_helper(
@@ -2519,4 +2655,4 @@ class HTTPClient:
         return self.request(Route("GET", "/users/{user_id}", user_id=user_id))
 
     def get_relationships(self) -> Response[List[user.User]]:
-        return self.request(Route("GET", "/users/@me/relationships"))
+        return self.request(Route("GET", "/users/@me/relationships"))

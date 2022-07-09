@@ -44,6 +44,7 @@ from typing import (
 )
 
 from . import abc, utils
+from .automod import AutoModAction, AutoModRule, AutoModTriggerMetadata
 from .asset import Asset
 from .channel import *
 from .channel import _guild_channel_factory, _threaded_guild_channel_factory
@@ -51,6 +52,8 @@ from .colour import Colour
 from .emoji import Emoji
 from .enums import (
     AuditLogAction,
+    AutoModEventType,
+    AutoModTriggerType,
     ChannelType,
     ContentFilter,
     NotificationLevel,
@@ -67,7 +70,7 @@ from .file import File
 from .flags import SystemChannelFlags
 from .integrations import Integration, _integration_factory
 from .invite import Invite
-from .iterators import AuditLogIterator, MemberIterator, BanIterator
+from .iterators import AuditLogIterator, BanIterator, MemberIterator
 from .member import Member, VoiceState
 from .mixins import Hashable
 from .permissions import PermissionOverwrite
@@ -90,6 +93,7 @@ if TYPE_CHECKING:
     from .abc import Snowflake, SnowflakeTime
     from .channel import (
         CategoryChannel,
+        ForumChannel,
         StageChannel,
         TextChannel,
         VoiceChannel,
@@ -100,13 +104,14 @@ if TYPE_CHECKING:
     from .types.guild import Ban as BanPayload
     from .types.guild import Guild as GuildPayload
     from .types.guild import GuildFeature, MFALevel
+    from .types.member import Member as MemberPayload
     from .types.threads import Thread as ThreadPayload
     from .types.voice import GuildVoiceState
     from .voice_client import VoiceProtocol
     from .webhook import Webhook
 
     VocalGuildChannel = Union[VoiceChannel, StageChannel]
-    GuildChannel = Union[VoiceChannel, StageChannel, TextChannel, CategoryChannel]
+    GuildChannel = Union[VoiceChannel, StageChannel, TextChannel, ForumChannel, CategoryChannel]
     ByCategoryItem = Tuple[Optional[CategoryChannel], List[GuildChannel]]
 
 
@@ -155,9 +160,6 @@ class Guild(Hashable):
         All stickers that the guild owns.
 
         .. versionadded:: 2.0
-    region: :class:`VoiceRegion`
-        The region the guild belongs on. There is a chance that the region
-        will be a :class:`str` if the value is not recognised by the enumerator.
     afk_timeout: :class:`int`
         The timeout to get sent to the AFK channel.
     afk_channel: Optional[:class:`VoiceChannel`]
@@ -204,6 +206,7 @@ class Guild(Hashable):
 
         - ``ANIMATED_BANNER``: Guild can upload an animated banner.
         - ``ANIMATED_ICON``: Guild can upload an animated icon.
+        - ``AUTO_MODERATION``: Guild has enabled the auto moderation system.
         - ``BANNER``: Guild can upload and use a banner. (i.e. :attr:`.banner`)
         - ``CHANNEL_BANNER``: Guild can upload and use a channel banners.
         - ``COMMERCE``: Guild can sell things using store channels, which have now been removed.
@@ -278,7 +281,6 @@ class Guild(Hashable):
         "name",
         "id",
         "unavailable",
-        "region",
         "owner_id",
         "mfa_level",
         "emojis",
@@ -319,8 +321,8 @@ class Guild(Hashable):
     )
 
     _PREMIUM_GUILD_LIMITS: ClassVar[Dict[Optional[int], _GuildLimit]] = {
-        None: _GuildLimit(emoji=50, stickers=0, bitrate=96e3, filesize=8388608),
-        0: _GuildLimit(emoji=50, stickers=0, bitrate=96e3, filesize=8388608),
+        None: _GuildLimit(emoji=50, stickers=5, bitrate=96e3, filesize=8388608),
+        0: _GuildLimit(emoji=50, stickers=5, bitrate=96e3, filesize=8388608),
         1: _GuildLimit(emoji=100, stickers=15, bitrate=128e3, filesize=8388608),
         2: _GuildLimit(emoji=150, stickers=30, bitrate=256e3, filesize=52428800),
         3: _GuildLimit(emoji=250, stickers=60, bitrate=384e3, filesize=104857600),
@@ -351,6 +353,22 @@ class Guild(Hashable):
 
     def _add_member(self, member: Member, /) -> None:
         self._members[member.id] = member
+
+    def _get_and_update_member(self, payload: MemberPayload, user_id: int, cache_flag: bool, /) -> Member:
+        # we always get the member, and we only update if the cache_flag (this cache
+        # flag should always be MemberCacheFlag.interaction) is set to True
+        if user_id in self._members:
+            member = self.get_member(user_id)
+            member._update(payload) if cache_flag else None
+        else:
+            # NOTE:
+            # This is a fallback in case the member is not found in the guild's members.
+            # If this fallback occurs, multiple aspects of the Member
+            # class will be incorrect such as status and activities.
+            member = Member(guild=self, state=self._state, data=payload)  # type: ignore
+            if cache_flag:
+                self._members[user_id] = member
+        return member
 
     def _store_thread(self, payload: ThreadPayload, /) -> Thread:
         thread = Thread(guild=self, state=self._state, data=payload)
@@ -465,7 +483,6 @@ class Guild(Hashable):
             self._member_count: int = member_count
 
         self.name: str = guild.get("name")
-        self.region: VoiceRegion = try_enum(VoiceRegion, guild.get("region"))
         self.verification_level: VerificationLevel = try_enum(VerificationLevel, guild.get("verification_level"))
         self.default_notifications: NotificationLevel = try_enum(
             NotificationLevel, guild.get("default_message_notifications")
@@ -532,7 +549,6 @@ class Guild(Hashable):
 
         for obj in guild.get("voice_states", []):
             self._update_voice_state(obj, int(obj["channel_id"]))
-
     # TODO: refactor/remove?
     def _sync(self, data: GuildPayload) -> None:
         try:
@@ -573,6 +589,14 @@ class Guild(Hashable):
         return list(self._threads.values())
 
     @property
+    def jump_url(self) -> str:
+        """:class:`str`: Returns a URL that allows the client to jump to the guild.
+
+        .. versionadded:: 2.0
+        """
+        return f"https://discord.com/channels/{self.id}"
+
+    @property
     def large(self) -> bool:
         """:class:`bool`: Indicates if the guild is a 'large' guild.
 
@@ -605,6 +629,18 @@ class Guild(Hashable):
         This is sorted by the position and are in UI order from top to bottom.
         """
         r = [ch for ch in self._channels.values() if isinstance(ch, StageChannel)]
+        r.sort(key=lambda c: (c.position, c.id))
+        return r
+
+    @property
+    def forum_channels(self) -> List[ForumChannel]:
+        """List[:class:`ForumChannel`]: A list of forum channels that belongs to this guild.
+
+        .. versionadded:: 2.0
+
+        This is sorted by the position and are in UI order from top to bottom.
+        """
+        r = [ch for ch in self._channels.values() if isinstance(ch, ForumChannel)]
         r.sort(key=lambda c: (c.position, c.id))
         return r
 
@@ -1343,6 +1379,123 @@ class Guild(Hashable):
         self._channels[channel.id] = channel
         return channel
 
+    async def create_forum_channel(
+        self,
+        name: str,
+        *,
+        reason: Optional[str] = None,
+        category: Optional[CategoryChannel] = None,
+        position: int = MISSING,
+        topic: str = MISSING,
+        slowmode_delay: int = MISSING,
+        nsfw: bool = MISSING,
+        overwrites: Dict[Union[Role, Member], PermissionOverwrite] = MISSING,
+    ) -> ForumChannel:
+        """|coro|
+
+        Creates a :class:`ForumChannel` for the guild.
+
+        Note that you need the :attr:`~Permissions.manage_channels` permission
+        to create the channel.
+
+        The ``overwrites`` parameter can be used to create a 'secret'
+        channel upon creation. This parameter expects a :class:`dict` of
+        overwrites with the target (either a :class:`Member` or a :class:`Role`)
+        as the key and a :class:`PermissionOverwrite` as the value.
+
+        .. note::
+
+            Creating a channel of a specified position will not update the position of
+            other channels to follow suit. A follow-up call to :meth:`~ForumChannel.edit`
+            will be required to update the position of the channel in the channel list.
+
+        Examples
+        ----------
+
+        Creating a basic channel:
+
+        .. code-block:: python3
+
+            channel = await guild.create_forum_channel('cool-channel')
+
+        Creating a "secret" channel:
+
+        .. code-block:: python3
+
+            overwrites = {
+                guild.default_role: discord.PermissionOverwrite(read_messages=False),
+                guild.me: discord.PermissionOverwrite(read_messages=True)
+            }
+
+            channel = await guild.create_forum_channel('secret', overwrites=overwrites)
+
+        Parameters
+        -----------
+        name: :class:`str`
+            The channel's name.
+        overwrites: Dict[Union[:class:`Role`, :class:`Member`], :class:`PermissionOverwrite`]
+            A :class:`dict` of target (either a role or a member) to
+            :class:`PermissionOverwrite` to apply upon creation of a channel.
+            Useful for creating secret channels.
+        category: Optional[:class:`CategoryChannel`]
+            The category to place the newly created channel under.
+            The permissions will be automatically synced to category if no
+            overwrites are provided.
+        position: :class:`int`
+            The position in the channel list. This is a number that starts
+            at 0. e.g. the top channel is position 0.
+        topic: :class:`str`
+            The new channel's topic.
+        slowmode_delay: :class:`int`
+            Specifies the slowmode rate limit for user in this channel, in seconds.
+            The maximum value possible is `21600`.
+        nsfw: :class:`bool`
+            To mark the channel as NSFW or not.
+        reason: Optional[:class:`str`]
+            The reason for creating this channel. Shows up on the audit log.
+
+        Raises
+        -------
+        Forbidden
+            You do not have the proper permissions to create this channel.
+        HTTPException
+            Creating the channel failed.
+        InvalidArgument
+            The permission overwrite information is not in proper form.
+
+        Returns
+        -------
+        :class:`ForumChannel`
+            The channel that was just created.
+        """
+
+        options = {}
+        if position is not MISSING:
+            options["position"] = position
+
+        if topic is not MISSING:
+            options["topic"] = topic
+
+        if slowmode_delay is not MISSING:
+            options["rate_limit_per_user"] = slowmode_delay
+
+        if nsfw is not MISSING:
+            options["nsfw"] = nsfw
+
+        data = await self._create_channel(
+            name,
+            overwrites=overwrites,
+            channel_type=ChannelType.forum,
+            category=category,
+            reason=reason,
+            **options,
+        )
+        channel = ForumChannel(state=self._state, guild=self, data=data)
+
+        # temporarily add to the cache
+        self._channels[channel.id] = channel
+        return channel
+
     async def create_category(
         self,
         name: str,
@@ -1437,7 +1590,6 @@ class Guild(Hashable):
         splash: Optional[bytes] = MISSING,
         discovery_splash: Optional[bytes] = MISSING,
         community: bool = MISSING,
-        region: Optional[Union[str, VoiceRegion]] = MISSING,
         afk_channel: Optional[VoiceChannel] = MISSING,
         owner: Snowflake = MISSING,
         afk_timeout: int = MISSING,
@@ -1496,8 +1648,6 @@ class Guild(Hashable):
         community: :class:`bool`
             Whether the guild should be a Community guild. If set to ``True``\, both ``rules_channel``
             and ``public_updates_channel`` parameters are required.
-        region: Union[:class:`str`, :class:`VoiceRegion`]
-            The new region for the guild's voice communication.
         afk_channel: Optional[:class:`VoiceChannel`]
             The new channel that is the AFK channel. Could be ``None`` for no AFK channel.
         afk_timeout: :class:`int`
@@ -1624,9 +1774,6 @@ class Guild(Hashable):
 
             fields["owner_id"] = owner.id
 
-        if region is not MISSING:
-            fields["region"] = str(region)
-
         if verification_level is not MISSING:
             if not isinstance(verification_level, VerificationLevel):
                 raise InvalidArgument("verification_level field must be of type VerificationLevel")
@@ -1728,7 +1875,7 @@ class Guild(Hashable):
         return threads
 
     # TODO: Remove Optional typing here when async iterators are refactored
-    def fetch_members(self, *, limit: int = 1000, after: Optional[SnowflakeTime] = None) -> MemberIterator:
+    def fetch_members(self, *, limit: Optional[int] = 1000, after: Optional[SnowflakeTime] = None) -> MemberIterator:
         """Retrieves an :class:`.AsyncIterator` that enables receiving the guild's members. In order to use this,
         :meth:`Intents.members` must be enabled.
 
@@ -1885,8 +2032,9 @@ class Guild(Hashable):
         channel: GuildChannel = factory(guild=self, state=self._state, data=data)  # type: ignore
         return channel
 
-    def bans(self, limit: Optional[int] = None, before: Optional[SnowflakeTime] = None,
-             after: Optional[SnowflakeTime] = None) -> BanIterator:
+    def bans(
+        self, limit: Optional[int] = None, before: Optional[SnowflakeTime] = None, after: Optional[SnowflakeTime] = None
+    ) -> BanIterator:
         """|coro|
 
         Retrieves an :class:`.AsyncIterator` that enables receiving the guild's bans. In order to use this, you must
@@ -3375,3 +3523,110 @@ class Guild(Hashable):
     def scheduled_events(self) -> List[ScheduledEvent]:
         """List[:class:`.ScheduledEvent`]: A list of scheduled events in this guild."""
         return list(self._scheduled_events.values())
+    
+    async def fetch_auto_moderation_rules(self) -> List[AutoModRule]:
+        """|coro|
+
+        Retrieves a list of auto moderation rules for this guild.
+
+        Raises
+        -------
+        HTTPException
+            Getting the auto moderation rules failed.
+        Forbidden
+            You do not have the Manage Guild permission.
+
+        Returns
+        --------
+        List[:class:`AutoModRule`]
+            The auto moderation rules for this guild.
+        """
+        data = await self._state.http.get_auto_moderation_rules(self.id)
+        return [AutoModRule(state=self._state, data=rule) for rule in data]
+    
+    async def fetch_auto_moderation_rule(self, id: int) -> AutoModRule:
+        """|coro|
+        
+        Retrieves a :class:`AutoModRule` from rule ID.
+        
+        Raises
+        -------
+        HTTPException
+            Getting the auto moderation rule failed.
+        Forbidden
+            You do not have the Manage Guild permission.
+            
+        Returns
+        --------
+        :class:`AutoModRule`
+            The requested auto moderation rule.
+        """
+        data = await self._state.http.get_auto_moderation_rule(self.id, id)
+        return AutoModRule(state=self._state, data=data)
+    
+    async def create_auto_moderation_rule(
+        self,
+        *,
+        name: str,
+        event_type: AutoModEventType,
+        trigger_type: AutoModTriggerType,
+        trigger_metadata: AutoModTriggerMetadata,
+        actions: List[AutoModAction],
+        enabled: bool = False,
+        exempt_roles: List[Snowflake] = None,
+        exempt_channels: List[Snowflake] = None,
+        reason: Optional[str] = None,
+    ) -> AutoModRule:
+        """
+        Creates an auto moderation rule.
+        
+        Parameters
+        -----------
+        name: :class:`str`
+            The name of the auto moderation rule.
+        event_type: :class:`AutoModEventType`
+            The type of event that triggers the rule.
+        trigger_type: :class:`AutoModTriggerType`
+            The rule's trigger type.
+        trigger_metadata: :class:`AutoModTriggerMetadata`
+            The rule's trigger metadata.
+        actions: List[:class:`AutoModAction`]
+            The actions to take when the rule is triggered.
+        enabled: :class:`bool`
+            Whether the rule is enabled.
+        exempt_roles: List[:class:`Snowflake`]
+            A list of roles that are exempt from the rule.
+        exempt_channels: List[:class:`Snowflake`]
+            A list of channels that are exempt from the rule.
+        reason: Optional[:class:`str`]
+            The reason for creating the rule. Shows up in the audit log.
+            
+        Raises
+        -------
+        HTTPException
+            Creating the auto moderation rule failed.
+        Forbidden
+            You do not have the Manage Guild permission.
+            
+        Returns
+        --------
+        :class:`AutoModRule`
+            The new auto moderation rule.
+        """
+        payload = {
+            "name": name,
+            "event_type": event_type.value,
+            "trigger_type": trigger_type.value,
+            "trigger_metadata": trigger_metadata.to_dict(),  
+            "actions": [a.to_dict() for a in actions],
+            "enabled": enabled,
+        }
+        
+        if exempt_roles:
+            payload["exempt_roles"] = [r.id for r in exempt_roles]
+            
+        if exempt_channels:
+            payload["exempt_channels"] = [c.id for c in exempt_channels]
+            
+        data = await self._state.http.create_auto_moderation_rule(self.id, payload)
+        return AutoModRule(state=self._state, data=data, reason=reason)
