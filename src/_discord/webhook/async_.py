@@ -291,11 +291,16 @@ class AsyncWebhookAdapter:
         multipart: Optional[List[Dict[str, Any]]] = None,
         files: Optional[List[File]] = None,
         thread_id: Optional[int] = None,
+        thread_name: Optional[str] = None,
         wait: bool = False,
     ) -> Response[Optional[MessagePayload]]:
         params = {"wait": int(wait)}
         if thread_id:
             params["thread_id"] = thread_id
+
+        if thread_name:
+            payload["thread_name"] = thread_name
+
         route = Route(
             "POST",
             "/webhooks/{webhook_id}/{webhook_token}",
@@ -1136,7 +1141,7 @@ class Webhook(BaseWebhook):
             A partial webhook is just a webhook object with an ID and a token.
         """
         m = re.search(
-            r"discord(?:app)?.com/api/webhooks/(?P<id>[0-9]{17,20})/(?P<token>[A-Za-z0-9\.\-\_]{60,68})",
+            r"discord(?:app)?.com/api/webhooks/(?P<id>\d{17,20})/(?P<token>[\w\.\-_]{60,68})",
             url,
         )
         if m is None:
@@ -1267,37 +1272,37 @@ class Webhook(BaseWebhook):
     ) -> Webhook:
         """|coro|
 
-          Edits this Webhook.
+        Edits this Webhook.
 
-          Parameters
-          -----------
-          name: Optional[:class:`str`]
-              The webhook's new default name.
-          avatar: Optional[:class:`bytes`]
-              A :term:`py:bytes-like object` representing the webhook's new default avatar.
-          channel: Optional[:class:`abc.Snowflake`]
-              The webhook's new channel. This requires an authenticated webhook.
+        Parameters
+        -----------
+        name: Optional[:class:`str`]
+            The webhook's new default name.
+        avatar: Optional[:class:`bytes`]
+            A :term:`py:bytes-like object` representing the webhook's new default avatar.
+        channel: Optional[:class:`abc.Snowflake`]
+            The webhook's new channel. This requires an authenticated webhook.
 
-              .. versionadded:: 2.0
-          reason: Optional[:class:`str`]
-              The reason for editing this webhook. Shows up on the audit log.
+            .. versionadded:: 2.0
+        reason: Optional[:class:`str`]
+            The reason for editing this webhook. Shows up on the audit log.
 
-              .. versionadded:: 1.4
-          prefer_auth: :class:`bool`
-              Whether to use the bot token over the webhook token
-              if available. Defaults to ``True``.
+            .. versionadded:: 1.4
+        prefer_auth: :class:`bool`
+            Whether to use the bot token over the webhook token
+            if available. Defaults to ``True``.
 
-              .. versionadded:: 2.0
+            .. versionadded:: 2.0
 
-          Raises
-          ------
-          HTTPException
-              Editing the webhook failed.
-          NotFound
-              This webhook does not exist.
-          InvalidArgument
-              This webhook does not have a token associated with it
-              or it tried editing a channel without authentication.
+        Raises
+        ------
+        HTTPException
+            Editing the webhook failed.
+        NotFound
+            This webhook does not exist.
+        InvalidArgument
+            This webhook does not have a token associated with it
+            or it tried editing a channel without authentication.
         """
         if self.token is None and self.auth_token is None:
             raise InvalidArgument("This webhook does not have a token associated with it")
@@ -1371,6 +1376,7 @@ class Webhook(BaseWebhook):
         allowed_mentions: AllowedMentions = MISSING,
         view: View = MISSING,
         thread: Snowflake = MISSING,
+        thread_name: Optional[str] = None,
         wait: Literal[True],
     ) -> WebhookMessage:
         ...
@@ -1391,6 +1397,7 @@ class Webhook(BaseWebhook):
         allowed_mentions: AllowedMentions = MISSING,
         view: View = MISSING,
         thread: Snowflake = MISSING,
+        thread_name: Optional[str] = None,
         wait: Literal[False] = ...,
     ) -> None:
         ...
@@ -1410,6 +1417,7 @@ class Webhook(BaseWebhook):
         allowed_mentions: AllowedMentions = MISSING,
         view: View = MISSING,
         thread: Snowflake = MISSING,
+        thread_name: Optional[str] = None,
         wait: bool = False,
         delete_after: float = None,
     ) -> Optional[WebhookMessage]:
@@ -1477,6 +1485,10 @@ class Webhook(BaseWebhook):
             The thread to send this webhook to.
 
             .. versionadded:: 2.0
+        thread_name: :class:`str`
+            The name of the thread to create. Only works for forum channels.
+
+            .. versionadded:: 2.0
         delete_after: :class:`float`
             If provided, the number of seconds to wait in the background
             before deleting the message we just sent.
@@ -1494,9 +1506,9 @@ class Webhook(BaseWebhook):
         ValueError
             The length of ``embeds`` was invalid.
         InvalidArgument
-            There was no token associated with this webhook or ``ephemeral``
-            was passed with the improper webhook type or there was no state
-            attached with this webhook when giving it a view.
+            Either there was no token associated with this webhook, ``ephemeral`` was passed
+            with the improper webhook type, there was no state attached with this webhook when
+            giving it a view, or you specified both ``thread_name`` and ``thread``.
 
         Returns
         ---------
@@ -1510,6 +1522,9 @@ class Webhook(BaseWebhook):
         previous_mentions: Optional[AllowedMentions] = getattr(self._state, "allowed_mentions", None)
         if content is None:
             content = MISSING
+
+        if thread and thread_name:
+            raise InvalidArgument("You cannot specify both a thread and thread_name")
 
         application_webhook = self.type is WebhookType.application
         if ephemeral and not application_webhook:
@@ -1551,6 +1566,7 @@ class Webhook(BaseWebhook):
             multipart=params.multipart,
             files=params.files,
             thread_id=thread_id,
+            thread_name=thread_name,
             wait=wait,
         )
 

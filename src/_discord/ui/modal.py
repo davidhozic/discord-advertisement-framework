@@ -3,9 +3,11 @@ from __future__ import annotations
 import asyncio
 import os
 import sys
-from itertools import groupby
 import traceback
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
+import time
+from functools import partial
+from itertools import groupby
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Callable
 
 from .input_text import InputText
 
@@ -29,27 +31,119 @@ class Modal:
 
     Parameters
     ----------
+    children: :class:`InputText`
+        The initial InputText fields that are displayed in the modal dialog.
     title: :class:`str`
         The title of the modal dialog.
         Must be 45 characters or fewer.
     custom_id: Optional[:class:`str`]
         The ID of the modal dialog that gets received during an interaction.
+        Must be 100 characters or fewer.
+    timeout: Optional[:class:`float`]
+        Timeout in seconds from last interaction with the UI before no longer accepting input.
+        If ``None`` then there is no timeout.
     """
 
-    def __init__(self, title: str, custom_id: Optional[str] = None) -> None:
-        if not (isinstance(custom_id, str) or custom_id is None):
+    def __init__(self, *children: InputText, title: str, custom_id: Optional[str] = None,
+                 timeout: Optional[float] = None) -> None:
+        self.timeout: Optional[float] = timeout
+        if not isinstance(custom_id, str) and custom_id is not None:
             raise TypeError(f"expected custom_id to be str, not {custom_id.__class__.__name__}")
-
-        self.custom_id = custom_id or os.urandom(16).hex()
-        self.title = title
-        self.children: List[InputText] = []
-        self.__weights = _ModalWeights(self.children)
+        self._custom_id: Optional[str] = custom_id or os.urandom(16).hex()
+        if len(title) > 45:
+            raise ValueError("title must be 45 characters or fewer")
+        self._title = title
+        self._children: List[InputText] = list(children)
+        self._weights = _ModalWeights(self._children)
         loop = asyncio.get_running_loop()
         self._stopped: asyncio.Future[bool] = loop.create_future()
+        self.__cancel_callback: Optional[Callable[[Modal], None]] = None
+        self.__timeout_expiry: Optional[float] = None
+        self.__timeout_task: Optional[asyncio.Task[None]] = None
+        self.loop = asyncio.get_event_loop()
+
+    def _start_listening_from_store(self, store: ModalStore) -> None:
+        self.__cancel_callback = partial(store.remove_modal)
+        if self.timeout:
+            loop = asyncio.get_running_loop()
+            if self.__timeout_task is not None:
+                self.__timeout_task.cancel()
+
+            self.__timeout_expiry = time.monotonic() + self.timeout
+            self.__timeout_task = loop.create_task(self.__timeout_task_impl())
+
+    async def __timeout_task_impl(self) -> None:
+        while True:
+            # Guard just in case someone changes the value of the timeout at runtime
+            if self.timeout is None:
+                return
+
+            if self.__timeout_expiry is None:
+                return self._dispatch_timeout()
+
+            # Check if we've elapsed our currently set timeout
+            now = time.monotonic()
+            if now >= self.__timeout_expiry:
+                return self._dispatch_timeout()
+
+            # Wait N seconds to see if timeout data has been refreshed
+            await asyncio.sleep(self.__timeout_expiry - now)
+
+    @property
+    def _expires_at(self) -> Optional[float]:
+        if self.timeout:
+            return time.monotonic() + self.timeout
+        return None
+
+    def _dispatch_timeout(self):
+        if self._stopped.done():
+            return
+
+        self._stopped.set_result(True)
+        self.loop.create_task(self.on_timeout(), name=f"discord-ui-view-timeout-{self.id}")
+
+    @property
+    def title(self) -> str:
+        """The title of the modal dialog."""
+        return self._title
+
+    @title.setter
+    def title(self, value: str):
+        if len(value) > 45:
+            raise ValueError("title must be 45 characters or fewer")
+        if not isinstance(value, str):
+            raise TypeError(f"expected title to be str, not {value.__class__.__name__}")
+        self._title = value
+
+    @property
+    def children(self) -> List[InputText]:
+        """The child components associated with the modal dialog."""
+        return self._children
+
+    @children.setter
+    def children(self, value: List[InputText]):
+        for item in value:
+            if not isinstance(item, InputText):
+                raise TypeError(f"all Modal children must be InputText, not {item.__class__.__name__}")
+        self._weights = _ModalWeights(self._children)
+        self._children = value
+
+    @property
+    def custom_id(self) -> str:
+        """The ID of the modal dialog that gets received during an interaction."""
+        return self._custom_id
+
+    @custom_id.setter
+    def custom_id(self, value: str):
+        if not isinstance(value, str):
+            raise TypeError(f"expected custom_id to be str, not {value.__class__.__name__}")
+        if len(value) > 100:
+            raise ValueError("custom_id must be 100 characters or fewer")
+        self._custom_id = value
 
     async def callback(self, interaction: Interaction):
         """|coro|
-        
+
         The coroutine that is called when the modal dialog is submitted.
         Should be overridden to handle the values submitted by the user.
 
@@ -64,7 +158,7 @@ class Modal:
         def key(item: InputText) -> int:
             return item._rendered_row or 0
 
-        children = sorted(self.children, key=key)
+        children = sorted(self._children, key=key)
         components: List[Dict[str, Any]] = []
         for _, group in groupby(children, key=key):
             children = [item.to_component_dict() for item in group]
@@ -89,14 +183,14 @@ class Modal:
             The item to add to the modal dialog
         """
 
-        if len(self.children) > 5:
+        if len(self._children) > 5:
             raise ValueError("You can only have up to 5 items in a modal dialog.")
 
         if not isinstance(item, InputText):
             raise TypeError(f"expected InputText not {item.__class__!r}")
 
-        self.__weights.add_item(item)
-        self.children.append(item)
+        self._weights.add_item(item)
+        self._children.append(item)
 
     def remove_item(self, item: InputText):
         """Removes an InputText component from the modal dialog.
@@ -107,7 +201,7 @@ class Modal:
             The item to remove from the modal dialog.
         """
         try:
-            self.children.remove(item)
+            self._children.remove(item)
         except ValueError:
             pass
 
@@ -115,6 +209,10 @@ class Modal:
         """Stops listening to interaction events from the modal dialog."""
         if not self._stopped.done():
             self._stopped.set_result(True)
+        self.__timeout_expiry = None
+        if self.__timeout_task is not None:
+            self.__timeout_task.cancel()
+            self.__timeout_task = None
 
     async def wait(self) -> bool:
         """Waits for the modal dialog to be submitted."""
@@ -143,6 +241,13 @@ class Modal:
         """
         print(f"Ignoring exception in modal {self}:", file=sys.stderr)
         traceback.print_exception(error.__class__, error, error.__traceback__, file=sys.stderr)
+
+    async def on_timeout(self) -> None:
+        """|coro|
+
+        A callback that is called when a modal's timeout elapses without being explicitly stopped.
+        """
+        pass
 
 
 class _ModalWeights:
@@ -193,8 +298,10 @@ class ModalStore:
 
     def add_modal(self, modal: Modal, user_id: int):
         self._modals[(user_id, modal.custom_id)] = modal
+        modal._start_listening_from_store(self)
 
     def remove_modal(self, modal: Modal, user_id):
+        modal.stop()
         self._modals.pop((user_id, modal.custom_id))
 
     async def dispatch(self, user_id: int, custom_id: str, interaction: Interaction):

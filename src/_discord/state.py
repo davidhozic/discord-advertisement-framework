@@ -49,6 +49,7 @@ from typing import (
 
 from . import utils
 from .activity import BaseActivity
+from .automod import AutoModAction, AutoModRule
 from .channel import *
 from .channel import _channel_factory
 from .emoji import Emoji
@@ -613,6 +614,27 @@ class ConnectionState:
     def parse_resumed(self, data) -> None:
         self.dispatch("resumed")
 
+    def parse_application_command_permissions_update(self, data) -> None:
+        # unsure what the implementation would be like
+        pass
+    
+    def parse_auto_moderation_rule_create(self, data) -> None:
+        rule = AutoModRule(state=self, data=data)
+        self.dispatch("auto_moderation_rule_create", rule)
+    
+    def parse_auto_moderation_rule_update(self, data) -> None:
+        # somehow get a 'before' object?
+        rule = AutoModRule(state=self, data=data)
+        self.dispatch("auto_moderation_rule_update", rule)
+    
+    def parse_auto_moderation_rule_delete(self, data) -> None:
+        rule = AutoModRule(state=self, data=data)
+        self.dispatch("auto_moderation_rule_delete", rule)
+    
+    def parse_auto_moderation_action_execution(self, data) -> None:
+        event = AutoModActionExecutionEvent(self, data)
+        self.dispatch("auto_moderation_action_execution", event)
+
     def parse_message_create(self, data) -> None:
         channel, _ = self._get_guild_channel(data)
         # channel would be the correct type here
@@ -897,7 +919,10 @@ class ConnectionState:
         has_thread = guild.get_thread(thread.id)
         guild._add_thread(thread)
         if not has_thread:
-            self.dispatch("thread_join", thread)
+            if data.get("newly_created"):
+                self.dispatch("thread_create", thread)
+            else:
+                self.dispatch("thread_join", thread)
 
     def parse_thread_update(self, data) -> None:
         guild_id = int(data["guild_id"])
@@ -940,6 +965,9 @@ class ConnectionState:
         if thread is not None:
             guild._remove_thread(thread)  # type: ignore
             self.dispatch("thread_delete", thread)
+
+            if (msg := thread.starting_message) is not None:
+                msg.thread = None
 
     def parse_thread_list_sync(self, data) -> None:
         guild_id = int(data["guild_id"])
@@ -1544,12 +1572,6 @@ class ConnectionState:
         # self.user is *always* cached when this is called
         self_id = self.user.id  # type: ignore
         if guild is not None:
-            if int(data["user_id"]) == self_id:
-                voice = self._get_voice_client(guild.id)
-                if voice is not None:
-                    coro = voice.on_voice_state_update(data)
-                    asyncio.create_task(logging_coroutine(coro, info="Voice Protocol voice state update handler"))
-
             member, before, after = guild._update_voice_state(data, channel_id)  # type: ignore
             if member is not None:
                 if flags.voice:
@@ -1566,6 +1588,14 @@ class ConnectionState:
                     "VOICE_STATE_UPDATE referencing an unknown member ID: %s. Discarding.",
                     data["user_id"],
                 )
+
+            if int(data["user_id"]) == self_id:
+                voice = self._get_voice_client(guild.id)
+                if voice is not None:
+                    if guild.me.voice is None:
+                        self._remove_voice_client(guild.id)
+                    coro = voice.on_voice_state_update(data)
+                    asyncio.create_task(logging_coroutine(coro, info="Voice Protocol voice state update handler"))
 
     def parse_voice_server_update(self, data) -> None:
         try:
@@ -1655,10 +1685,10 @@ class ConnectionState:
                 return channel
 
     def create_message(
-            self,
-            *,
-            channel: MessageableChannel,
-            data: MessagePayload,
+        self,
+        *,
+        channel: MessageableChannel,
+        data: MessagePayload,
     ) -> Message:
         return Message(state=self, channel=channel, data=data)
 
