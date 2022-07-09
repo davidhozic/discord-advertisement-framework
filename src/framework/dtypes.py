@@ -10,7 +10,7 @@ import  datetime
 import  _discord    as discord
 import  youtube_dl  as ytdl
 from   .exceptions import *
-
+from   .import core
 
 __all__ = (
     "data_function",
@@ -61,6 +61,15 @@ def data_function(fnc):
             """ ~ method ~
             - @Info Retreives the data from the user function."""
             return fnc(*self.args, **self.kwargs)
+        
+        def update(self, *args,**kwargs):
+            """ ~ async method ~
+            - @Added in v1.9.5
+            - @Info:
+                Method updates the arguments the data function will be called with"""
+            self.__init__(*args, **kwargs)
+            
+
     return FunctionCLASS
 
 
@@ -184,6 +193,17 @@ class FILE:
     def __init__(self,
                  filename: str):
         self.filename = filename
+    
+    async def update(self, **kwargs):
+        """ ~ async method ~
+        - @Added in v1.9.5
+        - @Info:
+            Used for chaning the initialization parameters the object was initialized with.
+        - @Params:
+            - The allowed parameters are the initialization parameters first used on creation of the object
+        - @Exception:
+            - Anything raised from core.update() function"""
+        await core.update(self, **kwargs)
 
 
 # Youtube streaming 
@@ -248,3 +268,16 @@ class AUDIO(ytdl.YoutubeDL):
             "type:" : "File",
             "filename": self.orig
         }
+
+    async def update(self, **kwargs):
+        """ ~ async method ~
+        - @Added in v1.9.5
+        - @Info:
+            Used for chaning the initialization parameters the object was initialized with.
+        - @Params:
+            - The allowed parameters are the initialization parameters first used on creation of the object.
+        - @Exception:
+            - Anything raised from core.update() function"""
+        if "filename" not in kwargs:
+            kwargs["filename"] = self.orig
+        await core.update(self, **kwargs)

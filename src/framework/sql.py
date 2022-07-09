@@ -24,6 +24,7 @@ from  .tracing import *
 from  .timing import *
 from  .const import *
 from  .exceptions import *
+from  . import core
 import json
 import copy
 import re
@@ -87,7 +88,7 @@ class LoggerSQL:
         "_sessionmaker",
         "commit_buffer",
         "username",
-        "__password",
+        "password",
         "server",
         "database",
         "lock",
@@ -106,7 +107,7 @@ class LoggerSQL:
                  database: str):
         # Save the connection parameters
         self.username = username
-        self.__password = password
+        self.password = password
         self.server = server
         self.database = database
         self.commit_buffer = []
@@ -394,7 +395,7 @@ class LoggerSQL:
         """~ method ~
         - @Info: Creates engine"""
         with suppress(SQLAlchemyError, TimeoutError, PyTDSError):
-            self.engine = create_engine(f"mssql+pytds://{self.username}:{self.__password}@{self.server}/{self.database}",
+            self.engine = create_engine(f"mssql+pytds://{self.username}:{self.password}@{self.server}/{self.database}",
                                         echo=False,future=True, pool_pre_ping=True,
                                         connect_args={"login_timeout" : SQL_CONNECTOR_TIMEOUT, "timeout" : SQL_CONNECTOR_TIMEOUT})
             self._sessionmaker = sessionmaker(bind=self.engine)
@@ -412,7 +413,7 @@ class LoggerSQL:
     #         return True
     #     return False
 
-    def initialize(self) -> bool:
+    async def initialize(self) -> bool:
         """~ method ~
         - @Info: This method initializes the connection to the database, creates the missing tables
                and fills the lookuptables with types defined by the register_type(lookup_table) function.
@@ -644,6 +645,19 @@ class LoggerSQL:
         trace(f"[SQL]: Saving log failed. Switching to file logging.")
         return False
 
+    async def update(self, **kwargs):
+        """ ~ async method ~
+        - @Added in v1.9.5
+        - @Info:
+            Used for chaning the initialization parameters the object was initialized with.
+        - @Params:
+            - The allowed parameters are the initialization parameters first used on creation of the object.
+        - @Exception:
+            - Anything raised from core.update() function"""
+        self.stop_engine()
+        await core.update(self, **kwargs)
+        GLOBALS.enabled = True
+
 
 class MessageTYPE(LoggerSQL.Base):
     """~ SQL Table Descriptor Class ~
@@ -804,7 +818,7 @@ class MessageChannelLOG(LoggerSQL.Base):
         self.reason = reason
 
 
-def initialize(mgr_object: LoggerSQL) -> bool:
+async def initialize(mgr_object: LoggerSQL) -> bool:
     """~ function ~
     - @Info: This function initializes the sql manager and also the selected database
            NOTE: If initialization fails, file logs will be used
@@ -812,7 +826,7 @@ def initialize(mgr_object: LoggerSQL) -> bool:
         mgr_object: LoggerSQL :: SQL database manager object responsible for saving the logs
                                  into the SQL database"""
     trace("[SQL]: Initializing logging...", TraceLEVELS.NORMAL)
-    if mgr_object is not None and mgr_object.initialize():
+    if mgr_object is not None and await mgr_object.initialize():
         trace("[SQL]: Initialization was successful!", TraceLEVELS.NORMAL)
         GLOBALS.enabled = True
         GLOBALS.manager = mgr_object

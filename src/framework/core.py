@@ -4,8 +4,7 @@
     and functions needed for the framework to run,
     as well as user function to control the framework
 """
-from   typing import Iterable, Literal, Callable, List, Set, overload, Union
-from   contextlib import suppress
+from   typing import Any, Iterable, Literal, Callable, List, overload
 from   _discord import Intents
 import asyncio
 import copy
@@ -71,7 +70,7 @@ async def initialize() -> None:
     # If manager is not provided, use JSON based file logs
     sql_manager = GLOBALS.sql_manager
     if sql_manager is not None:
-        if not sql.initialize(sql_manager): # Initialize the SQL database
+        if not await sql.initialize(sql_manager): # Initialize the SQL database
             trace("Unable to initialize the SQL manager, JSON logs will be used.", TraceLEVELS.WARNING)
     else:
         trace("[CORE]: No SQL manager provided, logging will be JSON based", TraceLEVELS.NORMAL)
@@ -185,7 +184,7 @@ def remove_object(data):
         raise DAFInvalidParameterError(f"Invalid parameter type `{type(data)}`.", DAF_INVALID_TYPE)
 
 
-async def update(object_: Union[guild.BaseGUILD, message.BaseMESSAGE], *, init_options: dict = {},**kwargs):
+async def update(object_: Any, *, init_options: dict = {},**kwargs):
         """ ~ async method ~
         - @Added in v1.9.5
         - @Info:
@@ -214,7 +213,9 @@ async def update(object_: Union[guild.BaseGUILD, message.BaseMESSAGE], *, init_o
 
             # Call the implementation __init__ function and then initialize API related things
             object_.__init__(**updated_params)
-            await object_.initialize(**init_options)
+            # Call additional initialization function (if it has one)
+            if hasattr(object_, "initialize"):
+                await object_.initialize(**init_options)
         except Exception:
             # In case of failure, restore to original attributes
             for k in type(object_).__slots__:
