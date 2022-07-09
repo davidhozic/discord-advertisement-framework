@@ -61,7 +61,7 @@ class BaseGUILD:
         raise NotImplementedError
     
     @property
-    def messages(self):
+    def messages(self) -> List[BaseMESSAGE]:
         """
         ~ property (getter) ~
         - @Info: Returns all the messages inside the object.
@@ -326,7 +326,7 @@ class GUILD(BaseGUILD):
         await core.update(self, **kwargs)
         # Update messages
         for message in self.messages:
-            await core.update(message)
+            await message.update()
         
 
 @sql.register_type("GuildTYPE")
@@ -437,4 +437,4 @@ class USER(BaseGUILD):
         await core.update(self, **kwargs)
         # Update messages
         for message in self.messages:
-            await core.update(message, init_options={"user" : self.apiobject})
+            await message.update(init_options={"user" : self.apiobject})

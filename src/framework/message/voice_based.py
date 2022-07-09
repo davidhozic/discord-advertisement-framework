@@ -238,4 +238,7 @@ class VoiceMESSAGE(BaseMESSAGE):
         - @Exception:
             - <class DAFInvalidParameterError code=DAF_UPDATE_PARAMETER_ERROR> ~ Invalid keyword argument was passed
             - Other exceptions raised from .initialize() method"""
+        if "start_now" not in kwargs:
+            # This parameter does not appear as attibute, manual setting neccessary
+            kwargs["start_now"] = True
         await core.update(self, **kwargs) # No additional modifications are required

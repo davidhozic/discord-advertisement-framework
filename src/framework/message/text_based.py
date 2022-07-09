@@ -281,6 +281,9 @@ class TextMESSAGE(BaseMESSAGE):
         - @Exception:
             - <class DAFInvalidParameterError code=DAF_UPDATE_PARAMETER_ERROR> ~ Invalid keyword argument was passed
             - Other exceptions raised from .initialize() method"""
+        if "start_now" not in kwargs:
+            # This parameter does not appear as attibute, manual setting neccessary
+            kwargs["start_now"] = True
         await core.update(self, **kwargs) # No additional modifications are required
  
 
@@ -479,7 +482,7 @@ class DirectMESSAGE(BaseMESSAGE):
 
         return None
 
-    async def update(self, **kwargs):
+    async def update(self, init_options={},**kwargs):
         """ ~ async method ~
         - @Added in v1.9.5
         - @Info:
@@ -490,4 +493,9 @@ class DirectMESSAGE(BaseMESSAGE):
         - @Exception:
             - <class DAFInvalidParameterError code=DAF_UPDATE_PARAMETER_ERROR> ~ Invalid keyword argument was passed
             - Other exceptions raised from .initialize() method"""
-        await core.update(self, init_options={"user" : self.dm_channel}, **kwargs) # No additional modifications are required
+        if "start_now" not in kwargs:
+            # This parameter does not appear as attibute, manual setting neccessary
+            kwargs["start_now"] = True
+        if not len(init_options):
+            init_options = {"user" : self.dm_channel}
+        await core.update(self, init_options=init_options, **kwargs) # No additional modifications are required

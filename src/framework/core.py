@@ -197,11 +197,9 @@ async def update(object_: Union[guild.BaseGUILD, message.BaseMESSAGE], *, init_o
         - @Exception:
             - <class DAFInvalidParameterError code=DAF_UPDATE_PARAMETER_ERROR> ~ Invalid keyword argument was passed
             - Other exceptions raised from .initialize() method"""
-        init_keys = list(object_.__init__.__annotations__.keys())
-        with suppress(ValueError):
-            init_keys.remove("return")
+        init_keys = list(object_.__init__.__code__.co_varnames) # Contains parameter list of the __init__ function
+        init_keys.remove("self")
         current_state = copy.copy(object_) # Make a copy of the current object for restoration in case of update failure
-
         try:  
             for k in kwargs:
                 if k not in init_keys:
@@ -212,9 +210,7 @@ async def update(object_: Union[guild.BaseGUILD, message.BaseMESSAGE], *, init_o
             updated_params = {}
             for k in init_keys:
                 # Store the attributes that match the __init__ parameters into `updated_params`
-                with suppress(AttributeError):
-                    # Ignore those that are not in the `updated_params`
-                    updated_params[k] = kwargs[k] if k in kwargs else getattr(object_, k)
+                updated_params[k] = kwargs[k] if k in kwargs else getattr(object_, k)
 
             # Call the implementation __init__ function and then initialize API related things
             object_.__init__(**updated_params)
