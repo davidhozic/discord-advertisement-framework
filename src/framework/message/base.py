@@ -2,16 +2,14 @@
 @Info:
     Contains base definitions for different message classes."""
 
-from    contextlib import suppress
 from    typing import Union
 from    ..dtypes import *
 from    ..tracing import *
 from    ..timing import *
 from    ..exceptions import *
-from    .. import core
 import  random
 import  _discord as discord
-import  copy
+import  asyncio
 
 
 __all__ = (
@@ -26,7 +24,6 @@ class BaseMESSAGE:
               represent a message you want to be sent into discord."""
 
     __slots__ = (
-        "initialized",
         "randomized_time",
         "period",
         "start_period",
@@ -34,6 +31,7 @@ class BaseMESSAGE:
         "timer",
         "force_retry",
         "data",
+        "update_mutex",
     )
 
     # The "__valid_data_types__" should be implemented in the INHERITED classes.
@@ -59,7 +57,7 @@ class BaseMESSAGE:
         self.timer = TIMER()
         self.force_retry = {"ENABLED" : start_now, "TIME" : 0}
         self.data = data
-        self.initialized = False
+        self.update_mutex: asyncio.Lock = asyncio.Lock() # Prevents access to to internal variables from send/update methods at once
 
     def generate_exception(self, 
                            status: int,
@@ -197,9 +195,7 @@ class BaseMESSAGE:
             - options ~ keyword arguments sent to initialize_channels() from an inherited (from BaseGUILD) class, contains extra init options.
         - @Exceptions:
             - Exceptions raised from .initialize_channels() and .initialize_data() methods"""
-        if self.initialized:
-            return
 
         await self.initialize_channels(**options)
         await self.initialize_data()
-        self.initialized = True
+

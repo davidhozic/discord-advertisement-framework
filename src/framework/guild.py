@@ -42,7 +42,6 @@ class BaseGUILD:
         - generate_log ~ Whether or not to generate a log file for the guild"""
 
     __slots__ = (       # Faster attribute access
-        "initialized",
         "apiobject",
         "snowflake",
         "logging",
@@ -73,7 +72,6 @@ class BaseGUILD:
                  messages: Optional[List]=[],
                  logging: Optional[bool]=False) -> None:
 
-        self.initialized = False
         self.apiobject = None
         self.snowflake = snowflake
         self.logging = logging
@@ -267,9 +265,6 @@ class GUILD(BaseGUILD):
         - @Exceptions:
             - <class DAFNotFoundError code=DAF_GUILD_ID_NOT_FOUND> ~ Raised when the guild_id wasn't found
             - Other exceptions from .add_message(message_object) method"""
-        if self.initialized: # Already initialized, just return
-            return
-
         guild_id = self.snowflake
         cl = client.get_client()
         self.apiobject = cl.get_guild(guild_id)
@@ -278,7 +273,6 @@ class GUILD(BaseGUILD):
             for message in self._messages:
                 await self.add_message(message)
 
-            self.initialized = True
             return
 
         raise DAFNotFoundError(f"Unable to find guild with ID: {guild_id}", DAF_GUILD_ID_NOT_FOUND)
@@ -378,9 +372,6 @@ class USER(BaseGUILD):
             - <class DAFNotFoundError code=DAF_USER_CREATE_DM> ~ Raised when the user_id wasn't found
             - Other exceptions from .add_message(message_object) method
         """
-        if self.initialized: # Already initialized, just return
-            return
-
         user_id = self.snowflake
         cl = client.get_client()
         self.apiobject = cl.get_user(user_id) # Get object from cache
@@ -393,8 +384,7 @@ class USER(BaseGUILD):
         if self.apiobject is not None:
             for message in self._messages:
                 await self.add_message(message)
-            
-            self.initialized = True
+
             return
 
         # Api object wasn't found, even after direct API call to discord.

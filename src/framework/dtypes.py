@@ -61,14 +61,6 @@ def data_function(fnc):
             """ ~ method ~
             - @Info Retreives the data from the user function."""
             return fnc(*self.args, **self.kwargs)
-        
-        def update(self, *args,**kwargs):
-            """ ~ async method ~
-            - @Added in v1.9.5
-            - @Info:
-                Method updates the arguments the data function will be called with"""
-            self.__init__(*args, **kwargs)
-            
 
     return FunctionCLASS
 
@@ -91,6 +83,7 @@ class EmbedFIELD:
         self.name = name
         self.content = content
         self.inline = inline
+
 
 class EMBED(discord.Embed):
     """ ~ class ~

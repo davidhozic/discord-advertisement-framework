@@ -8,6 +8,7 @@ from   typing import Any, Iterable, Literal, Callable, List, overload
 from   _discord import Intents
 import asyncio
 import copy
+import inspect
 from . const import *
 from . exceptions import *
 from . import tracing
@@ -196,7 +197,8 @@ async def update(object_: Any, *, init_options: dict = {},**kwargs):
         - @Exception:
             - <class DAFInvalidParameterError code=DAF_UPDATE_PARAMETER_ERROR> ~ Invalid keyword argument was passed
             - Other exceptions raised from .initialize() method"""
-        init_keys = list(object_.__init__.__code__.co_varnames) # Contains parameter list of the __init__ function
+        
+        init_keys = inspect.getfullargspec(object_.__init__).args # Retrievies list of call args
         init_keys.remove("self")
         current_state = copy.copy(object_) # Make a copy of the current object for restoration in case of update failure
         try:  
