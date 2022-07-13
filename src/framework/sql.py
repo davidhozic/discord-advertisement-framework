@@ -32,6 +32,8 @@ import time
 import asyncio
 import pytds
 
+# TODO: Replace methods that return bool with methods that raise exceptions for easier implementation of
+#       the update method (and easier exception handling in the future?)
 
 __all__ = (
     "LoggerSQL",
@@ -353,12 +355,13 @@ class LoggerSQL:
 
         return False
 
-    def generate_lookup_values(self) -> bool:
+    def generate_lookup_values(self):
         """~ method ~
-        - @Info: Generates the lookup values for all the different classes the @register_type decorator was used on."""
+        - @Info: Generates the lookup values for all the different classes the @register_type decorator was used on.
+        - @Exceptions:
+            - <class DAFSQLInitError code=DAF_SQL_CR_LT_VALUES_ERROR> ~ Raised when lookuptable values could not be inserted into the database."""
         session : Session
-        
-        with suppress(SQLAlchemyError, TimeoutError, PyTDSError):
+        try:
             trace("[SQL]: Generating lookuptable values...", TraceLEVELS.NORMAL)
             with self._sessionmaker.begin() as session:
                 for to_add in copy.deepcopy(GLOBALS.lt_types):  # Deepcopied to prevent SQLAlchemy from deleting the data
@@ -368,19 +371,17 @@ class LoggerSQL:
                         session.flush()
                         existing = to_add
                     self.add_to_cache(type(to_add), to_add.name, existing.id)
-            return True
+        except (SQLAlchemyError, TimeoutError, PyTDSError) as ex:
+            raise DAFSQLInitError(f"Unable to create lookuptables' rows.\nReason: {ex}", DAF_SQL_CR_LT_VALUES_ERROR)
 
-        return False
-
-    def create_tables(self) -> bool:
+    def create_tables(self) -> None:
         """~ method ~
         - @Info: Creates tables from the SQLAlchemy's descriptor classes"""
-        with suppress(SQLAlchemyError, TimeoutError, PyTDSError):
+        try:
             trace("[SQL]: Creating tables...", TraceLEVELS.NORMAL)
             self.Base.metadata.create_all(bind=self.engine)
-            return True
-        
-        return False
+        except (SQLAlchemyError, TimeoutError, PyTDSError) as ex:
+            raise DAFSQLInitError(f"Unable to create all the tables.\nReason: {ex}", DAF_SQL_CREATE_TABLES_ERROR)
 
     def connect_cursor(self) -> bool:
         """ ~ method ~
@@ -391,27 +392,18 @@ class LoggerSQL:
             return True
         return False
 
-    def begin_engine(self) -> bool:
+    def begin_engine(self) -> None:
         """~ method ~
-        - @Info: Creates engine"""
-        with suppress(SQLAlchemyError, TimeoutError, PyTDSError):
+        - @Info: Creates engine
+        - @Exceptions:
+            - <class DAFSQLInitError code=DAF_SQL_BEGIN_ENGINE_ERROR> ~ Raised if unable to begin engine."""
+        try:
             self.engine = create_engine(f"mssql+pytds://{self.username}:{self.password}@{self.server}/{self.database}",
                                         echo=False,future=True, pool_pre_ping=True,
                                         connect_args={"login_timeout" : SQL_CONNECTOR_TIMEOUT, "timeout" : SQL_CONNECTOR_TIMEOUT})
             self._sessionmaker = sessionmaker(bind=self.engine)
-            return True
-
-        return False
-
-    # def create_database(self) -> bool:
-    #     """ ~ Method ~
-    #     - @Info: Creates database if it doesn't exist"""
-    #     with suppress(SQLAlchemyError, TimeoutError, PyTDSError):
-    #         trace("[SQL]: Creating database...", TraceLEVELS.NORMAL)
-    #         if not database_exists(self.engine.url):
-    #             create_database(self.engine.url)
-    #         return True
-    #     return False
+        except (SQLAlchemyError, TimeoutError, PyTDSError) as ex:
+            raise DAFSQLInitError(f"Unable to start engine.\nError: {ex}", DAF_SQL_BEGIN_ENGINE_ERROR)
 
     async def initialize(self) -> bool:
         """~ method ~
@@ -420,23 +412,11 @@ class LoggerSQL:
         - @Param: void"""
 
         # Create engine for communicating with the SQL base
-        if not self.begin_engine():
-            trace("[SQL]: Unable to start engine.", TraceLEVELS.ERROR)
-            return False
-        
-        # if not self.create_database():
-        #     trace("[SQL]: Unable to create database")
-        #     return False
-        
+        self.begin_engine()
         # Create tables and the session class bound to the engine
-        if not self.create_tables():
-            trace("[SQL]: Unable to create all the tables.", TraceLEVELS.ERROR)
-            return False
-
+        self.create_tables()
         # Insert the lookuptable values        
-        if not self.generate_lookup_values():
-            trace("[SQL]: Unable to create lookuptables' rows.", TraceLEVELS.ERROR)
-            return False
+        self.generate_lookup_values()
 
         # Create datatypes
         if not self.create_data_types():
