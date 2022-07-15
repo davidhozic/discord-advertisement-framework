@@ -71,8 +71,10 @@ async def initialize() -> None:
     # If manager is not provided, use JSON based file logs
     sql_manager = GLOBALS.sql_manager
     if sql_manager is not None:
-        if not await sql.initialize(sql_manager): # Initialize the SQL database
-            trace("Unable to initialize the SQL manager, JSON logs will be used.", TraceLEVELS.WARNING)
+        try:
+            await sql.initialize(sql_manager) # Initialize the SQL database
+        except DAFSQLError as ex:
+            trace(f"Unable to initialize the SQL manager, JSON logs will be used.\nReason: {ex}", TraceLEVELS.WARNING)
     else:
         trace("[CORE]: No SQL manager provided, logging will be JSON based", TraceLEVELS.NORMAL)
 

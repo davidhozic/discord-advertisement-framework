@@ -406,12 +406,12 @@ class DirectMESSAGE(BaseMESSAGE):
         - @Parameters:
             - user ~ discord User object to whom the DM will be created for
         - @Exceptions:
-            - <DAFInitError code=DAF_USER_CREATE_DM> ~ Raised when the direct message channel could not be created"""
+            - <DAFNotFoundError code=DAF_USER_CREATE_DM> ~ Raised when the direct message channel could not be created"""
         try:
             await user.create_dm()
             self.dm_channel: discord.User = user
         except discord.HTTPException as ex:
-            raise DAFInitError(f"Unable to create DM with user {user.display_name}", DAF_USER_CREATE_DM)
+            raise DAFNotFoundError(f"Unable to create DM with user {user.display_name}\nReason: {ex}", DAF_USER_CREATE_DM)
 
     async def handle_error(self, ex: Exception) -> bool:
         """ ~ async method ~

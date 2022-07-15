@@ -12,18 +12,10 @@ class DAFError(Exception):
         self.code = code # Error code
         super().__init__(message)
 
-
-class DAFInitError(DAFError):
-    """~ class ~
-    @Info: Raised for initialization errors."""
-    pass
-
-
 class DAFAlreadyAddedError(DAFError):
     """~ class ~
     @Info: Raised when an object is added to the framework but already exists."""
     pass
-
 
 class DAFParameterError(DAFError):
     """~ class ~
@@ -40,23 +32,15 @@ class DAFInvalidParameterError(DAFParameterError):
     @Info: Raised when a parameter is invalid."""
     pass
 
-
 class DAFNotFoundError(DAFError):
     """~ class ~
     @Info: Raised when an object is not found."""
     pass
 
-
 class DAFSQLError(DAFError):
     """~ class ~
     @Info: Raised whenever there's an error with SQL."""
     pass
-
-class DAFSQLInitError(DAFSQLError):
-    """~ class ~
-    @Info: Raised when there is a problem with initialization."""
-    pass
-
 
 # Error Codes
 ## Guild codes
@@ -76,3 +60,6 @@ DAF_SQL_CREATE_TABLES_ERROR     = 9     # Unable to create all the tables.
 DAF_SQL_LOOKUPTABLE_NOT_FOUND   = 10    # The lookup table was not found.
 DAF_SQL_BEGIN_ENGINE_ERROR      = 11    # Unable to start engine.
 DAF_SQL_CR_LT_VALUES_ERROR      = 12    # Unable to create lookuptables' rows.
+DAF_SQL_CREATE_DT_ERROR         = 13    # Unable to create SQL data types.
+DAF_SQL_CREATE_VPF_ERROR        = 14    # Unable to create views, procedures and functions.
+DAF_SQL_CURSOR_CONN_ERROR       = 15    # Unable to connect the cursor.
