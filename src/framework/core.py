@@ -4,8 +4,11 @@
     and functions needed for the framework to run,
     as well as user function to control the framework
 """
-from   typing import Iterable, Literal, Callable, List, Set, overload
+from   typing import Any, Iterable, Literal, Callable, List, overload
 from   _discord import Intents
+import asyncio
+import copy
+import inspect
 from . const import *
 from . exceptions import *
 from . import tracing
@@ -14,7 +17,6 @@ from . import guild
 from . import client
 from . import sql
 from . import message
-import asyncio
 
 
 #######################################################################
@@ -24,7 +26,8 @@ __all__ = (
     "run",
     "shutdown",
     "add_object",
-    "remove_object"
+    "remove_object",
+    "update"
 )
 
 #######################################################################
@@ -68,8 +71,10 @@ async def initialize() -> None:
     # If manager is not provided, use JSON based file logs
     sql_manager = GLOBALS.sql_manager
     if sql_manager is not None:
-        if not sql.initialize(sql_manager): # Initialize the SQL database
-            trace("Unable to initialize the SQL manager, JSON logs will be used.", TraceLEVELS.WARNING)
+        try:
+            await sql.initialize(sql_manager) # Initialize the SQL database
+        except DAFSQLError as ex:
+            trace(f"Unable to initialize the SQL manager, JSON logs will be used.\nReason: {ex}", TraceLEVELS.WARNING)
     else:
         trace("[CORE]: No SQL manager provided, logging will be JSON based", TraceLEVELS.NORMAL)
 
@@ -180,6 +185,46 @@ def remove_object(data):
                         guild_user.remove_message(message) 
     else:
         raise DAFInvalidParameterError(f"Invalid parameter type `{type(data)}`.", DAF_INVALID_TYPE)
+
+
+async def update(object_: Any, *, init_options: dict = {}, **kwargs):
+        """ ~ async method ~
+        - @Added in v1.9.5
+        - @Info:
+            Used for chaning the initialization parameters the object was initialized with.
+        - @Params:
+            - The allowed parameters are the initialization parameters first used on creation of the object AND 
+            - init_options ~ Contains the initialization options used in .initialize() method for reainitializing certain objects.
+                             This is implementation specific and not necessarily available.
+        - @Exception:
+            - <class DAFInvalidParameterError code=DAF_UPDATE_PARAMETER_ERROR> ~ Invalid keyword argument was passed
+            - Other exceptions raised from .initialize() method"""
+        
+        init_keys = inspect.getfullargspec(object_.__init__).args # Retrievies list of call args
+        init_keys.remove("self")
+        current_state = copy.copy(object_) # Make a copy of the current object for restoration in case of update failure
+        try:  
+            for k in kwargs:
+                if k not in init_keys:
+                    raise DAFInvalidParameterError(f"Keyword argument `{k}` was passed which is not allowed. The update method only accepts the following keyword arguments: {init_keys}", DAF_UPDATE_PARAMETER_ERROR)
+            # Most of the variables inside the object have the same names as in the __init__ function.
+            # This section stores attributes, that are the same, into the `updated_params` dictionary and
+            # then calls the __init__ method with the same parameters, with the exception of start_period, end_period and start_now parameters
+            updated_params = {}
+            for k in init_keys:
+                # Store the attributes that match the __init__ parameters into `updated_params`
+                updated_params[k] = kwargs[k] if k in kwargs else getattr(object_, k)
+
+            # Call the implementation __init__ function and then initialize API related things
+            object_.__init__(**updated_params)
+            # Call additional initialization function (if it has one)
+            if hasattr(object_, "initialize"):
+                await object_.initialize(**init_options)
+        except Exception:
+            # In case of failure, restore to original attributes
+            for k in type(object_).__slots__:
+                setattr(object_, k, getattr(current_state, k))
+            raise
 
 
 async def shutdown() -> None:

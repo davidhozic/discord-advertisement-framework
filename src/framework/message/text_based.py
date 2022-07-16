@@ -39,7 +39,7 @@ class TextMESSAGE(BaseMESSAGE):
             if more than 1 string or embeds are sent, the framework will only consider the last found).
             - Function that accepts any amount of parameters and returns any of the above types.
             To pass a function, YOU MUST USE THE framework.data_function decorator on the function before passing the function to the framework.
-        - channel_ids ~ List of IDs of all the channels you want data to be sent into.
+        - channels ~ List of IDs of all the channels you want data to be sent into.
         - mode ~ Parameter that defines how message will be sent to a channel. It can be "send" - each period a new message will be sent,
                             "edit" - each period the previously send message will be edited (if it exists)
                             or "clear-send" - previous message will be deleted and a new one sent.
@@ -50,13 +50,15 @@ class TextMESSAGE(BaseMESSAGE):
     __slots__ = (
         "randomized_time",
         "period",
-        "random_range",
+        "start_period",
+        "end_period",
         "data",
         "channels",
         "timer",
         "mode",
         "force_retry",
-        "sent_messages"
+        "sent_messages",
+        "update_mutex",
     )
     __logname__ = "TextMESSAGE"
     __valid_data_types__ = {str, EMBED, FILE}
@@ -64,14 +66,14 @@ class TextMESSAGE(BaseMESSAGE):
     def __init__(self, start_period: Union[float, None],
                  end_period: float,
                  data: Union[str, EMBED, FILE, List[Union[str, EMBED, FILE]]],
-                 channel_ids: Iterable[int],
+                 channels: Iterable[int],
                  mode: Literal["send", "edit", "clear-send"] = "send",
                  start_now: bool = True):
         super().__init__(start_period, end_period, start_now)
         self.data = data
         self.mode = mode
-        self.channels = list(set(channel_ids)) # Automatically removes duplicates
-        self.sent_messages = {ch_id : None for ch_id in channel_ids} # Dictionary for storing last sent message for each channel
+        self.channels = list(set(channels)) # Automatically removes duplicates
+        self.sent_messages = {} # Dictionary for storing last sent message for each channel
 
     def generate_log_context(self,
                              text : str,
@@ -139,22 +141,24 @@ class TextMESSAGE(BaseMESSAGE):
         - @Name: initialize_channels
         - @Info: This method initializes the implementation specific
                  api objects and checks for the correct channel inpit context.
-        - @Return ~ Returns True on success
         - @Exceptions:
-            - <DAFInvalidParameterError code=DAF_INVALID_TYPE> ~ Raised when the object retrieved from channel_ids is not a discord.TextChannel or discord.Thread object.
+            - <DAFInvalidParameterError code=DAF_INVALID_TYPE> ~ Raised when the object retrieved from channels is not a discord.TextChannel or discord.Thread object.
             - <DAFMissingParameterError code=DAF_MISSING_PARAMETER> ~ Raised when no valid channels were parsed."""
         ch_i = 0
         cl = client.get_client()
         while ch_i < len(self.channels):
-            channel_id = self.channels[ch_i]
-            channel = cl.get_channel(channel_id)
-            self.channels[ch_i] = channel
+            channel = self.channels[ch_i]
+            if isinstance(channel, discord.abc.GuildChannel):
+                channel_id = channel.id
+            else:
+                channel_id = channel
+                channel = self.channels[ch_i] = cl.get_channel(channel_id)
 
             if channel is None:
                 trace(f"Unable to get channel from ID {channel_id}", TraceLEVELS.ERROR)
                 self.channels.remove(channel)
             elif type(channel) not in {discord.TextChannel, discord.Thread}:
-                raise DAFInvalidParameterError(f"TextMESSAGE object got ID ({channel_id}) for {type(channel).__name__}, but was expecting discord.TextChannel or discord.Thread", DAF_INVALID_TYPE)
+                raise DAFInvalidParameterError(f"TextMESSAGE object received channel type of {type(channel).__name__}, but was expecting discord.TextChannel or discord.Thread", DAF_INVALID_TYPE)
             else:
                 ch_i += 1
 
@@ -179,7 +183,7 @@ class TextMESSAGE(BaseMESSAGE):
                 handled = True
             elif ex.status == 404:      # Unknown object
                 if ex.code == 10008:    # Unknown message
-                    self.sent_messages[channel.id]  = None
+                    self.sent_messages[channel.id] = None
                     handled = True
         return handled
 
@@ -204,13 +208,13 @@ class TextMESSAGE(BaseMESSAGE):
                     raise self.generate_exception(403, 50013, "You lack permissions to perform that action", discord.Forbidden)
 
                 # Delete previous message if clear-send mode is choosen and message exists
-                if self.mode == "clear-send" and self.sent_messages[channel.id] is not None:
+                if self.mode == "clear-send" and self.sent_messages.get(channel.id, None) is not None:
                     await self.sent_messages[channel.id].delete()
                     self.sent_messages[channel.id] = None
 
                 # Send/Edit message
                 if  (self.mode in  {"send" , "clear-send"} or # Mode dictates to send new message or delete previous and then send new message or mode dictates edit but message was  never sent to this channel before
-                    self.mode == "edit" and self.sent_messages[channel.id] is None
+                    self.mode == "edit" and self.sent_messages.get(channel.id, None) is None
                     ):
                     discord_sent_msg = await channel.send(  text,
                                                             embed=embed,
@@ -235,38 +239,67 @@ class TextMESSAGE(BaseMESSAGE):
         - @Return:
             Returns a dictionary generated by the generate_log_context method
             or the None object if message wasn't ready to be sent (data_function returned None or an invalid type)"""
-        data_to_send = self.get_data()
-        if any(data_to_send.values()):
-            errored_channels = []
-            succeded_channels= []
+        
+        if self.update_mutex.locked():
+            # Object is in the proccess of having it's variables
+            # updated, meaning full reset of the object is due,
+            # so procceeding is considered incorrect behaviour.
+            return
+        
+        # Acquire mutex to prevent update method from writing while sending
+        async with self.update_mutex:
+            data_to_send = self.get_data()
+            if any(data_to_send.values()):
+                errored_channels = []
+                succeded_channels= []
 
-            # Send to channels
-            for channel in self.channels:
-                # Clear previous messages sent to channel if mode is MODE_DELETE_SEND
-                if core.GLOBALS.is_user:
-                    await asyncio.sleep(RLIM_USER_WAIT_TIME)
-                context = await self.send_channel(channel, **data_to_send)
-                if context["success"]:
-                    succeded_channels.append(channel)
-                else:
-                    errored_channels.append({"channel":channel, "reason": context["reason"]})
+                # Send to channels
+                for channel in self.channels:
+                    # Clear previous messages sent to channel if mode is MODE_DELETE_SEND
+                    if core.GLOBALS.is_user:
+                        await asyncio.sleep(RLIM_USER_WAIT_TIME)
+                    context = await self.send_channel(channel, **data_to_send)
+                    if context["success"]:
+                        succeded_channels.append(channel)
+                    else:
+                        errored_channels.append({"channel":channel, "reason": context["reason"]})
 
-            # Remove any channels that returned with code status 404 (They no longer exist)
-            for data in errored_channels:
-                reason = data["reason"]
-                channel = data["channel"]
-                if isinstance(reason, discord.HTTPException):
-                    if (reason.status == 403 or                    # Forbidden
-                        reason.code in {50007, 10003}     # Not Forbidden, but bad error codes
-                    ):
-                        self.channels.remove(channel)
-                        trace(f"Channel {channel.name}(ID: {channel.id}) {'was deleted' if reason.code == 10003 else 'does not have permissions'}, removing it from the send list", TraceLEVELS.WARNING)
+                # Remove any channels that returned with code status 404 (They no longer exist)
+                for data in errored_channels:
+                    reason = data["reason"]
+                    channel = data["channel"]
+                    if isinstance(reason, discord.HTTPException):
+                        if (reason.status == 403 or                    # Forbidden
+                            reason.code in {50007, 10003}     # Not Forbidden, but bad error codes
+                        ):
+                            self.channels.remove(channel)
+                            trace(f"Channel {channel.name}(ID: {channel.id}) {'was deleted' if reason.code == 10003 else 'does not have permissions'}, removing it from the send list", TraceLEVELS.WARNING)
 
-            # Return sent data + failed and successful function for logging purposes
-            return self.generate_log_context(**data_to_send, succeeded_ch=succeded_channels, failed_ch=errored_channels)
+                # Return sent data + failed and successful function for logging purposes
+                return self.generate_log_context(**data_to_send, succeeded_ch=succeded_channels, failed_ch=errored_channels)
 
-        return None
+            return None
 
+    async def update(self, **kwargs):
+        """ ~ async method ~
+        - @Added in v1.9.5
+        - @Info:
+            Used for chaning the initialization parameters the object was initialized with.
+            NOTE: Upon updating, the internal state of objects get's reset, meaning you basically have a brand new created object.
+        - @Params:
+            - The allowed parameters are the initialization parameters first used on creation of the object
+        - @Exception:
+            - <class DAFInvalidParameterError code=DAF_UPDATE_PARAMETER_ERROR> ~ Invalid keyword argument was passed
+            - Other exceptions raised from .initialize() method"""
+        if "start_now" not in kwargs:
+            # This parameter does not appear as attibute, manual setting neccessary
+            kwargs["start_now"] = True
+        
+        async with self.update_mutex:
+            # Wait for .send() method to finish or
+            # prevent .send() method from entering while updating the variables
+            await core.update(self, **kwargs) # No additional modifications are required
+ 
 
 @sql.register_type("MessageTYPE")
 class DirectMESSAGE(BaseMESSAGE):
@@ -292,13 +325,15 @@ class DirectMESSAGE(BaseMESSAGE):
     __slots__ = (
         "randomized_time",
         "period",
-        "random_range",
+        "start_period",
+        "end_period",
         "timer",
         "force_retry",
         "data",
         "mode",
         "previous_message",
-        "dm_channel"
+        "dm_channel",
+        "update_mutex",
     )
     __logname__ = "DirectMESSAGE"
     __valid_data_types__ = {str, EMBED, FILE}
@@ -371,11 +406,12 @@ class DirectMESSAGE(BaseMESSAGE):
         - @Parameters:
             - user ~ discord User object to whom the DM will be created for
         - @Exceptions:
-            - <DAFInitError code=DAF_USER_CREATE_DM> ~ Raised when the direct message channel could not be created"""
+            - <DAFNotFoundError code=DAF_USER_CREATE_DM> ~ Raised when the direct message channel could not be created"""
         try:
-            self.dm_channel = await user.create_dm()
+            await user.create_dm()
+            self.dm_channel: discord.User = user
         except discord.HTTPException as ex:
-            raise DAFInitError(f"Unable to create DM with user {user.display_name}", DAF_USER_CREATE_DM)
+            raise DAFNotFoundError(f"Unable to create DM with user {user.display_name}\nReason: {ex}", DAF_USER_CREATE_DM)
 
     async def handle_error(self, ex: Exception) -> bool:
         """ ~ async method ~
@@ -395,7 +431,7 @@ class DirectMESSAGE(BaseMESSAGE):
                 if ex.code == 10008:    # Unknown message
                     self.previous_message  = None
                     handled = True
-            elif ex.status == 400: # Bad Request
+            elif ex.status in {400, 403}: # Bad Request
                 await asyncio.sleep(RLIM_USER_WAIT_TIME * 5) # To avoid triggering selfbot detection
 
         return handled
@@ -443,20 +479,51 @@ class DirectMESSAGE(BaseMESSAGE):
         - @Return:
             Returns a dictionary generated by the generate_log_context method
             or the None object if message wasn't ready to be sent (data_function returned None)"""
-        # Parse data from the data parameter
-        data_to_send = self.get_data()
-        if any(data_to_send.values()):
-            if core.GLOBALS.is_user:
-                await asyncio.sleep(RLIM_USER_WAIT_TIME)
-            context = await self.send_channel(**data_to_send)
-            if context["success"] is False:
-                reason  = context["reason"]
-                if isinstance(reason, discord.HTTPException):
-                    if (reason.status == 403 or                    # Forbidden
-                        reason.code in {50007, 10001, 10003}     # Not Forbidden, but bad error codes
-                    ):
-                        self.dm_channel = None
+        
+        if self.update_mutex.locked():
+            # Object is in the proccess of having it's variables
+            # updated, meaning full reset of the object is due,
+            # so procceeding is considered incorrect behaviour.
+            return
 
-            return self.generate_log_context(**data_to_send, **context)
+        # Acquire mutex to prevent update method from writing while sending
+        async with self.update_mutex:
+            # Parse data from the data parameter
+            data_to_send = self.get_data()
+            if any(data_to_send.values()):
+                if core.GLOBALS.is_user:
+                    await asyncio.sleep(RLIM_USER_WAIT_TIME)
+                context = await self.send_channel(**data_to_send)
+                if context["success"] is False:
+                    reason  = context["reason"]
+                    if isinstance(reason, discord.HTTPException):
+                        if (reason.status == 403 or                    # Forbidden
+                            reason.code in {50007, 10001, 10003}     # Not Forbidden, but bad error codes
+                        ):
+                            self.dm_channel = None
 
-        return None
+                return self.generate_log_context(**data_to_send, **context)
+
+            return None
+
+    async def update(self, init_options={},**kwargs):
+        """ ~ async method ~
+        - @Added in v1.9.5
+        - @Info:
+            Used for chaning the initialization parameters the object was initialized with.
+            NOTE: Upon updating, the internal state of objects get's reset, meaning you basically have a brand new created object.
+        - @Params:
+            - The allowed parameters are the initialization parameters first used on creation of the object
+        - @Exception:
+            - <class DAFInvalidParameterError code=DAF_UPDATE_PARAMETER_ERROR> ~ Invalid keyword argument was passed
+            - Other exceptions raised from .initialize() method"""
+        if "start_now" not in kwargs:
+            # This parameter does not appear as attibute, manual setting neccessary
+            kwargs["start_now"] = True
+        if not len(init_options):
+            init_options = {"user" : self.dm_channel}
+        
+        async with self.update_mutex:
+            # Wait for .send() method to finish or
+            # prevent .send() method from entering while updating the variables
+            await core.update(self, init_options=init_options, **kwargs) # No additional modifications are required
