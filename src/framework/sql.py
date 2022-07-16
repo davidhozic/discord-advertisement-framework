@@ -114,7 +114,11 @@ class LoggerSQL:
         self.engine = None
         self.cursor = None
         self._sessionmaker  = None
-        self.lock = asyncio.Lock() # Lock used to prevent multiple tasks from accessing the database at the same time
+        self.lock = asyncio.Lock() 
+        """
+        Lock used to prevent multiple tasks from trying to access the `.save_log()` method at once.
+        Also used in the `.update()` method to prevent race conditions.
+        """
         # Caching (to avoid unneccessary queries)
         ## Lookup table caching
         self.MessageMODE = {}
@@ -527,6 +531,7 @@ class LoggerSQL:
         - @Info: Closes the engine and the cursor"""
         self.cursor.close()
         self.engine.dispose()
+        self.clear_cache()
         GLOBALS.enabled = False
 
     def handle_error(self,
@@ -616,7 +621,7 @@ class LoggerSQL:
 
         # Prevent multiple tasks from attempting to do operations on the database at the same time
         # This is to avoid eg. procedures being called while they are being created,
-        # handle error being called from different tasks, etc.
+        # handle error being called from different tasks, update method from causing a race condition,etc.
         async with self.lock: 
             if not GLOBALS.enabled:
                 # While current task was waiting for lock to be released, 
@@ -669,14 +674,15 @@ class LoggerSQL:
             - The allowed parameters are the initialization parameters first used on creation of the object.
         - @Exception:
             - Anything raised from core.update() function"""
-        try:
-            self.stop_engine()
-            await core.update(self, **kwargs)
-            GLOBALS.enabled = True
-        except Exception:
-            # Reinitialize since engine was disconnected
-            await self.initialize()
-            raise
+        async with self.lock:
+            try:
+                self.stop_engine()
+                await core.update(self, **kwargs)
+                GLOBALS.enabled = True
+            except Exception:
+                # Reinitialize since engine was disconnected
+                await self.initialize()
+                raise
 
 
 class MessageTYPE(LoggerSQL.Base):
