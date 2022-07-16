@@ -575,7 +575,7 @@ class LoggerSQL:
             else: # No handling instruction known
                 res = False
 
-        except:
+        except Exception:
             # Error could not be handled, stop the engine
             res = False
             self.stop_engine()          
@@ -673,7 +673,7 @@ class LoggerSQL:
             self.stop_engine()
             await core.update(self, **kwargs)
             GLOBALS.enabled = True
-        except:
+        except Exception:
             # Reinitialize since engine was disconnected
             await self.initialize()
             raise
