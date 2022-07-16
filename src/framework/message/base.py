@@ -9,6 +9,7 @@ from    ..timing import *
 from    ..exceptions import *
 import  random
 import  _discord as discord
+import  asyncio
 
 
 __all__ = (
@@ -23,13 +24,14 @@ class BaseMESSAGE:
               represent a message you want to be sent into discord."""
 
     __slots__ = (
-        "initialized",
         "randomized_time",
         "period",
-        "random_range",
+        "start_period",
+        "end_period",
         "timer",
         "force_retry",
-        "data"
+        "data",
+        "update_mutex",
     )
 
     # The "__valid_data_types__" should be implemented in the INHERITED classes.
@@ -43,18 +45,19 @@ class BaseMESSAGE:
                 data,
                 start_now : bool=True):
         # If start_period is none -> period will not be randomized
+        self.start_period = start_period
+        self.end_period   = end_period
         if start_period is None:            
             self.randomized_time = False
             self.period = end_period
         else:
             self.randomized_time = True
-            self.random_range = (start_period, end_period)
-            self.period = random.randrange(*self.random_range)
+            self.period = random.randrange(self.start_period, self.end_period)
 
         self.timer = TIMER()
         self.force_retry = {"ENABLED" : start_now, "TIME" : 0}
         self.data = data
-        self.initialized = False
+        self.update_mutex: asyncio.Lock = asyncio.Lock() # Prevents access to to internal variables from send/update methods at once
 
     def generate_exception(self, 
                            status: int,
@@ -62,7 +65,6 @@ class BaseMESSAGE:
                            description: str,
                            cls: discord.HTTPException):
         """ ~ method ~
-        - @Name: generate_exception
         - @Info: Generates a discord.HTTPException inherited class exception object
         - @Param:
             - status ~ Atatus code of the exception
@@ -78,7 +80,6 @@ class BaseMESSAGE:
 
     def generate_log_context(self):
         """ ~ method ~
-        - @Name: generate_log_context
         - @Info:
             This method is used for generating a dictionary (later converted to json) of the
             data that is to be included in the message log. This is to be implemented inside the
@@ -87,7 +88,6 @@ class BaseMESSAGE:
     
     def get_data(self) -> dict:
         """ ~ method ~
-        - @Name:  get_data
         - @Info: Returns a dictionary of keyword arguments that is then expanded
                into other functions (send_channel, generate_log)
                This is to be implemented in inherited classes due to different data_types"""
@@ -95,7 +95,6 @@ class BaseMESSAGE:
 
     def is_ready(self) -> bool:
         """ ~ method ~
-        - @Name:   is_ready
         - @Param:  void
         - @Info:   This method returns bool indicating if message is ready to be sent"""
         return (not self.force_retry["ENABLED"] and self.timer.elapsed() > self.period or
@@ -103,13 +102,12 @@ class BaseMESSAGE:
 
     def reset_timer(self) -> None:
         """ ~ method ~
-        - @Name: restart_time
         - @Info: Resets internal timer (and force period)"""
         self.timer.reset()
         self.timer.start()
         self.force_retry["ENABLED"] = False
         if self.randomized_time is True:
-            self.period = random.randrange(*self.random_range)
+            self.period = random.randrange(self.start_period, self.end_period)
 
     async def send_channel(self) -> dict:
         """ ~ async method ~
@@ -128,14 +126,12 @@ class BaseMESSAGE:
 
     async def initialize_channels(self):
         """ ~ async method ~
-        - @Name: initialize_channels
         - @Info: This method initializes the implementation specific
                  api objects and checks for the correct channel inpit context."""
         raise NotImplementedError
 
     async def initialize_data(self):
         """ ~ async method ~
-        - @Name:  initialize_data
         - @Info:  This method checks for the correct data input to the xxxMESSAGE
                   object. The expected datatypes for specific implementation is
                   defined thru the static variable __valid_data_types__
@@ -176,17 +172,30 @@ class BaseMESSAGE:
             if len(self.data) == 0:
                 raise DAFMissingParameterError(f"No data parameters were passed", DAF_MISSING_PARAMETER)
 
-
+    async def update(self, init_options={}, **kwargs):
+        """ ~ async method ~
+        - @Added in v1.9.5
+        - @Info:
+            Used for chaning the initialization parameters the object was initialized with.
+            NOTE: Upon updating, the internal state of objects get's reset, meaning you basically have a brand new created object.
+        - @Params:
+            - The allowed parameters are the initialization parameters first used on creation of the object AND 
+            - init_options ~ Contains the initialization options used in .initialize() method for reainitializing certain objects.
+                             This is implementation specific and not necessarily available.
+        - @Exception:
+            - <class DAFInvalidParameterError code=DAF_UPDATE_PARAMETER_ERROR> ~ Invalid keyword argument was passed
+            - Other exceptions raised from .initialize() method"""
+        raise NotImplementedError
+        
     async def initialize(self, **options):
         """ ~ async method ~
-        @Name: initialize
         - @Info:
             The initialize method initilizes the message object.
         - @Params:
-            - options ~ keyword arguments sent to initialize_channels() from an inherited (from BaseGUILD) class, contains extra init options."""
-        if self.initialized:
-            return
+            - options ~ keyword arguments sent to initialize_channels() from an inherited (from BaseGUILD) class, contains extra init options.
+        - @Exceptions:
+            - Exceptions raised from .initialize_channels() and .initialize_data() methods"""
 
         await self.initialize_channels(**options)
         await self.initialize_data()
-        self.initialized = True
+
