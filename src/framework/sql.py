@@ -24,6 +24,7 @@ from  .tracing import *
 from  .timing import *
 from  .const import *
 from  .exceptions import *
+from  . import core
 import json
 import copy
 import re
@@ -87,7 +88,7 @@ class LoggerSQL:
         "_sessionmaker",
         "commit_buffer",
         "username",
-        "__password",
+        "password",
         "server",
         "database",
         "lock",
@@ -106,14 +107,18 @@ class LoggerSQL:
                  database: str):
         # Save the connection parameters
         self.username = username
-        self.__password = password
+        self.password = password
         self.server = server
         self.database = database
         self.commit_buffer = []
         self.engine = None
         self.cursor = None
         self._sessionmaker  = None
-        self.lock = asyncio.Lock() # Lock used to prevent multiple tasks from accessing the database at the same time
+        self.lock = asyncio.Lock() 
+        """
+        Lock used to prevent multiple tasks from trying to access the `.save_log()` method at once.
+        Also used in the `.update()` method to prevent race conditions.
+        """
         # Caching (to avoid unneccessary queries)
         ## Lookup table caching
         self.MessageMODE = {}
@@ -157,10 +162,12 @@ class LoggerSQL:
                    it retries after <wait>"""
             for tries in range(SQL_RECONNECT_ATTEMPTS):
                 trace(f"[SQL]: Reconnecting to database {self.database}.")
-                if self.connect_cursor():
+                with suppress(DAFSQLError):
+                    self.connect_cursor()
                     trace(f"[SQL]: Reconnected to the database {self.database}.")
                     GLOBALS.enabled = True
                     return
+
                 if tries != SQL_RECONNECT_ATTEMPTS - 1: # Don't wait if it's the last attempt
                     trace(f"[SQL]: Retrying to connect in {wait} seconds.")
                     time.sleep(wait) 
@@ -171,9 +178,13 @@ class LoggerSQL:
         self.cursor.close()
         loop.run_in_executor(None, _reconnect)
 
-    def create_data_types(self) -> bool:
-        """~ method ~
-        - @Info: Creates datatypes that are used by the framework to log messages"""
+    def create_data_types(self) -> None:
+        """
+        Creates datatypes that are used by the framework to log messages
+
+        Exceptions
+        --------------
+        - `DAFSQLError(code=DAF_SQL_CREATE_DT_ERROR)` - Raised when the method is unable to create the SQL custom data types"""
         session: Session
         
         stms = [
@@ -182,23 +193,28 @@ class LoggerSQL:
                 "stm": "TYPE {} AS TABLE(id int, reason nvarchar(max))"
             }
         ]
-        with suppress(SQLAlchemyError, TimeoutError, PyTDSError):
+        try:
             trace("[SQL]: Creating data types...", TraceLEVELS.NORMAL)
             with self._sessionmaker.begin() as session:
                 for statement in stms:
                     if session.execute(text(f"SELECT name FROM sys.types WHERE name=:name"), {"name":statement["name"]}).first() is None:
                         session.execute(text("CREATE " + statement["stm"].format(statement["name"]) ))
-
-            return True
+        except Exception as ex:
+            raise DAFSQLError(f"Unable to create SQL data types\nReason: {ex}", DAF_SQL_CREATE_DT_ERROR)
         
-        return False
 
-    def create_analytic_objects(self) -> bool:
-        """~ mthod ~
-        - @Info: Creates Stored Procedures, Views and Functions via SQL code.
-               The method iterates thru a list, first checking if the object exists
-                -> if it does exist, it uses ALTER + "stm", if it doesn't exist,
-                   it uses CREATE + "stm" command to create the object inside the SQL database."""
+    def create_analytic_objects(self) -> None:
+        """
+        Creates Stored Procedures, Views and Functions via SQL code.
+        The method iterates thru a list, first checking if the object exists.
+        If it does exist, it uses ALTER + "stm", if it doesn't exist,
+        it uses CREATE + "stm" command to create the object inside the SQL database.
+        
+        Exceptions
+        ------------
+        - `DAFSQLError(code=DAF_SQL_CREATE_VPF_ERROR)` - Raised whenever the method is unable to create all the views, procedures, functions.
+        """
+        session: Session
         stms = [
             {   
                 "name" :   "vMessageLogFullDETAIL",
@@ -343,21 +359,25 @@ class LoggerSQL:
                 END"""
             }
         ]
-        with suppress(SQLAlchemyError, TimeoutError, PyTDSError):
+        try:
             trace("[SQL]: Creating Views, Procedures & Functions...", TraceLEVELS.NORMAL)
             with self._sessionmaker.begin() as session:
                 for statement in stms:
                     session.execute(text("CREATE OR ALTER " + statement["stm"].format(statement["name"]) ))
-            return True
+        except Exception as ex:
+            raise DAFSQLError(f" Unable to create views, procedures and functions.\nReason: {ex}", DAF_SQL_CREATE_VPF_ERROR)
 
-        return False
-
-    def generate_lookup_values(self) -> bool:
-        """~ method ~
-        - @Info: Generates the lookup values for all the different classes the @register_type decorator was used on."""
-        session : Session
         
-        with suppress(SQLAlchemyError, TimeoutError, PyTDSError):
+
+    def generate_lookup_values(self) -> None:
+        """
+        Generates the lookup values for all the different classes the @register_type decorator was used on.
+        
+        Exceptions
+        -------------
+        - `DAFSQLError(code=DAF_SQL_CR_LT_VALUES_ERROR)` - Raised when lookuptable values could not be inserted into the database."""
+        session : Session
+        try:
             trace("[SQL]: Generating lookuptable values...", TraceLEVELS.NORMAL)
             with self._sessionmaker.begin() as session:
                 for to_add in copy.deepcopy(GLOBALS.lt_types):  # Deepcopied to prevent SQLAlchemy from deleting the data
@@ -367,92 +387,77 @@ class LoggerSQL:
                         session.flush()
                         existing = to_add
                     self.add_to_cache(type(to_add), to_add.name, existing.id)
-            return True
+        except Exception as ex:
+            raise DAFSQLError(f"Unable to create lookuptables' rows.\nReason: {ex}", DAF_SQL_CR_LT_VALUES_ERROR)
 
-        return False
-
-    def create_tables(self) -> bool:
-        """~ method ~
-        - @Info: Creates tables from the SQLAlchemy's descriptor classes"""
-        with suppress(SQLAlchemyError, TimeoutError, PyTDSError):
+    def create_tables(self) -> None:
+        """
+        Creates tables from the SQLAlchemy's descriptor classes
+        
+        Exceptions
+        -----------
+        - `DAFSQLError(code=DAF_SQL_CREATE_TABLES_ERROR)` - Raised when tables could not be created."""
+        try:
             trace("[SQL]: Creating tables...", TraceLEVELS.NORMAL)
             self.Base.metadata.create_all(bind=self.engine)
-            return True
-        
-        return False
+        except Exception as ex:
+            raise DAFSQLError(f"Unable to create all the tables.\nReason: {ex}", DAF_SQL_CREATE_TABLES_ERROR)
 
-    def connect_cursor(self) -> bool:
-        """ ~ method ~
-        - @Info: Creates a cursor for the database (for faster communication)"""
-        with suppress(Exception):
+    def connect_cursor(self) -> None:
+        """
+        Creates a cursor for the database (for faster communication)
+        
+        Exceptions
+        ------------
+        - `DAFSQLError(code=DAF_SQL_CURSOR_CONN_ERROR)` - Raised when the cursor connection could not be established."""
+        try:
             trace("[SQL]: Connecting the cursor...", TraceLEVELS.NORMAL)
             self.cursor = self.engine.raw_connection().cursor()
-            return True
-        return False
+        except Exception as ex:
+            raise DAFSQLError(f"Unable to connect the cursor. Reason: {ex}", DAF_SQL_CURSOR_CONN_ERROR)
 
-    def begin_engine(self) -> bool:
-        """~ method ~
-        - @Info: Creates engine"""
-        with suppress(SQLAlchemyError, TimeoutError, PyTDSError):
-            self.engine = create_engine(f"mssql+pytds://{self.username}:{self.__password}@{self.server}/{self.database}",
+    def begin_engine(self) -> None:
+        """
+        Creates the sqlalchemy engine.
+        
+        Exceptions
+        ----------------
+        - `(DAFSQLError code=DAF_SQL_BEGIN_ENGINE_ERROR)` - Raised when the engine could not connect to the specified database."""
+        try:
+            self.engine = create_engine(f"mssql+pytds://{self.username}:{self.password}@{self.server}/{self.database}",
                                         echo=False,future=True, pool_pre_ping=True,
                                         connect_args={"login_timeout" : SQL_CONNECTOR_TIMEOUT, "timeout" : SQL_CONNECTOR_TIMEOUT})
             self._sessionmaker = sessionmaker(bind=self.engine)
-            return True
+        except Exception as ex:
+            raise DAFSQLError(f"Unable to start engine.\nError: {ex}", DAF_SQL_BEGIN_ENGINE_ERROR)
 
-        return False
-
-    # def create_database(self) -> bool:
-    #     """ ~ Method ~
-    #     - @Info: Creates database if it doesn't exist"""
-    #     with suppress(SQLAlchemyError, TimeoutError, PyTDSError):
-    #         trace("[SQL]: Creating database...", TraceLEVELS.NORMAL)
-    #         if not database_exists(self.engine.url):
-    #             create_database(self.engine.url)
-    #         return True
-    #     return False
-
-    def initialize(self) -> bool:
-        """~ method ~
-        - @Info: This method initializes the connection to the database, creates the missing tables
-               and fills the lookuptables with types defined by the register_type(lookup_table) function.
-        - @Param: void"""
-
+    async def initialize(self) -> None:
+        """ 
+        This method initializes the connection to the database, creates the missing tables
+        and fills the lookuptables with types defined by the register_type(lookup_table) function.
+            
+        Exceptions
+        -----------
+        Any exceptions raised are exceptions that are raised in:
+        - `.begin_engine()`
+        - `.create_tables()`
+        - `.generate_lookup_values()`
+        - `.create_data_types()`
+        - `.create_analytic_objects()`
+        - `.connect_cursor()`"""
         # Create engine for communicating with the SQL base
-        if not self.begin_engine():
-            trace("[SQL]: Unable to start engine.", TraceLEVELS.ERROR)
-            return False
-        
-        # if not self.create_database():
-        #     trace("[SQL]: Unable to create database")
-        #     return False
-        
+        self.begin_engine()
         # Create tables and the session class bound to the engine
-        if not self.create_tables():
-            trace("[SQL]: Unable to create all the tables.", TraceLEVELS.ERROR)
-            return False
-
+        self.create_tables()
         # Insert the lookuptable values        
-        if not self.generate_lookup_values():
-            trace("[SQL]: Unable to create lookuptables' rows.", TraceLEVELS.ERROR)
-            return False
-
+        self.generate_lookup_values()
         # Create datatypes
-        if not self.create_data_types():
-            trace("[SQL]: Unable to data types", TraceLEVELS.ERROR)
-            return False
-
+        self.create_data_types()
         # Initialize views, procedures and functions
-        if not self.create_analytic_objects():
-            trace("[SQL]: Unable to create views, procedures and functions.", TraceLEVELS.ERROR)
-            return False
-        
+        self.create_analytic_objects()
         # Connect the cursor for faster procedure calls
-        if not self.connect_cursor():
-            trace("[SQL]: Unable to connect the cursor", TraceLEVELS.ERROR)
-            return False
-
-        return True
+        self.connect_cursor()
+        GLOBALS.enabled = True
     
     def get_insert_guild(self,
                     snowflake: int,
@@ -526,43 +531,59 @@ class LoggerSQL:
         - @Info: Closes the engine and the cursor"""
         self.cursor.close()
         self.engine.dispose()
+        self.clear_cache()
         GLOBALS.enabled = False
 
     def handle_error(self,
                      exception: int, message: str,
                      loop: asyncio.AbstractEventLoop) -> bool:
-        """~ function ~
-        - @Info: Used to handle errors that happen in the save_log method.
-        - @Return: Returns BOOL indicating if logging to the base should be attempted again."""
-        res = False
-        time.sleep(SQL_RECOVERY_TIME)
-        # Handle the error
-        if exception == 208:  # Invalid object name (table deleted)
-            if self.create_tables() and self.create_data_types() and self.create_analytic_objects():
-                res = True
-        elif exception in {547, 515}:   # Constraint conflict, NULL value 
-            r_table = re.search(r'(?<=table "dbo.).+(?=")', message) # Try to parse the table name with regex
-            if r_table is not None:
-                self.clear_cache(r_table.group(0))  # Clears only the affected table cache 
-            else:
-                self.clear_cache()  # Clears all caching tables
-            res = self.generate_lookup_values()
-        elif exception in {-1, 2, 53}:  # Diconnect error, reconnect after period
-                self.reconnect_after(SQL_RECONNECT_TIME, loop)
-        elif exception == 2812:
-            if self.create_data_types() and self.create_analytic_objects():
-                res = True
-        elif exception == 2801: # Object was altered (via external source) after procedure was compiled
-            res = True # Just retry
-        elif exception == 1205: # Transaction deadlocked
-            with suppress(SQLAlchemyError, TimeoutError, PyTDSError):
-                with self._sessionmaker() as session:
-                    session.commit() # Just commit
-                res = True
+        """
+        Used to handle errors that happen in the save_log method.
 
-        # Could not handle the error, switch to file logging permanently
-        if not res and exception not in {-1, 2, 53}:
-            self.stop_engine()
+        Return
+        --------
+        Returns bool on successful handling.
+        """
+        session: Session
+        res = True
+        time.sleep(SQL_RECOVERY_TIME)
+        try:
+            # Handle the error
+            if exception == 208:  # Invalid object name (table deleted)
+                self.create_tables()
+                self.create_data_types()
+                self.create_analytic_objects()
+
+            elif exception in {547, 515}:   # Constraint conflict, NULL value 
+                r_table = re.search(r'(?<=table "dbo.).+(?=")', message) # Try to parse the table name with regex
+                if r_table is not None:
+                    self.clear_cache(r_table.group(0))  # Clears only the affected table cache 
+                else:
+                    self.clear_cache()  # Clears all caching tables
+                self.generate_lookup_values()
+
+            elif exception in {-1, 2, 53}:  # Diconnect error, reconnect after period
+                self.reconnect_after(SQL_RECONNECT_TIME, loop)
+                res = False # Don't try to save while reconnecting
+
+            elif exception == 2812:
+                self.create_data_types()
+                self.create_analytic_objects()
+
+            elif exception == 2801: # Object was altered (via external source) after procedure was compiled
+                pass # Just retry
+
+            elif exception == 1205: # Transaction deadlocked
+                with self._sessionmaker() as session:
+                    session.commit()
+    
+            else: # No handling instruction known
+                res = False
+
+        except Exception:
+            # Error could not be handled, stop the engine
+            res = False
+            self.stop_engine()          
 
         return res  # Returns if the error was handled or not
 
@@ -600,7 +621,7 @@ class LoggerSQL:
 
         # Prevent multiple tasks from attempting to do operations on the database at the same time
         # This is to avoid eg. procedures being called while they are being created,
-        # handle error being called from different tasks, etc.
+        # handle error being called from different tasks, update method from causing a race condition,etc.
         async with self.lock: 
             if not GLOBALS.enabled:
                 # While current task was waiting for lock to be released, 
@@ -643,6 +664,25 @@ class LoggerSQL:
         
         trace(f"[SQL]: Saving log failed. Switching to file logging.")
         return False
+
+    async def update(self, **kwargs):
+        """ ~ async method ~
+        - @Added in v1.9.5
+        - @Info:
+            Used for chaning the initialization parameters the object was initialized with.
+        - @Params:
+            - The allowed parameters are the initialization parameters first used on creation of the object.
+        - @Exception:
+            - Anything raised from core.update() function"""
+        async with self.lock:
+            try:
+                self.stop_engine()
+                await core.update(self, **kwargs)
+                GLOBALS.enabled = True
+            except Exception:
+                # Reinitialize since engine was disconnected
+                await self.initialize()
+                raise
 
 
 class MessageTYPE(LoggerSQL.Base):
@@ -804,20 +844,23 @@ class MessageChannelLOG(LoggerSQL.Base):
         self.reason = reason
 
 
-def initialize(mgr_object: LoggerSQL) -> bool:
-    """~ function ~
-    - @Info: This function initializes the sql manager and also the selected database
-           NOTE: If initialization fails, file logs will be used
-    - @Param:
-        mgr_object: LoggerSQL :: SQL database manager object responsible for saving the logs
-                                 into the SQL database"""
+async def initialize(mgr_object: LoggerSQL):
+    """
+    This function initializes the sql manager and also the selected database
+    
+    Parameters
+    -----------
+    - mgr_object: LoggerSQL - SQL database manager object responsible for saving the logs into the SQL database
+    
+    Exceptions
+    ------------
+    - Any exceptions raised in `mgr_object.initialize()` method"""
+
     trace("[SQL]: Initializing logging...", TraceLEVELS.NORMAL)
-    if mgr_object is not None and mgr_object.initialize():
-        trace("[SQL]: Initialization was successful!", TraceLEVELS.NORMAL)
-        GLOBALS.enabled = True
+    if mgr_object is not None:
+        await mgr_object.initialize()
         GLOBALS.manager = mgr_object
-        return True
-    return False
+        trace("[SQL]: Initialization was successful!", TraceLEVELS.NORMAL)
 
 
 def get_sql_manager() -> LoggerSQL:
