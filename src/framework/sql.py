@@ -453,6 +453,7 @@ class LoggerSQL:
         self.create_analytic_objects()
         # Connect the cursor for faster procedure calls
         self.connect_cursor()
+        GLOBALS.enabled = True
     
     def get_insert_guild(self,
                     snowflake: int,
@@ -668,9 +669,14 @@ class LoggerSQL:
             - The allowed parameters are the initialization parameters first used on creation of the object.
         - @Exception:
             - Anything raised from core.update() function"""
-        self.stop_engine()
-        await core.update(self, **kwargs)
-        GLOBALS.enabled = True
+        try:
+            self.stop_engine()
+            await core.update(self, **kwargs)
+            GLOBALS.enabled = True
+        except:
+            # Reinitialize since engine was disconnected
+            await self.initialize()
+            raise
 
 
 class MessageTYPE(LoggerSQL.Base):
@@ -847,9 +853,9 @@ async def initialize(mgr_object: LoggerSQL):
     trace("[SQL]: Initializing logging...", TraceLEVELS.NORMAL)
     if mgr_object is not None:
         await mgr_object.initialize()
-        trace("[SQL]: Initialization was successful!", TraceLEVELS.NORMAL)
-        GLOBALS.enabled = True
         GLOBALS.manager = mgr_object
+        trace("[SQL]: Initialization was successful!", TraceLEVELS.NORMAL)
+
 
 def get_sql_manager() -> LoggerSQL:
     """~ function ~

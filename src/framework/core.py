@@ -187,7 +187,7 @@ def remove_object(data):
         raise DAFInvalidParameterError(f"Invalid parameter type `{type(data)}`.", DAF_INVALID_TYPE)
 
 
-async def update(object_: Any, *, init_options: dict = {},**kwargs):
+async def update(object_: Any, *, init_options: dict = {}, **kwargs):
         """ ~ async method ~
         - @Added in v1.9.5
         - @Info:
