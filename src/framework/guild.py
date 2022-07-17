@@ -6,7 +6,7 @@
 """
 
 from    contextlib import suppress
-from    typing import Literal, Union, List, Optional
+from    typing import Any, Literal, Union, List, Optional
 from    .exceptions import *
 from    .tracing import *
 from    .const import *
@@ -46,8 +46,6 @@ class BaseGUILD:
         "snowflake",
         "logging",
         "_messages",
-        "t_messages",
-        "vc_messages"
     )
     __logname__ = "BaseGUILD" # Dummy to demonstrate correct definition for @sql.register_type decorator
 
@@ -68,16 +66,14 @@ class BaseGUILD:
         return self.t_messages + self.vc_messages
 
     def __init__(self,
-                 snowflake: int,
+                 snowflake: Any,
                  messages: Optional[List]=[],
                  logging: Optional[bool]=False) -> None:
 
-        self.apiobject = None
-        self.snowflake = snowflake
-        self.logging = logging
-        self._messages = messages
-        self.t_messages: List[Union[TextMESSAGE, DirectMESSAGE]] = []
-        self.vc_messages: List[VoiceMESSAGE] = []
+        self.apiobject: discord.Snowflake = None
+        self.snowflake: Any = snowflake
+        self.logging: bool= logging
+        self._messages: list = messages
 
     def __eq__(self, other) -> bool:
         """
@@ -202,22 +198,28 @@ class BaseGUILD:
 
 @sql.register_type("GuildTYPE")
 class GUILD(BaseGUILD):
-    """ ~ class ~
-    - @Info: The GUILD object represents a server to which messages will be sent.
-    - @Param:
-        - guild_id ~ identificator which can be obtained by enabling developer mode in discord's settings and
-                     afterwards right-clicking on the server/guild icon in the server list and clicking "Copy ID",
-        - messages ~List of TextMESSAGE/VoiceMESSAGE objects
-        - logging ~ bool variable, if True it will generate a file log for each message send attempt."""
+    """
+    The GUILD object represents a server to which messages will be sent.
+    
+    Parameters
+    ------------
+    - snowflake: `Union[int, discord.Guild]` - Discord's snowflake identificator of the guild or discord.Guild object,
+    - messages: `Optional[List[Union[TextMESSAGE, VoiceMESSAGE]]]` - Optional list of TextMESSAGE/VoiceMESSAGE objects
+    - logging:  `Optional[bool]` - Optional variable dictating whatever to log sent't messages inside this guild."""
     
     __logname__ = "GUILD" # For sql.register_type
-    __slots__   = set()   # Removes __dict__ (prevents dynamic attributes)
+    __slots__   = (
+        "t_messages",
+        "vc_messages"
+    )
 
     def __init__(self,
-                 guild_id: int,
+                 snowflake: Union[int, discord.Guild],
                  messages: Optional[List[Union[TextMESSAGE, VoiceMESSAGE]]]=[],
                  logging: Optional[bool]=False):
-        super().__init__(guild_id, messages, logging)
+        super().__init__(snowflake, messages, logging)
+        self.t_messages: List[TextMESSAGE] = []
+        self.vc_messages: List[VoiceMESSAGE] = []
     
     @property
     def log_file_name(self):
@@ -265,9 +267,13 @@ class GUILD(BaseGUILD):
         - @Exceptions:
             - <class DAFNotFoundError code=DAF_GUILD_ID_NOT_FOUND> ~ Raised when the guild_id wasn't found
             - Other exceptions from .add_message(message_object) method"""
-        guild_id = self.snowflake
-        cl = client.get_client()
-        self.apiobject = cl.get_guild(guild_id)
+        if isinstance(self.snowflake, int):
+            guild_id = self.snowflake
+            cl = client.get_client()
+            self.apiobject = cl.get_guild(guild_id)
+        else:
+            self.apiobject = self.snowflake
+            self.snowflake = self.apiobject.id
 
         if self.apiobject is not None:
             for message in self._messages:
@@ -325,17 +331,19 @@ class GUILD(BaseGUILD):
 
 @sql.register_type("GuildTYPE")
 class USER(BaseGUILD):
-    """~ class ~
-    - @Info:
-        - The USER objects represents a Discord user/member.
-    - @Params:
-        - user_id ~ id of the user you want to DM,
-        - messages ~ list of DirectMESSAGE objects which
-                            represent messages that will be sent to the DM
-        - logging ~ dictates if log should be generated for each sent message"""
+    """
+    The USER object represents a user to whom messages will be sent.
+    
+    Parameters
+    ------------
+    - snowflake: `Union[int, discord.User]` - Discord's snowflake identificator of the user or discord.User object,
+    - messages: `Optional[List[DirectMESSAGE]]` - Optional list of DirectMESSAGE objects
+    - logging:  `Optional[bool]` - Optional variable dictating whatever to log sent't messages inside this guild."""
 
     __logname__ = "USER" # For sql.register_type
-    __slots__   = set()  # Removes __dict__ (prevents dynamic attributes)
+    __slots__   = (
+        "t_messages",
+    )
 
     @property
     def log_file_name(self):
@@ -346,10 +354,11 @@ class USER(BaseGUILD):
         return "".join(char if char not in C_FILE_NAME_FORBIDDEN_CHAR else "#" for char in f"{self.apiobject.display_name}#{self.apiobject.discriminator}") + ".json"
 
     def __init__(self,
-                 user_id: int,
+                 snowflake: Union[int, discord.User],
                  messages: Optional[List[DirectMESSAGE]]=[],
-                 logging: bool = False) -> None:
-        super().__init__(user_id, messages, logging)
+                 logging: Optional[bool] = False) -> None:
+        super().__init__(snowflake, messages, logging)
+        self.t_messages: List[DirectMESSAGE] = []
 
     async def add_message(self, message):
         """~  coro  ~
@@ -372,13 +381,13 @@ class USER(BaseGUILD):
             - <class DAFNotFoundError code=DAF_USER_CREATE_DM> ~ Raised when the user_id wasn't found
             - Other exceptions from .add_message(message_object) method
         """
-        user_id = self.snowflake
-        cl = client.get_client()
-        self.apiobject = cl.get_user(user_id) # Get object from cache
-        if self.apiobject is None: 
-            # User not found in cache, try to fetch from API
-            with suppress(discord.HTTPException):
-                self.apiobject = await cl.fetch_user(user_id)
+        if isinstance(self.snowflake, int):
+            user_id = self.snowflake
+            cl = client.get_client()
+            self.apiobject = cl.get_or_fetch_user(user_id) # Get object from cache
+        else:
+            self.apiobject = self.snowflake
+            self.snowflake = self.apiobject.id
 
         # Api object was found in cache or fetched from API -> initialize messages
         if self.apiobject is not None:

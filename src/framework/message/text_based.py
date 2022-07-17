@@ -66,7 +66,7 @@ class TextMESSAGE(BaseMESSAGE):
     def __init__(self, start_period: Union[float, None],
                  end_period: float,
                  data: Union[str, EMBED, FILE, List[Union[str, EMBED, FILE]]],
-                 channels: Iterable[int],
+                 channels: Iterable[Union[int, discord.TextChannel, discord.Thread]],
                  mode: Literal["send", "edit", "clear-send"] = "send",
                  start_now: bool = True):
         super().__init__(start_period, end_period, start_now)

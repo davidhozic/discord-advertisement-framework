@@ -67,7 +67,7 @@ class VoiceMESSAGE(BaseMESSAGE):
     def __init__(self, start_period: Union[float, None],
                  end_period: float,
                  data: AUDIO,
-                 channels: Iterable[int],
+                 channels: Iterable[Union[int, discord.VoiceChannel]],
                  start_now: bool = True,
                  volume: int=50):
 
