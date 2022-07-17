@@ -136,8 +136,8 @@ class BaseMESSAGE:
                   object. The expected datatypes for specific implementation is
                   defined thru the static variable __valid_data_types__
         - @Exceptions:
-            - <class DAFInvalidParameterError code=DAF_INVALID_TYPE> ~ Raised when a parameter is of invalid type
-            - <class DAFMissingParameterError code=DAF_MISSING_PARAMETER> ~ Raised when no data parameters were passed."""
+            - <class DAFParameterError code=DAF_INVALID_TYPE> ~ Raised when a parameter is of invalid type
+            - <class DAFNotFoundError code=DAF_MISSING_PARAMETER> ~ Raised when no data parameters were passed."""
 
         # Check for correct data types of the MESSAGE.data parameter
         if not isinstance(self.data, FunctionBaseCLASS):
@@ -164,13 +164,13 @@ class BaseMESSAGE:
                         type(data) not in type(self).__valid_data_types__
                     ):
                     if isinstance(data, FunctionBaseCLASS):
-                        raise DAFInvalidParameterError(f"The function can only be used on the data parameter directly, not in a iterable. Function: {data.func_name}", DAF_INVALID_TYPE)
+                        raise DAFParameterError(f"The function can only be used on the data parameter directly, not in a iterable. Function: {data.func_name}", DAF_INVALID_TYPE)
                     else:
                         trace(f"INVALID DATA PARAMETER PASSED!\nArgument is of type : {type(data).__name__}\nSee README.md for allowed data types", TraceLEVELS.WARNING)
-                        raise DAFInvalidParameterError(f"Invalid data type {type(data).__name__}. Allowed types: {type(self).__valid_data_types__}", DAF_INVALID_TYPE)
+                        raise DAFParameterError(f"Invalid data type {type(data).__name__}. Allowed types: {type(self).__valid_data_types__}", DAF_INVALID_TYPE)
 
             if len(self.data) == 0:
-                raise DAFMissingParameterError(f"No data parameters were passed", DAF_MISSING_PARAMETER)
+                raise DAFNotFoundError(f"No data parameters were passed", DAF_MISSING_PARAMETER)
 
     async def update(self, init_options={}, **kwargs):
         """ ~ async method ~
@@ -183,7 +183,7 @@ class BaseMESSAGE:
             - init_options ~ Contains the initialization options used in .initialize() method for reainitializing certain objects.
                              This is implementation specific and not necessarily available.
         - @Exception:
-            - <class DAFInvalidParameterError code=DAF_UPDATE_PARAMETER_ERROR> ~ Invalid keyword argument was passed
+            - <class DAFParameterError code=DAF_UPDATE_PARAMETER_ERROR> ~ Invalid keyword argument was passed
             - Other exceptions raised from .initialize() method"""
         raise NotImplementedError
         

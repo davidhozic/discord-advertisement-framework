@@ -125,8 +125,8 @@ class VoiceMESSAGE(BaseMESSAGE):
                   api objects and checks for the correct channel inpit context.
         - @Return: True on success
         - @Exceptions:
-            - <class DAFInvalidParameterError code=DAF_INVALID_TYPE> ~ Raised when the object obtained from a channel id is not of type discord.VoiceChannel
-            - <class DAFMissingParameterError code=DAF_MISSING_PARAMETER> ~ Raised when no channels could be obtained from the given channel ids"""
+            - <class DAFParameterError code=DAF_INVALID_TYPE> ~ Raised when the object obtained from a channel id is not of type discord.VoiceChannel
+            - <class DAFNotFoundError code=DAF_MISSING_PARAMETER> ~ Raised when no channels could be obtained from the given channel ids"""
         ch_i = 0
         cl = client.get_client()
         while ch_i < len(self.channels):
@@ -141,12 +141,12 @@ class VoiceMESSAGE(BaseMESSAGE):
                 trace(f"Unable to get channel from ID {channel_id}", TraceLEVELS.ERROR)
                 self.channels.remove(channel)
             elif type(channel) not in {discord.VoiceChannel}:
-                raise DAFInvalidParameterError(f"TextMESSAGE object received channel type of {type(channel).__name__}, but was expecting VoiceChannel", DAF_INVALID_TYPE)
+                raise DAFParameterError(f"TextMESSAGE object received channel type of {type(channel).__name__}, but was expecting VoiceChannel", DAF_INVALID_TYPE)
             else:
                 ch_i += 1
 
         if not len(self.channels):
-            raise DAFMissingParameterError(f"No valid channels were passed to {type(self)} object", DAF_MISSING_PARAMETER)
+            raise DAFNotFoundError(f"No valid channels were passed to {type(self)} object", DAF_MISSING_PARAMETER)
 
     async def send_channel(self,
                            channel: discord.VoiceChannel,
@@ -246,7 +246,7 @@ class VoiceMESSAGE(BaseMESSAGE):
             - init_options ~ Contains the initialization options used in .initialize() method for reainitializing certain objects.
                              This is implementation specific and not necessarily available.
         - @Exception:
-            - <class DAFInvalidParameterError code=DAF_UPDATE_PARAMETER_ERROR> ~ Invalid keyword argument was passed
+            - <class DAFParameterError code=DAF_UPDATE_PARAMETER_ERROR> ~ Invalid keyword argument was passed
             - Other exceptions raised from .initialize() method"""
         if "start_now" not in kwargs:
             # This parameter does not appear as attibute, manual setting neccessary

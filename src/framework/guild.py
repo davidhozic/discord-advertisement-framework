@@ -4,7 +4,7 @@
     regarding the guild and also defines a USER class from the
     BaseGUILD class.
 """
-
+from    __future__ import annotations
 from    contextlib import suppress
 from    typing import Any, Literal, Union, List, Optional
 from    .exceptions import *
@@ -43,7 +43,6 @@ class BaseGUILD:
 
     __slots__ = (       # Faster attribute access
         "apiobject",
-        "snowflake",
         "logging",
         "_messages",
     )
@@ -57,25 +56,43 @@ class BaseGUILD:
                property because the name can change overtime."""
         raise NotImplementedError
     
-    @property
-    def messages(self) -> List[BaseMESSAGE]:
-        """
-        ~ property (getter) ~
-        - @Info: Returns all the messages inside the object.
-        """
-        return self.t_messages + self.vc_messages
-
+    
     def __init__(self,
-                 snowflake: Any,
+                 snowflake: Union[int, discord.Object],
                  messages: Optional[List]=[],
                  logging: Optional[bool]=False) -> None:
 
-        self.apiobject: discord.Snowflake = None
-        self.snowflake: Any = snowflake
+        self.apiobject: discord.Object = snowflake
         self.logging: bool= logging
-        self._messages: list = messages
+        self._messages: list = messages  # Contains all the different message objects, this gets sorted in `.initialize()` method
+    
+    @property
+    def messages(self) -> List[BaseMESSAGE]:
+        """
+        Returns all the message objects inside the object.
 
-    def __eq__(self, other) -> bool:
+        Changelog
+        -----------
+        - v1.9.5 - Automatically find all messages based on attribute name.
+        """
+        ret = []
+        for x in self.__slots__:
+            if hasattr(self, x) and not x.startswith("_") and x.endswith("messages"):
+                ret.extend(getattr(self , x))
+        return ret
+
+    @property
+    def snowflake(self) -> int:
+        """
+        Returns the discord's snowflake identificator.
+
+        Changelog
+        -----------
+        - v1.9.5 - Created.
+        """
+        return self.apiobject if isinstance(self.apiobject, int) else self.apiobject.id
+
+    def __eq__(self, other: BaseGUILD) -> bool:
         """
         ~  operator method  ~
         - @Return: ~ Returns True if objects have the same snowflake or False otherwise
@@ -115,7 +132,7 @@ class BaseGUILD:
         - @Params:
             - The allowed parameters are the initialization parameters first used on creation of the object
         - @Exception:
-            - <class DAFInvalidParameterError code=DAF_UPDATE_PARAMETER_ERROR> ~ Invalid keyword argument was passed
+            - <class DAFParameterError code=DAF_UPDATE_PARAMETER_ERROR> ~ Invalid keyword argument was passed
             - Other exceptions raised from .initialize() method"""
         raise NotImplementedError
 
@@ -234,10 +251,10 @@ class GUILD(BaseGUILD):
         - @Info:   Adds a message to the message list
         - @Param:  message ~ message object to add
         - @Exceptions:
-            - <class DAFInvalidParameterError code=DAF_INVALID_TYPE> ~ Raised when the message is not of type TextMESSAGE or VoiceMESSAGE
+            - <class DAFParameterError code=DAF_INVALID_TYPE> ~ Raised when the message is not of type TextMESSAGE or VoiceMESSAGE
             - Other exceptions from message.initialize() method"""
         if not isinstance(message, (TextMESSAGE, VoiceMESSAGE)):
-            raise DAFInvalidParameterError(f"Invalid xxxMESSAGE type: {type(message).__name__}, expected  {TextMESSAGE.__name__} or {VoiceMESSAGE.__name__}", DAF_INVALID_TYPE)
+            raise DAFParameterError(f"Invalid xxxMESSAGE type: {type(message).__name__}, expected  {TextMESSAGE.__name__} or {VoiceMESSAGE.__name__}", DAF_INVALID_TYPE)
 
         await message.initialize()
 
@@ -251,7 +268,7 @@ class GUILD(BaseGUILD):
         - @Info:   Removes a message from the message list
         - @Param:  message ~ message object to remove
         - @Exceptions:
-            - <class DAFInvalidParameterError code=DAF_INVALID_TYPE> ~ Raised when the message is not of type TextMESSAGE or VoiceMESSAGE"""
+            - <class DAFParameterError code=DAF_INVALID_TYPE> ~ Raised when the message is not of type TextMESSAGE or VoiceMESSAGE"""
         if isinstance(message, TextMESSAGE):
             self.t_messages.remove(message)
             return
@@ -259,21 +276,20 @@ class GUILD(BaseGUILD):
             self.vc_messages.remove(message)
             return
 
-        raise DAFInvalidParameterError(f"Invalid xxxMESSAGE type: {type(message).__name__}, expected  {TextMESSAGE.__name__} or {VoiceMESSAGE.__name__}", DAF_INVALID_TYPE)
+        raise DAFParameterError(f"Invalid xxxMESSAGE type: {type(message).__name__}, expected  {TextMESSAGE.__name__} or {VoiceMESSAGE.__name__}", DAF_INVALID_TYPE)
 
-    async def initialize(self):
-        """ ~ async method
-        - @Info:   This function initializes the API related objects and then tries to initialize the MESSAGE objects.
-        - @Exceptions:
-            - <class DAFNotFoundError code=DAF_GUILD_ID_NOT_FOUND> ~ Raised when the guild_id wasn't found
-            - Other exceptions from .add_message(message_object) method"""
-        if isinstance(self.snowflake, int):
-            guild_id = self.snowflake
+    async def initialize(self) -> None:
+        """
+        This function initializes the API related objects and then tries to initialize the MESSAGE objects.
+
+        Exceptions
+        -----------
+        - DAFNotFoundError(code=DAF_GUILD_ID_NOT_FOUND) - Raised when the guild_id wasn't found
+        - Other exceptions from .add_message(message_object) method"""
+        guild_id = self.snowflake
+        if isinstance(self.apiobject, int):
             cl = client.get_client()
             self.apiobject = cl.get_guild(guild_id)
-        else:
-            self.apiobject = self.snowflake
-            self.snowflake = self.apiobject.id
 
         if self.apiobject is not None:
             for message in self._messages:
@@ -318,7 +334,7 @@ class GUILD(BaseGUILD):
         - @Params:
             - The allowed parameters are the initialization parameters first used on creation of the object
         - @Exception:
-            - <class DAFInvalidParameterError code=DAF_UPDATE_PARAMETER_ERROR> ~ Invalid keyword argument was passed
+            - <class DAFParameterError code=DAF_UPDATE_PARAMETER_ERROR> ~ Invalid keyword argument was passed
             - Other exceptions raised from .initialize() method"""
         # Update the guild
         if "guild_id" not in kwargs:
@@ -365,11 +381,11 @@ class USER(BaseGUILD):
         - @Info:   Adds a message to the message list
         - @Param:  message ~ message object to add
         - @Exceptions:
-            - <class DAFInvalidParameterError code=DAF_INVALID_TYPE> ~ Raised when the message is not of type DirectMESSAGE
+            - <class DAFParameterError code=DAF_INVALID_TYPE> ~ Raised when the message is not of type DirectMESSAGE
             - Other exceptions from message.initialize() method
         """
         if not isinstance(message, DirectMESSAGE):
-            raise DAFInvalidParameterError(f"Invalid xxxMESSAGE type: {type(message).__name__}, expected  {DirectMESSAGE.__name__}", DAF_INVALID_TYPE)
+            raise DAFParameterError(f"Invalid xxxMESSAGE type: {type(message).__name__}, expected  {DirectMESSAGE.__name__}", DAF_INVALID_TYPE)
 
         await message.initialize(user=self.apiobject)
         self.t_messages.append(message)
@@ -381,13 +397,10 @@ class USER(BaseGUILD):
             - <class DAFNotFoundError code=DAF_USER_CREATE_DM> ~ Raised when the user_id wasn't found
             - Other exceptions from .add_message(message_object) method
         """
-        if isinstance(self.snowflake, int):
-            user_id = self.snowflake
+        user_id = self.snowflake
+        if isinstance(self.apiobject, int):
             cl = client.get_client()
-            self.apiobject = cl.get_or_fetch_user(user_id) # Get object from cache
-        else:
-            self.apiobject = self.snowflake
-            self.snowflake = self.apiobject.id
+            self.apiobject = await cl.get_or_fetch_user(user_id) # Get object from cache
 
         # Api object was found in cache or fetched from API -> initialize messages
         if self.apiobject is not None:
@@ -428,7 +441,7 @@ class USER(BaseGUILD):
         - @Params:
             - The allowed parameters are the initialization parameters first used on creation of the object
         - @Exception:
-            - <class DAFInvalidParameterError code=DAF_UPDATE_PARAMETER_ERROR> ~ Invalid keyword argument was passed
+            - <class DAFParameterError code=DAF_UPDATE_PARAMETER_ERROR> ~ Invalid keyword argument was passed
             - Other exceptions raised from .initialize() method"""
         # Update the guild
         if "user_id" not in kwargs:
