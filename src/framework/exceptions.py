@@ -12,24 +12,9 @@ class DAFError(Exception):
         self.code = code # Error code
         super().__init__(message)
 
-class DAFAlreadyAddedError(DAFError):
-    """~ class ~
-    @Info: Raised when an object is added to the framework but already exists."""
-    pass
-
 class DAFParameterError(DAFError):
     """~ class ~
     @Info: Raised when theres an parameter exception."""
-    pass
-
-class DAFMissingParameterError(DAFParameterError):
-    """~ class ~
-    @Info: Raised when a parameter is missing."""
-    pass
-
-class DAFInvalidParameterError(DAFParameterError):
-    """~ class ~
-    @Info: Raised when a parameter is invalid."""
     pass
 
 class DAFNotFoundError(DAFError):
