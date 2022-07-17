@@ -4,11 +4,12 @@
     and functions needed for the framework to run,
     as well as user function to control the framework
 """
-from   typing import Any, Iterable, Literal, Callable, List, overload
+from   typing import Any, Iterable, Literal, Callable, List, Union, overload
 from   _discord import Intents
 import asyncio
 import copy
 import inspect
+import _discord as dc
 from . const import *
 from . exceptions import *
 from . import tracing
@@ -104,51 +105,68 @@ async def initialize() -> None:
 
 
 @overload
-async def add_object(obj: guild.BaseGUILD) -> None: 
-    """ ~ coro ~
-    - @Params: 
-        - obj ~ guild to add to the framework
-    - @Info:   
-        - Adds an GUILD/USER to the framework
-    - @Exceptions:
-        - <class DAFAlreadyAddedError code=DAF_GUILD_ALREADY_ADDED> ~ Object already exits
-        - <class DAFInvalidParameterError code=DAF_INVALID_TYPE>    ~ The object provided is not supported for addition."""
+async def add_object(obj: Union[guild.USER, guild.GUILD]) -> None: 
+    """|coro|
+
+    Adds a guild or an user to the framework.
+    
+    Parameters
+    --------------
+    - obj: `BaseGUILD` - The guild object to add into the framework,
+
+    Exceptions
+    -----------
+    - `DAFParameterError(code=DAF_GUILD_ALREADY_ADDED)` - The guild/user is already added to the framework.
+    - `DAFParameterError(code=DAF_INVALID_TYPE)`        - The object provided is not supported for addition.
+    - Other exceptions raised in the `obj.initialize()` method"""
     ...
 @overload
-async def add_object(obj: message.BaseMESSAGE, guild_id: int) -> None:
-    """ ~ coro ~
-    - @Params: 
-        - obj ~ message to add to the framework
-        - guild_id ~ guild id of the guild to add the message to
-    - @Info:
-        - Adds a MESSAGE to the framework
-    - @Exceptions:
-        - <class DAFMissingParameterError code=DAF_GUILD_ID_REQUIRED> ~ guild_id wasn't provided when adding a message object (to which guild shouild it add)
-        - <class DAFNotFoundError code=DAF_GUILD_ID_NOT_FOUND>        ~ Could not find guild with that id.
-        - <class DAFInvalidParameterError code=DAF_INVALID_TYPE>      ~ The object provided is not supported for addition.
-        """
+async def add_object(obj: Union[message.DirectMESSAGE, message.TextMESSAGE, message.VoiceMESSAGE], snowflake: Union[int, guild.GUILD, guild.USER, dc.Guild, dc.User]) -> None:
+    """|coro|
+
+    Adds a message to the framework.
+    
+    Parameters
+    --------------
+    - obj: `BaseMESSAGE` - The message object to add into the framework,
+    - snowflake: `Union[snowflake id, BaseGUILD, discord.Guild, discord.Message]` - Which guild/user to add it to (can be snowflake id or a framework BaseGUILD object or a discord API wrapper object)
+
+    Exceptions
+    -----------
+    - `DAFParameterError(code=DAF_GUILD_ID_REQUIRED)` - guild_id wasn't provided when adding a message object (to which guild shouild it add)
+    - `DAFNotFoundError(code=DAF_GUILD_ID_NOT_FOUND)` - Could not find guild with that id.
+    - `DAFParameterError(code=DAF_INVALID_TYPE)`      - The object provided is not supported for addition.
+    - Other exceptions raised in the `obj.add_message()` method"""
     ...
-async def add_object(obj, guild_id=None):    
+async def add_object(obj, snowflake=None):
+    object_type_name = type(obj).__name__
+    # Convert the `snowflake` object into a discord snowflake identificator (only if adding a message to guild)
+    if isinstance(snowflake, (dc.Guild, dc.User)):
+        snowflake = snowflake.id
+    elif isinstance(snowflake, guild.BaseGUILD):
+        snowflake = snowflake.snowflake
+
+    # Add the object
     if isinstance(obj, guild.BaseGUILD):
         if obj in GLOBALS.server_list:
-            raise DAFAlreadyAddedError(f"Guild with snowflake `{obj.snowflake}` is already added to the framework.", DAF_GUILD_ALREADY_ADDED)
+            raise DAFParameterError(f"{object_type_name} with snowflake `{obj.snowflake}` is already added to the framework.", DAF_GUILD_ALREADY_ADDED)
 
         await obj.initialize()
         GLOBALS.server_list.append(obj)
 
     elif isinstance(obj, message.BaseMESSAGE):
-        if guild_id is None:
-            raise DAFMissingParameterError("`guild_id` is required to add a message. Only the xMESSAGE object was provided.", DAF_GUILD_ID_REQUIRED)
+        if snowflake is None:
+            raise DAFParameterError(f"`snowflake` is required to add a message. Only the {object_type_name} object was provided.", DAF_GUILD_ID_REQUIRED)
 
         for guild_user in GLOBALS.server_list:
-            if guild_user.snowflake == guild_id:
+            if guild_user.snowflake == snowflake:
                 await guild_user.add_message(obj)
                 return
 
-        raise DAFNotFoundError(f"Guild with snowflake `{guild_id}` was not found in the framework.", DAF_GUILD_ID_NOT_FOUND)
-    
+        raise DAFNotFoundError(f"Guild or user with snowflake `{snowflake}` was not found in the framework.", DAF_GUILD_ID_NOT_FOUND)
+
     else:
-        raise DAFInvalidParameterError(f"Invalid object type `{type(obj)}`.", DAF_INVALID_TYPE)
+        raise DAFParameterError(f"Invalid object type `{object_type_name}`.", DAF_INVALID_TYPE)
 
 
 @overload
@@ -158,7 +176,7 @@ def remove_object(guild_id: int) -> None:
     - @Param: guild_id ~ id of the guild to remove
     - @Exceptions:
         - <class DAFNotFoundError code=DAF_GUILD_ID_NOT_FOUND> ~ Could not find guild with that id.
-        - <class DAFInvalidParameterError code=DAF_INVALID_TYPE> ~ The object provided is not supported for removal."""
+        - <class DAFParameterError code=DAF_INVALID_TYPE> ~ The object provided is not supported for removal."""
     ...
 @overload
 def remove_object(channel_ids: Iterable) -> None:
@@ -166,7 +184,7 @@ def remove_object(channel_ids: Iterable) -> None:
     - @Info:   Remove messages that containt all the given channel ids (data itearable)
     - @Param: channel_ids ~ set of channel ids to look for in the message
     - @Exceptions:
-        - <class DAFInvalidParameterError code=DAF_INVALID_TYPE> ~ The object provided is not supported for removal."""
+        - <class DAFParameterError code=DAF_INVALID_TYPE> ~ The object provided is not supported for removal."""
     ...
 def remove_object(data):    
     if isinstance(data, int): # Guild id
@@ -184,7 +202,7 @@ def remove_object(data):
                     if all(x in msg_channels for x in data): # If any of the channels in the set are in the message channel list
                         guild_user.remove_message(message) 
     else:
-        raise DAFInvalidParameterError(f"Invalid parameter type `{type(data)}`.", DAF_INVALID_TYPE)
+        raise DAFParameterError(f"Invalid parameter type `{type(data)}`.", DAF_INVALID_TYPE)
 
 
 async def update(object_: Any, *, init_options: dict = {}, **kwargs):
@@ -197,7 +215,7 @@ async def update(object_: Any, *, init_options: dict = {}, **kwargs):
             - init_options ~ Contains the initialization options used in .initialize() method for reainitializing certain objects.
                              This is implementation specific and not necessarily available.
         - @Exception:
-            - <class DAFInvalidParameterError code=DAF_UPDATE_PARAMETER_ERROR> ~ Invalid keyword argument was passed
+            - <class DAFParameterError code=DAF_UPDATE_PARAMETER_ERROR> ~ Invalid keyword argument was passed
             - Other exceptions raised from .initialize() method"""
         
         init_keys = inspect.getfullargspec(object_.__init__).args # Retrievies list of call args
@@ -206,7 +224,7 @@ async def update(object_: Any, *, init_options: dict = {}, **kwargs):
         try:  
             for k in kwargs:
                 if k not in init_keys:
-                    raise DAFInvalidParameterError(f"Keyword argument `{k}` was passed which is not allowed. The update method only accepts the following keyword arguments: {init_keys}", DAF_UPDATE_PARAMETER_ERROR)
+                    raise DAFParameterError(f"Keyword argument `{k}` was passed which is not allowed. The update method only accepts the following keyword arguments: {init_keys}", DAF_UPDATE_PARAMETER_ERROR)
             # Most of the variables inside the object have the same names as in the __init__ function.
             # This section stores attributes, that are the same, into the `updated_params` dictionary and
             # then calls the __init__ method with the same parameters, with the exception of start_period, end_period and start_now parameters
