@@ -1,5 +1,4 @@
-"""~ voice message related ~
-@info:
+"""
     Contains definitions related to voice messaging."""
 
 from re import L
@@ -27,26 +26,29 @@ class GLOBALS:
 
 @sql.register_type("MessageTYPE")
 class VoiceMESSAGE(BaseMESSAGE):
-    """ ~ class ~
-    - @Name: VoiceMESSAGE
-    - @Info: The VoiceMESSAGE object containts parameters which describe behaviour and data that will be sent to the channels.
-    - @Params:
-        - start_period, end_period ~ These 2 parameters specify the period on which the messages will be played:
-            - start_period can be either:
-                - None ~ Messages will be sent on intervals specified by End period,
-                - Integer >= 0 ~ Messages will be sent on intervals randomly chosen between Start period and End period,
-                                 where the randomly chosen intervals will be re::randomized after each sent message.
-        - data ~ The data parameter is the actual data that will be sent using discord's API. The data types of this parameter can be:
-            - Path to an audio file (str)
-            - Youtube link (str)
-            - Function that accepts any amount of parameters and returns any of the above types.
-                    To pass a function, YOU MUST USE THE framework.data_function decorator on the function before
-                    passing the function to the framework.
-        - channels ~ List of IDs of all the channels you want data to be sent into.
-        - start_now ~ A bool variable that can be either True or False. If True, then the framework will send the message
-                                 as soon as it is run and then wait it's period before trying again. If False, then the message will
-                                 not be sent immediatly after framework is ready, but will instead wait for the period to elapse.
-        - volume ~ The volume in percentage (5-100%) of the audio that will be streamed. The default value is 50%."""
+    """
+    This class is used for creating objects that represent messages which will be streamed to voice channels.
+
+    Parameters
+    ------------
+    + start_period, end_period: `int` - These 2 parameters specify the period on which the messages will be sent.
+        - start_period can be either:
+            * None - Messages will be sent on intervals specified by End period,
+            * A non-negative integer -  Messages will be sent on intervals randomly chosen between Start period and End period,
+                                        where the randomly chosen intervals will be re-randomized after each sent message.
+    + data: `AUDIO` - The data parameter is the actual data that will be sent using discord's API. The data types of this parameter can be:
+        - AUDIO object
+        - Function that accepts any amount of parameters and returns an AUDIO object.
+        To pass a function, YOU MUST USE THE framework.data_function decorator on the function before passing the function to the framework.
+    + channels: `Iterable[Union[int, discord.VoiceChannel]]` - Channels that it will be advertised into.
+    + start_now: `bool` - If True, then the framework will send the message as soon as it is run
+    + volume: `int` - The volume (0-100%) at which to play the audio. Defaults to 50%
+    
+    Changelog
+    -----------
+    + v1.9.5
+        - Added the volume parameter
+        - Channels parameter now also accepts channel objects instead of int"""
 
     __slots__ = (
         "randomized_time",
@@ -73,20 +75,21 @@ class VoiceMESSAGE(BaseMESSAGE):
 
         super().__init__(start_period, end_period, start_now)
         self.data = data
-        self.volume = max(5, min(100, volume)) # Clamp the volume to 5-100 % 
+        self.volume = max(0, min(100, volume)) # Clamp the volume to 0-100 % 
         self.channels = list(set(channels))    # Auto remove duplicates
 
     def generate_log_context(self,
                              audio: AUDIO,
                              succeeded_ch: List[discord.VoiceChannel],
                              failed_ch: List[dict]):
-        """ ~ method ~
-        - @Name: generate_log_context
-        - @Param:
-            - audio ~The audio that was streamed to the channels
-            - succeeded_ch ~ list of the successfuly streamed channels,
-            - failed_ch ~ list of dictionaries contained the failed channel and the Exception
-        - @Info: Generates a dictionary containing data that will be saved in the message log"""
+        """
+        Generates a dictionary containing data that will be saved in the message log
+
+        Parameters
+        -----------
+        - audio: `audio`- The audio that was streamed.
+        - succeeded_ch: List[Union[discord.VoiceChannel]] - list of the successfuly streamed channels,
+        - failed_ch: failed_ch: List[Dict[discord.VoiceChannel, Exception]] - list of dictionaries contained the failed channel and the Exception object"""
 
         succeeded_ch = [{"name": str(channel), "id" : channel.id} for channel in succeeded_ch]
         failed_ch = [{"name": str(entry["channel"]), "id" : entry["channel"].id,
@@ -103,10 +106,9 @@ class VoiceMESSAGE(BaseMESSAGE):
         }
 
     def get_data(self) -> dict:
-        """ ~ method ~
-        - @Name:  get_data
-        - @Info: Returns a dictionary of keyword arguments that is then expanded
-                 into other functions (send_channel, generate_log)"""
+        """"
+        Returns a dictionary of keyword arguments that is then expanded
+        into other methods eg. `send_channel, generate_log`"""
         data = None
         _data_to_send = {}
         data = self.data.get_data() if isinstance(self.data, FunctionBaseCLASS) else self.data
@@ -118,15 +120,14 @@ class VoiceMESSAGE(BaseMESSAGE):
                     _data_to_send["audio"] = element
         return _data_to_send
 
-    async def initialize_channels(self) -> bool:
-        """ ~ async method ~
-        - @Name:  initialize_channels
-        - @Info:  This method initializes the implementation specific
-                  api objects and checks for the correct channel inpit context.
-        - @Return: True on success
-        - @Exceptions:
-            - <class DAFParameterError code=DAF_INVALID_TYPE> ~ Raised when the object obtained from a channel id is not of type discord.VoiceChannel
-            - <class DAFNotFoundError code=DAF_MISSING_PARAMETER> ~ Raised when no channels could be obtained from the given channel ids"""
+    async def initialize_channels(self):
+        """
+        This method initializes the implementation specific api objects and checks for the correct channel input context.
+        
+        Exceptions
+        ------------
+        - `DAFParameterError(code=DAF_INVALID_TYPE)` - Raised when the object retrieved from channels is not a discord.TextChannel or discord.Thread object.
+        - `DAFNotFoundError(code=DAF_MISSING_PARAMETER)` - Raised when no channels could be found were parsed."""
         ch_i = 0
         cl = client.get_client()
         while ch_i < len(self.channels):
@@ -151,15 +152,17 @@ class VoiceMESSAGE(BaseMESSAGE):
     async def send_channel(self,
                            channel: discord.VoiceChannel,
                            audio: AUDIO) -> dict:
-        """ ~ async method ~
-        - @Name : send_channel
-        - @Info:
-            Streams audio to specific channel
-        - @Return:
-            - dict:
-                - "success" ~ True if successful, else False
-                - "reason"  ~ Only present if "success" is False,
-                              contains the Exception returned by the send attempt."""
+        """
+        Sends data to specific channel
+        
+        Returns a dictionary:
+        - "success" - Returns True if successful, else False
+        - "reason"  - Only present if "success" is False, contains the Exception returned by the send attempt
+        
+        Parameters
+        -------------
+        - channel: `discord.VoiceChannel` - The channel in which to send the data
+        - audio: `AUDIO` - the audio to stream""" 
         stream = None
         try:
             # Check if client has permissions before attempting to join
@@ -194,12 +197,11 @@ class VoiceMESSAGE(BaseMESSAGE):
                 await asyncio.sleep(1) # Avoid sudden disconnect and connect to a new channel
 
     async def send(self) -> Union[dict,  None]:
-        """" ~ async method ~
-        - @Name send
-        - @Info: Streams audio into the chanels
-        - @Return:
-            Returns a dictionary generated by the generate_log_context method
-            or the None object if message wasn't ready to be sent (data_function returned None)"""
+        """
+        Sends the data into the channels
+        
+        Returns a dictionary generated by the generate_log_context method
+        or the None object if message wasn't ready to be sent (data_function returned None or an invalid type)"""
         
         if self.update_mutex.locked():
             # Object is in the proccess of having it's variables
@@ -236,18 +238,23 @@ class VoiceMESSAGE(BaseMESSAGE):
             return None
 
     async def update(self, **kwargs):
-        """ ~ async method ~
-        - @Added in v1.9.5
-        - @Info:
-            Used for chaning the initialization parameters the object was initialized with.
-            NOTE: Upon updating, the internal state of objects get's reset, meaning you basically have a brand new created object.
-        - @Params:
-            - The allowed parameters are the initialization parameters first used on creation of the object AND 
-            - init_options ~ Contains the initialization options used in .initialize() method for reainitializing certain objects.
-                             This is implementation specific and not necessarily available.
-        - @Exception:
-            - <class DAFParameterError code=DAF_UPDATE_PARAMETER_ERROR> ~ Invalid keyword argument was passed
-            - Other exceptions raised from .initialize() method"""
+        """
+        Used for chaning the initialization parameters the object was initialized with.
+        NOTE: Upon updating, the internal state of objects get's reset, meaning you basically have a brand new created object.
+        
+        Parameters
+        -------------
+        - **kwargs: `Any` - Custom number of keyword parameters which you want to update, these can be anything that is available during the object creation.
+        
+        Exceptions
+        -----------
+        - DAFParameterError(code=DAF_UPDATE_PARAMETER_ERROR) - Invalid keyword argument was passed
+        - Other exceptions raised from `.initialize()` method
+        
+        Changelog
+        -------------
+        + v1.9.5:
+            - Added"""
         if "start_now" not in kwargs:
             # This parameter does not appear as attibute, manual setting neccessary
             kwargs["start_now"] = True

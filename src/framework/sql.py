@@ -1,11 +1,11 @@
-"""~    sql    ~
+"""
     The sql module contains definitions related to the
     relational database logging that is available in this shiller.
     It is only used if the sql logging is enabled by passing
     the framework.run function with the SqlCONTROLLER object.
 """
 from  datetime   import datetime
-from  typing     import List, Literal, Any
+from  typing     import Callable, Dict, List, Literal, Any
 from  contextlib import suppress
 from  sqlalchemy import (
                          SmallInteger, Integer, BigInteger, NVARCHAR, DateTime,
@@ -15,16 +15,13 @@ from  sqlalchemy import (
 from  sqlalchemy.exc  import SQLAlchemyError
 from  sqlalchemy.orm import sessionmaker, Session
 from  sqlalchemy.ext.declarative import declarative_base
-from  pytds import (
-                    ClosedConnectionError,
-                    TimeoutError,
-                    Error as PyTDSError
-                   )
+from  pytds import ClosedConnectionError
 from  .tracing import *
 from  .timing import *
 from  .const import *
 from  .exceptions import *
 from  . import core
+import sqlalchemy as sqa
 import json
 import copy
 import re
@@ -41,24 +38,27 @@ __all__ = (
 
 
 class GLOBALS:
-    """~ class ~
-    - @Info: Stores global module variables """
+    """
+    Stores global module variables."""
     manager  = None
     enabled = False
     lt_types = []
 
 
-def register_type(lookuptable: Literal["GuildTYPE", "MessageTYPE", "MessageMODE"]):
-    """~ decorator ~
-    - @Info:
-        This is a function that returns a decorator which will create a row inside
-        <lookuptable> table. The name of the inserted item is defined with the __logname__ variable
-        which must be present in each framework class that is to be added to the lookuptable.
-        The __logname__ also defines the object type name inside text logs (and sql).
-    - @Param:
-        - lookuptable ~ Name of the lookup table to insert the value into
-    - @Exceptions:
-        <class DAFNotFoundError code=DAF_SQL_LOOKUPTABLE_NOT_FOUND> ~ Raised when the lookuptable descriptor class was not found.
+def register_type(lookuptable: Literal["GuildTYPE", "MessageTYPE", "MessageMODE"]) -> Callable:
+    """
+    Returns a decorator which will create a row inside <lookuptable> table.
+    The name of the inserted item is defined with the __logname__ variable
+    which must be present in each framework class that is to be added to the lookuptable.
+    The __logname__ also defines the object type name inside text logs (and sql).
+    
+    Parameters
+    ------------
+    - lookuptable: `Literal["GuildTYPE", "MessageTYPE", "MessageMODE"]` - Name of the lookup table to insert the value into.
+    
+    Exceptions
+    --------------
+    - `DAFNotFoundError(code=DAF_SQL_LOOKUPTABLE_NOT_FOUND)` - Raised when the lookuptable descriptor class was not found.
     """
     def _register_type(cls):
         # Iterate thru all module globals to find the lookup table
@@ -72,21 +72,21 @@ def register_type(lookuptable: Literal["GuildTYPE", "MessageTYPE", "MessageMODE"
 
 
 class LoggerSQL:
-    """~ class ~
-    - @Info: This class is used for controlling
-           the SQL database used for messagge logs
-    - @Param:
-        - username ~  Username to login to the database with
-        - password ~  Password to use when logging into the database
-        - server   ~  Address of the SQL server
-        - database ~  Name of the database used for logs"""
+    """
+    Used for controlling the SQL database used for messagge logs.
+    
+    Parameters
+    ------------
+    - username: `str` -  Username to login to the database with
+    - password: `str` -  Password to use when logging into the database
+    - server:   `str` -  Address of the SQL server
+    - database: `str` -  Name of the database used for logs"""
 
     Base = declarative_base()
     __slots__ = (
         "engine",
         "cursor",
         "_sessionmaker",
-        "commit_buffer",
         "username",
         "password",
         "server",
@@ -110,10 +110,9 @@ class LoggerSQL:
         self.password = password
         self.server = server
         self.database = database
-        self.commit_buffer = []
-        self.engine = None
-        self.cursor = None
-        self._sessionmaker  = None
+        self.engine: sqa.engine.Engine = None
+        self.cursor: pytds.Cursor = None
+        self._sessionmaker: sessionmaker  = None
         self.lock = asyncio.Lock() 
         """
         Lock used to prevent multiple tasks from trying to access the `.save_log()` method at once.
@@ -130,36 +129,40 @@ class LoggerSQL:
         self.CHANNEL = {}
 
     def add_to_cache(self, table: Base, key: Any, value: Any) -> None:
-        """~ method ~
-        - @Info: Adds a value to the internal cache of a certain table
-        - @Param:
-            - table ~ Name of the table to cache the row in
-            - key   ~ row key
-            - value ~ row value"""
+        """
+        Adds a value to the internal cache of a certain table
+        
+        Parameters
+        ------------
+        - table: `Base` - Name of the table to cache the row in
+        - key: `Any` - row key
+        - value: `Any` - row value"""
         getattr(self, table.__name__)[key] = value
 
-    def clear_cache(self, *to_clear) -> None:
-        """~ method ~
-        - @Info: Clears the caching dicitonaries inside the object that match any of the tables
-        - @Param:
-            - to_clear ~ Variadic parameters of tables to clear"""
+    def clear_cache(self, *to_clear: str) -> None:
+        """
+        Clears the caching dicitonaries inside the object that match any of the tables.
+        
+        Parameters
+        -----------
+        - *to_clear: `str` - Custom number of positional arguments of caching dictionaries to clear."""
         if len(to_clear) == 0:  # Clear all cached tables if nothing was passead
             to_clear = self.__slots__
-        tables = [k for k in globals() if k in to_clear]  # Serch for classes in the module's namespace
-        for k in tables:
+        for k in to_clear:
             getattr(self, k).clear()
 
     def reconnect_after(self, wait: int, loop: asyncio.AbstractEventLoop) -> None:
-        """ ~ Method ~
-        - @Info: reconnects the SQL manager to the database after <time>.
-        - @Params:
-            - wait ~ Time in seconds after which reconnect
-            - loop ~ Asyncio event loop (for thread executor)"""
+        """
+        Reconnects the SQL manager to the database after <wait>.
+        
+        Parameters
+        -----------
+        - wait: `int` - Time in seconds after which reconnect
+        - loop: `AbstractEventLoop` - Asyncio event loop (for thread executor)"""
         def _reconnect():
             """
-            ~ Coroutine ~
-            - @Info: Tries to reconnect after <wait>, if it failed,
-                   it retries after <wait>"""
+            Tries to reconnect after <wait>, if it failed,
+            it retries after <wait>"""
             for tries in range(SQL_RECONNECT_ATTEMPTS):
                 trace(f"[SQL]: Reconnecting to database {self.database}.")
                 with suppress(DAFSQLError):
@@ -180,11 +183,11 @@ class LoggerSQL:
 
     def create_data_types(self) -> None:
         """
-        Creates datatypes that are used by the framework to log messages
+        Creates data types that are used by the framework to log messages.
 
         Exceptions
         --------------
-        - `DAFSQLError(code=DAF_SQL_CREATE_DT_ERROR)` - Raised when the method is unable to create the SQL custom data types"""
+        - `DAFSQLError(code=DAF_SQL_CREATE_DT_ERROR)` - Raised when the method is unable to create the SQL custom data types."""
         session: Session
         
         stms = [
@@ -463,14 +466,15 @@ class LoggerSQL:
                     snowflake: int,
                     name: str,
                     _type: str) -> int:
-        """~ method ~
-        - @Info:
-            Inserts the guild into the db if it doesn't exist,
-            adds it to cache and returns it's internal db id from cache.
-        - @Param:
-            - snowflake ~ The snowflake of the guild
-            - name ~ The name of the guild
-            - _type ~ The type of the guild"""
+        """
+        Inserts the guild into the db if it doesn't exist,
+        adds it to cache and returns it's internal db id from cache.
+        
+        Parameters
+        ------------
+        - snowflake: `int` - The snowflake of the guild
+        - name: `name` - The name of the guild
+        - _type: `str` - The type of the guild"""
         result = None          
         if snowflake not in self.GuildUSER:
             with self._sessionmaker.begin() as session:
@@ -491,16 +495,17 @@ class LoggerSQL:
         return result
 
     def get_insert_channels(self,
-                        channels: List[dict],
+                        channels: List[Dict[int, str]],
                         guild_id: int) -> List[dict]:
-        """~ method ~
-        - @Info: 
-            - Adds missing channels to the database, where it then caches those added,
-              to avoid unnecessary quaries if all channels exist and then returns
-              a list of dicitonaries containing internal DB id and reason why sending failed.
-        - @Param:
-            - channels ~ List of dictionaries containing snowflake_id and name of the channel
-            - guild_id ~ The internal DB id of the guild where the channels are in"""
+        """
+        Adds missing channels to the database, where it then caches those added,
+        to avoid unnecessary quaries if all channels exist and then returns
+        a list of dicitonaries containing internal DB id and reason why sending failed.
+        
+        Parameters
+        ------------
+        - channels: `List[Dict[int, str]]` - List of dictionaries containing snowflake_id and name of the channel.
+        - guild_id: `int` - The internal DB id of the guild where the channels are in."""
 
         not_cached = [{"id": x["id"], "name": x["name"]} for x in channels  if x["id"] not in self.CHANNEL] # Get snowflakes that are not cached
         not_cached_snow = [x["id"] for x in not_cached]
@@ -527,8 +532,8 @@ class LoggerSQL:
         return ret
     
     def stop_engine(self):
-        """~ method ~
-        - @Info: Closes the engine and the cursor"""
+        """
+        Closes the engine and the cursor."""
         self.cursor.close()
         self.engine.dispose()
         self.clear_cache()
@@ -590,15 +595,17 @@ class LoggerSQL:
     async def save_log(self,
                  guild_context: dict,
                  message_context: dict) -> bool:
-        """~ method ~
-        - @Info: This method saves the log generated by
-                 the xGUILD object into the database
-        - @Param:
-            - guild_context   ~  Context generated by the xGUILD object,
-                                 see guild.xGUILD.generate_log() for more info.
-            - message_context ~  Context generated by the xMESSAGE object,
-                                 see guild.xMESSAGE.generate_log_context() for more info.
-        - @Return: Returns bool value indicating success (True) or failure (False)."""
+        """
+        This method saves the log generated by the xGUILD object into the database.
+        
+        Parameters
+        -------------
+        - guild_context: `dict`   -  Context generated by the xGUILD object, see guild.xGUILD.generate_log() for more info.
+        - message_context: `dict` -  Context generated by the xMESSAGE object, see guild.xMESSAGE.generate_log_context() for more info.
+
+        Return
+        -------
+        Returns bool value indicating success (True) or failure (False)."""
 
         # Parse the data
         sent_data = message_context.get("sent_data")
@@ -666,14 +673,23 @@ class LoggerSQL:
         return False
 
     async def update(self, **kwargs):
-        """ ~ async method ~
-        - @Added in v1.9.5
-        - @Info:
-            Used for chaning the initialization parameters the object was initialized with.
-        - @Params:
-            - The allowed parameters are the initialization parameters first used on creation of the object.
-        - @Exception:
-            - Anything raised from core.update() function"""
+        """
+        Used for chaning the initialization parameters the object was initialized with.
+        NOTE: Upon updating, the internal state of objects get's reset, meaning you basically have a brand new created object.
+        It also resets the message objects.
+        
+        Parameters
+        -------------
+        + **kwargs: `Any` - Custom number of keyword parameters which you want to update, these can be anything that is available during the object creation.
+
+        Exceptions
+        -----------
+        + Exceptions raised from `core.update` function.
+        
+        Changelog
+        -------------
+        + v1.9.5:
+            - Added"""
         async with self.lock:
             try:
                 self.stop_engine()
@@ -686,10 +702,12 @@ class LoggerSQL:
 
 
 class MessageTYPE(LoggerSQL.Base):
-    """~ SQL Table Descriptor Class ~
-    - @Info: Lookup table for storing xMESSAGE types
-    - @Param:
-        name: Name of the xMESSAGE class"""
+    """
+    Lookup table for storing xMESSAGE types
+
+    Parameters
+    -----------
+    - name: `str` - Name of the xMESSAGE class"""
     __tablename__ = "MessageTYPE"
 
     id = Column(SmallInteger, Identity(start=0, increment=1), primary_key=True)
@@ -699,11 +717,30 @@ class MessageTYPE(LoggerSQL.Base):
         self.name = name
 
 
+class MessageMODE(LoggerSQL.Base):
+    """
+    Lookup table for storing message sending modes.
+
+    Parameters
+    -----------
+    - name: `str` - Name of the xMESSAGE class"""
+
+    __tablename__ = "MessageMODE"
+
+    id = Column(SmallInteger, Identity(start=0, increment=1), primary_key=True)
+    name = Column(NVARCHAR(20), unique=True)
+
+    def __init__(self, name: str=None):
+        self.name = name
+
+
 class GuildTYPE(LoggerSQL.Base):
-    """~ SQL Table Descriptor Class ~
-    - @Info: Lookup table for storing xGUILD types
-    - @Param:
-        name: Name of the xGUILD class"""
+    """
+    Lookup table for storing xGUILD types
+
+    Parameters
+    -----------
+    - name: `str` - Name of the xMESSAGE class"""
 
     __tablename__ = "GuildTYPE"
 
@@ -715,12 +752,14 @@ class GuildTYPE(LoggerSQL.Base):
 
 
 class GuildUSER(LoggerSQL.Base):
-    """~ SQL Table Descriptor Class ~
-    - @Info: Guild
-    - @Param: Table that represents GUILD and USER object inside the database
-        snowflake: int :: Snowflake identificator of the guild/user
-        name: str      :: Name of the guild/user"""
+    """
+    Table for storing different guilds and users.
 
+    Parameters
+    -----------
+    - guild_type: `int` - Foreign key pointing to GuildTYPE.id.
+    - snowflake: `int` - Discord's snowflake ID of the guild.
+    - name: `str` - The name of the guild."""
     __tablename__ = "GuildUSER"
 
     id = Column(Integer, Identity(start=0,increment=1),primary_key=True)
@@ -738,12 +777,15 @@ class GuildUSER(LoggerSQL.Base):
 
 
 class CHANNEL(LoggerSQL.Base):
-    """~ SQL Table Descriptor Class ~
-    - @Info: Maps the snowflake id to a name and GUILD id
-    - @Param:
-        snowflake: int :: Snowflake identificator
-        name: str      :: Name of the channel
-        guild_id: int  :: Snowflake identificator pointing to a GUILD/USER"""
+    """
+    Table for storing different channels.
+
+    Parameters
+    -----------
+    - snowflake: `int` - Discord's snowflake ID of the channel.
+    - name: `str` - The name of the channel.
+    - guild_id: `int` - Foreign key pointing to GuildUSER.id."""
+
 
     __tablename__ = "CHANNEL"
     id = Column(Integer, Identity(start=0,increment=1),primary_key=True)
@@ -760,24 +802,13 @@ class CHANNEL(LoggerSQL.Base):
         self.guild_id = guild_id
 
 
-class MessageMODE(LoggerSQL.Base):
-    """~ SQL Table Descriptor Class ~
-    - @Info: Lookup table for storing different message send modes [TextMESSAGE, DirectMESSAGE]
-    - @Param:
-        name: Name of the mode"""
-
-    __tablename__ = "MessageMODE"
-
-    id = Column(SmallInteger, Identity(start=0, increment=1), primary_key=True)
-    name = Column(NVARCHAR(20), unique=True)
-
-    def __init__(self, name: str=None):
-        self.name = name
-
 class DataHISTORY(LoggerSQL.Base):
-    """~ SQL Table Descriptor Class ~
-    - @Info:
-        This table is used for storing all the different data(JSON) that was ever sent (to reduce redundancy -> and file size in the MessageLOG)."""
+    """
+    Table used for storing all the different data(JSON) that was ever sent (to reduce redundancy -> and file size in the MessageLOG).
+    
+    Parameters
+    -----------
+    - content: `str` - The JSON string representing sent data."""
     __tablename__ = "DataHISTORY"
     
     id = Column(Integer, Identity(start=0, increment=1), primary_key= True)
@@ -788,16 +819,18 @@ class DataHISTORY(LoggerSQL.Base):
         self.content = content
 
 class MessageLOG(LoggerSQL.Base):
-    """~ SQL Table Descriptor Class ~
-    - @Info: The logging table containing information for each message send attempt.
-           NOTE: This table is missing successful and failed channels (or DM success status)
-                  that is because those are a seperate table
-    - @Param:
-        sent_data: str          :: JSONized data that was sent by the xMESSAGE object
-        message_type: int       :: id pointing to a row inside the MessageTYPE lookup table
-        message_mode: int       :: id pointing to a row inside the MessageMODE lookup table
-        dm_reason: str          :: If DM sent succeeded, it is null, if it failed it contains a string description of the error
-        guild_id: int           :: Internal database id of the guild this message was advertised to"""
+    """
+    Table containing information for each message send attempt.
+
+    NOTE: This table is missing successful and failed channels (or DM success status).That is because those are a seperate table.
+
+    Parameters
+    ------------
+    - sent_data: `str`     - JSONized data that was sent by the xMESSAGE object.
+    - message_type: `int`  - Foreign key  pointing to a row inside the MessageTYPE lookup table.
+    - message_mode: `int`  - Foreign key pointing to a row inside the MessageMODE lookup table.
+    - dm_reason: `str`     - If DM sent succeeded, it is null, if it failed it contains a string description of the error.
+    - guild_id: `int`      - Foreign key pointing the guild this message was advertised to."""
 
     __tablename__ = "MessageLOG"
 
@@ -824,11 +857,14 @@ class MessageLOG(LoggerSQL.Base):
 
 
 class MessageChannelLOG(LoggerSQL.Base):
-    """~ SQL Table Descriptor Class ~
-    - @Info: This is a table that contains a log of channels that are
-           linked to a certain message log.
-    - @Param:
-        name: Name of the mode"""
+    """
+    This is a table that contains a log of channels that are linked to a certain message log.
+    
+    Parameters
+    ------------
+    - message_log_id: `int` - Foreign key pointing to MessageLOG.id.
+    - channel_id: `int` - Foreign key pointing to CHANNEL.id.
+    - reason: `str` - Stringified description of Exception that caused the send attempt to be successful for a certain channel."""
 
     __tablename__ = "MessageChannelLOG"
 
@@ -846,11 +882,11 @@ class MessageChannelLOG(LoggerSQL.Base):
 
 async def initialize(mgr_object: LoggerSQL):
     """
-    This function initializes the sql manager and also the selected database
+    This function initializes the sql manager and also the selected database.
     
     Parameters
     -----------
-    - mgr_object: LoggerSQL - SQL database manager object responsible for saving the logs into the SQL database
+    - mgr_object: LoggerSQL - SQL database manager object responsible for saving the logs into the SQL database.
     
     Exceptions
     ------------
@@ -864,8 +900,7 @@ async def initialize(mgr_object: LoggerSQL):
 
 
 def get_sql_manager() -> LoggerSQL:
-    """~ function ~
-    - @Info: Returns the LoggerSQL object that was originally
-           passed to the framework.run(...) function 
-           or None if the SQL logging is disabled"""
+    """
+    Returns the LoggerSQL object that was originall passed to the 
+    framework.run(...) function or None if the SQL logging is disabled"""
     return GLOBALS.manager if GLOBALS.enabled else None

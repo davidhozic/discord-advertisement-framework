@@ -1,5 +1,4 @@
 """
-    ~ const ~
     This module contains all the different constants that
     can be common to more modules
 """

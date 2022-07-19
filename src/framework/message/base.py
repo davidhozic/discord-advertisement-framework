@@ -1,5 +1,4 @@
-"""~ base ~
-@Info:
+"""
     Contains base definitions for different message classes."""
 
 from    typing import Union
@@ -183,7 +182,7 @@ class BaseMESSAGE:
             if len(self.data) == 0:
                 raise DAFNotFoundError(f"No data parameters were passed", DAF_MISSING_PARAMETER)
 
-    async def update(self, init_options={}, **kwargs):
+    async def update(self, init_options: dict={}, **kwargs):
         """
         Used for chaning the initialization parameters the object was initialized with.
         NOTE: Upon updating, the internal state of objects get's reset, meaning you basically have a brand new created object.     
@@ -191,8 +190,8 @@ class BaseMESSAGE:
         Parameters
         -------------
         - The allowed parameters are the initialization parameters first used on creation of the object AND 
-        - init_options ~ Contains the initialization options used in .initialize() method for reainitializing certain objects.
-                            This is implementation specific and not necessarily available.
+        - init_options: `dict` - Contains the initialization options used in .initialize() method for reinitializing certain objects.
+                                 This is implementation specific and not necessarily available.
         
         Exceptions
         ------------
@@ -200,8 +199,9 @@ class BaseMESSAGE:
         - Other exceptions raised from .initialize() method
         
         Changelog
-        ----------
-        - Added in v1.9.5"""
+        -------------
+        + v1.9.5:
+            - Added"""
 
         raise NotImplementedError
         

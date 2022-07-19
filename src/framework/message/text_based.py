@@ -44,7 +44,12 @@ class TextMESSAGE(BaseMESSAGE):
     + mode: `str` - Parameter that defines how message will be sent to a channel. It can be "send" - each period a new message will be sent,
                         "edit" - each period the previously send message will be edited (if it exists)
                         or "clear-send" - previous message will be deleted and a new one sent.
-    + start_now: `bool` - If True, then the framework will send the message as soon as it is run"""
+    + start_now: `bool` - If True, then the framework will send the message as soon as it is run
+    
+    Changelog
+    -----------
+    + v1.9.5
+        - Channels parameter now also accepts channel objects instead of int"""
 
     __slots__ = (
         "randomized_time",
@@ -137,7 +142,7 @@ class TextMESSAGE(BaseMESSAGE):
 
     async def initialize_channels(self):
         """
-        This method initializes the implementation specific api objects and checks for the correct channel inpit context.
+        This method initializes the implementation specific api objects and checks for the correct channel input context.
         
         Exceptions
         ------------
@@ -189,16 +194,23 @@ class TextMESSAGE(BaseMESSAGE):
         return handled
 
     async def send_channel(self,
-                           channel: discord.TextChannel,
+                           channel: Union[discord.TextChannel, discord.Thread],
                            text: str,
                            embed: EMBED,
                            files: List[FILE]) -> dict:
         """
-        Sends data to specific channel.
-
+        Sends data to specific channel
+        
         Returns a dictionary:
         - "success" - Returns True if successful, else False
-        - "reason"  - Only present if "success" is False, contains the Exception returned by the send attempt."""
+        - "reason"  - Only present if "success" is False, contains the Exception returned by the send attempt
+        
+        Parameters
+        -------------
+        - channel: `Union[discord.TextChannel, discord.Thread]` - The channel in which to send the data
+        - text: `str` - The text to send
+        - embed: `EMBED` - the embedded frame to send
+        - files: `List[FILE]` - list of files to send""" 
 
         ch_perms = channel.permissions_for(channel.guild.get_member(client.get_client().user.id))
         for tries in range(3):  # Maximum 3 tries (if rate limit)
@@ -294,7 +306,8 @@ class TextMESSAGE(BaseMESSAGE):
         
         Changelog
         -------------
-        - Added in v1.9.5"""
+        + v1.9.5:
+            - Added"""
         if "start_now" not in kwargs:
             # This parameter does not appear as attibute, manual setting neccessary
             kwargs["start_now"] = True
@@ -530,7 +543,8 @@ class DirectMESSAGE(BaseMESSAGE):
         
         Changelog
         -------------
-        - Added in v1.9.5"""
+        + v1.9.5:
+            - Added"""
 
         if "start_now" not in kwargs:
             # This parameter does not appear as attibute, manual setting neccessary

@@ -1,30 +1,47 @@
-""" ~ exceptions ~
-- @Added in v1.9.5
-- @Info: This module contains the definitons related to errors
-         that can be raised inside the framework."""
-
-# TODO: Documentation
+"""
+Contains the definitons related to errors that can be raised inside the framework.
+"""
 
 class DAFError(Exception):
-    """~ class ~
-    @Info: Base exception class for all DAF exceptions."""
+    """
+    Base exception class for all DAF exceptions.
+    
+    Parameters
+    -------------
+    - message: `str` - The exception message.
+    - code: `int` - The error code."""
     def __init__(self, message: str, code: int):
         self.code = code # Error code
         super().__init__(message)
 
 class DAFParameterError(DAFError):
-    """~ class ~
-    @Info: Raised when theres an parameter exception."""
+    """
+    Raised when theres an parameter exception.
+    
+    Parameters
+    -------------
+    - message: `str` - The exception message.
+    - code: `int` - The error code."""
     pass
 
 class DAFNotFoundError(DAFError):
-    """~ class ~
-    @Info: Raised when an object is not found."""
+    """
+    Raised when an object is not found.
+
+    Parameters
+    -------------
+    - message: `str` - The exception message.
+    - code: `int` - The error code."""
     pass
 
 class DAFSQLError(DAFError):
-    """~ class ~
-    @Info: Raised whenever there's an error with SQL."""
+    """
+    Raised whenever there's an error with SQL.
+
+    Parameters
+    -------------
+    - message: `str` - The exception message.
+    - code: `int` - The error code."""
     pass
 
 # Error Codes

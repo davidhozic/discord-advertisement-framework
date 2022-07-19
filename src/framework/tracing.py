@@ -1,5 +1,4 @@
 """
-    ~   Tracing    ~
     This modules containes functions and classes
     related to the console debug long or trace.
 """
@@ -16,18 +15,20 @@ m_use_debug = None
 m_lock = Lock() # For print thread safety
 
 class TraceLEVELS(Enum):
-    """ ~ class ~
-    - @Info: Level of trace for debug"""
+    """Levels of trace for debug"""
     NORMAL = 0
     WARNING = auto()
     ERROR =  auto()
 
 def trace(message: str,
           level:   TraceLEVELS = TraceLEVELS.NORMAL):
-    """" ~ function ~
-    - @Param:
-        - message ~ Trace message
-        - level   ~ Level of the trace"""
+    """
+    Prints a trace to the console.
+    
+    Parameters:
+    --------------
+    - message: `str` - Trace message.
+    - level: `TraceLEVELS`   - Level of the trace. Defaults to TraceLEVELS.NORMAL."""
     if m_use_debug:
         with m_lock:
             timestruct = time.localtime()

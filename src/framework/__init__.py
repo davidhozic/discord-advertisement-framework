@@ -18,7 +18,4 @@ from .exceptions import *
 #-----------------
 # TODO:
 #-----------------
-# . Edit docstrings
-# . Implement .update() method for inherited message objects
-# . Implement .update() method for BaseGUILD and inherited guild objects
 # . Documentation (change docstrings into reST and setup auto generated docs)

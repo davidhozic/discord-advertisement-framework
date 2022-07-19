@@ -1,11 +1,9 @@
 """
-    ~  core  ~
     This module contains the essential definitons
     and functions needed for the framework to run,
     as well as user function to control the framework
 """
 from   typing import Any, Iterable, Literal, Callable, List, Union, overload
-from   _discord import Intents
 import asyncio
 import copy
 import inspect
@@ -35,8 +33,9 @@ __all__ = (
 # Globals   (These are all set in the framework.run function)
 #######################################################################
 class GLOBALS:
-    """ ~ class ~
-    - @Info: Contains the globally needed variables"""
+    """
+    Storage class used for holding global variables.
+    """
     user_callback: Callable = None
     server_list: List[guild.BaseGUILD] = []
     temp_server_list: List[guild.BaseGUILD] = None # Holds the guilds that are awaiting initialization (set in framework.run and cleared after initialization)
@@ -47,13 +46,14 @@ class GLOBALS:
 # Tasks
 #######################################################################
 async def advertiser(message_type: Literal["text", "voice"]) -> None:
-    """ ~ coro ~
-    - @Param :
-        -   message_type:
-            Name of the message list variable, can be t_messages for TextMESSAGE list
-            and vc_messages for VoiceMESSAGE list
-    @Info  : Main task that is responsible for the framework
-            2 tasks are created for 2 types of messages: TextMESSAGE and VoiceMESSAGE"""
+    """
+    The task that is responsible for shilling to channels.
+    
+    Parameters
+    ------------
+    - message_type: `str` - Two tasks advertising tasks are created, this variable tells the guild objects which
+                            taks is requesting to shill, so it knows what type of messages to actually send.
+    """
     while True:
         await asyncio.sleep(C_TASK_SLEEP_DELAY)
         for guild_user in GLOBALS.server_list: # Copy the list to prevent issues with the list being modified 
@@ -64,10 +64,11 @@ async def advertiser(message_type: Literal["text", "voice"]) -> None:
 # Functions
 #######################################################################
 async def initialize() -> None:
-    """ ~ coro ~
-    - @Info:      
-        Function that initializes the guild objects and
-        starts the shilling proccess. Also prints out any error messages that occured."""
+    """
+    The main initialization function.
+    It initializes all the other modules, creates advertising tasks
+    and initializes all the core functionality.
+    """
     # Initialize the SQL module if manager is provided
     # If manager is not provided, use JSON based file logs
     sql_manager = GLOBALS.sql_manager
@@ -106,13 +107,13 @@ async def initialize() -> None:
 
 @overload
 async def add_object(obj: Union[guild.USER, guild.GUILD]) -> None: 
-    """|coro|
+    """
 
     Adds a guild or an user to the framework.
     
     Parameters
     --------------
-    - obj: `BaseGUILD` - The guild object to add into the framework,
+    - obj: `Union[guild.USER, guild.GUILD]` - The guild object to add into the framework.
 
     Exceptions
     -----------
@@ -122,13 +123,13 @@ async def add_object(obj: Union[guild.USER, guild.GUILD]) -> None:
     ...
 @overload
 async def add_object(obj: Union[message.DirectMESSAGE, message.TextMESSAGE, message.VoiceMESSAGE], snowflake: Union[int, guild.GUILD, guild.USER, dc.Guild, dc.User]) -> None:
-    """|coro|
+    """
 
     Adds a message to the framework.
     
     Parameters
     --------------
-    - obj: `BaseMESSAGE` - The message object to add into the framework,
+    - obj: `Union[message.DirectMESSAGE, message.TextMESSAGE, message.VoiceMESSAGE]` - The message object to add into the framework,
     - snowflake: `Union[snowflake id, BaseGUILD, discord.Guild, discord.Message]` - Which guild/user to add it to (can be snowflake id or a framework BaseGUILD object or a discord API wrapper object)
 
     Exceptions
@@ -172,19 +173,29 @@ async def add_object(obj, snowflake=None):
 @overload
 def remove_object(guild_id: int) -> None: 
     """
-    - @Info:   Removes a guild from the framework that has the given guild_id
-    - @Param: guild_id ~ id of the guild to remove
-    - @Exceptions:
-        - <class DAFNotFoundError code=DAF_GUILD_ID_NOT_FOUND> ~ Could not find guild with that id.
-        - <class DAFParameterError code=DAF_INVALID_TYPE> ~ The object provided is not supported for removal."""
+    Removes a guild from the framework that has the given guild_id.
+    
+    Parameters
+    -------------
+    - guild_id: `int` - ID of the guild to remove.
+    
+    Exceptions:
+    --------------
+    - `DAFNotFoundError(code=DAF_GUILD_ID_NOT_FOUND)` - Could not find guild with that id.
+    - `DAFParameterError(code=DAF_INVALID_TYPE)` - The object provided is not supported for removal."""
     ...
 @overload
 def remove_object(channel_ids: Iterable) -> None:
     """
-    - @Info:   Remove messages that containt all the given channel ids (data itearable)
-    - @Param: channel_ids ~ set of channel ids to look for in the message
-    - @Exceptions:
-        - <class DAFParameterError code=DAF_INVALID_TYPE> ~ The object provided is not supported for removal."""
+    Removes messages that containt all the given channel ids.
+    
+    Parameters
+    --------------
+    - channel_ids: `Iterable` - The channel IDs that the message must have to be removed (it must have all of these).
+    
+    Exceptions
+    --------------------
+    - `DAFParameterError(code=DAF_INVALID_TYPE)` - The object provided is not supported for removal."""
     ...
 def remove_object(data):    
     if isinstance(data, int): # Guild id
@@ -206,17 +217,28 @@ def remove_object(data):
 
 
 async def update(object_: Any, *, init_options: dict = {}, **kwargs):
-        """ ~ async method ~
-        - @Added in v1.9.5
-        - @Info:
-            Used for chaning the initialization parameters the object was initialized with.
-        - @Params:
-            - The allowed parameters are the initialization parameters first used on creation of the object AND 
-            - init_options ~ Contains the initialization options used in .initialize() method for reainitializing certain objects.
-                             This is implementation specific and not necessarily available.
-        - @Exception:
-            - <class DAFParameterError code=DAF_UPDATE_PARAMETER_ERROR> ~ Invalid keyword argument was passed
-            - Other exceptions raised from .initialize() method"""
+        """
+        Used for chaning the initialization parameters the `object_` was initialized with.
+        Upon updating, the internal state of objects get's reset, meaning you basically have a brand new created object.   
+
+        THIS IS NOT MEANT FOR MANUAL USE, BUT SHOULD BE USED ONLY BY THE `object_` method.
+        
+        Parameters
+        -------------
+        - object_: Any - The object that contains a `.update()` method.
+        - init_options: `dict` - Contains the initialization options used in `.initialize()` method for reinitializing certain objects.
+                         This is implementation specific and not necessarily available.
+        - Other allowed parameters are the initialization parameters first used on creation of the object.
+        
+        Exceptions
+        ------------
+        - `DAFParameterError(code=DAF_UPDATE_PARAMETER_ERROR)` - Invalid keyword argument was passed
+        - Other exceptions raised from .initialize() method
+        
+        Changelog
+        -------------
+        + v1.9.5:
+            - Added"""
         
         init_keys = inspect.getfullargspec(object_.__init__).args # Retrievies list of call args
         init_keys.remove("self")
@@ -246,38 +268,42 @@ async def update(object_: Any, *, init_options: dict = {}, **kwargs):
 
 
 async def shutdown() -> None:
-    """ ~ coro ~
-    - @ Info: Stops the framework"""
+    """Stops the framework and any user tasks."""
     cl = client.get_client()
     await cl.close()
 
 
 def get_user_callback() -> Callable:
-    """ ~ function ~
-    - @Return: Callable
-    - @Info:   Returns the user callback function"""
+    """
+    Returns the user coroutine.
+    """
     return GLOBALS.user_callback
 
 
 def run(token : str,
-        server_list : list=[],
+        server_list : List[Union[guild.GUILD, guild.USER]]=[],
         is_user : bool =False,
-        user_callback : bool=None,
+        user_callback : Callable=None,
         server_log_output : str ="History",
         sql_manager: sql.LoggerSQL=None,
-        intents: Intents=Intents.default(),
+        intents: dc.Intents=dc.Intents.default(),
         debug : bool=True) -> None:
-    """ ~ function ~
-    - @Param:
-        - token             ~ access token for account
-        - server_list       ~ List of framework.GUILD objects
-        - is_user           ~ Is the token from an user account
-        - user_callback     ~ Function to call on run
-        - server_log_output ~ Path where the server log files will be created
-        - sql_manager       ~ SQL manager object that will save into the database
-        - intents           ~ Discord Intents object (API permissions)
-        - debug             ~ Print trace message to the console, useful for debugging
-    - @Info: This function is the function that starts framework and starts advertising"""
+    """
+    Runs the framework. 
+
+    This is the very first thing that needs to be called to start the framework.
+    
+    Parameters
+    ---------------
+    - token: `str`                                          - Discord's access token for account.
+    - server_list: `List[Union[guild.GUILD, guild.USER]]`   - Predefined server list (guild list) to shill.
+    - is_user: `bool`                                       - Set to True if the token is for an user account.
+    - user_callback: `Callable`                             - Users coroutine (task) to run after the framework is run.
+    - server_log_output: `str`                              - Path where the server log files will be created.
+    - sql_manager: `LoggerSQL`                              - SQL manager object that will save logs into the database.
+    - intents: `discord.Intents`                            - Discord Intents object (represents settings to which events it will be listened to).
+    - debug: `bool`                                         - Print trace message to the console, useful for debugging."""
+
     guild.GLOBALS.server_log_path = server_log_output               # Logging folder
     tracing.m_use_debug = debug                                     # Print trace messages to the console for debugging purposes
     GLOBALS.temp_server_list = server_list                          # List of guild objects to iterate thru in the advertiser task
