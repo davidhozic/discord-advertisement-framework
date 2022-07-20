@@ -18,4 +18,4 @@ from .exceptions import *
 #-----------------
 # TODO:
 #-----------------
-# . Documentation (change docstrings into reST and setup auto generated docs)
+# . Documentation (change docstrings into google style and setup auto generated docs)
