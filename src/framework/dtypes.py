@@ -15,7 +15,6 @@ from   .import core
 __all__ = (
     "data_function",
     "FunctionBaseCLASS",
-    "EmbedFIELD",
     "EMBED",
     "FILE",
     "AUDIO"
@@ -45,8 +44,8 @@ def data_function(fnc: Callable):
     ------------
     - fnc: `Callable` - The function to wrapp.
 
-    .. literalinclude:: ../../Examples/Message Types/TextMESSAGE/main_data_function.py
-        :language: python
+    .. seealso:: `../../Examples/Message Types/TextMESSAGE/main_data_function.py`
+
     """
     class FunctionCLASS(FunctionBaseCLASS):
         """

@@ -225,15 +225,15 @@ async def update(object_: Any, *, init_options: dict = {}, **kwargs):
         
         Parameters
         -------------
-        - object_: Any - The object that contains a `.update()` method.
-        - init_options: `dict` - Contains the initialization options used in `.initialize()` method for reinitializing certain objects.
+        + object_: Any - The object that contains a `.update()` method.
+        + init_options: `dict` - Contains the initialization options used in `.initialize()` method for reinitializing certain objects.
                          This is implementation specific and not necessarily available.
-        - Other allowed parameters are the initialization parameters first used on creation of the object.
+        + Other allowed parameters are the initialization parameters first used on creation of the object.
         
         Exceptions
         ------------
-        - `DAFParameterError(code=DAF_UPDATE_PARAMETER_ERROR)` - Invalid keyword argument was passed
-        - Other exceptions raised from .initialize() method
+        + `DAFParameterError(code=DAF_UPDATE_PARAMETER_ERROR)` - Invalid keyword argument was passed
+        + Other exceptions raised from .initialize() method
         
         Changelog
         -------------
