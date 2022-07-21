@@ -9,8 +9,8 @@ Logging
 The framework allows to log sent messages for each :ref:`GUILD`/:ref:`USER` (if you set the "generate_log" to True inside the :ref:`GUILD` or :ref:`USER` object).
 There are 2 different types of logs:
 
-- Relational Database Log
-- JSON file logs
+- :ref:`Relational Database Log`
+- :ref:`JSON Logging (file)`
     
 Relational Database Log
 ================================
