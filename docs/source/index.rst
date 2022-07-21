@@ -1,5 +1,5 @@
 =========================================================
-Index
+DAF (|version|)
 =========================================================
 The Discord advertisement framework is a tool that allows easy advertising on Discord.
 
@@ -7,13 +7,13 @@ The Discord advertisement framework is a tool that allows easy advertising on Di
     :hidden:
 
     ref
-    
+    logging
 
 Reference
 ---------------
 - `Github <https://github.com/davidhozic/discord-advertisement-framework>`_
 - `Releases <https://github.com/davidhozic/discord-advertisement-framework/releases>`_
-- :ref:`Programming Reference`
+- :ref:`Programming Reference` (Description on classes/functions)
 
 Key features
 -------------------

@@ -12,6 +12,7 @@
 #
 import os
 import sys
+import re
 sys.path.insert(0, os.path.abspath('../../src/'))
 sys.path.insert(0, os.path.abspath('.'))
 sys.path.insert(0, os.path.abspath('./extensions'))
@@ -21,7 +22,12 @@ sys.path.insert(0, os.path.abspath('./extensions'))
 project = 'Discord Advert Framework'
 copyright = '2022, David Hozic'
 author = 'David Hozic'
+version = ""
 
+with open("../../src/framework/__init__.py", "r", encoding="utf-8") as init_file:
+    match = re.search(r"(?<=\|).*Version.*(?=\|)", init_file.read())
+    if match is not None:
+        version = re.sub(r"Version.*\|", "", match.group(0)).strip()
 
 # -- General configuration ---------------------------------------------------
 

@@ -11,3 +11,8 @@ GUILD
 ~~~~~~~~~~~~~~~~~~~~~
 .. autoclass:: framework.GUILD
    :members:
+
+USER
+~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: framework.USER
+   :members:
