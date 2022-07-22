@@ -21,7 +21,8 @@ __all__ = (
 
 class GLOBALS:
     """ ~ class ~
-    - @Info: Contains global variables used in the voice messaging."""
+    - @Info: Contains global variables used in the voice messaging.
+    """
     voice_client: discord.VoiceClient = None
 
 @sql.register_type("MessageTYPE")
@@ -31,24 +32,28 @@ class VoiceMESSAGE(BaseMESSAGE):
 
     Parameters
     ------------
-    + start_period, end_period: `int` - These 2 parameters specify the period on which the messages will be sent.
-        - start_period can be either:
-            * None - Messages will be sent on intervals specified by End period,
-            * A non-negative integer -  Messages will be sent on intervals randomly chosen between Start period and End period,
-                                        where the randomly chosen intervals will be re-randomized after each sent message.
-    + data: `AUDIO` - The data parameter is the actual data that will be sent using discord's API. The data types of this parameter can be:
-        - AUDIO object
-        - Function that accepts any amount of parameters and returns an AUDIO object.
-        To pass a function, YOU MUST USE THE framework.data_function decorator on the function before passing the function to the framework.
-    + channels: `Iterable[Union[int, discord.VoiceChannel]]` - Channels that it will be advertised into.
-    + start_now: `bool` - If True, then the framework will send the message as soon as it is run
-    + volume: `int` - The volume (0-100%) at which to play the audio. Defaults to 50%
+    start_period: Union[int, None]
+        If this this is not None, then it dictates the bottom limit for range of the randomized period. Set this to None
+                                         for a fixed sending period.
+    end_period: int
+        If start_period is not None, this dictates the upper limit for range of the randomized period. If start_period is None, then this
+                            dictates a fixed sending period in SECONDS, eg. if you pass the value `5`, that means the message will be sent every 5 seconds.
+    data: AUDIO
+        The data parameter is the actual data that will be sent using discord's API. The data types of this parameter can be:
+            - AUDIO object.
+            - Function that accepts any amount of parameters and returns an AUDIO object. To pass a function, YOU MUST USE THE framework.data_function decorator on the function before passing the function to the framework.
+    channels: Iterable[Union[int, discord.VoiceChannel]]
+        Channels that it will be advertised into.
+    start_now: bool
+        If True, then the framework will send the message as soon as it is run.
+    volume: int
+        The volume (0-100%) at which to play the audio. Defaults to 50%.
     
-    Changelog
-    -----------
-    + v1.9.5
-        - Added the volume parameter
-        - Channels parameter now also accepts channel objects instead of int"""
+    .. versionchanged::
+        v1.9.5
+        Added the volume parameter
+        Channels parameter now also accepts channel objects instead of int
+    """
 
     __slots__ = (
         "randomized_time",
@@ -87,9 +92,13 @@ class VoiceMESSAGE(BaseMESSAGE):
 
         Parameters
         -----------
-        - audio: `audio`- The audio that was streamed.
-        - succeeded_ch: List[Union[discord.VoiceChannel]] - list of the successfuly streamed channels,
-        - failed_ch: failed_ch: List[Dict[discord.VoiceChannel, Exception]] - list of dictionaries contained the failed channel and the Exception object"""
+        audio: audio
+            The audio that was streamed.
+        succeeded_ch: List[Union[discord.VoiceChannel]] 
+            List of the successfuly streamed channels
+        failed_ch: List[Dict[discord.VoiceChannel, Exception]] 
+            List of dictionaries contained the failed channel and the Exception object
+        """
 
         succeeded_ch = [{"name": str(channel), "id" : channel.id} for channel in succeeded_ch]
         failed_ch = [{"name": str(entry["channel"]), "id" : entry["channel"].id,
@@ -108,7 +117,8 @@ class VoiceMESSAGE(BaseMESSAGE):
     def get_data(self) -> dict:
         """"
         Returns a dictionary of keyword arguments that is then expanded
-        into other methods eg. `send_channel, generate_log`"""
+        into other methods eg. `send_channel, generate_log`
+        """
         data = None
         _data_to_send = {}
         data = self.data.get_data() if isinstance(self.data, FunctionBaseCLASS) else self.data
@@ -124,10 +134,11 @@ class VoiceMESSAGE(BaseMESSAGE):
         """
         This method initializes the implementation specific api objects and checks for the correct channel input context.
         
-        Exceptions
+        Raises
         ------------
         - `DAFParameterError(code=DAF_INVALID_TYPE)` - Raised when the object retrieved from channels is not a discord.TextChannel or discord.Thread object.
-        - `DAFNotFoundError(code=DAF_MISSING_PARAMETER)` - Raised when no channels could be found were parsed."""
+        - `DAFNotFoundError(code=DAF_MISSING_PARAMETER)` - Raised when no channels could be found were parsed.
+        """
         ch_i = 0
         cl = client.get_client()
         while ch_i < len(self.channels):
@@ -161,8 +172,11 @@ class VoiceMESSAGE(BaseMESSAGE):
         
         Parameters
         -------------
-        - channel: `discord.VoiceChannel` - The channel in which to send the data
-        - audio: `AUDIO` - the audio to stream""" 
+        channel: discord.VoiceChannel
+            The channel in which to send the data.
+        audio: AUDIO
+            the audio to stream.
+        """
         stream = None
         try:
             # Check if client has permissions before attempting to join
@@ -198,10 +212,12 @@ class VoiceMESSAGE(BaseMESSAGE):
 
     async def send(self) -> Union[dict,  None]:
         """
-        Sends the data into the channels
+        Sends the data into the channels/
         
-        Returns a dictionary generated by the generate_log_context method
-        or the None object if message wasn't ready to be sent (data_function returned None or an invalid type)"""
+        Returns
+        ---------
+        Dictionary generated by the generate_log_context method or the None object if message wasn't ready to be sent (data_function returned None or an invalid type)
+        """
         
         if self.update_mutex.locked():
             # Object is in the proccess of having it's variables
@@ -246,15 +262,14 @@ class VoiceMESSAGE(BaseMESSAGE):
         -------------
         - **kwargs: `Any` - Custom number of keyword parameters which you want to update, these can be anything that is available during the object creation.
         
-        Exceptions
+        Raises
         -----------
         - DAFParameterError(code=DAF_UPDATE_PARAMETER_ERROR) - Invalid keyword argument was passed
         - Other exceptions raised from `.initialize()` method
         
-        Changelog
-        -------------
-        + v1.9.5:
-            - Added"""
+        .. versionadded::
+            v1.9.5
+        """
         if "start_now" not in kwargs:
             # This parameter does not appear as attibute, manual setting neccessary
             kwargs["start_now"] = True

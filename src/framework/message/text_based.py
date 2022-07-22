@@ -27,29 +27,32 @@ class TextMESSAGE(BaseMESSAGE):
 
     Parameters
     ------------
-    + start_period, end_period: `int` - These 2 parameters specify the period on which the messages will be sent.
-        - start_period can be either:
-            * None - Messages will be sent on intervals specified by End period,
-            * A non-negative integer -  Messages will be sent on intervals randomly chosen between Start period and End period,
-                                        where the randomly chosen intervals will be re-randomized after each sent message.
-    + data: `Union[str, EMBED, FILE, List[Union[str, EMBED, FILE]], FunctionBaseCLASS]` - The data parameter is the actual data that will be sent using discord's API. The data types of this parameter can be:
-        - str (normal text),
-        - framework.EMBED,
-        - framework.FILE,
-        - List/Tuple containing any of the above arguments (There can up to 1 string, up to 1 embed and up to 10 framework.FILE objects,
-        if more than 1 string or embeds are sent, the framework will only consider the last found).
-        - Function that accepts any amount of parameters and returns any of the above types.
-        To pass a function, YOU MUST USE THE framework.data_function decorator on the function before passing the function to the framework.
-    + channels: `Iterable[Union[int, discord.TextChannel, discord.Thread]]` - Channels that it will be advertised into.
-    + mode: `str` - Parameter that defines how message will be sent to a channel. It can be "send" - each period a new message will be sent,
-                        "edit" - each period the previously send message will be edited (if it exists)
-                        or "clear-send" - previous message will be deleted and a new one sent.
-    + start_now: `bool` - If True, then the framework will send the message as soon as it is run
+    start_period: Union[int, None]
+        If this this is not None, then it dictates the bottom limit for range of the randomized period. Set this to None
+                                         for a fixed sending period.
+    end_period: int
+        If start_period is not None, this dictates the upper limit for range of the randomized period. If start_period is None, then this
+                            dictates a fixed sending period in SECONDS, eg. if you pass the value `5`, that means the message will be sent every 5 seconds.
+    data: Union[str, EMBED, FILE, List[Union[str, EMBED, FILE]], FunctionBaseCLASS]
+        The data parameter is the actual data that will be sent using discord's API. The data types of this parameter can be:
+            - str (normal text),
+            - framework.EMBED,
+            - framework.FILE,
+            - List/Tuple containing any of the above arguments (There can up to 1 string, up to 1 embed and up to 10 framework.FILE objects,
+            if more than 1 string or embeds are sent, the framework will only consider the last found).
+            - Function that accepts any amount of parameters and returns any of the above types. To pass a function, YOU MUST USE THE framework.data_function decorator on the function before passing the function to the framework.
+    channels: Iterable[Union[int, discord.TextChannel, discord.Thread]]
+        Channels that it will be advertised into.
+    mode: str
+        Parameter that defines how message will be sent to a channel. It can be "send" - each period a new message will be sent,
+        "edit" - each period the previously send message will be edited (if it exists)
+        or "clear-send" - previous message will be deleted and a new one sent.
+    start_now: `bool` - If True, then the framework will send the message as soon as it is run.
     
-    Changelog
-    -----------
-    + v1.9.5
-        - Channels parameter now also accepts channel objects instead of int"""
+    .. versionchanged::
+        v1.9.5
+        Channels parameter now also accepts channel objects instead of int.
+    """
 
     __slots__ = (
         "randomized_time",
@@ -90,11 +93,17 @@ class TextMESSAGE(BaseMESSAGE):
 
         Parameters
         -----------
-        - text: `str` - The text that was sent
-        - embed: `EMBED` - The embed that was sent
-        - files: `List[FILE]` - List of files that were sent
-        - succeeded_ch: List[Union[discord.TextChannel, discord.Thread]] - list of the successfuly streamed channels,
-        - failed_ch: failed_ch: List[Dict[Union[discord.TextChannel, discord.Thread], Exception]] - list of dictionaries contained the failed channel and the Exception object"""
+        text: str
+            The text that was sent.
+        embed: EMBED
+            The embed that was sent.
+        files: List[FILE]
+            List of files that were sent.
+        succeeded_ch: List[Union[discord.TextChannel, discord.Thread]]
+            List of the successfuly streamed channels.
+        failed_ch: failed_ch: List[Dict[Union[discord.TextChannel, discord.Thread], Exception]]
+            List of dictionaries contained the failed channel and the Exception object.
+        """
 
         succeeded_ch = [{"name": str(channel), "id" : channel.id} for channel in succeeded_ch]
         failed_ch = [{"name": str(entry["channel"]), "id" : entry["channel"].id,
@@ -125,7 +134,8 @@ class TextMESSAGE(BaseMESSAGE):
     def get_data(self) -> dict:
         """"
         Returns a dictionary of keyword arguments that is then expanded
-        into other methods eg. `send_channel, generate_log`"""
+        into other methods eg. `send_channel, generate_log`
+        """
         data = self.data.get_data() if isinstance(self.data, FunctionBaseCLASS) else self.data
         _data_to_send = {"embed": None, "text": None, "files": []}
         if data is not None:
@@ -144,10 +154,11 @@ class TextMESSAGE(BaseMESSAGE):
         """
         This method initializes the implementation specific api objects and checks for the correct channel input context.
         
-        Exceptions
+        Raises
         ------------
         - `DAFParameterError(code=DAF_INVALID_TYPE)` - Raised when the object retrieved from channels is not a discord.TextChannel or discord.Thread object.
-        - `DAFNotFoundError(code=DAF_MISSING_PARAMETER)` - Raised when no channels could be found were parsed."""
+        - `DAFNotFoundError(code=DAF_MISSING_PARAMETER)` - Raised when no channels could be found were parsed.
+        """
         ch_i = 0
         cl = client.get_client()
         while ch_i < len(self.channels):
@@ -176,8 +187,11 @@ class TextMESSAGE(BaseMESSAGE):
 
         Parameters
         -----------
-        - channel: `Union[discord.TextChannel, discord.Thread]` - The channel where the exception occurred.
-        - ex: `Exception`: The exception that occured during a send attempt."""
+        channel: Union[discord.TextChannel, discord.Thread]
+            The channel where the exception occurred.
+        ex: Exception
+            The exception that occured during a send attempt.
+        """
         handled = False
         if isinstance(ex, discord.HTTPException):
             if ex.status == 429:  # Rate limit
@@ -207,10 +221,15 @@ class TextMESSAGE(BaseMESSAGE):
         
         Parameters
         -------------
-        - channel: `Union[discord.TextChannel, discord.Thread]` - The channel in which to send the data
-        - text: `str` - The text to send
-        - embed: `EMBED` - the embedded frame to send
-        - files: `List[FILE]` - list of files to send""" 
+        channel: Union[discord.TextChannel, discord.Thread]
+            The channel in which to send the data.
+        text: str
+            The text to send.
+        embed: EMBED
+            The embedded frame to send.
+        files: List[FILE]
+            List of files to send.
+        """ 
 
         ch_perms = channel.permissions_for(channel.guild.get_member(client.get_client().user.id))
         for tries in range(3):  # Maximum 3 tries (if rate limit)
@@ -248,7 +267,8 @@ class TextMESSAGE(BaseMESSAGE):
         Sends the data into the channels
         
         Returns a dictionary generated by the generate_log_context method
-        or the None object if message wasn't ready to be sent (data_function returned None or an invalid type)"""
+        or the None object if message wasn't ready to be sent (data_function returned None or an invalid type)
+        """
         
         if self.update_mutex.locked():
             # Object is in the proccess of having it's variables
@@ -299,15 +319,14 @@ class TextMESSAGE(BaseMESSAGE):
         -------------
         - **kwargs: `Any` - Custom number of keyword parameters which you want to update, these can be anything that is available during the object creation.
         
-        Exceptions
+        Raises
         -----------
         - DAFParameterError(code=DAF_UPDATE_PARAMETER_ERROR) - Invalid keyword argument was passed
         - Other exceptions raised from `.initialize()` method
         
-        Changelog
-        -------------
-        + v1.9.5:
-            - Added"""
+        .. versionadded::
+            v1.9.5
+        """
         if "start_now" not in kwargs:
             # This parameter does not appear as attibute, manual setting neccessary
             kwargs["start_now"] = True
@@ -325,23 +344,25 @@ class DirectMESSAGE(BaseMESSAGE):
 
     Parameters
     ------------
-    + start_period, end_period: `int` - These 2 parameters specify the period on which the messages will be sent.
-        - start_period can be either:
-            * None - Messages will be sent on intervals specified by End period,
-            * A non-negative integer -  Messages will be sent on intervals randomly chosen between Start period and End period,
-                                        where the randomly chosen intervals will be re-randomized after each sent message.
-    + data: `Union[str, EMBED, FILE, List[Union[str, EMBED, FILE]], FunctionBaseCLASS]` - The data parameter is the actual data that will be sent using discord's API. The data types of this parameter can be:
-        - str (normal text),
-        - framework.EMBED,
-        - framework.FILE,
-        - List/Tuple containing any of the above arguments (There can up to 1 string, up to 1 embed and up to 10 framework.FILE objects,
-        if more than 1 string or embeds are sent, the framework will only consider the last found).
-        - Function that accepts any amount of parameters and returns any of the above types.
-        To pass a function, YOU MUST USE THE framework.data_function decorator on the function before passing the function to the framework.
-    + mode: `str` - Parameter that defines how message will be sent to a channel. It can be "send" - each period a new message will be sent,
-                        "edit" - each period the previously send message will be edited (if it exists)
-                        or "clear-send" - previous message will be deleted and a new one sent.
-    + start_now: `bool` - If True, then the framework will send the message as soon as it is run"""
+    start_period: Union[int, None]
+        If this this is not None, then it dictates the bottom limit for range of the randomized period. Set this to None  for a fixed sending period.
+    end_period: int
+        If start_period is not None, this dictates the upper limit for range of the randomized period. If start_period is None, then this
+                            dictates a fixed sending period in SECONDS, eg. if you pass the value `5`, that means the message will be sent every 5 seconds.
+    data: Union[str, EMBED, FILE, List[Union[str, EMBED, FILE]], FunctionBaseCLASS]
+        The data parameter is the actual data that will be sent using discord's API. The data types of this parameter can be:
+            - str (normal text),
+            - framework.EMBED,
+            - framework.FILE,
+            - List/Tuple containing any of the above arguments (There can up to 1 string, up to 1 embed and up to 10 framework.FILE objects,
+            if more than 1 string or embeds are sent, the framework will only consider the last found).
+            - Function that accepts any amount of parameters and returns any of the above types. To pass a function, YOU MUST USE THE framework.data_function decorator on the function before passing the function to the framework.
+    mode: str
+        Parameter that defines how message will be sent to a channel. It can be "send" - each period a new message will be sent,
+        "edit" - each period the previously send message will be edited (if it exists)
+        or "clear-send" - previous message will be deleted and a new one sent.
+    start_now: `bool` - If True, then the framework will send the message as soon as it is run.
+    """
 
     __slots__ = (
         "randomized_time",
@@ -381,11 +402,15 @@ class DirectMESSAGE(BaseMESSAGE):
 
         Parameters
         -----------
-        - text: `str` - The text that was sent
-        - embed: `EMBED` - The embed that was sent
-        - files: `List[FILE]` - List of files that were sent
-        - success_context:   `Dict[bool, Exception]` - Dictionary containing information about succession of the DM attempt. 
-                            Contains "success": `bool` key and "reason": `Exception` key which is only present if "success" is `False`
+        text: str
+            The text that was sent.
+        embed: EMBED
+            The embed that was sent.
+        files: List[FILE]
+            List of files that were sent.
+        success_context: Dict[bool, Exception]
+            Dictionary containing information about succession of the DM attempt. 
+            Contains "success": `bool` key and "reason": `Exception` key which is only present if "success" is `False`
         """
         embed = embed.to_dict() if embed is not None else None
         files = [x.filename for x in files]
@@ -413,7 +438,8 @@ class DirectMESSAGE(BaseMESSAGE):
         """
         Returns a dictionary of keyword arguments that is then expanded
         into other functions (send_channel, generate_log).
-        This is exactly the same as in TextMESSAGE"""
+        This is exactly the same as in :ref:`TextMESSAGE`
+        """
         return TextMESSAGE.get_data(self)
 
     async def initialize_channels(self,
@@ -426,9 +452,10 @@ class DirectMESSAGE(BaseMESSAGE):
         -----------
         - user: discord.User - discord User object to whom the DM will be created for
         
-        Exceptions
+        Raises
         ---------
-        - DAFNotFoundError(code=DAF_USER_CREATE_DM) - Raised when the direct message channel could not be created"""
+        - DAFNotFoundError(code=DAF_USER_CREATE_DM) - Raised when the direct message channel could not be created
+        """
         try:
             await user.create_dm()
             self.dm_channel = user
@@ -442,7 +469,9 @@ class DirectMESSAGE(BaseMESSAGE):
 
         Parameters
         -----------
-        - ex: `Exception`: The exception that occured during a send attempt."""
+        ex: Exception
+            The exception that occured during a send attempt.
+        """
         handled = False
         if isinstance(ex, discord.HTTPException):
             if ex.status == 429 or ex.code == 40003: # Too Many Requests or opening DMs too fast
@@ -466,9 +495,12 @@ class DirectMESSAGE(BaseMESSAGE):
         """
         Sends data to the DM channel (user).
         
+        Returns
+        ------------
         Returns a dictionary:
         - "success" - Returns True if successful, else False.
-        - "reason"  - Only present if "success" is False, contains the Exception returned by the send attempt."""
+        - "reason"  - Only present if "success" is False, contains the Exception returned by the send attempt.
+        """
         # Send/Edit messages
         for tries in range(3):  # Maximum 3 tries (if rate limit)
             try:
@@ -497,8 +529,11 @@ class DirectMESSAGE(BaseMESSAGE):
         """
         Sends the data into the channels
         
+        Returns
+        ------------
         Returns a dictionary generated by the generate_log_context method
-        or the None object if message wasn't ready to be sent (data_function returned None or an invalid type)"""
+        or the None object if message wasn't ready to be sent (data_function returned None or an invalid type).
+        """
         
         if self.update_mutex.locked():
             # Object is in the proccess of having it's variables
@@ -533,18 +568,19 @@ class DirectMESSAGE(BaseMESSAGE):
         
         Parameters
         -------------
-        - init_options: `Dict` - Contains additional initialization options, not meant for public use, should only be called by the USER update method recursively.
-        - **kwargs: `Any` - Custom number of keyword parameters which you want to update, these can be anything that is available during the object creation.
+        init_options: Dict
+            Contains additional initialization options, not meant for public use, should only be called by the USER update method recursively.
+        **kwargs: Any
+            Custom number of keyword parameters which you want to update, these can be anything that is available during the object creation.
 
-        Exceptions
+        Raises
         -----------
         - DAFParameterError(code=DAF_UPDATE_PARAMETER_ERROR) - Invalid keyword argument was passed
         - Other exceptions raised from `.initialize()` method
         
-        Changelog
-        -------------
-        + v1.9.5:
-            - Added"""
+        .. versionadded::
+            v1.9.5
+        """
 
         if "start_now" not in kwargs:
             # This parameter does not appear as attibute, manual setting neccessary

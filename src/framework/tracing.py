@@ -15,7 +15,9 @@ m_use_debug = None
 m_lock = Lock() # For print thread safety
 
 class TraceLEVELS(Enum):
-    """Levels of trace for debug"""
+    """
+    Levels of trace for debug
+    """
     NORMAL = 0
     WARNING = auto()
     ERROR =  auto()
@@ -25,10 +27,13 @@ def trace(message: str,
     """
     Prints a trace to the console.
     
-    Parameters:
+    Parameters
     --------------
-    - message: `str` - Trace message.
-    - level: `TraceLEVELS`   - Level of the trace. Defaults to TraceLEVELS.NORMAL."""
+    message: str
+        Trace message.
+    level: TraceLEVELS
+        Level of the trace. Defaults to TraceLEVELS.NORMAL.
+    """
     if m_use_debug:
         with m_lock:
             timestruct = time.localtime()

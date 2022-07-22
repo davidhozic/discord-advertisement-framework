@@ -51,8 +51,9 @@ async def advertiser(message_type: Literal["text", "voice"]) -> None:
     
     Parameters
     ------------
-    - message_type: `str` - Two tasks advertising tasks are created, this variable tells the guild objects which
-                            taks is requesting to shill, so it knows what type of messages to actually send.
+    message_type: str
+        Two tasks advertising tasks are created, this variable tells the guild objects which
+        taks is requesting to shill, so it knows what type of messages to actually send.
     """
     while True:
         await asyncio.sleep(C_TASK_SLEEP_DELAY)
@@ -115,7 +116,7 @@ async def add_object(obj: Union[guild.USER, guild.GUILD]) -> None:
     --------------
     - obj: `Union[guild.USER, guild.GUILD]` - The guild object to add into the framework.
 
-    Exceptions
+    Raises
     -----------
     - `DAFParameterError(code=DAF_GUILD_ALREADY_ADDED)` - The guild/user is already added to the framework.
     - `DAFParameterError(code=DAF_INVALID_TYPE)`        - The object provided is not supported for addition.
@@ -129,15 +130,18 @@ async def add_object(obj: Union[message.DirectMESSAGE, message.TextMESSAGE, mess
     
     Parameters
     --------------
-    - obj: `Union[message.DirectMESSAGE, message.TextMESSAGE, message.VoiceMESSAGE]` - The message object to add into the framework,
-    - snowflake: `Union[snowflake id, BaseGUILD, discord.Guild, discord.Message]` - Which guild/user to add it to (can be snowflake id or a framework BaseGUILD object or a discord API wrapper object)
+    obj: Union[message.DirectMESSAGE, message.TextMESSAGE, message.VoiceMESSAGE]
+        The message object to add into the framework.
+    snowflake: Union[snowflake id, BaseGUILD, discord.Guild, discord.Message]
+        Which guild/user to add it to (can be snowflake id or a framework BaseGUILD object or a discord API wrapper object).
 
-    Exceptions
+    Raises
     -----------
     - `DAFParameterError(code=DAF_GUILD_ID_REQUIRED)` - guild_id wasn't provided when adding a message object (to which guild shouild it add)
     - `DAFNotFoundError(code=DAF_GUILD_ID_NOT_FOUND)` - Could not find guild with that id.
     - `DAFParameterError(code=DAF_INVALID_TYPE)`      - The object provided is not supported for addition.
-    - Other exceptions raised in the `obj.add_message()` method"""
+    - Other exceptions raised in the `obj.add_message()` method
+    """
     ...
 async def add_object(obj, snowflake=None):
     object_type_name = type(obj).__name__
@@ -179,7 +183,7 @@ def remove_object(guild_id: int) -> None:
     -------------
     - guild_id: `int` - ID of the guild to remove.
     
-    Exceptions:
+    Raises
     --------------
     - `DAFNotFoundError(code=DAF_GUILD_ID_NOT_FOUND)` - Could not find guild with that id.
     - `DAFParameterError(code=DAF_INVALID_TYPE)` - The object provided is not supported for removal."""
@@ -191,11 +195,13 @@ def remove_object(channel_ids: Iterable) -> None:
     
     Parameters
     --------------
-    - channel_ids: `Iterable` - The channel IDs that the message must have to be removed (it must have all of these).
+    channel_ids: Iterable
+        The channel IDs that the message must have to be removed (it must have all of these).
     
-    Exceptions
+    Raises
     --------------------
-    - `DAFParameterError(code=DAF_INVALID_TYPE)` - The object provided is not supported for removal."""
+    - `DAFParameterError(code=DAF_INVALID_TYPE)` - The object provided is not supported for removal.
+    """
     ...
 def remove_object(data):    
     if isinstance(data, int): # Guild id
@@ -225,12 +231,15 @@ async def update(object_: Any, *, init_options: dict = {}, **kwargs):
         
         Parameters
         -------------
-        + object_: Any - The object that contains a `.update()` method.
-        + init_options: `dict` - Contains the initialization options used in `.initialize()` method for reinitializing certain objects.
-                         This is implementation specific and not necessarily available.
-        + Other allowed parameters are the initialization parameters first used on creation of the object.
+        object_: Any
+            The object that contains a `.update()` method.
+        init_options: dict
+            Contains the initialization options used in `.initialize()` method for reinitializing certain objects.
+            This is implementation specific and not necessarily available.
+        Other:
+            Other allowed parameters are the initialization parameters first used on creation of the object.
         
-        Exceptions
+        Raises
         ------------
         + `DAFParameterError(code=DAF_UPDATE_PARAMETER_ERROR)` - Invalid keyword argument was passed
         + Other exceptions raised from .initialize() method
@@ -238,7 +247,8 @@ async def update(object_: Any, *, init_options: dict = {}, **kwargs):
         Changelog
         -------------
         + v1.9.5:
-            - Added"""
+            - Added
+        """
         
         init_keys = inspect.getfullargspec(object_.__init__).args # Retrievies list of call args
         init_keys.remove("self")
@@ -268,7 +278,9 @@ async def update(object_: Any, *, init_options: dict = {}, **kwargs):
 
 
 async def shutdown() -> None:
-    """Stops the framework and any user tasks."""
+    """
+    Stops the framework and any user tasks.
+    """
     cl = client.get_client()
     await cl.close()
 
@@ -295,14 +307,23 @@ def run(token : str,
     
     Parameters
     ---------------
-    - token: `str`                                          - Discord's access token for account.
-    - server_list: `List[Union[guild.GUILD, guild.USER]]`   - Predefined server list (guild list) to shill.
-    - is_user: `bool`                                       - Set to True if the token is for an user account.
-    - user_callback: `Callable`                             - Users coroutine (task) to run after the framework is run.
-    - server_log_output: `str`                              - Path where the server log files will be created.
-    - sql_manager: `LoggerSQL`                              - SQL manager object that will save logs into the database.
-    - intents: `discord.Intents`                            - Discord Intents object (represents settings to which events it will be listened to).
-    - debug: `bool`                                         - Print trace message to the console, useful for debugging."""
+    token: str
+        Discord's access token for account.
+    server_list: List[Union[guild.GUILD, guild.USER]]
+        Predefined server list (guild list) to shill.
+    is_user: bool
+        Set to True if the token is for an user account.
+    user_callback: Callable
+        Users coroutine (task) to run after the framework is run.
+    server_log_output: str
+        Path where the server log files will be created.
+    sql_manager: LoggerSQL
+        SQL manager object that will save logs into the database.
+    intents: discord.Intents
+        Discord Intents object (represents settings to which events it will be listened to).
+    debug: bool
+        Print trace message to the console, useful for debugging.
+    """
 
     guild.GLOBALS.server_log_path = server_log_output               # Logging folder
     tracing.m_use_debug = debug                                     # Print trace messages to the console for debugging purposes

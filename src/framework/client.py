@@ -42,11 +42,14 @@ def initialize(token: str, *,
 
     Parameters
     ----------------
-    - token: `str`  - Authorization token for connecting to discord.
-    - bot: `bool`   - Tells if the token is for a bot account.
+    token: str
+        Authorization token for connecting to discord.
+    bot: bool
+        Tells if the token is for a bot account.
                       and False if the token is  for an user account.
-    - intents: `discord.Intents` - The intents discord object. Intents are settings that
-                                   dictate which dictates the events that the client will listen for.
+    intents: discord.Intents
+        The intents discord object. Intents are settings that
+                                    dictate which dictates the events that the client will listen for.
     """
     GLOBALS.client = CLIENT(intents=intents)
     if not bot:

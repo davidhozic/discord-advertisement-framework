@@ -8,8 +8,11 @@ class DAFError(Exception):
     
     Parameters
     -------------
-    - message: `str` - The exception message.
-    - code: `int` - The error code."""
+    message: str
+        The exception message.
+    code: int
+        The error code.
+    """
     def __init__(self, message: str, code: int):
         self.code = code # Error code
         super().__init__(message)
@@ -20,8 +23,11 @@ class DAFParameterError(DAFError):
     
     Parameters
     -------------
-    - message: `str` - The exception message.
-    - code: `int` - The error code."""
+    message: str
+        The exception message.
+    code: int
+        The error code.
+    """
     pass
 
 class DAFNotFoundError(DAFError):
@@ -30,8 +36,11 @@ class DAFNotFoundError(DAFError):
 
     Parameters
     -------------
-    - message: `str` - The exception message.
-    - code: `int` - The error code."""
+    message: str
+        The exception message.
+    code: int
+        The error code.
+    """
     pass
 
 class DAFSQLError(DAFError):
@@ -40,8 +49,11 @@ class DAFSQLError(DAFError):
 
     Parameters
     -------------
-    - message: `str` - The exception message.
-    - code: `int` - The error code."""
+    message: str
+        The exception message.
+    code: int
+        The error code.
+    """
     pass
 
 # Error Codes

@@ -30,7 +30,8 @@ class FunctionBaseCLASS:
     Because the FunctionCLASS is inaccessible outside the data_function decorator,
     this class is used to detect if the MESSAGE.data parameter is of function type,
     because the function isinstance also returns True when comparing
-    the object to it's class or to the base class from which the object class is inherited from."""
+    the object to it's class or to the base class from which the object class is inherited from.
+    """
 
 
 def data_function(fnc: Callable):
@@ -40,9 +41,10 @@ def data_function(fnc: Callable):
     A class is returned that can be then used to create function wrapper objects that get sent to the
     xMESSAGE as a parameter and then used inside the `.send()` method to obtain data from the function.
 
-    Parameters:
+    Parameters
     ------------
-    - fnc: `Callable` - The function to wrapp.
+    fnc: Callable
+        The function to wrapp.
 
     .. seealso:: `../../Examples/Message Types/TextMESSAGE/main_data_function.py`
 
@@ -72,7 +74,8 @@ def data_function(fnc: Callable):
 
         def get_data(self):
             """ 
-            Retreives the data from the user function."""
+            Retreives the data from the user function.
+            """
             return fnc(*self.args, **self.kwargs)
 
     return FunctionCLASS
@@ -87,13 +90,18 @@ class EMBED(discord.Embed):
     
     Parameters
     -------------
-    + Added parameters:
-        - author_name: `str` - Name of embed author,
-        - author_icon: `str` - Url to author image,
-        - image: `str`       - Url of image to be placed at the end of the embed
-        - thumbnail: `str`   - Url of image that will be placed at the top right of embed
-    + Inherited from discord.Embed:
-        - For the other, original params see https://docs.pycord.dev/en/master/api.html?highlight=discord%20embed#discord.Embed"""
+    author_name: str
+        Name of embed author
+    author_icon: str
+        Url to author image.
+    image: str
+        Url of image to be placed at the end of the embed.
+    thumbnail: str
+        Url of image that will be placed at the top right of embed.
+
+    other parameters (discord.Embed):
+        See https://docs.pycord.dev/en/master/api.html?highlight=discord%20embed#discord.Embed
+    """
     __slots__ = (
         'title',
         'url',
@@ -120,7 +128,9 @@ class EMBED(discord.Embed):
 
         Parameters
         ------------
-        - _object: `discord.Embed` - The Discord Embed object you want converted into a framework.EMBED object."""
+        _object: discord.Embed
+            The Discord Embed object you want converted into a framework.EMBED object.
+        """
         ret = EMBED()
         # Copy attributes but not special methods to the new EMBED. "dir" is used instead of "vars" because the object does not support the function.
         for key in dir(_object):
@@ -179,7 +189,8 @@ class FILE:
 
     Parameters
     -------------
-    - filename: `str` - Path to the file you want sent.
+    filename: str
+         Path to the file you want sent.
     """
     __slots__ = ("filename",)
     def __init__(self,
@@ -193,16 +204,16 @@ class FILE:
 
         Parameters
         -------------
-        - **kwargs: `Any` - Custom number of keyword parameters which you want to update, these can be anything that is available during the object creation.
+        **kwargs: Any
+            Custom number of keyword parameters which you want to update, these can be anything that is available during the object creation.
 
-        Exceptions
+        Raises
         -----------
         - Exceptions raised from `core.update()` method.
 
-        Changelog
-        -------------
-        + v1.9.5:
-            - Added."""
+        .. versionadded::
+            v1.9.5
+        """
         await core.update(self, **kwargs)
 
 
@@ -214,13 +225,15 @@ class AUDIO(ytdl.YoutubeDL):
     Used for streaming audio from file or YouTube.
     NOTE: Using a youtube video, will cause the shilling start to be delayed due to youtube data extraction.
     
-    Parameters:
+    Parameters
     -----------------
-    - filename: `str` - Path to the file you want streamed or a YouTube video url.
+    filename: str
+        Path to the file you want streamed or a YouTube video url.
     
-    Exceptions:
+    Raises
     ----------
-    - `DAFNotFoundError(code=DAF_FILE_NOT_FOUND/DAF_YOUTUBE_STREAM_ERROR)` - Raised when the file or youtube url is not found."""
+    - `DAFNotFoundError(code=DAF_FILE_NOT_FOUND/DAF_YOUTUBE_STREAM_ERROR)` - Raised when the file or youtube url is not found.
+    """
 
     ytdl_options = {
         "format": "bestaudio/best",
@@ -260,7 +273,8 @@ class AUDIO(ytdl.YoutubeDL):
     @property
     def filename(self):
         """
-        Returns the filename of the file or the name of a youtube video with the link"""
+        Returns the filename of the file or the name of a youtube video with the link
+        """
         if self.stream:
             return {
                 "type:" : "Youtube",
@@ -281,14 +295,13 @@ class AUDIO(ytdl.YoutubeDL):
         -------------
         - **kwargs: `Any` - Custom number of keyword parameters which you want to update, these can be anything that is available during the object creation.
 
-        Exceptions
+        Raises
         -----------
         - Exceptions raised from `core.update()` method.
 
-        Changelog
-        -------------
-        + v1.9.5:
-            - Added."""
+        .. versionadded::
+            v1.9.5
+        """
         if "filename" not in kwargs:
             kwargs["filename"] = self.orig
         await core.update(self, **kwargs)

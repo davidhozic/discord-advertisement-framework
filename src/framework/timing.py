@@ -7,7 +7,8 @@ def timeit(num: int):
 
     Parameters
     ------------
-    - num: `int` - Number of samples to take for average"""
+    - num: `int` - Number of samples to take for average
+    """
     def _timeit(fnc):
         sum = 0
         ct = 0
@@ -51,14 +52,16 @@ class TIMER:
 
     def start(self):
         """
-        Start the timer."""
+        Start the timer.
+        """
         if not self.running:
             self.running = True
             self.startms = time.time()
 
     def elapsed(self):
         """
-        Returns the elapsed time in seconds."""
+        Returns the elapsed time in seconds.
+        """
         if self.running:
             return time.time() - self.startms
         self.start()
@@ -66,5 +69,6 @@ class TIMER:
 
     def reset (self):
         """
-        Resets the timer."""
+        Resets the timer.
+        """
         self.running = False
