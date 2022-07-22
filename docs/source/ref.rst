@@ -1,4 +1,3 @@
-=======================
 Programming Reference
 =======================
 Contain classes and functions description.

@@ -40,7 +40,6 @@ extensions = [
     "sphinx.ext.autosectionlabel",
     "sphinx.ext.napoleon",
     "sphinx.ext.githubpages",
-    "myst_parser",
 ]
 
 
