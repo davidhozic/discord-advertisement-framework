@@ -39,7 +39,6 @@ extensions = [
     "sphinx.ext.autosummary",
     "sphinx.ext.autosectionlabel",
     "sphinx.ext.napoleon",
-    "sphinx.ext.githubpages",
 ]
 
 

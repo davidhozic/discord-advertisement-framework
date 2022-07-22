@@ -720,7 +720,7 @@ class LoggerSQL:
 
     async def update(self, **kwargs):
         """
-        .. versionadded:: v1.9.5
+        .. versionadded:: v1.9.5 **(NOT YET AVAILABLE)**
 
         Used for chaning the initialization parameters the object was initialized with.
         

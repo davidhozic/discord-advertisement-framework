@@ -4,10 +4,13 @@ This page contains informations about any functions that can be called.
 
 
 
-
 add_object
 --------------------------
 .. autofunction:: framework.add_object
+
+remove_object
+--------------------------
+.. autofunction:: framework.remove_object
 
 
 data_function
@@ -28,11 +31,6 @@ get_sql_manager
 register_type
 --------------------------
 .. autofunction:: framework.register_type
-
-
-remove_object
---------------------------
-.. autofunction:: framework.remove_object
 
 
 run

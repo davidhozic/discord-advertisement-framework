@@ -30,14 +30,18 @@ class VoiceMESSAGE(BaseMESSAGE):
     """
     This class is used for creating objects that represent messages which will be streamed to voice channels.
 
+    .. versionchanged::
+        v1.9.5 **(NOT YET AVAILABLE)**
+        
+            - Added the volume parameter
+            - Channels parameter now also accepts channel objects instead of int
+
     Parameters
     ------------
     start_period: Union[int, None]
-        If this this is not None, then it dictates the bottom limit for range of the randomized period. Set this to None
-                                         for a fixed sending period.
+        If this this is not None, then it dictates the bottom limit for range of the randomized period. Set this to None  for a fixed sending period.
     end_period: int
-        If start_period is not None, this dictates the upper limit for range of the randomized period. If start_period is None, then this
-                            dictates a fixed sending period in SECONDS, eg. if you pass the value `5`, that means the message will be sent every 5 seconds.
+        If start_period is not None, this dictates the upper limit for range of the randomized period. If start_period is None, then this dictates a fixed sending period in SECONDS, eg. if you pass the value `5`, that means the message will be sent every 5 seconds.
     data: AUDIO
         The data parameter is the actual data that will be sent using discord's API. The data types of this parameter can be:
             - AUDIO object.
@@ -48,11 +52,6 @@ class VoiceMESSAGE(BaseMESSAGE):
         If True, then the framework will send the message as soon as it is run.
     volume: int
         The volume (0-100%) at which to play the audio. Defaults to 50%.
-    
-    .. versionchanged::
-        v1.9.5
-        Added the volume parameter
-        Channels parameter now also accepts channel objects instead of int
     """
 
     __slots__ = (
@@ -255,7 +254,7 @@ class VoiceMESSAGE(BaseMESSAGE):
 
     async def update(self, **kwargs):
         """
-        .. versionadded:: v1.9.5
+        .. versionadded:: v1.9.5 **(NOT YET AVAILABLE)**
 
         Used for chaning the initialization parameters the object was initialized with.
         

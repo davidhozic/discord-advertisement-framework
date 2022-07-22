@@ -38,6 +38,13 @@ class BaseGUILD:
     """ 
     Represents an universal guild.
     
+    .. versionchanged:: 
+        v1.9.5 **(Not yet available)**
+
+            - Added the update method.
+            - snowflake parameter can now be a discord.Object object.
+
+
     Parameters
     ---------------
     snowflake: Union[int, discord.Object]
@@ -77,7 +84,8 @@ class BaseGUILD:
         Returns all the message objects inside the object.
 
         .. versionchanged::
-            v1.9.5 - Automatically find all messages based on attribute name.
+            v1.9.5  **(Not yet available)** 
+            Automatically find all messages based on attribute name.
         """
         ret = []
         for x in self.__slots__:
@@ -88,7 +96,7 @@ class BaseGUILD:
     @property
     def snowflake(self) -> int:
         """
-        .. versionadded:: v1.9.5
+        .. versionadded:: v1.9.5 **(NOT YET AVAILABLE)**
 
         Returns the discord's snowflake identificator.
         """
@@ -133,7 +141,7 @@ class BaseGUILD:
 
     async def update(self, **kwargs):
         """
-        .. versionadded:: v1.9.5
+        .. versionadded:: v1.9.5 **(NOT YET AVAILABLE)**
 
         Used for chaning the initialization parameters the object was initialized with.
         
@@ -235,6 +243,13 @@ class GUILD(BaseGUILD):
     """
     The GUILD object represents a server to which messages will be sent.
     
+    .. versionchanged::
+        v1.9.5  **(Not yet available)**
+            
+            - Added the update method
+
+            - snowflake parameter can now be a discord.Guild object.
+
     Parameters
     ------------
     snowflake: Union[int, discord.Guild]
@@ -389,7 +404,7 @@ class GUILD(BaseGUILD):
 
 
         .. versionadded::
-            v1.9.5
+            v1.9.5 **(NOT YET AVAILABLE)**
         """
         # Update the guild
         if "guild_id" not in kwargs:
@@ -526,7 +541,7 @@ class USER(BaseGUILD):
     
     async def update(self, **kwargs):
         """
-        .. versionadded:: v1.9.5
+        .. versionadded:: v1.9.5 **(NOT YET AVAILABLE)**
 
         Used for changing the initialization parameters the object was initialized with.
 

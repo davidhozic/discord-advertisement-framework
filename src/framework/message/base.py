@@ -222,7 +222,7 @@ class BaseMESSAGE:
             Raised from .initialize() method
         
         .. versionadded::
-            v1.9.5
+            v1.9.5 **(NOT YET AVAILABLE)**
         """
 
         raise NotImplementedError

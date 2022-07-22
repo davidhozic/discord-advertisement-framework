@@ -114,7 +114,8 @@ async def add_object(obj: Union[guild.USER, guild.GUILD]) -> None:
     
     Parameters
     --------------
-    - obj: `Union[guild.USER, guild.GUILD]` - The guild object to add into the framework.
+    obj: Union[guild.USER, guild.GUILD]
+        The guild object to add into the framework.
 
     Raises
     -----------
@@ -135,7 +136,7 @@ async def add_object(obj: Union[message.DirectMESSAGE, message.TextMESSAGE, mess
     --------------
     obj: Union[message.DirectMESSAGE, message.TextMESSAGE, message.VoiceMESSAGE]
         The message object to add into the framework.
-    snowflake: Union[snowflake id, BaseGUILD, discord.Guild, discord.Message]
+    snowflake: Union[int, guild.GUILD, guild.USER, dc.Guild, dc.User]
         Which guild/user to add it to (can be snowflake id or a framework BaseGUILD object or a discord API wrapper object).
 
     Raises
@@ -234,7 +235,7 @@ def remove_object(data):
 
 async def update(obj: Any, *, init_options: dict = {}, **kwargs):
         """
-        .. versionadded:: v1.9.5
+        .. versionadded:: v1.9.5 **(NOT YET AVAILABLE)**
 
         Used for chaning the initialization parameters the obj was initialized with.
         

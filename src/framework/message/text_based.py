@@ -25,6 +25,12 @@ class TextMESSAGE(BaseMESSAGE):
     """
     This class is used for creating objects that represent messages which will be sent to Discord's TEXT CHANNELS.
 
+    .. versionchanged::
+        v1.9.5 **(NOT YET AVAILABLE)**
+        
+            - Channels parameter now also accepts channel objects instead of int.
+            - .update method added.
+
     Parameters
     ------------
     start_period: Union[int, None]
@@ -46,10 +52,6 @@ class TextMESSAGE(BaseMESSAGE):
         "edit" - each period the previously send message will be edited (if it exists)
         or "clear-send" - previous message will be deleted and a new one sent.
     start_now: `bool` - If True, then the framework will send the message as soon as it is run.
-    
-    .. versionchanged::
-        v1.9.5
-        Channels parameter now also accepts channel objects instead of int.
     """
 
     __slots__ = (
@@ -310,7 +312,7 @@ class TextMESSAGE(BaseMESSAGE):
 
     async def update(self, **kwargs: Any):
         """
-        .. versionadded:: v1.9.5
+        .. versionadded:: v1.9.5 **(NOT YET AVAILABLE)**
 
         Used for chaning the initialization parameters the object was initialized with.
         
@@ -344,6 +346,10 @@ class DirectMESSAGE(BaseMESSAGE):
     """
     This class is used for creating objects that represent messages which will be sent to DIRECT MESSAGES.
 
+    .. versionchanged::
+        v1.9.5 **(NOT YET AVAILABLE)**
+        .update method added.
+
     Parameters
     ------------
     start_period: Union[int, None]
@@ -362,10 +368,6 @@ class DirectMESSAGE(BaseMESSAGE):
         "edit" - each period the previously send message will be edited (if it exists)
         or "clear-send" - previous message will be deleted and a new one sent.
     start_now: `bool` - If True, then the framework will send the message as soon as it is run.
-    
-    .. versionchanged::
-        v1.9.5
-        Channels parameter now also accepts channel objects instead of int.
     """
 
     __slots__ = (
@@ -567,7 +569,7 @@ class DirectMESSAGE(BaseMESSAGE):
 
     async def update(self, init_options={},**kwargs):
         """
-        .. versionadded:: v1.9.5
+        .. versionadded:: v1.9.5 **(NOT YET AVAILABLE)**
 
         Used for chaning the initialization parameters the object was initialized with.
         
