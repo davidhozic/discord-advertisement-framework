@@ -14,7 +14,9 @@ This is a minimal example of how to use the shiller.
     is limited to (see other examples).
     
 .. seealso:: 
-    `Other examples on GitHub <https://github.com/davidhozic/discord-advertisement-framework/tree/master/Examples>`_
+    :download:`Download more examples <../../Examples/Examples.zip>`
+    
+    `Examples on GitHub <https://github.com/davidhozic/discord-advertisement-framework/tree/master/Examples>`_
 
 
 

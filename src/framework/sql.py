@@ -470,13 +470,18 @@ class LoggerSQL:
             
         Raises
         -----------
-        Any exceptions raised are exceptions that are raised in:
-        .begin_engine()
-        .create_tables()
-        .generate_lookup_values()
-        .create_data_types()
-        .create_analytic_objects()
-        .connect_cursor()
+        Inherited from DAFSQLError
+            from ``.begin_engine()``
+        Inherited from DAFSQLError
+            from ``.create_tables()``
+        Inherited from DAFSQLError
+            from ``.generate_lookup_values()``
+        Inherited from DAFSQLError
+            from ``.create_data_types()``
+        Inherited from DAFSQLError
+            from ``.create_analytic_objects()``
+        Inherited from DAFSQLError
+            from ``.connect_cursor()``
         """
         # Create engine for communicating with the SQL base
         self.begin_engine()
@@ -715,9 +720,13 @@ class LoggerSQL:
 
     async def update(self, **kwargs):
         """
+        .. versionadded:: v1.9.5
+
         Used for chaning the initialization parameters the object was initialized with.
-        NOTE: Upon updating, the internal state of objects get's reset, meaning you basically have a brand new created object.
-        It also resets the message objects.
+        
+        .. warning::
+            Upon updating, the internal state of objects get's reset, meaning you basically have a brand new created object.
+            It also resets the message objects.
         
         Parameters
         -------------
@@ -727,9 +736,6 @@ class LoggerSQL:
         Raises
         -----------
         Exceptions raised from core.update function.
-
-        .. versionadded::
-            v1.9.5
         """
         async with self.lock:
             try:

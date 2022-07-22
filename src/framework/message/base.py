@@ -202,7 +202,9 @@ class BaseMESSAGE:
     async def update(self, init_options: dict={}, **kwargs):
         """
         Used for chaning the initialization parameters the object was initialized with.
-        NOTE: Upon updating, the internal state of objects get's reset, meaning you basically have a brand new created object.     
+        
+        .. warning::
+            Upon updating, the internal state of objects get's reset, meaning you basically have a brand new created object.     
         
         Parameters
         -------------

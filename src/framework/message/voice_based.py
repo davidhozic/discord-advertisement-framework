@@ -255,8 +255,12 @@ class VoiceMESSAGE(BaseMESSAGE):
 
     async def update(self, **kwargs):
         """
+        .. versionadded:: v1.9.5
+
         Used for chaning the initialization parameters the object was initialized with.
-        NOTE: Upon updating, the internal state of objects get's reset, meaning you basically have a brand new created object.
+        
+        .. warning::
+            Upon updating, the internal state of objects get's reset, meaning you basically have a brand new created object.
         
         Parameters
         -------------
@@ -269,9 +273,6 @@ class VoiceMESSAGE(BaseMESSAGE):
             Invalid keyword argument was passed
         Other
             Raised from .initialize() method
-        
-        .. versionadded::
-            v1.9.5
         """
         if "start_now" not in kwargs:
             # This parameter does not appear as attibute, manual setting neccessary

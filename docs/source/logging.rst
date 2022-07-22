@@ -105,7 +105,7 @@ GuildUSER
 MessageMODE
 ~~~~~~~~~~~~~~~~~~~~
 :Description:
-    This is a lookup table containing the the different message modes available by :ref:`TextMESAGE` / :ref:`DirectMESSAGE`, it is set to null for :ref:`VoiceMESSAGE`.
+    This is a lookup table containing the the different message modes available by :ref:`TextMESSAGE` / :ref:`DirectMESSAGE`, it is set to null for :ref:`VoiceMESSAGE`.
 
 :Attributes:
   - |PK| id: int - Internal identifier of the message mode inside the database.

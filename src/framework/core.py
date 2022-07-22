@@ -232,17 +232,21 @@ def remove_object(data):
         raise DAFParameterError(f"Invalid parameter type `{type(data)}`.", DAF_INVALID_TYPE)
 
 
-async def update(object_: Any, *, init_options: dict = {}, **kwargs):
+async def update(obj: Any, *, init_options: dict = {}, **kwargs):
         """
-        Used for chaning the initialization parameters the object_ was initialized with.
-        Upon updating, the internal state of objects get's reset, meaning you basically have a brand new created object.   
+        .. versionadded:: v1.9.5
+
+        Used for chaning the initialization parameters the obj was initialized with.
+        
+        .. warning::
+            Upon updating, the internal state of objects get's reset, meaning you basically have a brand new created object.   
 
         .. warning::
-            This is not meant for manual use, but should be used only by the object_ method.
+            This is not meant for manual use, but should be used only by the obj's method.
 
         Parameters
         -------------
-        object_: Any
+        obj: Any
             The object that contains a .update() method.
         init_options: dict
             Contains the initialization options used in .initialize() method for reinitializing certain objects.
@@ -256,14 +260,11 @@ async def update(object_: Any, *, init_options: dict = {}, **kwargs):
             Invalid keyword argument was passed.
         Other
             Raised from .initialize() method.
-
-        .. versionadded:: 
-            v1.9.5
         """
         
-        init_keys = inspect.getfullargspec(object_.__init__).args # Retrievies list of call args
+        init_keys = inspect.getfullargspec(obj.__init__).args # Retrievies list of call args
         init_keys.remove("self")
-        current_state = copy.copy(object_) # Make a copy of the current object for restoration in case of update failure
+        current_state = copy.copy(obj) # Make a copy of the current object for restoration in case of update failure
         try:  
             for k in kwargs:
                 if k not in init_keys:
@@ -274,17 +275,17 @@ async def update(object_: Any, *, init_options: dict = {}, **kwargs):
             updated_params = {}
             for k in init_keys:
                 # Store the attributes that match the __init__ parameters into `updated_params`
-                updated_params[k] = kwargs[k] if k in kwargs else getattr(object_, k)
+                updated_params[k] = kwargs[k] if k in kwargs else getattr(obj, k)
 
             # Call the implementation __init__ function and then initialize API related things
-            object_.__init__(**updated_params)
+            obj.__init__(**updated_params)
             # Call additional initialization function (if it has one)
-            if hasattr(object_, "initialize"):
-                await object_.initialize(**init_options)
+            if hasattr(obj, "initialize"):
+                await obj.initialize(**init_options)
         except Exception:
             # In case of failure, restore to original attributes
-            for k in type(object_).__slots__:
-                setattr(object_, k, getattr(current_state, k))
+            for k in type(obj).__slots__:
+                setattr(obj, k, getattr(current_state, k))
             raise
 
 

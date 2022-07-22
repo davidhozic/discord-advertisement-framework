@@ -88,10 +88,9 @@ class BaseGUILD:
     @property
     def snowflake(self) -> int:
         """
-        Returns the discord's snowflake identificator.
+        .. versionadded:: v1.9.5
 
-        .. versionadded:: 
-            v1.9.5
+        Returns the discord's snowflake identificator.
         """
         return self.apiobject if isinstance(self.apiobject, int) else self.apiobject.id
 
@@ -134,18 +133,17 @@ class BaseGUILD:
 
     async def update(self, **kwargs):
         """
+        .. versionadded:: v1.9.5
+
         Used for chaning the initialization parameters the object was initialized with.
         
-        .. note::
+        .. warning::
             Upon updating, the internal state of objects get's reset, meaning you basically have a brand new created object.
         
         Parameters
         -------------
         **kwargs: Any
             Custom number of keyword parameters which you want to update, these can be anything that is available during the object creation.
-        
-        .. versionadded::
-            v1.9.5
         """
         raise NotImplementedError
 
@@ -374,7 +372,7 @@ class GUILD(BaseGUILD):
         """
         Used for changing the initialization parameters the object was initialized with.
 
-        .. note:: 
+        .. warning:: 
             Upon updating, the internal state of objects get's reset, meaning you basically have a brand new created object.
             It also resets the message objects.
         
@@ -528,9 +526,11 @@ class USER(BaseGUILD):
     
     async def update(self, **kwargs):
         """
+        .. versionadded:: v1.9.5
+
         Used for changing the initialization parameters the object was initialized with.
 
-        .. note:: 
+        .. warning:: 
             Upon updating, the internal state of objects get's reset, meaning you basically have a brand new created object.
             It also resets the message objects.
 
@@ -543,9 +543,6 @@ class USER(BaseGUILD):
         -----------
         Exceptions raised from message.update method.
         Exceptions raised from core.update function.
-
-        .. versionadded::
-            v1.9.5
         """
         # Update the guild
         if "user_id" not in kwargs:

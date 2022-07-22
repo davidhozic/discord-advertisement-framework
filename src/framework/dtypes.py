@@ -26,8 +26,8 @@ __all__ = (
 #######################################################################
 class FunctionBaseCLASS:
     """
-    Used as a base class to FunctionCLASS which gets created in framework.data_function decorator.
-    Because the FunctionCLASS is inaccessible outside the data_function decorator,
+    Used as a base class to FunctionCLASS which gets created in :ref:`data_function` decorator.
+    Because the FunctionCLASS is inaccessible outside the :ref:`data_function` decorator,
     this class is used to detect if the MESSAGE.data parameter is of function type,
     because the function isinstance also returns True when comparing
     the object to it's class or to the base class from which the object class is inherited from.
@@ -36,18 +36,19 @@ class FunctionBaseCLASS:
 
 def data_function(fnc: Callable):
     """
+    .. note:: 
+        See :download:`main_data_function.py <../../Examples/Message Types/TextMESSAGE/main_data_function.py>`
+        for an example.
+
     Decorator used to create a framework FunctionCLASS class that wrapps the function.
     
     A class is returned that can be then used to create function wrapper objects that get sent to the
-    xMESSAGE as a parameter and then used inside the `.send()` method to obtain data from the function.
+    xMESSAGE as a parameter and then used inside the ``.send()`` method to obtain data from the function.
 
     Parameters
     ------------
     fnc: Callable
         The function to wrapp.
-
-    .. seealso:: `../../Examples/Message Types/TextMESSAGE/main_data_function.py`
-
     """
     class FunctionCLASS(FunctionBaseCLASS):
         """
@@ -200,8 +201,11 @@ class FILE:
     
     async def update(self, **kwargs):
         """
+        .. versionadded:: v1.9.5
+
         Used for chaning the initialization parameters the object was initialized with.
-        .. note::
+        
+        .. warning::
             Upon updating, the internal state of objects get's reset, meaning you basically have a brand new created object.
 
         Parameters
@@ -213,10 +217,6 @@ class FILE:
         -----------
         Exceptions 
             Raised from core.update() method.
-
-
-        .. versionadded::
-            v1.9.5
         """
         await core.update(self, **kwargs)
 
@@ -225,7 +225,7 @@ class FILE:
 ytdl.utils.bug_reports_message = lambda: "" # Suppress bug report message.
 
 class AUDIO(ytdl.YoutubeDL):
-    """~
+    """
     Used for streaming audio from file or YouTube.
     
     .. note::
@@ -239,7 +239,7 @@ class AUDIO(ytdl.YoutubeDL):
     Raises
     ----------
     DAFNotFoundError(code=DAF_FILE_NOT_FOUND/DAF_YOUTUBE_STREAM_ERROR) 
-         Raised when the file or youtube url is not found.
+        Raised when the file or youtube url is not found.
     """
 
     ytdl_options = {
@@ -295,23 +295,22 @@ class AUDIO(ytdl.YoutubeDL):
 
     async def update(self, **kwargs):
         """
+        .. versionadded:: v1.9.5
+        
         Used for chaning the initialization parameters the object was initialized with.
         
-        .. note::
+        .. warning::
             Upon updating, the internal state of objects get's reset, meaning you basically have a brand new created object.
 
         Parameters
         -------------
-        - **kwargs: `Any` - Custom number of keyword parameters which you want to update, these can be anything that is available during the object creation.
+        **kwargs: Any
+            Custom number of keyword parameters which you want to update, these can be anything that is available during the object creation.
 
         Raises
         -----------
-        
-        Exceptions raised from core.update() method.
-
-
-        .. versionadded::
-            v1.9.5
+        Any exception
+            Raised from core.update() method.
         """
         if "filename" not in kwargs:
             kwargs["filename"] = self.orig
