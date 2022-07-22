@@ -214,8 +214,10 @@ class BaseMESSAGE:
         
         Raises
         ------------
-        - `DAFParameterError(code=DAF_UPDATE_PARAMETER_ERROR)` - Invalid keyword argument was passed
-        - Other exceptions raised from .initialize() method
+        DAFParameterError(code=DAF_UPDATE_PARAMETER_ERROR)
+            Invalid keyword argument was passed
+        Other
+            Raised from .initialize() method
         
         .. versionadded::
             v1.9.5

@@ -317,12 +317,15 @@ class TextMESSAGE(BaseMESSAGE):
         
         Parameters
         -------------
-        - **kwargs: `Any` - Custom number of keyword parameters which you want to update, these can be anything that is available during the object creation.
+        **kwargs: Any
+            Custom number of keyword parameters which you want to update, these can be anything that is available during the object creation.
         
         Raises
         -----------
-        - DAFParameterError(code=DAF_UPDATE_PARAMETER_ERROR) - Invalid keyword argument was passed
-        - Other exceptions raised from `.initialize()` method
+        DAFParameterError(code=DAF_UPDATE_PARAMETER_ERROR)
+            Invalid keyword argument was passed
+        Other
+            Raised from .initialize() method.
         
         .. versionadded::
             v1.9.5
@@ -575,8 +578,10 @@ class DirectMESSAGE(BaseMESSAGE):
 
         Raises
         -----------
-        - DAFParameterError(code=DAF_UPDATE_PARAMETER_ERROR) - Invalid keyword argument was passed
-        - Other exceptions raised from `.initialize()` method
+        DAFParameterError(code=DAF_UPDATE_PARAMETER_ERROR)
+            Invalid keyword argument was passed
+        Other
+            Raised from .initialize() method
         
         .. versionadded::
             v1.9.5

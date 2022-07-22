@@ -64,7 +64,7 @@ class BaseGUILD:
 
     @property
     def log_file_name(self):
-        """~
+        """
         Returns a string that transforms the xGUILD's discord name into
         a string that contains only allowed character. This is a method instead of
         property because the name can change overtime.
@@ -135,11 +135,14 @@ class BaseGUILD:
     async def update(self, **kwargs):
         """
         Used for chaning the initialization parameters the object was initialized with.
-        NOTE: Upon updating, the internal state of objects get's reset, meaning you basically have a brand new created object.
+        
+        .. note::
+            Upon updating, the internal state of objects get's reset, meaning you basically have a brand new created object.
         
         Parameters
         -------------
-        - **kwargs: `Any` - Custom number of keyword parameters which you want to update, these can be anything that is available during the object creation.
+        **kwargs: Any
+            Custom number of keyword parameters which you want to update, these can be anything that is available during the object creation.
         
         .. versionadded::
             v1.9.5
@@ -273,8 +276,11 @@ class GUILD(BaseGUILD):
 
         Raises
         --------------
-        - `DAFParameterError(code=DAF_INVALID_TYPE)` - Raised when the message is not of type TextMESSAGE or VoiceMESSAGE.
-        - Other exceptions from `message.initialize()` method.
+        DAFParameterError(code=DAF_INVALID_TYPE)
+            Raised when the message is not of type TextMESSAGE or VoiceMESSAGE.
+
+        Other
+            Raised from message.initialize() method.
         """
         if not isinstance(message, (TextMESSAGE, VoiceMESSAGE)):
             raise DAFParameterError(f"Invalid xxxMESSAGE type: {type(message).__name__}, expected  {TextMESSAGE.__name__} or {VoiceMESSAGE.__name__}", DAF_INVALID_TYPE)
@@ -297,7 +303,8 @@ class GUILD(BaseGUILD):
 
         Raises
         --------------
-        - `DAFParameterError(code=DAF_INVALID_TYPE)` - Raised when the message is not of type TextMESSAGE or VoiceMESSAGE.
+        DAFParameterError(code=DAF_INVALID_TYPE)
+            Raised when the message is not of type TextMESSAGE or VoiceMESSAGE.
         """
         if isinstance(message, TextMESSAGE):
             self.t_messages.remove(message)
@@ -314,8 +321,11 @@ class GUILD(BaseGUILD):
 
         Raises
         -----------
-        - `DAFNotFoundError(code=DAF_GUILD_ID_NOT_FOUND)` - Raised when the guild_id wasn't found.
-        - Other exceptions from .add_message(message_object) method.
+        DAFNotFoundError(code=DAF_GUILD_ID_NOT_FOUND)
+            Raised when the guild_id wasn't found.
+
+        Other
+            Raised from .add_message(message_object) method.
         """
         guild_id = self.snowflake
         if isinstance(self.apiobject, int):
@@ -362,18 +372,23 @@ class GUILD(BaseGUILD):
 
     async def update(self, **kwargs):
         """
-        Used for chaning the initialization parameters the object was initialized with.
-        NOTE: Upon updating, the internal state of objects get's reset, meaning you basically have a brand new created object.
-        It also resets the message objects.
+        Used for changing the initialization parameters the object was initialized with.
+
+        .. note:: 
+            Upon updating, the internal state of objects get's reset, meaning you basically have a brand new created object.
+            It also resets the message objects.
         
         Parameters
         -------------
-        - **kwargs: `Any` - Custom number of keyword parameters which you want to update, these can be anything that is available during the object creation.
+        **kwargs: Any
+            Custom number of keyword parameters which you want to update, these can be anything that is available during the object creation.
 
         Raises
         -----------
-        - Exceptions raised from `message.update` method.
-        - Exceptions raised from `core.update` function.
+        
+        Exceptions raised from message.update method.
+        Exceptions raised from core.update function.
+
 
         .. versionadded::
             v1.9.5
@@ -429,8 +444,10 @@ class USER(BaseGUILD):
 
         Raises
         --------------
-        - `DAFParameterError(code=DAF_INVALID_TYPE)` - Raised when the message is not of type DirectMESSAGE.
-        - Other exceptions from `message.initialize()` method.
+        DAFParameterError(code=DAF_INVALID_TYPE)
+            Raised when the message is not of type DirectMESSAGE.
+        Other
+            Raised from message.initialize() method.
         """
         if not isinstance(message, DirectMESSAGE):
             raise DAFParameterError(f"Invalid xxxMESSAGE type: {type(message).__name__}, expected  {DirectMESSAGE.__name__}", DAF_INVALID_TYPE)
@@ -450,7 +467,8 @@ class USER(BaseGUILD):
 
         Raises
         --------------
-        - `DAFParameterError(code=DAF_INVALID_TYPE)` - Raised when the message is not of type DirectMESSAGE.
+        DAFParameterError(code=DAF_INVALID_TYPE)
+            Raised when the message is not of type DirectMESSAGE.
         """
         if isinstance(message, DirectMESSAGE):
             self.t_messages.remove(message)
@@ -464,8 +482,10 @@ class USER(BaseGUILD):
 
         Raises
         -----------
-        - `DAFNotFoundError(code=DAF_USER_CREATE_DM)` - Raised when the DM could not be created.
-        - Other exceptions from .add_message(message_object) method.
+        DAFNotFoundError(code=DAF_USER_CREATE_DM)
+            Raised when the DM could not be created.
+        Other
+            Raised from .add_message(message_object) method.
         """
         user_id = self.snowflake
         if isinstance(self.apiobject, int):
@@ -508,10 +528,12 @@ class USER(BaseGUILD):
     
     async def update(self, **kwargs):
         """
-        Used for chaning the initialization parameters the object was initialized with.
-        NOTE: Upon updating, the internal state of objects get's reset, meaning you basically have a brand new created object.
-        It also resets the message objects.
-        
+        Used for changing the initialization parameters the object was initialized with.
+
+        .. note:: 
+            Upon updating, the internal state of objects get's reset, meaning you basically have a brand new created object.
+            It also resets the message objects.
+
         Parameters
         -------------
         **kwargs: Any
@@ -519,9 +541,9 @@ class USER(BaseGUILD):
 
         Raises
         -----------
-        - Exceptions raised from `message.update` method.
-        - Exceptions raised from `core.update` function.
-        
+        Exceptions raised from message.update method.
+        Exceptions raised from core.update function.
+
         .. versionadded::
             v1.9.5
         """

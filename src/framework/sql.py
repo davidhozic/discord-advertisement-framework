@@ -60,7 +60,8 @@ def register_type(lookuptable: Literal["GuildTYPE", "MessageTYPE", "MessageMODE"
     
     Raises
     --------------
-    - `DAFNotFoundError(code=DAF_SQL_LOOKUPTABLE_NOT_FOUND)` - Raised when the lookuptable descriptor class was not found.
+    DAFNotFoundError(code=DAF_SQL_LOOKUPTABLE_NOT_FOUND)
+        Raised when the lookuptable descriptor class was not found.
     """
     def _register_type(cls):
         # Iterate thru all module globals to find the lookup table
@@ -204,7 +205,8 @@ class LoggerSQL:
 
         Raises
         --------------
-        - `DAFSQLError(code=DAF_SQL_CREATE_DT_ERROR)` - Raised when the method is unable to create the SQL custom data types.
+        DAFSQLError(code=DAF_SQL_CREATE_DT_ERROR)
+            Raised when the method is unable to create the SQL custom data types.
         """
         session: Session
         
@@ -233,7 +235,8 @@ class LoggerSQL:
         
         Raises
         ------------
-        - `DAFSQLError(code=DAF_SQL_CREATE_VPF_ERROR)` - Raised whenever the method is unable to create all the views, procedures, functions.     
+        DAFSQLError(code=DAF_SQL_CREATE_VPF_ERROR)
+            Raised whenever the method is unable to create all the views, procedures, functions.     
         """
         session: Session
         stms = [
@@ -396,7 +399,8 @@ class LoggerSQL:
         
         Raises
         -------------
-        - `DAFSQLError(code=DAF_SQL_CR_LT_VALUES_ERROR)` - Raised when lookuptable values could not be inserted into the database.
+        DAFSQLError(code=DAF_SQL_CR_LT_VALUES_ERROR)
+            Raised when lookuptable values could not be inserted into the database.
         """
         session : Session
         try:
@@ -418,7 +422,8 @@ class LoggerSQL:
         
         Raises
         -----------
-        - `DAFSQLError(code=DAF_SQL_CREATE_TABLES_ERROR)` - Raised when tables could not be created.
+        DAFSQLError(code=DAF_SQL_CREATE_TABLES_ERROR)
+            Raised when tables could not be created.
         """
         try:
             trace("[SQL]: Creating tables...", TraceLEVELS.NORMAL)
@@ -432,7 +437,8 @@ class LoggerSQL:
         
         Raises
         ------------
-        - `DAFSQLError(code=DAF_SQL_CURSOR_CONN_ERROR)` - Raised when the cursor connection could not be established.
+        DAFSQLError(code=DAF_SQL_CURSOR_CONN_ERROR)
+            Raised when the cursor connection could not be established.
         """
         try:
             trace("[SQL]: Connecting the cursor...", TraceLEVELS.NORMAL)
@@ -446,7 +452,8 @@ class LoggerSQL:
         
         Raises
         ----------------
-        - `(DAFSQLError code=DAF_SQL_BEGIN_ENGINE_ERROR)` - Raised when the engine could not connect to the specified database.
+        DAFSQLError(code=DAF_SQL_BEGIN_ENGINE_ERROR)
+            Raised when the engine could not connect to the specified database.
         """
         try:
             self.engine = create_engine(f"mssql+pytds://{self.username}:{self.password}@{self.server}/{self.database}",
@@ -464,12 +471,12 @@ class LoggerSQL:
         Raises
         -----------
         Any exceptions raised are exceptions that are raised in:
-        - `.begin_engine()`
-        - `.create_tables()`
-        - `.generate_lookup_values()`
-        - `.create_data_types()`
-        - `.create_analytic_objects()`
-        - `.connect_cursor()`
+        .begin_engine()
+        .create_tables()
+        .generate_lookup_values()
+        .create_data_types()
+        .create_analytic_objects()
+        .connect_cursor()
         """
         # Create engine for communicating with the SQL base
         self.begin_engine()
@@ -719,7 +726,7 @@ class LoggerSQL:
 
         Raises
         -----------
-        + Exceptions raised from `core.update` function.
+        Exceptions raised from core.update function.
 
         .. versionadded::
             v1.9.5
@@ -950,7 +957,7 @@ async def initialize(mgr_object: LoggerSQL):
     
     Raises
     ------------
-    - Any exceptions raised in `mgr_object.initialize()` method
+    Any exceptions raised in mgr_object.initialize() method
     """
 
     trace("[SQL]: Initializing logging...", TraceLEVELS.NORMAL)

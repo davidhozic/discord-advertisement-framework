@@ -185,7 +185,8 @@ class FILE:
     This is needed aposed to a normal file object because this way,
     you can edit the file after the framework has already been started.
     
-    NOTE: This is used for sending an actual file and NOT it's contents as text.
+    .. note:: 
+        This is used for sending an actual file and NOT it's contents as text.
 
     Parameters
     -------------
@@ -200,7 +201,8 @@ class FILE:
     async def update(self, **kwargs):
         """
         Used for chaning the initialization parameters the object was initialized with.
-        NOTE: Upon updating, the internal state of objects get's reset, meaning you basically have a brand new created object.
+        .. note::
+            Upon updating, the internal state of objects get's reset, meaning you basically have a brand new created object.
 
         Parameters
         -------------
@@ -209,7 +211,9 @@ class FILE:
 
         Raises
         -----------
-        - Exceptions raised from `core.update()` method.
+        Exceptions 
+            Raised from core.update() method.
+
 
         .. versionadded::
             v1.9.5
@@ -223,7 +227,9 @@ ytdl.utils.bug_reports_message = lambda: "" # Suppress bug report message.
 class AUDIO(ytdl.YoutubeDL):
     """~
     Used for streaming audio from file or YouTube.
-    NOTE: Using a youtube video, will cause the shilling start to be delayed due to youtube data extraction.
+    
+    .. note::
+        Using a youtube video, will cause the shilling start to be delayed due to youtube data extraction.
     
     Parameters
     -----------------
@@ -232,7 +238,8 @@ class AUDIO(ytdl.YoutubeDL):
     
     Raises
     ----------
-    - `DAFNotFoundError(code=DAF_FILE_NOT_FOUND/DAF_YOUTUBE_STREAM_ERROR)` - Raised when the file or youtube url is not found.
+    DAFNotFoundError(code=DAF_FILE_NOT_FOUND/DAF_YOUTUBE_STREAM_ERROR) 
+         Raised when the file or youtube url is not found.
     """
 
     ytdl_options = {
@@ -289,7 +296,9 @@ class AUDIO(ytdl.YoutubeDL):
     async def update(self, **kwargs):
         """
         Used for chaning the initialization parameters the object was initialized with.
-        NOTE: Upon updating, the internal state of objects get's reset, meaning you basically have a brand new created object.
+        
+        .. note::
+            Upon updating, the internal state of objects get's reset, meaning you basically have a brand new created object.
 
         Parameters
         -------------
@@ -297,7 +306,9 @@ class AUDIO(ytdl.YoutubeDL):
 
         Raises
         -----------
-        - Exceptions raised from `core.update()` method.
+        
+        Exceptions raised from core.update() method.
+
 
         .. versionadded::
             v1.9.5
