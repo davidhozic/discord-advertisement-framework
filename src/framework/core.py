@@ -26,7 +26,6 @@ __all__ = (
     "shutdown",
     "add_object",
     "remove_object",
-    "update"
 )
 
 #######################################################################
@@ -37,15 +36,15 @@ class GLOBALS:
     Storage class used for holding global variables.
     """
     user_callback: Callable = None
-    server_list: List[guild.BaseGUILD] = []
-    temp_server_list: List[guild.BaseGUILD] = None # Holds the guilds that are awaiting initialization (set in framework.run and cleared after initialization)
+    server_list: List[guild._BaseGUILD] = []
+    temp_server_list: List[guild._BaseGUILD] = None # Holds the guilds that are awaiting initialization (set in framework.run and cleared after initialization)
     sql_manager: sql.LoggerSQL = None,
     is_user: bool = False
 
 #######################################################################
 # Tasks
 #######################################################################
-async def advertiser(message_type: Literal["text", "voice"]) -> None:
+async def _advertiser(message_type: Literal["text", "voice"]) -> None:
     """
     The task that is responsible for shilling to channels.
     
@@ -64,7 +63,7 @@ async def advertiser(message_type: Literal["text", "voice"]) -> None:
 #######################################################################
 # Functions
 #######################################################################
-async def initialize() -> None:
+async def _initialize() -> None:
     """
     The main initialization function.
     It initializes all the other modules, creates advertising tasks
@@ -91,8 +90,8 @@ async def initialize() -> None:
 
     # Create advertiser tasks
     trace("[CORE]: Creating advertiser tasks", TraceLEVELS.NORMAL)
-    asyncio.create_task(advertiser("text"))
-    asyncio.create_task(advertiser("voice"))
+    asyncio.create_task(_advertiser("text"))
+    asyncio.create_task(_advertiser("voice"))
 
     # Create the user callback task
     callback = get_user_callback()
@@ -137,7 +136,7 @@ async def add_object(obj: Union[message.DirectMESSAGE, message.TextMESSAGE, mess
     obj: Union[message.DirectMESSAGE, message.TextMESSAGE, message.VoiceMESSAGE]
         The message object to add into the framework.
     snowflake: Union[int, guild.GUILD, guild.USER, dc.Guild, dc.User]
-        Which guild/user to add it to (can be snowflake id or a framework BaseGUILD object or a discord API wrapper object).
+        Which guild/user to add it to (can be snowflake id or a framework _BaseGUILD object or a discord API wrapper object).
 
     Raises
     -----------
@@ -156,11 +155,11 @@ async def add_object(obj, snowflake=None):
     # Convert the `snowflake` object into a discord snowflake ID (only if adding a message to guild)
     if isinstance(snowflake, (dc.Guild, dc.User)):
         snowflake = snowflake.id
-    elif isinstance(snowflake, guild.BaseGUILD):
+    elif isinstance(snowflake, guild._BaseGUILD):
         snowflake = snowflake.snowflake
 
     # Add the object
-    if isinstance(obj, guild.BaseGUILD):
+    if isinstance(obj, guild._BaseGUILD):
         if obj in GLOBALS.server_list:
             raise DAFParameterError(f"{object_type_name} with snowflake `{obj.snowflake}` is already added to the framework.", DAF_GUILD_ALREADY_ADDED)
 
@@ -233,9 +232,9 @@ def remove_object(data):
         raise DAFParameterError(f"Invalid parameter type `{type(data)}`.", DAF_INVALID_TYPE)
 
 
-async def update(obj: Any, *, init_options: dict = {}, **kwargs):
+async def _update(obj: Any, *, init_options: dict = {}, **kwargs):
         """
-        .. versionadded:: v1.9.5 **(NOT YET AVAILABLE)**
+        .. versionadded:: v1.9.5
 
         Used for changing the initialization parameters the obj was initialized with.
         
@@ -346,4 +345,4 @@ def run(token : str,
     if user_callback is not None:
         GLOBALS.user_callback = user_callback()                     # Called after framework has started
 
-    client.initialize(token, bot=not is_user, intents=intents)
+    client._initialize(token, bot=not is_user, intents=intents)

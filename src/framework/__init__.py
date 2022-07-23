@@ -22,4 +22,6 @@ from .exceptions import *
 #-----------------
 # TODO:
 #-----------------
-# . Documentation (change docstrings into google style and setup auto generated docs)
+#  Update Examples
+#  Check documentation for errors
+#  Add Lock objects in xGUILD (add_message, remove_message, update, advertise)

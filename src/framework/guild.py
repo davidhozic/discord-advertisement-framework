@@ -1,7 +1,7 @@
 """
     This module contains the class definitions for all things
     regarding the guild and also defines a USER class from the
-    BaseGUILD class.
+    _BaseGUILD class.
 """
 from    __future__ import annotations
 from    contextlib import suppress
@@ -34,7 +34,7 @@ class GLOBALS:
     server_log_path = None
 
 
-class BaseGUILD:
+class _BaseGUILD:
     """ 
     Represents an universal guild.
     
@@ -58,7 +58,7 @@ class BaseGUILD:
         "logging",
         "_messages",
     )
-    __logname__ = "BaseGUILD" # Dummy to demonstrate correct definition for @sql.register_type decorator
+    __logname__ = "_BaseGUILD" # Dummy to demonstrate correct definition for @sql._register_type decorator
 
     def __init__(self,
                  snowflake: Union[int, discord.Object],
@@ -70,7 +70,7 @@ class BaseGUILD:
         self._messages: list = messages  # Contains all the different message objects, this gets sorted in `.initialize()` method
 
     @property
-    def log_file_name(self):
+    def _log_file_name(self):
         """
         Returns a string that transforms the xGUILD's discord name into
         a string that contains only allowed character. This is a method instead of
@@ -83,9 +83,7 @@ class BaseGUILD:
         """
         Returns all the message objects inside the object.
 
-        .. versionchanged::
-            v1.9.5  **(Not yet available)** 
-            Automatically find all messages based on attribute name.
+        .. versionadded:: v1.9.5  **(Not yet available)** 
         """
         ret = []
         for x in self.__slots__:
@@ -102,7 +100,7 @@ class BaseGUILD:
         """
         return self.apiobject if isinstance(self.apiobject, int) else self.apiobject.id
 
-    def __eq__(self, other: BaseGUILD) -> bool:
+    def __eq__(self, other: _BaseGUILD) -> bool:
         """
         Compares two guild objects if they're equal.
         """
@@ -165,7 +163,7 @@ class BaseGUILD:
         Parameter:
         -----------
         data_context: dict
-            Dictionary containing data describing the message send attempt.
+            Dictionary containing data describing the message send attempt. (Return of ``message.send()``)
         """
 
         guild_context = {
@@ -179,7 +177,7 @@ class BaseGUILD:
             manager = sql.get_sql_manager()
             if (
                 manager is None or  # Short circuit evaluation
-                not await manager.save_log(guild_context, message_context)
+                not await manager._save_log(guild_context, message_context)
             ):
                 timestruct = time.localtime()
                 timestamp = "{:02d}.{:02d}.{:04d} {:02d}:{:02d}:{:02d}".format(timestruct.tm_mday,
@@ -195,7 +193,7 @@ class BaseGUILD:
                 with suppress(FileExistsError):
                     logging_output.mkdir(parents=True,exist_ok=True)
 
-                logging_output = str(logging_output.joinpath(self.log_file_name))
+                logging_output = str(logging_output.joinpath(self._log_file_name))
 
                 # Create file if it doesn't exist
                 fresh_file = False
@@ -238,8 +236,8 @@ class BaseGUILD:
             trace(f"[{type(self).__name__}]: Unable to save log. Exception: {exception}", TraceLEVELS.WARNING)
 
 
-@sql.register_type("GuildTYPE")
-class GUILD(BaseGUILD):
+@sql._register_type("GuildTYPE")
+class GUILD(_BaseGUILD):
     """
     The GUILD object represents a server to which messages will be sent.
     
@@ -257,10 +255,10 @@ class GUILD(BaseGUILD):
     messages: Optional[List[Union[TextMESSAGE, VoiceMESSAGE]]]
         Optional list of TextMESSAGE/VoiceMESSAGE objects.
     logging:  Optional[bool]
-        Optional variable dictating whatever to log sent't messages inside this guild.
+        Optional variable dictating whatever to log sent messages inside this guild.
     """
     
-    __logname__ = "GUILD" # For sql.register_type
+    __logname__ = "GUILD" # For sql._register_type
     __slots__   = (
         "t_messages",
         "vc_messages"
@@ -275,7 +273,7 @@ class GUILD(BaseGUILD):
         self.vc_messages: List[VoiceMESSAGE] = []
     
     @property
-    def log_file_name(self):
+    def _log_file_name(self):
         return "".join(char if char not in C_FILE_NAME_FORBIDDEN_CHAR else "#" for char in self.apiobject.name) + ".json"
     
     async def add_message(self, message: Union[TextMESSAGE, VoiceMESSAGE]):
@@ -291,7 +289,6 @@ class GUILD(BaseGUILD):
         --------------
         DAFParameterError(code=DAF_INVALID_TYPE)
             Raised when the message is not of type TextMESSAGE or VoiceMESSAGE.
-
         Other
             Raised from message.initialize() method.
         """
@@ -386,6 +383,8 @@ class GUILD(BaseGUILD):
     async def update(self, **kwargs):
         """
         Used for changing the initialization parameters the object was initialized with.
+        
+        .. versionadded:: v1.9.5 **(NOT YET AVAILABLE)**
 
         .. warning:: 
             Upon updating, the internal state of objects get's reset, meaning you basically have a brand new created object.
@@ -398,25 +397,22 @@ class GUILD(BaseGUILD):
 
         Raises
         -----------
-        
-        Exceptions raised from message.update method.
-        Exceptions raised from core.update function.
-
-
-        .. versionadded::
-            v1.9.5 **(NOT YET AVAILABLE)**
+        DAFParameterError(code=DAF_UPDATE_PARAMETER_ERROR)
+            Invalid keyword argument was passed.
+        Other
+            Raised from .initialize() method.
         """
         # Update the guild
         if "guild_id" not in kwargs:
             kwargs["guild_id"] = self.snowflake
-        await core.update(self, **kwargs)
+        await core._update(self, **kwargs)
         # Update messages
         for message in self.messages:
             await message.update()
         
 
-@sql.register_type("GuildTYPE")
-class USER(BaseGUILD):
+@sql._register_type("GuildTYPE")
+class USER(_BaseGUILD):
     """
     The USER object represents a user to whom messages will be sent.
     
@@ -427,16 +423,16 @@ class USER(BaseGUILD):
     messages: Optional[List[DirectMESSAGE]]
         Optional list of DirectMESSAGE objects.
     logging: Optional[bool]
-        Optional variable dictating whatever to log sent't messages inside this guild.
+        Optional variable dictating whatever to log sent messages inside this guild.
     """
 
-    __logname__ = "USER" # For sql.register_type
+    __logname__ = "USER" # For sql._register_type
     __slots__   = (
         "t_messages",
     )
 
     @property
-    def log_file_name(self):
+    def _log_file_name(self):
         return "".join(char if char not in C_FILE_NAME_FORBIDDEN_CHAR else "#" for char in f"{self.apiobject.display_name}#{self.apiobject.discriminator}") + ".json"
 
     def __init__(self,
@@ -556,13 +552,15 @@ class USER(BaseGUILD):
 
         Raises
         -----------
-        Exceptions raised from message.update method.
-        Exceptions raised from core.update function.
+        DAFParameterError(code=DAF_UPDATE_PARAMETER_ERROR)
+            Invalid keyword argument was passed.
+        Other
+            Raised from .initialize() method.
         """
         # Update the guild
         if "user_id" not in kwargs:
             kwargs["user_id"] = self.snowflake
-        await core.update(self, **kwargs)
+        await core._update(self, **kwargs)
         # Update messages
         for message in self.messages:
             await message.update(init_options={"user" : self.apiobject})

@@ -8,6 +8,7 @@ add_object
 --------------------------
 .. autofunction:: framework.add_object
 
+
 remove_object
 --------------------------
 .. autofunction:: framework.remove_object
@@ -28,11 +29,6 @@ get_sql_manager
 .. autofunction:: framework.get_sql_manager
 
 
-register_type
---------------------------
-.. autofunction:: framework.register_type
-
-
 run
 --------------------------
 .. autofunction:: framework.run
@@ -47,8 +43,4 @@ trace
 --------------------------
 .. autofunction:: framework.trace
 
-
-update
---------------------------
-.. autofunction:: framework.update
 

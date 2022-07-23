@@ -14,7 +14,7 @@ from   .import core
 
 __all__ = (
     "data_function",
-    "FunctionBaseCLASS",
+    "_FunctionBaseCLASS",
     "EMBED",
     "FILE",
     "AUDIO"
@@ -24,7 +24,7 @@ __all__ = (
 #######################################################################
 # Decorators
 #######################################################################
-class FunctionBaseCLASS:
+class _FunctionBaseCLASS:
     """
     Used as a base class to FunctionCLASS which gets created in :ref:`data_function` decorator.
     Because the FunctionCLASS is inaccessible outside the :ref:`data_function` decorator,
@@ -50,7 +50,7 @@ def data_function(fnc: Callable):
     fnc: Callable
         The function to wrap.
     """
-    class FunctionCLASS(FunctionBaseCLASS):
+    class FunctionCLASS(_FunctionBaseCLASS):
         """
         Used for creating special classes that are then used to create objects in the framework.MESSAGE
         data parameter, allows for sending dynamic content received thru an user defined function.
@@ -101,7 +101,7 @@ class EMBED(discord.Embed):
         Url of image that will be placed at the top right of embed.
 
     other parameters (discord.Embed):
-        See https://docs.pycord.dev/en/master/api.html?highlight=discord%20embed#discord.Embed
+        See `PyCord docs <https://docs.pycord.dev/en/master/api.html?highlight=discord%20embed#discord.Embed>`_
     """
     __slots__ = (
         'title',
@@ -198,27 +198,6 @@ class FILE:
     def __init__(self,
                  filename: str):
         self.filename = filename
-    
-    async def update(self, **kwargs):
-        """
-        .. versionadded:: v1.9.5 **(NOT YET AVAILABLE)**
-
-        Used for changing the initialization parameters the object was initialized with.
-        
-        .. warning::
-            Upon updating, the internal state of objects get's reset, meaning you basically have a brand new created object.
-
-        Parameters
-        -------------
-        **kwargs: Any
-            Custom number of keyword parameters which you want to update, these can be anything that is available during the object creation.
-
-        Raises
-        -----------
-        Exceptions 
-            Raised from core.update() method.
-        """
-        await core.update(self, **kwargs)
 
 
 # Youtube streaming 
@@ -292,26 +271,3 @@ class AUDIO(ytdl.YoutubeDL):
             "type:" : "File",
             "filename": self.orig
         }
-
-    async def update(self, **kwargs):
-        """
-        .. versionadded:: v1.9.5 **(NOT YET AVAILABLE)**
-        
-        Used for changing the initialization parameters the object was initialized with.
-        
-        .. warning::
-            Upon updating, the internal state of objects get's reset, meaning you basically have a brand new created object.
-
-        Parameters
-        -------------
-        **kwargs: Any
-            Custom number of keyword parameters which you want to update, these can be anything that is available during the object creation.
-
-        Raises
-        -----------
-        Any exception
-            Raised from core.update() method.
-        """
-        if "filename" not in kwargs:
-            kwargs["filename"] = self.orig
-        await core.update(self, **kwargs)

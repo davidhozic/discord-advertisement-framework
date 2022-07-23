@@ -30,10 +30,10 @@ class CLIENT(discord.Client):
         """
         trace(f"[CLIENT]: Logged in as {self.user}", TraceLEVELS.NORMAL)
         # Initialize all the modules from the core module
-        asyncio.create_task(core.initialize())
+        asyncio.create_task(core._initialize())
         
 
-def initialize(token: str, *,
+def _initialize(token: str, *,
                bot: bool,
                intents: discord.Intents):
     """

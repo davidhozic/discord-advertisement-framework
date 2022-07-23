@@ -1,7 +1,6 @@
 """
     Contains definitions related to voice messaging."""
 
-from re import L
 from   .base        import *
 from   ..dtypes     import *
 from   ..tracing    import *
@@ -25,7 +24,7 @@ class GLOBALS:
     """
     voice_client: discord.VoiceClient = None
 
-@sql.register_type("MessageTYPE")
+@sql._register_type("MessageTYPE")
 class VoiceMESSAGE(BaseMESSAGE):
     """
     This class is used for creating objects that represent messages which will be streamed to voice channels.
@@ -39,15 +38,39 @@ class VoiceMESSAGE(BaseMESSAGE):
     Parameters
     ------------
     start_period: Union[int, None]
-        If this this is not None, then it dictates the bottom limit for range of the randomized period. Set this to None  for a fixed sending period.
+        The value of this parameter can be:
+
+        ..  table:: 
+        
+            ===========  =================================================================================================================
+             Value        Info
+            ===========  =================================================================================================================
+             None         Messages are sent in a constant time period equal to the value of ``end_period``.
+             int > 0      Messages are sent in a randomized time period. ``start_period`` represents the bottom limit of this period.
+            ===========  =================================================================================================================
+
     end_period: int
-        If start_period is not None, this dictates the upper limit for range of the randomized period. If start_period is None, then this dictates a fixed sending period in SECONDS, eg. if you pass the value `5`, that means the message will be sent every 5 seconds.
+        If ``start_period`` > 0, then this represents the upper limit of randomized time period in which messages will be sent.
+        If ``start_period`` is None, then this represents the actual time period between each message send.
+
+        .. code-block:: python
+            :caption: **Randomized** sending period between **5** seconds and **10** seconds.
+            
+            # Time between each send is somewhere between 5 seconds and 10 seconds.
+            framework.VoiceMESSAGE(start_period=None, end_period=10, data=framework.AUDIO("msg.mp3"), channels=[12345], start_now=True, volume=50)
+
+        .. code-block:: python
+            :caption: **Fixed** sending period at **10** seconds
+
+            # Time between each send is exactly 10 seconds.
+            framework.VoiceMESSAGE(start_period=None, end_period=10, data=framework.AUDIO("msg.mp3"), channels=[12345], start_now=True, volume=50)
+
     data: AUDIO
         The data parameter is the actual data that will be sent using discord's API. The data types of this parameter can be:
             - AUDIO object.
             - Function that accepts any amount of parameters and returns an AUDIO object. To pass a function, YOU MUST USE THE framework.data_function decorator on the function before passing the function to the framework.
     channels: Iterable[Union[int, discord.VoiceChannel]]
-        Channels that it will be advertised into.
+        Channels that it will be advertised into (Can be snowflake ID or channel objects from PyCord).
     start_now: bool
         If True, then the framework will send the message as soon as it is run.
     volume: int
@@ -67,7 +90,7 @@ class VoiceMESSAGE(BaseMESSAGE):
         "update_mutex",
     )
 
-    __logname__ = "VoiceMESSAGE"    # For sql.register_type
+    __logname__ = "VoiceMESSAGE"    # For sql._register_type
     __valid_data_types__ = {AUDIO}  # This is used in the BaseMESSAGE.initialize() to check if the passed data parameters are of correct type
 
     def __init__(self, start_period: Union[float, None],
@@ -82,7 +105,7 @@ class VoiceMESSAGE(BaseMESSAGE):
         self.volume = max(0, min(100, volume)) # Clamp the volume to 0-100 % 
         self.channels = list(set(channels))    # Auto remove duplicates
 
-    def generate_log_context(self,
+    def _generate_log_context(self,
                              audio: AUDIO,
                              succeeded_ch: List[discord.VoiceChannel],
                              failed_ch: List[dict]):
@@ -94,7 +117,7 @@ class VoiceMESSAGE(BaseMESSAGE):
         audio: audio
             The audio that was streamed.
         succeeded_ch: List[Union[discord.VoiceChannel]] 
-            List of the successfuly streamed channels
+            List of the successfully streamed channels
         failed_ch: List[Dict[discord.VoiceChannel, Exception]] 
             List of dictionaries contained the failed channel and the Exception object
         """
@@ -113,14 +136,14 @@ class VoiceMESSAGE(BaseMESSAGE):
             "type" : type(self).__name__
         }
 
-    def get_data(self) -> dict:
+    def _get_data(self) -> dict:
         """"
         Returns a dictionary of keyword arguments that is then expanded
-        into other methods eg. `send_channel, generate_log`
+        into other methods eg. `_send_channel, generate_log`
         """
         data = None
         _data_to_send = {}
-        data = self.data.get_data() if isinstance(self.data, FunctionBaseCLASS) else self.data
+        data = self.data.get_data() if isinstance(self.data, _FunctionBaseCLASS) else self.data
         if data is not None:
             if not isinstance(data, (list, tuple, set)):
                 data = (data,)
@@ -129,7 +152,7 @@ class VoiceMESSAGE(BaseMESSAGE):
                     _data_to_send["audio"] = element
         return _data_to_send
 
-    async def initialize_channels(self):
+    async def _initialize_channels(self):
         """
         This method initializes the implementation specific api objects and checks for the correct channel input context.
         
@@ -159,7 +182,7 @@ class VoiceMESSAGE(BaseMESSAGE):
         if not len(self.channels):
             raise DAFNotFoundError(f"No valid channels were passed to {type(self)} object", DAF_MISSING_PARAMETER)
 
-    async def send_channel(self,
+    async def _send_channel(self,
                            channel: discord.VoiceChannel,
                            audio: AUDIO) -> dict:
         """
@@ -181,7 +204,7 @@ class VoiceMESSAGE(BaseMESSAGE):
             # Check if client has permissions before attempting to join
             ch_perms = channel.permissions_for(channel.guild.get_member(client.get_client().user.id))
             if not all([ch_perms.connect, ch_perms.stream, ch_perms.speak]):
-                raise self.generate_exception(403, 50013, "You lack permissions to perform that action", discord.Forbidden)
+                raise self._generate_exception(403, 50013, "You lack permissions to perform that action", discord.Forbidden)
 
             if GLOBALS.voice_client is None or not GLOBALS.voice_client.is_connected():
                 GLOBALS.voice_client = await channel.connect(timeout=C_VC_CONNECT_TIMEOUT)
@@ -199,9 +222,9 @@ class VoiceMESSAGE(BaseMESSAGE):
             if isinstance(ex, (FileExistsError, discord.Forbidden)):
                 pass # Don't change error
             elif client.get_client().get_channel(channel.id) is None:
-                ex = self.generate_exception(404, 10003, "Channel was deleted", discord.NotFound)
+                ex = self._generate_exception(404, 10003, "Channel was deleted", discord.NotFound)
             else:
-                ex = self.generate_exception(500, 0, "Timeout error", discord.HTTPException)
+                ex = self._generate_exception(500, 0, "Timeout error", discord.HTTPException)
             return {"success": False, "reason": ex}
         finally:
             if GLOBALS.voice_client is not None and GLOBALS.voice_client.is_connected():
@@ -215,7 +238,7 @@ class VoiceMESSAGE(BaseMESSAGE):
         
         Returns
         ---------
-        Dictionary generated by the generate_log_context method or the None object if message wasn't ready to be sent (data_function returned None or an invalid type)
+        Dictionary generated by the _generate_log_context method or the None object if message wasn't ready to be sent (data_function returned None or an invalid type)
         """
         
         if self.update_mutex.locked():
@@ -226,13 +249,13 @@ class VoiceMESSAGE(BaseMESSAGE):
 
         async with self.update_mutex:
             # Take mutex to prevent access from .update() function.
-            _data_to_send = self.get_data()
+            _data_to_send = self._get_data()
             if any(_data_to_send.values()):
                 errored_channels = []
                 succeded_channels= []
 
                 for channel in self.channels:
-                    context = await self.send_channel(channel, **_data_to_send)
+                    context = await self._send_channel(channel, **_data_to_send)
                     if context["success"]:
                         succeded_channels.append(channel)
                     else:
@@ -249,7 +272,7 @@ class VoiceMESSAGE(BaseMESSAGE):
                             self.channels.remove(channel)
                             trace(f"Channel {channel.name}(ID: {channel.id}) {'was deleted' if reason.code == 10003 else 'does not have permissions'}, removing it from the send list", TraceLEVELS.WARNING)
 
-                return self.generate_log_context(**_data_to_send, succeeded_ch=succeded_channels, failed_ch=errored_channels)
+                return self._generate_log_context(**_data_to_send, succeeded_ch=succeded_channels, failed_ch=errored_channels)
             return None
 
     async def update(self, **kwargs):
@@ -278,4 +301,4 @@ class VoiceMESSAGE(BaseMESSAGE):
             kwargs["start_now"] = True
 
         async with self.update_mutex:
-            await core.update(self, **kwargs) # No additional modifications are required
+            await core._update(self, **kwargs) # No additional modifications are required

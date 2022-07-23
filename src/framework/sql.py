@@ -5,7 +5,7 @@
     the framework.run function with the SqlCONTROLLER object.
 """
 from  datetime   import datetime
-from  typing     import Callable, Dict, List, Literal, Any
+from  typing     import Callable, Dict, List, Literal, Any, Optional, Union
 from  contextlib import suppress
 from  sqlalchemy import (
                          SmallInteger, Integer, BigInteger, NVARCHAR, DateTime,
@@ -32,7 +32,7 @@ import pytds
 
 __all__ = (
     "LoggerSQL",
-    "register_type",
+    "_register_type",
     "get_sql_manager"
 )
 
@@ -46,7 +46,7 @@ class GLOBALS:
     lt_types = []
 
 
-def register_type(lookuptable: Literal["GuildTYPE", "MessageTYPE", "MessageMODE"]) -> Callable:
+def _register_type(lookuptable: Literal["GuildTYPE", "MessageTYPE", "MessageMODE"]) -> Callable:
     """
     Returns a decorator which will create a row inside <lookuptable> table.
     The name of the inserted item is defined with the __logname__ variable
@@ -63,7 +63,7 @@ def register_type(lookuptable: Literal["GuildTYPE", "MessageTYPE", "MessageMODE"
     DAFNotFoundError(code=DAF_SQL_LOOKUPTABLE_NOT_FOUND)
         Raised when the lookuptable descriptor class was not found.
     """
-    def _register_type(cls):
+    def decorator_register_type(cls):
         # Iterate thru all module globals to find the lookup table
         # and insert a row into that lookup table (name of the type is defined with __logname__)
         for lt_name, lt_cls in globals().items():
@@ -71,13 +71,14 @@ def register_type(lookuptable: Literal["GuildTYPE", "MessageTYPE", "MessageMODE"
                 GLOBALS.lt_types.append( lt_cls(cls.__logname__) )
                 return cls
         raise DAFNotFoundError(f"[SQL]: Unable to to find lookuptable: {lookuptable}", DAF_SQL_LOOKUPTABLE_NOT_FOUND)
-    return _register_type
+
+    return decorator_register_type
 
 
 class LoggerSQL:
     """
     Used for controlling the SQL database used for message logs.
-    
+
     Parameters
     ------------
     username: str
@@ -121,11 +122,11 @@ class LoggerSQL:
         self.engine: sqa.engine.Engine = None
         self.cursor: pytds.Cursor = None
         self._sessionmaker: sessionmaker  = None
+
+        # Lock used to prevent multiple tasks from trying to access the `._save_log()` method at once.
+        # Also used in the `.update()` method to prevent race conditions.
         self.lock = asyncio.Lock() 
-        """
-        Lock used to prevent multiple tasks from trying to access the `.save_log()` method at once.
-        Also used in the `.update()` method to prevent race conditions.
-        """
+
         # Caching (to avoid unnecessary queries)
         ## Lookup table caching
         self.MessageMODE = {}
@@ -136,9 +137,9 @@ class LoggerSQL:
         self.GuildUSER = {}
         self.CHANNEL = {}
 
-    def add_to_cache(self, table: Base, key: Any, value: Any) -> None:
+    def _add_to_cache(self, table: Base, key: Any, value: Any) -> None:
         """
-        Adds a value to the internal cache of a certain table
+        Adds a value to the internal cache of a certain table.
         
         Parameters
         ------------
@@ -151,7 +152,7 @@ class LoggerSQL:
         """
         getattr(self, table.__name__)[key] = value
 
-    def clear_cache(self, *to_clear: str) -> None:
+    def _clear_cache(self, *to_clear: str) -> None:
         """
         Clears the caching dictionaries inside the object that match any of the tables.
         
@@ -165,9 +166,9 @@ class LoggerSQL:
         for k in to_clear:
             getattr(self, k).clear()
 
-    def reconnect_after(self, wait: int, loop: asyncio.AbstractEventLoop) -> None:
+    def _reconnect_after(self, wait: int, loop: asyncio.AbstractEventLoop) -> None:
         """
-        Reconnects the SQL manager to the database after <wait>.
+        Reconnects the SQL manager to the database after <wait> if it was disconnected.
         
         Parameters
         -----------
@@ -175,7 +176,7 @@ class LoggerSQL:
             Time in seconds after which reconnect.
         loop: AbstractEventLoop
             Asyncio event loop (for thread executor).
-"""
+        """
         def _reconnect():
             """
             Tries to reconnect after <wait>, if it failed,
@@ -184,7 +185,7 @@ class LoggerSQL:
             for tries in range(SQL_RECONNECT_ATTEMPTS):
                 trace(f"[SQL]: Reconnecting to database {self.database}.")
                 with suppress(DAFSQLError):
-                    self.connect_cursor()
+                    self.begin_engine()
                     trace(f"[SQL]: Reconnected to the database {self.database}.")
                     GLOBALS.enabled = True
                     return
@@ -196,10 +197,10 @@ class LoggerSQL:
             trace(f"[SQL]: Failed to reconnect in {SQL_RECONNECT_ATTEMPTS} attempts, SQL logging is now disabled.")
 
         GLOBALS.enabled = False
-        self.cursor.close()
+        self.stop_engine()
         loop.run_in_executor(None, _reconnect)
 
-    def create_data_types(self) -> None:
+    def _create_data_types(self) -> None:
         """
         Creates data types that are used by the framework to log messages.
 
@@ -226,12 +227,9 @@ class LoggerSQL:
             raise DAFSQLError(f"Unable to create SQL data types\nReason: {ex}", DAF_SQL_CREATE_DT_ERROR)
         
 
-    def create_analytic_objects(self) -> None:
+    def _create_analytic_objects(self) -> None:
         """
         Creates Stored Procedures, Views and Functions via SQL code.
-        The method iterates thru a list, first checking if the object exists.
-        If it does exist, it uses ALTER + "stm", if it doesn't exist,
-        it uses CREATE + "stm" command to create the object inside the SQL database.
         
         Raises
         ------------
@@ -369,7 +367,7 @@ class LoggerSQL:
 	                   IF @existence = 1
 	                   BEGIN        
 	                    	INSERT INTO MessageChannelLOG (log_id, channel_id, reason)
-	                   		SELECT @last_log_id, ch.id, ch.reason FROM @channels ch --OPENJSON(@channels) WITH(id int, reason nvarchar(max)) ch;
+	                   		SELECT @last_log_id, ch.id, ch.reason FROM @channels ch;
 	                   END
 	                   COMMIT;
 	                   BEGIN TRAN;
@@ -391,11 +389,10 @@ class LoggerSQL:
         except Exception as ex:
             raise DAFSQLError(f" Unable to create views, procedures and functions.\nReason: {ex}", DAF_SQL_CREATE_VPF_ERROR)
 
-        
 
-    def generate_lookup_values(self) -> None:
+    def _generate_lookup_values(self) -> None:
         """
-        Generates the lookup values for all the different classes the @register_type decorator was used on.
+        Generates the lookup values for all the different classes the @_register_type decorator was used on.
         
         Raises
         -------------
@@ -412,11 +409,11 @@ class LoggerSQL:
                         session.add(to_add)
                         session.flush()
                         existing = to_add
-                    self.add_to_cache(type(to_add), to_add.name, existing.id)
+                    self._add_to_cache(type(to_add), to_add.name, existing.id)
         except Exception as ex:
             raise DAFSQLError(f"Unable to create lookuptables' rows.\nReason: {ex}", DAF_SQL_CR_LT_VALUES_ERROR)
 
-    def create_tables(self) -> None:
+    def _create_tables(self) -> None:
         """
         Creates tables from the SQLAlchemy's descriptor classes
         
@@ -466,38 +463,41 @@ class LoggerSQL:
     async def initialize(self) -> None:
         """ 
         This method initializes the connection to the database, creates the missing tables
-        and fills the lookuptables with types defined by the register_type(lookup_table) function.
-            
+        and fills the lookuptables with types defined by the _register_type(lookup_table) function.
+
+        .. note:: 
+            This is automatically called when running the framework.
+
         Raises
         -----------
         Inherited from DAFSQLError
             from ``.begin_engine()``
         Inherited from DAFSQLError
-            from ``.create_tables()``
+            from ``._create_tables()``
         Inherited from DAFSQLError
-            from ``.generate_lookup_values()``
+            from ``._generate_lookup_values()``
         Inherited from DAFSQLError
-            from ``.create_data_types()``
+            from ``._create_data_types()``
         Inherited from DAFSQLError
-            from ``.create_analytic_objects()``
+            from ``._create_analytic_objects()``
         Inherited from DAFSQLError
             from ``.connect_cursor()``
         """
         # Create engine for communicating with the SQL base
         self.begin_engine()
         # Create tables and the session class bound to the engine
-        self.create_tables()
+        self._create_tables()
         # Insert the lookuptable values        
-        self.generate_lookup_values()
+        self._generate_lookup_values()
         # Create datatypes
-        self.create_data_types()
+        self._create_data_types()
         # Initialize views, procedures and functions
-        self.create_analytic_objects()
+        self._create_analytic_objects()
         # Connect the cursor for faster procedure calls
         self.connect_cursor()
         GLOBALS.enabled = True
     
-    def get_insert_guild(self,
+    def _get_insert_guild(self,
                     snowflake: int,
                     name: str,
                     _type: str) -> int:
@@ -521,32 +521,36 @@ class LoggerSQL:
                 result = session.query(GuildUSER.id).filter(GuildUSER.snowflake_id == snowflake).first()
                 if result is not None:
                     result = result[0]
-                    self.add_to_cache(GuildUSER, snowflake, result)
+                    self._add_to_cache(GuildUSER, snowflake, result)
                 else:
                     guild_type = self.GuildTYPE[_type]
                     result = GuildUSER(guild_type, snowflake, name)
                     session.add(result)
                     session.flush()
                     result = result.id
-                    self.add_to_cache(GuildUSER, snowflake, result)
+                    self._add_to_cache(GuildUSER, snowflake, result)
         else:
             result = self.GuildUSER[snowflake]
         return result
 
-    def get_insert_channels(self,
-                        channels: List[Dict[int, str]],
-                        guild_id: int) -> List[dict]:
+    def _get_insert_channels(self,
+                        channels: List[dict],
+                        guild_id: int) -> List[Dict[int, Union[str, None]]]:
         """
-        Adds missing channels to the database, where it then caches those added,
-        to avoid unnecessary queries if all channels exist and then returns
-        a list of dictionaries containing internal DB id and reason why sending failed.
+        Adds missing channels to the database, then caches those added
+        for performance.
         
         Parameters
         ------------
-        channels: List[Dict[int, str]]
-            List of dictionaries containing snowflake_id and name of the channel.
+        channels: List[dict],
+            List of dictionaries containing values for snowflake id ("id") and name of the channel ("name"). If sending to failed, it also contains text like description of the error ("reason").
         guild_id: int
             The internal DB id of the guild where the channels are in.
+        
+        Return
+        -------------
+        List[Dict[int, Union[str, None]]]
+            List of dictionaries containing database ID of a channel and a reason why sending to channel failed.
         """
 
         not_cached = [{"id": x["id"], "name": x["name"]} for x in channels  if x["id"] not in self.CHANNEL] # Get snowflakes that are not cached
@@ -556,13 +560,13 @@ class LoggerSQL:
                 session: Session
                 result = session.query(CHANNEL.id, CHANNEL.snowflake_id).where(CHANNEL.snowflake_id.in_(not_cached_snow)).all()
                 for internal_id, snowflake_id in result:
-                    self.add_to_cache(CHANNEL, snowflake_id, internal_id)
+                    self._add_to_cache(CHANNEL, snowflake_id, internal_id)
                 to_add = [CHANNEL(x["id"], x["name"], guild_id) for x in not_cached if x["id"] not in self.CHANNEL]
                 if len(to_add):
                     session.add_all(to_add)
                     session.flush()
                     for channel in to_add:
-                        self.add_to_cache(CHANNEL, channel.snowflake_id, channel.id)
+                        self._add_to_cache(CHANNEL, channel.snowflake_id, channel.id)
         
         ret = [(self.CHANNEL.get(d["id"],None), d.get("reason", None))  for d in channels]
         #For some reason pytds doesn't like when a row with a NULL column value is followed by a row with a non NULL column value
@@ -579,14 +583,13 @@ class LoggerSQL:
         """
         self.cursor.close()
         self.engine.dispose()
-        self.clear_cache()
         GLOBALS.enabled = False
 
-    def handle_error(self,
+    def _handle_error(self,
                      exception: int, message: str,
                      loop: asyncio.AbstractEventLoop) -> bool:
         """
-        Used to handle errors that happen in the save_log method.
+        Used to handle errors that happen in the _save_log method.
 
         Return
         --------
@@ -598,25 +601,25 @@ class LoggerSQL:
         try:
             # Handle the error
             if exception == 208:  # Invalid object name (table deleted)
-                self.create_tables()
-                self.create_data_types()
-                self.create_analytic_objects()
+                self._create_tables()
+                self._create_data_types()
+                self._create_analytic_objects()
 
             elif exception in {547, 515}:   # Constraint conflict, NULL value 
                 r_table = re.search(r'(?<=table "dbo.).+(?=")', message) # Try to parse the table name with regex
                 if r_table is not None:
-                    self.clear_cache(r_table.group(0))  # Clears only the affected table cache 
+                    self._clear_cache(r_table.group(0))  # Clears only the affected table cache 
                 else:
-                    self.clear_cache()  # Clears all caching tables
-                self.generate_lookup_values()
+                    self._clear_cache()  # Clears all caching tables
+                self._generate_lookup_values()
 
             elif exception in {-1, 2, 53}:  # Disconnect error, reconnect after period
-                self.reconnect_after(SQL_RECONNECT_TIME, loop)
+                self._reconnect_after(SQL_RECONNECT_TIME, loop)
                 res = False # Don't try to save while reconnecting
 
             elif exception == 2812:
-                self.create_data_types()
-                self.create_analytic_objects()
+                self._create_data_types()
+                self._create_analytic_objects()
 
             elif exception == 2801: # Object was altered (via external source) after procedure was compiled
                 pass # Just retry
@@ -635,7 +638,7 @@ class LoggerSQL:
 
         return res  # Returns if the error was handled or not
 
-    async def save_log(self,
+    async def _save_log(self,
                  guild_context: dict,
                  message_context: dict) -> bool:
         """
@@ -646,7 +649,7 @@ class LoggerSQL:
         guild_context: dict
             Context generated by the xGUILD object, see guild.xGUILD.generate_log() for more info.
         message_context: dict
-            Context generated by the xMESSAGE object, see guild.xMESSAGE.generate_log_context() for more info.
+            Context generated by the xMESSAGE object, see guild.xMESSAGE._generate_log_context() for more info.
 
         Return
         -------
@@ -684,10 +687,10 @@ class LoggerSQL:
             for tries in range(SQL_MAX_SAVE_ATTEMPTS):
                 try:
                     # Insert guild into the database and cache if it doesn't exist
-                    guild_id = self.get_insert_guild(guild_snowflake, guild_name, guild_type)
+                    guild_id = self._get_insert_guild(guild_snowflake, guild_name, guild_type)
                     if channels is not None:
                         # Insert channels into the database and cache if it doesn't exist
-                        _channels = self.get_insert_channels(channels, guild_id)
+                        _channels = self._get_insert_channels(channels, guild_id)
                         _channels = pytds.TableValuedParam("t_tmp_channel_log", rows=_channels)
                     # Execute the saved procedure that saves the log
                     self.cursor.callproc("sp_save_log", (json.dumps(sent_data), 
@@ -712,7 +715,7 @@ class LoggerSQL:
                     trace(f"[SQL]: Saving log failed. {code} - {message}. Attempting recovery... (Tries left: {SQL_MAX_SAVE_ATTEMPTS - tries - 1})")
                     loop = asyncio.get_event_loop()
                     # Run in executor to prevent blocking
-                    if not await loop.run_in_executor(None, self.handle_error, code, message, asyncio.get_event_loop()):
+                    if not await loop.run_in_executor(None, self._handle_error, code, message, asyncio.get_event_loop()):
                         break
         
         trace(f"[SQL]: Saving log failed. Switching to file logging.")
@@ -735,12 +738,15 @@ class LoggerSQL:
 
         Raises
         -----------
-        Exceptions raised from core.update function.
+        DAFParameterError(code=DAF_UPDATE_PARAMETER_ERROR)
+            Invalid keyword argument was passed.
+        Other
+            Raised from .initialize() method.
         """
         async with self.lock:
             try:
                 self.stop_engine()
-                await core.update(self, **kwargs)
+                await core._update(self, **kwargs)
                 GLOBALS.enabled = True
             except Exception:
                 # Reinitialize since engine was disconnected
