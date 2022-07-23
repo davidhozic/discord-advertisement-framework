@@ -3,9 +3,13 @@ import inspect
 import os
 import sys
 
+# Set current working directory to scripts folder
+for path, dirs, files in os.walk("./"):
+    for dir in dirs:
+        if dir == "scripts":
+            os.chdir(os.path.join(path, dir))
+            break
 
-with suppress():
-    os.chdir("docs/scripts")
 
 sys.path.append(os.path.abspath("../../src"))
 import framework
@@ -30,11 +34,12 @@ CLASS_TEMPLATE =\
 export_f = ""
 export_c = ""
 for item in inspect.getmembers(framework, lambda x: inspect.isclass(x) or inspect.isfunction(x)):
-    item = item[1]
-    if inspect.isfunction(item):
-        export_f += FUNCTION_TEMPLATE.format(function_name=item.__name__) + "\n"
-    elif inspect.isclass(item):
-        export_c += CLASS_TEMPLATE.format(class_name=item.__name__) + "\n"
+    name, item = item
+    if not name.startswith(("_", "Base")):
+        if inspect.isfunction(item):
+            export_f += FUNCTION_TEMPLATE.format(function_name=item.__name__) + "\n"
+        elif inspect.isclass(item):
+            export_c += CLASS_TEMPLATE.format(class_name=item.__name__) + "\n"
 
 
 with open("autodoc_export_funct.rst", "w") as f:

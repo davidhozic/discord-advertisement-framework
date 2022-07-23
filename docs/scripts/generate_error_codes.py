@@ -5,8 +5,12 @@ import sys
 import re
 
 
-with suppress():
-    os.chdir("docs/scripts")
+# Set current working directory to scripts folder
+for path, dirs, files in os.walk("./"):
+    for dir in dirs:
+        if dir == "scripts":
+            os.chdir(os.path.join(path, dir))
+            break
 
 
 EXCEPTION_TEMPLATE =\
