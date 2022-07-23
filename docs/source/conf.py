@@ -39,6 +39,8 @@ extensions = [
     "sphinx.ext.autosummary",
     "sphinx.ext.autosectionlabel",
     "sphinx.ext.napoleon",
+    "sphinx_inline_tabs",
+    "sphinx_copybutton",
 ]
 
 
@@ -73,4 +75,5 @@ html_static_path = ['_static']
 
 # Autodoc
 autodoc_member_order = "bysource"
+
 

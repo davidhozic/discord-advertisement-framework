@@ -8,22 +8,35 @@ The Discord advertisement framework is a tool that allows easy advertising on Di
 
         Anything that has a **"Changed in v1.9.5"** or **"Added in v1.9.5"** is **not yet available**!
 
-Index
+
+Links
 ----------------------
-.. toctree::
-    :maxdepth: 1
+.. tab:: Index
 
-    getting_started
-    ref
-    logging
-    changelog
+    .. toctree::
+        :maxdepth: 1
+
+        getting_started
+        ref
+        logging
+        changelog
+
+.. tab:: My links
+
+    - `Github <https://github.com/davidhozic/discord-advertisement-framework>`_
+    - `Releases <https://github.com/davidhozic/discord-advertisement-framework/releases>`_
+    - `Examples <https://github.com/davidhozic/discord-advertisement-framework/tree/master/Examples>`_
+
+
+.. tab:: PyCord
+
+    This framework uses a Discord API wrapper called PyCord and it is built to allow working directly with Pycord (eg. framework objects accept Pycord objects as arguments).
+
+    Links:
     
+    - `PyCord GitHub <https://github.com/Pycord-Development/pycord>`_
+    - `PyCord Documentation <https://docs.pycord.dev/en/master/>`_
 
-External links
------------------
-- `Github <https://github.com/davidhozic/discord-advertisement-framework>`_
-- `Releases <https://github.com/davidhozic/discord-advertisement-framework/releases>`_
-- `Examples <https://github.com/davidhozic/discord-advertisement-framework/tree/master/Examples>`_
 
 
 Key features
@@ -58,14 +71,6 @@ To install the framework use one of the following:
     # Linux
     python3 -m pip install discord-advert-framework
 
-
-PyCord
--------------------
-This framework uses a Discord API wrapper called PyCord and it is built to allow working directly with Pycord (eg. framework objects accept Pycord objects as arguments).
-
-Links:
-- `PyCord GitHub <https://github.com/Pycord-Development/pycord>`_
-- `PyCord Documentation <https://docs.pycord.dev/en/master/>`_
 
 
 
