@@ -1,7 +1,7 @@
 =====================
 Classes
 =====================
-This page contains infomation about any classes that can be used in the framework.
+This page contains information about any classes that can be used in the framework.
 
 
 Guilds (Servers)
@@ -140,7 +140,7 @@ Error codes
     +------+----------------------------------------------------------------------------+
     | 2    | Guild with specified snowflake was not found (or user).                    |
     +------+----------------------------------------------------------------------------+
-    | 3    | Was unble to create DM with user (probably user not found).                |
+    | 3    | Was unable to create DM with user (probably user not found).               |
     +------+----------------------------------------------------------------------------+
     | 4    | Object of invalid type was given.                                          |
     +------+----------------------------------------------------------------------------+

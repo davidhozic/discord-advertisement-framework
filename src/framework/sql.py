@@ -76,7 +76,7 @@ def register_type(lookuptable: Literal["GuildTYPE", "MessageTYPE", "MessageMODE"
 
 class LoggerSQL:
     """
-    Used for controlling the SQL database used for messagge logs.
+    Used for controlling the SQL database used for message logs.
     
     Parameters
     ------------
@@ -126,7 +126,7 @@ class LoggerSQL:
         Lock used to prevent multiple tasks from trying to access the `.save_log()` method at once.
         Also used in the `.update()` method to prevent race conditions.
         """
-        # Caching (to avoid unneccessary queries)
+        # Caching (to avoid unnecessary queries)
         ## Lookup table caching
         self.MessageMODE = {}
         self.MessageTYPE = {}
@@ -153,14 +153,14 @@ class LoggerSQL:
 
     def clear_cache(self, *to_clear: str) -> None:
         """
-        Clears the caching dicitonaries inside the object that match any of the tables.
+        Clears the caching dictionaries inside the object that match any of the tables.
         
         Parameters
         -----------
         *to_clear: str
             Custom number of positional arguments of caching dictionaries to clear.
         """
-        if len(to_clear) == 0:  # Clear all cached tables if nothing was passead
+        if len(to_clear) == 0:  # Clear all cached tables if nothing was passed
             to_clear = self.__slots__
         for k in to_clear:
             getattr(self, k).clear()
@@ -363,10 +363,10 @@ class LoggerSQL:
 	                                      		
 	                   SET @last_log_id = SCOPE_IDENTITY();
 	                   
-	                   DECLARE @existance tinyint;
-                	   SELECT @existance = (CASE WHEN EXISTS(SELECT TOP(1) 1 FROM @channels) THEN 1 ELSE 0 END)
+	                   DECLARE @existence tinyint;
+                	   SELECT @existence = (CASE WHEN EXISTS(SELECT TOP(1) 1 FROM @channels) THEN 1 ELSE 0 END)
                 	   
-	                   IF @existance = 1
+	                   IF @existence = 1
 	                   BEGIN        
 	                    	INSERT INTO MessageChannelLOG (log_id, channel_id, reason)
 	                   		SELECT @last_log_id, ch.id, ch.reason FROM @channels ch --OPENJSON(@channels) WITH(id int, reason nvarchar(max)) ch;
@@ -406,7 +406,7 @@ class LoggerSQL:
         try:
             trace("[SQL]: Generating lookuptable values...", TraceLEVELS.NORMAL)
             with self._sessionmaker.begin() as session:
-                for to_add in copy.deepcopy(GLOBALS.lt_types):  # Deepcopied to prevent SQLAlchemy from deleting the data
+                for to_add in copy.deepcopy(GLOBALS.lt_types):  # Deep copied to prevent SQLAlchemy from deleting the data
                     existing = session.query(type(to_add)).where(type(to_add).name == to_add.name).first()
                     if existing is None:
                         session.add(to_add)
@@ -538,8 +538,8 @@ class LoggerSQL:
                         guild_id: int) -> List[dict]:
         """
         Adds missing channels to the database, where it then caches those added,
-        to avoid unnecessary quaries if all channels exist and then returns
-        a list of dicitonaries containing internal DB id and reason why sending failed.
+        to avoid unnecessary queries if all channels exist and then returns
+        a list of dictionaries containing internal DB id and reason why sending failed.
         
         Parameters
         ------------
@@ -610,7 +610,7 @@ class LoggerSQL:
                     self.clear_cache()  # Clears all caching tables
                 self.generate_lookup_values()
 
-            elif exception in {-1, 2, 53}:  # Diconnect error, reconnect after period
+            elif exception in {-1, 2, 53}:  # Disconnect error, reconnect after period
                 self.reconnect_after(SQL_RECONNECT_TIME, loop)
                 res = False # Don't try to save while reconnecting
 
@@ -678,7 +678,7 @@ class LoggerSQL:
         async with self.lock: 
             if not GLOBALS.enabled:
                 # While current task was waiting for lock to be released, 
-                # some other task disabled the logging due to an unhandable error
+                # some other task disabled the logging due to an un-handleable error
                 return False
 
             for tries in range(SQL_MAX_SAVE_ATTEMPTS):
@@ -722,7 +722,7 @@ class LoggerSQL:
         """
         .. versionadded:: v1.9.5 **(NOT YET AVAILABLE)**
 
-        Used for chaning the initialization parameters the object was initialized with.
+        Used for changing the initialization parameters the object was initialized with.
         
         .. warning::
             Upon updating, the internal state of objects get's reset, meaning you basically have a brand new created object.
@@ -885,7 +885,7 @@ class MessageLOG(LoggerSQL.Base):
     """
     Table containing information for each message send attempt.
 
-    NOTE: This table is missing successful and failed channels (or DM success status).That is because those are a seperate table.
+    NOTE: This table is missing successful and failed channels (or DM success status).That is because those are a separate table.
 
     Parameters
     ------------
@@ -975,7 +975,7 @@ async def initialize(mgr_object: LoggerSQL):
 
 def get_sql_manager() -> LoggerSQL:
     """
-    Returns the LoggerSQL object that was originall passed to the 
+    Returns the LoggerSQL object that was originally passed to the 
     framework.run(...) function or None if the SQL logging is disabled
     """
     return GLOBALS.manager if GLOBALS.enabled else None

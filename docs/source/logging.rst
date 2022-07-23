@@ -36,7 +36,7 @@ Features
   - Automatic reconnect on disconnect - Retries 3 times in delays of 5 minutes, then switches to file logging
   - If tables are deleted, they are automatically recreated
   - If cached values get corrupted, they are automatically recached
-  - If there are unhandable errors, the framework switches to file logging
+  - If there are un-handable errors, the framework switches to file logging
 
 .. note:: 
 
@@ -57,9 +57,9 @@ MessageLOG
     If the types are **Voice/Text** MESSAGE, then part of the log (to which channels it sent), is saved in the :ref:`MessageChannelLOG` table.
 
 :Attributes:
-  - |PK| id: int  - This is an internal identificator of the log inside the database.
+  - |PK| id: int  - This is an internal ID of the log inside the database.
   - sent_data: int - Foreign key pointing to a row inside the :ref:`DataHISTORY` table.
-  - message_type: int - Foreign key identificator pointing to a entry inside the :ref:`MessageTYPE` table.
+  - message_type: int - Foreign key ID pointing to a entry inside the :ref:`MessageTYPE` table.
   - guild_id: int -  Foreign key pointing to :ref:`GuildUSER` table.
   - message_mode: int - Foreign key pointing to :ref:`MessageMODE` table. This is non-null only for :ref:`DirectMESSAGE`.
   - dm_reason: str -  If MessageTYPE is not DirectMESSAGE or the send attempt was successful, this is NULL, otherwise it contains the string representation of the error that caused the message send attempt to be unsuccessful.
@@ -72,12 +72,12 @@ DataHISTORY
 ~~~~~~~~~~~~~~~~~~~~
 :Description:
     This table contains all the **different** data that was ever advertised. Every element is **unique** and is not replicated.
-    This table exist to reduce reduncancy and file size of the logs whenever same data is advertised multiple times.
+    This table exist to reduce redundancy and file size of the logs whenever same data is advertised multiple times.
     When a log is created, it is first checked if the data sent was already sent before, if it was the id to the existing :ref:`DataHISTORY` row is used,
     else a new row is created.
 
 :Attributes:
-  - |PK| id: int - Internal identificator of data inside the database.
+  - |PK| id: int - Internal ID of data inside the database.
   - content: str -  Actual data that was sent.
 
 
@@ -87,7 +87,7 @@ MessageTYPE
     This is a lookup table containing the the different message types that exist within the framework (:ref:`Messages`).
 
 :Attributes:
-  - |PK| id: int - Internal identificator of the message type inside the database.
+  - |PK| id: int - Internal ID of the message type inside the database.
   - name: str - The name of the actual message type.
 
 GuildUSER
@@ -96,8 +96,8 @@ GuildUSER
     The table contains all the guilds/users the framework ever generated a log for.
 
 :Attributes:
-  - |PK| id: int - Internal identificator of the Guild/User inside the database.
-  - snowflake_id: int - The discord (snowflake) identificator of the User/Guild
+  - |PK| id: int - Internal ID of the Guild/User inside the database.
+  - snowflake_id: int - The discord (snowflake) ID of the User/Guild
   - name: str - Name of the Guild/User
   - guild_type: int - Foreign key pointing to :ref:`GuildTYPE` table.
 
@@ -160,7 +160,7 @@ t_tmp_channel_log
 
 :Attributes:
     - id: int ~ Internal DB id pointing to :ref:`CHANNEL` table.
-    - reason: nvarchar ~ Reason why sending to the channel failed, if it was succeessful then this is NULL.
+    - reason: nvarchar ~ Reason why sending to the channel failed, if it was successful then this is NULL.
 
 
 
@@ -229,7 +229,7 @@ fn_guilduser_success_rate
     Success rate is defined as (number of **fully** successful send attempts) / (number of all send attempts)
 
 :Parameters:
-  - snowflake_id: bigint ~ Discord's identificator (snowflake id) of the USER or GUILD you want to get the success rate for
+  - snowflake_id: bigint ~ Discord's ID (snowflake id) of the USER or GUILD you want to get the success rate for
   - limit: int ~ How many of the latest logs you want to use to calculate the relative success rate
 
 :Return:
@@ -248,7 +248,7 @@ vMessageLogFullDETAIL
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
 :Description:
-    The :ref:`MessageLOG` table contains mostly internal DB ids which makes it hard to see anything directly from it. This is why the :ref:`vMessageLogFullDETAIL` view exists. It contains all the information inside the MessageLOG table, but expanded with actual values and not just identificators making it easier to view the content of the log.
+    The :ref:`MessageLOG` table contains mostly internal DB ids which makes it hard to see anything directly from it. This is why the :ref:`vMessageLogFullDETAIL` view exists. It contains all the information inside the MessageLOG table, but expanded with actual values and not just IDs making it easier to view the content of the log.
 
 
 

@@ -25,7 +25,7 @@ DEALINGS IN THE SOFTWARE.
 
 # If you're wondering why this is essentially copy pasted from the async_.py
 # file, then it's due to needing two separate types to make the typing shenanigans
-# a bit easier to write. It's an unfortunate design. Originally, these types were
+# a bit easier to write. It's an unfortunate design. originallyy, these types were
 # merged and an adapter was used to differentiate between the async and sync versions.
 # However, this proved to be difficult to provide typings for, so here we are.
 

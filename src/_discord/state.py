@@ -246,7 +246,7 @@ class ConnectionState:
 
     def clear(self, *, views: bool = True) -> None:
         self.user: Optional[ClientUser] = None
-        # Originally, this code used WeakValueDictionary to maintain references to the
+        # originallyy, this code used WeakValueDictionary to maintain references to the
         # global user mapping.
 
         # However, profiling showed that this came with two cons:

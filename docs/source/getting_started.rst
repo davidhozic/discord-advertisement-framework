@@ -37,7 +37,7 @@ For help with the :ref:`GUILD`, :ref:`TextMESSAGE` object and see :ref:`Programm
     # Define a server list
     servers = [
         fw.GUILD(
-            snowflake=123456789012345678, # The snowflake id of the guild (This can be obtained by enablind developer mode and then right clicking on the guild's icon)
+            snowflake=123456789012345678, # The snowflake id of the guild (This can be obtained by enabling developer mode and then right clicking on the guild's icon)
             messages=[
                 fw.TextMESSAGE(None, 5, "Hello world!", [123456789012345678], "send", True) # start_period, end_period, data, channels, mode, start_now
             ],
@@ -75,6 +75,6 @@ Bot accounts
 
 User accounts
 ~~~~~~~~~~~~~~~~~~~~~~~
-Folow `instructions <https://www.youtube.com/results?search_query=discord+get+user+token>`_
+Follow `instructions <https://www.youtube.com/results?search_query=discord+get+user+token>`_
 
 

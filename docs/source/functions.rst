@@ -1,6 +1,6 @@
 Functions
 ======================
-This page contains informations about any functions that can be called.
+This page contains information about any functions that can be called.
 
 
 

@@ -314,7 +314,7 @@ class TextMESSAGE(BaseMESSAGE):
         """
         .. versionadded:: v1.9.5 **(NOT YET AVAILABLE)**
 
-        Used for chaning the initialization parameters the object was initialized with.
+        Used for changing the initialization parameters the object was initialized with.
         
         .. warning::
             Upon updating, the internal state of objects get's reset, meaning you basically have a brand new created object.
@@ -571,7 +571,7 @@ class DirectMESSAGE(BaseMESSAGE):
         """
         .. versionadded:: v1.9.5 **(NOT YET AVAILABLE)**
 
-        Used for chaning the initialization parameters the object was initialized with.
+        Used for changing the initialization parameters the object was initialized with.
         
         .. warning:: 
             Upon updating, the internal state of objects get's reset, meaning you basically have a brand new created object.

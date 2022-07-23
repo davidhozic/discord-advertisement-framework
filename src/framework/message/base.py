@@ -133,7 +133,7 @@ class BaseMESSAGE:
 
     async def send_channel(self) -> dict:
         """
-        Sends data to a specific channel, this is seperate from send
+        Sends data to a specific channel, this is separate from send
         for eaiser implementation of simmilar inherited classes
         The method returns a dictionary: `{"success": bool, "reason": discord.HTTPException}` where 
         `"reason"` is only present if `"success"` `is False`
@@ -201,7 +201,7 @@ class BaseMESSAGE:
 
     async def update(self, init_options: dict={}, **kwargs):
         """
-        Used for chaning the initialization parameters the object was initialized with.
+        Used for changing the initialization parameters the object was initialized with.
         
         .. warning::
             Upon updating, the internal state of objects get's reset, meaning you basically have a brand new created object.     

@@ -1,5 +1,5 @@
 """
-    The module contains defintions regarding the data types
+    The module contains definitions regarding the data types
     you can send using the xxxMESSAGE objects.
 """
 from    typing      import Callable, List, Union
@@ -40,7 +40,7 @@ def data_function(fnc: Callable):
         See :download:`main_data_function.py <../../Examples/Message Types/TextMESSAGE/main_data_function.py>`
         for an example.
 
-    Decorator used to create a framework FunctionCLASS class that wrapps the function.
+    Decorator used to create a framework FunctionCLASS class that wraps the function.
     
     A class is returned that can be then used to create function wrapper objects that get sent to the
     xMESSAGE as a parameter and then used inside the ``.send()`` method to obtain data from the function.
@@ -48,12 +48,12 @@ def data_function(fnc: Callable):
     Parameters
     ------------
     fnc: Callable
-        The function to wrapp.
+        The function to wrap.
     """
     class FunctionCLASS(FunctionBaseCLASS):
         """
         Used for creating special classes that are then used to create objects in the framework.MESSAGE
-        data parameter, allows for sending dynamic contentent received thru an user defined function.
+        data parameter, allows for sending dynamic content received thru an user defined function.
 
         Parameters
         -----------
@@ -75,7 +75,7 @@ def data_function(fnc: Callable):
 
         def get_data(self):
             """ 
-            Retreives the data from the user function.
+            Retrieves the data from the user function.
             """
             return fnc(*self.args, **self.kwargs)
 
@@ -87,7 +87,7 @@ def data_function(fnc: Callable):
 #######################################################################
 class EMBED(discord.Embed):
     """
-    Derrived class of discord.Embed created to provide additional arguments in the creation.
+    Derived class of discord.Embed created to provide additional arguments in the creation.
     
     Parameters
     -------------
@@ -183,7 +183,7 @@ class EMBED(discord.Embed):
 class FILE:
     """
     FILE object used as a data parameter to the MESSAGE objects.
-    This is needed aposed to a normal file object because this way,
+    This is needed opposed to a normal file object because this way,
     you can edit the file after the framework has already been started.
     
     .. note:: 
@@ -203,7 +203,7 @@ class FILE:
         """
         .. versionadded:: v1.9.5 **(NOT YET AVAILABLE)**
 
-        Used for chaning the initialization parameters the object was initialized with.
+        Used for changing the initialization parameters the object was initialized with.
         
         .. warning::
             Upon updating, the internal state of objects get's reset, meaning you basically have a brand new created object.
@@ -297,7 +297,7 @@ class AUDIO(ytdl.YoutubeDL):
         """
         .. versionadded:: v1.9.5 **(NOT YET AVAILABLE)**
         
-        Used for chaning the initialization parameters the object was initialized with.
+        Used for changing the initialization parameters the object was initialized with.
         
         .. warning::
             Upon updating, the internal state of objects get's reset, meaning you basically have a brand new created object.

@@ -1,5 +1,5 @@
 """
-    This module contains the class defitions for all things
+    This module contains the class definitions for all things
     regarding the guild and also defines a USER class from the
     BaseGUILD class.
 """
@@ -48,7 +48,7 @@ class BaseGUILD:
     Parameters
     ---------------
     snowflake: Union[int, discord.Object]
-        Discord's snowflake id or a Discord object that has the ID attrubute.
+        Discord's snowflake id or a Discord object that has the ID attribute.
     generate_log: bool
         Set to True if you wish to have message logs for this guild.
     """
@@ -98,7 +98,7 @@ class BaseGUILD:
         """
         .. versionadded:: v1.9.5 **(NOT YET AVAILABLE)**
 
-        Returns the discord's snowflake identificator.
+        Returns the discord's snowflake ID.
         """
         return self.apiobject if isinstance(self.apiobject, int) else self.apiobject.id
 
@@ -129,7 +129,7 @@ class BaseGUILD:
     async def advertise(self,
                         mode: Literal["text", "voice"]):
         """
-        Main coroutine responsible for sending all the messages to this specificc guild,
+        Main coroutine responsible for sending all the messages to this specific guild,
         it is called from the core module's advertiser task.
         
         Parameters
@@ -143,7 +143,7 @@ class BaseGUILD:
         """
         .. versionadded:: v1.9.5 **(NOT YET AVAILABLE)**
 
-        Used for chaning the initialization parameters the object was initialized with.
+        Used for changing the initialization parameters the object was initialized with.
         
         .. warning::
             Upon updating, the internal state of objects get's reset, meaning you basically have a brand new created object.
@@ -234,7 +234,7 @@ class BaseGUILD:
                     appender.truncate() # Remove any old data
 
         except Exception as exception:
-            # Any uncautch exception (prevent from complete framework stop)
+            # Any uncaught exception (prevent from complete framework stop)
             trace(f"[{type(self).__name__}]: Unable to save log. Exception: {exception}", TraceLEVELS.WARNING)
 
 
@@ -253,7 +253,7 @@ class GUILD(BaseGUILD):
     Parameters
     ------------
     snowflake: Union[int, discord.Guild]
-        Discord's snowflake identificator of the guild or discord.Guild object.
+        Discord's snowflake ID of the guild or discord.Guild object.
     messages: Optional[List[Union[TextMESSAGE, VoiceMESSAGE]]]
         Optional list of TextMESSAGE/VoiceMESSAGE objects.
     logging:  Optional[bool]
@@ -356,7 +356,7 @@ class GUILD(BaseGUILD):
     async def advertise(self,
                         mode: Literal["text", "voice"]):
         """
-        Main coroutine responsible for sending all the messages to this specificc guild,
+        Main coroutine responsible for sending all the messages to this specific guild,
         it is called from the core module's advertiser task.
         
         Parameters
@@ -423,7 +423,7 @@ class USER(BaseGUILD):
     Parameters
     ------------
     snowflake: Union[int, discord.User]
-        Discord's snowflake identificator of the user or discord.User object.
+        Discord's snowflake ID of the user or discord.User object.
     messages: Optional[List[DirectMESSAGE]]
         Optional list of DirectMESSAGE objects.
     logging: Optional[bool]
@@ -518,7 +518,7 @@ class USER(BaseGUILD):
     async def advertise(self,
                         mode: Literal["text", "voice"]) -> None:
         """
-        Main coroutine responsible for sending all the messages to this specificc guild,
+        Main coroutine responsible for sending all the messages to this specific guild,
         it is called from the core module's advertiser task.
         
         Parameters

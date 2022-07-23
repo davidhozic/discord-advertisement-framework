@@ -1,5 +1,5 @@
 """
-    This module contains the essential definitons
+    This module contains the essential definitions
     and functions needed for the framework to run,
     as well as user function to control the framework
 """
@@ -53,7 +53,7 @@ async def advertiser(message_type: Literal["text", "voice"]) -> None:
     ------------
     message_type: str
         Two tasks advertising tasks are created, this variable tells the guild objects which
-        taks is requesting to shill, so it knows what type of messages to actually send.
+        task is requesting to shill, so it knows what type of messages to actually send.
     """
     while True:
         await asyncio.sleep(C_TASK_SLEEP_DELAY)
@@ -142,7 +142,7 @@ async def add_object(obj: Union[message.DirectMESSAGE, message.TextMESSAGE, mess
     Raises
     -----------
     DAFParameterError(code=DAF_GUILD_ID_REQUIRED)
-         guild_id wasn't provided when adding a message object (to which guild shouild it add)
+         guild_id wasn't provided when adding a message object (to which guild should it add)
     DAFNotFoundError(code=DAF_GUILD_ID_NOT_FOUND)
         Could not find guild with that id.
     DAFParameterError(code=DAF_INVALID_TYPE)
@@ -153,7 +153,7 @@ async def add_object(obj: Union[message.DirectMESSAGE, message.TextMESSAGE, mess
     ...
 async def add_object(obj, snowflake=None):
     object_type_name = type(obj).__name__
-    # Convert the `snowflake` object into a discord snowflake identificator (only if adding a message to guild)
+    # Convert the `snowflake` object into a discord snowflake ID (only if adding a message to guild)
     if isinstance(snowflake, (dc.Guild, dc.User)):
         snowflake = snowflake.id
     elif isinstance(snowflake, guild.BaseGUILD):
@@ -201,7 +201,7 @@ def remove_object(guild_id: int) -> None:
 @overload
 def remove_object(channel_ids: Iterable) -> None:
     """
-    Removes messages that containt all the given channel ids.
+    Removes messages that contain all the given channel ids.
     
     Parameters
     --------------
@@ -237,7 +237,7 @@ async def update(obj: Any, *, init_options: dict = {}, **kwargs):
         """
         .. versionadded:: v1.9.5 **(NOT YET AVAILABLE)**
 
-        Used for chaning the initialization parameters the obj was initialized with.
+        Used for changing the initialization parameters the obj was initialized with.
         
         .. warning::
             Upon updating, the internal state of objects get's reset, meaning you basically have a brand new created object.   
@@ -250,7 +250,7 @@ async def update(obj: Any, *, init_options: dict = {}, **kwargs):
         obj: Any
             The object that contains a .update() method.
         init_options: dict
-            Contains the initialization options used in .initialize() method for reinitializing certain objects.
+            Contains the initialization options used in .initialize() method for re-initializing certain objects.
             This is implementation specific and not necessarily available.
         Other:
             Other allowed parameters are the initialization parameters first used on creation of the object.
@@ -263,7 +263,7 @@ async def update(obj: Any, *, init_options: dict = {}, **kwargs):
             Raised from .initialize() method.
         """
         
-        init_keys = inspect.getfullargspec(obj.__init__).args # Retrievies list of call args
+        init_keys = inspect.getfullargspec(obj.__init__).args # Retrieves list of call args
         init_keys.remove("self")
         current_state = copy.copy(obj) # Make a copy of the current object for restoration in case of update failure
         try:  
