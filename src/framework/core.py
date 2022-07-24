@@ -123,7 +123,8 @@ async def add_object(obj: Union[guild.USER, guild.GUILD]) -> None:
     DAFParameterError(code=DAF_INVALID_TYPE)
          The object provided is not supported for addition.
     Other
-        Raised in the obj.initialize() method"""
+        Raised in the obj.initialize() method
+    """
     ...
 @overload
 async def add_object(obj: Union[message.DirectMESSAGE, message.TextMESSAGE, message.VoiceMESSAGE], snowflake: Union[int, guild.GUILD, guild.USER, dc.Guild, dc.User]) -> None:
@@ -198,7 +199,7 @@ def remove_object(guild_id: int) -> None:
          The object provided is not supported for removal."""
     ...
 @overload
-def remove_object(channel_ids: Iterable) -> None:
+def remove_object(channel_ids: Iterable[int]) -> None:
     """
     Removes messages that contain all the given channel ids.
     
