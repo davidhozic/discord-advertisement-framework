@@ -3,7 +3,7 @@
     and functions needed for the framework to run,
     as well as user function to control the framework
 """
-from   typing import Any, Iterable, Literal, Callable, List, Optional, Union, overload
+from   typing import Any, Dict, Iterable, Literal, Callable, List, Optional, Union, overload
 import asyncio
 import copy
 import inspect
@@ -41,12 +41,14 @@ class GLOBALS:
     sql_manager: sql.LoggerSQL = None,
     is_user: bool = False
 
+
 #######################################################################
 # Tasks
 #######################################################################
 async def _advertiser(message_type: Literal["text", "voice"]) -> None:
     """
     The task that is responsible for shilling to channels.
+    This is the most top level task.
     
     Parameters
     ------------
@@ -56,7 +58,7 @@ async def _advertiser(message_type: Literal["text", "voice"]) -> None:
     """
     while True:
         await asyncio.sleep(C_TASK_SLEEP_DELAY)
-        for guild_user in GLOBALS.server_list: # Copy the list to prevent issues with the list being modified 
+        for guild_user in GLOBALS.server_list[:]: # Shallow copy list to allow dynamic removal and addition of objects
             await guild_user.advertise(message_type)
 
 
@@ -127,7 +129,8 @@ async def add_object(obj: Union[guild.USER, guild.GUILD]) -> None:
     """
     ...
 @overload
-async def add_object(obj: Union[message.DirectMESSAGE, message.TextMESSAGE, message.VoiceMESSAGE], snowflake: Union[int, guild.GUILD, guild.USER, dc.Guild, dc.User]) -> None:
+async def add_object(obj: Union[message.DirectMESSAGE, message.TextMESSAGE, message.VoiceMESSAGE],
+                     snowflake: Union[int, guild.GUILD, guild.USER, dc.Guild, dc.User]) -> None:
     """
 
     Adds a message to the framework.
@@ -228,7 +231,7 @@ def remove_object(data):
                 for message in guild_user.t_messages + guild_user.vc_messages:
                     msg_channels = [x.id for x in message.channels] # Generate snowflake list
                     if all(x in msg_channels for x in data): # If any of the channels in the set are in the message channel list
-                        guild_user.remove_message(message) 
+                        guild_user.remove_message(message)
     else:
         raise DAFParameterError(f"Invalid parameter type `{type(data)}`.", DAF_INVALID_TYPE)
 
@@ -262,7 +265,6 @@ async def _update(obj: Any, *, init_options: dict = {}, **kwargs):
         Other
             Raised from .initialize() method.
         """
-        
         init_keys = inspect.getfullargspec(obj.__init__).args # Retrieves list of call args
         init_keys.remove("self")
         current_state = copy.copy(obj) # Make a copy of the current object for restoration in case of update failure
@@ -283,10 +285,12 @@ async def _update(obj: Any, *, init_options: dict = {}, **kwargs):
             # Call additional initialization function (if it has one)
             if hasattr(obj, "initialize"):
                 await obj.initialize(**init_options)
+        
         except Exception:
             # In case of failure, restore to original attributes
             for k in type(obj).__slots__:
                 setattr(obj, k, getattr(current_state, k))
+
             raise
 
 

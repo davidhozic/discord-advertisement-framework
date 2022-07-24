@@ -47,6 +47,7 @@ remove_object
 --------------------------
 .. function:: framework.remove_object(guild_id: int)
     :noindex:
+    :async:
 
     Removes a guild from the framework that has the given guild_id.
     
@@ -62,6 +63,7 @@ remove_object
 
 
 .. function:: framework.remove_object(channel_ids: Iterable[int])
+    :async:
 
     Removes messages that contain all the given channel ids.
     

@@ -42,7 +42,6 @@ class BaseMESSAGE:
         "timer",
         "force_retry",
         "data",
-        "update_mutex",
     )
 
     # The "__valid_data_types__" should be implemented in the INHERITED classes.
@@ -68,7 +67,6 @@ class BaseMESSAGE:
         self.timer = TIMER()
         self.force_retry = {"ENABLED" : start_now, "TIME" : 0}
         self.data = data
-        self.update_mutex: asyncio.Lock = asyncio.Lock() # Prevents access to to internal variables from send/update methods at once
 
     def _generate_exception(self, 
                            status: int,

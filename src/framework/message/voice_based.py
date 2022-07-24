@@ -89,7 +89,6 @@ class VoiceMESSAGE(BaseMESSAGE):
         "channels",
         "timer",
         "force_retry",
-        "update_mutex",
     )
 
     __logname__ = "VoiceMESSAGE"    # For sql._register_type
@@ -259,40 +258,32 @@ class VoiceMESSAGE(BaseMESSAGE):
             
             This is then passed to :ref:`GUILD`.generate_log method.
         """
-        
-        if self.update_mutex.locked():
-            # Object is in the process of having it's variables
-            # updated, meaning full reset of the object is due,
-            # so proceeding is considered incorrect behavior.
-            return
+        _data_to_send = self._get_data()
+        if any(_data_to_send.values()):
+            errored_channels = []
+            succeeded_channels= []
 
-        async with self.update_mutex:
-            # Take mutex to prevent access from .update() function.
-            _data_to_send = self._get_data()
-            if any(_data_to_send.values()):
-                errored_channels = []
-                succeeded_channels= []
+            for channel in self.channels:
+                context = await self._send_channel(channel, **_data_to_send)
+                if context["success"]:
+                    succeeded_channels.append(channel)
+                else:
+                    errored_channels.append({"channel":channel, "reason": context["reason"]})
 
-                for channel in self.channels:
-                    context = await self._send_channel(channel, **_data_to_send)
-                    if context["success"]:
-                        succeeded_channels.append(channel)
-                    else:
-                        errored_channels.append({"channel":channel, "reason": context["reason"]})
+            # Remove any channels that returned with code status 404 (They no longer exist)
+            for data in errored_channels:
+                reason = data["reason"]
+                channel = data["channel"]
+                if isinstance(reason, discord.HTTPException):
+                    if (reason.status == 403 or
+                        reason.code in {10003, 50013} # Unknown, Permissions
+                    ):
+                        self.channels.remove(channel)
+                        trace(f"Channel {channel.name}(ID: {channel.id}) {'was deleted' if reason.code == 10003 else 'does not have permissions'}, removing it from the send list", TraceLEVELS.WARNING)
 
-                # Remove any channels that returned with code status 404 (They no longer exist)
-                for data in errored_channels:
-                    reason = data["reason"]
-                    channel = data["channel"]
-                    if isinstance(reason, discord.HTTPException):
-                        if (reason.status == 403 or
-                            reason.code in {10003, 50013} # Unknown, Permissions
-                        ):
-                            self.channels.remove(channel)
-                            trace(f"Channel {channel.name}(ID: {channel.id}) {'was deleted' if reason.code == 10003 else 'does not have permissions'}, removing it from the send list", TraceLEVELS.WARNING)
+            return self._generate_log_context(**_data_to_send, succeeded_ch=succeeded_channels, failed_ch=errored_channels)
 
-                return self._generate_log_context(**_data_to_send, succeeded_ch=succeeded_channels, failed_ch=errored_channels)
-            return None
+        return None
 
     async def update(self, **kwargs):
         """
@@ -319,5 +310,4 @@ class VoiceMESSAGE(BaseMESSAGE):
             # This parameter does not appear as attribute, manual setting necessary 
             kwargs["start_now"] = True
 
-        async with self.update_mutex:
-            await core._update(self, **kwargs) # No additional modifications are required
+        await core._update(self, **kwargs) # No additional modifications are required

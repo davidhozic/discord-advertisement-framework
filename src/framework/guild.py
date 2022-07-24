@@ -81,7 +81,7 @@ class _BaseGUILD:
     @property
     def messages(self) -> List[BaseMESSAGE]:
         """
-        Returns all the message objects inside the object.
+        Returns all the (initialized) message objects inside the object.
 
         .. versionadded:: v1.9.5  **(Not yet available)** 
         """
@@ -143,6 +143,10 @@ class _BaseGUILD:
 
         Used for changing the initialization parameters the object was initialized with.
         
+        .. warning:: 
+            This method will BLOCK until every message has finished shilling!
+            This is done for safety due to asynchronous operations.
+
         .. warning::
             Upon updating, the internal state of objects get's reset, meaning you basically have a brand new created object.
         
@@ -165,7 +169,6 @@ class _BaseGUILD:
         data_context: dict
             Dictionary containing data describing the message send attempt. (Return of ``message.send()``)
         """
-
         guild_context = {
             "name" : str(self.apiobject),
             "id" : self.snowflake,
@@ -302,7 +305,7 @@ class GUILD(_BaseGUILD):
         elif isinstance(message, VoiceMESSAGE):
             self.vc_messages.append(message)
 
-    def remove_message(self, message: Union[TextMESSAGE, VoiceMESSAGE]):
+    async def remove_message(self, message: Union[TextMESSAGE, VoiceMESSAGE]):
         """
         Removes a message from the message list.
 
@@ -363,8 +366,7 @@ class GUILD(_BaseGUILD):
         """
         msg_list = self.t_messages if mode == "text" else self.vc_messages
         marked_del = []
-
-        for message in msg_list: # Copy the avoid issues with the list being modified while iterating
+        for message in msg_list[:]: # Copy the avoid issues with the list being modified while iterating (add_message/remove_message)
             if message.is_ready():
                 message.reset_timer()
                 message_ret = await message.send()
@@ -403,8 +405,9 @@ class GUILD(_BaseGUILD):
             Raised from .initialize() method.
         """
         # Update the guild
-        if "guild_id" not in kwargs:
-            kwargs["guild_id"] = self.snowflake
+        if "snowflake" not in kwargs:
+            kwargs["snowflake"] = self.snowflake
+
         await core._update(self, **kwargs)
         # Update messages
         for message in self.messages:
@@ -471,7 +474,7 @@ class USER(_BaseGUILD):
         self.t_messages.append(message)
 
     
-    def remove_message(self, message: DirectMESSAGE):
+    async def remove_message(self, message: DirectMESSAGE):
         """
         .. versionadded:: v1.9.5
 
@@ -531,13 +534,13 @@ class USER(_BaseGUILD):
             Tells which task called this method (there is one task for textual messages and one for voice like messages).
         """
         if mode == "text":  # Does not have voice messages, only text based (DirectMESSAGE)
-            for message in self.t_messages: # Copy the avoid issues with the list being modified while iterating
+            for message in self.t_messages[:]: # Copy the avoid issues with the list being modified while iterating (add_message/remove_message)
                 if message.is_ready():
                     message.reset_timer()
                     message_ret = await message.send()
                     if self.logging and message_ret is not None:
                         await self.generate_log(message_ret)
-                    
+
                     if message.dm_channel is None:
                         self.t_messages.clear()            # Remove all messages since that they all share the same user and will fail
                         trace(f"Removing all messages for user {self.apiobject.display_name}#{self.apiobject.discriminator} (ID: {self.snowflake}) because we do not have permissions to send to that user.", TraceLEVELS.WARNING)
@@ -566,8 +569,9 @@ class USER(_BaseGUILD):
             Raised from .initialize() method.
         """
         # Update the guild
-        if "user_id" not in kwargs:
-            kwargs["user_id"] = self.snowflake
+        if "snowflake" not in kwargs:
+            kwargs["snowflake"] = self.snowflake
+
         await core._update(self, **kwargs)
         # Update messages
         for message in self.messages:
