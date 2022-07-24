@@ -246,7 +246,7 @@ class ConnectionState:
 
     def clear(self, *, views: bool = True) -> None:
         self.user: Optional[ClientUser] = None
-        # Originally, this code used WeakValueDictionary to maintain references to the
+        # originallyy, this code used WeakValueDictionary to maintain references to the
         # global user mapping.
 
         # However, profiling showed that this came with two cons:
@@ -473,7 +473,7 @@ class ConnectionState:
         return guild
 
     def _guild_needs_chunking(self, guild: Guild) -> bool:
-        # If presences are enabled then we get back the old guild.large behaviour
+        # If presences are enabled then we get back the old guild.large behavior
         return self._chunk_guilds and not guild.chunked and not (self._intents.presences and not guild.large)
 
     def _get_guild_channel(self, data: MessagePayload) -> Tuple[Union[Channel, Thread], Optional[Guild]]:

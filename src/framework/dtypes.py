@@ -1,9 +1,8 @@
 """
-    ~ dtypes ~
-    The module contains defintions regarding the data types
+    The module contains definitions regarding the data types
     you can send using the xxxMESSAGE objects.
 """
-from    typing      import List, Union
+from    typing      import Callable, List, Union
 from    contextlib  import suppress
 import  copy
 import  datetime
@@ -12,10 +11,10 @@ import  youtube_dl  as ytdl
 from   .exceptions import *
 from   .import core
 
+
 __all__ = (
     "data_function",
-    "FunctionBaseCLASS",
-    "EmbedFIELD",
+    "_FunctionBaseCLASS",
     "EMBED",
     "FILE",
     "AUDIO"
@@ -25,26 +24,46 @@ __all__ = (
 #######################################################################
 # Decorators
 #######################################################################
-class FunctionBaseCLASS:
-    """ ~ class ~
-    - @Info: Used as a base class to FunctionCLASS which gets created in framework.data_function decorator.
-             Because the FunctionCLASS is inaccessible outside the data_function decorator,
-             this class is used to detect if the MESSAGE.data parameter is of function type,
-             because the function isinstance also returns True when comparing
-             the object to it's class or to the base class from which the object class is inherited from."""
+class _FunctionBaseCLASS:
+    """
+    Used as a base class to FunctionCLASS which gets created in :ref:`data_function` decorator.
+    Because the FunctionCLASS is inaccessible outside the :ref:`data_function` decorator,
+    this class is used to detect if the MESSAGE.data parameter is of function type,
+    because the function isinstance also returns True when comparing
+    the object to it's class or to the base class from which the object class is inherited from.
+    """
 
-def data_function(fnc):
-    """ ~ decorator ~
-    - @Info:   Decorator used to create a framework FunctionCLASS class for function
-    - @Return: FunctionCLASS"""
-    class FunctionCLASS(FunctionBaseCLASS):
-        """" ~ data function wrapper class ~
-        - @Name:  FunctionCLASS
-        - @Info:  Used for creating special classes that are then used to create objects in the framework.MESSAGE
-                  data parameter, allows for sending dynamic contentent received thru an user defined function.
 
-        - @Param: custom number of positional arguments and custom number of keyword arguments that 
-                  the user data function accepts.
+def data_function(fnc: Callable):
+    """
+    Decorator used to create a framework FunctionCLASS class that wraps the function.
+
+    Parameters
+    ------------
+    fnc: Callable
+        The function to wrap.
+    
+    Returns
+    -----------
+    FunctionCLASS
+        A class for creating wrapper objects is returned. These wrapper objects can be used as
+        a ``data`` parameter to the :ref:`Messages` objects.
+
+    
+    .. literalinclude:: ../../Examples/Message Types/TextMESSAGE/main_data_function.py
+        :language: python
+    """
+    class FunctionCLASS(_FunctionBaseCLASS):
+        """
+        Used for creating special classes that are then used to create objects in the framework.MESSAGE
+        data parameter, allows for sending dynamic content received thru an user defined function.
+
+        Parameters
+        -----------
+        - Custom number of positional and keyword arguments.
+
+        .. literalinclude:: ../../Examples/Message Types/TextMESSAGE/main_data_function.py
+            :language: python
         """
         __slots__ = (
             "args",
@@ -58,8 +77,9 @@ def data_function(fnc):
             self.func_name = fnc.__name__
 
         def get_data(self):
-            """ ~ method ~
-            - @Info Retreives the data from the user function."""
+            """ 
+            Retrieves the data from the user function.
+            """
             return fnc(*self.args, **self.kwargs)
 
     return FunctionCLASS
@@ -68,35 +88,23 @@ def data_function(fnc):
 #######################################################################
 # Other
 #######################################################################
-class EmbedFIELD:
-    """ ~ class ~
-    - @Info:
-        Embedded field class for use in EMBED object constructor
-    - @Param:
-        -  Name    ~ Name of the field
-        -  Content ~ Content of the embedded field
-        -  Inline  ~ Make this field appear in the same line as the previous field"""
-    def __init__(self,
-                 name : str,
-                 content : str,
-                 inline : bool=False):
-        self.name = name
-        self.content = content
-        self.inline = inline
-
-
 class EMBED(discord.Embed):
-    """ ~ class ~
-    - @Info: Derrived class of discord.Embed with easier definition
-    - @Param:
-        - Added parameters:
-            - author_name      ~ Name of embed author,
-            - author_icon      ~ Url to author image,
-            - image            ~ Url of image to be placed at the end of the embed
-            - thumbnail        ~ Url of image that will be placed at the top right of embed
-            - fields           ~ List of EmbedFIELD objects
-        - Inherited from discord.Embed:
-            - For the other, original params see https://docs.pycord.dev/en/master/api.html?highlight=discord%20embed#discord.Embed"""
+    """
+    Derived class of discord.Embed created to provide additional arguments in the creation.
+    
+    **Original parameters** from **PyCord**: `PyCord docs <https://docs.pycord.dev/en/master/api.html?highlight=discord%20embed#discord.Embed>`_
+
+    Parameters
+    -------------
+    author_name: str
+        Name of embed author
+    author_icon: str
+        Url to author image.
+    image: str
+        Url of image to be placed at the end of the embed.
+    thumbnail: str
+        Url of image that will be placed at the top right of embed.
+    """
     __slots__ = (
         'title',
         'url',
@@ -118,10 +126,14 @@ class EMBED(discord.Embed):
 
     @staticmethod
     def from_discord_embed(_object : discord.Embed):
-        """ ~ static method ~
-        - @Info: Creates an EMBED object from a discord.Embed object
-        - @Param:
-            - object ~ The discord Embed object you want converted into the framework.EMBED class"""
+        """ 
+        Creates an EMBED object from a discord.Embed object
+
+        Parameters
+        ------------
+        _object: discord.Embed
+            The Discord Embed object you want converted into a framework.EMBED object.
+        """
         ret = EMBED()
         # Copy attributes but not special methods to the new EMBED. "dir" is used instead of "vars" because the object does not support the function.
         for key in dir(_object):
@@ -141,7 +153,7 @@ class EMBED(discord.Embed):
                 author_icon: str=EmptyEmbed,
                 image: str= None,
                 thumbnail : str = None,
-                fields : List[EmbedFIELD] = None,
+                fields : List[discord.EmbedField] = None,
                 # Base class parameters
                 colour: Union[int, Colour] = EmptyEmbed,
                 color: Union[int, Colour] = EmptyEmbed,
@@ -157,8 +169,8 @@ class EMBED(discord.Embed):
                          type=type,
                          url=url,
                          description=description,
-                         timestamp=timestamp)
-
+                         timestamp=timestamp,
+                         fields=fields)
         ## Set author
         if author_name is not None:
             self.set_author(name=author_name, icon_url=author_icon)
@@ -168,49 +180,48 @@ class EMBED(discord.Embed):
         ## Set thumbnail
         if thumbnail is not None:
             self.set_thumbnail(url=thumbnail)
-        ### Set fields
-        if fields is not None:
-            for field in fields:
-                self.add_field(name=field.name,value=field.content,inline=field.inline)
 
 
 class FILE:
-    """ ~ FILE ~
-    - @Param:
-        - filename ~ string path to the file you want to send
+    """
+    FILE object used as a data parameter to the MESSAGE objects.
+    This is needed opposed to a normal file object because this way,
+    you can edit the file after the framework has already been started.
+    
+    .. warning:: 
+        This is used for sending an actual file and **NOT it's contents as text**.
 
-    - @Info:  FILE object used as a data parameter to the MESSAGE objects.
-              This is needed aposed to a normal file object because this way,
-              you can edit the file after the framework has already been started."""
+    Parameters
+    -------------
+    filename: str
+         Path to the file you want sent.
+    """
     __slots__ = ("filename",)
     def __init__(self,
                  filename: str):
         self.filename = filename
-    
-    async def update(self, **kwargs):
-        """ ~ async method ~
-        - @Added in v1.9.5
-        - @Info:
-            Used for chaning the initialization parameters the object was initialized with.
-        - @Params:
-            - The allowed parameters are the initialization parameters first used on creation of the object
-        - @Exception:
-            - Anything raised from core.update() function"""
-        await core.update(self, **kwargs)
 
 
 # Youtube streaming 
 ytdl.utils.bug_reports_message = lambda: "" # Suppress bug report message.
 
 class AUDIO(ytdl.YoutubeDL):
-    """~ class ~
-    - @Info:
-        Used for streaming audio from file or YouTube.
-        NOTE: Using a youtube video, will cause the shilling start to be delayed due to youtube data extraction.
-    - @Param:
-        - filename ~ The path to the file you want to stream or the url to the youtube video.
-    - @Exceptions:
-        - <class DAFNotFoundError code=DAF_FILE_NOT_FOUND/DAF_YOUTUBE_STREAM_ERROR> ~ Raised when the file or youtube url is not found."""
+    """
+    Used for streaming audio from file or YouTube.
+    
+    .. note::
+        Using a youtube video, will cause the shilling start to be delayed due to youtube data extraction.
+    
+    Parameters
+    -----------------
+    filename: str
+        Path to the file you want streamed or a YouTube video url.
+    
+    Raises
+    ----------
+    DAFNotFoundError(code=DAF_FILE_NOT_FOUND/DAF_YOUTUBE_STREAM_ERROR) 
+        Raised when the file or youtube url is not found.
+    """
 
     ytdl_options = {
         "format": "bestaudio/best",
@@ -249,8 +260,9 @@ class AUDIO(ytdl.YoutubeDL):
 
     @property
     def filename(self):
-        """~ property ~
-        - @Info: Returns the filename of the file or the name of a youtube video with the link"""
+        """
+        Returns the filename of the file or the name of a youtube video with the link
+        """
         if self.stream:
             return {
                 "type:" : "Youtube",
@@ -261,16 +273,3 @@ class AUDIO(ytdl.YoutubeDL):
             "type:" : "File",
             "filename": self.orig
         }
-
-    async def update(self, **kwargs):
-        """ ~ async method ~
-        - @Added in v1.9.5
-        - @Info:
-            Used for chaning the initialization parameters the object was initialized with.
-        - @Params:
-            - The allowed parameters are the initialization parameters first used on creation of the object.
-        - @Exception:
-            - Anything raised from core.update() function"""
-        if "filename" not in kwargs:
-            kwargs["filename"] = self.orig
-        await core.update(self, **kwargs)

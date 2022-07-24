@@ -1,5 +1,4 @@
-"""~ base ~
-@Info:
+"""
     Contains base definitions for different message classes."""
 
 from    typing import Union
@@ -18,11 +17,23 @@ __all__ = (
 
 
 class BaseMESSAGE:
-    """~  BaseMESSAGE  ~
-        - @Info:
-            - This is the base class for all the different classes that
-              represent a message you want to be sent into discord."""
-
+    """
+    This is the base class for all the different classes that
+    represent a message you want to be sent into discord.
+    
+    Parameters
+    -----------------
+    start_period: Union[int, None]
+        If this this is not None, then it dictates the bottom limit for range of the randomized period. Set this to None
+                                         for a fixed sending period.
+    end_period: int
+        If start_period is not None, this dictates the upper limit for range of the randomized period. If start_period is None, then this
+                            dictates a fixed sending period in SECONDS, eg. if you pass the value `5`, that means the message will be sent every 5 seconds.
+    data: inherited class dependant
+        The data that will be sent to Discord. Valid data types are defined inside `__valid_data_types__` set.
+    start_now: bool
+        Dictates if the message should be send immediately after framework start, or wait the period first.
+    """
     __slots__ = (
         "randomized_time",
         "period",
@@ -40,8 +51,8 @@ class BaseMESSAGE:
     __valid_data_types__ = {}
 
     def __init__(self,
-                start_period : Union[float,None],
-                end_period : float,
+                start_period : Union[int, None],
+                end_period : int,
                 data,
                 start_now : bool=True):
         # If start_period is none -> period will not be randomized
@@ -59,88 +70,104 @@ class BaseMESSAGE:
         self.data = data
         self.update_mutex: asyncio.Lock = asyncio.Lock() # Prevents access to to internal variables from send/update methods at once
 
-    def generate_exception(self, 
+    def _generate_exception(self, 
                            status: int,
                            code: int,
                            description: str,
-                           cls: discord.HTTPException):
-        """ ~ method ~
-        - @Info: Generates a discord.HTTPException inherited class exception object
-        - @Param:
-            - status ~ Atatus code of the exception
-            - code ~ Actual error code
-            - description ~ The textual description of the error
-            - cls ~ Inherited class to make exception from"""
+                           cls: discord.HTTPException) -> discord.HTTPException:
+        """
+        Generates a discord.HTTPException inherited class exception object.
+        This is used for generating dummy exceptions that are then raised inside the `._send_channel()`
+        method to simulate what would be the result of a API call, without actually having to call the API (reduces the number of bad responses).
+
+        Parameters
+        -------------
+        status: int
+            Discord status code of the exception.
+        code: int
+            Discord error code.
+        description: str
+            The textual description of the error.
+        cls: discord.HTTPException
+            Inherited class from discord.HTTPException to make exception from.
+        """
         resp = Exception()
         resp.status = status
         resp.status_code = status
         resp.reason = cls.__name__
-        ex = cls(resp, {"message" : description, "code" : code})
-        return ex
+        resp = cls(resp, {"message" : description, "code" : code})
+        return resp
 
-    def generate_log_context(self):
-        """ ~ method ~
-        - @Info:
-            This method is used for generating a dictionary (later converted to json) of the
-            data that is to be included in the message log. This is to be implemented inside the
-            inherited classes."""
+    def _generate_log_context(self):
+        """
+        This method is used for generating a dictionary (later converted to json) of the
+        data that is to be included in the message log. This is to be implemented inside the
+        inherited classes.
+        """
         raise NotImplementedError
     
-    def get_data(self) -> dict:
-        """ ~ method ~
-        - @Info: Returns a dictionary of keyword arguments that is then expanded
-               into other functions (send_channel, generate_log)
-               This is to be implemented in inherited classes due to different data_types"""
+    def _get_data(self) -> dict:
+        """
+        Returns a dictionary of keyword arguments that is then expanded
+        into other functions (_send_channel, generate_log)
+        This is to be implemented in inherited classes due to different data_types
+        """
         raise NotImplementedError
 
     def is_ready(self) -> bool:
-        """ ~ method ~
-        - @Param:  void
-        - @Info:   This method returns bool indicating if message is ready to be sent"""
+        """ 
+        This method returns bool indicating if message is ready to be sent
+        """
         return (not self.force_retry["ENABLED"] and self.timer.elapsed() > self.period or
                 self.force_retry["ENABLED"] and self.timer.elapsed() > self.force_retry["TIME"])
 
     def reset_timer(self) -> None:
-        """ ~ method ~
-        - @Info: Resets internal timer (and force period)"""
+        """ 
+        Resets internal timer (and force period)
+        """
         self.timer.reset()
         self.timer.start()
         self.force_retry["ENABLED"] = False
         if self.randomized_time is True:
             self.period = random.randrange(self.start_period, self.end_period)
 
-    async def send_channel(self) -> dict:
-        """ ~ async method ~
-        - @Info:
-            Sends data to a specific channel, this is seperate from send
-            for eaiser implementation of simmilar inherited classes
-        - @Return:
-            The method returns a dictionary containing : {"success": bool, "reason": discord.HTTPException}"""
+    async def _send_channel(self) -> dict:
+        """
+        Sends data to a specific channel, this is separate from send
+        for easier implementation of similar inherited classes
+        The method returns a dictionary: `{"success": bool, "reason": discord.HTTPException}` where 
+        `"reason"` is only present if `"success"` `is False`
+        """
         raise NotImplementedError
 
     async def send(self) -> dict:
-        """ ~ async method ~
-        - @Info:   This function should be implemented in the inherited class
-                   and should send the message to all the channels."""
+        """
+        Sends a message to all the channels.
+        Returns a dictionary generated by the `._generate_log_context` method
+        """
         raise NotImplementedError
 
-    async def initialize_channels(self):
-        """ ~ async method ~
-        - @Info: This method initializes the implementation specific
-                 api objects and checks for the correct channel inpit context."""
+    async def _initialize_channels(self):
+        """
+        This method initializes the implementation specific
+        api objects and checks for the correct channel input context.
+        """
         raise NotImplementedError
 
     async def initialize_data(self):
-        """ ~ async method ~
-        - @Info:  This method checks for the correct data input to the xxxMESSAGE
-                  object. The expected datatypes for specific implementation is
-                  defined thru the static variable __valid_data_types__
-        - @Exceptions:
-            - <class DAFParameterError code=DAF_INVALID_TYPE> ~ Raised when a parameter is of invalid type
-            - <class DAFNotFoundError code=DAF_MISSING_PARAMETER> ~ Raised when no data parameters were passed."""
+        """
+        This method checks for the correct data input to the xxxMESSAGE
+        object. The expected datatypes for specific implementation is
+        defined thru the static variable __valid_data_types__
+
+        Raises
+        ------------
+        - `DAFParameterError(code=DAF_INVALID_TYPE)` - Raised when a parameter is of invalid type
+        - `DAFNotFoundError(code=DAF_MISSING_PARAMETER)` - Raised when no data parameters were passed.
+        """
 
         # Check for correct data types of the MESSAGE.data parameter
-        if not isinstance(self.data, FunctionBaseCLASS):
+        if not isinstance(self.data, _FunctionBaseCLASS):
             # This is meant only as a pre-check if the parameters are correct so you wouldn't eg. start
             # sending this message 6 hours later and only then realize the parameters were incorrect.
             # The parameters also get checked/parsed each period right before the send.
@@ -163,7 +190,7 @@ class BaseMESSAGE:
                 if (
                         type(data) not in type(self).__valid_data_types__
                     ):
-                    if isinstance(data, FunctionBaseCLASS):
+                    if isinstance(data, _FunctionBaseCLASS):
                         raise DAFParameterError(f"The function can only be used on the data parameter directly, not in a iterable. Function: {data.func_name}", DAF_INVALID_TYPE)
                     else:
                         trace(f"INVALID DATA PARAMETER PASSED!\nArgument is of type : {type(data).__name__}\nSee README.md for allowed data types", TraceLEVELS.WARNING)
@@ -172,30 +199,47 @@ class BaseMESSAGE:
             if len(self.data) == 0:
                 raise DAFNotFoundError(f"No data parameters were passed", DAF_MISSING_PARAMETER)
 
-    async def update(self, init_options={}, **kwargs):
-        """ ~ async method ~
-        - @Added in v1.9.5
-        - @Info:
-            Used for chaning the initialization parameters the object was initialized with.
-            NOTE: Upon updating, the internal state of objects get's reset, meaning you basically have a brand new created object.
-        - @Params:
-            - The allowed parameters are the initialization parameters first used on creation of the object AND 
-            - init_options ~ Contains the initialization options used in .initialize() method for reainitializing certain objects.
-                             This is implementation specific and not necessarily available.
-        - @Exception:
-            - <class DAFParameterError code=DAF_UPDATE_PARAMETER_ERROR> ~ Invalid keyword argument was passed
-            - Other exceptions raised from .initialize() method"""
+    async def update(self, init_options: dict={}, **kwargs):
+        """
+        Used for changing the initialization parameters the object was initialized with.
+        
+        .. warning::
+            Upon updating, the internal state of objects get's reset, meaning you basically have a brand new created object.     
+        
+        Parameters
+        -------------
+        init_options: dict
+            Contains the initialization options used in .initialize() method for re-initializing certain objects.
+            This is implementation specific and not necessarily available.
+        original_params:
+            The allowed parameters are the initialization parameters first used on creation of the object AND 
+        
+        Raises
+        ------------
+        DAFParameterError(code=DAF_UPDATE_PARAMETER_ERROR)
+            Invalid keyword argument was passed
+        Other
+            Raised from .initialize() method
+        
+        .. versionadded::
+            v1.9.5 **(NOT YET AVAILABLE)**
+        """
+
         raise NotImplementedError
         
     async def initialize(self, **options):
-        """ ~ async method ~
-        - @Info:
-            The initialize method initilizes the message object.
-        - @Params:
-            - options ~ keyword arguments sent to initialize_channels() from an inherited (from BaseGUILD) class, contains extra init options.
-        - @Exceptions:
-            - Exceptions raised from .initialize_channels() and .initialize_data() methods"""
+        """
+        The initialize method initializes the message object.
+    
+        Parameters
+        -------------
+        - options - keyword arguments sent to _initialize_channels() from an inherited (from _BaseGUILD) class, contains extra init options.
+        
+        Raises
+        -------------
+        - Exceptions raised from ._initialize_channels() and .initialize_data() methods
+        """
 
-        await self.initialize_channels(**options)
+        await self._initialize_channels(**options)
         await self.initialize_data()
 

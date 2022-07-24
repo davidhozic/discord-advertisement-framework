@@ -2,3 +2,4 @@
 settings.json
 dist/**
 test**
+build**

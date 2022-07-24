@@ -1,6 +1,5 @@
-"""~  text message related ~
-@Info:
-    Contains definitions for message classes that are text based (TextMESSAGE & DirectMESSAGE)."""
+"""
+Contains definitions for message classes that are text based (TextMESSAGE & DirectMESSAGE)."""
 
 from   .base        import *
 from   ..           import client
@@ -10,7 +9,7 @@ from   ..tracing    import *
 from   ..const      import *
 from   ..exceptions import *
 from   ..           import core
-from   typing       import List, Iterable, Union, Literal
+from   typing       import Any, Dict, List, Iterable, Union, Literal
 import asyncio
 import _discord as discord
 
@@ -21,31 +20,75 @@ __all__ = (
 )
 
 
-@sql.register_type("MessageTYPE")
+@sql._register_type("MessageTYPE")
 class TextMESSAGE(BaseMESSAGE):
-    """ ~ class ~
-    - @Info: The TextMESSAGE object containts parameters which describe behaviour and data that will be sent to the channels.
-    - @Params:
-        - start_period, end_period ~ These 2 parameters specify the period on which the messages will be sent.
-            - start_period can be either:
-                - None ~ Messages will be sent on intervals specified by End period,
-                - Integer >= 0 ~ Messages will be sent on intervals randomly chosen between Start period and End period,
-                             where the randomly chosen intervals will be re-randomized after each sent message.
-        - (data ~ The data parameter is the actual data that will be sent using discord's API. The data types of this parameter can be:
+    """
+    This class is used for creating objects that represent messages which will be sent to Discord's TEXT CHANNELS.
+
+    .. versionchanged:: v1.9.5 **(NOT YET AVAILABLE)**
+            
+        - Renamed ``channel_ids`` parameter to ``channels``
+        - Channels parameter now also accepts channel objects instead of int.
+        - .update method added.
+
+    Parameters
+    ------------
+    start_period: Union[int, None]
+        The value of this parameter can be:
+
+        ..  table:: 
+        
+            ===========  =================================================================================================================
+             Value        Info
+            ===========  =================================================================================================================
+             None         Messages are sent in a constant time period equal to the value of ``end_period``.
+             int > 0      Messages are sent in a randomized time period. ``start_period`` represents the bottom limit of this period.
+            ===========  =================================================================================================================
+
+    end_period: int
+        If ``start_period`` > 0, then this represents the upper limit of randomized time period in which messages will be sent.
+        If ``start_period`` is None, then this represents the actual time period between each message send.
+
+        .. code-block:: python
+            :caption: **Randomized** sending period between **5** seconds and **10** seconds.
+            
+            # Time between each send is somewhere between 5 seconds and 10 seconds.
+            framework.TextMESSAGE(start_period=5, end_period=10, data="Second Message", channels=[12345], mode="send", start_now=True)
+
+        .. code-block:: python
+            :caption: **Fixed** sending period at **10** seconds
+
+            # Time between each send is exactly 10 seconds.
+            framework.TextMESSAGE(start_period=None, end_period=10, data="Second Message", channels=[12345], mode="send", start_now=True)
+
+    data: Union[str, EMBED, FILE, List[Union[str, EMBED, FILE]], _FunctionBaseCLASS]
+        The data parameter is the actual data that will be sent using discord's API. The data types of this parameter can be:
             - str (normal text),
-            - framework.EMBED,
-            - framework.FILE,
-            - List/Tuple containing any of the above arguments (There can up to 1 string, up to 1 embed and up to 10 framework.FILE objects,
-            if more than 1 string or embeds are sent, the framework will only consider the last found).
-            - Function that accepts any amount of parameters and returns any of the above types.
-            To pass a function, YOU MUST USE THE framework.data_function decorator on the function before passing the function to the framework.
-        - channels ~ List of IDs of all the channels you want data to be sent into.
-        - mode ~ Parameter that defines how message will be sent to a channel. It can be "send" - each period a new message will be sent,
-                            "edit" - each period the previously send message will be edited (if it exists)
-                            or "clear-send" - previous message will be deleted and a new one sent.
-        - start_now ~ A bool variable that can be either True or False. If True, then the framework will send the message
-                    as soon as it is run and then wait it's period before trying again. If False, then the message will not be sent immediatly after framework is ready,
-                    but will instead wait for the period to elapse."""
+            - :ref:`EMBED`,
+            - :ref:`FILE`,
+            - List/Tuple containing any of the above arguments (There can up to 1 string, up to 1 :ref:`EMBED` and up to 10 :ref:`FILE` objects. If more than 1 string or embeds are sent, the framework will only consider the last found).
+            - Function that accepts any amount of parameters and returns any of the above types. To pass a function, YOU MUST USE THE :ref:`data_function` decorator on the function before passing the function to the framework.
+
+    channels: Iterable[Union[int, discord.TextChannel, discord.Thread]]
+        Channels that it will be advertised into (Can be snowflake ID or channel objects from PyCord).
+    mode: str
+        Parameter that defines how message will be sent to a channel.
+        It can be:   
+
+        .. table:: 
+            :align: left
+
+            =================  =======================================================================================
+              Mode               Description
+            =================  =======================================================================================
+             "send"             each period a new message will be sent,                                               
+             "edit"             each period the previously send message will be edited (if it exists)                 
+             "clear-send"       previous message will be deleted and a new one sent.                                  
+            =================  =======================================================================================
+
+    start_now: bool
+        If True, then the framework will send the message as soon as it is run.
+    """
 
     __slots__ = (
         "randomized_time",
@@ -65,7 +108,7 @@ class TextMESSAGE(BaseMESSAGE):
 
     def __init__(self, start_period: Union[float, None],
                  end_period: float,
-                 data: Union[str, EMBED, FILE, List[Union[str, EMBED, FILE]]],
+                 data: Union[str, EMBED, FILE, List[Union[str, EMBED, FILE]], _FunctionBaseCLASS],
                  channels: Iterable[Union[int, discord.TextChannel, discord.Thread]],
                  mode: Literal["send", "edit", "clear-send"] = "send",
                  start_now: bool = True):
@@ -75,21 +118,48 @@ class TextMESSAGE(BaseMESSAGE):
         self.channels = list(set(channels)) # Automatically removes duplicates
         self.sent_messages = {} # Dictionary for storing last sent message for each channel
 
-    def generate_log_context(self,
+    def _generate_log_context(self,
                              text : str,
                              embed : EMBED,
                              files : List[FILE],
                              succeeded_ch: List[Union[discord.TextChannel, discord.Thread]],
-                             failed_ch: List[dict]):
-        """ ~ method ~
-        - @Name : generate_log_context
-        - @Param:
-            - text ~ The text that was sent
-            - embed ~ The embed that was sent
-            - files ~ List of files that were sent
-            - succeeded_ch: ~ list of the successfuly streamed channels,
-            - failed_ch: ~ list of dictionaries contained the failed channel and the Exception object
-        - @Info: Generates a dictionary containing data that will be saved in the message log"""
+                             failed_ch: List[Dict[Union[discord.TextChannel, discord.Thread], Exception]]):
+        """
+        Generates information about the message send attempt that is to be saved into a log.
+
+        Parameters
+        -----------
+        text: str
+            The text that was sent.
+        embed: EMBED
+            The embed that was sent.
+        files: List[FILE]
+            List of files that were sent.
+        succeeded_ch: List[Union[discord.TextChannel, discord.Thread]]
+            List of the successfully streamed channels.
+        failed_ch: failed_ch: List[Dict[Union[discord.TextChannel, discord.Thread], Exception]]
+            List of dictionaries contained the failed channel and the Exception object.
+        
+        Returns
+        ----------
+        Dict[str, Any]
+            Dictionary containing:
+
+                - sent_data: Dict[str, Any]:
+                    - text: str
+                        The text that was sent.
+                    - embed: Dict[str, Any]
+                        The embed that was sent.
+                    - files: List[str]
+                        List of files that were sent.
+
+                - channels: Dict[str, List]:
+                    - successful: List[Dict[str, int]] - List of dictionaries containing name of the channel and snowflake id of the channels.
+                    - failed: List[Dict[str, Any]] - List of dictionaries containing name of the channel (str), snowflake id (int) and reason why streaming to channel failed (str).
+                
+                - type: str - The type of the message, this is always TextMESSAGE.
+                - mode: str - The mode used to send the message (send, edit, clear-send).
+        """
 
         succeeded_ch = [{"name": str(channel), "id" : channel.id} for channel in succeeded_ch]
         failed_ch = [{"name": str(entry["channel"]), "id" : entry["channel"].id,
@@ -117,12 +187,12 @@ class TextMESSAGE(BaseMESSAGE):
             "mode" : self.mode,
         }
     
-    def get_data(self) -> dict:
-        """ ~ method ~
-        @Name:  get_data
-        @Info: Returns a dictionary of keyword arguments that is then expanded
-               into other functions (send_channel, generate_log)"""
-        data = self.data.get_data() if isinstance(self.data, FunctionBaseCLASS) else self.data
+    def _get_data(self) -> dict:
+        """"
+        Returns a dictionary of keyword arguments that is then expanded
+        into other methods eg. `_send_channel, generate_log`
+        """
+        data = self.data.get_data() if isinstance(self.data, _FunctionBaseCLASS) else self.data
         _data_to_send = {"embed": None, "text": None, "files": []}
         if data is not None:
             if not isinstance(data, (list, tuple, set)):
@@ -136,14 +206,15 @@ class TextMESSAGE(BaseMESSAGE):
                     _data_to_send["files"].append(element)
         return _data_to_send
 
-    async def initialize_channels(self):
-        """ ~ async method ~
-        - @Name: initialize_channels
-        - @Info: This method initializes the implementation specific
-                 api objects and checks for the correct channel inpit context.
-        - @Exceptions:
-            - <DAFParameterError code=DAF_INVALID_TYPE> ~ Raised when the object retrieved from channels is not a discord.TextChannel or discord.Thread object.
-            - <DAFNotFoundError code=DAF_MISSING_PARAMETER> ~ Raised when no valid channels were parsed."""
+    async def _initialize_channels(self):
+        """
+        This method initializes the implementation specific api objects and checks for the correct channel input context.
+        
+        Raises
+        ------------
+        - `DAFParameterError(code=DAF_INVALID_TYPE)` - Raised when the object retrieved from channels is not a discord.TextChannel or discord.Thread object.
+        - `DAFNotFoundError(code=DAF_MISSING_PARAMETER)` - Raised when no channels could be found were parsed.
+        """
         ch_i = 0
         cl = client.get_client()
         while ch_i < len(self.channels):
@@ -165,13 +236,18 @@ class TextMESSAGE(BaseMESSAGE):
         if not len(self.channels):
             raise DAFNotFoundError(f"No valid channels were passed to {type(self)} object", DAF_MISSING_PARAMETER)
     
-    async def handle_error(self, channel: Union[discord.TextChannel, discord.Thread], ex: Exception) -> bool:
-        """ ~ async method ~
-        - @Name: handle_error
-        - @Info: This method handles the error that occured during the execution of the function.
-        - @Param:
-            - ex ~ The exception that occured
-        - @Return ~ Returns True on successful handling"""
+    async def _handle_error(self, channel: Union[discord.TextChannel, discord.Thread], ex: Exception) -> bool:
+        """
+        This method handles the error that occurred during the execution of the function.
+        Returns `True` if error was handled.
+
+        Parameters
+        -----------
+        channel: Union[discord.TextChannel, discord.Thread]
+            The channel where the exception occurred.
+        ex: Exception
+            The exception that occurred during a send attempt.
+        """
         handled = False
         if isinstance(ex, discord.HTTPException):
             if ex.status == 429:  # Rate limit
@@ -187,25 +263,35 @@ class TextMESSAGE(BaseMESSAGE):
                     handled = True
         return handled
 
-    async def send_channel(self,
-                           channel: discord.TextChannel,
+    async def _send_channel(self,
+                           channel: Union[discord.TextChannel, discord.Thread],
                            text: str,
                            embed: EMBED,
                            files: List[FILE]) -> dict:
-        """ ~ async method ~
-        - @Name : send_channel
-        - @Info: Sends data to specific channel.
-        - @Return:
-            - dict:
-                - "success" ~ Returns True if successful, else False
-                - "reason"  ~ Only present if "success" is False,
-                              contains the Exception returned by the send attempt."""
+        """
+        Sends data to specific channel
+        
+        Returns a dictionary:
+        - "success" - Returns True if successful, else False
+        - "reason"  - Only present if "success" is False, contains the Exception returned by the send attempt
+        
+        Parameters
+        -------------
+        channel: Union[discord.TextChannel, discord.Thread]
+            The channel in which to send the data.
+        text: str
+            The text to send.
+        embed: EMBED
+            The embedded frame to send.
+        files: List[FILE]
+            List of files to send.
+        """ 
 
         ch_perms = channel.permissions_for(channel.guild.get_member(client.get_client().user.id))
         for tries in range(3):  # Maximum 3 tries (if rate limit)
             try:
                 if ch_perms.send_messages is False: # Check if we have permissions
-                    raise self.generate_exception(403, 50013, "You lack permissions to perform that action", discord.Forbidden)
+                    raise self._generate_exception(403, 50013, "You lack permissions to perform that action", discord.Forbidden)
 
                 # Delete previous message if clear-send mode is choosen and message exists
                 if self.mode == "clear-send" and self.sent_messages.get(channel.id, None) is not None:
@@ -229,38 +315,42 @@ class TextMESSAGE(BaseMESSAGE):
                 return {"success" : True}
 
             except Exception as ex:
-                if not await self.handle_error(channel, ex):
+                if not await self._handle_error(channel, ex):
                     return {"success" : False, "reason" : ex}
 
     async def send(self) -> Union[dict,  None]:
-        """" ~ async method ~
-        - @Name: send
-        - @Info: Sends the data into the channels
-        - @Return:
-            Returns a dictionary generated by the generate_log_context method
-            or the None object if message wasn't ready to be sent (data_function returned None or an invalid type)"""
+        """
+        Sends the data into the channels.
+        
+        Returns
+        ----------
+        Union[Dict, None]
+            Returns a dictionary generated by the ``_generate_log_context`` method or the None object if message wasn't ready to be sent (:ref:`data_function` returned None or an invalid type)
+            
+            This is then passed to :ref:`GUILD`.generate_log method.
+        """
         
         if self.update_mutex.locked():
-            # Object is in the proccess of having it's variables
+            # Object is in the process of having it's variables
             # updated, meaning full reset of the object is due,
-            # so procceeding is considered incorrect behaviour.
+            # so proceeding is considered incorrect behavior.
             return
         
         # Acquire mutex to prevent update method from writing while sending
         async with self.update_mutex:
-            data_to_send = self.get_data()
+            data_to_send = self._get_data()
             if any(data_to_send.values()):
                 errored_channels = []
-                succeded_channels= []
+                succeeded_channels= []
 
                 # Send to channels
                 for channel in self.channels:
                     # Clear previous messages sent to channel if mode is MODE_DELETE_SEND
                     if core.GLOBALS.is_user:
                         await asyncio.sleep(RLIM_USER_WAIT_TIME)
-                    context = await self.send_channel(channel, **data_to_send)
+                    context = await self._send_channel(channel, **data_to_send)
                     if context["success"]:
-                        succeded_channels.append(channel)
+                        succeeded_channels.append(channel)
                     else:
                         errored_channels.append({"channel":channel, "reason": context["reason"]})
 
@@ -276,51 +366,107 @@ class TextMESSAGE(BaseMESSAGE):
                             trace(f"Channel {channel.name}(ID: {channel.id}) {'was deleted' if reason.code == 10003 else 'does not have permissions'}, removing it from the send list", TraceLEVELS.WARNING)
 
                 # Return sent data + failed and successful function for logging purposes
-                return self.generate_log_context(**data_to_send, succeeded_ch=succeded_channels, failed_ch=errored_channels)
+                return self._generate_log_context(**data_to_send, succeeded_ch=succeeded_channels, failed_ch=errored_channels)
 
             return None
 
-    async def update(self, **kwargs):
-        """ ~ async method ~
-        - @Added in v1.9.5
-        - @Info:
-            Used for chaning the initialization parameters the object was initialized with.
-            NOTE: Upon updating, the internal state of objects get's reset, meaning you basically have a brand new created object.
-        - @Params:
-            - The allowed parameters are the initialization parameters first used on creation of the object
-        - @Exception:
-            - <class DAFParameterError code=DAF_UPDATE_PARAMETER_ERROR> ~ Invalid keyword argument was passed
-            - Other exceptions raised from .initialize() method"""
+    async def update(self, **kwargs: Any):
+        """
+        .. versionadded:: v1.9.5 **(NOT YET AVAILABLE)**
+
+        Used for changing the initialization parameters the object was initialized with.
+        
+        .. warning::
+            Upon updating, the internal state of objects get's reset, meaning you basically have a brand new created object.
+        
+        Parameters
+        -------------
+        **kwargs: Any
+            Custom number of keyword parameters which you want to update, these can be anything that is available during the object creation.
+        
+        Raises
+        -----------
+        DAFParameterError(code=DAF_UPDATE_PARAMETER_ERROR)
+            Invalid keyword argument was passed
+        Other
+            Raised from .initialize() method.
+        """
         if "start_now" not in kwargs:
-            # This parameter does not appear as attibute, manual setting neccessary
+            # This parameter does not appear as attribute, manual setting necessary
             kwargs["start_now"] = True
         
         async with self.update_mutex:
             # Wait for .send() method to finish or
             # prevent .send() method from entering while updating the variables
-            await core.update(self, **kwargs) # No additional modifications are required
+            await core._update(self, **kwargs) # No additional modifications are required
  
 
-@sql.register_type("MessageTYPE")
+@sql._register_type("MessageTYPE")
 class DirectMESSAGE(BaseMESSAGE):
-    """ ~ class ~
-    - @Name: DirectMESSAGE
-    - @Info: DirectMESSAGE represents a message that will be sent into direct messages
-    - @Params:
-        - start_period, end_period:
-            dictate the sending period in seconds, if both are > 0, then the period is randomized
-            each send and that period will be between the specifiec parameters. If start_period is None,
-            the period will be equal to end_period.
-        - data:
-            Represents data that will be sent into the channels, the data types can be:
-            - str, EMBED, FILE, list of str, EMBED, FILE or a function (refer to README)
-        - mode:
-            Mode parameter dictates the behaviour of the way data is send. It can be:
-            - "send" ~ Each period a new message will be send to Discord,
-            - "edit" ~ Each period the previous message will be edited, or a new sent if the previous message does not exist/was deleted
-            - "clear-send" ~ Each period the previous message will be cleared and a new one sent to the channels.
-        - start_now:
-            Dictates if the message should be sent immediatly after framework start or if it should wait it's period first and then send"""
+    """
+    This class is used for creating objects that represent messages which will be sent to Discord's TEXT CHANNELS.
+
+    .. versionchanged:: v1.9.5 **(NOT YET AVAILABLE)**
+        
+        - Channels parameter now also accepts channel objects instead of int.
+        - ``.update`` method added.
+
+    Parameters
+    ------------
+    start_period: Union[int, None]
+        The value of this parameter can be:
+
+        ..  table:: 
+        
+            ===========  =================================================================================================================
+             Value        Info
+            ===========  =================================================================================================================
+             None         Messages are sent in a constant time period equal to the value of ``end_period``.
+             int > 0      Messages are sent in a randomized time period. ``start_period`` represents the bottom limit of this period.
+            ===========  =================================================================================================================
+
+    end_period: int
+        If ``start_period`` > 0, then this represents the upper limit of randomized time period in which messages will be sent.
+        If ``start_period`` is None, then this represents the actual time period between each message send.
+
+        .. code-block:: python
+            :caption: **Randomized** sending period between **5** seconds and **10** seconds.
+            
+            # Time between each send is somewhere between 5 seconds and 10 seconds.
+            framework.DirectMESSAGE(start_period=5, end_period=10, data="Second Message",  mode="send", start_now=True)
+
+        .. code-block:: python
+            :caption: **Fixed** sending period at **10** seconds
+
+            # Time between each send is exactly 10 seconds.
+            framework.DirectMESSAGE(start_period=None, end_period=10, data="Second Message",  mode="send", start_now=True)
+
+    data: Union[str, EMBED, FILE, List[Union[str, EMBED, FILE]], _FunctionBaseCLASS]
+        The data parameter is the actual data that will be sent using discord's API. The data types of this parameter can be:
+            - str (normal text),
+            - :ref:`EMBED`,
+            - :ref:`FILE`,
+            - List/Tuple containing any of the above arguments (There can up to 1 string, up to 1 :ref:`EMBED` and up to 10 :ref:`FILE` objects. If more than 1 string or embeds are sent, the framework will only consider the last found).
+            - Function that accepts any amount of parameters and returns any of the above types. To pass a function, YOU MUST USE THE :ref:`data_function` decorator on the function before passing the function to the framework.
+
+    mode: str
+        Parameter that defines how message will be sent to a channel.
+        It can be:   
+
+        .. table:: 
+            :align: left
+
+            =================  =======================================================================================
+              Mode               Description
+            =================  =======================================================================================
+             "send"             each period a new message will be sent,                                               
+             "edit"             each period the previously send message will be edited (if it exists)                 
+             "clear-send"       previous message will be deleted and a new one sent.                                  
+            =================  =======================================================================================
+
+    start_now: bool
+        If True, then the framework will send the message as soon as it is run.
+    """
 
     __slots__ = (
         "randomized_time",
@@ -350,22 +496,42 @@ class DirectMESSAGE(BaseMESSAGE):
         self.dm_channel = None
         self.previous_message = None
 
-    def generate_log_context(self,
+    def _generate_log_context(self,
                              text : str,
                              embed : EMBED,
                              files : List[FILE],
-                             **success_context):
+                             success_context: Dict[bool, Exception]):
+        """
+        Generates information about the message send attempt that is to be saved into a log.
 
-        """ ~ method ~
-        - @Name: generate_log_context
-        - @Param:
-            - text ~ The text that was sent
-            - embed ~ The embed that was sent
-            - files ~ List of files that were sent
-            - succeeded_ch ~ list of the successfuly streamed channels,
-            - failed_ch ~ list of dictionaries contained the failed channel and the Exception
-        - @Info: Generates a dictionary containing data that will be saved in the message log"""
+        Parameters
+        -----------
+        text: str
+            The text that was sent.
+        embed: EMBED
+            The embed that was sent.
+        files: List[FILE]
+            List of files that were sent.
+        success_context: Dict[bool, Exception]
+            Dictionary containing information about succession of the DM attempt. 
+            Contains "success": `bool` key and "reason": `Exception` key which is only present if "success" is `False`
 
+
+        Returns
+        ----------
+        Dict[str, Any]
+            Dictionary containing:
+
+                - sent_data: Dict[str, str]:
+                    - streamed_audio - The filename that was streamed/youtube url
+
+                - success_info: Dict[str, Any]:
+                    - success: bool - Was sending successful or not
+                    - reason:  str  - If it was unsuccessful, what was the reason
+                
+                - type: str - The type of the message, this is always TextMESSAGE.
+                - mode: str - The mode used to send the message (send, edit, clear-send).
+        """
         embed = embed.to_dict() if embed is not None else None
         files = [x.filename for x in files]
         if not success_context["success"]:
@@ -388,38 +554,44 @@ class DirectMESSAGE(BaseMESSAGE):
             "mode" : self.mode
         }
 
-    def get_data(self) -> dict:
-        """ ~ method ~
-        - @Name: get_data
-        - @Info: Returns a dictionary of keyword arguments that is then expanded
-                 into other functions (send_channel, generate_log).
-                 This is exactly the same as in TextMESSAGE"""
-        return TextMESSAGE.get_data(self)
+    def _get_data(self) -> dict:
+        """
+        Returns a dictionary of keyword arguments that is then expanded
+        into other functions (_send_channel, generate_log).
+        This is exactly the same as in :ref:`TextMESSAGE`
+        """
+        return TextMESSAGE._get_data(self)
 
-    async def initialize_channels(self,
+    async def _initialize_channels(self,
                                   user: discord.User):
-        """ ~ async method ~
-        - @Name: initialize_channels
-        - @Info:
-            The method creates a direct message channel and
-            returns True on success or False on failure
-        - @Parameters:
-            - user ~ discord User object to whom the DM will be created for
-        - @Exceptions:
-            - <DAFNotFoundError code=DAF_USER_CREATE_DM> ~ Raised when the direct message channel could not be created"""
+        """
+        The method creates a direct message channel and
+        returns True on success or False on failure
+
+        Parameters
+        -----------
+        - user: discord.User - discord User object to whom the DM will be created for
+        
+        Raises
+        ---------
+        - DAFNotFoundError(code=DAF_USER_CREATE_DM) - Raised when the direct message channel could not be created
+        """
         try:
             await user.create_dm()
-            self.dm_channel: discord.User = user
+            self.dm_channel = user
         except discord.HTTPException as ex:
             raise DAFNotFoundError(f"Unable to create DM with user {user.display_name}\nReason: {ex}", DAF_USER_CREATE_DM)
 
-    async def handle_error(self, ex: Exception) -> bool:
-        """ ~ async method ~
-        - @Name: handle_error
-        - @Info: The method handles the error that occured during the send_channel method.
-        - @Parameters:
-            - ex ~ Exception instance
-        - @Return: True if the error was handled, False if not"""
+    async def _handle_error(self, ex: Exception) -> bool:
+        """
+        This method handles the error that occurred during the execution of the function.
+        Returns `True` if error was handled.
+
+        Parameters
+        -----------
+        ex: Exception
+            The exception that occurred during a send attempt.
+        """
         handled = False
         if isinstance(ex, discord.HTTPException):
             if ex.status == 429 or ex.code == 40003: # Too Many Requests or opening DMs too fast
@@ -436,18 +608,19 @@ class DirectMESSAGE(BaseMESSAGE):
 
         return handled
 
-    async def send_channel(self,
+    async def _send_channel(self,
                            text: str,
                            embed: EMBED,
                            files: List[FILE]) -> dict:
-        """ ~ async method ~
-        - @Name : send_channel
-        - @Info:  Sends data to the DM channel (user).
-        - @Return:
-            - dict:
-                - "success" ~ True if successful, else False
-                - "reason"  ~ Only present if "success" is False,
-                              contains the Exception returned by the send attempt."""
+        """
+        Sends data to the DM channel (user).
+        
+        Returns
+        ------------
+        Returns a dictionary:
+        - "success" - Returns True if successful, else False.
+        - "reason"  - Only present if "success" is False, contains the Exception returned by the send attempt.
+        """
         # Send/Edit messages
         for tries in range(3):  # Maximum 3 tries (if rate limit)
             try:
@@ -469,31 +642,35 @@ class DirectMESSAGE(BaseMESSAGE):
                 return {"success" : True}
 
             except Exception as ex:
-                if await self.handle_error(ex) is False or tries == 2:
+                if await self._handle_error(ex) is False or tries == 2:
                     return {"success" : False, "reason" : ex}
 
     async def send(self) -> Union[dict, None]:
-        """" ~ async method ~
-        - @Name: send
-        - @Info: Sends the data into the DM channel of the user.
-        - @Return:
-            Returns a dictionary generated by the generate_log_context method
-            or the None object if message wasn't ready to be sent (data_function returned None)"""
+        """
+        Sends the data into the channels
+        
+        Returns
+        ----------
+        Union[Dict, None]
+            Returns a dictionary generated by the ``_generate_log_context`` method or the None object if message wasn't ready to be sent (:ref:`data_function` returned None or an invalid type)
+            
+            This is then passed to :ref:`GUILD`.generate_log method.
+        """
         
         if self.update_mutex.locked():
-            # Object is in the proccess of having it's variables
+            # Object is in the process of having it's variables
             # updated, meaning full reset of the object is due,
-            # so procceeding is considered incorrect behaviour.
+            # so proceeding is considered incorrect behavior.
             return
 
         # Acquire mutex to prevent update method from writing while sending
         async with self.update_mutex:
             # Parse data from the data parameter
-            data_to_send = self.get_data()
+            data_to_send = self._get_data()
             if any(data_to_send.values()):
                 if core.GLOBALS.is_user:
                     await asyncio.sleep(RLIM_USER_WAIT_TIME)
-                context = await self.send_channel(**data_to_send)
+                context = await self._send_channel(**data_to_send)
                 if context["success"] is False:
                     reason  = context["reason"]
                     if isinstance(reason, discord.HTTPException):
@@ -502,23 +679,36 @@ class DirectMESSAGE(BaseMESSAGE):
                         ):
                             self.dm_channel = None
 
-                return self.generate_log_context(**data_to_send, **context)
+                return self._generate_log_context(**data_to_send, **context)
 
             return None
 
     async def update(self, init_options={},**kwargs):
-        """ ~ async method ~
-        - @Added in v1.9.5
-        - @Info:
-            Used for chaning the initialization parameters the object was initialized with.
-            NOTE: Upon updating, the internal state of objects get's reset, meaning you basically have a brand new created object.
-        - @Params:
-            - The allowed parameters are the initialization parameters first used on creation of the object
-        - @Exception:
-            - <class DAFParameterError code=DAF_UPDATE_PARAMETER_ERROR> ~ Invalid keyword argument was passed
-            - Other exceptions raised from .initialize() method"""
+        """
+        .. versionadded:: v1.9.5 **(NOT YET AVAILABLE)**
+
+        Used for changing the initialization parameters the object was initialized with.
+        
+        .. warning:: 
+            Upon updating, the internal state of objects get's reset, meaning you basically have a brand new created object.
+        
+        Parameters
+        -------------
+        init_options: Dict
+            Contains additional initialization options, not meant for public use, should only be called by the USER update method recursively.
+        **kwargs: Any
+            Custom number of keyword parameters which you want to update, these can be anything that is available during the object creation.
+
+        Raises
+        -----------
+        DAFParameterError(code=DAF_UPDATE_PARAMETER_ERROR)
+            Invalid keyword argument was passed
+        Other
+            Raised from .initialize() method
+        """
+
         if "start_now" not in kwargs:
-            # This parameter does not appear as attibute, manual setting neccessary
+            # This parameter does not appear as attribute, manual setting necessary
             kwargs["start_now"] = True
         if not len(init_options):
             init_options = {"user" : self.dm_channel}
@@ -526,4 +716,4 @@ class DirectMESSAGE(BaseMESSAGE):
         async with self.update_mutex:
             # Wait for .send() method to finish or
             # prevent .send() method from entering while updating the variables
-            await core.update(self, init_options=init_options, **kwargs) # No additional modifications are required
+            await core._update(self, init_options=init_options, **kwargs) # No additional modifications are required
