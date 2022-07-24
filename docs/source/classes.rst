@@ -50,6 +50,7 @@ DirectMESSAGE
 
 Message data types
 ---------------------
+These classes describe data that can be passed to the :ref:`Messages` objects
 
 EMBED
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -99,14 +100,11 @@ Tracing
 
 TraceLEVELS
 ~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: framework.TraceLEVELS
+.. autoenum:: framework.TraceLEVELS
     :members:
 
-    .. note:: 
-        See :ref:`trace`
 
-
-Exceptions (Classes)
+Exceptions
 ---------------------
 
 Types

@@ -176,7 +176,7 @@ class StreamIntegration(Integration):
     enable_emoticons: Optional[:class:`bool`]
         Whether emoticons should be synced for this integration (currently twitch only).
     expire_behaviour: :class:`ExpireBehaviour`
-        The behaviour of expiring subscribers. Aliased to ``expire_behavior`` as well.
+        The behavior of expiring subscribers. Aliased to ``expire_behavior`` as well.
     expire_grace_period: :class:`int`
         The grace period (in days) for expiring subscribers.
     user: :class:`User`
@@ -236,7 +236,7 @@ class StreamIntegration(Integration):
         Parameters
         -----------
         expire_behaviour: :class:`ExpireBehaviour`
-            The behaviour when an integration subscription lapses. Aliased to ``expire_behavior`` as well.
+            The behavior when an integration subscription lapses. Aliased to ``expire_behavior`` as well.
         expire_grace_period: :class:`int`
             The period (in days) where the integration will ignore lapsed subscriptions.
         enable_emoticons: :class:`bool`

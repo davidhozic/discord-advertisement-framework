@@ -32,7 +32,7 @@ class BaseMESSAGE:
     data: inherited class dependant
         The data that will be sent to Discord. Valid data types are defined inside `__valid_data_types__` set.
     start_now: bool
-        Dictates if the message should be send immediatly after framework start, or wait the period first.
+        Dictates if the message should be send immediately after framework start, or wait the period first.
     """
     __slots__ = (
         "randomized_time",
@@ -134,7 +134,7 @@ class BaseMESSAGE:
     async def _send_channel(self) -> dict:
         """
         Sends data to a specific channel, this is separate from send
-        for eaiser implementation of simmilar inherited classes
+        for easier implementation of similar inherited classes
         The method returns a dictionary: `{"success": bool, "reason": discord.HTTPException}` where 
         `"reason"` is only present if `"success"` `is False`
         """
@@ -150,7 +150,7 @@ class BaseMESSAGE:
     async def _initialize_channels(self):
         """
         This method initializes the implementation specific
-        api objects and checks for the correct channel inpit context.
+        api objects and checks for the correct channel input context.
         """
         raise NotImplementedError
 
@@ -209,7 +209,7 @@ class BaseMESSAGE:
         Parameters
         -------------
         init_options: dict
-            Contains the initialization options used in .initialize() method for reinitializing certain objects.
+            Contains the initialization options used in .initialize() method for re-initializing certain objects.
             This is implementation specific and not necessarily available.
         original_params:
             The allowed parameters are the initialization parameters first used on creation of the object AND 
@@ -229,7 +229,7 @@ class BaseMESSAGE:
         
     async def initialize(self, **options):
         """
-        The initialize method initilizes the message object.
+        The initialize method initializes the message object.
     
         Parameters
         -------------

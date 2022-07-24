@@ -3,7 +3,7 @@
     and functions needed for the framework to run,
     as well as user function to control the framework
 """
-from   typing import Any, Iterable, Literal, Callable, List, Union, overload
+from   typing import Any, Iterable, Literal, Callable, List, Optional, Union, overload
 import asyncio
 import copy
 import inspect
@@ -305,13 +305,13 @@ def get_user_callback() -> Callable:
 
 
 def run(token : str,
-        server_list : List[Union[guild.GUILD, guild.USER]]=[],
-        is_user : bool =False,
-        user_callback : Callable=None,
-        server_log_output : str ="History",
-        sql_manager: sql.LoggerSQL=None,
-        intents: dc.Intents=dc.Intents.default(),
-        debug : bool=True) -> None:
+        server_list : Optional[List[Union[guild.GUILD, guild.USER]]]=[],
+        is_user : Optional[bool] =False,
+        user_callback : Optional[Callable]=None,
+        server_log_output : Optional[str] ="History",
+        sql_manager: Optional[sql.LoggerSQL]=None,
+        intents: Optional[dc.Intents]=dc.Intents.default(),
+        debug : Optional[bool]=True) -> None:
     """
     Runs the framework. 
 
@@ -321,19 +321,19 @@ def run(token : str,
     ---------------
     token: str
         Discord's access token for account.
-    server_list: List[Union[guild.GUILD, guild.USER]]
+    server_list: Optional[List[Union[:ref:`GUILD`, :ref:`USER`]]
         Predefined server list (guild list) to shill.
-    is_user: bool
+    is_user: Optional[bool]
         Set to True if the token is for an user account.
-    user_callback: Callable
+    user_callback: Optional[Callable]
         Users coroutine (task) to run after the framework is run.
-    server_log_output: str
+    server_log_output: Optional[str]
         Path where the server log files will be created.
-    sql_manager: LoggerSQL
+    sql_manager: Optional[:ref:`LoggerSQL`]
         SQL manager object that will save logs into the database.
-    intents: discord.Intents
+    intents: Optional[discord.Intents]
         Discord Intents object (represents settings to which events it will be listened to).
-    debug: bool
+    debug: Optional[bool]
         Print trace message to the console, useful for debugging.
     """
 

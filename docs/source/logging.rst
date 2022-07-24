@@ -35,8 +35,8 @@ Features
   
   - Automatic reconnect on disconnect - Retries 3 times in delays of 5 minutes, then switches to file logging
   - If tables are deleted, they are automatically recreated
-  - If cached values get corrupted, they are automatically recached
-  - If there are un-handable errors, the framework switches to file logging
+  - If cached values get corrupted, they are automatically re-cached
+  - If there are un-recoverable errors, the framework switches to file logging
 
 .. note:: 
 

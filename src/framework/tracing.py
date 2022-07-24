@@ -16,7 +16,9 @@ m_lock = Lock() # For print thread safety
 
 class TraceLEVELS(Enum):
     """
-    Levels of trace for debug
+    Levels of trace for debug.
+
+    .. seealso:: :ref:`trace`
     """
     NORMAL = 0
     WARNING = auto()

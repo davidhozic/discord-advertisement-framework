@@ -22,7 +22,11 @@ __all__ = (
 
 class CLIENT(discord.Client):
     """
-    The same as discord.Client, except it contains a on_ready coroutine.
+    The same as `discord.Client <https://docs.pycord.dev/en/master/api.html?highlight=client#discord.Client>`_, except it contains an on_ready coroutine.
+
+    .. note::
+        This is automatically created by the framework.
+        You can retrieve the object created by calling :ref:`get_client` function.
     """
     async def on_ready(self) -> None:
         """

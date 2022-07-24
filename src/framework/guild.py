@@ -241,12 +241,12 @@ class GUILD(_BaseGUILD):
     """
     The GUILD object represents a server to which messages will be sent.
     
-    .. versionchanged::
-        v1.9.5  **(Not yet available)**
-            
-            - Added the update method
+    .. versionchanged:: v1.9.5  **(Not yet available)**
 
-            - snowflake parameter can now be a discord.Guild object.
+        - Added the update method
+        - Renamed param ``guild_id`` to ``snowflake``
+        - Renamed ``generate_log`` parameter to ``logging``
+        - snowflake parameter can now be a discord.Guild object.
 
     Parameters
     ------------
@@ -416,6 +416,12 @@ class USER(_BaseGUILD):
     """
     The USER object represents a user to whom messages will be sent.
     
+    .. versionchanged:: v1.9.5
+
+        - ``user_id`` parameter renamed to ``snowflake``
+        - ``snowflake`` can now also be a ``discord.User`` object
+        - renamed ``generate_log`` parameter to ``logging``.
+
     Parameters
     ------------
     snowflake: Union[int, discord.User]
@@ -467,6 +473,8 @@ class USER(_BaseGUILD):
     
     def remove_message(self, message: DirectMESSAGE):
         """
+        .. versionadded:: v1.9.5
+
         Removes a message from the message list.
 
         Parameters

@@ -5,7 +5,7 @@
    +----------+-----------------------------------+
    | Author   |   David Hozic                     |
    | Copyright|   Copyright (c) 2022 David Hozic  |
-   | Version  |   v1.9                            |          
+   | Version  |   v1.9.5                          |          
    +----------+-----------------------------------+
 """
 import _discord as discord

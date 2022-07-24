@@ -36,19 +36,22 @@ class _FunctionBaseCLASS:
 
 def data_function(fnc: Callable):
     """
-    .. note:: 
-        See :download:`main_data_function.py <../../Examples/Message Types/TextMESSAGE/main_data_function.py>`
-        for an example.
-
     Decorator used to create a framework FunctionCLASS class that wraps the function.
-    
-    A class is returned that can be then used to create function wrapper objects that get sent to the
-    xMESSAGE as a parameter and then used inside the ``.send()`` method to obtain data from the function.
 
     Parameters
     ------------
     fnc: Callable
         The function to wrap.
+    
+    Returns
+    -----------
+    FunctionCLASS
+        A class for creating wrapper objects is returned. These wrapper objects can be used as
+        a ``data`` parameter to the :ref:`Messages` objects.
+
+    
+    .. literalinclude:: ../../Examples/Message Types/TextMESSAGE/main_data_function.py
+        :language: python
     """
     class FunctionCLASS(_FunctionBaseCLASS):
         """
@@ -89,6 +92,8 @@ class EMBED(discord.Embed):
     """
     Derived class of discord.Embed created to provide additional arguments in the creation.
     
+    **Original parameters** from **PyCord**: `PyCord docs <https://docs.pycord.dev/en/master/api.html?highlight=discord%20embed#discord.Embed>`_
+
     Parameters
     -------------
     author_name: str
@@ -99,9 +104,6 @@ class EMBED(discord.Embed):
         Url of image to be placed at the end of the embed.
     thumbnail: str
         Url of image that will be placed at the top right of embed.
-
-    other parameters (discord.Embed):
-        See `PyCord docs <https://docs.pycord.dev/en/master/api.html?highlight=discord%20embed#discord.Embed>`_
     """
     __slots__ = (
         'title',
@@ -186,8 +188,8 @@ class FILE:
     This is needed opposed to a normal file object because this way,
     you can edit the file after the framework has already been started.
     
-    .. note:: 
-        This is used for sending an actual file and NOT it's contents as text.
+    .. warning:: 
+        This is used for sending an actual file and **NOT it's contents as text**.
 
     Parameters
     -------------

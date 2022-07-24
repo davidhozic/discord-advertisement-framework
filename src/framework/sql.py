@@ -681,7 +681,7 @@ class LoggerSQL:
         async with self.lock: 
             if not GLOBALS.enabled:
                 # While current task was waiting for lock to be released, 
-                # some other task disabled the logging due to an un-handleable error
+                # some other task disabled the logging due to an recoverable error
                 return False
 
             for tries in range(SQL_MAX_SAVE_ATTEMPTS):
