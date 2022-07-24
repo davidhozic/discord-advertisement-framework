@@ -1,8 +1,12 @@
 """
+    ==============================================
     DISCORD ADVERTISEMENT FRAMEWORK (DAF)
-    Author      :: David Hozic
-    Copyright   :: Copyright (c) 2022 David Hozic
-    Version     :: V1.9
+    ==============================================
+   +----------+-----------------------------------+
+   | Author   |   David Hozic                     |
+   | Copyright|   Copyright (c) 2022 David Hozic  |
+   | Version  |   v1.9.5                          |          
+   +----------+-----------------------------------+
 """
 import _discord as discord
 from .client import *
@@ -18,7 +22,6 @@ from .exceptions import *
 #-----------------
 # TODO:
 #-----------------
-# . Edit docstrings
-# . Implement .update() method for inherited message objects
-# . Implement .update() method for BaseGUILD and inherited guild objects
-# . Documentation (change docstrings into reST and setup auto generated docs)
+#  Update Examples
+#  Check documentation for errors
+#  Add Lock objects in xGUILD (add_message, remove_message, update, advertise)

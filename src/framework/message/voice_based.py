@@ -1,14 +1,12 @@
-"""~ voice message related ~
-@info:
+"""
     Contains definitions related to voice messaging."""
 
-from re import L
 from   .base        import *
 from   ..dtypes     import *
 from   ..tracing    import *
 from   ..const      import *
 from   ..exceptions import *
-from   typing       import List, Iterable, Union
+from   typing       import Any, Dict, List, Iterable, Union
 from   ..           import client
 from   ..           import sql
 from   ..           import core
@@ -22,31 +20,64 @@ __all__ = (
 
 class GLOBALS:
     """ ~ class ~
-    - @Info: Contains global variables used in the voice messaging."""
+    - @Info: Contains global variables used in the voice messaging.
+    """
     voice_client: discord.VoiceClient = None
 
-@sql.register_type("MessageTYPE")
+@sql._register_type("MessageTYPE")
 class VoiceMESSAGE(BaseMESSAGE):
-    """ ~ class ~
-    - @Name: VoiceMESSAGE
-    - @Info: The VoiceMESSAGE object containts parameters which describe behaviour and data that will be sent to the channels.
-    - @Params:
-        - start_period, end_period ~ These 2 parameters specify the period on which the messages will be played:
-            - start_period can be either:
-                - None ~ Messages will be sent on intervals specified by End period,
-                - Integer >= 0 ~ Messages will be sent on intervals randomly chosen between Start period and End period,
-                                 where the randomly chosen intervals will be re::randomized after each sent message.
-        - data ~ The data parameter is the actual data that will be sent using discord's API. The data types of this parameter can be:
-            - Path to an audio file (str)
-            - Youtube link (str)
-            - Function that accepts any amount of parameters and returns any of the above types.
-                    To pass a function, YOU MUST USE THE framework.data_function decorator on the function before
-                    passing the function to the framework.
-        - channels ~ List of IDs of all the channels you want data to be sent into.
-        - start_now ~ A bool variable that can be either True or False. If True, then the framework will send the message
-                                 as soon as it is run and then wait it's period before trying again. If False, then the message will
-                                 not be sent immediatly after framework is ready, but will instead wait for the period to elapse.
-        - volume ~ The volume in percentage (5-100%) of the audio that will be streamed. The default value is 50%."""
+    """
+    This class is used for creating objects that represent messages which will be streamed to voice channels.
+
+    .. versionchanged:: v1.9.5 **(NOT YET AVAILABLE)**
+        
+        - Added the ``volume`` parameter
+        - Renamed ``channel_ids`` parameter to ``channels``
+        - Channels parameter now also accepts channel objects instead of int
+
+    Parameters
+    ------------
+    start_period: Union[int, None]
+        The value of this parameter can be:
+
+        ..  table:: 
+        
+            ===========  =================================================================================================================
+             Value        Info
+            ===========  =================================================================================================================
+             None         Messages are sent in a constant time period equal to the value of ``end_period``.
+             int > 0      Messages are sent in a randomized time period. ``start_period`` represents the bottom limit of this period.
+            ===========  =================================================================================================================
+
+    end_period: int
+        If ``start_period`` > 0, then this represents the upper limit of randomized time period in which messages will be sent.
+        If ``start_period`` is None, then this represents the actual time period between each message send.
+
+        .. code-block:: python
+            :caption: **Randomized** sending period between **5** seconds and **10** seconds.
+            
+            # Time between each send is somewhere between 5 seconds and 10 seconds.
+            framework.VoiceMESSAGE(start_period=None, end_period=10, data=framework.AUDIO("msg.mp3"), channels=[12345], start_now=True, volume=50)
+
+        .. code-block:: python
+            :caption: **Fixed** sending period at **10** seconds
+
+            # Time between each send is exactly 10 seconds.
+            framework.VoiceMESSAGE(start_period=None, end_period=10, data=framework.AUDIO("msg.mp3"), channels=[12345], start_now=True, volume=50)
+
+    data: AUDIO
+        The data parameter is the actual data that will be sent using discord's API. The data types of this parameter can be:
+            - AUDIO object.
+            - Function that accepts any amount of parameters and returns an AUDIO object. To pass a function, YOU MUST USE THE :ref:`data_function` decorator on the function before passing the function to the framework.
+    channels: Iterable[Union[int, discord.VoiceChannel]]
+        Channels that it will be advertised into (Can be snowflake ID or channel objects from PyCord).
+    start_now: bool
+        If True, then the framework will send the message as soon as it is run.
+    volume: int         
+        The volume (0-100%) at which to play the audio. Defaults to 50%.
+        
+        (Since v1.9.5)
+    """
 
     __slots__ = (
         "randomized_time",
@@ -61,7 +92,7 @@ class VoiceMESSAGE(BaseMESSAGE):
         "update_mutex",
     )
 
-    __logname__ = "VoiceMESSAGE"    # For sql.register_type
+    __logname__ = "VoiceMESSAGE"    # For sql._register_type
     __valid_data_types__ = {AUDIO}  # This is used in the BaseMESSAGE.initialize() to check if the passed data parameters are of correct type
 
     def __init__(self, start_period: Union[float, None],
@@ -73,20 +104,39 @@ class VoiceMESSAGE(BaseMESSAGE):
 
         super().__init__(start_period, end_period, start_now)
         self.data = data
-        self.volume = max(5, min(100, volume)) # Clamp the volume to 5-100 % 
+        self.volume = max(0, min(100, volume)) # Clamp the volume to 0-100 % 
         self.channels = list(set(channels))    # Auto remove duplicates
 
-    def generate_log_context(self,
+    def _generate_log_context(self,
                              audio: AUDIO,
                              succeeded_ch: List[discord.VoiceChannel],
-                             failed_ch: List[dict]):
-        """ ~ method ~
-        - @Name: generate_log_context
-        - @Param:
-            - audio ~The audio that was streamed to the channels
-            - succeeded_ch ~ list of the successfuly streamed channels,
-            - failed_ch ~ list of dictionaries contained the failed channel and the Exception
-        - @Info: Generates a dictionary containing data that will be saved in the message log"""
+                             failed_ch: List[dict]) -> Dict[str, Any]:
+        """
+        Generates information about the message send attempt that is to be saved into a log.
+
+        Parameters
+        -----------
+        audio: audio
+            The audio that was streamed.
+        succeeded_ch: List[Union[discord.VoiceChannel]] 
+            List of the successfully streamed channels
+        failed_ch: List[Dict[discord.VoiceChannel, Exception]] 
+            List of dictionaries contained the failed channel and the Exception object
+
+        Returns
+        ----------
+        Dict[str, Any]
+            Dictionary containing:
+
+                - sent_data: Dict[str, str]:
+                    - streamed_audio: str - The filename that was streamed/youtube url
+
+                - channels: Dict[str, List]:
+                    - successful: List[Dict[str, int]] - List of dictionaries containing name of the channel and snowflake id of the channels.
+                    - failed: List[Dict[str, Any]] - List of dictionaries containing name of the channel (str), snowflake id (int) and reason why streaming to channel failed (str).
+                
+                - type: str - The type of the message, this is always VoiceMESSAGE.
+        """
 
         succeeded_ch = [{"name": str(channel), "id" : channel.id} for channel in succeeded_ch]
         failed_ch = [{"name": str(entry["channel"]), "id" : entry["channel"].id,
@@ -102,14 +152,14 @@ class VoiceMESSAGE(BaseMESSAGE):
             "type" : type(self).__name__
         }
 
-    def get_data(self) -> dict:
-        """ ~ method ~
-        - @Name:  get_data
-        - @Info: Returns a dictionary of keyword arguments that is then expanded
-                 into other functions (send_channel, generate_log)"""
+    def _get_data(self) -> dict:
+        """"
+        Returns a dictionary of keyword arguments that is then expanded
+        into other methods eg. `_send_channel, generate_log`
+        """
         data = None
         _data_to_send = {}
-        data = self.data.get_data() if isinstance(self.data, FunctionBaseCLASS) else self.data
+        data = self.data.get_data() if isinstance(self.data, _FunctionBaseCLASS) else self.data
         if data is not None:
             if not isinstance(data, (list, tuple, set)):
                 data = (data,)
@@ -118,15 +168,15 @@ class VoiceMESSAGE(BaseMESSAGE):
                     _data_to_send["audio"] = element
         return _data_to_send
 
-    async def initialize_channels(self) -> bool:
-        """ ~ async method ~
-        - @Name:  initialize_channels
-        - @Info:  This method initializes the implementation specific
-                  api objects and checks for the correct channel inpit context.
-        - @Return: True on success
-        - @Exceptions:
-            - <class DAFParameterError code=DAF_INVALID_TYPE> ~ Raised when the object obtained from a channel id is not of type discord.VoiceChannel
-            - <class DAFNotFoundError code=DAF_MISSING_PARAMETER> ~ Raised when no channels could be obtained from the given channel ids"""
+    async def _initialize_channels(self):
+        """
+        This method initializes the implementation specific api objects and checks for the correct channel input context.
+        
+        Raises
+        ------------
+        - `DAFParameterError(code=DAF_INVALID_TYPE)` - Raised when the object retrieved from channels is not a discord.TextChannel or discord.Thread object.
+        - `DAFNotFoundError(code=DAF_MISSING_PARAMETER)` - Raised when no channels could be found were parsed.
+        """
         ch_i = 0
         cl = client.get_client()
         while ch_i < len(self.channels):
@@ -148,24 +198,29 @@ class VoiceMESSAGE(BaseMESSAGE):
         if not len(self.channels):
             raise DAFNotFoundError(f"No valid channels were passed to {type(self)} object", DAF_MISSING_PARAMETER)
 
-    async def send_channel(self,
+    async def _send_channel(self,
                            channel: discord.VoiceChannel,
                            audio: AUDIO) -> dict:
-        """ ~ async method ~
-        - @Name : send_channel
-        - @Info:
-            Streams audio to specific channel
-        - @Return:
-            - dict:
-                - "success" ~ True if successful, else False
-                - "reason"  ~ Only present if "success" is False,
-                              contains the Exception returned by the send attempt."""
+        """
+        Sends data to specific channel
+        
+        Returns a dictionary:
+        - "success" - Returns True if successful, else False
+        - "reason"  - Only present if "success" is False, contains the Exception returned by the send attempt
+        
+        Parameters
+        -------------
+        channel: discord.VoiceChannel
+            The channel in which to send the data.
+        audio: AUDIO
+            the audio to stream.
+        """
         stream = None
         try:
             # Check if client has permissions before attempting to join
             ch_perms = channel.permissions_for(channel.guild.get_member(client.get_client().user.id))
             if not all([ch_perms.connect, ch_perms.stream, ch_perms.speak]):
-                raise self.generate_exception(403, 50013, "You lack permissions to perform that action", discord.Forbidden)
+                raise self._generate_exception(403, 50013, "You lack permissions to perform that action", discord.Forbidden)
 
             if GLOBALS.voice_client is None or not GLOBALS.voice_client.is_connected():
                 GLOBALS.voice_client = await channel.connect(timeout=C_VC_CONNECT_TIMEOUT)
@@ -183,9 +238,9 @@ class VoiceMESSAGE(BaseMESSAGE):
             if isinstance(ex, (FileExistsError, discord.Forbidden)):
                 pass # Don't change error
             elif client.get_client().get_channel(channel.id) is None:
-                ex = self.generate_exception(404, 10003, "Channel was deleted", discord.NotFound)
+                ex = self._generate_exception(404, 10003, "Channel was deleted", discord.NotFound)
             else:
-                ex = self.generate_exception(500, 0, "Timeout error", discord.HTTPException)
+                ex = self._generate_exception(500, 0, "Timeout error", discord.HTTPException)
             return {"success": False, "reason": ex}
         finally:
             if GLOBALS.voice_client is not None and GLOBALS.voice_client.is_connected():
@@ -194,30 +249,34 @@ class VoiceMESSAGE(BaseMESSAGE):
                 await asyncio.sleep(1) # Avoid sudden disconnect and connect to a new channel
 
     async def send(self) -> Union[dict,  None]:
-        """" ~ async method ~
-        - @Name send
-        - @Info: Streams audio into the chanels
-        - @Return:
-            Returns a dictionary generated by the generate_log_context method
-            or the None object if message wasn't ready to be sent (data_function returned None)"""
+        """
+        Sends the data into each channel.
+        
+        Returns
+        ----------
+        Union[Dict, None]
+            Returns a dictionary generated by the ``_generate_log_context`` method or the None object if message wasn't ready to be sent (:ref:`data_function` returned None or an invalid type)
+            
+            This is then passed to :ref:`GUILD`.generate_log method.
+        """
         
         if self.update_mutex.locked():
-            # Object is in the proccess of having it's variables
+            # Object is in the process of having it's variables
             # updated, meaning full reset of the object is due,
-            # so procceeding is considered incorrect behaviour.
+            # so proceeding is considered incorrect behavior.
             return
 
         async with self.update_mutex:
             # Take mutex to prevent access from .update() function.
-            _data_to_send = self.get_data()
+            _data_to_send = self._get_data()
             if any(_data_to_send.values()):
                 errored_channels = []
-                succeded_channels= []
+                succeeded_channels= []
 
                 for channel in self.channels:
-                    context = await self.send_channel(channel, **_data_to_send)
+                    context = await self._send_channel(channel, **_data_to_send)
                     if context["success"]:
-                        succeded_channels.append(channel)
+                        succeeded_channels.append(channel)
                     else:
                         errored_channels.append({"channel":channel, "reason": context["reason"]})
 
@@ -232,25 +291,33 @@ class VoiceMESSAGE(BaseMESSAGE):
                             self.channels.remove(channel)
                             trace(f"Channel {channel.name}(ID: {channel.id}) {'was deleted' if reason.code == 10003 else 'does not have permissions'}, removing it from the send list", TraceLEVELS.WARNING)
 
-                return self.generate_log_context(**_data_to_send, succeeded_ch=succeded_channels, failed_ch=errored_channels)
+                return self._generate_log_context(**_data_to_send, succeeded_ch=succeeded_channels, failed_ch=errored_channels)
             return None
 
     async def update(self, **kwargs):
-        """ ~ async method ~
-        - @Added in v1.9.5
-        - @Info:
-            Used for chaning the initialization parameters the object was initialized with.
-            NOTE: Upon updating, the internal state of objects get's reset, meaning you basically have a brand new created object.
-        - @Params:
-            - The allowed parameters are the initialization parameters first used on creation of the object AND 
-            - init_options ~ Contains the initialization options used in .initialize() method for reainitializing certain objects.
-                             This is implementation specific and not necessarily available.
-        - @Exception:
-            - <class DAFParameterError code=DAF_UPDATE_PARAMETER_ERROR> ~ Invalid keyword argument was passed
-            - Other exceptions raised from .initialize() method"""
+        """
+        .. versionadded:: v1.9.5 **(NOT YET AVAILABLE)**
+
+        Used for changing the initialization parameters the object was initialized with.
+        
+        .. warning::
+            Upon updating, the internal state of objects get's reset, meaning you basically have a brand new created object.
+        
+        Parameters
+        -------------
+        **kwargs: Any
+            Custom number of keyword parameters which you want to update, these can be anything that is available during the object creation.
+        
+        Raises
+        -----------
+        DAFParameterError(code=DAF_UPDATE_PARAMETER_ERROR)
+            Invalid keyword argument was passed
+        Other
+            Raised from .initialize() method
+        """
         if "start_now" not in kwargs:
-            # This parameter does not appear as attibute, manual setting neccessary
+            # This parameter does not appear as attribute, manual setting necessary 
             kwargs["start_now"] = True
 
         async with self.update_mutex:
-            await core.update(self, **kwargs) # No additional modifications are required
+            await core._update(self, **kwargs) # No additional modifications are required

@@ -968,7 +968,7 @@ class clean_content(Converter[str]):
 
 class Greedy(List[T]):
     r"""A special converter that greedily consumes arguments until it can't.
-    As a consequence of this behaviour, most input errors are silently discarded,
+    As a consequence of this behavior, most input errors are silently discarded,
     since it is used as an indicator of when to stop parsing.
 
     When a parser error is met the greedy converter stops converting, undoes the

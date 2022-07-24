@@ -2,10 +2,13 @@ import time
 
 
 def timeit(num: int):
-    """~ Profiling function ~
-    - @Info: Prints average time to execute specific function
-    - @Param: 
-        - num ~ Number of samples to take for average"""
+    """
+    Decorator that prints average time to execute specific function.
+
+    Parameters
+    ------------
+    - num: `int` - Number of samples to take for average
+    """
     def _timeit(fnc):
         sum = 0
         ct = 0
@@ -35,8 +38,8 @@ def timeit(num: int):
 
 
 class TIMER:
-    """ ~ class ~
-    - @Info ~ Used in MESSAGE objects as a send timer
+    """
+    Used in MESSAGE objects as a send timer.
     """
     __slots__ = (
         "running",
@@ -48,21 +51,24 @@ class TIMER:
         self.startms = 0
 
     def start(self):
-        """ ~ method ~
-        - @Info: Start the timer"""
+        """
+        Start the timer.
+        """
         if not self.running:
             self.running = True
             self.startms = time.time()
 
     def elapsed(self):
-        """ ~ method ~
-        - @Info: Returns the elapsed time in seconds"""
+        """
+        Returns the elapsed time in seconds.
+        """
         if self.running:
             return time.time() - self.startms
         self.start()
         return 0
 
     def reset (self):
-        """ ~ method ~
-        - @Info: Resets the timer"""
+        """
+        Resets the timer.
+        """
         self.running = False

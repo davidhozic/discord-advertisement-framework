@@ -1,0 +1,6 @@
+sphinx
+sphinx-inline-tabs
+sphinx-autobuild
+sphinx-copybutton
+furo
+enum-tools[sphinx]
