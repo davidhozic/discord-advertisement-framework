@@ -23,4 +23,3 @@ from .exceptions import *
 # TODO:
 #-----------------
 #  Update Examples
-#  Add locks for object update

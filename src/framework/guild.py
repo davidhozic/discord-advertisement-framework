@@ -60,7 +60,6 @@ class _BaseGUILD:
         "apiobject",
         "logging",
         "_messages",
-        "update_lock",
     )
     __logname__ = "_BaseGUILD" # Dummy to demonstrate correct definition for @sql._register_type decorator
 
@@ -72,7 +71,6 @@ class _BaseGUILD:
         self.apiobject: discord.Object = snowflake
         self.logging: bool= logging
         self._messages: list = messages  # Contains all the different message objects, this gets sorted in `.initialize()` method
-        misc._write_safe_vars(self, "update_lock", asyncio.Lock())
 
     @property
     def _log_file_name(self):
@@ -269,7 +267,9 @@ class GUILD(_BaseGUILD):
     __logname__ = "GUILD" # For sql._register_type
     __slots__   = (
         "t_messages",
-        "vc_messages"
+        "vc_messages",
+        "update_lock_text",
+        "update_lock_voice",
     )
 
     def __init__(self,
@@ -279,6 +279,8 @@ class GUILD(_BaseGUILD):
         super().__init__(snowflake, messages, logging)
         self.t_messages: List[TextMESSAGE] = []
         self.vc_messages: List[VoiceMESSAGE] = []
+        misc._write_safe_vars(self, "update_lock_text", asyncio.Lock())
+        misc._write_safe_vars(self, "update_lock_voice", asyncio.Lock())
     
     @property
     def _log_file_name(self):
@@ -325,9 +327,11 @@ class GUILD(_BaseGUILD):
             Raised when the message is not of type TextMESSAGE or VoiceMESSAGE.
         """
         if isinstance(message, TextMESSAGE):
+            misc._write_safe_vars(message, "_deleted", True, True)
             self.t_messages.remove(message)
             return
         elif isinstance(message, VoiceMESSAGE):
+            misc._write_safe_vars(message, "_deleted", True, True)
             self.vc_messages.remove(message)
             return
 
@@ -359,7 +363,6 @@ class GUILD(_BaseGUILD):
 
         raise DAFNotFoundError(f"Unable to find guild with ID: {guild_id}", DAF_GUILD_ID_NOT_FOUND)
 
-    @misc._async_safe("update_lock")
     async def advertise(self,
                         mode: Literal["text", "voice"]):
         """
@@ -372,25 +375,26 @@ class GUILD(_BaseGUILD):
             Tells which task called this method (there is one task for textual messages and one for voice like messages).
         """
         msg_list = self.t_messages if mode == "text" else self.vc_messages
-        marked_del = []
-        for message in msg_list[:]: # Copy the avoid issues with the list being modified while iterating (add_message/remove_message)
-            if message.is_ready():
-                message.reset_timer()
-                message_ret = await message.send()
-                # Check if the message still has any channels (as they can be auto removed on 404 status)
-                if len(message.channels) == 0:
-                    marked_del.append(message) # All channels were removed (either not found or forbidden) -> remove message from send list
-                if self.logging and message_ret is not None:
-                    await self.generate_log(message_ret)
+        async with getattr(self, f"update_lock_{mode}"): # Can't use the decorator, because both advertising task are supposed to run at the same time
+            marked_del = []
+            for message in msg_list[:]: # Copy the avoid issues with the list being modified while iterating (add_message/remove_message)
+                if message.is_ready():
+                    message.reset_timer()
+                    message_ret = await message.send()
+                    # Check if the message still has any channels (as they can be auto removed on 404 status)
+                    if len(message.channels) == 0:
+                        marked_del.append(message) # All channels were removed (either not found or forbidden) -> remove message from send list
+                    if self.logging and message_ret is not None:
+                        await self.generate_log(message_ret)
 
-        # Cleanup messages marked for removal
-        for message in marked_del:
-            if message in msg_list:
-                misc._write_safe_vars(message, "_deleted", True, True)
-                msg_list.remove(message)
-            trace(f"[GUILD]: Removing a {type(message).__name__} because it's channels were removed, in guild {self.apiobject.name}(ID: {self.snowflake})", TraceLEVELS.WARNING)
+            # Cleanup messages marked for removal
+            for message in marked_del:
+                if message in msg_list:
+                    await self.remove_message(message)
+                trace(f"[GUILD]: Removing a {type(message).__name__} because it's channels were removed, in guild {self.apiobject.name}(ID: {self.snowflake})", TraceLEVELS.WARNING)
 
-    @misc._async_safe("update_lock")
+    @misc._async_safe("update_lock_text")  # For text task
+    @misc._async_safe("update_lock_voice") # For voice task
     async def update(self, **kwargs):
         """
         Used for changing the initialization parameters the object was initialized with.
@@ -447,6 +451,7 @@ class USER(_BaseGUILD):
     __logname__ = "USER" # For sql._register_type
     __slots__   = (
         "t_messages",
+        "update_lock",
     )
 
     @property
@@ -459,6 +464,8 @@ class USER(_BaseGUILD):
                  logging: Optional[bool] = False) -> None:
         super().__init__(snowflake, messages, logging)
         self.t_messages: List[DirectMESSAGE] = []
+        
+        misc._write_safe_vars(self, "update_lock", asyncio.Lock()) # Only allows re-referencing this attribute once
 
     async def add_message(self, message):
         """
@@ -532,7 +539,6 @@ class USER(_BaseGUILD):
         # Api object wasn't found, even after direct API call to discord.
         raise DAFNotFoundError(f"[USER]: Unable to create DM with user id: {user_id}", DAF_USER_CREATE_DM)
 
-    @misc._async_safe("update_lock")
     async def advertise(self,
                         mode: Literal["text", "voice"]) -> None:
         """
@@ -545,20 +551,21 @@ class USER(_BaseGUILD):
             Tells which task called this method (there is one task for textual messages and one for voice like messages).
         """
         if mode == "text":  # Does not have voice messages, only text based (DirectMESSAGE)
-            for message in self.t_messages[:]: # Copy the avoid issues with the list being modified while iterating (add_message/remove_message)
-                if message.is_ready():
-                    message.reset_timer()
-                    message_ret = await message.send()
-                    if message_ret is not None:
-                        if self.logging:
-                            await self.generate_log(message_ret)
+            async with self.update_lock: # Don't _async_safe use the decorator because that would take the lock even in voice mode was provided
+                for message in self.t_messages[:]: # Copy the avoid issues with the list being modified while iterating (add_message/remove_message)
+                    if message.is_ready():
+                        message.reset_timer()
+                        message_ret = await message.send()
+                        if message_ret is not None:
+                            if self.logging:
+                                await self.generate_log(message_ret)
 
-                        if message.deleted:  # Only True on critical errors that need to be handled by removing all messages
-                            for msg in self.t_messages:
-                                misc._write_safe_vars(msg, "_deleted", True, True)
-                            self.t_messages.clear()  # Remove all messages since that they all share the same user and will fail
-                            trace(f"Removing all messages for user {self.apiobject.display_name}#{self.apiobject.discriminator} (ID: {self.snowflake}) because we do not have permissions to send to that user.", TraceLEVELS.WARNING)
-                            break
+                            if message.deleted:  # Only True on critical errors that need to be handled by removing all messages
+                                for msg in self.t_messages:
+                                    misc._write_safe_vars(msg, "_deleted", True, True)
+                                self.t_messages.clear()  # Remove all messages since that they all share the same user and will fail
+                                trace(f"Removing all messages for user {self.apiobject.display_name}#{self.apiobject.discriminator} (ID: {self.snowflake}) because we do not have permissions to send to that user.", TraceLEVELS.WARNING)
+                                break
     
     @misc._async_safe("update_lock")
     async def update(self, **kwargs):
