@@ -19,11 +19,11 @@ def get(st):
 
 servers = [
     fw.GUILD(
-        guild_id=12345,
-        messages_to_send=[
+        snowflake=12345,
+        messages=[
             fw.TextMESSAGE(None, 5, get(rolls.copy()), [12345], "edit", True)
         ],
-        generate_log=True
+        logging=True
     )
 ]
 

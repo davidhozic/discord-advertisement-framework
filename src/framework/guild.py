@@ -312,7 +312,7 @@ class GUILD(_BaseGUILD):
         elif isinstance(message, VoiceMESSAGE):
             self.vc_messages.append(message)
 
-    async def remove_message(self, message: Union[TextMESSAGE, VoiceMESSAGE]):
+    def remove_message(self, message: Union[TextMESSAGE, VoiceMESSAGE]):
         """
         Removes a message from the message list.
 
@@ -390,7 +390,7 @@ class GUILD(_BaseGUILD):
             # Cleanup messages marked for removal
             for message in marked_del:
                 if message in msg_list:
-                    await self.remove_message(message)
+                    self.remove_message(message)
                 trace(f"[GUILD]: Removing a {type(message).__name__} because it's channels were removed, in guild {self.apiobject.name}(ID: {self.snowflake})", TraceLEVELS.WARNING)
 
     @misc._async_safe("update_lock_text")  # For text task
@@ -490,7 +490,7 @@ class USER(_BaseGUILD):
         self.t_messages.append(message)
 
     
-    async def remove_message(self, message: DirectMESSAGE):
+    def remove_message(self, message: DirectMESSAGE):
         """
         .. versionadded:: v1.9.5
 
@@ -507,6 +507,7 @@ class USER(_BaseGUILD):
             Raised when the message is not of type DirectMESSAGE.
         """
         if isinstance(message, DirectMESSAGE):
+            misc._write_safe_vars(message, "_deleted", True, True)
             self.t_messages.remove(message)
             return
 
@@ -562,8 +563,8 @@ class USER(_BaseGUILD):
 
                             if message.deleted:  # Only True on critical errors that need to be handled by removing all messages
                                 for msg in self.t_messages:
-                                    misc._write_safe_vars(msg, "_deleted", True, True)
-                                self.t_messages.clear()  # Remove all messages since that they all share the same user and will fail
+                                    self.remove_message(msg)
+
                                 trace(f"Removing all messages for user {self.apiobject.display_name}#{self.apiobject.discriminator} (ID: {self.snowflake}) because we do not have permissions to send to that user.", TraceLEVELS.WARNING)
                                 break
     

@@ -250,11 +250,11 @@ async def main():
 # Create the server list
 servers = [
         fw.GUILD (
-            guild_id=guild["SERVER-ID"], 
-            messages_to_send= [
+            snowflake=guild["SERVER-ID"], 
+            messages= [
                 fw.TextMESSAGE(None, 1, get_data(ch_id), [ch_id], "send", True) for ch_id in guild["CHANNEL-IDs"]
             ],
-            generate_log=True
+            logging=True
         ) for guild in conf.WHITELISTED_GUILDS   
 ]
 

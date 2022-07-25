@@ -41,8 +41,8 @@ test_embed_fw_2 = fw.EMBED.from_discord_embed(test_embed2) ## Converts discord.E
 ############################################################################################
 guilds = [
     fw.USER(
-        user_id=123456789,                                 # ID of server (guild)
-        messages_to_send=[                                  # List MESSAGE objects
+        user_id=123456789,                                 # ID of server (guild) or a discord.Guild object
+        messages=[                                  # List MESSAGE objects
             fw.DirectMESSAGE(
                               start_period=None,            # If None, messages will be send on a fixed period (end period)
                               end_period=15,                # If start_period is None, it dictates the fixed sending period,
@@ -65,7 +65,7 @@ guilds = [
                               start_now=True
                               ),
         ],
-        generate_log=True                                   ## Generate file log of sent messages (and failed attempts) for this user
+        logging=True                                   ## Generate file log of sent messages (and failed attempts) for this user
     )
 ]
                                      
