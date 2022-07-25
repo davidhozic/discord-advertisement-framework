@@ -1,7 +1,7 @@
 =========================================================
 DAF (|version|)
 =========================================================
-The Discord advertisement framework is a tool that allows easy advertising on Discord.
+The Discord advertisement framework is a  **shilling tool** that allows easy advertising on Discord.
 
 .. warning::
         **Version v1.9.5 is not yet released** or even ready. The **latest version is v1.9**.

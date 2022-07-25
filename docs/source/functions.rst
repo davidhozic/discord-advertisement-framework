@@ -47,11 +47,13 @@ remove_object
 --------------------------
 .. function:: framework.remove_object(guild_id: int)
     :noindex:
+    :async:
 
     Removes a guild from the framework that has the given guild_id.
     
     :Parameters:
-        guild_id: `int` - ID of the guild to remove.
+        guild_id: int
+            ID of the guild to remove.
     
     :Raises:
         - DAFNotFoundError(code=DAF_GUILD_ID_NOT_FOUND)
@@ -62,6 +64,7 @@ remove_object
 
 
 .. function:: framework.remove_object(channel_ids: Iterable[int])
+    :async:
 
     Removes messages that contain all the given channel ids.
     

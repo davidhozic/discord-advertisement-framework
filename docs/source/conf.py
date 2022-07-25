@@ -13,6 +13,7 @@
 import os
 import sys
 import re
+import typing
 sys.path.insert(0, os.path.abspath('../../src/'))
 sys.path.insert(0, os.path.abspath('.'))
 
@@ -35,12 +36,12 @@ with open("../../src/framework/__init__.py", "r", encoding="utf-8") as init_file
 # ones.
 extensions = [
     "sphinx.ext.autodoc",
+    "sphinx.ext.napoleon",
     "sphinx.ext.autosummary",
     "sphinx.ext.autosectionlabel",
-    "sphinx.ext.napoleon",
     "sphinx_inline_tabs",
     "sphinx_copybutton",
-    "enum_tools.autoenum"
+    "enum_tools.autoenum",
 ]
 
 
@@ -74,5 +75,6 @@ html_static_path = ['_static']
 
 # Autodoc
 autodoc_member_order = "bysource"
-
+autodoc_typehints = "both"
+autodoc_typehints_format = "short"
 

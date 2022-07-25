@@ -23,5 +23,3 @@ from .exceptions import *
 # TODO:
 #-----------------
 #  Update Examples
-#  Check documentation for errors
-#  Add Lock objects in xGUILD (add_message, remove_message, update, advertise)

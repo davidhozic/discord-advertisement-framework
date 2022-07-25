@@ -13,6 +13,7 @@ from    . import core
 #######################################################################
 class GLOBALS:
     client = None     # Pycord Client object
+    running = False # Weird bug causes client.on_ready method to be called multiple times some times
 
 __all__ = (
     "CLIENT",
@@ -32,9 +33,13 @@ class CLIENT(discord.Client):
         """
         Gets run at login, creates the main initialization task inside the core module.
         """
+        if GLOBALS.running:
+            return
+
+        GLOBALS.running = True
         trace(f"[CLIENT]: Logged in as {self.user}", TraceLEVELS.NORMAL)
         # Initialize all the modules from the core module
-        asyncio.create_task(core._initialize())
+        self.loop.create_task(core._initialize())
         
 
 def _initialize(token: str, *,

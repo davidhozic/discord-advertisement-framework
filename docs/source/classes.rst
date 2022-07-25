@@ -35,15 +35,21 @@ TextMESSAGE
 .. autoclass:: framework.TextMESSAGE
     :members:
 
+    .. autoproperty:: deleted
+
 VoiceMESSAGE
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 .. autoclass:: framework.VoiceMESSAGE
     :members:
 
+    .. autoproperty:: deleted
+
 DirectMESSAGE
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 .. autoclass:: framework.DirectMESSAGE
     :members:
+
+    .. autoproperty:: deleted
 
 
 

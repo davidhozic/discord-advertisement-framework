@@ -1,11 +1,12 @@
 """
     Contains base definitions for different message classes."""
 
-from    typing import Union
+from    typing import Dict, Set, Tuple, Union
 from    ..dtypes import *
 from    ..tracing import *
 from    ..timing import *
 from    ..exceptions import *
+from    .. import misc
 import  random
 import  _discord as discord
 import  asyncio
@@ -14,7 +15,6 @@ import  asyncio
 __all__ = (
     "BaseMESSAGE",
 )
-
 
 class BaseMESSAGE:
     """
@@ -42,8 +42,11 @@ class BaseMESSAGE:
         "timer",
         "force_retry",
         "data",
-        "update_mutex",
+        "update_lock",
+        "_deleted"
     )
+
+    __logname__: str = "" # Used for registering SQL types and to get the message type for saving the log
 
     # The "__valid_data_types__" should be implemented in the INHERITED classes.
     # The set contains all the data types that the class is allowed to accept, this variable
@@ -54,7 +57,7 @@ class BaseMESSAGE:
                 start_period : Union[int, None],
                 end_period : int,
                 data,
-                start_now : bool=True):
+                start_now):
         # If start_period is none -> period will not be randomized
         self.start_period = start_period
         self.end_period   = end_period
@@ -68,7 +71,17 @@ class BaseMESSAGE:
         self.timer = TIMER()
         self.force_retry = {"ENABLED" : start_now, "TIME" : 0}
         self.data = data
-        self.update_mutex: asyncio.Lock = asyncio.Lock() # Prevents access to to internal variables from send/update methods at once
+        misc._write_safe_vars(self, "_deleted", False)
+        misc._write_safe_vars(self, "update_lock", asyncio.Lock())
+
+    @property
+    def deleted(self) -> bool:
+        """
+        Property that indicates if an object has been deleted from the shilling list.
+
+        If this is True, you should dereference this object from any variables.
+        """
+        return self._deleted
 
     def _generate_exception(self, 
                            status: int,
