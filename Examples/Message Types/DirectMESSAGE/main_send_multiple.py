@@ -28,8 +28,8 @@ fields=\
 
 guilds = [
     framework.USER(
-        user_id=123456789,                                 # ID of server (guild)
-        messages_to_send=[                                  # List MESSAGE objects
+        user_id=123456789,                                 # ID of server (guild) or a discord.Guild object
+        messages=[                                  # List MESSAGE objects
             framework.DirectMESSAGE(
                               start_period=None,            # If None, messages will be send on a fixed period (end period)
                               end_period=15,                # If start_period is None, it dictates the fixed sending period,
@@ -43,7 +43,7 @@ guilds = [
                               start_now=True                # Start sending now (True) or wait until period
                               ),  
         ],
-        generate_log=True                                   ## Generate file log of sent messages (and failed attempts) for this user
+        logging=True                                   ## Generate file log of sent messages (and failed attempts) for this user
     )
 ]
 
