@@ -34,22 +34,17 @@ jobs:
       run:   make clean html
     
 
-    - name: FTP Deploy
+    - name: GitHub Pages
       # You may pin to the exact commit or the version.
-      # uses: SamKirkland/FTP-Deploy-Action@d0aa83872616587eb552bc831bb9166b3f9c5ad5
-      uses: SamKirkland/FTP-Deploy-Action@4.3.0
+      # uses: crazy-max/ghaction-github-pages@eb08c35b9fab86751edfff4e55cd5cde35ff0e52
+      uses: crazy-max/ghaction-github-pages@v3.0.0
       with:
-        # ftp server
-        server: ftp.davidhozic.top
-        # ftp username
-        username: davidhozic@daf.davidhozic.top
-        # ftp password
-        password: ${{ secrets.WEB_FTP_PASSWORD }}
-        protocol: ftps
-        dangerous-clean-slate: true
-        exclude: |
-          **stats**
-        # Server port to connect to (read your web hosts docs)
-        local-dir: ./docs/build/html/
-
-
+        # Git domain (default github.com)
+        #domain: # optional, default is github.com
+        # Git branch where assets will be deployed
+        #target_branch: # optional, default is gh-pages
+        # Create incremental commit instead of doing push force
+        # Build directory to deploy
+        build_dir: docs/build/html
+        # Allow Jekyll to build your site
+        jekyll: False
