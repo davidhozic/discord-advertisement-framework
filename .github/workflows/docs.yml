@@ -40,11 +40,11 @@ jobs:
       uses: SamKirkland/FTP-Deploy-Action@4.3.0
       with:
         # ftp server
-        server: ${{secrets.WEB_FTP_SERVER}}
+        server: ftp.davidhozic.top
         # ftp username
-        username: ${{secrets.WEB_FTP_USERNAME}}
+        username: davidhozic@daf.davidhozic.top
         # ftp password
-        password: ${{secrets.WEB_FTP_PASSWORD}}
+        password: ${{ secrets.WEB_FTP_PASSWORD }}
         protocol: ftps
         dangerous-clean-slate: true
         exclude: |
