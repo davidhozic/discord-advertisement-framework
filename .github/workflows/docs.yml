@@ -47,7 +47,8 @@ jobs:
         password: ${{secrets.WEB_FTP_PASSWORD}}
         protocol: ftps
         dangerous-clean-slate: true
-        exclude: ["**stats**"]
+        exclude: |
+          **stats**
         # Server port to connect to (read your web hosts docs)
         local-dir: ./docs/build/html/
 
