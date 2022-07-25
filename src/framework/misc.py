@@ -29,11 +29,9 @@ def _write_safe_vars(obj: Any, name: str, value: Any, overwrite: bool=False):
         Set this to True to allow the variable to be re-referenced.
         If False, then variables with existing references will be left alone.
     """
-    try:
-        getattr(obj, name) # Test if the item exists, if it does, do nothing
-        if overwrite:
-            raise Exception("Rewrite!") # Allow rewrite of existing references
-    except:
+
+    # TODO: Test if it works
+    if overwrite or not hasattr(obj, name): # Write only if forced, or if not forced, then the attribute must not exist
         setattr(obj, name, value)
 
 
@@ -41,6 +39,7 @@ def _write_safe_vars(obj: Any, name: str, value: Any, overwrite: bool=False):
 ###########################
 # Decorators
 ###########################
+# TODO: Change Lock to semaphore, add parameter that dictates how many to take
 def _async_safe(lock: str) -> Callable:
     """
     Function that returns a safety decorator, which uses the :strong:`lock` parameter

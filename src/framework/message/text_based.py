@@ -578,9 +578,12 @@ class DirectMESSAGE(BaseMESSAGE):
                 if ex.code == 10008:    # Unknown message
                     self.previous_message  = None
                     handled = True
-            elif ex.status in {400, 403}: # Bad Request
-                await asyncio.sleep(RLIM_USER_WAIT_TIME * 5) # To avoid triggering selfbot detection
+            elif ex.status == 403 or ex.code in {50007, 10001, 10003}:
+                misc._write_safe_vars(self, "_deleted", True, True)
 
+            if ex.status in {400, 403}: # Bad Request
+                await asyncio.sleep(RLIM_USER_WAIT_TIME * 5) # To avoid triggering selfbot detection
+                        
         return handled
 
     async def _send_channel(self,
@@ -617,12 +620,7 @@ class DirectMESSAGE(BaseMESSAGE):
                 return {"success" : True}
 
             except Exception as ex:
-                if await self._handle_error(ex) is False or tries == 2:          # Forbidden                    # Not Forbidden, but bad error codes
-                    _delete = True if isinstance(ex, discord.HTTPException) and (ex.status == 403 or ex.code in {50007, 10001, 10003}) else False
-
-                    if _delete:
-                        misc._write_safe_vars(self, "_deleted", True, True)
-
+                if await self._handle_error(ex) is False or tries == 2:
                     return {"success" : False, "reason" : ex}
 
     @misc._async_safe("update_lock")

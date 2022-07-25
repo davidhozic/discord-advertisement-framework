@@ -16,7 +16,7 @@ on:
         - warning
         - debug 
 
-jobs: 
+jobs:
   upload:
     runs-on: ubuntu-latest
     
@@ -32,19 +32,5 @@ jobs:
     - name:  build
       working-directory: docs
       run:   make clean html
-    
 
-    - name: GitHub Pages
-      # You may pin to the exact commit or the version.
-      # uses: crazy-max/ghaction-github-pages@eb08c35b9fab86751edfff4e55cd5cde35ff0e52
-      uses: crazy-max/ghaction-github-pages@v3.0.0
-      with:
-        # Git domain (default github.com)
-        #domain: # optional, default is github.com
-        # Git branch where assets will be deployed
-        #target_branch: # optional, default is gh-pages
-        # Create incremental commit instead of doing push force
-        # Build directory to deploy
-        build_dir: docs/build/html
-        # Allow Jekyll to build your site
-        jekyll: False
+# TODO: Upload to FTP
