@@ -35,9 +35,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses:  actions/checkout@v3
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -U Sphinx
+    
     - name:  build
       working-directory: docs
       run:   make clean html
+    
     - name: ftp-clean
       # You may pin to the exact commit or the version.
       # uses: taylorgibb/ftp-clean@37c34052bd2170bcab847bf8b61df5f4ff526093
