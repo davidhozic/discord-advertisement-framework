@@ -40,11 +40,14 @@ jobs:
       uses: SamKirkland/FTP-Deploy-Action@4.3.0
       with:
         # ftp server
-        server: ${{ secrets.WEB_FTP_SERVER }}
+        server: ${{secrets.WEB_FTP_SERVER}}
         # ftp username
-        username: ${{ secrets.WEB_FTP_USERNAME }}
+        username: ${{secrets.WEB_FTP_USERNAME}}
         # ftp password
-        password: ${{ secrets.WEB_FTP_PASSWORD }}
+        password: ${{secrets.WEB_FTP_PASSWORD}}
+        protocol: ftps
+        dangerous-clean-slate: true
+        exclude: ["**stats**"]
         # Server port to connect to (read your web hosts docs)
         local-dir: ./docs/build/html/
 
