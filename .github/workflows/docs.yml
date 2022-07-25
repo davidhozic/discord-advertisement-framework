@@ -16,53 +16,35 @@ on:
         - warning
         - debug 
 
-jobs:
-  build:
-
-    runs-on: ubuntu-latest
-
-    steps:
-    - uses: actions/checkout@v3
-    - name: make
-      run: make
-    - name: make check
-      run: make check
-    - name: make distcheck
-      run: make distcheck
-  
-  
+jobs: 
   upload:
     runs-on: ubuntu-latest
+    
     steps:
     - uses:  actions/checkout@v3
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -U -r requirements.txt
+        pip install -U -r docs/requirements.txt
+    
     - name:  build
       working-directory: docs
       run:   make clean html
-    - name: ftp-clean
-      # You may pin to the exact commit or the version.
-      # uses: taylorgibb/ftp-clean@37c34052bd2170bcab847bf8b61df5f4ff526093
-      uses: taylorgibb/ftp-clean@v2.0.3
-      with:
-        # FTP host
-        host: ${{ secrets.WEB_FTP_SERVER }}
-        # FTP user
-        user:  ${{ secrets.WEB_FTP_USERNAME }}
-        # FTP password
-        password: ${{ secrets.WEB_FTP_PASSWORD }}
-        # Files and directories which should be excluded from being removed.
-        exclude: "stats"
-
-    - name: FTP Deploy
-      # You may pin to the exact commit or the version.
-      # uses: SamKirkland/FTP-Deploy-Action@d0aa83872616587eb552bc831bb9166b3f9c5ad5
-      uses: SamKirkland/FTP-Deploy-Action@4.3.0
-      with:
-        # ftp server
-        server: ${{ secrets.WEB_FTP_SERVER }}
-        # ftp username
-        username: ${{ secrets.WEB_FTP_USERNAME }}
-        # ftp password
-        password: ${{ secrets.WEB_FTP_PASSWORD }}
-        # Server port to connect to (read your web hosts docs)
     
-  
+
+    - name: GitHub Pages
+      # You may pin to the exact commit or the version.
+      # uses: crazy-max/ghaction-github-pages@eb08c35b9fab86751edfff4e55cd5cde35ff0e52
+      uses: crazy-max/ghaction-github-pages@v3.0.0
+      with:
+        # Git domain (default github.com)
+        #domain: # optional, default is github.com
+        # Git branch where assets will be deployed
+        #target_branch: # optional, default is gh-pages
+        # Create incremental commit instead of doing push force
+        # Build directory to deploy
+        build_dir: docs/build/html
+        # Allow Jekyll to build your site
+        jekyll: False
