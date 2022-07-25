@@ -39,7 +39,7 @@ class CLIENT(discord.Client):
         GLOBALS.running = True
         trace(f"[CLIENT]: Logged in as {self.user}", TraceLEVELS.NORMAL)
         # Initialize all the modules from the core module
-        asyncio.create_task(core._initialize())
+        self.loop.create_task(core._initialize())
         
 
 def _initialize(token: str, *,

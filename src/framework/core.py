@@ -74,6 +74,7 @@ async def _initialize() -> None:
     # Initialize the SQL module if manager is provided
     # If manager is not provided, use JSON based file logs
     sql_manager = GLOBALS.sql_manager
+    _client = client.get_client()
     if sql_manager is not None:
         try:
             await sql.initialize(sql_manager) # Initialize the SQL database
@@ -92,14 +93,14 @@ async def _initialize() -> None:
 
     # Create advertiser tasks
     trace("[CORE]: Creating advertiser tasks", TraceLEVELS.NORMAL)
-    asyncio.create_task(_advertiser("text"))
-    asyncio.create_task(_advertiser("voice"))
+    _client.loop.create_task(_advertiser("text"))
+    _client.loop.create_task(_advertiser("voice"))
 
     # Create the user callback task
     callback = get_user_callback()
     if callback is not None:
         trace("[CORE]: Starting user callback function", TraceLEVELS.NORMAL)
-        asyncio.create_task(callback)
+        _client.loop.create_task(callback)
 
     del GLOBALS.sql_manager         # Variable is no longer needed, instead the sql_manager inside sql.py is used
     del GLOBALS.temp_server_list    # Variable is no longer needed

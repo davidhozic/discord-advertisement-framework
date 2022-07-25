@@ -10,6 +10,7 @@ from   typing       import Any, Dict, List, Iterable, Union
 from   ..           import client
 from   ..           import sql
 from   ..           import core
+from   ..           import misc
 import asyncio
 import _discord as discord
 
@@ -101,8 +102,7 @@ class VoiceMESSAGE(BaseMESSAGE):
                  start_now: bool = True,
                  volume: int=50):
 
-        super().__init__(start_period, end_period, start_now)
-        self.data = data
+        super().__init__(start_period, end_period, data, start_now)
         self.volume = max(0, min(100, volume)) # Clamp the volume to 0-100 % 
         self.channels = list(set(channels))    # Auto remove duplicates
 
@@ -247,6 +247,7 @@ class VoiceMESSAGE(BaseMESSAGE):
                 GLOBALS.voice_client = None
                 await asyncio.sleep(1) # Avoid sudden disconnect and connect to a new channel
 
+    @misc._async_safe("update_lock")
     async def send(self) -> Union[dict,  None]:
         """
         Sends the data into each channel.
@@ -285,6 +286,7 @@ class VoiceMESSAGE(BaseMESSAGE):
 
         return None
 
+    @misc._async_safe("update_lock")
     async def update(self, **kwargs):
         """
         .. versionadded:: v1.9.5 **(NOT YET AVAILABLE)**

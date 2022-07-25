@@ -4,12 +4,13 @@ Contains definitions for message classes that are text based (TextMESSAGE & Dire
 from   .base        import *
 from   ..           import client
 from   ..           import sql
+from   ..           import misc
 from   ..dtypes     import *
 from   ..tracing    import *
 from   ..const      import *
 from   ..exceptions import *
 from   ..           import core
-from   typing       import Any, Dict, List, Iterable, Union, Literal
+from   typing       import Any, Dict, List, Iterable, Set, Union, Literal
 import asyncio
 import _discord as discord
 
@@ -18,7 +19,6 @@ __all__ = (
     "TextMESSAGE",
     "DirectMESSAGE"
 )
-
 
 @sql._register_type("MessageTYPE")
 class TextMESSAGE(BaseMESSAGE):
@@ -91,19 +91,12 @@ class TextMESSAGE(BaseMESSAGE):
     """
 
     __slots__ = (
-        "randomized_time",
-        "period",
-        "start_period",
-        "end_period",
-        "data",
         "channels",
-        "timer",
         "mode",
-        "force_retry",
         "sent_messages",
     )
-    __logname__ = "TextMESSAGE"
-    __valid_data_types__ = {str, EMBED, FILE}
+    __logname__: str = "TextMESSAGE"               # Used for registering SQL types and to get the message type for saving the log
+    __valid_data_types__: set = {str, EMBED, FILE} # Used in initialize_data to check if valid parameters were passed
 
     def __init__(self, start_period: Union[float, None],
                  end_period: float,
@@ -111,8 +104,7 @@ class TextMESSAGE(BaseMESSAGE):
                  channels: Iterable[Union[int, discord.TextChannel, discord.Thread]],
                  mode: Literal["send", "edit", "clear-send"] = "send",
                  start_now: bool = True):
-        super().__init__(start_period, end_period, start_now)
-        self.data = data
+        super().__init__(start_period, end_period, data, start_now)
         self.mode = mode
         self.channels = list(set(channels)) # Automatically removes duplicates
         self.sent_messages = {} # Dictionary for storing last sent message for each channel
@@ -292,7 +284,7 @@ class TextMESSAGE(BaseMESSAGE):
                 if ch_perms.send_messages is False: # Check if we have permissions
                     raise self._generate_exception(403, 50013, "You lack permissions to perform that action", discord.Forbidden)
 
-                # Delete previous message if clear-send mode is choosen and message exists
+                # Delete previous message if clear-send mode is chosen and message exists
                 if self.mode == "clear-send" and self.sent_messages.get(channel.id, None) is not None:
                     await self.sent_messages[channel.id].delete()
                     self.sent_messages[channel.id] = None
@@ -317,6 +309,7 @@ class TextMESSAGE(BaseMESSAGE):
                 if not await self._handle_error(channel, ex):
                     return {"success" : False, "reason" : ex}
 
+    @misc._async_safe("update_lock")
     async def send(self) -> Union[dict,  None]:
         """
         Sends the data into the channels.
@@ -361,6 +354,7 @@ class TextMESSAGE(BaseMESSAGE):
 
         return None
 
+    @misc._async_safe("update_lock")
     async def update(self, **kwargs: Any):
         """
         .. versionadded:: v1.9.5 **(NOT YET AVAILABLE)**
@@ -388,7 +382,6 @@ class TextMESSAGE(BaseMESSAGE):
         
         await core._update(self, **kwargs) # No additional modifications are required
  
-
 @sql._register_type("MessageTYPE")
 class DirectMESSAGE(BaseMESSAGE):
     """
@@ -457,19 +450,12 @@ class DirectMESSAGE(BaseMESSAGE):
     """
 
     __slots__ = (
-        "randomized_time",
-        "period",
-        "start_period",
-        "end_period",
-        "timer",
-        "force_retry",
-        "data",
         "mode",
         "previous_message",
         "dm_channel",
     )
-    __logname__ = "DirectMESSAGE"
-    __valid_data_types__ = {str, EMBED, FILE}
+    __logname__ = "DirectMESSAGE"               # Used for logging (type key) and sql lookup table type registration
+    __valid_data_types__ = {str, EMBED, FILE}   # Defines the allowed data types for the data parameter (get's checked in the ._initialize_data method)                                             
 
     def __init__(self,
                  start_period: Union[float, None],
@@ -477,17 +463,16 @@ class DirectMESSAGE(BaseMESSAGE):
                  data: Union[str, EMBED, FILE, list],
                  mode: Literal["send", "edit", "clear-send"] = "send",
                  start_now: bool = True):
-        super().__init__(start_period, end_period, start_now)
-        self.data = data
+        super().__init__(start_period, end_period, data, start_now)
         self.mode = mode
         self.dm_channel = None
         self.previous_message = None
 
     def _generate_log_context(self,
-                            success_context: Dict[bool, Exception],
-                             text : str,
-                             embed : EMBED,
-                             files : List[FILE]):
+                              success_context: Dict[bool, Exception],
+                              text : str,
+                              embed : EMBED,
+                              files : List[FILE]):
         """
         Generates information about the message send attempt that is to be saved into a log.
 
@@ -515,6 +500,8 @@ class DirectMESSAGE(BaseMESSAGE):
                 - success_info: Dict[str, Any]:
                     - success: bool - Was sending successful or not
                     - reason:  str  - If it was unsuccessful, what was the reason
+                    - delete: bool  - Signals the guild object to remove this message from the list
+                                      due to unrecoverable error (if set to True).
                 
                 - type: str - The type of the message, this is always TextMESSAGE.
                 - mode: str - The mode used to send the message (send, edit, clear-send).
@@ -523,6 +510,7 @@ class DirectMESSAGE(BaseMESSAGE):
         files = [x.filename for x in files]
         if not success_context["success"]:
             success_context["reason"] = str(success_context["reason"])
+
         sent_data_context = {}
         if text is not None:
             sent_data_context["text"] = text
@@ -629,9 +617,15 @@ class DirectMESSAGE(BaseMESSAGE):
                 return {"success" : True}
 
             except Exception as ex:
-                if await self._handle_error(ex) is False or tries == 2:
+                if await self._handle_error(ex) is False or tries == 2:          # Forbidden                    # Not Forbidden, but bad error codes
+                    _delete = True if isinstance(ex, discord.HTTPException) and (ex.status == 403 or ex.code in {50007, 10001, 10003}) else False
+
+                    if _delete:
+                        misc._write_safe_vars(self, "_deleted", True, True)
+
                     return {"success" : False, "reason" : ex}
 
+    @misc._async_safe("update_lock")
     async def send(self) -> Union[dict, None]:
         """
         Sends the data into the channels
@@ -649,18 +643,12 @@ class DirectMESSAGE(BaseMESSAGE):
             if core.GLOBALS.is_user:
                 await asyncio.sleep(RLIM_USER_WAIT_TIME)
             context = await self._send_channel(**data_to_send)
-            if context["success"] is False:
-                reason  = context["reason"]
-                if isinstance(reason, discord.HTTPException):
-                    if (reason.status == 403 or                    # Forbidden
-                        reason.code in {50007, 10001, 10003}     # Not Forbidden, but bad error codes
-                    ):
-                        self.dm_channel = None
 
             return self._generate_log_context(context, **data_to_send)
 
         return None
 
+    @misc._async_safe("update_lock")
     async def update(self, init_options={},**kwargs):
         """
         .. versionadded:: v1.9.5 **(NOT YET AVAILABLE)**
@@ -688,6 +676,7 @@ class DirectMESSAGE(BaseMESSAGE):
         if "start_now" not in kwargs:
             # This parameter does not appear as attribute, manual setting necessary
             kwargs["start_now"] = True
+
         if not len(init_options):
             init_options = {"user" : self.dm_channel}
         

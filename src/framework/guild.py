@@ -4,8 +4,11 @@
     _BaseGUILD class.
 """
 from    __future__ import annotations
+import asyncio
 from    contextlib import suppress
 from    typing import Any, Literal, Union, List, Optional
+
+from framework import misc
 from    .exceptions import *
 from    .tracing import *
 from    .const import *
@@ -57,6 +60,7 @@ class _BaseGUILD:
         "apiobject",
         "logging",
         "_messages",
+        "update_lock",
     )
     __logname__ = "_BaseGUILD" # Dummy to demonstrate correct definition for @sql._register_type decorator
 
@@ -68,6 +72,7 @@ class _BaseGUILD:
         self.apiobject: discord.Object = snowflake
         self.logging: bool= logging
         self._messages: list = messages  # Contains all the different message objects, this gets sorted in `.initialize()` method
+        misc._write_safe_vars(self, "update_lock", asyncio.Lock())
 
     @property
     def _log_file_name(self):
@@ -349,10 +354,12 @@ class GUILD(_BaseGUILD):
             for message in self._messages:
                 await self.add_message(message)
 
+            self._messages.clear()
             return
 
         raise DAFNotFoundError(f"Unable to find guild with ID: {guild_id}", DAF_GUILD_ID_NOT_FOUND)
 
+    @misc._async_safe("update_lock")
     async def advertise(self,
                         mode: Literal["text", "voice"]):
         """
@@ -379,9 +386,11 @@ class GUILD(_BaseGUILD):
         # Cleanup messages marked for removal
         for message in marked_del:
             if message in msg_list:
+                misc._write_safe_vars(message, "_deleted", True, True)
                 msg_list.remove(message)
             trace(f"[GUILD]: Removing a {type(message).__name__} because it's channels were removed, in guild {self.apiobject.name}(ID: {self.snowflake})", TraceLEVELS.WARNING)
 
+    @misc._async_safe("update_lock")
     async def update(self, **kwargs):
         """
         Used for changing the initialization parameters the object was initialized with.
@@ -517,11 +526,13 @@ class USER(_BaseGUILD):
             for message in self._messages:
                 await self.add_message(message)
 
+            self._messages.clear()
             return
 
         # Api object wasn't found, even after direct API call to discord.
         raise DAFNotFoundError(f"[USER]: Unable to create DM with user id: {user_id}", DAF_USER_CREATE_DM)
 
+    @misc._async_safe("update_lock")
     async def advertise(self,
                         mode: Literal["text", "voice"]) -> None:
         """
@@ -538,14 +549,18 @@ class USER(_BaseGUILD):
                 if message.is_ready():
                     message.reset_timer()
                     message_ret = await message.send()
-                    if self.logging and message_ret is not None:
-                        await self.generate_log(message_ret)
+                    if message_ret is not None:
+                        if self.logging:
+                            await self.generate_log(message_ret)
 
-                    if message.dm_channel is None:
-                        self.t_messages.clear()            # Remove all messages since that they all share the same user and will fail
-                        trace(f"Removing all messages for user {self.apiobject.display_name}#{self.apiobject.discriminator} (ID: {self.snowflake}) because we do not have permissions to send to that user.", TraceLEVELS.WARNING)
-                        break
+                        if message.deleted:  # Only True on critical errors that need to be handled by removing all messages
+                            for msg in self.t_messages:
+                                misc._write_safe_vars(msg, "_deleted", True, True)
+                            self.t_messages.clear()  # Remove all messages since that they all share the same user and will fail
+                            trace(f"Removing all messages for user {self.apiobject.display_name}#{self.apiobject.discriminator} (ID: {self.snowflake}) because we do not have permissions to send to that user.", TraceLEVELS.WARNING)
+                            break
     
+    @misc._async_safe("update_lock")
     async def update(self, **kwargs):
         """
         .. versionadded:: v1.9.5 **(NOT YET AVAILABLE)**
