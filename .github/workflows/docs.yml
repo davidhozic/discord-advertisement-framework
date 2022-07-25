@@ -19,17 +19,18 @@ on:
 jobs: 
   upload:
     runs-on: ubuntu-latest
-    working-directory: docs
     
     steps:
     - uses:  actions/checkout@v3
     
     - name: Install dependencies
+      working-directory: docs
       run: |
         python -m pip install --upgrade pip
         pip install -U -r requirements.txt
     
     - name:  build
+      working-directory: docs
       run:   make clean html
     
     - name: ftp-clean
@@ -58,5 +59,6 @@ jobs:
         # ftp password
         password: ${{ secrets.WEB_FTP_PASSWORD }}
         # Server port to connect to (read your web hosts docs)
-    
+        local-dir: ./docs/build/html/
+      
   
