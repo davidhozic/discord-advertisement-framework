@@ -33,19 +33,6 @@ jobs:
       working-directory: docs
       run:   make clean html
     
-    - name: ftp-clean
-      # You may pin to the exact commit or the version.
-      # uses: taylorgibb/ftp-clean@37c34052bd2170bcab847bf8b61df5f4ff526093
-      uses: taylorgibb/ftp-clean@v2.0.3
-      with:
-        # FTP host
-        host: ${{ secrets.WEB_FTP_SERVER }}
-        # FTP user
-        user:  ${{ secrets.WEB_FTP_USERNAME }}
-        # FTP password
-        password: ${{ secrets.WEB_FTP_PASSWORD }}
-        # Files and directories which should be excluded from being removed.
-        exclude: "stats"
 
     - name: FTP Deploy
       # You may pin to the exact commit or the version.
@@ -60,5 +47,5 @@ jobs:
         password: ${{ secrets.WEB_FTP_PASSWORD }}
         # Server port to connect to (read your web hosts docs)
         local-dir: ./docs/build/html/
-      
-  
+
+
