@@ -7,7 +7,7 @@ Changelog
     The library first started as a single file script that I didn't make versions of.
     When I decided to turn it into a library, I've set the version number based on the amount of commits I have made since the start.
 
-v1.9.5
+v2.0
 ----------------------
 - New cool looking web documentation (the one you're reading now)
 - Added volume parameter to :ref:`VoiceMESSAGE`

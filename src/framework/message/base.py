@@ -42,7 +42,7 @@ class BaseMESSAGE:
         "timer",
         "force_retry",
         "data",
-        "update_lock",
+        "update_semaphore",
         "_deleted"
     )
 
@@ -71,8 +71,8 @@ class BaseMESSAGE:
         self.timer = TIMER()
         self.force_retry = {"ENABLED" : start_now, "TIME" : 0}
         self.data = data
-        misc._write_safe_vars(self, "_deleted", False)
-        misc._write_safe_vars(self, "update_lock", asyncio.Lock())
+        misc._write_attr_once(self, "_deleted", False)
+        misc._write_attr_once(self, "update_semaphore", asyncio.Semaphore(1))
 
     @property
     def deleted(self) -> bool:
@@ -82,6 +82,13 @@ class BaseMESSAGE:
         If this is True, you should dereference this object from any variables.
         """
         return self._deleted
+
+    def _delete(self):
+        """
+        Sets the deleted flag to True, indicating the user should stop
+        using this message.
+        """
+        self._deleted = True
 
     def _generate_exception(self, 
                            status: int,
@@ -235,7 +242,7 @@ class BaseMESSAGE:
             Raised from .initialize() method
         
         .. versionadded::
-            v1.9.5 **(NOT YET AVAILABLE)**
+            v2.0
         """
 
         raise NotImplementedError

@@ -16,6 +16,8 @@ from  sqlalchemy.exc  import SQLAlchemyError
 from  sqlalchemy.orm import sessionmaker, Session
 from  sqlalchemy.ext.declarative import declarative_base
 from  pytds import ClosedConnectionError
+
+from framework import misc
 from  .tracing import *
 from  .timing import *
 from  .const import *
@@ -100,7 +102,7 @@ class LoggerSQL:
         "password",
         "server",
         "database",
-        "lock",
+        "safe_sem",
         # Caching dictionaries
         "MessageMODE",
         "MessageTYPE",
@@ -123,9 +125,9 @@ class LoggerSQL:
         self.cursor: pytds.Cursor = None
         self._sessionmaker: sessionmaker  = None
 
-        # Lock used to prevent multiple tasks from trying to access the `._save_log()` method at once.
+        # Semaphore used to prevent multiple tasks from trying to access the `._save_log()` method at once.
         # Also used in the `.update()` method to prevent race conditions.
-        self.lock = asyncio.Lock() 
+        self.safe_sem = asyncio.Semaphore(1) 
 
         # Caching (to avoid unnecessary queries)
         ## Lookup table caching
@@ -185,7 +187,7 @@ class LoggerSQL:
             for tries in range(SQL_RECONNECT_ATTEMPTS):
                 trace(f"[SQL]: Reconnecting to database {self.database}.")
                 with suppress(DAFSQLError):
-                    self.begin_engine()
+                    self._begin_engine()
                     trace(f"[SQL]: Reconnected to the database {self.database}.")
                     GLOBALS.enabled = True
                     return
@@ -197,7 +199,7 @@ class LoggerSQL:
             trace(f"[SQL]: Failed to reconnect in {SQL_RECONNECT_ATTEMPTS} attempts, SQL logging is now disabled.")
 
         GLOBALS.enabled = False
-        self.stop_engine()
+        self._stop_engine()
         loop.run_in_executor(None, _reconnect)
 
     def _create_data_types(self) -> None:
@@ -428,7 +430,7 @@ class LoggerSQL:
         except Exception as ex:
             raise DAFSQLError(f"Unable to create all the tables.\nReason: {ex}", DAF_SQL_CREATE_TABLES_ERROR)
 
-    def connect_cursor(self) -> None:
+    def _connect_cursor(self) -> None:
         """
         Creates a cursor for the database (for faster communication)
         
@@ -443,7 +445,7 @@ class LoggerSQL:
         except Exception as ex:
             raise DAFSQLError(f"Unable to connect the cursor. Reason: {ex}", DAF_SQL_CURSOR_CONN_ERROR)
 
-    def begin_engine(self) -> None:
+    def _begin_engine(self) -> None:
         """
         Creates the sqlalchemy engine.
         
@@ -471,7 +473,7 @@ class LoggerSQL:
         Raises
         -----------
         Inherited from DAFSQLError
-            from ``.begin_engine()``
+            from ``._begin_engine()``
         Inherited from DAFSQLError
             from ``._create_tables()``
         Inherited from DAFSQLError
@@ -481,10 +483,10 @@ class LoggerSQL:
         Inherited from DAFSQLError
             from ``._create_analytic_objects()``
         Inherited from DAFSQLError
-            from ``.connect_cursor()``
+            from ``._connect_cursor()``
         """
         # Create engine for communicating with the SQL base
-        self.begin_engine()
+        self._begin_engine()
         # Create tables and the session class bound to the engine
         self._create_tables()
         # Insert the lookuptable values        
@@ -494,7 +496,7 @@ class LoggerSQL:
         # Initialize views, procedures and functions
         self._create_analytic_objects()
         # Connect the cursor for faster procedure calls
-        self.connect_cursor()
+        self._connect_cursor()
         GLOBALS.enabled = True
     
     def _get_insert_guild(self,
@@ -577,7 +579,7 @@ class LoggerSQL:
                 break
         return ret
     
-    def stop_engine(self):
+    def _stop_engine(self):
         """
         Closes the engine and the cursor.
         """
@@ -634,10 +636,15 @@ class LoggerSQL:
         except Exception:
             # Error could not be handled, stop the engine
             res = False
-            self.stop_engine()          
+            self._stop_engine()          
 
         return res  # Returns if the error was handled or not
 
+
+    # _async_safe prevents multiple tasks from attempting to do operations on the database at the same time.
+    # This is to avoid eg. procedures being called while they are being created,
+    # handle error being called from different tasks, update method from causing a race condition,etc.
+    @misc._async_safe("safe_sem", 1)
     async def _save_log(self,
                  guild_context: dict,
                  message_context: dict) -> bool:
@@ -656,16 +663,22 @@ class LoggerSQL:
         Returns bool value indicating success (True) or failure (False).
         """
 
+        if not GLOBALS.enabled:
+            # While current task was waiting for safe_sem to be released, 
+            # some other task disabled the logging due to an recoverable error.
+            # Proceeding would result in failure anyway, so just return False.
+            return False
+
         # Parse the data
-        sent_data = message_context.get("sent_data")
-        guild_snowflake = guild_context.get("id")
-        guild_name = guild_context.get("name")
+        sent_data: dict = message_context.get("sent_data")
+        guild_snowflake: int = guild_context.get("id")
+        guild_name: str = guild_context.get("name")
         guild_type: str = guild_context.get("type")
         message_type: str = message_context.get("type")
-        message_mode = message_context.get("mode", None)
-        channels = message_context.get("channels", None)
-        dm_success_info = message_context.get("success_info", None)
-        dm_success_info_reason = None
+        message_mode: str = message_context.get("mode", None)
+        channels: List[dict] = message_context.get("channels", None)
+        dm_success_info: dict = message_context.get("success_info", None)
+        dm_success_info_reason: str = None
                 
         if dm_success_info is not None:
             if "reason" in dm_success_info:
@@ -675,55 +688,48 @@ class LoggerSQL:
         if channels is not None:
             channels = channels['successful'] + channels['failed']
 
-        # Prevent multiple tasks from attempting to do operations on the database at the same time
-        # This is to avoid eg. procedures being called while they are being created,
-        # handle error being called from different tasks, update method from causing a race condition,etc.
-        async with self.lock: 
-            if not GLOBALS.enabled:
-                # While current task was waiting for lock to be released, 
-                # some other task disabled the logging due to an recoverable error
-                return False
 
-            for tries in range(SQL_MAX_SAVE_ATTEMPTS):
-                try:
-                    # Insert guild into the database and cache if it doesn't exist
-                    guild_id = self._get_insert_guild(guild_snowflake, guild_name, guild_type)
-                    if channels is not None:
-                        # Insert channels into the database and cache if it doesn't exist
-                        _channels = self._get_insert_channels(channels, guild_id)
-                        _channels = pytds.TableValuedParam("t_tmp_channel_log", rows=_channels)
-                    # Execute the saved procedure that saves the log
-                    self.cursor.callproc("sp_save_log", (json.dumps(sent_data), 
-                                                        self.MessageTYPE.get(message_type, None),
-                                                        guild_id,
-                                                        self.MessageMODE.get(message_mode, None),
-                                                        dm_success_info_reason,
-                                                        _channels)) # Execute the stored procedure
+        for tries in range(SQL_MAX_SAVE_ATTEMPTS):
+            try:
+                # Insert guild into the database and cache if it doesn't exist
+                guild_id = self._get_insert_guild(guild_snowflake, guild_name, guild_type)
+                if channels is not None:
+                    # Insert channels into the database and cache if it doesn't exist
+                    _channels = self._get_insert_channels(channels, guild_id)
+                    _channels = pytds.TableValuedParam("t_tmp_channel_log", rows=_channels)
+                # Execute the saved procedure that saves the log
+                self.cursor.callproc("sp_save_log", (json.dumps(sent_data), 
+                                                    self.MessageTYPE.get(message_type, None),
+                                                    guild_id,
+                                                    self.MessageMODE.get(message_mode, None),
+                                                    dm_success_info_reason,
+                                                    _channels)) # Execute the stored procedure
 
-                    return True
-                
-                except Exception as ex:
-                    if isinstance(ex, SQLAlchemyError):
-                        ex = ex.orig  # Get the original exception
+                return True
+            
+            except Exception as ex:
+                if isinstance(ex, SQLAlchemyError):
+                    ex = ex.orig  # Get the original exception
 
-                    if isinstance(ex, ClosedConnectionError):
-                        ex.text = ex.args[0]
-                        ex.number = 53  # Because only text is returned
+                if isinstance(ex, ClosedConnectionError):
+                    ex.text = ex.args[0]
+                    ex.number = 53  # Because only text is returned
 
-                    code = ex.number  if hasattr(ex, "number") else -1      # The exception does't have a number attribute
-                    message = ex.text if hasattr(ex, "text")   else str(ex) # The exception does't have a text attribute
-                    trace(f"[SQL]: Saving log failed. {code} - {message}. Attempting recovery... (Tries left: {SQL_MAX_SAVE_ATTEMPTS - tries - 1})")
-                    loop = asyncio.get_event_loop()
-                    # Run in executor to prevent blocking
-                    if not await loop.run_in_executor(None, self._handle_error, code, message, asyncio.get_event_loop()):
-                        break
+                code = ex.number  if hasattr(ex, "number") else -1      # The exception does't have a number attribute
+                message = ex.text if hasattr(ex, "text")   else str(ex) # The exception does't have a text attribute
+                trace(f"[SQL]: Saving log failed. {code} - {message}. Attempting recovery... (Tries left: {SQL_MAX_SAVE_ATTEMPTS - tries - 1})")
+                loop = asyncio.get_event_loop()
+                # Run in executor to prevent blocking
+                if not await loop.run_in_executor(None, self._handle_error, code, message, asyncio.get_event_loop()):
+                    break
         
         trace(f"[SQL]: Saving log failed. Switching to file logging.")
         return False
 
+    @misc._async_safe("safe_sem", 1)
     async def update(self, **kwargs):
         """
-        .. versionadded:: v1.9.5 **(NOT YET AVAILABLE)**
+        .. versionadded:: v2.0
 
         Used for changing the initialization parameters the object was initialized with.
         
@@ -743,15 +749,14 @@ class LoggerSQL:
         Other
             Raised from .initialize() method.
         """
-        async with self.lock:
-            try:
-                self.stop_engine()
-                await core._update(self, **kwargs)
-                GLOBALS.enabled = True
-            except Exception:
-                # Reinitialize since engine was disconnected
-                await self.initialize()
-                raise
+        try:
+            self._stop_engine()
+            await core._update(self, **kwargs)
+            GLOBALS.enabled = True
+        except Exception:
+            # Reinitialize since engine was disconnected
+            await self.initialize()
+            raise
 
 
 class MessageTYPE(LoggerSQL.Base):
