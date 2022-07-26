@@ -62,6 +62,7 @@ __all__ = (
     "MessageConverter",
     "PartialMessageConverter",
     "TextChannelConverter",
+    "ForumChannelConverter",
     "InviteConverter",
     "GuildConverter",
     "RoleConverter",
@@ -160,7 +161,7 @@ class ObjectConverter(IDConverter[_discord.Object]):
     """
 
     async def convert(self, ctx: Context, argument: str) -> _discord.Object:
-        match = self._get_id_match(argument) or re.match(r"<(?:@(?:!|&)?|#)([0-9]{15,20})>$", argument)
+        match = self._get_id_match(argument) or re.match(r"<(?:@[!&]?|#)([0-9]{15,20})>$", argument)
 
         if match is None:
             raise ObjectNotFound(argument)
@@ -563,6 +564,25 @@ class CategoryChannelConverter(IDConverter[_discord.CategoryChannel]):
         return GuildChannelConverter._resolve_channel(ctx, argument, "categories", _discord.CategoryChannel)
 
 
+class ForumChannelConverter(IDConverter[_discord.ForumChannel]):
+    """Converts to a :class:`~discord.ForumChannel`.
+
+    All lookups are via the local guild. If in a DM context, then the lookup
+    is done by the global cache.
+
+    The lookup strategy is as follows (in order):
+
+    1. Lookup by ID.
+    2. Lookup by mention.
+    3. Lookup by name
+
+    .. versionadded:: 2.0
+    """
+
+    async def convert(self, ctx: Context, argument: str) -> _discord.ForumChannel:
+        return GuildChannelConverter._resolve_channel(ctx, argument, "forum_channels", _discord.ForumChannel)
+
+
 class ThreadConverter(IDConverter[_discord.Thread]):
     """Coverts to a :class:`~discord.Thread`.
 
@@ -767,7 +787,7 @@ class EmojiConverter(IDConverter[_discord.Emoji]):
     """
 
     async def convert(self, ctx: Context, argument: str) -> _discord.Emoji:
-        match = self._get_id_match(argument) or re.match(r"<a?:[a-zA-Z0-9\_]{1,32}:([0-9]{15,20})>$", argument)
+        match = self._get_id_match(argument) or re.match(r"<a?:\w{1,32}:([0-9]{15,20})>$", argument)
         result = None
         bot = ctx.bot
         guild = ctx.guild
@@ -801,7 +821,7 @@ class PartialEmojiConverter(Converter[_discord.PartialEmoji]):
     """
 
     async def convert(self, ctx: Context, argument: str) -> _discord.PartialEmoji:
-        match = re.match(r"<(a?):([a-zA-Z0-9\_]{1,32}):([0-9]{15,20})>$", argument)
+        match = re.match(r"<(a?):(\w{1,32}):([0-9]{15,20})>$", argument)
 
         if match:
             emoji_animated = bool(match.group(1))
@@ -948,7 +968,7 @@ class clean_content(Converter[str]):
 
 class Greedy(List[T]):
     r"""A special converter that greedily consumes arguments until it can't.
-    As a consequence of this behaviour, most input errors are silently discarded,
+    As a consequence of this behavior, most input errors are silently discarded,
     since it is used as an indicator of when to stop parsing.
 
     When a parser error is met the greedy converter stops converting, undoes the
@@ -1043,6 +1063,7 @@ CONVERTER_MAPPING: Dict[Type[Any], Any] = {
     _discord.Emoji: EmojiConverter,
     _discord.PartialEmoji: PartialEmojiConverter,
     _discord.CategoryChannel: CategoryChannelConverter,
+    _discord.ForumChannel: ForumChannelConverter,
     _discord.Thread: ThreadConverter,
     _discord.abc.GuildChannel: GuildChannelConverter,
     _discord.GuildSticker: GuildStickerConverter,

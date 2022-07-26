@@ -699,7 +699,7 @@ class VoiceClient(VoiceProtocol):
             A function which is called after the bot has stopped recording.
         *args:
             Args which will be passed to the callback function.
-            
+
         Raises
         ------
         RecordingException
@@ -882,6 +882,8 @@ class VoiceClient(VoiceProtocol):
 
         self.checked_add("sequence", 1, 65535)
         if encode:
+            if not self.encoder:
+                self.encoder = opus.Encoder()
             encoded_data = self.encoder.encode(data, self.encoder.SAMPLES_PER_FRAME)
         else:
             encoded_data = data

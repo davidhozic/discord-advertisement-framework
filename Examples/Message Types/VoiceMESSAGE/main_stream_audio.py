@@ -6,18 +6,19 @@ some_audio_file = framework.AUDIO("VoiceMessage.mp3")
 
 guilds = [
     framework.GUILD(
-        guild_id=12345,                         # ID of server (guild)
-        messages_to_send=[                      # List MESSAGE objects
+        snowflake=123456789,                                    # ID of server (guild) or a discord.Guild object or a discord.Guild object
+        messages=[                                      # List MESSAGE objects 
             framework.VoiceMESSAGE(
-                start_period=None,              # If None, messages will be send on a fixed period (end period)
-                end_period=15,                  # If start_period is None, it dictates the fixed streaming period (period of channel join).,
-                data=[some_audio_file],         # Data you want to send (Can be of types : AUDIO or function that returns any of above types [or returns None if you don't have any data to send yet])
-                    
-                channel_ids=[12345],
-                start_now=True
-            )  
+                              start_period=None,                # If None, messages will be send on a fixed period (end period)
+                              end_period=15,                    # If start_period is None, it dictates the fixed sending period,
+                                                                # If start period is defined, it dictates the maximum limit of randomized period
+                              data=some_audio_file,             # Data parameter
+                              channels=[123456789],             # List of channel ids or discord.VoiceChannel objects
+                              volume=50,                        # The volume (0-100%) at which to play the audio
+                              start_now=True                    # Start sending now (True) or wait until period
+                              ),  
         ],
-        generate_log=True           ## Generate file log of sent messages (and failed attempts) for this server 
+        logging=True           ## Generate file log of sent messages (and failed attempts) for this server 
     )
 ]
 

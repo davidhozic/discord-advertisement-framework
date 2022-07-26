@@ -1,14 +1,11 @@
 """
-    ~  client  ~
-    This modules contains definitions
-    related to the client (for API)
+    This modules contains definitions related to the client (for API)
 """
 
 import  asyncio
 import  _discord as discord
 from    .tracing import *
 from    . import core
-from    . import message
 
 
 #######################################################################
@@ -16,6 +13,7 @@ from    . import message
 #######################################################################
 class GLOBALS:
     client = None     # Pycord Client object
+    running = False # Weird bug causes client.on_ready method to be called multiple times some times
 
 __all__ = (
     "CLIENT",
@@ -25,34 +23,42 @@ __all__ = (
 
 class CLIENT(discord.Client):
     """
-        Name : CLIENT
-        Info : Inherited class from discord.Client.
-               Contains an additional on_ready function.
+    The same as `discord.Client <https://docs.pycord.dev/en/master/api.html?highlight=client#discord.Client>`_, except it contains an on_ready coroutine.
+
+    .. note::
+        This is automatically created by the framework.
+        You can retrieve the object created by calling :ref:`get_client` function.
     """
     async def on_ready(self) -> None:
         """
-            Name : on_ready
-            Info : Tasks that is started by pycord when you have been
-                   successfully logged into discord.
+        Gets run at login, creates the main initialization task inside the core module.
         """
+        if GLOBALS.running:
+            return
+
+        GLOBALS.running = True
         trace(f"[CLIENT]: Logged in as {self.user}", TraceLEVELS.NORMAL)
-        
         # Initialize all the modules from the core module
-        asyncio.create_task(core.initialize())
+        self.loop.create_task(core._initialize())
         
 
-def initialize(token: str, *,
+def _initialize(token: str, *,
                bot: bool,
-               intents: discord.Intents) -> bool:
+               intents: discord.Intents):
     """
-        ~  initialize  ~
-        @Param:
-        - token: str ~ authorization token for connecting to discord
-        - bot: bool ~ bool variable that should be True if the token
-                      is for a bot account and False if the token is
-                      for an user account.
-        @Info:
-        The function initializes Pycord, the discord API wrapper.
+    
+    Initializes the client module (Pycord).
+
+    Parameters
+    ----------------
+    token: str
+        Authorization token for connecting to discord.
+    bot: bool
+        Tells if the token is for a bot account.
+                      and False if the token is  for an user account.
+    intents: discord.Intents
+        The intents discord object. Intents are settings that
+                                    dictate which dictates the events that the client will listen for.
     """
     GLOBALS.client = CLIENT(intents=intents)
     if not bot:
@@ -62,10 +68,6 @@ def initialize(token: str, *,
 
 def get_client() -> CLIENT:
     """
-    Name:   get_client
-    Params: void
-    Return: discord.Client | None
-    Info:   Returns the client object used by the framework,
-            so the user wouldn't have to run 2 clients.
+    Returns the `CLIENT` object used for communicating with Discord.
     """
     return GLOBALS.client

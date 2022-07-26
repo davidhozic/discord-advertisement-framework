@@ -25,10 +25,9 @@ DEALINGS IN THE SOFTWARE.
 
 import copy
 import functools
-import inspect
 import itertools
 import re
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 import _discord.utils
 
@@ -290,7 +289,7 @@ class HelpCommand:
         .. versionchanged:: 1.7
     command_attrs: :class:`dict`
         A dictionary of options to pass in for the construction of the help command.
-        This allows you to change the command behaviour without actually changing
+        This allows you to change the command behavior without actually changing
         the implementation of the command. The attributes will be the same as the
         ones passed in the :class:`.Command` constructor.
     """
@@ -610,7 +609,7 @@ class HelpCommand:
     def get_destination(self):
         """Returns the :class:`~discord.abc.Messageable` where the help command will be output.
 
-        You can override this method to customise the behaviour.
+        You can override this method to customise the behavior.
 
         By default this returns the context's channel.
 
@@ -627,7 +626,7 @@ class HelpCommand:
         Handles the implementation when an error happens in the help command.
         For example, the result of :meth:`command_not_found` will be passed here.
 
-        You can override this method to customise the behaviour.
+        You can override this method to customise the behavior.
 
         By default, this sends the error message to the destination
         specified by :meth:`get_destination`.
@@ -651,7 +650,7 @@ class HelpCommand:
 
         The help command's error handler, as specified by :ref:`ext_commands_error_handler`.
 
-        Useful to override if you need some specific behaviour when the error handler
+        Useful to override if you need some specific behavior when the error handler
         is called.
 
         By default this method does nothing and just propagates to the default
@@ -677,7 +676,7 @@ class HelpCommand:
         should use :meth:`get_destination` to know where to send, as this is a customisation
         point for other users.
 
-        You can override this method to customise the behaviour.
+        You can override this method to customise the behavior.
 
         .. note::
 
@@ -706,7 +705,7 @@ class HelpCommand:
         should use :meth:`get_destination` to know where to send, as this is a customisation
         point for other users.
 
-        You can override this method to customise the behaviour.
+        You can override this method to customise the behavior.
 
         .. note::
 
@@ -734,7 +733,7 @@ class HelpCommand:
         should use :meth:`get_destination` to know where to send, as this is a customisation
         point for other users.
 
-        You can override this method to customise the behaviour.
+        You can override this method to customise the behavior.
 
         .. note::
 
@@ -761,7 +760,7 @@ class HelpCommand:
         should use :meth:`get_destination` to know where to send, as this is a customisation
         point for other users.
 
-        You can override this method to customise the behaviour.
+        You can override this method to customise the behavior.
 
         .. note::
 
@@ -819,7 +818,7 @@ class HelpCommand:
         The actual implementation of the help command.
 
         It is not recommended to override this method and instead change
-        the behaviour through the methods that actually get dispatched.
+        the behavior through the methods that actually get dispatched.
 
         - :meth:`send_bot_help`
         - :meth:`send_cog_help`
