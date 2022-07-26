@@ -239,7 +239,7 @@ def remove_object(data):
 
 async def _update(obj: Any, *, init_options: dict = {}, **kwargs):
         """
-        .. versionadded:: v1.9.5
+        .. versionadded:: v2.0
 
         Used for changing the initialization parameters the obj was initialized with.
         
@@ -344,11 +344,11 @@ def run(token : str,
     """
 
     guild.GLOBALS.server_log_path = server_log_output               # Logging folder
-    tracing.m_use_debug = debug                                     # Print trace messages to the console for debugging purposes
     GLOBALS.temp_server_list = server_list                          # List of guild objects to iterate thru in the advertiser task
     GLOBALS.sql_manager = sql_manager                               # SQL manager object
     GLOBALS.is_user = is_user                                       # Is the token from an user account
     if user_callback is not None:
         GLOBALS.user_callback = user_callback()                     # Called after framework has started
-
+    
+    tracing.initialize(debug)                                       # Print trace messages to the console for debugging purposes
     client._initialize(token, bot=not is_user, intents=intents)

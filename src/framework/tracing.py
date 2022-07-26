@@ -11,8 +11,9 @@ __all__ = (
     "trace"
 )
 
-m_use_debug = None
-m_lock = Lock() # For print thread safety
+class GLOBALS:
+    use_debug = None
+    lock = Lock() # For print thread safety
 
 class TraceLEVELS(Enum):
     """
@@ -36,8 +37,8 @@ def trace(message: str,
     level: TraceLEVELS
         Level of the trace. Defaults to TraceLEVELS.NORMAL.
     """
-    if m_use_debug:
-        with m_lock:
+    if GLOBALS.use_debug:
+        with GLOBALS.lock:
             timestruct = time.localtime()
             timestamp = "Date: {:02d}.{:02d}.{:04d} Time:{:02d}:{:02d}"
             timestamp = timestamp.format(timestruct.tm_mday,
@@ -47,3 +48,17 @@ def trace(message: str,
                                         timestruct.tm_min)
             l_trace = f"{timestamp}\nTrace level: {level.name}\nMessage: {message}\n"
             print(l_trace)
+
+
+def initialize(enable: bool):
+    """
+    Initializes the tracing module
+    
+    Parameters
+    ------------
+    enable: bool
+        True for tracing module to be enabled.
+    """
+    GLOBALS.use_debug = enable
+
+    

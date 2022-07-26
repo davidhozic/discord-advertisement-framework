@@ -257,11 +257,13 @@ class AUDIO(ytdl.YoutubeDL):
             except FileNotFoundError:
                 raise DAFNotFoundError(f"The file {self.url} could not be found.", DAF_FILE_NOT_FOUND)
 
-
-    @property
-    def filename(self):
+    def to_dict(self):
         """
-        Returns the filename of the file or the name of a youtube video with the link
+        Returns dictionary representation of this data type.
+
+        .. versionchanged:: v2.0
+
+            Changed to method ``to_dict`` from property ``filename``
         """
         if self.stream:
             return {

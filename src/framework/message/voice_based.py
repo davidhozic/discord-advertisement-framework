@@ -30,7 +30,7 @@ class VoiceMESSAGE(BaseMESSAGE):
     """
     This class is used for creating objects that represent messages which will be streamed to voice channels.
 
-    .. versionchanged:: v1.9.5 **(NOT YET AVAILABLE)**
+    .. versionchanged:: v2.0
         
         - Added the ``volume`` parameter
         - Renamed ``channel_ids`` parameter to ``channels``
@@ -72,12 +72,10 @@ class VoiceMESSAGE(BaseMESSAGE):
             - Function that accepts any amount of parameters and returns an AUDIO object. To pass a function, YOU MUST USE THE :ref:`data_function` decorator on the function before passing the function to the framework.
     channels: Iterable[Union[int, discord.VoiceChannel]]
         Channels that it will be advertised into (Can be snowflake ID or channel objects from PyCord).
-    start_now: bool
-        If True, then the framework will send the message as soon as it is run.
     volume: int         
-        The volume (0-100%) at which to play the audio. Defaults to 50%.
-        
-        (Since v1.9.5)
+        The volume (0-100%) at which to play the audio. Defaults to 50%. This was added in v2.0.0
+    start_now: bool
+        If True, then the framework will send the message as soon as it is run.      
     """
 
     __slots__ = (
@@ -99,8 +97,8 @@ class VoiceMESSAGE(BaseMESSAGE):
                  end_period: float,
                  data: AUDIO,
                  channels: Iterable[Union[int, discord.VoiceChannel]],
-                 start_now: bool = True,
-                 volume: int=50):
+                 volume: int=50,
+                 start_now: bool = True):
 
         super().__init__(start_period, end_period, data, start_now)
         self.volume = max(0, min(100, volume)) # Clamp the volume to 0-100 % 
@@ -142,7 +140,7 @@ class VoiceMESSAGE(BaseMESSAGE):
                      "reason": str(entry["reason"])} for entry in failed_ch]
         return {
             "sent_data": {
-                "streamed_audio" : audio.filename
+                "streamed_audio" : audio.to_dict()
             },
             "channels": {
                 "successful" : succeeded_ch,
@@ -247,7 +245,7 @@ class VoiceMESSAGE(BaseMESSAGE):
                 GLOBALS.voice_client = None
                 await asyncio.sleep(1) # Avoid sudden disconnect and connect to a new channel
 
-    @misc._async_safe("update_lock")
+    @misc._async_safe("update_semaphore")
     async def send(self) -> Union[dict,  None]:
         """
         Sends the data into each channel.
@@ -286,10 +284,10 @@ class VoiceMESSAGE(BaseMESSAGE):
 
         return None
 
-    @misc._async_safe("update_lock")
+    @misc._async_safe("update_semaphore")
     async def update(self, **kwargs):
         """
-        .. versionadded:: v1.9.5 **(NOT YET AVAILABLE)**
+        .. versionadded:: v2.0
 
         Used for changing the initialization parameters the object was initialized with.
         

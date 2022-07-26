@@ -21,6 +21,7 @@ guilds = [
                                                                 # If start period is defined, it dictates the maximum limit of randomized period
                               data=get_data(1, 2),              # Data parameter
                               channels=[123456789],             # List of channel ids or discord.VoiceChannel objects
+                              volume=50,                        # The volume (0-100%) at which to play the audio
                               start_now=True                    # Start sending now (True) or wait until period
                               ),  
         ],

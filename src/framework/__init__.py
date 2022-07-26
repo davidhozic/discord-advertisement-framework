@@ -1,12 +1,7 @@
 """
-    ==============================================
-    DISCORD ADVERTISEMENT FRAMEWORK (DAF)
-    ==============================================
-   +----------+-----------------------------------+
-   | Author   |   David Hozic                     |
-   | Copyright|   Copyright (c) 2022 David Hozic  |
-   | Version  |   v2.0                            |          
-   +----------+-----------------------------------+
+Discord Advertisement Framework
+
+Version 2.0
 """
 import _discord as discord
 from .client import *

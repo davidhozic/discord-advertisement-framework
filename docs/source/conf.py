@@ -22,7 +22,7 @@ sys.path.insert(0, os.path.abspath('.'))
 project = 'Discord Advert Framework'
 copyright = '2022, David Hozic'
 author = 'David Hozic'
-version = ""
+version = "v2.0.0"
 
 with open("../../src/framework/__init__.py", "r", encoding="utf-8") as init_file:
     match = re.search(r"(?<=\|).*Version.*(?=\|)", init_file.read())

@@ -25,7 +25,7 @@ class TextMESSAGE(BaseMESSAGE):
     """
     This class is used for creating objects that represent messages which will be sent to Discord's TEXT CHANNELS.
 
-    .. versionchanged:: v1.9.5 **(NOT YET AVAILABLE)**
+    .. versionchanged:: v2.0
             
         - Renamed ``channel_ids`` parameter to ``channels``
         - Channels parameter now also accepts channel objects instead of int.
@@ -309,7 +309,7 @@ class TextMESSAGE(BaseMESSAGE):
                 if not await self._handle_error(channel, ex):
                     return {"success" : False, "reason" : ex}
 
-    @misc._async_safe("update_lock")
+    @misc._async_safe("update_semaphore")
     async def send(self) -> Union[dict,  None]:
         """
         Sends the data into the channels.
@@ -354,10 +354,10 @@ class TextMESSAGE(BaseMESSAGE):
 
         return None
 
-    @misc._async_safe("update_lock")
+    @misc._async_safe("update_semaphore")
     async def update(self, **kwargs: Any):
         """
-        .. versionadded:: v1.9.5 **(NOT YET AVAILABLE)**
+        .. versionadded:: v2.0
 
         Used for changing the initialization parameters the object was initialized with.
         
@@ -387,7 +387,7 @@ class DirectMESSAGE(BaseMESSAGE):
     """
     This class is used for creating objects that represent messages which will be sent to Discord's TEXT CHANNELS.
 
-    .. versionchanged:: v1.9.5 **(NOT YET AVAILABLE)**
+    .. versionchanged:: v2.0
         
         - Channels parameter now also accepts channel objects instead of int.
         - ``.update`` method added.
@@ -579,7 +579,7 @@ class DirectMESSAGE(BaseMESSAGE):
                     self.previous_message  = None
                     handled = True
             elif ex.status == 403 or ex.code in {50007, 10001, 10003}:
-                misc._write_safe_vars(self, "_deleted", True, True)
+                self._delete()
 
             if ex.status in {400, 403}: # Bad Request
                 await asyncio.sleep(RLIM_USER_WAIT_TIME * 5) # To avoid triggering selfbot detection
@@ -623,7 +623,7 @@ class DirectMESSAGE(BaseMESSAGE):
                 if await self._handle_error(ex) is False or tries == 2:
                     return {"success" : False, "reason" : ex}
 
-    @misc._async_safe("update_lock")
+    @misc._async_safe("update_semaphore")
     async def send(self) -> Union[dict, None]:
         """
         Sends the data into the channels
@@ -646,10 +646,10 @@ class DirectMESSAGE(BaseMESSAGE):
 
         return None
 
-    @misc._async_safe("update_lock")
+    @misc._async_safe("update_semaphore")
     async def update(self, init_options={},**kwargs):
         """
-        .. versionadded:: v1.9.5 **(NOT YET AVAILABLE)**
+        .. versionadded:: v2.0
 
         Used for changing the initialization parameters the object was initialized with.
         
