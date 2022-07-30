@@ -11,6 +11,7 @@ from   ..const      import *
 from   ..exceptions import *
 from   ..           import core
 from   typing       import Any, Dict, List, Iterable, Set, Union, Literal
+from   datetime import datetime, timedelta
 import asyncio
 import _discord as discord
 
@@ -53,13 +54,13 @@ class TextMESSAGE(BaseMESSAGE):
             :caption: **Randomized** sending period between **5** seconds and **10** seconds.
             
             # Time between each send is somewhere between 5 seconds and 10 seconds.
-            framework.TextMESSAGE(start_period=5, end_period=10, data="Second Message", channels=[12345], mode="send", start_now=True)
+            framework.TextMESSAGE(start_period=5, end_period=10, data="Second Message", channels=[12345], mode="send", start_in=timedelta(seconds=0))
 
         .. code-block:: python
             :caption: **Fixed** sending period at **10** seconds
 
             # Time between each send is exactly 10 seconds.
-            framework.TextMESSAGE(start_period=None, end_period=10, data="Second Message", channels=[12345], mode="send", start_now=True)
+            framework.TextMESSAGE(start_period=None, end_period=10, data="Second Message", channels=[12345], mode="send", start_in=timedelta(seconds=0))
 
     data: Union[str, EMBED, FILE, List[Union[str, EMBED, FILE]], _FunctionBaseCLASS]
         The data parameter is the actual data that will be sent using discord's API. The data types of this parameter can be:
@@ -86,7 +87,7 @@ class TextMESSAGE(BaseMESSAGE):
              "clear-send"       previous message will be deleted and a new one sent.                                  
             =================  =======================================================================================
 
-    start_now: bool
+    start_in: timedelta
         If True, then the framework will send the message as soon as it is run.
     """
 
@@ -98,13 +99,13 @@ class TextMESSAGE(BaseMESSAGE):
     __logname__: str = "TextMESSAGE"               # Used for registering SQL types and to get the message type for saving the log
     __valid_data_types__: set = {str, EMBED, FILE} # Used in initialize_data to check if valid parameters were passed
 
-    def __init__(self, start_period: Union[float, None],
-                 end_period: float,
+    def __init__(self, start_period: Union[int, None],
+                 end_period: int,
                  data: Union[str, EMBED, FILE, List[Union[str, EMBED, FILE]], _FunctionBaseCLASS],
                  channels: Iterable[Union[int, discord.TextChannel, discord.Thread]],
                  mode: Literal["send", "edit", "clear-send"] = "send",
-                 start_now: bool = True):
-        super().__init__(start_period, end_period, data, start_now)
+                 start_in: timedelta=timedelta(seconds=0)):
+        super().__init__(start_period, end_period, data, start_in)
         self.mode = mode
         self.channels = list(set(channels)) # Automatically removes duplicates
         self.sent_messages = {} # Dictionary for storing last sent message for each channel
@@ -242,12 +243,15 @@ class TextMESSAGE(BaseMESSAGE):
         handled = False
         if isinstance(ex, discord.HTTPException):
             if ex.status == 429:  # Rate limit
-                retry_after = int(ex.response.headers["Retry-After"]) * RLIM_SAFETY_FACTOR
+                retry_after = int(ex.response.headers["Retry-After"])
                 if ex.code == 20016:    # Slow Mode
                     self.force_retry["ENABLED"] = True
-                    self.force_retry["TIME"] = retry_after
+                    self.force_retry["TIMESTAMP"] = datetime.now() + timedelta(seconds=retry_after) # Set an overwrite timestamp for next send
                     trace(f"{channel.name} is in slow mode, retrying in {retry_after} seconds", TraceLEVELS.WARNING)
-                handled = True
+                    handled = False
+                else:
+                    handled = True
+                    await asyncio.sleep(retry_after * RLIM_SAFETY_FACTOR)
             elif ex.status == 404:      # Unknown object
                 if ex.code == 10008:    # Unknown message
                     self.sent_messages[channel.id] = None
@@ -376,9 +380,9 @@ class TextMESSAGE(BaseMESSAGE):
         Other
             Raised from .initialize() method.
         """
-        if "start_now" not in kwargs:
+        if "start_in" not in kwargs:
             # This parameter does not appear as attribute, manual setting necessary
-            kwargs["start_now"] = True
+            kwargs["start_in"] = timedelta(seconds=0)
         
         await core._update(self, **kwargs) # No additional modifications are required
  
@@ -414,13 +418,13 @@ class DirectMESSAGE(BaseMESSAGE):
             :caption: **Randomized** sending period between **5** seconds and **10** seconds.
             
             # Time between each send is somewhere between 5 seconds and 10 seconds.
-            framework.DirectMESSAGE(start_period=5, end_period=10, data="Second Message",  mode="send", start_now=True)
+            framework.DirectMESSAGE(start_period=5, end_period=10, data="Second Message",  mode="send", start_in=timedelta(seconds=0))
 
         .. code-block:: python
             :caption: **Fixed** sending period at **10** seconds
 
             # Time between each send is exactly 10 seconds.
-            framework.DirectMESSAGE(start_period=None, end_period=10, data="Second Message",  mode="send", start_now=True)
+            framework.DirectMESSAGE(start_period=None, end_period=10, data="Second Message",  mode="send", start_in=timedelta(seconds=0))
 
     data: Union[str, EMBED, FILE, List[Union[str, EMBED, FILE]], _FunctionBaseCLASS]
         The data parameter is the actual data that will be sent using discord's API. The data types of this parameter can be:
@@ -445,7 +449,7 @@ class DirectMESSAGE(BaseMESSAGE):
              "clear-send"       previous message will be deleted and a new one sent.                                  
             =================  =======================================================================================
 
-    start_now: bool
+    start_in: timedelta
         If True, then the framework will send the message as soon as it is run.
     """
 
@@ -458,12 +462,12 @@ class DirectMESSAGE(BaseMESSAGE):
     __valid_data_types__ = {str, EMBED, FILE}   # Defines the allowed data types for the data parameter (get's checked in the ._initialize_data method)                                             
 
     def __init__(self,
-                 start_period: Union[float, None],
-                 end_period: float,
+                 start_period: Union[int, None],
+                 end_period: int,
                  data: Union[str, EMBED, FILE, list],
                  mode: Literal["send", "edit", "clear-send"] = "send",
-                 start_now: bool = True):
-        super().__init__(start_period, end_period, data, start_now)
+                 start_in: timedelta = timedelta(seconds=0)):
+        super().__init__(start_period, end_period, data, start_in)
         self.mode = mode
         self.dm_channel = None
         self.previous_message = None
@@ -671,9 +675,9 @@ class DirectMESSAGE(BaseMESSAGE):
             Raised from .initialize() method
         """
 
-        if "start_now" not in kwargs:
+        if "start_in" not in kwargs:
             # This parameter does not appear as attribute, manual setting necessary
-            kwargs["start_now"] = True
+            kwargs["start_in"] = timedelta(seconds=0)
 
         if not len(init_options):
             init_options = {"user" : self.dm_channel}

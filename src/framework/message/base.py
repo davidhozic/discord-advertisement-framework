@@ -1,12 +1,13 @@
 """
     Contains base definitions for different message classes."""
 
-from    typing import Dict, Set, Tuple, Union
+from    typing import Any, Dict, Set, Tuple, Union
 from    ..dtypes import *
 from    ..tracing import *
 from    ..timing import *
 from    ..exceptions import *
 from    .. import misc
+from    datetime import timedelta, datetime
 import  random
 import  _discord as discord
 import  asyncio
@@ -31,16 +32,20 @@ class BaseMESSAGE:
                             dictates a fixed sending period in SECONDS, eg. if you pass the value `5`, that means the message will be sent every 5 seconds.
     data: inherited class dependant
         The data that will be sent to Discord. Valid data types are defined inside `__valid_data_types__` set.
-    start_now: bool
-        Dictates if the message should be send immediately after framework start, or wait the period first.
+    start_in: timedelta
+        Dictates when, the first send should be
+    
+    .. deprecated:: 2.1
+        (start_now) - Using bool value to dictate whether the message should be sent at framework start.
+
+        Use ``timedelta`` object instead describing the delay before first send.
     """
     __slots__ = (
-        "randomized_time",
         "period",
         "start_period",
-        "end_period",
-        "timer",
         "force_retry",
+        "end_period",
+        "next_send_time",
         "data",
         "update_semaphore",
         "_deleted"
@@ -56,22 +61,28 @@ class BaseMESSAGE:
     def __init__(self,
                 start_period : Union[int, None],
                 end_period : int,
-                data,
-                start_now):
+                data: Any,
+                start_in: timedelta):
         # If start_period is none -> period will not be randomized
         self.start_period = start_period
         self.end_period   = end_period
         if start_period is None:            
-            self.randomized_time = False
-            self.period = end_period
+            self.period = timedelta(seconds=end_period)
         else:
-            self.randomized_time = True
-            self.period = random.randrange(self.start_period, self.end_period)
+            self.period = timedelta(seconds=random.randrange(self.start_period, self.end_period))
 
-        self.timer = TIMER()
-        self.force_retry = {"ENABLED" : start_now, "TIME" : 0}
+        if isinstance(start_in, bool): # TODO: Remove in 2.2
+            self.next_send_time = datetime.now() if start_in else datetime.now() + self.period
+            trace("Using bool value for 'start_in' ('start_now') parameter is deprecated. Use timedelta object instead.", TraceLEVELS.WARNING)
+        else:
+            self.next_send_time = datetime.now() + start_in
+
+        self.force_retry = {"ENABLED" : False, "TIMESTAMP" : None}
         self.data = data
-        misc._write_attr_once(self, "_deleted", False)
+        
+        # Attributes created with this function will not be re-referenced to a different object
+        # if the function is called again, ensuring safety (.update_method)
+        misc._write_attr_once(self, "_deleted", False)       
         misc._write_attr_once(self, "update_semaphore", asyncio.Semaphore(1))
 
     @property
@@ -134,22 +145,32 @@ class BaseMESSAGE:
         """
         raise NotImplementedError
 
+    def _handle_error(self) -> bool:
+        """
+        This method handles the error that occurred during the execution of the function.
+        Returns ``True`` if error was handled.
+        """
+        raise NotImplementedError
+
     def is_ready(self) -> bool:
         """ 
-        This method returns bool indicating if message is ready to be sent
+        This method returns bool indicating if message is ready to be sent.
         """
-        return (not self.force_retry["ENABLED"] and self.timer.elapsed() > self.period or
-                self.force_retry["ENABLED"] and self.timer.elapsed() > self.force_retry["TIME"])
+        return (datetime.now() >= self.force_retry["TIMESTAMP"] if self.force_retry["ENABLED"]
+                else datetime.now() >= self.next_send_time)
 
     def reset_timer(self) -> None:
         """ 
-        Resets internal timer (and force period)
+        Resets internal timer
         """
-        self.timer.reset()
-        self.timer.start()
         self.force_retry["ENABLED"] = False
-        if self.randomized_time is True:
-            self.period = random.randrange(self.start_period, self.end_period)
+        if self.start_period is not None:
+            self.period = timedelta(seconds=random.randrange(self.start_period, self.end_period))
+        
+        # Absolute timing instead of relative to prevent time slippage due to missed timer reset.
+        current_stamp = datetime.now()
+        while self.next_send_time < current_stamp:
+            self.next_send_time += self.period
 
     async def _send_channel(self) -> dict:
         """
