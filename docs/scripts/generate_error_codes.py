@@ -35,7 +35,7 @@ for exc in excs:
 export_e += ""
 
 
-with open("autodoc_export_exceptions.rst", "w") as f:
+with open("__autodoc_export_exceptions.rst", "w") as f:
     f.write(export_e)
 
 

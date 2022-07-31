@@ -42,9 +42,9 @@ for item in inspect.getmembers(framework, lambda x: inspect.isclass(x) or inspec
             export_c += CLASS_TEMPLATE.format(class_name=item.__name__) + "\n"
 
 
-with open("autodoc_export_funct.rst", "w") as f:
+with open("__autodoc_export_funct.rst", "w") as f:
     f.write(export_f)
 
-with open("autodoc_export_class.rst", "w") as f:
+with open("__autodoc_export_class.rst", "w") as f:
     f.write(export_c)
     
