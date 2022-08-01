@@ -12,7 +12,7 @@ with open("./requirements.txt" , 'r', encoding="utf-8") as rf:
 
 __metadata__ = \
 {
-    "version" :  "2.0.1",
+    "version" :  "2.0.2",
     "requirements" : req,
     "minimum_py_version" :  "3.8",
 }
@@ -34,5 +34,6 @@ setuptools.setup(
     package_dir={"": "src"},
     packages=setuptools.find_packages(where="src"),
     python_requires=f">={__metadata__['minimum_py_version']}",
-    install_requires=__metadata__["requirements"]
+    install_requires=__metadata__["requirements"],
+    include_package_data=True
 )
