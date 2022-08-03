@@ -7,6 +7,7 @@ from   ..tracing    import *
 from   ..const      import *
 from   ..exceptions import *
 from   typing       import Any, Dict, List, Iterable, Union
+from   datetime import timedelta
 from   ..           import client
 from   ..           import sql
 from   ..           import core
@@ -58,13 +59,13 @@ class VoiceMESSAGE(BaseMESSAGE):
             :caption: **Randomized** sending period between **5** seconds and **10** seconds.
             
             # Time between each send is somewhere between 5 seconds and 10 seconds.
-            framework.VoiceMESSAGE(start_period=None, end_period=10, data=framework.AUDIO("msg.mp3"), channels=[12345], start_now=True, volume=50)
+            framework.VoiceMESSAGE(start_period=None, end_period=10, data=framework.AUDIO("msg.mp3"), channels=[12345], start_in=timedelta(seconds=0), volume=50)
 
         .. code-block:: python
             :caption: **Fixed** sending period at **10** seconds
 
             # Time between each send is exactly 10 seconds.
-            framework.VoiceMESSAGE(start_period=None, end_period=10, data=framework.AUDIO("msg.mp3"), channels=[12345], start_now=True, volume=50)
+            framework.VoiceMESSAGE(start_period=None, end_period=10, data=framework.AUDIO("msg.mp3"), channels=[12345], start_in=timedelta(seconds=0), volume=50)
 
     data: AUDIO
         The data parameter is the actual data that will be sent using discord's API. The data types of this parameter can be:
@@ -74,7 +75,7 @@ class VoiceMESSAGE(BaseMESSAGE):
         Channels that it will be advertised into (Can be snowflake ID or channel objects from PyCord).
     volume: int         
         The volume (0-100%) at which to play the audio. Defaults to 50%. This was added in v2.0.0
-    start_now: bool
+    start_in: timedelta
         If True, then the framework will send the message as soon as it is run.      
     """
 
@@ -93,14 +94,14 @@ class VoiceMESSAGE(BaseMESSAGE):
     __logname__ = "VoiceMESSAGE"    # For sql._register_type
     __valid_data_types__ = {AUDIO}  # This is used in the BaseMESSAGE.initialize() to check if the passed data parameters are of correct type
 
-    def __init__(self, start_period: Union[float, None],
-                 end_period: float,
+    def __init__(self, start_period: Union[int, None],
+                 end_period: int,
                  data: AUDIO,
                  channels: Iterable[Union[int, discord.VoiceChannel]],
                  volume: int=50,
-                 start_now: bool = True):
+                 start_in: timedelta=timedelta(seconds=0)):
 
-        super().__init__(start_period, end_period, data, start_now)
+        super().__init__(start_period, end_period, data, start_in)
         self.volume = max(0, min(100, volume)) # Clamp the volume to 0-100 % 
         self.channels = list(set(channels))    # Auto remove duplicates
 
@@ -306,8 +307,8 @@ class VoiceMESSAGE(BaseMESSAGE):
         Other
             Raised from .initialize() method
         """
-        if "start_now" not in kwargs:
+        if "start_in" not in kwargs:
             # This parameter does not appear as attribute, manual setting necessary 
-            kwargs["start_now"] = True
+            kwargs["start_in"] = timedelta(seconds=0)
 
         await core._update(self, **kwargs) # No additional modifications are required

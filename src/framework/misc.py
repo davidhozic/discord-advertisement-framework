@@ -5,6 +5,7 @@
 
 from typing import Coroutine, Callable, Any, Optional
 from asyncio import Semaphore
+import functools as fts
 
 
 ###############################
@@ -27,8 +28,6 @@ def _write_attr_once(obj: Any, name: str, value: Any):
     value: Any
         The value to change the attribute with.
     """
-
-    # TODO: Test if it works
     if not hasattr(obj, name): # Write only if forced, or if not forced, then the attribute must not exist
         setattr(obj, name, value)
 
@@ -37,7 +36,6 @@ def _write_attr_once(obj: Any, name: str, value: Any):
 ###########################
 # Decorators
 ###########################
-# TODO: Change Lock to semaphore, add parameter that dictates how many to take
 def _async_safe(semaphore: str, amount: Optional[int]=1) -> Callable:
     """
     Function that returns a safety decorator, which uses the :strong:`semaphore` parameter
@@ -67,6 +65,7 @@ def _async_safe(semaphore: str, amount: Optional[int]=1) -> Callable:
         Decorator that returns a method wrapper Coroutine that utilizes a
         asyncio semaphore to assure safe asynchronous operations.
         """
+        @fts.wraps(coroutine)
         async def wrapper(self, *args, **kwargs):
             sem: Semaphore = getattr(self, semaphore)
             for i in range(amount):

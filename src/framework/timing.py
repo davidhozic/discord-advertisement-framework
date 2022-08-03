@@ -36,10 +36,13 @@ def timeit(num: int):
         return _timeit(tmp)
     return _timeit
 
-
+# Deprecated
 class TIMER:
     """
     Used in MESSAGE objects as a send timer.
+    
+    .. deprecated:: v2.1
+        Since v2.1, absolute timestamp is used.
     """
     __slots__ = (
         "running",
@@ -72,3 +75,5 @@ class TIMER:
         Resets the timer.
         """
         self.running = False
+
+    

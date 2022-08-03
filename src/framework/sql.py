@@ -17,12 +17,12 @@ from  sqlalchemy.orm import sessionmaker, Session
 from  sqlalchemy.ext.declarative import declarative_base
 from  pytds import ClosedConnectionError
 
-from framework import misc
 from  .tracing import *
 from  .timing import *
 from  .const import *
 from  .exceptions import *
 from  . import core
+from  . import misc
 import sqlalchemy as sqa
 import json
 import copy
