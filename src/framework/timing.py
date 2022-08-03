@@ -1,3 +1,7 @@
+"""
+Module contains definitions that are related to time.
+"""
+
 import time
 
 
@@ -7,7 +11,8 @@ def timeit(num: int):
 
     Parameters
     ------------
-    - num: `int` - Number of samples to take for average
+    num: int
+        Number of samples to take for average
     """
     def _timeit(fnc):
         sum = 0
@@ -20,9 +25,9 @@ def timeit(num: int):
             ret = fnc(*args, **kwargs)
             end = time.time()
             ms = (end-start)*1000
-            
+
             sum += ms
-            ct  += 1
+            ct += 1
             if ct == num:
                 print(f"{fnc.__name__} took {sum/ct} ms on average")
                 ct = 0
@@ -40,7 +45,7 @@ def timeit(num: int):
 class TIMER:
     """
     Used in MESSAGE objects as a send timer.
-    
+
     .. deprecated:: v2.1
         Since v2.1, absolute timestamp is used.
     """
@@ -75,5 +80,3 @@ class TIMER:
         Resets the timer.
         """
         self.running = False
-
-    

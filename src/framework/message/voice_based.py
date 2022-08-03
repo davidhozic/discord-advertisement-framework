@@ -1,17 +1,20 @@
 """
     Contains definitions related to voice messaging."""
 
-from   .base        import *
-from   ..dtypes     import *
-from   ..tracing    import *
-from   ..const      import *
-from   ..exceptions import *
-from   typing       import Any, Dict, List, Iterable, Union
-from   datetime import timedelta
-from   ..           import client
-from   ..           import sql
-from   ..           import core
-from   ..           import misc
+
+from typing import Any, Dict, List, Iterable, Union
+from datetime import timedelta
+
+from .base import *
+from ..dtypes import *
+from ..tracing import *
+from ..const import *
+from ..exceptions import *
+
+from .. import client
+from .. import sql
+from .. import core
+from .. import misc
 import asyncio
 import _discord as discord
 
@@ -32,7 +35,7 @@ class VoiceMESSAGE(BaseMESSAGE):
     This class is used for creating objects that represent messages which will be streamed to voice channels.
 
     .. versionchanged:: v2.0
-        
+
         - Added the ``volume`` parameter
         - Renamed ``channel_ids`` parameter to ``channels``
         - Channels parameter now also accepts channel objects instead of int
@@ -42,8 +45,8 @@ class VoiceMESSAGE(BaseMESSAGE):
     start_period: Union[int, None]
         The value of this parameter can be:
 
-        ..  table:: 
-        
+        ..  table::
+
             ===========  =================================================================================================================
              Value        Info
             ===========  =================================================================================================================
@@ -57,7 +60,7 @@ class VoiceMESSAGE(BaseMESSAGE):
 
         .. code-block:: python
             :caption: **Randomized** sending period between **5** seconds and **10** seconds.
-            
+
             # Time between each send is somewhere between 5 seconds and 10 seconds.
             framework.VoiceMESSAGE(start_period=None, end_period=10, data=framework.AUDIO("msg.mp3"), channels=[12345], start_in=timedelta(seconds=0), volume=50)
 
@@ -73,10 +76,10 @@ class VoiceMESSAGE(BaseMESSAGE):
             - Function that accepts any amount of parameters and returns an AUDIO object. To pass a function, YOU MUST USE THE :ref:`data_function` decorator on the function before passing the function to the framework.
     channels: Iterable[Union[int, discord.VoiceChannel]]
         Channels that it will be advertised into (Can be snowflake ID or channel objects from PyCord).
-    volume: int         
+    volume: int
         The volume (0-100%) at which to play the audio. Defaults to 50%. This was added in v2.0.0
     start_in: timedelta
-        If True, then the framework will send the message as soon as it is run.      
+        If True, then the framework will send the message as soon as it is run.
     """
 
     __slots__ = (
@@ -102,7 +105,7 @@ class VoiceMESSAGE(BaseMESSAGE):
                  start_in: timedelta=timedelta(seconds=0)):
 
         super().__init__(start_period, end_period, data, start_in)
-        self.volume = max(0, min(100, volume)) # Clamp the volume to 0-100 % 
+        self.volume = max(0, min(100, volume)) # Clamp the volume to 0-100 %
         self.channels = list(set(channels))    # Auto remove duplicates
 
     def _generate_log_context(self,
@@ -116,9 +119,9 @@ class VoiceMESSAGE(BaseMESSAGE):
         -----------
         audio: audio
             The audio that was streamed.
-        succeeded_ch: List[Union[discord.VoiceChannel]] 
+        succeeded_ch: List[Union[discord.VoiceChannel]]
             List of the successfully streamed channels
-        failed_ch: List[Dict[discord.VoiceChannel, Exception]] 
+        failed_ch: List[Dict[discord.VoiceChannel, Exception]]
             List of dictionaries contained the failed channel and the Exception object
 
         Returns
@@ -132,7 +135,7 @@ class VoiceMESSAGE(BaseMESSAGE):
                 - channels: Dict[str, List]:
                     - successful: List[Dict[str, int]] - List of dictionaries containing name of the channel and snowflake id of the channels.
                     - failed: List[Dict[str, Any]] - List of dictionaries containing name of the channel (str), snowflake id (int) and reason why streaming to channel failed (str).
-                
+
                 - type: str - The type of the message, this is always VoiceMESSAGE.
         """
 
@@ -169,7 +172,7 @@ class VoiceMESSAGE(BaseMESSAGE):
     async def _initialize_channels(self):
         """
         This method initializes the implementation specific api objects and checks for the correct channel input context.
-        
+
         Raises
         ------------
         - `DAFParameterError(code=DAF_INVALID_TYPE)` - Raised when the object retrieved from channels is not a discord.TextChannel or discord.Thread object.
@@ -201,11 +204,11 @@ class VoiceMESSAGE(BaseMESSAGE):
                            audio: AUDIO) -> dict:
         """
         Sends data to specific channel
-        
+
         Returns a dictionary:
         - "success" - Returns True if successful, else False
         - "reason"  - Only present if "success" is False, contains the Exception returned by the send attempt
-        
+
         Parameters
         -------------
         channel: discord.VoiceChannel
@@ -247,15 +250,15 @@ class VoiceMESSAGE(BaseMESSAGE):
                 await asyncio.sleep(1) # Avoid sudden disconnect and connect to a new channel
 
     @misc._async_safe("update_semaphore")
-    async def send(self) -> Union[dict,  None]:
+    async def send(self) -> Union[dict, None]:
         """
         Sends the data into each channel.
-        
+
         Returns
         ----------
         Union[Dict, None]
             Returns a dictionary generated by the ``_generate_log_context`` method or the None object if message wasn't ready to be sent (:ref:`data_function` returned None or an invalid type)
-            
+
             This is then passed to :ref:`GUILD`.generate_log method.
         """
         _data_to_send = self._get_data()
@@ -291,15 +294,15 @@ class VoiceMESSAGE(BaseMESSAGE):
         .. versionadded:: v2.0
 
         Used for changing the initialization parameters the object was initialized with.
-        
+
         .. warning::
             Upon updating, the internal state of objects get's reset, meaning you basically have a brand new created object.
-        
+
         Parameters
         -------------
         **kwargs: Any
             Custom number of keyword parameters which you want to update, these can be anything that is available during the object creation.
-        
+
         Raises
         -----------
         DAFParameterError(code=DAF_UPDATE_PARAMETER_ERROR)
@@ -308,7 +311,7 @@ class VoiceMESSAGE(BaseMESSAGE):
             Raised from .initialize() method
         """
         if "start_in" not in kwargs:
-            # This parameter does not appear as attribute, manual setting necessary 
+            # This parameter does not appear as attribute, manual setting necessary
             kwargs["start_in"] = timedelta(seconds=0)
 
         await core._update(self, **kwargs) # No additional modifications are required

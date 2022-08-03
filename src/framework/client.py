@@ -2,28 +2,30 @@
     This modules contains definitions related to the client (for API)
 """
 
-import  asyncio
-import  _discord as discord
-from    .tracing import *
-from    . import core
+import _discord as discord
+from .tracing import *
+from . import core
 
 
 #######################################################################
 # Globals
 #######################################################################
-class GLOBALS:
-    client = None     # Pycord Client object
-    running = False # Weird bug causes client.on_ready method to be called multiple times some times
-
 __all__ = (
     "CLIENT",
     "get_client"
 )
 
 
+class GLOBALS:
+    """Storage class used for storing global variables"""
+    client = None     # Pycord Client object
+    running = False # Weird bug causes client.on_ready method to be called multiple times some times
+
+
 class CLIENT(discord.Client):
     """
-    The same as `discord.Client <https://docs.pycord.dev/en/master/api.html?highlight=client#discord.Client>`_, except it contains an on_ready coroutine.
+    The same as `discord.Client <https://docs.pycord.dev/en/master/api.html?highlight=client#discord.Client>`_,
+    except it contains an on_ready coroutine.
 
     .. note::
         This is automatically created by the framework.
@@ -40,13 +42,13 @@ class CLIENT(discord.Client):
         trace(f"[CLIENT]: Logged in as {self.user}", TraceLEVELS.NORMAL)
         # Initialize all the modules from the core module
         self.loop.create_task(core._initialize())
-        
+
 
 def _initialize(token: str, *,
                bot: bool,
                intents: discord.Intents):
     """
-    
+
     Initializes the client module (Pycord).
 
     Parameters

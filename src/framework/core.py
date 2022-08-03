@@ -3,20 +3,23 @@
     and functions needed for the framework to run,
     as well as user function to control the framework
 """
-from   typing import Any, Dict, Iterable, Literal, Callable, List, Optional, Union, overload
-import asyncio
-import copy
-import inspect
-import _discord as dc
-from . const import *
-from . exceptions import *
-from . import tracing
-from . tracing import *
+from typing import (Any, Iterable, Literal,
+                    Callable, List, Optional,
+                    Union, overload)
+
+from .const import *
+from .exceptions import *
+from .import tracing
+from .tracing import *
+
 from . import guild
 from . import client
 from . import sql
 from . import message
-
+import asyncio
+import copy
+import inspect
+import _discord as dc
 
 #######################################################################
 # Exports
@@ -37,7 +40,7 @@ class GLOBALS:
     """
     user_callback: Callable = None
     server_list: List[guild._BaseGUILD] = []
-    temp_server_list: List[guild._BaseGUILD] = None # Holds the guilds that are awaiting initialization (set in framework.run and cleared after initialization)
+    temp_server_list: List[guild._BaseGUILD] = [] # Holds the guilds that are awaiting initialization (set in framework.run and cleared after initialization)
     sql_manager: sql.LoggerSQL = None,
     is_user: bool = False
 
@@ -49,7 +52,7 @@ async def _advertiser(message_type: Literal["text", "voice"]) -> None:
     """
     The task that is responsible for shilling to channels.
     This is the most top level task.
-    
+
     Parameters
     ------------
     message_type: str
@@ -109,11 +112,11 @@ async def _initialize() -> None:
 
 
 @overload
-async def add_object(obj: Union[guild.USER, guild.GUILD]) -> None: 
+async def add_object(obj: Union[guild.USER, guild.GUILD]) -> None:
     """
 
     Adds a guild or an user to the framework.
-    
+
     Parameters
     --------------
     obj: Union[guild.USER, guild.GUILD]
@@ -135,7 +138,7 @@ async def add_object(obj: Union[message.DirectMESSAGE, message.TextMESSAGE, mess
     """
 
     Adds a message to the framework.
-    
+
     Parameters
     --------------
     obj: Union[message.DirectMESSAGE, message.TextMESSAGE, message.VoiceMESSAGE]
@@ -187,38 +190,38 @@ async def add_object(obj, snowflake=None):
 
 
 @overload
-def remove_object(guild_id: int) -> None: 
+def remove_object(guild_id: int) -> None:
     """
     Removes a guild from the framework that has the given guild_id.
-    
+
     Parameters
     -------------
     - guild_id: `int` - ID of the guild to remove.
-    
+
     Raises
     --------------
     DAFNotFoundError(code=DAF_GUILD_ID_NOT_FOUND)
          Could not find guild with that id.
     DAFParameterError(code=DAF_INVALID_TYPE)
          The object provided is not supported for removal."""
-    ...
+
 @overload
 def remove_object(channel_ids: Iterable[int]) -> None:
     """
     Removes messages that contain all the given channel ids.
-    
+
     Parameters
     --------------
     channel_ids: Iterable
         The channel IDs that the message must have to be removed (it must have all of these).
-    
+
     Raises
     --------------------
     DAFParameterError(code=DAF_INVALID_TYPE)
         The object provided is not supported for removal.
     """
-    ...
-def remove_object(data):    
+
+def remove_object(data):
     if isinstance(data, int): # Guild id
         for guild_user in GLOBALS.server_list:
             if guild_user.snowflake == data:
@@ -238,61 +241,61 @@ def remove_object(data):
 
 
 async def _update(obj: Any, *, init_options: dict = {}, **kwargs):
-        """
-        .. versionadded:: v2.0
+    """
+    .. versionadded:: v2.0
 
-        Used for changing the initialization parameters the obj was initialized with.
-        
-        .. warning::
-            Upon updating, the internal state of objects get's reset, meaning you basically have a brand new created object.   
+    Used for changing the initialization parameters the obj was initialized with.
 
-        .. warning::
-            This is not meant for manual use, but should be used only by the obj's method.
+    .. warning::
+        Upon updating, the internal state of objects get's reset, meaning you basically have a brand new created object.
 
-        Parameters
-        -------------
-        obj: Any
-            The object that contains a .update() method.
-        init_options: dict
-            Contains the initialization options used in .initialize() method for re-initializing certain objects.
-            This is implementation specific and not necessarily available.
-        Other:
-            Other allowed parameters are the initialization parameters first used on creation of the object.
+    .. warning::
+        This is not meant for manual use, but should be used only by the obj's method.
 
-        Raises
-        ------------
-        DAFParameterError(code=DAF_UPDATE_PARAMETER_ERROR)
-            Invalid keyword argument was passed.
-        Other
-            Raised from .initialize() method.
-        """
-        init_keys = inspect.getfullargspec(obj.__init__).args # Retrieves list of call args
-        init_keys.remove("self")
-        current_state = copy.copy(obj) # Make a copy of the current object for restoration in case of update failure
-        try:  
-            for k in kwargs:
-                if k not in init_keys:
-                    raise DAFParameterError(f"Keyword argument `{k}` was passed which is not allowed. The update method only accepts the following keyword arguments: {init_keys}", DAF_UPDATE_PARAMETER_ERROR)
-            # Most of the variables inside the object have the same names as in the __init__ function.
-            # This section stores attributes, that are the same, into the `updated_params` dictionary and
-            # then calls the __init__ method with the same parameters, with the exception of start_period, end_period and start_now parameters
-            updated_params = {}
-            for k in init_keys:
-                # Store the attributes that match the __init__ parameters into `updated_params`
-                updated_params[k] = kwargs[k] if k in kwargs else getattr(obj, k)
+    Parameters
+    -------------
+    obj: Any
+        The object that contains a .update() method.
+    init_options: dict
+        Contains the initialization options used in .initialize() method for re-initializing certain objects.
+        This is implementation specific and not necessarily available.
+    Other:
+        Other allowed parameters are the initialization parameters first used on creation of the object.
 
-            # Call the implementation __init__ function and then initialize API related things
-            obj.__init__(**updated_params)
-            # Call additional initialization function (if it has one)
-            if hasattr(obj, "initialize"):
-                await obj.initialize(**init_options)
-        
-        except Exception:
-            # In case of failure, restore to original attributes
-            for k in type(obj).__slots__:
-                setattr(obj, k, getattr(current_state, k))
+    Raises
+    ------------
+    DAFParameterError(code=DAF_UPDATE_PARAMETER_ERROR)
+        Invalid keyword argument was passed.
+    Other
+        Raised from .initialize() method.
+    """
+    init_keys = inspect.getfullargspec(obj.__init__).args # Retrieves list of call args
+    init_keys.remove("self")
+    current_state = copy.copy(obj) # Make a copy of the current object for restoration in case of update failure
+    try:
+        for k in kwargs:
+            if k not in init_keys:
+                raise DAFParameterError(f"Keyword argument `{k}` was passed which is not allowed. The update method only accepts the following keyword arguments: {init_keys}", DAF_UPDATE_PARAMETER_ERROR)
+        # Most of the variables inside the object have the same names as in the __init__ function.
+        # This section stores attributes, that are the same, into the `updated_params` dictionary and
+        # then calls the __init__ method with the same parameters, with the exception of start_period, end_period and start_now parameters
+        updated_params = {}
+        for k in init_keys:
+            # Store the attributes that match the __init__ parameters into `updated_params`
+            updated_params[k] = kwargs[k] if k in kwargs else getattr(obj, k)
 
-            raise
+        # Call the implementation __init__ function and then initialize API related things
+        obj.__init__(**updated_params)
+        # Call additional initialization function (if it has one)
+        if hasattr(obj, "initialize"):
+            await obj.initialize(**init_options)
+
+    except Exception:
+        # In case of failure, restore to original attributes
+        for k in type(obj).__slots__:
+            setattr(obj, k, getattr(current_state, k))
+
+        raise
 
 
 async def shutdown() -> None:
@@ -319,10 +322,10 @@ def run(token : str,
         intents: Optional[dc.Intents]=dc.Intents.default(),
         debug : Optional[bool]=True) -> None:
     """
-    Runs the framework. 
+    Runs the framework.
 
     This is the very first thing that needs to be called to start the framework.
-    
+
     Parameters
     ---------------
     token: str
@@ -349,6 +352,6 @@ def run(token : str,
     GLOBALS.is_user = is_user                                       # Is the token from an user account
     if user_callback is not None:
         GLOBALS.user_callback = user_callback()                     # Called after framework has started
-    
+
     tracing.initialize(debug)                                       # Print trace messages to the console for debugging purposes
     client._initialize(token, bot=not is_user, intents=intents)

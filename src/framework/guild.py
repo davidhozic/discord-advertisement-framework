@@ -3,23 +3,26 @@
     regarding the guild and also defines a USER class from the
     _BaseGUILD class.
 """
-from    __future__ import annotations
+from __future__ import annotations
 import asyncio
-from    contextlib import suppress
-from    typing import Any, Literal, Union, List, Optional
-from    .exceptions import *
-from    .tracing import *
-from    .const import *
-from    .message import *
-from    . import client
-from    . import sql
-from    . import core
-from    . import misc
-import  _discord as discord
-import  time
-import  json
-import  pathlib
-import  shutil
+from contextlib import suppress
+from typing import Literal, Union, List, Optional
+
+from .exceptions import *
+from .tracing import *
+from .const import *
+from .message import *
+
+from . import client
+from . import sql
+from . import core
+from . import misc
+
+import _discord as discord
+import time
+import json
+import pathlib
+import shutil
 
 __all__ = (
     "GUILD",
@@ -37,10 +40,10 @@ class GLOBALS:
 
 
 class _BaseGUILD:
-    """ 
+    """
     Represents an universal guild.
-    
-    .. versionchanged:: 
+
+    .. versionchanged::
         v2.0
 
             - Added the update method.
@@ -79,7 +82,7 @@ class _BaseGUILD:
         property because the name can change overtime.
         """
         raise NotImplementedError
-    
+
     @property
     def messages(self) -> List[BaseMESSAGE]:
         """
@@ -131,7 +134,7 @@ class _BaseGUILD:
         """
         Main coroutine responsible for sending all the messages to this specific guild,
         it is called from the core module's advertiser task.
-        
+
         Parameters
         --------------
         mode: Literal["text", "voice"]
@@ -144,14 +147,14 @@ class _BaseGUILD:
         .. versionadded:: v2.0
 
         Used for changing the initialization parameters the object was initialized with.
-        
-        .. warning:: 
+
+        .. warning::
             This method will BLOCK until every message has finished shilling!
             This is done for safety due to asynchronous operations.
 
         .. warning::
             Upon updating, the internal state of objects get's reset, meaning you basically have a brand new created object.
-        
+
         Parameters
         -------------
         **kwargs: Any
@@ -210,7 +213,7 @@ class _BaseGUILD:
                     appender_data = None
                     appender.seek(0) # Append moves cursor to the end of the file
                     try:
-                        appender_data = json.load(appender)
+                        appender_data: dict = json.load(appender)
                     except json.JSONDecodeError:
                         # No valid json in the file, create new data
                         # and create a .old file to store this invalid data
@@ -221,7 +224,7 @@ class _BaseGUILD:
                         # Create new data
                         appender_data = {}
                         appender_data["name"] = guild_context["name"]
-                        appender_data["id"]   = guild_context["id"]
+                        appender_data["id"] = guild_context["id"]
                         appender_data["type"] = guild_context["type"]
                         appender_data["message_history"] = []
                     finally:
@@ -230,9 +233,9 @@ class _BaseGUILD:
                     appender_data["message_history"].insert(0,
                         {
                             **message_context,
-                            "index":    appender_data["message_history"][0]["index"] + 1 if len(appender_data["message_history"]) else 0,
+                            "index": appender_data["message_history"][0]["index"] + 1 if len(appender_data["message_history"]) else 0,
                             "timestamp": timestamp
-                        })                
+                        })
                     json.dump(appender_data, appender, indent=4)
                     appender.truncate() # Remove any old data
 
@@ -245,7 +248,7 @@ class _BaseGUILD:
 class GUILD(_BaseGUILD):
     """
     The GUILD object represents a server to which messages will be sent.
-    
+
     .. versionchanged:: v2.0
 
         - Added the update method
@@ -262,9 +265,9 @@ class GUILD(_BaseGUILD):
     logging:  Optional[bool]
         Optional variable dictating whatever to log sent messages inside this guild.
     """
-    
+
     __logname__ = "GUILD" # For sql._register_type
-    __slots__   = (
+    __slots__ = (
         "t_messages",
         "vc_messages",
         "update_semaphore",
@@ -278,11 +281,11 @@ class GUILD(_BaseGUILD):
         self.t_messages: List[TextMESSAGE] = []
         self.vc_messages: List[VoiceMESSAGE] = []
         misc._write_attr_once(self, "update_semaphore", asyncio.Semaphore(2))
-    
+
     @property
     def _log_file_name(self):
         return "".join(char if char not in C_FILE_NAME_FORBIDDEN_CHAR else "#" for char in self.apiobject.name) + ".json"
-    
+
     async def add_message(self, message: Union[TextMESSAGE, VoiceMESSAGE]):
         """
         Adds a message to the message list.
@@ -368,7 +371,7 @@ class GUILD(_BaseGUILD):
         """
         Main coroutine responsible for sending all the messages to this specific guild,
         it is called from the core module's advertiser task.
-        
+
         Parameters
         --------------
         mode: Literal["text", "voice"]
@@ -384,20 +387,20 @@ class GUILD(_BaseGUILD):
                     self.remove_message(message) # All channels were removed (either not found or forbidden) -> remove message from send list
                     trace(f"[GUILD]: Removing a {type(message).__name__} because it's channels were removed, in guild {self.apiobject.name}(ID: {self.snowflake})", TraceLEVELS.WARNING)
                 if self.logging and message_ret is not None:
-                    await self.generate_log(message_ret)              
-            
+                    await self.generate_log(message_ret)
+
 
     @misc._async_safe("update_semaphore", 2) # Take 2 since 2 tasks share access
     async def update(self, **kwargs):
         """
         Used for changing the initialization parameters the object was initialized with.
-        
+
         .. versionadded:: v2.0
 
-        .. warning:: 
+        .. warning::
             Upon updating, the internal state of objects get's reset, meaning you basically have a brand new created object.
             It also resets the message objects.
-        
+
         Parameters
         -------------
         **kwargs: Any
@@ -418,13 +421,13 @@ class GUILD(_BaseGUILD):
         # Update messages
         for message in self.messages:
             await message.update()
-        
+
 
 @sql._register_type("GuildTYPE")
 class USER(_BaseGUILD):
     """
     The USER object represents a user to whom messages will be sent.
-    
+
     .. versionchanged:: v2.0
 
         - ``user_id`` parameter renamed to ``snowflake``
@@ -442,7 +445,7 @@ class USER(_BaseGUILD):
     """
 
     __logname__ = "USER" # For sql._register_type
-    __slots__   = (
+    __slots__ = (
         "t_messages",
         "update_semaphore",
     )
@@ -457,7 +460,7 @@ class USER(_BaseGUILD):
                  logging: Optional[bool] = False) -> None:
         super().__init__(snowflake, messages, logging)
         self.t_messages: List[DirectMESSAGE] = []
-        
+
         misc._write_attr_once(self, "update_semaphore", asyncio.Semaphore(2)) # Only allows re-referencing this attribute once
 
     async def add_message(self, message):
@@ -482,7 +485,7 @@ class USER(_BaseGUILD):
         await message.initialize(user=self.apiobject)
         self.t_messages.append(message)
 
-    
+
     def remove_message(self, message: DirectMESSAGE):
         """
         .. versionadded:: v2.0
@@ -539,7 +542,7 @@ class USER(_BaseGUILD):
         """
         Main coroutine responsible for sending all the messages to this specific guild,
         it is called from the core module's advertiser task.
-        
+
         Parameters
         --------------
         mode: Literal["text", "voice"]
@@ -560,7 +563,7 @@ class USER(_BaseGUILD):
 
                             trace(f"Removing all messages for user {self.apiobject.display_name}#{self.apiobject.discriminator} (ID: {self.snowflake}) because we do not have permissions to send to that user.", TraceLEVELS.WARNING)
                             break
-    
+
     @misc._async_safe("update_semaphore", 2)
     async def update(self, **kwargs):
         """
@@ -568,7 +571,7 @@ class USER(_BaseGUILD):
 
         Used for changing the initialization parameters the object was initialized with.
 
-        .. warning:: 
+        .. warning::
             Upon updating, the internal state of objects get's reset, meaning you basically have a brand new created object.
             It also resets the message objects.
 

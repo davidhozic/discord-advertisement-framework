@@ -1,16 +1,16 @@
 """
     Contains base definitions for different message classes."""
 
-from    typing import Any, Dict, Set, Tuple, Union
-from    ..dtypes import *
-from    ..tracing import *
-from    ..timing import *
-from    ..exceptions import *
-from    .. import misc
-from    datetime import timedelta, datetime
-import  random
-import  _discord as discord
-import  asyncio
+from typing import Any, Dict, Set, Tuple, Union
+from ..dtypes import *
+from ..tracing import *
+from ..timing import *
+from ..exceptions import *
+from .. import misc
+from datetime import timedelta, datetime
+import random
+import _discord as discord
+import asyncio
 
 
 __all__ = (
@@ -21,7 +21,7 @@ class BaseMESSAGE:
     """
     This is the base class for all the different classes that
     represent a message you want to be sent into discord.
-    
+
     Parameters
     -----------------
     start_period: Union[int, None]
@@ -34,7 +34,7 @@ class BaseMESSAGE:
         The data that will be sent to Discord. Valid data types are defined inside `__valid_data_types__` set.
     start_in: timedelta
         Dictates when, the first send should be
-    
+
     .. deprecated:: 2.1
         (start_now) - Using bool value to dictate whether the message should be sent at framework start.
 
@@ -65,8 +65,8 @@ class BaseMESSAGE:
                 start_in: timedelta):
         # If start_period is none -> period will not be randomized
         self.start_period = start_period
-        self.end_period   = end_period
-        if start_period is None:            
+        self.end_period = end_period
+        if start_period is None:
             self.period = timedelta(seconds=end_period)
         else:
             self.period = timedelta(seconds=random.randrange(self.start_period, self.end_period))
@@ -79,10 +79,10 @@ class BaseMESSAGE:
 
         self.force_retry = {"ENABLED" : False, "TIMESTAMP" : None}
         self.data = data
-        
+
         # Attributes created with this function will not be re-referenced to a different object
         # if the function is called again, ensuring safety (.update_method)
-        misc._write_attr_once(self, "_deleted", False)       
+        misc._write_attr_once(self, "_deleted", False)
         misc._write_attr_once(self, "update_semaphore", asyncio.Semaphore(1))
 
     @property
@@ -101,7 +101,7 @@ class BaseMESSAGE:
         """
         self._deleted = True
 
-    def _generate_exception(self, 
+    def _generate_exception(self,
                            status: int,
                            code: int,
                            description: str,
@@ -136,7 +136,7 @@ class BaseMESSAGE:
         inherited classes.
         """
         raise NotImplementedError
-    
+
     def _get_data(self) -> dict:
         """
         Returns a dictionary of keyword arguments that is then expanded
@@ -153,20 +153,20 @@ class BaseMESSAGE:
         raise NotImplementedError
 
     def is_ready(self) -> bool:
-        """ 
+        """
         This method returns bool indicating if message is ready to be sent.
         """
         return (datetime.now() >= self.force_retry["TIMESTAMP"] if self.force_retry["ENABLED"]
                 else datetime.now() >= self.next_send_time)
 
     def reset_timer(self) -> None:
-        """ 
+        """
         Resets internal timer
         """
         self.force_retry["ENABLED"] = False
         if self.start_period is not None:
             self.period = timedelta(seconds=random.randrange(self.start_period, self.end_period))
-        
+
         # Absolute timing instead of relative to prevent time slippage due to missed timer reset.
         current_stamp = datetime.now()
         while self.next_send_time < current_stamp:
@@ -176,7 +176,7 @@ class BaseMESSAGE:
         """
         Sends data to a specific channel, this is separate from send
         for easier implementation of similar inherited classes
-        The method returns a dictionary: `{"success": bool, "reason": discord.HTTPException}` where 
+        The method returns a dictionary: `{"success": bool, "reason": discord.HTTPException}` where
         `"reason"` is only present if `"success"` `is False`
         """
         raise NotImplementedError
@@ -243,39 +243,39 @@ class BaseMESSAGE:
     async def update(self, init_options: dict={}, **kwargs):
         """
         Used for changing the initialization parameters the object was initialized with.
-        
+
         .. warning::
-            Upon updating, the internal state of objects get's reset, meaning you basically have a brand new created object.     
-        
+            Upon updating, the internal state of objects get's reset, meaning you basically have a brand new created object.
+
         Parameters
         -------------
         init_options: dict
             Contains the initialization options used in .initialize() method for re-initializing certain objects.
             This is implementation specific and not necessarily available.
         original_params:
-            The allowed parameters are the initialization parameters first used on creation of the object AND 
-        
+            The allowed parameters are the initialization parameters first used on creation of the object AND
+
         Raises
         ------------
         DAFParameterError(code=DAF_UPDATE_PARAMETER_ERROR)
             Invalid keyword argument was passed
         Other
             Raised from .initialize() method
-        
+
         .. versionadded::
             v2.0
         """
 
         raise NotImplementedError
-        
+
     async def initialize(self, **options):
         """
         The initialize method initializes the message object.
-    
+
         Parameters
         -------------
         - options - keyword arguments sent to _initialize_channels() from an inherited (from _BaseGUILD) class, contains extra init options.
-        
+
         Raises
         -------------
         - Exceptions raised from ._initialize_channels() and .initialize_data() methods
@@ -283,4 +283,3 @@ class BaseMESSAGE:
 
         await self._initialize_channels(**options)
         await self.initialize_data()
-

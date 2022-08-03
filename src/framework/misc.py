@@ -21,7 +21,7 @@ def _write_attr_once(obj: Any, name: str, value: Any):
     -------------
     obj: Any
         Object to safely write.
-    
+
     name: str
         The name of the attribute to change.
 
@@ -77,13 +77,13 @@ def _async_safe(semaphore: str, amount: Optional[int]=1) -> Callable:
                 sem.release()
 
             return result
-        
+
         wrapper.__annotations__ = coroutine.__annotations__ # Keep the same type hints
 
         return wrapper
 
 
-    if type(semaphore) is not str:
+    if not isinstance(semaphore, str):
         raise TypeError("semaphore parameter must be an attribute name of the asyncio semaphore inside the object")
 
     return __safe_access
