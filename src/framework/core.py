@@ -3,7 +3,7 @@
     and functions needed for the framework to run,
     as well as user function to control the framework
 """
-from typing import (Any,  Iterable, Literal,
+from typing import (Any, Iterable, Literal,
                     Callable, List, Optional,
                     Union, overload)
 
