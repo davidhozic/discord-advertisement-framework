@@ -1,17 +1,20 @@
 """
     Contains definitions related to voice messaging."""
 
-from   .base        import *
-from   ..dtypes     import *
-from   ..tracing    import *
-from   ..const      import *
-from   ..exceptions import *
-from   typing       import Any, Dict, List, Iterable, Union
-from   datetime import timedelta
-from   ..           import client
-from   ..           import sql
-from   ..           import core
-from   ..           import misc
+
+from typing import Any, Dict, List, Iterable, Union
+from datetime import timedelta
+
+from .base import *
+from ..dtypes import *
+from ..tracing import *
+from ..const import *
+from ..exceptions import *
+
+from .. import client
+from .. import sql
+from .. import core
+from .. import misc
 import asyncio
 import _discord as discord
 

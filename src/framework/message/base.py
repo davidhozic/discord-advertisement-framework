@@ -1,16 +1,16 @@
 """
     Contains base definitions for different message classes."""
 
-from    typing import Any, Dict, Set, Tuple, Union
-from    ..dtypes import *
-from    ..tracing import *
-from    ..timing import *
-from    ..exceptions import *
-from    .. import misc
-from    datetime import timedelta, datetime
-import  random
-import  _discord as discord
-import  asyncio
+from typing import Any, Dict, Set, Tuple, Union
+from ..dtypes import *
+from ..tracing import *
+from ..timing import *
+from ..exceptions import *
+from .. import misc
+from datetime import timedelta, datetime
+import random
+import _discord as discord
+import asyncio
 
 
 __all__ = (

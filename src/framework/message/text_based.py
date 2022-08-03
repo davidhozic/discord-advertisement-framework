@@ -1,17 +1,20 @@
 """
 Contains definitions for message classes that are text based (TextMESSAGE & DirectMESSAGE)."""
 
-from   .base        import *
-from   ..           import client
-from   ..           import sql
-from   ..           import misc
-from   ..dtypes     import *
-from   ..tracing    import *
-from   ..const      import *
-from   ..exceptions import *
-from   ..           import core
-from   typing       import Any, Dict, List, Iterable, Set, Union, Literal
-from   datetime import datetime, timedelta
+
+from typing import Any, Dict, List, Iterable, Union, Literal
+from datetime import datetime, timedelta
+
+from .base import *
+from ..dtypes import *
+from ..tracing import *
+from ..const import *
+from ..exceptions import *
+
+from .. import core
+from .. import client
+from .. import sql
+from .. import misc
 import asyncio
 import _discord as discord
 
