@@ -169,9 +169,14 @@ class VoiceMESSAGE(BaseMESSAGE):
                     _data_to_send["audio"] = element
         return _data_to_send
 
-    async def _initialize_channels(self):
+    async def _initialize_channels(self, guild: discord.Guild):
         """
         This method initializes the implementation specific api objects and checks for the correct channel input context.
+
+        Parameters
+        --------------
+        guild: discord.Guild
+            Discord's guild object, this is used to check if channels given are in the correct guild.
 
         Raises
         ------------
@@ -193,6 +198,8 @@ class VoiceMESSAGE(BaseMESSAGE):
                 self.channels.remove(channel)
             elif type(channel) not in {discord.VoiceChannel}:
                 raise DAFParameterError(f"TextMESSAGE object received channel type of {type(channel).__name__}, but was expecting VoiceChannel", DAF_INVALID_TYPE)
+            elif channel.guild != guild:
+                raise DAFParameterError(f"The channel {channel.name}(ID: {channel_id}) does not belong into {guild.name}(ID: {guild.id}) but is part of {channel.guild.name}(ID: {channel.guild.id})", DAF_CHANNEL_GUILD_MISMATCH_ERROR)
             else:
                 ch_i += 1
 
