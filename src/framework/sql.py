@@ -43,7 +43,7 @@ class GLOBALS:
     """
     Stores global module variables.
     """
-    manager  = None
+    manager = None
     enabled = False
     lt_types = []
 
@@ -123,7 +123,7 @@ class LoggerSQL:
         self.database = database
         self.engine: sqa.engine.Engine = None
         self.cursor: pytds.Cursor = None
-        self._sessionmaker: sessionmaker  = None
+        self._sessionmaker: sessionmaker = None
 
         # Semaphore used to prevent multiple tasks from trying to access the `._save_log()` method at once.
         # Also used in the `.update()` method to prevent race conditions.
@@ -133,7 +133,7 @@ class LoggerSQL:
         ## Lookup table caching
         self.MessageMODE = {}
         self.MessageTYPE = {}
-        self.GuildTYPE   = {}
+        self.GuildTYPE = {}
 
         ## Other object caching
         self.GuildUSER = {}
@@ -241,7 +241,7 @@ class LoggerSQL:
         session: Session
         stms = [
             {
-                "name" :   "vMessageLogFullDETAIL",
+                "name" : "vMessageLogFullDETAIL",
                 "stm"    : """
                 VIEW {} AS
                 SELECT ml.id id, dh.content sent_data, mt.name message_type, gt.name guild_type , gu.snowflake_id guild_id, gu.name guild_name, mm.name message_mode, ml.dm_reason dm_reason, ml.[timestamp] [timestamp]
@@ -917,9 +917,9 @@ class MessageLOG(LoggerSQL.Base):
     id = Column(Integer, Identity(start=0, increment=1), primary_key=True)
     sent_data = Column(Integer, ForeignKey("DataHISTORY.id"))
     message_type = Column(SmallInteger, ForeignKey("MessageTYPE.id"), nullable=False)
-    guild_id =     Column(Integer, ForeignKey("GuildUSER.id"), nullable=False)
+    guild_id = Column(Integer, ForeignKey("GuildUSER.id"), nullable=False)
     message_mode = Column(SmallInteger, ForeignKey("MessageMODE.id")) # [TextMESSAGE, DirectMESSAGE]
-    dm_reason   = Column(NVARCHAR)  # [DirectMESSAGE]
+    dm_reason = Column(NVARCHAR)  # [DirectMESSAGE]
     timestamp = Column(DateTime)
 
     def __init__(self,
