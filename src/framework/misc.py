@@ -5,6 +5,7 @@
 
 from typing import Coroutine, Callable, Any, Optional
 from asyncio import Semaphore
+import functools as fts
 
 
 ###############################
@@ -64,6 +65,7 @@ def _async_safe(semaphore: str, amount: Optional[int]=1) -> Callable:
         Decorator that returns a method wrapper Coroutine that utilizes a
         asyncio semaphore to assure safe asynchronous operations.
         """
+        @fts.wraps(coroutine)
         async def wrapper(self, *args, **kwargs):
             sem: Semaphore = getattr(self, semaphore)
             for i in range(amount):
