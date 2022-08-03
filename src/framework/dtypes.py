@@ -2,14 +2,16 @@
     The module contains definitions regarding the data types
     you can send using the xxxMESSAGE objects.
 """
-from    typing      import Callable, List, Union
-from    contextlib  import suppress
-import  copy
-import  datetime
-import  _discord    as discord
-import  youtube_dl  as ytdl
-from   .exceptions import *
-from   .import core
+from typing import Callable, List, Union
+from contextlib import suppress
+
+from .exceptions import *
+
+import copy
+import datetime
+import _discord as discord
+import youtube_dl as ytdl
+
 
 
 __all__ = (
@@ -42,14 +44,14 @@ def data_function(fnc: Callable):
     ------------
     fnc: Callable
         The function to wrap.
-    
+
     Returns
     -----------
     FunctionCLASS
         A class for creating wrapper objects is returned. These wrapper objects can be used as
         a ``data`` parameter to the :ref:`Messages` objects.
 
-    
+
     .. literalinclude:: ../../Examples/Message Types/TextMESSAGE/main_data_function.py
         :language: python
     """
@@ -77,7 +79,7 @@ def data_function(fnc: Callable):
             self.func_name = fnc.__name__
 
         def get_data(self):
-            """ 
+            """
             Retrieves the data from the user function.
             """
             return fnc(*self.args, **self.kwargs)
@@ -91,7 +93,7 @@ def data_function(fnc: Callable):
 class EMBED(discord.Embed):
     """
     Derived class of discord.Embed created to provide additional arguments in the creation.
-    
+
     **Original parameters** from **PyCord**: `PyCord docs <https://docs.pycord.dev/en/master/api.html?highlight=discord%20embed#discord.Embed>`_
 
     Parameters
@@ -105,28 +107,14 @@ class EMBED(discord.Embed):
     thumbnail: str
         Url of image that will be placed at the top right of embed.
     """
-    __slots__ = (
-        'title',
-        'url',
-        'type',
-        '_timestamp',
-        '_colour',
-        '_footer',
-        '_image',
-        '_thumbnail',
-        '_video',
-        '_provider',
-        '_author',
-        '_fields',
-        'description',
-    )
+    __slots__ = super().__slots__
     # Static members
     Color = Colour = discord.Color  # Used for color parameter
     EmptyEmbed = discord.embeds.EmptyEmbed
 
     @staticmethod
     def from_discord_embed(_object : discord.Embed):
-        """ 
+        """
         Creates an EMBED object from a discord.Embed object
 
         Parameters
@@ -187,8 +175,8 @@ class FILE:
     FILE object used as a data parameter to the MESSAGE objects.
     This is needed opposed to a normal file object because this way,
     you can edit the file after the framework has already been started.
-    
-    .. warning:: 
+
+    .. warning::
         This is used for sending an actual file and **NOT it's contents as text**.
 
     Parameters
@@ -202,24 +190,24 @@ class FILE:
         self.filename = filename
 
 
-# Youtube streaming 
+# Youtube streaming
 ytdl.utils.bug_reports_message = lambda: "" # Suppress bug report message.
 
 class AUDIO(ytdl.YoutubeDL):
     """
     Used for streaming audio from file or YouTube.
-    
+
     .. note::
         Using a youtube video, will cause the shilling start to be delayed due to youtube data extraction.
-    
+
     Parameters
     -----------------
     filename: str
         Path to the file you want streamed or a YouTube video url.
-    
+
     Raises
     ----------
-    DAFNotFoundError(code=DAF_FILE_NOT_FOUND/DAF_YOUTUBE_STREAM_ERROR) 
+    DAFNotFoundError(code=DAF_FILE_NOT_FOUND/DAF_YOUTUBE_STREAM_ERROR)
         Raised when the file or youtube url is not found.
     """
 
@@ -242,7 +230,7 @@ class AUDIO(ytdl.YoutubeDL):
         if "youtube.com" in self.orig.lower(): # If the url contains http, assume it's a youtube link
             self.stream = True
             try:
-                data = self.extract_info(self.orig, download=False) 
+                data = self.extract_info(self.orig, download=False)
             except ytdl.DownloadError:
                 raise DAFNotFoundError(f'The audio from "{self.orig}" could not be streamed', DAF_YOUTUBE_STREAM_ERROR)
             if "entries" in data:

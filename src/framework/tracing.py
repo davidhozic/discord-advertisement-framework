@@ -12,6 +12,7 @@ __all__ = (
 )
 
 class GLOBALS:
+    """Storage class used for storing global varibales of the module."""
     use_debug = None
     lock = Lock() # For print thread safety
 
@@ -29,7 +30,7 @@ def trace(message: str,
           level:   TraceLEVELS = TraceLEVELS.NORMAL):
     """
     Prints a trace to the console.
-    
+
     Parameters
     --------------
     message: str
@@ -53,12 +54,10 @@ def trace(message: str,
 def initialize(enable: bool):
     """
     Initializes the tracing module
-    
+
     Parameters
     ------------
     enable: bool
         True for tracing module to be enabled.
     """
     GLOBALS.use_debug = enable
-
-    

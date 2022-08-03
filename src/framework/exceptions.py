@@ -5,7 +5,7 @@ Contains the definitions related to errors that can be raised inside the framewo
 class DAFError(Exception):
     """
     Base exception class for all DAF exceptions.
-    
+
     Parameters
     -------------
     message: str
@@ -20,7 +20,7 @@ class DAFError(Exception):
 class DAFParameterError(DAFError):
     """
     Raised when theres an parameter exception.
-    
+
     Parameters
     -------------
     message: str
@@ -28,7 +28,7 @@ class DAFParameterError(DAFError):
     code: int
         The error code.
     """
-    pass
+
 
 class DAFNotFoundError(DAFError):
     """
@@ -41,7 +41,7 @@ class DAFNotFoundError(DAFError):
     code: int
         The error code.
     """
-    pass
+
 
 class DAFSQLError(DAFError):
     """
@@ -54,12 +54,11 @@ class DAFSQLError(DAFError):
     code: int
         The error code.
     """
-    pass
 
 # Error Codes
 # Guild codes
 DAF_GUILD_ALREADY_ADDED         = 0     #: Guild with specified snowflake is already added.
-DAF_GUILD_ID_REQUIRED           = 1     #: Guild ID is required but was not passed.    
+DAF_GUILD_ID_REQUIRED           = 1     #: Guild ID is required but was not passed.
 DAF_GUILD_ID_NOT_FOUND          = 2     #: Guild with specified snowflake was not found (or user).
 DAF_USER_CREATE_DM              = 3     #: Was unable to create DM with user (probably user not found).
 # Data type codes
