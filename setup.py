@@ -12,9 +12,9 @@ with open("./requirements.txt" , 'r', encoding="utf-8") as rf:
 
 __metadata__ = \
 {
-    "version" :  "2.0.2",
+    "version" : "2.0.2",
     "requirements" : req,
-    "minimum_py_version" :  "3.8",
+    "minimum_py_version" : "3.8",
 }
 
 setuptools.setup(

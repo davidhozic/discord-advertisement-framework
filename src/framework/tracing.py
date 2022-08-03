@@ -24,10 +24,10 @@ class TraceLEVELS(Enum):
     """
     NORMAL = 0
     WARNING = auto()
-    ERROR =  auto()
+    ERROR = auto()
 
 def trace(message: str,
-          level:   TraceLEVELS = TraceLEVELS.NORMAL):
+          level: TraceLEVELS = TraceLEVELS.NORMAL):
     """
     Prints a trace to the console.
 

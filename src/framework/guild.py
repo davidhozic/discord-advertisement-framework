@@ -213,7 +213,7 @@ class _BaseGUILD:
                     appender_data = None
                     appender.seek(0) # Append moves cursor to the end of the file
                     try:
-                        appender_data = json.load(appender)
+                        appender_data: dict = json.load(appender)
                     except json.JSONDecodeError:
                         # No valid json in the file, create new data
                         # and create a .old file to store this invalid data
@@ -224,7 +224,7 @@ class _BaseGUILD:
                         # Create new data
                         appender_data = {}
                         appender_data["name"] = guild_context["name"]
-                        appender_data["id"]   = guild_context["id"]
+                        appender_data["id"] = guild_context["id"]
                         appender_data["type"] = guild_context["type"]
                         appender_data["message_history"] = []
                     finally:
@@ -233,7 +233,7 @@ class _BaseGUILD:
                     appender_data["message_history"].insert(0,
                         {
                             **message_context,
-                            "index":    appender_data["message_history"][0]["index"] + 1 if len(appender_data["message_history"]) else 0,
+                            "index": appender_data["message_history"][0]["index"] + 1 if len(appender_data["message_history"]) else 0,
                             "timestamp": timestamp
                         })
                     json.dump(appender_data, appender, indent=4)
@@ -267,7 +267,7 @@ class GUILD(_BaseGUILD):
     """
 
     __logname__ = "GUILD" # For sql._register_type
-    __slots__   = (
+    __slots__ = (
         "t_messages",
         "vc_messages",
         "update_semaphore",
@@ -445,7 +445,7 @@ class USER(_BaseGUILD):
     """
 
     __logname__ = "USER" # For sql._register_type
-    __slots__   = (
+    __slots__ = (
         "t_messages",
         "update_semaphore",
     )

@@ -4,15 +4,15 @@
     It is only used if the sql logging is enabled by passing
     the framework.run function with the SqlCONTROLLER object.
 """
-from datetime   import datetime
-from typing     import Callable, Dict, List, Literal, Any, Union
+from datetime import datetime
+from typing import Callable, Dict, List, Literal, Any, Union
 from contextlib import suppress
 from sqlalchemy import (
                         SmallInteger, Integer, BigInteger, NVARCHAR, DateTime,
                         Column, Identity, ForeignKey,
                         create_engine, text
                        )
-from sqlalchemy.exc  import SQLAlchemyError
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.ext.declarative import declarative_base
 from pytds import ClosedConnectionError
@@ -555,7 +555,7 @@ class LoggerSQL:
             List of dictionaries containing database ID of a channel and a reason why sending to channel failed.
         """
 
-        not_cached = [{"id": x["id"], "name": x["name"]} for x in channels  if x["id"] not in self.CHANNEL] # Get snowflakes that are not cached
+        not_cached = [{"id": x["id"], "name": x["name"]} for x in channels if x["id"] not in self.CHANNEL] # Get snowflakes that are not cached
         not_cached_snow = [x["id"] for x in not_cached]
         if len(not_cached):
             with self._sessionmaker.begin() as session:
@@ -570,7 +570,7 @@ class LoggerSQL:
                     for channel in to_add:
                         self._add_to_cache(CHANNEL, channel.snowflake_id, channel.id)
 
-        ret = [(self.CHANNEL.get(d["id"],None), d.get("reason", None))  for d in channels]
+        ret = [(self.CHANNEL.get(d["id"],None), d.get("reason", None)) for d in channels]
         #For some reason pytds doesn't like when a row with a NULL column value is followed by a row with a non NULL column value
         for channel in ret.copy():
             if channel[1] is None:
@@ -715,8 +715,8 @@ class LoggerSQL:
                     ex.text = ex.args[0]
                     ex.number = 53  # Because only text is returned
 
-                code = ex.number  if hasattr(ex, "number") else -1      # The exception does't have a number attribute
-                message = ex.text if hasattr(ex, "text")   else str(ex) # The exception does't have a text attribute
+                code = ex.number if hasattr(ex, "number") else -1     # The exception does't have a number attribute
+                message = ex.text if hasattr(ex, "text") else str(ex) # The exception does't have a text attribute
                 trace(f"[SQL]: Saving log failed. {code} - {message}. Attempting recovery... (Tries left: {SQL_MAX_SAVE_ATTEMPTS - tries - 1})")
                 loop = asyncio.get_event_loop()
                 # Run in executor to prevent blocking

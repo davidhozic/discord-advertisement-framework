@@ -65,7 +65,7 @@ class BaseMESSAGE:
                 start_in: timedelta):
         # If start_period is none -> period will not be randomized
         self.start_period = start_period
-        self.end_period   = end_period
+        self.end_period = end_period
         if start_period is None:
             self.period = timedelta(seconds=end_period)
         else:

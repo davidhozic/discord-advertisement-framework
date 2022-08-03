@@ -107,7 +107,7 @@ class EMBED(discord.Embed):
     thumbnail: str
         Url of image that will be placed at the top right of embed.
     """
-    __slots__ = super().__slots__
+    __slots__ = discord.Embed.__slots__
     # Static members
     Color = Colour = discord.Color  # Used for color parameter
     EmptyEmbed = discord.embeds.EmptyEmbed

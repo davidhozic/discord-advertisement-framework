@@ -27,7 +27,7 @@ def timeit(num: int):
             ms = (end-start)*1000
 
             sum += ms
-            ct  += 1
+            ct += 1
             if ct == num:
                 print(f"{fnc.__name__} took {sum/ct} ms on average")
                 ct = 0

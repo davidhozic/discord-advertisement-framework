@@ -297,9 +297,9 @@ class TextMESSAGE(BaseMESSAGE):
                     self.sent_messages[channel.id] = None
 
                 # Send/Edit message
-                if  (self.mode in {"send" , "clear-send"} or # Mode dictates to send new message or delete previous and then send new message or mode dictates edit but message was  never sent to this channel before
+                if (self.mode in {"send" , "clear-send"} or # Mode dictates to send new message or delete previous and then send new message or mode dictates edit but message was  never sent to this channel before
                     self.mode == "edit" and self.sent_messages.get(channel.id, None) is None
-                    ):
+                ):
                     discord_sent_msg = await channel.send(  text,
                                                             embed=embed,
                                                             # Create discord.File objects here so it is catched by the except block and then logged
@@ -317,7 +317,7 @@ class TextMESSAGE(BaseMESSAGE):
                     return {"success" : False, "reason" : ex}
 
     @misc._async_safe("update_semaphore")
-    async def send(self) -> Union[dict,  None]:
+    async def send(self) -> Union[dict, None]:
         """
         Sends the data into the channels.
 
@@ -577,13 +577,13 @@ class DirectMESSAGE(BaseMESSAGE):
         handled = False
         if isinstance(ex, discord.HTTPException):
             if ex.status == 429 or ex.code == 40003: # Too Many Requests or opening DMs too fast
-                retry_after = float(ex.response.headers["Retry-After"])  * RLIM_SAFETY_FACTOR
+                retry_after = float(ex.response.headers["Retry-After"]) * RLIM_SAFETY_FACTOR
                 trace(f"Rate limited, sleeping for {retry_after} seconds", TraceLEVELS.WARNING)
                 await asyncio.sleep(retry_after)
                 handled = True
             elif ex.status == 404:      # Unknown object
                 if ex.code == 10008:    # Unknown message
-                    self.previous_message  = None
+                    self.previous_message = None
                     handled = True
             elif ex.status == 403 or ex.code in {50007, 10001, 10003}:
                 self._delete()
