@@ -305,7 +305,7 @@ class GUILD(_BaseGUILD):
         if not isinstance(message, (TextMESSAGE, VoiceMESSAGE)):
             raise DAFParameterError(f"Invalid xxxMESSAGE type: {type(message).__name__}, expected  {TextMESSAGE.__name__} or {VoiceMESSAGE.__name__}", DAF_INVALID_TYPE)
 
-        await message.initialize()
+        await message.initialize(guild=self.apiobject)
 
         if isinstance(message, TextMESSAGE):
             self.t_messages.append(message)

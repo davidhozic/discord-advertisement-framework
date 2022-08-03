@@ -15,11 +15,14 @@ for path, dirs, files in os.walk("./"):
 
 EXCEPTION_TEMPLATE =\
 """
-| {error_name}{space_nm}| {error_code}{space_ec}| {error_message}{space_msg}|
-+----------------------------------------+------+----------------------------------------------------------------------------+"""
+| {error_name}| {error_code}| {error_message}|
++----------------------------------------+------+----------------------------------------------------------------------------------------------------------------------------+"""
 
 
-export_e = "+----------------------------------------+------+----------------------------------------------------------------------------+"
+export_e = """\
++----------------------------------------+------+----------------------------------------------------------------------------------------------------------------------------+
+|     Name                               | Num  | Description                                                                                                                |
++========================================+======+============================================================================================================================+"""
 fdata = ""
 with open("../../src/framework/exceptions.py", "r") as f:
     fdata += f.read()
@@ -30,7 +33,7 @@ for exc in excs:
     name = re.search(r"[A-z]+", exc).group(0)
     value = re.search(r"[0-9]+", exc).group(0)    
     description = re.search(r"(?<=#:).+", exc).group(0).strip()
-    export_e += EXCEPTION_TEMPLATE.format(error_name=name, space_nm="".join(' ' for i in range(39-len(name))), error_code=value, space_ec="".join(' ' for i in range(5-len(value))), error_message=description, space_msg="".join(' ' for i in range(75-len(description))))
+    export_e += EXCEPTION_TEMPLATE.format(error_name=name + "".join(' ' for i in range(39-len(name))), error_code=value + "".join(' ' for i in range(5-len(value))), error_message=description + "".join(' ' for i in range(123-len(description))))
 
 export_e += ""
 
