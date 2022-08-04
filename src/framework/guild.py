@@ -290,6 +290,9 @@ class GUILD(_BaseGUILD):
         """
         Adds a message to the message list.
 
+        .. warning::
+            To use this method, the guild must already be added to the framework's shilling list (or initialized).
+
         Parameters
         --------------
         message: Union[TextMESSAGE, VoiceMESSAGE]
@@ -466,6 +469,9 @@ class USER(_BaseGUILD):
     async def add_message(self, message):
         """
         Adds a message to the message list.
+
+        .. warning::
+            To use this method, the guild must already be added to the framework's shilling list (or initialized).
 
         Parameters
         --------------
