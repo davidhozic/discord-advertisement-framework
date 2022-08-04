@@ -2,8 +2,9 @@
 Contains definitions for message classes that are text based (TextMESSAGE & DirectMESSAGE)."""
 
 
-from typing import Any, Dict, List, Iterable, Union, Literal
+from typing import Any, Dict, List, Iterable, Optional, Union, Literal
 from datetime import datetime, timedelta
+from typeguard import typechecked
 
 from .base import *
 from ..dtypes import *
@@ -24,6 +25,8 @@ __all__ = (
     "DirectMESSAGE"
 )
 
+
+@typechecked
 @sql._register_type("MessageTYPE")
 class TextMESSAGE(BaseMESSAGE):
     """
@@ -37,7 +40,7 @@ class TextMESSAGE(BaseMESSAGE):
 
     Parameters
     ------------
-    start_period: Union[int, None]
+    start_period: Union[int, timedelta, None]
         The value of this parameter can be:
 
         ..  table::
@@ -49,7 +52,7 @@ class TextMESSAGE(BaseMESSAGE):
              int > 0      Messages are sent in a randomized time period. ``start_period`` represents the bottom limit of this period.
             ===========  =================================================================================================================
 
-    end_period: int
+    end_period: Union[int, timedelta]
         If ``start_period`` > 0, then this represents the upper limit of randomized time period in which messages will be sent.
         If ``start_period`` is None, then this represents the actual time period between each message send.
 
@@ -100,23 +103,23 @@ class TextMESSAGE(BaseMESSAGE):
         "sent_messages",
     )
     __logname__: str = "TextMESSAGE"               # Used for registering SQL types and to get the message type for saving the log
-    __valid_data_types__: set = {str, EMBED, FILE} # Used in initialize_data to check if valid parameters were passed
 
-    def __init__(self, start_period: Union[int, None],
-                 end_period: int,
-                 data: Union[str, EMBED, FILE, List[Union[str, EMBED, FILE]], _FunctionBaseCLASS],
+    def __init__(self, 
+                 start_period: Union[int, timedelta, None],
+                 end_period: Union[int, timedelta],
+                 data: Union[str, EMBED, FILE, Iterable[Union[str, EMBED, FILE]], _FunctionBaseCLASS],
                  channels: Iterable[Union[int, discord.TextChannel, discord.Thread]],
                  mode: Literal["send", "edit", "clear-send"] = "send",
-                 start_in: timedelta=timedelta(seconds=0)):
+                 start_in: Union[timedelta, bool]=timedelta(seconds=0)):
         super().__init__(start_period, end_period, data, start_in)
         self.mode = mode
         self.channels = list(set(channels)) # Automatically removes duplicates
         self.sent_messages = {} # Dictionary for storing last sent message for each channel
-
+    
     def _generate_log_context(self,
-                             text : str,
-                             embed : EMBED,
-                             files : List[FILE],
+                             text: Optional[str],
+                             embed: Optional[EMBED],
+                             files: List[FILE],
                              succeeded_ch: List[Union[discord.TextChannel, discord.Thread]],
                              failed_ch: List[Dict[Union[discord.TextChannel, discord.Thread], Exception]]):
         """
@@ -201,7 +204,7 @@ class TextMESSAGE(BaseMESSAGE):
                     _data_to_send["files"].append(element)
         return _data_to_send
 
-    async def _initialize_channels(self, guild: discord.Guild):
+    async def initialize(self, guild: discord.Guild):
         """
         This method initializes the implementation specific api objects and checks for the correct channel input context.
 
@@ -217,6 +220,7 @@ class TextMESSAGE(BaseMESSAGE):
         """
         ch_i = 0
         cl = client.get_client()
+        self.parent = guild
         while ch_i < len(self.channels):
             channel = self.channels[ch_i]
             if isinstance(channel, discord.abc.GuildChannel):
@@ -269,9 +273,9 @@ class TextMESSAGE(BaseMESSAGE):
         return handled
 
     async def _send_channel(self,
-                           channel: Union[discord.TextChannel, discord.Thread],
-                           text: str,
-                           embed: EMBED,
+                           channel: Union[discord.TextChannel, discord.Thread, None],
+                           text: Optional[str],
+                           embed: Optional[EMBED],
                            files: List[FILE]) -> dict:
         """
         Sends data to specific channel
@@ -369,7 +373,7 @@ class TextMESSAGE(BaseMESSAGE):
         return None
 
     @misc._async_safe("update_semaphore")
-    async def update(self, **kwargs: Any):
+    async def update(self, _init_options: Optional[dict] = {}, **kwargs: Any):
         """
         .. versionadded:: v2.0
 
@@ -393,9 +397,14 @@ class TextMESSAGE(BaseMESSAGE):
         if "start_in" not in kwargs:
             # This parameter does not appear as attribute, manual setting necessary
             kwargs["start_in"] = timedelta(seconds=0)
+        
+        if not len(_init_options):
+            _init_options = {"guild": self.parent}
 
-        await core._update(self, **kwargs) # No additional modifications are required
+        await core._update(self, init_options=_init_options, **kwargs) # No additional modifications are required
 
+
+@typechecked
 @sql._register_type("MessageTYPE")
 class DirectMESSAGE(BaseMESSAGE):
     """
@@ -408,7 +417,7 @@ class DirectMESSAGE(BaseMESSAGE):
 
     Parameters
     ------------
-    start_period: Union[int, None]
+    start_period: Union[int, timedelta, None]
         The value of this parameter can be:
 
         ..  table::
@@ -420,7 +429,7 @@ class DirectMESSAGE(BaseMESSAGE):
              int > 0      Messages are sent in a randomized time period. ``start_period`` represents the bottom limit of this period.
             ===========  =================================================================================================================
 
-    end_period: int
+    end_period: Union[int, timedelta]
         If ``start_period`` > 0, then this represents the upper limit of randomized time period in which messages will be sent.
         If ``start_period`` is None, then this represents the actual time period between each message send.
 
@@ -469,23 +478,22 @@ class DirectMESSAGE(BaseMESSAGE):
         "dm_channel",
     )
     __logname__ = "DirectMESSAGE"               # Used for logging (type key) and sql lookup table type registration
-    __valid_data_types__ = {str, EMBED, FILE}   # Defines the allowed data types for the data parameter (get's checked in the ._initialize_data method)
 
     def __init__(self,
-                 start_period: Union[int, None],
-                 end_period: int,
-                 data: Union[str, EMBED, FILE, list],
+                 start_period: Union[int, timedelta, None],
+                 end_period: Union[int, timedelta],
+                 data: Union[str, EMBED, FILE, Iterable[Union[str, EMBED, FILE]], _FunctionBaseCLASS],
                  mode: Literal["send", "edit", "clear-send"] = "send",
-                 start_in: timedelta = timedelta(seconds=0)):
+                 start_in: Union[timedelta, bool] = timedelta(seconds=0)):
         super().__init__(start_period, end_period, data, start_in)
         self.mode = mode
         self.dm_channel = None
         self.previous_message = None
 
     def _generate_log_context(self,
-                              success_context: Dict[bool, Exception],
-                              text : str,
-                              embed : EMBED,
+                              success_context: Dict[str, Union[bool, Optional[Exception]]],
+                              text : Optional[str],
+                              embed : Optional[EMBED],
                               files : List[FILE]):
         """
         Generates information about the message send attempt that is to be saved into a log.
@@ -551,8 +559,7 @@ class DirectMESSAGE(BaseMESSAGE):
         """
         return TextMESSAGE._get_data(self)
 
-    async def _initialize_channels(self,
-                                  user: discord.User):
+    async def initialize(self, user: discord.User):
         """
         The method creates a direct message channel and
         returns True on success or False on failure
@@ -568,6 +575,7 @@ class DirectMESSAGE(BaseMESSAGE):
         try:
             await user.create_dm()
             self.dm_channel = user
+            self.parent = user
         except discord.HTTPException as ex:
             raise DAFNotFoundError(f"Unable to create DM with user {user.display_name}\nReason: {ex}", DAF_USER_CREATE_DM)
 
@@ -601,8 +609,8 @@ class DirectMESSAGE(BaseMESSAGE):
         return handled
 
     async def _send_channel(self,
-                           text: str,
-                           embed: EMBED,
+                           text: Optional[str],
+                           embed: Optional[EMBED],
                            files: List[FILE]) -> dict:
         """
         Sends data to the DM channel (user).
@@ -661,7 +669,7 @@ class DirectMESSAGE(BaseMESSAGE):
         return None
 
     @misc._async_safe("update_semaphore")
-    async def update(self, init_options={},**kwargs):
+    async def update(self, _init_options: Optional[dict] = {}, **kwargs):
         """
         .. versionadded:: v2.0
 
@@ -672,8 +680,6 @@ class DirectMESSAGE(BaseMESSAGE):
 
         Parameters
         -------------
-        init_options: Dict
-            Contains additional initialization options, not meant for public use, should only be called by the USER update method recursively.
         **kwargs: Any
             Custom number of keyword parameters which you want to update, these can be anything that is available during the object creation.
 
@@ -689,7 +695,7 @@ class DirectMESSAGE(BaseMESSAGE):
             # This parameter does not appear as attribute, manual setting necessary
             kwargs["start_in"] = timedelta(seconds=0)
 
-        if not len(init_options):
-            init_options = {"user" : self.dm_channel}
+        if not len(_init_options):
+            _init_options = {"user" : self.parent}
 
-        await core._update(self, init_options=init_options, **kwargs) # No additional modifications are required
+        await core._update(self, init_options=_init_options, **kwargs) # No additional modifications are required

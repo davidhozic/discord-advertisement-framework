@@ -10,9 +10,15 @@ req = None
 with open("./requirements.txt" , 'r', encoding="utf-8") as rf:
     req = rf.readlines()
 
+
+version = ""
+with open("./version.txt", "r", encoding="utf-8") as rf:
+    version = rf.read().strip()
+
+
 __metadata__ = \
 {
-    "version" : "2.0.2",
+    "version" : version,
     "requirements" : req,
     "minimum_py_version" : "3.8",
 }
@@ -25,7 +31,7 @@ setuptools.setup(
     description="Framework (or bot) that allows you to advertise on discord",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/davidhozic/discord-advertisement-framework",
+    url="https://daf.davidhozic.top/",
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",

@@ -2,11 +2,14 @@
     This module contains definitions regarding miscellaneous
     items that can appear in multiple modules
 """
-
-from typing import Coroutine, Callable, Any, Optional
+from typing import Coroutine, Callable, Any, Optional, TypeVar
 from asyncio import Semaphore
-import functools as fts
+from functools import wraps
 
+###############################
+# Type vars
+T = TypeVar("T")
+###############################
 
 ###############################
 # Safe access functions
@@ -65,7 +68,7 @@ def _async_safe(semaphore: str, amount: Optional[int]=1) -> Callable:
         Decorator that returns a method wrapper Coroutine that utilizes a
         asyncio semaphore to assure safe asynchronous operations.
         """
-        @fts.wraps(coroutine)
+        @wraps(coroutine)
         async def wrapper(self, *args, **kwargs):
             sem: Semaphore = getattr(self, semaphore)
             for i in range(amount):

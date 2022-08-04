@@ -2,8 +2,9 @@
     Contains definitions related to voice messaging."""
 
 
-from typing import Any, Dict, List, Iterable, Union
+from typing import Any, Dict, List, Iterable, Optional, Union
 from datetime import timedelta
+from typeguard import typechecked
 
 from .base import *
 from ..dtypes import *
@@ -29,6 +30,8 @@ class GLOBALS:
     """
     voice_client: discord.VoiceClient = None
 
+
+@typechecked
 @sql._register_type("MessageTYPE")
 class VoiceMESSAGE(BaseMESSAGE):
     """
@@ -95,14 +98,14 @@ class VoiceMESSAGE(BaseMESSAGE):
     )
 
     __logname__ = "VoiceMESSAGE"    # For sql._register_type
-    __valid_data_types__ = {AUDIO}  # This is used in the BaseMESSAGE.initialize() to check if the passed data parameters are of correct type
 
-    def __init__(self, start_period: Union[int, None],
-                 end_period: int,
+    def __init__(self,
+                 start_period: Union[int, timedelta, None],
+                 end_period: Union[int, timedelta],
                  data: AUDIO,
                  channels: Iterable[Union[int, discord.VoiceChannel]],
                  volume: int=50,
-                 start_in: timedelta=timedelta(seconds=0)):
+                 start_in: Union[timedelta, bool]=timedelta(seconds=0)):
 
         super().__init__(start_period, end_period, data, start_in)
         self.volume = max(0, min(100, volume)) # Clamp the volume to 0-100 %
@@ -169,7 +172,7 @@ class VoiceMESSAGE(BaseMESSAGE):
                     _data_to_send["audio"] = element
         return _data_to_send
 
-    async def _initialize_channels(self, guild: discord.Guild):
+    async def initialize(self, guild: discord.Guild):
         """
         This method initializes the implementation specific api objects and checks for the correct channel input context.
 
@@ -185,6 +188,7 @@ class VoiceMESSAGE(BaseMESSAGE):
         """
         ch_i = 0
         cl = client.get_client()
+        self.parent = guild
         while ch_i < len(self.channels):
             channel = self.channels[ch_i]
             if isinstance(channel, discord.abc.GuildChannel):
@@ -208,7 +212,7 @@ class VoiceMESSAGE(BaseMESSAGE):
 
     async def _send_channel(self,
                            channel: discord.VoiceChannel,
-                           audio: AUDIO) -> dict:
+                           audio: Optional[AUDIO]) -> dict:
         """
         Sends data to specific channel
 
@@ -248,7 +252,7 @@ class VoiceMESSAGE(BaseMESSAGE):
             elif client.get_client().get_channel(channel.id) is None:
                 ex = self._generate_exception(404, 10003, "Channel was deleted", discord.NotFound)
             else:
-                ex = self._generate_exception(500, 0, "Timeout error", discord.HTTPException)
+                ex = self._generate_exception(500, 0, f"Timeout error\nTraceback ({ex.__class__.__name__}): {ex}", discord.HTTPException)
             return {"success": False, "reason": ex}
         finally:
             if GLOBALS.voice_client is not None and GLOBALS.voice_client.is_connected():
@@ -296,7 +300,7 @@ class VoiceMESSAGE(BaseMESSAGE):
         return None
 
     @misc._async_safe("update_semaphore")
-    async def update(self, **kwargs):
+    async def update(self, _init_options: Optional[dict] = {}, **kwargs):
         """
         .. versionadded:: v2.0
 
@@ -320,5 +324,8 @@ class VoiceMESSAGE(BaseMESSAGE):
         if "start_in" not in kwargs:
             # This parameter does not appear as attribute, manual setting necessary
             kwargs["start_in"] = timedelta(seconds=0)
+        
+        if not len(_init_options):
+            _init_options = {"guild": self.parent}
 
-        await core._update(self, **kwargs) # No additional modifications are required
+        await core._update(self, init_options=_init_options, **kwargs) # No additional modifications are required

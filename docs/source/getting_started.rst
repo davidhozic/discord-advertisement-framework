@@ -10,8 +10,8 @@ Minimal example
 This is a minimal example of how to use the shiller. 
 
 .. note:: 
-    The example shows you how to shill "Hello World" every 5 seconds, however this is not what framework
-    is limited to (see other examples).
+    The example shows you how to shill "Hello World" every 5 seconds to a manually defined list of servers, however this is not what framework
+    is limited to (see `Examples <https://github.com/davidhozic/discord-advertisement-framework/tree/master/Examples>`_).
     
 .. seealso:: 
     :download:`Download more examples <../../Examples/Examples.zip>`
