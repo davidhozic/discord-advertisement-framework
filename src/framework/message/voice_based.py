@@ -248,7 +248,7 @@ class VoiceMESSAGE(BaseMESSAGE):
             elif client.get_client().get_channel(channel.id) is None:
                 ex = self._generate_exception(404, 10003, "Channel was deleted", discord.NotFound)
             else:
-                ex = self._generate_exception(500, 0, "Timeout error", discord.HTTPException)
+                ex = self._generate_exception(500, 0, f"Timeout error\nTraceback ({ex.__class__.__name__}): {ex}", discord.HTTPException)
             return {"success": False, "reason": ex}
         finally:
             if GLOBALS.voice_client is not None and GLOBALS.voice_client.is_connected():
