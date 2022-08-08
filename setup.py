@@ -25,7 +25,7 @@ setuptools.setup(
     description="Framework (or bot) that allows you to advertise on discord",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/davidhozic/discord-advertisement-framework",
+    url="https://daf.davidhozic.top/",
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
