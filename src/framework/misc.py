@@ -2,11 +2,17 @@
     This module contains definitions regarding miscellaneous
     items that can appear in multiple modules
 """
-
-from typing import Coroutine, Callable, Any, Optional
+from typing import Coroutine, Callable, Any, Optional, Union, TypeVar
 from asyncio import Semaphore
-import functools as fts
+from .exceptions import DAF_INVALID_TYPE, DAFParameterError
+from functools import wraps
+from typeguard import typechecked
+from inspect import isclass
 
+###############################
+# Type vars
+T = TypeVar("T")
+###############################
 
 ###############################
 # Safe access functions
@@ -65,7 +71,7 @@ def _async_safe(semaphore: str, amount: Optional[int]=1) -> Callable:
         Decorator that returns a method wrapper Coroutine that utilizes a
         asyncio semaphore to assure safe asynchronous operations.
         """
-        @fts.wraps(coroutine)
+        @wraps(coroutine)
         async def wrapper(self, *args, **kwargs):
             sem: Semaphore = getattr(self, semaphore)
             for i in range(amount):
@@ -87,3 +93,32 @@ def _async_safe(semaphore: str, amount: Optional[int]=1) -> Callable:
         raise TypeError("semaphore parameter must be an attribute name of the asyncio semaphore inside the object")
 
     return __safe_access
+
+
+
+def _enforce_annotations(func: T) -> T:
+    """
+    Decorator that wraps method fnc in a function that
+    raises DAFParameterError(code=DAF_INVALID_TYPE)
+    if values don't the annotations. 
+
+    Parameters
+    ---------------
+    fnc: Union[Callable, Class]
+        Function to check parameters of or a class. If this
+        is a class, then __init__ method is checked.
+    """
+    if isclass(func):
+        func.__init__ = _enforce_annotations(func.__init__)
+        return func
+
+    checked_fnc = typechecked(func)
+    
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        try:
+            return checked_fnc(*args, **kwargs)
+        except TypeError as ex:
+            raise DAFParameterError(str(ex), DAF_INVALID_TYPE) from ex
+
+    return wrapper

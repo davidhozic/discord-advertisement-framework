@@ -6,7 +6,7 @@
 from __future__ import annotations
 import asyncio
 from contextlib import suppress
-from typing import Literal, Union, List, Optional
+from typing import Any, Literal, Union, List, Optional
 
 from .exceptions import *
 from .tracing import *
@@ -38,7 +38,7 @@ class GLOBALS:
     """
     server_log_path = None
 
-
+@misc._enforce_annotations
 class _BaseGUILD:
     """
     Represents an universal guild.
@@ -66,7 +66,7 @@ class _BaseGUILD:
     __logname__ = "_BaseGUILD" # Dummy to demonstrate correct definition for @sql._register_type decorator
 
     def __init__(self,
-                 snowflake: Union[int, discord.Object],
+                 snowflake: Any,
                  messages: Optional[List]=[],
                  logging: Optional[bool]=False) -> None:
 
@@ -244,6 +244,7 @@ class _BaseGUILD:
             trace(f"[{type(self).__name__}]: Unable to save log. Exception: {exception}", TraceLEVELS.WARNING)
 
 
+@misc._enforce_annotations
 @sql._register_type("GuildTYPE")
 class GUILD(_BaseGUILD):
     """
@@ -286,6 +287,7 @@ class GUILD(_BaseGUILD):
     def _log_file_name(self):
         return "".join(char if char not in C_FILE_NAME_FORBIDDEN_CHAR else "#" for char in self.apiobject.name) + ".json"
 
+    @misc._enforce_annotations
     async def add_message(self, message: Union[TextMESSAGE, VoiceMESSAGE]):
         """
         Adds a message to the message list.
@@ -305,8 +307,6 @@ class GUILD(_BaseGUILD):
         Other
             Raised from message.initialize() method.
         """
-        if not isinstance(message, (TextMESSAGE, VoiceMESSAGE)):
-            raise DAFParameterError(f"Invalid xxxMESSAGE type: {type(message).__name__}, expected  {TextMESSAGE.__name__} or {VoiceMESSAGE.__name__}", DAF_INVALID_TYPE)
 
         await message.initialize(guild=self.apiobject)
 
@@ -315,6 +315,7 @@ class GUILD(_BaseGUILD):
         elif isinstance(message, VoiceMESSAGE):
             self.vc_messages.append(message)
 
+    @misc._enforce_annotations
     def remove_message(self, message: Union[TextMESSAGE, VoiceMESSAGE]):
         """
         Removes a message from the message list.
@@ -335,12 +336,11 @@ class GUILD(_BaseGUILD):
             message._delete()
             self.t_messages.remove(message)
             return
+
         elif isinstance(message, VoiceMESSAGE):
             message._delete()
             self.vc_messages.remove(message)
             return
-
-        raise DAFParameterError(f"Invalid xxxMESSAGE type: {type(message).__name__}, expected  {TextMESSAGE.__name__} or {VoiceMESSAGE.__name__}", DAF_INVALID_TYPE)
 
     async def initialize(self) -> None:
         """
@@ -426,6 +426,7 @@ class GUILD(_BaseGUILD):
             await message.update()
 
 
+@misc._enforce_annotations
 @sql._register_type("GuildTYPE")
 class USER(_BaseGUILD):
     """
@@ -466,7 +467,8 @@ class USER(_BaseGUILD):
 
         misc._write_attr_once(self, "update_semaphore", asyncio.Semaphore(2)) # Only allows re-referencing this attribute once
 
-    async def add_message(self, message):
+    @misc._enforce_annotations
+    async def add_message(self, message: DirectMESSAGE):
         """
         Adds a message to the message list.
 
@@ -485,13 +487,10 @@ class USER(_BaseGUILD):
         Other
             Raised from message.initialize() method.
         """
-        if not isinstance(message, DirectMESSAGE):
-            raise DAFParameterError(f"Invalid xxxMESSAGE type: {type(message).__name__}, expected  {DirectMESSAGE.__name__}", DAF_INVALID_TYPE)
-
         await message.initialize(user=self.apiobject)
         self.t_messages.append(message)
 
-
+    @misc._enforce_annotations
     def remove_message(self, message: DirectMESSAGE):
         """
         .. versionadded:: v2.0
@@ -508,12 +507,8 @@ class USER(_BaseGUILD):
         DAFParameterError(code=DAF_INVALID_TYPE)
             Raised when the message is not of type DirectMESSAGE.
         """
-        if isinstance(message, DirectMESSAGE):
-            message._delete()
-            self.t_messages.remove(message)
-            return
-
-        raise DAFParameterError(f"Invalid xxxMESSAGE type: {type(message).__name__}, expected  {DirectMESSAGE.__name__}", DAF_INVALID_TYPE)
+        message._delete()
+        self.t_messages.remove(message)
 
     async def initialize(self):
         """

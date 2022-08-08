@@ -1,13 +1,16 @@
 """
     Contains base definitions for different message classes."""
 
-from typing import Any, Dict, Set, Tuple, Union
+from typing import Any, Dict, Iterable, Set, Tuple, Union
+from datetime import timedelta, datetime
+from typeguard import check_type
+
 from ..dtypes import *
 from ..tracing import *
 from ..timing import *
 from ..exceptions import *
 from .. import misc
-from datetime import timedelta, datetime
+
 import random
 import _discord as discord
 import asyncio
@@ -17,28 +20,36 @@ __all__ = (
     "BaseMESSAGE",
 )
 
+
+@misc._enforce_annotations
 class BaseMESSAGE:
     """
     This is the base class for all the different classes that
     represent a message you want to be sent into discord.
 
-    Parameters
-    -----------------
-    start_period: Union[int, None]
-        If this this is not None, then it dictates the bottom limit for range of the randomized period. Set this to None
-                                         for a fixed sending period.
-    end_period: int
-        If start_period is not None, this dictates the upper limit for range of the randomized period. If start_period is None, then this
-                            dictates a fixed sending period in SECONDS, eg. if you pass the value `5`, that means the message will be sent every 5 seconds.
-    data: inherited class dependant
-        The data that will be sent to Discord. Valid data types are defined inside `__valid_data_types__` set.
-    start_in: timedelta
-        Dictates when, the first send should be
-
     .. deprecated:: 2.1
         (start_now) - Using bool value to dictate whether the message should be sent at framework start.
 
         Use ``timedelta`` object instead describing the delay before first send.
+    
+    Parameters
+    -----------------
+    start_period: Union[int, timedelta, None]
+        If this this is not None, then it dictates the bottom limit for range of the randomized period. Set this to None
+                                         for a fixed sending period.
+    end_period: Union[int, timedelta],
+        If start_period is not None, this dictates the upper limit for range of the randomized period. If start_period is None, then this
+                            dictates a fixed sending period in SECONDS, eg. if you pass the value `5`, that means the message will be sent every 5 seconds.
+    data: inherited class dependant
+        The data to be sent to discord.
+    start_in: timedelta
+        Dictates when, the first send should be
+
+
+    Raises
+    ----------------
+    DAFParameterError(code=DAF_INVALID_TYPE)
+        The parameter end_period cannot be None.
     """
     __slots__ = (
         "period",
@@ -53,32 +64,51 @@ class BaseMESSAGE:
 
     __logname__: str = "" # Used for registering SQL types and to get the message type for saving the log
 
-    # The "__valid_data_types__" should be implemented in the INHERITED classes.
-    # The set contains all the data types that the class is allowed to accept, this variable
-    # is then checked for allowed data types in the "initialize" function bellow.
-    __valid_data_types__ = {}
-
     def __init__(self,
-                start_period : Union[int, None],
-                end_period : int,
+                start_period: Union[int, timedelta, None],
+                end_period: Union[int, timedelta],
                 data: Any,
-                start_in: timedelta):
-        # If start_period is none -> period will not be randomized
-        self.start_period = start_period
-        self.end_period = end_period
-        if start_period is None:
-            self.period = timedelta(seconds=end_period)
-        else:
-            self.period = timedelta(seconds=random.randrange(self.start_period, self.end_period))
+                start_in: Union[timedelta, bool]):
+        
+        # Data parameter checks
+        if isinstance(data, Iterable):
+            if not len(data):
+                raise TypeError(f"data parameter cannot be an empty iterable. Got: '{data}'")
+            
+            annots = self.__init__.__annotations__["data"]  
+            for element in data:
+                if isinstance(element, _FunctionBaseCLASS): # Check if function is being used standalone
+                    raise TypeError(f"The function can only be used on the data parameter directly, not in a iterable. Function: '{element})'")
+                
+                # Check if the list elements are of correct type (typeguard does not protect iterable's elements)
+                check_type("data", element, annots)
 
-        if isinstance(start_in, bool): # TODO: Remove in 2.2
+        # Deprecated int, use timedelta
+        if isinstance(start_period, int):
+            trace("Using int on start_period is deprecated, use timedelta object instead", TraceLEVELS.WARNING)
+            start_period = timedelta(seconds=start_period)
+
+        if isinstance(end_period, int):
+            trace("Using int on end_period is deprecated, use timedelta object instead", TraceLEVELS.WARNING)
+            end_period = timedelta(seconds=end_period)
+        
+        if start_period is None:
+            self.period = end_period    # Fixed period is used, equal to end_period
+        else:
+            range = map(int, [start_period.total_seconds(), end_period.total_seconds()])
+            self.period = random.randrange(*range) # Randomized period is used
+            
+        if isinstance(start_in, bool): # Deprecated since 2.1
             self.next_send_time = datetime.now() if start_in else datetime.now() + self.period
             trace("Using bool value for 'start_in' ('start_now') parameter is deprecated. Use timedelta object instead.", TraceLEVELS.WARNING)
         else:
             self.next_send_time = datetime.now() + start_in
 
+
         self.force_retry = {"ENABLED" : False, "TIMESTAMP" : None}
         self.data = data
+        self.start_period = start_period
+        self.end_period = end_period
 
         # Attributes created with this function will not be re-referenced to a different object
         # if the function is called again, ensuring safety (.update_method)
@@ -165,7 +195,8 @@ class BaseMESSAGE:
         """
         self.force_retry["ENABLED"] = False
         if self.start_period is not None:
-            self.period = timedelta(seconds=random.randrange(self.start_period, self.end_period))
+            range = map(int, [self.start_period.total_seconds(), self.end_period.total_seconds()])
+            self.period = timedelta(seconds=random.randrange(*range))
 
         # Absolute timing instead of relative to prevent time slippage due to missed timer reset.
         current_stamp = datetime.now()
@@ -194,51 +225,6 @@ class BaseMESSAGE:
         api objects and checks for the correct channel input context.
         """
         raise NotImplementedError
-
-    async def initialize_data(self):
-        """
-        This method checks for the correct data input to the xxxMESSAGE
-        object. The expected datatypes for specific implementation is
-        defined thru the static variable __valid_data_types__
-
-        Raises
-        ------------
-        - `DAFParameterError(code=DAF_INVALID_TYPE)` - Raised when a parameter is of invalid type
-        - `DAFNotFoundError(code=DAF_MISSING_PARAMETER)` - Raised when no data parameters were passed.
-        """
-
-        # Check for correct data types of the MESSAGE.data parameter
-        if not isinstance(self.data, _FunctionBaseCLASS):
-            # This is meant only as a pre-check if the parameters are correct so you wouldn't eg. start
-            # sending this message 6 hours later and only then realize the parameters were incorrect.
-            # The parameters also get checked/parsed each period right before the send.
-
-            # Convert any arguments passed into a list of arguments
-            if isinstance(self.data, (list, tuple, set)):
-                self.data = list(self.data)   # Convert into a regular list to allow removal of items
-            else:
-                self.data = [self.data]       # Place into a list for iteration, to avoid additional code
-
-            # Check all the arguments
-            for data in self.data[:]:
-                # Check all the data types of all the passed to the data parameter.
-                # If class does not match the allowed types, then the object is removed.
-                # The for loop iterates thru a shallow copy (sliced list) of data_params to allow removal of items
-                # without affecting the iteration (would skip elements without a copy or use of while loop).
-
-                # The inherited classes MUST DEFINE THE "__valid_data_types__" inside the class which should be a set of the allowed data types
-
-                if (
-                        type(data) not in type(self).__valid_data_types__
-                    ):
-                    if isinstance(data, _FunctionBaseCLASS):
-                        raise DAFParameterError(f"The function can only be used on the data parameter directly, not in a iterable. Function: {data.func_name}", DAF_INVALID_TYPE)
-                    else:
-                        trace(f"INVALID DATA PARAMETER PASSED!\nArgument is of type : {type(data).__name__}\nSee README.md for allowed data types", TraceLEVELS.WARNING)
-                        raise DAFParameterError(f"Invalid data type {type(data).__name__}. Allowed types: {type(self).__valid_data_types__}", DAF_INVALID_TYPE)
-
-            if len(self.data) == 0:
-                raise DAFNotFoundError(f"No data parameters were passed", DAF_MISSING_PARAMETER)
 
     async def update(self, init_options: dict={}, **kwargs):
         """
@@ -280,6 +266,4 @@ class BaseMESSAGE:
         -------------
         - Exceptions raised from ._initialize_channels() and .initialize_data() methods
         """
-
         await self._initialize_channels(**options)
-        await self.initialize_data()
