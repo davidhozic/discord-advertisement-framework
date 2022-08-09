@@ -2,7 +2,7 @@
 Contains definitions for message classes that are text based (TextMESSAGE & DirectMESSAGE)."""
 
 
-from typing import Any, Dict, List, Iterable, Union, Literal
+from typing import Any, Dict, List, Iterable, Optional, Union, Literal
 from datetime import datetime, timedelta
 
 from .base import *
@@ -203,7 +203,7 @@ class TextMESSAGE(BaseMESSAGE):
                     _data_to_send["files"].append(element)
         return _data_to_send
 
-    async def _initialize_channels(self, guild: discord.Guild):
+    async def initialize(self, guild: discord.Guild):
         """
         This method initializes the implementation specific api objects and checks for the correct channel input context.
 
@@ -219,6 +219,7 @@ class TextMESSAGE(BaseMESSAGE):
         """
         ch_i = 0
         cl = client.get_client()
+        self.parent = guild
         while ch_i < len(self.channels):
             channel = self.channels[ch_i]
             if isinstance(channel, discord.abc.GuildChannel):
@@ -371,7 +372,7 @@ class TextMESSAGE(BaseMESSAGE):
         return None
 
     @misc._async_safe("update_semaphore")
-    async def update(self, **kwargs: Any):
+    async def update(self, _init_options: Optional[dict] = {}, **kwargs: Any):
         """
         .. versionadded:: v2.0
 
@@ -395,8 +396,11 @@ class TextMESSAGE(BaseMESSAGE):
         if "start_in" not in kwargs:
             # This parameter does not appear as attribute, manual setting necessary
             kwargs["start_in"] = timedelta(seconds=0)
+        
+        if not len(_init_options):
+            _init_options = {"guild": self.parent}
 
-        await core._update(self, **kwargs) # No additional modifications are required
+        await core._update(self, init_options=_init_options, **kwargs) # No additional modifications are required
 
 
 @misc._enforce_annotations
@@ -554,8 +558,7 @@ class DirectMESSAGE(BaseMESSAGE):
         """
         return TextMESSAGE._get_data(self)
 
-    async def _initialize_channels(self,
-                                  user: discord.User):
+    async def initialize(self, user: discord.User):
         """
         The method creates a direct message channel and
         returns True on success or False on failure
@@ -571,6 +574,7 @@ class DirectMESSAGE(BaseMESSAGE):
         try:
             await user.create_dm()
             self.dm_channel = user
+            self.parent = user
         except discord.HTTPException as ex:
             raise DAFNotFoundError(f"Unable to create DM with user {user.display_name}\nReason: {ex}", DAF_USER_CREATE_DM)
 
@@ -664,7 +668,7 @@ class DirectMESSAGE(BaseMESSAGE):
         return None
 
     @misc._async_safe("update_semaphore")
-    async def update(self, init_options={},**kwargs):
+    async def update(self, _init_options: Optional[dict] = {}, **kwargs):
         """
         .. versionadded:: v2.0
 
@@ -675,8 +679,6 @@ class DirectMESSAGE(BaseMESSAGE):
 
         Parameters
         -------------
-        init_options: Dict
-            Contains additional initialization options, not meant for public use, should only be called by the USER update method recursively.
         **kwargs: Any
             Custom number of keyword parameters which you want to update, these can be anything that is available during the object creation.
 
@@ -692,7 +694,7 @@ class DirectMESSAGE(BaseMESSAGE):
             # This parameter does not appear as attribute, manual setting necessary
             kwargs["start_in"] = timedelta(seconds=0)
 
-        if not len(init_options):
-            init_options = {"user" : self.dm_channel}
+        if not len(_init_options):
+            _init_options = {"user" : self.parent}
 
-        await core._update(self, init_options=init_options, **kwargs) # No additional modifications are required
+        await core._update(self, init_options=_init_options, **kwargs) # No additional modifications are required

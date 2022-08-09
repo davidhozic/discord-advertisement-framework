@@ -10,9 +10,15 @@ req = None
 with open("./requirements.txt" , 'r', encoding="utf-8") as rf:
     req = rf.readlines()
 
+
+version = ""
+with open("./version.txt", "r", encoding="utf-8") as rf:
+    version = rf.read().strip()
+
+
 __metadata__ = \
 {
-    "version" : "2.0.2",
+    "version" : version,
     "requirements" : req,
     "minimum_py_version" : "3.8",
 }

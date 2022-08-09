@@ -2,7 +2,7 @@
     Contains definitions related to voice messaging."""
 
 
-from typing import Any, Dict, List, Iterable, Union
+from typing import Any, Dict, List, Iterable, Optional, Union
 from datetime import timedelta
 
 from .base import *
@@ -171,7 +171,7 @@ class VoiceMESSAGE(BaseMESSAGE):
                     _data_to_send["audio"] = element
         return _data_to_send
 
-    async def _initialize_channels(self, guild: discord.Guild):
+    async def initialize(self, guild: discord.Guild):
         """
         This method initializes the implementation specific api objects and checks for the correct channel input context.
 
@@ -187,6 +187,7 @@ class VoiceMESSAGE(BaseMESSAGE):
         """
         ch_i = 0
         cl = client.get_client()
+        self.parent = guild
         while ch_i < len(self.channels):
             channel = self.channels[ch_i]
             if isinstance(channel, discord.abc.GuildChannel):
@@ -298,7 +299,7 @@ class VoiceMESSAGE(BaseMESSAGE):
         return None
 
     @misc._async_safe("update_semaphore")
-    async def update(self, **kwargs):
+    async def update(self, _init_options: Optional[dict] = {}, **kwargs):
         """
         .. versionadded:: v2.0
 
@@ -322,5 +323,8 @@ class VoiceMESSAGE(BaseMESSAGE):
         if "start_in" not in kwargs:
             # This parameter does not appear as attribute, manual setting necessary
             kwargs["start_in"] = timedelta(seconds=0)
+        
+        if not len(_init_options):
+            _init_options = {"guild": self.parent}
 
-        await core._update(self, **kwargs) # No additional modifications are required
+        await core._update(self, init_options=_init_options, **kwargs) # No additional modifications are required
