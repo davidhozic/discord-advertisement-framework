@@ -24,6 +24,8 @@ __all__ = (
     "DirectMESSAGE"
 )
 
+
+@misc._enforce_annotations
 @sql._register_type("MessageTYPE")
 class TextMESSAGE(BaseMESSAGE):
     """
@@ -37,7 +39,7 @@ class TextMESSAGE(BaseMESSAGE):
 
     Parameters
     ------------
-    start_period: Union[int, None]
+    start_period: Union[int, timedelta, None]
         The value of this parameter can be:
 
         ..  table::
@@ -49,7 +51,7 @@ class TextMESSAGE(BaseMESSAGE):
              int > 0      Messages are sent in a randomized time period. ``start_period`` represents the bottom limit of this period.
             ===========  =================================================================================================================
 
-    end_period: int
+    end_period: Union[int, timedelta]
         If ``start_period`` > 0, then this represents the upper limit of randomized time period in which messages will be sent.
         If ``start_period`` is None, then this represents the actual time period between each message send.
 
@@ -100,23 +102,23 @@ class TextMESSAGE(BaseMESSAGE):
         "sent_messages",
     )
     __logname__: str = "TextMESSAGE"               # Used for registering SQL types and to get the message type for saving the log
-    __valid_data_types__: set = {str, EMBED, FILE} # Used in initialize_data to check if valid parameters were passed
 
-    def __init__(self, start_period: Union[int, None],
-                 end_period: int,
-                 data: Union[str, EMBED, FILE, List[Union[str, EMBED, FILE]], _FunctionBaseCLASS],
+    def __init__(self, 
+                 start_period: Union[int, timedelta, None],
+                 end_period: Union[int, timedelta],
+                 data: Union[str, EMBED, FILE, Iterable[Union[str, EMBED, FILE]], _FunctionBaseCLASS],
                  channels: Iterable[Union[int, discord.TextChannel, discord.Thread]],
                  mode: Literal["send", "edit", "clear-send"] = "send",
-                 start_in: timedelta=timedelta(seconds=0)):
+                 start_in: Union[timedelta, bool]=timedelta(seconds=0)):
         super().__init__(start_period, end_period, data, start_in)
         self.mode = mode
         self.channels = list(set(channels)) # Automatically removes duplicates
         self.sent_messages = {} # Dictionary for storing last sent message for each channel
-
+    
     def _generate_log_context(self,
-                             text : str,
-                             embed : EMBED,
-                             files : List[FILE],
+                             text: Union[str, None],
+                             embed: Union[EMBED, None],
+                             files: List[FILE],
                              succeeded_ch: List[Union[discord.TextChannel, discord.Thread]],
                              failed_ch: List[Dict[Union[discord.TextChannel, discord.Thread], Exception]]):
         """
@@ -269,9 +271,9 @@ class TextMESSAGE(BaseMESSAGE):
         return handled
 
     async def _send_channel(self,
-                           channel: Union[discord.TextChannel, discord.Thread],
-                           text: str,
-                           embed: EMBED,
+                           channel: Union[discord.TextChannel, discord.Thread, None],
+                           text: Union[str, None],
+                           embed: Union[EMBED, None],
                            files: List[FILE]) -> dict:
         """
         Sends data to specific channel
@@ -396,6 +398,8 @@ class TextMESSAGE(BaseMESSAGE):
 
         await core._update(self, **kwargs) # No additional modifications are required
 
+
+@misc._enforce_annotations
 @sql._register_type("MessageTYPE")
 class DirectMESSAGE(BaseMESSAGE):
     """
@@ -408,7 +412,7 @@ class DirectMESSAGE(BaseMESSAGE):
 
     Parameters
     ------------
-    start_period: Union[int, None]
+    start_period: Union[int, timedelta, None]
         The value of this parameter can be:
 
         ..  table::
@@ -420,7 +424,7 @@ class DirectMESSAGE(BaseMESSAGE):
              int > 0      Messages are sent in a randomized time period. ``start_period`` represents the bottom limit of this period.
             ===========  =================================================================================================================
 
-    end_period: int
+    end_period: Union[int, timedelta]
         If ``start_period`` > 0, then this represents the upper limit of randomized time period in which messages will be sent.
         If ``start_period`` is None, then this represents the actual time period between each message send.
 
@@ -469,14 +473,13 @@ class DirectMESSAGE(BaseMESSAGE):
         "dm_channel",
     )
     __logname__ = "DirectMESSAGE"               # Used for logging (type key) and sql lookup table type registration
-    __valid_data_types__ = {str, EMBED, FILE}   # Defines the allowed data types for the data parameter (get's checked in the ._initialize_data method)
 
     def __init__(self,
-                 start_period: Union[int, None],
-                 end_period: int,
-                 data: Union[str, EMBED, FILE, list],
+                 start_period: Union[int, timedelta, None],
+                 end_period: Union[int, timedelta],
+                 data: Union[str, EMBED, FILE, Iterable[Union[str, EMBED, FILE]], _FunctionBaseCLASS],
                  mode: Literal["send", "edit", "clear-send"] = "send",
-                 start_in: timedelta = timedelta(seconds=0)):
+                 start_in: Union[timedelta, bool] = timedelta(seconds=0)):
         super().__init__(start_period, end_period, data, start_in)
         self.mode = mode
         self.dm_channel = None

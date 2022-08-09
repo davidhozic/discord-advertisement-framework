@@ -51,20 +51,22 @@ Installation
 -------------------
 To install the framework use one of the following:
 
-.. code-block:: bash
+.. tab:: Windows
 
-    # Windows
-    python -m pip install discord-advert-framework
+    .. code-block:: bash
 
-.. code-block:: bash
+        python -m pip install discord-advert-framework
 
-    # Windows
-    py -3 -m pip install discord-advert-framework
+    .. code-block:: bash
 
-.. code-block:: bash
-    
-    # Linux
-    python3 -m pip install discord-advert-framework
+        py -3 -m pip install discord-advert-framework
+
+.. tab:: Linux
+
+    .. code-block:: bash
+        
+        # Linux
+        python3 -m pip install discord-advert-framework
 
 
 

@@ -76,7 +76,7 @@ def _register_type(lookuptable: Literal["GuildTYPE", "MessageTYPE", "MessageMODE
 
     return decorator_register_type
 
-
+@misc._enforce_annotations
 class LoggerSQL:
     """
     Used for controlling the SQL database used for message logs.

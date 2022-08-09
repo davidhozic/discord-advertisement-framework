@@ -2,17 +2,18 @@
     The module contains definitions regarding the data types
     you can send using the xxxMESSAGE objects.
 """
-from typing import Callable, List, Union
+from typing import Any, Callable, List, Union, TypeVar
 from contextlib import suppress
 
 from .exceptions import *
+from . import misc
 
 import copy
 import datetime
 import _discord as discord
 import youtube_dl as ytdl
 
-
+T = TypeVar("T")
 
 __all__ = (
     "data_function",
@@ -55,6 +56,7 @@ def data_function(fnc: Callable):
     .. literalinclude:: ../../Examples/Message Types/TextMESSAGE/main_data_function.py
         :language: python
     """
+    @misc._enforce_annotations
     class FunctionCLASS(_FunctionBaseCLASS):
         """
         Used for creating special classes that are then used to create objects in the framework.MESSAGE
@@ -73,7 +75,7 @@ def data_function(fnc: Callable):
             "func_name",
         )
 
-        def __init__(self, *args, **kwargs):
+        def __init__(self, *args: Any, **kwargs: Any):
             self.args = args
             self.kwargs = kwargs
             self.func_name = fnc.__name__
@@ -83,6 +85,9 @@ def data_function(fnc: Callable):
             Retrieves the data from the user function.
             """
             return fnc(*self.args, **self.kwargs)
+        
+        def __str__(self) -> str:
+            return self.func_name
 
     return FunctionCLASS
 
@@ -90,6 +95,7 @@ def data_function(fnc: Callable):
 #######################################################################
 # Other
 #######################################################################
+@misc._enforce_annotations
 class EMBED(discord.Embed):
     """
     Derived class of discord.Embed created to provide additional arguments in the creation.
@@ -169,7 +175,7 @@ class EMBED(discord.Embed):
         if thumbnail is not None:
             self.set_thumbnail(url=thumbnail)
 
-
+@misc._enforce_annotations
 class FILE:
     """
     FILE object used as a data parameter to the MESSAGE objects.
@@ -193,6 +199,7 @@ class FILE:
 # Youtube streaming
 ytdl.utils.bug_reports_message = lambda: "" # Suppress bug report message.
 
+@misc._enforce_annotations
 class AUDIO(ytdl.YoutubeDL):
     """
     Used for streaming audio from file or YouTube.

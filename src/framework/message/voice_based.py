@@ -29,6 +29,8 @@ class GLOBALS:
     """
     voice_client: discord.VoiceClient = None
 
+
+@misc._enforce_annotations
 @sql._register_type("MessageTYPE")
 class VoiceMESSAGE(BaseMESSAGE):
     """
@@ -95,14 +97,14 @@ class VoiceMESSAGE(BaseMESSAGE):
     )
 
     __logname__ = "VoiceMESSAGE"    # For sql._register_type
-    __valid_data_types__ = {AUDIO}  # This is used in the BaseMESSAGE.initialize() to check if the passed data parameters are of correct type
 
-    def __init__(self, start_period: Union[int, None],
-                 end_period: int,
+    def __init__(self,
+                 start_period: Union[int, timedelta, None],
+                 end_period: Union[int, timedelta],
                  data: AUDIO,
                  channels: Iterable[Union[int, discord.VoiceChannel]],
                  volume: int=50,
-                 start_in: timedelta=timedelta(seconds=0)):
+                 start_in: Union[timedelta, bool]=timedelta(seconds=0)):
 
         super().__init__(start_period, end_period, data, start_in)
         self.volume = max(0, min(100, volume)) # Clamp the volume to 0-100 %
