@@ -423,7 +423,7 @@ class GUILD(_BaseGUILD):
         await core._update(self, **kwargs)
         # Update messages
         for message in self.messages:
-            await message.update()
+            await message.update(_init_options={"guild": self.apiobject})
 
 
 @misc._enforce_annotations
@@ -595,4 +595,4 @@ class USER(_BaseGUILD):
         await core._update(self, **kwargs)
         # Update messages
         for message in self.messages:
-            await message.update(init_options={"user" : self.apiobject})
+            await message.update(_init_options={"user" : self.apiobject})

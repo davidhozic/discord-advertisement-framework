@@ -59,7 +59,8 @@ class BaseMESSAGE:
         "next_send_time",
         "data",
         "update_semaphore",
-        "_deleted"
+        "_deleted",
+        "parent"
     )
 
     __logname__: str = "" # Used for registering SQL types and to get the message type for saving the log
@@ -109,6 +110,8 @@ class BaseMESSAGE:
         self.data = data
         self.start_period = start_period
         self.end_period = end_period
+
+        self.parent = None # The xGUILD object this message is in (needed for update method).
 
         # Attributes created with this function will not be re-referenced to a different object
         # if the function is called again, ensuring safety (.update_method)
@@ -219,14 +222,14 @@ class BaseMESSAGE:
         """
         raise NotImplementedError
 
-    async def _initialize_channels(self):
+    async def initialize(self, **options):
         """
         This method initializes the implementation specific
         api objects and checks for the correct channel input context.
         """
         raise NotImplementedError
 
-    async def update(self, init_options: dict={}, **kwargs):
+    async def update(self, _init_options: dict={}, **kwargs):
         """
         Used for changing the initialization parameters the object was initialized with.
 
@@ -253,17 +256,3 @@ class BaseMESSAGE:
         """
 
         raise NotImplementedError
-
-    async def initialize(self, **options):
-        """
-        The initialize method initializes the message object.
-
-        Parameters
-        -------------
-        - options - keyword arguments sent to _initialize_channels() from an inherited (from _BaseGUILD) class, contains extra init options.
-
-        Raises
-        -------------
-        - Exceptions raised from ._initialize_channels() and .initialize_data() methods
-        """
-        await self._initialize_channels(**options)
