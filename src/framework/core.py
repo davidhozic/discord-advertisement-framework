@@ -269,7 +269,7 @@ async def _update(obj: Any, *, init_options: dict = {}, **kwargs):
     Other
         Raised from .initialize() method.
     """
-    init_keys = inspect.getfullargspec(obj.__init__).args # Retrieves list of call args
+    init_keys = inspect.getfullargspec(obj.__init__.__wrapped__ if hasattr(obj.__init__, "__wrapped__") else obj.__init__).args # Retrieves list of call args
     init_keys.remove("self")
     current_state = copy.copy(obj) # Make a copy of the current object for restoration in case of update failure
     try:
