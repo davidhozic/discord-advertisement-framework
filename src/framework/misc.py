@@ -96,7 +96,7 @@ def _async_safe(semaphore: str, amount: Optional[int]=1) -> Callable:
 
 
 
-def _enforce_annotations(func: T) -> T:
+def _enforce_annotations(func: Union[Callable, T]) -> T:
     """
     Decorator that wraps method fnc in a function that
     raises DAFParameterError(code=DAF_INVALID_TYPE)
