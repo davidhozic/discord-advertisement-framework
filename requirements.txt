@@ -1,3 +1,4 @@
+typeguard
 aiohttp
 youtube_dl
 python-tds
