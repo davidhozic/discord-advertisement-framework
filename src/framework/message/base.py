@@ -1,9 +1,9 @@
 """
     Contains base definitions for different message classes."""
 
-from typing import Any, Dict, Iterable, Set, Tuple, Union
+from typing import Any, Iterable, Union
 from datetime import timedelta, datetime
-from typeguard import check_type
+from typeguard import check_type, typechecked
 
 from ..dtypes import *
 from ..tracing import *
@@ -21,7 +21,7 @@ __all__ = (
 )
 
 
-@misc._enforce_annotations
+@typechecked
 class BaseMESSAGE:
     """
     This is the base class for all the different classes that

@@ -4,6 +4,7 @@ Contains definitions for message classes that are text based (TextMESSAGE & Dire
 
 from typing import Any, Dict, List, Iterable, Optional, Union, Literal
 from datetime import datetime, timedelta
+from typeguard import typechecked
 
 from .base import *
 from ..dtypes import *
@@ -25,7 +26,7 @@ __all__ = (
 )
 
 
-@misc._enforce_annotations
+@typechecked
 @sql._register_type("MessageTYPE")
 class TextMESSAGE(BaseMESSAGE):
     """
@@ -116,8 +117,8 @@ class TextMESSAGE(BaseMESSAGE):
         self.sent_messages = {} # Dictionary for storing last sent message for each channel
     
     def _generate_log_context(self,
-                             text: Union[str, None],
-                             embed: Union[EMBED, None],
+                             text: Optional[str],
+                             embed: Optional[EMBED],
                              files: List[FILE],
                              succeeded_ch: List[Union[discord.TextChannel, discord.Thread]],
                              failed_ch: List[Dict[Union[discord.TextChannel, discord.Thread], Exception]]):
@@ -273,8 +274,8 @@ class TextMESSAGE(BaseMESSAGE):
 
     async def _send_channel(self,
                            channel: Union[discord.TextChannel, discord.Thread, None],
-                           text: Union[str, None],
-                           embed: Union[EMBED, None],
+                           text: Optional[str],
+                           embed: Optional[EMBED],
                            files: List[FILE]) -> dict:
         """
         Sends data to specific channel
@@ -403,7 +404,7 @@ class TextMESSAGE(BaseMESSAGE):
         await core._update(self, init_options=_init_options, **kwargs) # No additional modifications are required
 
 
-@misc._enforce_annotations
+@typechecked
 @sql._register_type("MessageTYPE")
 class DirectMESSAGE(BaseMESSAGE):
     """
@@ -490,9 +491,9 @@ class DirectMESSAGE(BaseMESSAGE):
         self.previous_message = None
 
     def _generate_log_context(self,
-                              success_context: Dict[bool, Exception],
-                              text : str,
-                              embed : EMBED,
+                              success_context: Dict[str, Union[bool, Optional[Exception]]],
+                              text : Optional[str],
+                              embed : Optional[EMBED],
                               files : List[FILE]):
         """
         Generates information about the message send attempt that is to be saved into a log.
@@ -608,8 +609,8 @@ class DirectMESSAGE(BaseMESSAGE):
         return handled
 
     async def _send_channel(self,
-                           text: str,
-                           embed: EMBED,
+                           text: Optional[str],
+                           embed: Optional[EMBED],
                            files: List[FILE]) -> dict:
         """
         Sends data to the DM channel (user).
