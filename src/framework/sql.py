@@ -7,6 +7,7 @@
 from datetime import datetime
 from typing import Callable, Dict, List, Literal, Any, Union
 from contextlib import suppress
+from typeguard import typechecked
 from sqlalchemy import (
                         SmallInteger, Integer, BigInteger, NVARCHAR, DateTime,
                         Column, Identity, ForeignKey,
@@ -76,7 +77,7 @@ def _register_type(lookuptable: Literal["GuildTYPE", "MessageTYPE", "MessageMODE
 
     return decorator_register_type
 
-@misc._enforce_annotations
+@typechecked
 class LoggerSQL:
     """
     Used for controlling the SQL database used for message logs.

@@ -4,6 +4,7 @@
 
 from typing import Any, Dict, List, Iterable, Optional, Union
 from datetime import timedelta
+from typeguard import typechecked
 
 from .base import *
 from ..dtypes import *
@@ -30,7 +31,7 @@ class GLOBALS:
     voice_client: discord.VoiceClient = None
 
 
-@misc._enforce_annotations
+@typechecked
 @sql._register_type("MessageTYPE")
 class VoiceMESSAGE(BaseMESSAGE):
     """
@@ -211,7 +212,7 @@ class VoiceMESSAGE(BaseMESSAGE):
 
     async def _send_channel(self,
                            channel: discord.VoiceChannel,
-                           audio: AUDIO) -> dict:
+                           audio: Optional[AUDIO]) -> dict:
         """
         Sends data to specific channel
 
