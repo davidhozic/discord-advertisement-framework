@@ -1,7 +1,7 @@
 """
     Contains base definitions for different message classes."""
 
-from typing import Any, Iterable, Union
+from typing import Any, Iterable, Union, TypeVar
 from datetime import timedelta, datetime
 from typeguard import check_type, typechecked
 
@@ -12,13 +12,14 @@ from ..exceptions import *
 from .. import misc
 
 import random
-import _discord as discord
 import asyncio
 
 
 __all__ = (
     "BaseMESSAGE",
 )
+
+T = TypeVar("T")
 
 
 @typechecked
@@ -48,7 +49,7 @@ class BaseMESSAGE:
 
     Raises
     ----------------
-    DAFParameterError(code=DAF_INVALID_TYPE)
+    TypeError
         The parameter end_period cannot be None.
     """
     __slots__ = (
@@ -138,7 +139,7 @@ class BaseMESSAGE:
                            status: int,
                            code: int,
                            description: str,
-                           cls: discord.HTTPException) -> discord.HTTPException:
+                           cls: T) -> T:
         """
         Generates a discord.HTTPException inherited class exception object.
         This is used for generating dummy exceptions that are then raised inside the `._send_channel()`
@@ -246,7 +247,7 @@ class BaseMESSAGE:
 
         Raises
         ------------
-        DAFParameterError(code=DAF_UPDATE_PARAMETER_ERROR)
+        TypeError
             Invalid keyword argument was passed
         Other
             Raised from .initialize() method

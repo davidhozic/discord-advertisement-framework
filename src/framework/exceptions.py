@@ -17,18 +17,6 @@ class DAFError(Exception):
         self.code = code # Error code
         super().__init__(message)
 
-class DAFParameterError(DAFError):
-    """
-    Raised when theres an parameter exception.
-
-    Parameters
-    -------------
-    message: str
-        The exception message.
-    code: int
-        The error code.
-    """
-
 
 class DAFNotFoundError(DAFError):
     """

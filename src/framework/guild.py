@@ -143,6 +143,16 @@ class _BaseGUILD:
         """
         raise NotImplementedError
 
+    def remove_message(self, message: BaseMESSAGE):
+        """
+        Removes a message from the message list.
+
+        Parameters
+        --------------
+        message: message.BaseMESSAGE
+            Message object to remove."""
+        raise NotImplementedError
+
     async def update(self, **kwargs):
         """
         .. versionadded:: v2.0
@@ -302,7 +312,7 @@ class GUILD(_BaseGUILD):
 
         Raises
         --------------
-        DAFParameterError(code=DAF_INVALID_TYPE)
+        TypeError
             Raised when the message is not of type TextMESSAGE or VoiceMESSAGE.
         Other
             Raised from message.initialize() method.
@@ -326,7 +336,7 @@ class GUILD(_BaseGUILD):
 
         Raises
         --------------
-        DAFParameterError(code=DAF_INVALID_TYPE)
+        TypeError
             Raised when the message is not of type TextMESSAGE or VoiceMESSAGE.
         ValueError
             Raised when the message is not present in the list.
@@ -410,7 +420,7 @@ class GUILD(_BaseGUILD):
 
         Raises
         -----------
-        DAFParameterError(code=DAF_UPDATE_PARAMETER_ERROR)
+        TypeError
             Invalid keyword argument was passed.
         Other
             Raised from .initialize() method.
@@ -480,7 +490,7 @@ class USER(_BaseGUILD):
 
         Raises
         --------------
-        DAFParameterError(code=DAF_INVALID_TYPE)
+        TypeError
             Raised when the message is not of type DirectMESSAGE.
         Other
             Raised from message.initialize() method.
@@ -501,7 +511,7 @@ class USER(_BaseGUILD):
 
         Raises
         --------------
-        DAFParameterError(code=DAF_INVALID_TYPE)
+        TypeError
             Raised when the message is not of type DirectMESSAGE.
         """
         message._delete()
@@ -580,7 +590,7 @@ class USER(_BaseGUILD):
 
         Raises
         -----------
-        DAFParameterError(code=DAF_UPDATE_PARAMETER_ERROR)
+        TypeError
             Invalid keyword argument was passed.
         Other
             Raised from .initialize() method.

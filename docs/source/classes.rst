@@ -131,11 +131,6 @@ Types
     .. autoclass:: framework.DAFNotFoundError
         :members:
 
-    **DAFParameterError**
-
-    .. autoclass:: framework.DAFParameterError
-        :members:
-
 
 Error codes
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
