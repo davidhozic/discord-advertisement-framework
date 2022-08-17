@@ -745,7 +745,7 @@ class LoggerSQL:
 
         Raises
         -----------
-        DAFParameterError(code=DAF_UPDATE_PARAMETER_ERROR)
+        TypeError
             Invalid keyword argument was passed.
         Other
             Raised from .initialize() method.

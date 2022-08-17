@@ -3,7 +3,7 @@ DAF (|version|)
 =========================================================
 The Discord advertisement framework is a  **shilling tool** that allows easy advertising on Discord.
 
-
+----------------------
 Links
 ----------------------
 .. tab:: Index
@@ -15,6 +15,11 @@ Links
         ref
         logging
         changelog
+
+.. tab:: Feedback
+
+    What do you use DAF for: `Strawpoll <https://strawpoll.com/polls/Q0Zp4WbbVZM>`_
+
 
 .. tab:: My links
 
@@ -33,9 +38,9 @@ Links
     - `PyCord Documentation <https://docs.pycord.dev/en/master/>`_
 
 
-
+----------------------
 Key features
--------------------
+----------------------
 - Ability to run on **user** accounts or **bot** accounts
 - Periodic advertisement to **Direct (Private) Messages**, **Text channels** and **Voice channels**
 - Advertising with either static data (text, embed, files, audio) or **dynamic data** (the data is obtained thru a function dynamically)
@@ -49,9 +54,9 @@ Key features
     it harder for the API to detect a self-bot.
 
 
-
+----------------------
 Installation
--------------------
+----------------------
 To install the framework use one of the following:
 
 .. tab:: Windows
@@ -70,7 +75,5 @@ To install the framework use one of the following:
         
         # Linux
         python3 -m pip install discord-advert-framework
-
-
 
 

@@ -183,8 +183,12 @@ class VoiceMESSAGE(BaseMESSAGE):
 
         Raises
         ------------
-        - `DAFParameterError(code=DAF_INVALID_TYPE)` - Raised when the object retrieved from channels is not a discord.TextChannel or discord.Thread object.
-        - `DAFNotFoundError(code=DAF_MISSING_PARAMETER)` - Raised when no channels could be found were parsed.
+        TypeError
+            Channel contains invalid channels
+        ValueError
+            Channel does not belong to the guild this message is in.
+        DAFNotFoundError(code=DAF_MISSING_PARAMETER)
+            Raised when no channels could be found were parsed.
         """
         ch_i = 0
         cl = client.get_client()
@@ -201,9 +205,9 @@ class VoiceMESSAGE(BaseMESSAGE):
                 trace(f"Unable to get channel from ID {channel_id}", TraceLEVELS.ERROR)
                 self.channels.remove(channel)
             elif type(channel) not in {discord.VoiceChannel}:
-                raise DAFParameterError(f"TextMESSAGE object received channel type of {type(channel).__name__}, but was expecting VoiceChannel", DAF_INVALID_TYPE)
+                raise TypeError(f"TextMESSAGE object received channel type of {type(channel).__name__}, but was expecting VoiceChannel")
             elif channel.guild != guild:
-                raise DAFParameterError(f"The channel {channel.name}(ID: {channel_id}) does not belong into {guild.name}(ID: {guild.id}) but is part of {channel.guild.name}(ID: {channel.guild.id})", DAF_CHANNEL_GUILD_MISMATCH_ERROR)
+                raise ValueError(f"The channel {channel.name}(ID: {channel_id}) does not belong into {guild.name}(ID: {guild.id}) but is part of {channel.guild.name}(ID: {channel.guild.id})")
             else:
                 ch_i += 1
 
@@ -247,12 +251,8 @@ class VoiceMESSAGE(BaseMESSAGE):
                 await asyncio.sleep(1)
             return {"success": True}
         except Exception as ex:
-            if isinstance(ex, (FileExistsError, discord.Forbidden)):
-                pass # Don't change error
-            elif client.get_client().get_channel(channel.id) is None:
+            if client.get_client().get_channel(channel.id) is None:
                 ex = self._generate_exception(404, 10003, "Channel was deleted", discord.NotFound)
-            else:
-                ex = self._generate_exception(500, 0, f"Timeout error\nTraceback ({ex.__class__.__name__}): {ex}", discord.HTTPException)
             return {"success": False, "reason": ex}
         finally:
             if GLOBALS.voice_client is not None and GLOBALS.voice_client.is_connected():
@@ -316,7 +316,7 @@ class VoiceMESSAGE(BaseMESSAGE):
 
         Raises
         -----------
-        DAFParameterError(code=DAF_UPDATE_PARAMETER_ERROR)
+        TypeError
             Invalid keyword argument was passed
         Other
             Raised from .initialize() method

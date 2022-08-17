@@ -29,6 +29,7 @@ __all__ = (
     "shutdown",
     "add_object",
     "remove_object",
+    "get_guild_user"
 )
 
 #######################################################################
@@ -124,17 +125,19 @@ async def add_object(obj: Union[guild.USER, guild.GUILD]) -> None:
 
     Raises
     -----------
-    DAFParameterError(code=DAF_GUILD_ALREADY_ADDED)
+    ValueError
          The guild/user is already added to the framework.
-    DAFParameterError(code=DAF_INVALID_TYPE)
+    TypeError
          The object provided is not supported for addition.
+    TypeError
+        Invalid parameter type.
     Other
         Raised in the obj.initialize() method
     """
     ...
 @overload
 async def add_object(obj: Union[message.DirectMESSAGE, message.TextMESSAGE, message.VoiceMESSAGE],
-                     snowflake: Union[int, guild.GUILD, guild.USER, dc.Guild, dc.User]) -> None:
+                     snowflake: Union[int, guild.GUILD, guild.USER, dc.Guild, dc.User, dc.Object]) -> None:
     """
 
     Adds a message to the framework.
@@ -148,12 +151,14 @@ async def add_object(obj: Union[message.DirectMESSAGE, message.TextMESSAGE, mess
 
     Raises
     -----------
-    DAFParameterError(code=DAF_GUILD_ID_REQUIRED)
-         guild_id wasn't provided when adding a message object (to which guild should it add)
+    ValueError
+        guild_id wasn't provided when adding a message object (to which guild should it add)
+    TypeError
+        The object provided is not supported for addition.
+    TypeError
+        Missing snowflake parameter.
     DAFNotFoundError(code=DAF_GUILD_ID_NOT_FOUND)
         Could not find guild with that id.
-    DAFParameterError(code=DAF_INVALID_TYPE)
-         The object provided is not supported for addition.
     Other
         Raised in the obj.add_message() method
     """
@@ -161,7 +166,7 @@ async def add_object(obj: Union[message.DirectMESSAGE, message.TextMESSAGE, mess
 async def add_object(obj, snowflake=None):
     object_type_name = type(obj).__name__
     # Convert the `snowflake` object into a discord snowflake ID (only if adding a message to guild)
-    if isinstance(snowflake, (dc.Guild, dc.User)):
+    if isinstance(snowflake, (dc.Guild, dc.User, dc.Object)):
         snowflake = snowflake.id
     elif isinstance(snowflake, guild._BaseGUILD):
         snowflake = snowflake.snowflake
@@ -169,14 +174,14 @@ async def add_object(obj, snowflake=None):
     # Add the object
     if isinstance(obj, guild._BaseGUILD):
         if obj in GLOBALS.server_list:
-            raise DAFParameterError(f"{object_type_name} with snowflake `{obj.snowflake}` is already added to the framework.", DAF_GUILD_ALREADY_ADDED)
+            raise ValueError(f"{object_type_name} with snowflake `{obj.snowflake}` is already added to the framework.")
 
         await obj.initialize()
         GLOBALS.server_list.append(obj)
 
     elif isinstance(obj, message.BaseMESSAGE):
         if snowflake is None:
-            raise DAFParameterError(f"`snowflake` is required to add a message. Only the {object_type_name} object was provided.", DAF_GUILD_ID_REQUIRED)
+            raise TypeError(f"`snowflake` is required to add a message. Only the {object_type_name} object was provided.")
 
         for guild_user in GLOBALS.server_list:
             if guild_user.snowflake == snowflake:
@@ -186,58 +191,72 @@ async def add_object(obj, snowflake=None):
         raise DAFNotFoundError(f"Guild or user with snowflake `{snowflake}` was not found in the framework.", DAF_GUILD_ID_NOT_FOUND)
 
     else:
-        raise DAFParameterError(f"Invalid object type `{object_type_name}`.", DAF_INVALID_TYPE)
+        raise TypeError(f"Invalid object type `{object_type_name}`.")
 
 
-@overload
-def remove_object(guild_id: int) -> None:
+def remove_object(snowflake: Union[int, dc.Object, dc.Guild, dc.User, dc.Object, guild._BaseGUILD, message.BaseMESSAGE]) -> None:
     """
-    Removes a guild from the framework that has the given guild_id.
+    Removes an object from the framework.
 
     Parameters
     -------------
-    - guild_id: `int` - ID of the guild to remove.
+    snowflake: Union[int, dc.Object, dc.Guild, dc.User, dc.Object, guild.GUILD, guild.USER , message.TextMESSAGE, message.VoiceMESSAGE, message.DirectMESSAGE]
+        The GUILD/USER object to remove/snowflake of GUILD/USER
+        or a xMESSAGE object
 
     Raises
     --------------
     DAFNotFoundError(code=DAF_GUILD_ID_NOT_FOUND)
          Could not find guild with that id.
-    DAFParameterError(code=DAF_INVALID_TYPE)
-         The object provided is not supported for removal."""
+    TypeError
+        Invalid argument."""    
+    if isinstance(snowflake, message.BaseMESSAGE):
+        for guild in GLOBALS.server_list:
+            if snowflake in guild.messages:
+                guild.remove_message(snowflake)
+        return
 
-@overload
-def remove_object(channel_ids: Iterable[int]) -> None:
+    if isinstance(snowflake, int):
+        snowflake = dc.Object(snowflake)
+
+    if not isinstance(snowflake, guild._BaseGUILD):
+        snowflake = get_guild_user(snowflake)
+
+    if snowflake is not None and snowflake in GLOBALS.server_list:
+        GLOBALS.server_list.remove(snowflake)
+    else:
+        raise DAFNotFoundError(f"GUILD/USER not in the shilling list.", DAF_GUILD_ID_NOT_FOUND)
+
+
+def get_guild_user(snowflake: Union[int, dc.Object, dc.Guild, dc.User, dc.Object]) -> Union[guild.GUILD, guild.USER, None]:
     """
-    Removes messages that contain all the given channel ids.
+    Retrieves the GUILD/USER object that has the ``snowflake`` ID from the shilling list. 
 
     Parameters
-    --------------
-    channel_ids: Iterable
-        The channel IDs that the message must have to be removed (it must have all of these).
-
+    -------------
+    snowflake: Union[int, dc.Object, dc.Guild, dc.User, dc.Object]
+        Snowflake ID or discord objects containing snowflake id of the GUILD.
+    
     Raises
-    --------------------
-    DAFParameterError(code=DAF_INVALID_TYPE)
-        The object provided is not supported for removal.
+    ---------------
+    TypeError
+        Incorrect snowflake type
+
+    Returns
+    ---------------
+    :class:`framework.guild.GUILD` | :class:`framework.guild.USER`
+        The object requested.
+    None
+        If not guild/user not in the shilling list.
     """
+    if isinstance(snowflake, int):
+        snowflake = dc.Object(snowflake)
 
-def remove_object(data):
-    if isinstance(data, int): # Guild id
-        for guild_user in GLOBALS.server_list:
-            if guild_user.snowflake == data:
-                GLOBALS.server_list.remove(guild_user)
-                return
-        raise DAFNotFoundError(f"Guild with snowflake `{data}` was not found in the framework.", DAF_GUILD_ID_NOT_FOUND)
+    for guild in GLOBALS.server_list:
+        if guild.snowflake == snowflake.id:
+            return guild
 
-    elif isinstance(data, Iterable): # Channel ids
-        for guild_user in GLOBALS.server_list:
-            if isinstance(guild_user, guild.GUILD): # USER doesn't have channels
-                for message in guild_user.t_messages + guild_user.vc_messages:
-                    msg_channels = [x.id for x in message.channels] # Generate snowflake list
-                    if all(x in msg_channels for x in data): # If any of the channels in the set are in the message channel list
-                        guild_user.remove_message(message)
-    else:
-        raise DAFParameterError(f"Invalid parameter type `{type(data)}`.", DAF_INVALID_TYPE)
+    return None
 
 
 async def _update(obj: Any, *, init_options: dict = {}, **kwargs):
@@ -264,7 +283,7 @@ async def _update(obj: Any, *, init_options: dict = {}, **kwargs):
 
     Raises
     ------------
-    DAFParameterError(code=DAF_UPDATE_PARAMETER_ERROR)
+    TypeError
         Invalid keyword argument was passed.
     Other
         Raised from .initialize() method.
@@ -275,7 +294,7 @@ async def _update(obj: Any, *, init_options: dict = {}, **kwargs):
     try:
         for k in kwargs:
             if k not in init_keys:
-                raise DAFParameterError(f"Keyword argument `{k}` was passed which is not allowed. The update method only accepts the following keyword arguments: {init_keys}", DAF_UPDATE_PARAMETER_ERROR)
+                raise TypeError(f"Keyword argument `{k}` was passed which is not allowed. The update method only accepts the following keyword arguments: {init_keys}")
         # Most of the variables inside the object have the same names as in the __init__ function.
         # This section stores attributes, that are the same, into the `updated_params` dictionary and
         # then calls the __init__ method with the same parameters, with the exception of start_period, end_period and start_now parameters
