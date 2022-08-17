@@ -29,6 +29,7 @@ __all__ = (
     "shutdown",
     "add_object",
     "remove_object",
+    "get_guild_user"
 )
 
 #######################################################################
@@ -124,9 +125,9 @@ async def add_object(obj: Union[guild.USER, guild.GUILD]) -> None:
 
     Raises
     -----------
-    ValueError(code=DAF_GUILD_ALREADY_ADDED)
+    ValueError
          The guild/user is already added to the framework.
-    TypeError(code=DAF_INVALID_TYPE)
+    TypeError
          The object provided is not supported for addition.
     TypeError
         Invalid parameter type.

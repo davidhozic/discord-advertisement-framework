@@ -4,11 +4,7 @@ import os
 import sys
 
 # Set current working directory to scripts folder
-for path, dirs, files in os.walk("./"):
-    for dir in dirs:
-        if dir == "scripts":
-            os.chdir(os.path.join(path, dir))
-            break
+os.chdir(os.path.dirname(__file__))
 
 
 sys.path.append(os.path.abspath("../../src"))
@@ -18,16 +14,18 @@ FUNCTION_TEMPLATE =\
 """
 {function_name}
 --------------------------
-.. autofunction:: framework.{function_name}
+.. autofunction:: {module}.{function_name}
 """
 
 CLASS_TEMPLATE =\
 """
 
 {class_name}
-~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: framework.{class_name}
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: {class_path}
     :members:
+
+    {properties}
 """
 
 
@@ -37,9 +35,18 @@ for item in inspect.getmembers(framework, lambda x: inspect.isclass(x) or inspec
     name, item = item
     if not name.startswith(("_", "Base")):
         if inspect.isfunction(item):
-            export_f += FUNCTION_TEMPLATE.format(function_name=item.__name__) + "\n"
+            export_f += FUNCTION_TEMPLATE.format(module= item.__module__, function_name=item.__name__) + "\n"
         elif inspect.isclass(item):
-            export_c += CLASS_TEMPLATE.format(class_name=item.__name__) + "\n"
+            # Fill properties 
+            properties = []
+            cls_path = f"{item.__module__}.{item.__name__}"
+            for name in dir(item):
+                attr = getattr(item, name)
+                if isinstance(attr, property):
+                    properties.append(f".. autoproperty:: {cls_path}.{name}")
+
+            export_c += CLASS_TEMPLATE.format(class_name=item.__name__, class_path=cls_path, properties="\n\n    ".join(properties)) + "\n"
+            
 
 
 with open("__autodoc_export_funct.rst", "w") as f:
