@@ -12,11 +12,11 @@ v2.1
 - ``timedelta`` object on ``start_period/end_period`` parameters
 - Replaced ``start_now`` with ``start_in`` parameter, deprecated use of bool value
 - :class:`framework.TextMESSAGE` and :class:`framework.VoiceMESSAGE` now check if the given channels are actually inside the guild
-- Fixed message slippage in case of slow Discord API calls or rate limit
+- Time slippage correction:
 
-.. figure:: images/changelog_2_1_slippage_fix.png
-    
-    Fixed message slippage in case of slow Discord API calls or rate limit
+.. figure:: images/changelog_2_1_slippage_fix.png    
+
+    Time slippage correction
   
 
 v2.0

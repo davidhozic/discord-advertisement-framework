@@ -244,7 +244,7 @@ def get_guild_user(snowflake: Union[int, dc.Object, dc.Guild, dc.User, dc.Object
 
     Returns
     ---------------
-    GUILD | USER
+    :class:`framework.guild.GUILD` | :class:`framework.guild.USER`
         The object requested.
     None
         If not guild/user not in the shilling list.

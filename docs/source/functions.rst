@@ -6,7 +6,7 @@ This page contains information about any functions that can be called.
 
 add_object
 --------------------------
-.. function:: framework.add_object(obj: Union[USER, GUILD])
+.. function:: framework.core.add_object(obj: Union[USER, GUILD])
     :noindex:
 
     Adds a guild or an user to the framework.
@@ -23,7 +23,7 @@ add_object
         - Other -
             Raised in the :ref:`Guilds (Servers)` ``.add_message()`` method
 
-.. function:: framework.add_object(obj: Union[DirectMESSAGE, TextMESSAGE, VoiceMESSAGE], snowflake: Union[int, GUILD, USER, dc.Guild, dc.User])
+.. function:: framework.core.add_object(obj: Union[DirectMESSAGE, TextMESSAGE, VoiceMESSAGE], snowflake: Union[int, GUILD, USER, dc.Guild, dc.User])
 
     Adds a message to the framework.
     
@@ -43,38 +43,43 @@ add_object
         Other
             Raised in the :ref:`Guilds (Servers)` ``.add_message()`` method
 
-remove_object
---------------------------
-.. autofunction:: framework.remove_object
 
 
 data_function
 --------------------------
-.. autofunction:: framework.data_function
+.. autofunction:: framework.dtypes.data_function
 
 
 get_client
 --------------------------
-.. autofunction:: framework.get_client
+.. autofunction:: framework.client.get_client
+
+
+get_guild_user
+--------------------------
+.. autofunction:: framework.core.get_guild_user
 
 
 get_sql_manager
 --------------------------
-.. autofunction:: framework.get_sql_manager
+.. autofunction:: framework.sql.get_sql_manager
+
+
+remove_object
+--------------------------
+.. autofunction:: framework.core.remove_object
 
 
 run
 --------------------------
-.. autofunction:: framework.run
+.. autofunction:: framework.core.run
 
 
 shutdown
 --------------------------
-.. autofunction:: framework.shutdown
+.. autofunction:: framework.core.shutdown
 
 
 trace
 --------------------------
-.. autofunction:: framework.trace
-
-
+.. autofunction:: framework.tracing.trace
