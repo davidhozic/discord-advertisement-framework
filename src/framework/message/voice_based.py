@@ -114,7 +114,7 @@ class VoiceMESSAGE(BaseMESSAGE):
     def _generate_log_context(self,
                              audio: AUDIO,
                              succeeded_ch: List[discord.VoiceChannel],
-                             failed_ch: List[dict]) -> Dict[str, Any]:
+                             failed_ch: List[Dict[str, Any]]) -> Dict[str, Any]:
         """
         Generates information about the message send attempt that is to be saved into a log.
 

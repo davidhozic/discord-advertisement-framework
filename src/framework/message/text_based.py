@@ -121,7 +121,7 @@ class TextMESSAGE(BaseMESSAGE):
                              embed: Optional[EMBED],
                              files: List[FILE],
                              succeeded_ch: List[Union[discord.TextChannel, discord.Thread]],
-                             failed_ch: List[Dict[Union[discord.TextChannel, discord.Thread], Exception]]):
+                             failed_ch: List[Dict[str, Any]]) -> Dict[str, Any]:
         """
         Generates information about the message send attempt that is to be saved into a log.
 
@@ -498,7 +498,7 @@ class DirectMESSAGE(BaseMESSAGE):
                               success_context: Dict[str, Union[bool, Optional[Exception]]],
                               text : Optional[str],
                               embed : Optional[EMBED],
-                              files : List[FILE]):
+                              files : List[FILE]) -> Dict[str, Any]:
         """
         Generates information about the message send attempt that is to be saved into a log.
 
