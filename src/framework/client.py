@@ -46,6 +46,7 @@ class CLIENT(discord.Client):
 
 def _initialize(token: str, *,
                bot: bool,
+               connector,
                intents: discord.Intents):
     """
 
@@ -62,7 +63,7 @@ def _initialize(token: str, *,
         The intents discord object. Intents are settings that
                                     dictate which dictates the events that the client will listen for.
     """
-    GLOBALS.client = CLIENT(intents=intents)
+    GLOBALS.client = CLIENT(intents=intents, connector=connector)
     if not bot:
         trace("[CLIENT]: Bot is an user account which is against discord's ToS",TraceLEVELS.WARNING)
     GLOBALS.client.run(token, bot=bot)

@@ -334,6 +334,7 @@ def get_user_callback() -> Callable:
 
 def run(token : str,
         server_list : Optional[List[Union[guild.GUILD, guild.USER]]]=[],
+        connector = None,
         is_user : Optional[bool] =False,
         user_callback : Optional[Callable]=None,
         server_log_output : Optional[str] ="History",
@@ -373,4 +374,4 @@ def run(token : str,
         GLOBALS.user_callback = user_callback()                     # Called after framework has started
 
     tracing.initialize(debug)                                       # Print trace messages to the console for debugging purposes
-    client._initialize(token, bot=not is_user, intents=intents)
+    client._initialize(token, bot=not is_user, intents=intents, connector=connector)
