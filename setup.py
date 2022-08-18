@@ -23,6 +23,11 @@ __metadata__ = \
     "minimum_py_version" : "3.8",
 }
 
+optional_install = \
+{
+    "voice" : ["PyNaCl", "youtube_dl"],
+}
+
 setuptools.setup(
     name="Discord-Advert-Framework",
     version=__metadata__["version"],
@@ -41,5 +46,6 @@ setuptools.setup(
     packages=setuptools.find_packages(where="src"),
     python_requires=f">={__metadata__['minimum_py_version']}",
     install_requires=__metadata__["requirements"],
-    include_package_data=True
+    include_package_data=True,
+    extras_require=optional_install
 )

@@ -3,39 +3,42 @@ DAF (|version|)
 =========================================================
 The Discord advertisement framework is a  **shilling tool** that allows easy advertising on Discord.
 
+
+
+
 ----------------------
 Links
 ----------------------
-.. tab:: Index
+.. tab-set::
 
-    .. toctree::
-        :maxdepth: 1
+    .. tab-item:: Index
 
-        getting_started
-        ref
-        logging
-        changelog
+        .. toctree::
+            :maxdepth: 1
 
-.. tab:: Feedback
-
-    What do you use DAF for: `Strawpoll <https://strawpoll.com/polls/Q0Zp4WbbVZM>`_
+            getting_started
+            ref
+            logging
+            changelog
 
 
-.. tab:: My links
+    .. tab-item:: My links
 
-    - `Github <https://github.com/davidhozic/discord-advertisement-framework>`_
-    - `Releases <https://github.com/davidhozic/discord-advertisement-framework/releases>`_
-    - `Examples <https://github.com/davidhozic/discord-advertisement-framework/tree/master/Examples>`_
+        - `Github <https://github.com/davidhozic/discord-advertisement-framework>`_
+        - `Releases <https://github.com/davidhozic/discord-advertisement-framework/releases>`_
+        - `Examples <https://github.com/davidhozic/discord-advertisement-framework/tree/master/Examples>`_
 
 
-.. tab:: PyCord
+    .. tab-item:: PyCord
 
-    This framework uses a Discord API wrapper called PyCord and it is built to allow working directly with Pycord (eg. framework objects accept Pycord objects as arguments).
+        This framework uses a Discord API wrapper called PyCord and it is built to allow working directly with Pycord (eg. framework objects accept Pycord objects as arguments).
 
-    Links:
-    
-    - `PyCord GitHub <https://github.com/Pycord-Development/pycord>`_
-    - `PyCord Documentation <https://docs.pycord.dev/en/master/>`_
+        Links:
+        
+        - `PyCord GitHub <https://github.com/Pycord-Development/pycord>`_
+        - `PyCord Documentation <https://docs.pycord.dev/en/master/>`_
+
+
 
 
 ----------------------
@@ -57,23 +60,29 @@ Key features
 ----------------------
 Installation
 ----------------------
-To install the framework use one of the following:
+.. tab-set::
 
-.. tab:: Windows
+    .. tab-item:: Windows
 
-    .. code-block:: bash
+        .. code-block:: bash
 
-        python -m pip install discord-advert-framework
+            python -m pip install discord-advert-framework
 
-    .. code-block:: bash
+        .. code-block:: bash
 
-        py -3 -m pip install discord-advert-framework
+            py -3 -m pip install discord-advert-framework
 
-.. tab:: Linux
+    .. tab-item:: Linux
 
-    .. code-block:: bash
-        
-        # Linux
-        python3 -m pip install discord-advert-framework
+        .. code-block:: bash
+            
+            python3 -m pip install discord-advert-framework
+
+    .. tab-item:: Additional functionality
+
+        - .. code-block:: bash
+            :caption: Voice Messaging / AUDIO
+
+            pip install discord-advert-framework[voice]
 
 

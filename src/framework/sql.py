@@ -165,7 +165,10 @@ class LoggerSQL:
             Custom number of positional arguments of caching dictionaries to clear.
         """
         if len(to_clear) == 0:  # Clear all cached tables if nothing was passed
-            to_clear = self.__slots__
+            to_clear = [table.__name__ for table in self.Base.__subclasses__() if table.__name__ in self.__slots__]
+        else:
+            to_clear = [table for table in to_clear if table in self.__slots__]
+
         for k in to_clear:
             getattr(self, k).clear()
 

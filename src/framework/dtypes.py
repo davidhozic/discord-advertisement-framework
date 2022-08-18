@@ -11,7 +11,6 @@ from .exceptions import *
 import copy
 import datetime
 import _discord as discord
-import youtube_dl as ytdl
 
 T = TypeVar("T")
 
@@ -196,11 +195,16 @@ class FILE:
         self.filename = filename
 
 
-# Youtube streaming
-ytdl.utils.bug_reports_message = lambda: "" # Suppress bug report message.
+# ------------------- Optional module --------------------------------------------- #
+try:
+    import youtube_dl as ytdl
+    ytdl.utils.bug_reports_message = lambda: "" # Suppress bug report message.
+except ModuleNotFoundError:
+    ytdl = NotImplemented
+# --------------------------------------------------------------------------------- #
 
 @typechecked
-class AUDIO(ytdl.YoutubeDL):
+class AUDIO:
     """
     Used for streaming audio from file or YouTube.
 
@@ -231,19 +235,25 @@ class AUDIO(ytdl.YoutubeDL):
         "default_search": "auto"
     }
     def __init__(self, filename: str) -> None:
-        super().__init__(AUDIO.ytdl_options)
         self.orig = filename
         self.stream = False
         if "youtube.com" in self.orig.lower(): # If the url contains http, assume it's a youtube link
-            self.stream = True
-            try:
-                data = self.extract_info(self.orig, download=False)
-            except ytdl.DownloadError:
-                raise DAFNotFoundError(f'The audio from "{self.orig}" could not be streamed', DAF_YOUTUBE_STREAM_ERROR)
-            if "entries" in data:
-                data = data["entries"][0] # Is a playlist, get the first entry
-            self.url = data["url"]
-            self.title = data["title"]
+            if ytdl is not NotImplemented:
+                try:
+                    self.ytdl = ytdl.YoutubeDL(params=self.ytdl_options)
+                    self.stream = True
+                    data = self.ytdl.extract_info(self.orig, download=False)
+                    if "entries" in data:
+                        data = data["entries"][0] # Is a playlist, get the first entry
+            
+                    self.url = data["url"]
+                    self.title = data["title"]
+
+                except ytdl.DownloadError:
+                    raise DAFNotFoundError(f'The audio from "{self.orig}" could not be streamed', DAF_YOUTUBE_STREAM_ERROR)
+
+            else:
+                raise ModuleNotFoundError("You need to install extra requirements: pip install discord-advert-framework[voice]")
         else:
             self.url = filename
             try:
