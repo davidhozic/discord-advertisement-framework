@@ -26,6 +26,7 @@ __metadata__ = \
 optional_install = \
 {
     "voice" : ["PyNaCl", "youtube_dl"],
+    "proxy" : ["aiohttp_socks"]
 }
 
 setuptools.setup(

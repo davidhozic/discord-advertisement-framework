@@ -1,7 +1,5 @@
 typeguard
 aiohttp
-aiohttp_socks
-youtube_dl
 python-tds
 sqlalchemy-pytds
 sqlalchemy

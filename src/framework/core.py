@@ -334,13 +334,13 @@ def get_user_callback() -> Callable:
 
 def run(token : str,
         server_list : Optional[List[Union[guild.GUILD, guild.USER]]]=[],
-        connector = None,
         is_user : Optional[bool] =False,
         user_callback : Optional[Callable]=None,
         server_log_output : Optional[str] ="History",
         sql_manager: Optional[sql.LoggerSQL]=None,
         intents: Optional[dc.Intents]=dc.Intents.default(),
-        debug : Optional[bool]=True) -> None:
+        debug : Optional[bool]=True,
+        proxy: Optional[str]=None) -> None:
     """
     Runs the framework.
 
@@ -374,4 +374,4 @@ def run(token : str,
         GLOBALS.user_callback = user_callback()                     # Called after framework has started
 
     tracing.initialize(debug)                                       # Print trace messages to the console for debugging purposes
-    client._initialize(token, bot=not is_user, intents=intents, connector=connector)
+    client._initialize(token, bot=not is_user, intents=intents, proxy=proxy)

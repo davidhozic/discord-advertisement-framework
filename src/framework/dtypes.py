@@ -22,6 +22,20 @@ __all__ = (
     "AUDIO"
 )
 
+class GLOBALS:
+    "Storage class used for storing global variables"
+    voice_installed: bool = False
+
+# --------------------------------- Optional modules --------------------------------- #
+try:
+    import youtube_dl as ytdl
+    import nacl
+    ytdl.utils.bug_reports_message = lambda: ""  # Suppress console logs
+    GLOBALS.voice_installed = True
+except ModuleNotFoundError:
+    GLOBALS.voice_installed = False
+# ------------------------------------------------------------------------------------ #
+
 
 #######################################################################
 # Decorators
@@ -195,14 +209,6 @@ class FILE:
         self.filename = filename
 
 
-# ------------------- Optional module --------------------------------------------- #
-try:
-    import youtube_dl as ytdl
-    ytdl.utils.bug_reports_message = lambda: "" # Suppress bug report message.
-except ModuleNotFoundError:
-    ytdl = NotImplemented
-# --------------------------------------------------------------------------------- #
-
 @typechecked
 class AUDIO:
     """
@@ -237,23 +243,23 @@ class AUDIO:
     def __init__(self, filename: str) -> None:
         self.orig = filename
         self.stream = False
+
+        if not GLOBALS.voice_installed:
+            raise ModuleNotFoundError("You need to install extra requirements: pip install discord-advert-framework[voice]")
+
         if "youtube.com" in self.orig.lower(): # If the url contains http, assume it's a youtube link
-            if ytdl is not NotImplemented:
-                try:
-                    self.ytdl = ytdl.YoutubeDL(params=self.ytdl_options)
-                    self.stream = True
-                    data = self.ytdl.extract_info(self.orig, download=False)
-                    if "entries" in data:
-                        data = data["entries"][0] # Is a playlist, get the first entry
-            
-                    self.url = data["url"]
-                    self.title = data["title"]
+            try:
+                self.ytdl = ytdl.YoutubeDL(params=self.ytdl_options)
+                self.stream = True
+                data = self.ytdl.extract_info(self.orig, download=False)
+                if "entries" in data:
+                    data = data["entries"][0] # Is a playlist, get the first entry
+        
+                self.url = data["url"]
+                self.title = data["title"]
 
-                except ytdl.DownloadError:
-                    raise DAFNotFoundError(f'The audio from "{self.orig}" could not be streamed', DAF_YOUTUBE_STREAM_ERROR)
-
-            else:
-                raise ModuleNotFoundError("You need to install extra requirements: pip install discord-advert-framework[voice]")
+            except ytdl.DownloadError:
+                raise DAFNotFoundError(f'The audio from "{self.orig}" could not be streamed', DAF_YOUTUBE_STREAM_ERROR)
         else:
             self.url = filename
             try:
