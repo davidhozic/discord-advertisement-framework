@@ -1,4 +1,4 @@
 {
-    "voice" : ["PyNaCl", "youtube_dl"],
+    "voice" : ["PyNaCl", "yt-dlp"],
     "proxy" : ["aiohttp_socks"]
 }

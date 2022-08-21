@@ -122,7 +122,7 @@ def _cleanup_loop(loop: asyncio.AbstractEventLoop) -> None:
         loop.run_until_complete(loop.shutdown_asyncgens())
     finally:
         _log.info("Closing the event loop.")
-        loop.close()
+        loop.call_soon(loop.close)
 
 
 class Client:
@@ -1563,10 +1563,6 @@ class Client:
         """
         data = await self.http.get_user(user_id)
         return User(state=self._connection, data=data)
-    
-    async def fetch_relationships(self) -> List[User]:
-        data = await self.http.get_relationships()
-        return [User(state=self._connection, data=d["user"]) for d in data]
 
     async def fetch_channel(self, channel_id: int, /) -> Union[GuildChannel, PrivateChannel, Thread]:
         """|coro|

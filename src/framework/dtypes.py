@@ -28,9 +28,8 @@ class GLOBALS:
 
 # --------------------------------- Optional modules --------------------------------- #
 try:
-    import youtube_dl as ytdl
+    import yt_dlp
     import nacl
-    ytdl.utils.bug_reports_message = lambda: ""  # Suppress console logs
     GLOBALS.voice_installed = True
 except ModuleNotFoundError:
     GLOBALS.voice_installed = False
@@ -242,23 +241,23 @@ class AUDIO:
     }
     def __init__(self, filename: str) -> None:
         self.orig = filename
-        self.stream = False
+        self.is_stream = False
 
         if not GLOBALS.voice_installed:
             raise ModuleNotFoundError("You need to install extra requirements: pip install discord-advert-framework[voice]")
 
         if "youtube.com" in self.orig.lower(): # If the url contains http, assume it's a youtube link
             try:
-                self.ytdl = ytdl.YoutubeDL(params=self.ytdl_options)
-                self.stream = True
-                data = self.ytdl.extract_info(self.orig, download=False)
+                self.is_stream = True
+                youtube_dl = yt_dlp.YoutubeDL(params=self.ytdl_options)
+                data = youtube_dl.extract_info(filename, download=False)
                 if "entries" in data:
                     data = data["entries"][0] # Is a playlist, get the first entry
         
                 self.url = data["url"]
                 self.title = data["title"]
 
-            except ytdl.DownloadError:
+            except yt_dlp.DownloadError:
                 raise DAFNotFoundError(f'The audio from "{self.orig}" could not be streamed', DAF_YOUTUBE_STREAM_ERROR)
         else:
             self.url = filename
@@ -276,7 +275,7 @@ class AUDIO:
 
             Changed to method ``to_dict`` from property ``filename``
         """
-        if self.stream:
+        if self.is_stream:
             return {
                 "type:" : "Youtube",
                 "title": self.title,
