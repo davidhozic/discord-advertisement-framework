@@ -1,3 +1,30 @@
+diff --git a/src/discord/__init__.py b/src/_discord/__init__.py
+similarity index 100%
+rename from src/discord/__init__.py
+rename to src/_discord/__init__.py
+diff --git a/src/discord/__main__.py b/src/_discord/__main__.py
+similarity index 99%
+rename from src/discord/__main__.py
+rename to src/_discord/__main__.py
+index 07c00ef..d437faa 100644
+--- a/src/discord/__main__.py
++++ b/src/_discord/__main__.py
+@@ -32,13 +32,13 @@ from typing import Tuple
+ import aiohttp
+ import pkg_resources
+ 
+-import discord
++import _discord
+ 
+ 
+ def show_version() -> None:
+     entries = ["- Python v{0.major}.{0.minor}.{0.micro}-{0.releaselevel}".format(sys.version_info)]
+ 
+-    version_info = discord.version_info
++    version_info = _discord.version_info
+     entries.append("- py-cord v{0.major}.{0.minor}.{0.micro}-{0.releaselevel}".format(version_info))
+     if version_info.releaselevel != "final":
+         pkg = pkg_resources.get_distribution("py-cord")
 diff --git a/src/discord/abc.py b/src/_discord/abc.py
 similarity index 100%
 rename from src/discord/abc.py
@@ -253,6 +280,10 @@ diff --git a/src/discord/colour.py b/src/_discord/colour.py
 similarity index 100%
 rename from src/discord/colour.py
 rename to src/_discord/colour.py
+diff --git a/src/discord/commands/__init__.py b/src/_discord/commands/__init__.py
+similarity index 100%
+rename from src/discord/commands/__init__.py
+rename to src/_discord/commands/__init__.py
 diff --git a/src/discord/commands/context.py b/src/_discord/commands/context.py
 similarity index 95%
 rename from src/discord/commands/context.py
@@ -409,6 +440,10 @@ diff --git a/src/discord/errors.py b/src/_discord/errors.py
 similarity index 100%
 rename from src/discord/errors.py
 rename to src/_discord/errors.py
+diff --git a/src/discord/ext/bridge/__init__.py b/src/_discord/ext/bridge/__init__.py
+similarity index 100%
+rename from src/discord/ext/bridge/__init__.py
+rename to src/_discord/ext/bridge/__init__.py
 diff --git a/src/discord/ext/bridge/bot.py b/src/_discord/ext/bridge/bot.py
 similarity index 97%
 rename from src/discord/ext/bridge/bot.py
@@ -475,6 +510,10 @@ index 5b55ee5..b427095 100644
  
 -discord.commands.options.Option = BridgeOption
 +_discord.commands.options.Option = BridgeOption
+diff --git a/src/discord/ext/commands/__init__.py b/src/_discord/ext/commands/__init__.py
+similarity index 100%
+rename from src/discord/ext/commands/__init__.py
+rename to src/_discord/ext/commands/__init__.py
 diff --git a/src/discord/ext/commands/_types.py b/src/_discord/ext/commands/_types.py
 similarity index 100%
 rename from src/discord/ext/commands/_types.py
@@ -1582,6 +1621,10 @@ diff --git a/src/discord/ext/commands/view.py b/src/_discord/ext/commands/view.p
 similarity index 100%
 rename from src/discord/ext/commands/view.py
 rename to src/_discord/ext/commands/view.py
+diff --git a/src/discord/ext/pages/__init__.py b/src/_discord/ext/pages/__init__.py
+similarity index 100%
+rename from src/discord/ext/pages/__init__.py
+rename to src/_discord/ext/pages/__init__.py
 diff --git a/src/discord/ext/pages/pagination.py b/src/_discord/ext/pages/pagination.py
 similarity index 89%
 rename from src/discord/ext/pages/pagination.py
@@ -2132,6 +2175,52 @@ index b2a5aa7..ae66496 100644
          """|coro|
  
          The coroutine that is called when a menu option is selected.
+diff --git a/src/discord/ext/tasks/__init__.py b/src/_discord/ext/tasks/__init__.py
+similarity index 98%
+rename from src/discord/ext/tasks/__init__.py
+rename to src/_discord/ext/tasks/__init__.py
+index 5d7cccb..33dd716 100644
+--- a/src/discord/ext/tasks/__init__.py
++++ b/src/_discord/ext/tasks/__init__.py
+@@ -46,9 +46,9 @@ from typing import (
+ 
+ import aiohttp
+ 
+-import discord
+-from discord.backoff import ExponentialBackoff
+-from discord.utils import MISSING
++import _discord
++from _discord.backoff import ExponentialBackoff
++from _discord.utils import MISSING
+ 
+ __all__ = ("loop",)
+ 
+@@ -65,12 +65,12 @@ class SleepHandle:
+     def __init__(self, dt: datetime.datetime, *, loop: asyncio.AbstractEventLoop) -> None:
+         self.loop = loop
+         self.future = future = loop.create_future()
+-        relative_delta = discord.utils.compute_timedelta(dt)
++        relative_delta = _discord.utils.compute_timedelta(dt)
+         self.handle = loop.call_later(relative_delta, future.set_result, True)
+ 
+     def recalculate(self, dt: datetime.datetime) -> None:
+         self.handle.cancel()
+-        relative_delta = discord.utils.compute_timedelta(dt)
++        relative_delta = _discord.utils.compute_timedelta(dt)
+         self.handle = self.loop.call_later(relative_delta, self.future.set_result, True)
+ 
+     def wait(self) -> asyncio.Future[Any]:
+@@ -111,8 +111,8 @@ class Loop(Generic[LF]):
+         self._injected = None
+         self._valid_exception = (
+             OSError,
+-            discord.GatewayNotFound,
+-            discord.ConnectionClosed,
++            _discord.GatewayNotFound,
++            _discord.ConnectionClosed,
+             aiohttp.ClientError,
+             asyncio.TimeoutError,
+         )
 diff --git a/src/discord/file.py b/src/_discord/file.py
 similarity index 100%
 rename from src/discord/file.py
@@ -2262,6 +2351,10 @@ diff --git a/src/discord/shard.py b/src/_discord/shard.py
 similarity index 100%
 rename from src/discord/shard.py
 rename to src/_discord/shard.py
+diff --git a/src/discord/sinks/__init__.py b/src/_discord/sinks/__init__.py
+similarity index 100%
+rename from src/discord/sinks/__init__.py
+rename to src/_discord/sinks/__init__.py
 diff --git a/src/discord/sinks/core.py b/src/_discord/sinks/core.py
 similarity index 100%
 rename from src/discord/sinks/core.py
@@ -2338,6 +2431,10 @@ diff --git a/src/discord/threads.py b/src/_discord/threads.py
 similarity index 100%
 rename from src/discord/threads.py
 rename to src/_discord/threads.py
+diff --git a/src/discord/types/__init__.py b/src/_discord/types/__init__.py
+similarity index 100%
+rename from src/discord/types/__init__.py
+rename to src/_discord/types/__init__.py
 diff --git a/src/discord/types/activity.py b/src/_discord/types/activity.py
 similarity index 100%
 rename from src/discord/types/activity.py
@@ -2450,6 +2547,10 @@ diff --git a/src/discord/types/widget.py b/src/_discord/types/widget.py
 similarity index 100%
 rename from src/discord/types/widget.py
 rename to src/_discord/types/widget.py
+diff --git a/src/discord/ui/__init__.py b/src/_discord/ui/__init__.py
+similarity index 100%
+rename from src/discord/ui/__init__.py
+rename to src/_discord/ui/__init__.py
 diff --git a/src/discord/ui/button.py b/src/_discord/ui/button.py
 similarity index 100%
 rename from src/discord/ui/button.py
@@ -2507,6 +2608,10 @@ diff --git a/src/discord/voice_client.py b/src/_discord/voice_client.py
 similarity index 100%
 rename from src/discord/voice_client.py
 rename to src/_discord/voice_client.py
+diff --git a/src/discord/webhook/__init__.py b/src/_discord/webhook/__init__.py
+similarity index 100%
+rename from src/discord/webhook/__init__.py
+rename to src/_discord/webhook/__init__.py
 diff --git a/src/discord/webhook/async_.py b/src/_discord/webhook/async_.py
 similarity index 100%
 rename from src/discord/webhook/async_.py
