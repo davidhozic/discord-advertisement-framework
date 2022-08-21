@@ -243,7 +243,7 @@ class VoiceMESSAGE(BaseMESSAGE):
             else:
                 await GLOBALS.voice_client.move_to(channel)
 
-            stream = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(audio.url), volume=self.volume/100)
+            stream = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(audio.url, options="-loglevel fatal"), volume=self.volume/100)
 
             GLOBALS.voice_client.play(stream)
 
