@@ -2,6 +2,7 @@
     Contains definitions related to voice messaging."""
 
 
+from contextlib import suppress
 from typing import Any, Dict, List, Iterable, Optional, Union
 from datetime import timedelta
 from typeguard import typechecked
@@ -237,6 +238,10 @@ class VoiceMESSAGE(BaseMESSAGE):
             ch_perms = channel.permissions_for(channel.guild.get_member(client.get_client().user.id))
             if not all([ch_perms.connect, ch_perms.stream, ch_perms.speak]):
                 raise self._generate_exception(403, 50013, "You lack permissions to perform that action", discord.Forbidden)
+            
+            # Check if channel still exists in cache (has not been deleted)
+            if client.get_client().get_channel(channel.id) is None:
+                ex = self._generate_exception(404, 10003, "Channel was deleted", discord.NotFound)
 
             if GLOBALS.voice_client is None or not GLOBALS.voice_client.is_connected():
                 GLOBALS.voice_client = await channel.connect(timeout=C_VC_CONNECT_TIMEOUT)
@@ -251,12 +256,11 @@ class VoiceMESSAGE(BaseMESSAGE):
                 await asyncio.sleep(1)
             return {"success": True}
         except Exception as ex:
-            if client.get_client().get_channel(channel.id) is None:
-                ex = self._generate_exception(404, 10003, "Channel was deleted", discord.NotFound)
             return {"success": False, "reason": ex}
         finally:
-            if GLOBALS.voice_client is not None and GLOBALS.voice_client.is_connected():
-                await GLOBALS.voice_client.disconnect()
+            if GLOBALS.voice_client is not None:
+                with suppress(ConnectionResetError):
+                    await GLOBALS.voice_client.disconnect()
                 GLOBALS.voice_client = None
                 await asyncio.sleep(1) # Avoid sudden disconnect and connect to a new channel
 

@@ -303,8 +303,13 @@ class TextMESSAGE(BaseMESSAGE):
         ch_perms = channel.permissions_for(channel.guild.get_member(client.get_client().user.id))
         for tries in range(3):  # Maximum 3 tries (if rate limit)
             try:
-                if ch_perms.send_messages is False: # Check if we have permissions
+                # Check if we have permissions
+                if ch_perms.send_messages is False:
                     raise self._generate_exception(403, 50013, "You lack permissions to perform that action", discord.Forbidden)
+
+                # Check if channel still exists in cache (has not been deleted)
+                if client.get_client().get_channel(channel.id) is None:
+                    ex = self._generate_exception(404, 10003, "Channel was deleted", discord.NotFound)
 
                 # Delete previous message if clear-send mode is chosen and message exists
                 if self.mode == "clear-send" and self.sent_messages.get(channel.id, None) is not None:
