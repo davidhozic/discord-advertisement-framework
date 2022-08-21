@@ -1,2 +1,3 @@
 include *.txt
 include src/_discord/bin/*.dll
+include optional.json

@@ -1,4 +1,5 @@
-import setuptools, os
+import setuptools
+import json
 
 
 
@@ -16,6 +17,12 @@ with open("./version.txt", "r", encoding="utf-8") as rf:
     version = rf.read().strip()
 
 
+optional_install = None
+with open("./optional.json", "r", encoding="utf-8") as rf:
+    optional_install = json.load(rf)
+
+
+
 __metadata__ = \
 {
     "version" : version,
@@ -23,11 +30,6 @@ __metadata__ = \
     "minimum_py_version" : "3.8",
 }
 
-optional_install = \
-{
-    "voice" : ["PyNaCl", "youtube_dl"],
-    "proxy" : ["aiohttp_socks"]
-}
 
 setuptools.setup(
     name="Discord-Advert-Framework",

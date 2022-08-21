@@ -1,0 +1,4 @@
+{
+    "voice" : ["PyNaCl", "youtube_dl"],
+    "proxy" : ["aiohttp_socks"]
+}
