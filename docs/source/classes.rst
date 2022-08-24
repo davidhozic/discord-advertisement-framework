@@ -99,7 +99,7 @@ SQL
 LoggerSQL
 =====================
 .. note::
-    See :ref:`Relational Database Log` for usage.
+    See :ref:`relational database log (SQL)` for usage.
 
 .. autoclass:: framework.sql.LoggerSQL
     :members:

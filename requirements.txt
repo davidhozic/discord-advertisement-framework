@@ -1,5 +1,2 @@
 typeguard
 aiohttp
-python-tds
-sqlalchemy-pytds
-sqlalchemy

@@ -5,6 +5,7 @@ list based on the `allowed_strings` list (contains strings that must appear in t
 
 We pass the framework a user_callback function named `find_advertisement_channels` which autofills the `servers` list with GUILD objects.
 """
+from datetime import timedelta
 import framework as fw
 
 
@@ -31,21 +32,22 @@ async def find_advertisement_channels():
                 channels.append(channel.id) # If so, add the channel id to the list
         
         # Add the guild to the internal shilling list
-        await fw.core.add_object(   
-            fw.GUILD(
-                guild.id,                               # Guild id
-                [                                       # List of messages
-                    fw.TextMESSAGE(None,                    # Start period
-                                   5,                       # End period
-                                   data_to_shill,           # Data that will be sent
-                                   channels,                # List of channels to send the message to            
-                                   "send",                  # Sending moode (send, edit, clear-send)
-                                   True                     # Should the message be sent immediately after adding it to the list
-                    )                                   
-                ],
-                True                                    # Should the framework generate a log of sent messages for this guild
+        if len(channels):
+            await fw.core.add_object(   
+                fw.GUILD(
+                    guild.id,                               # Guild id
+                    [                                       # List of messages
+                        fw.TextMESSAGE(None,                # Start period
+                                    timedelta(seconds=5),   # End period
+                                    data_to_shill,          # Data that will be sent
+                                    channels,               # List of channels to send the message to            
+                                    "send",                 # Sending moode (send, edit, clear-send)
+                                    timedelta(seconds=0)    # Should the message be sent immediately after adding it to the list
+                        )                                   
+                    ],
+                    True                                    # Should the framework generate a log of sent messages for this guild
+                )
             )
-        )
 
 
 fw.run(

@@ -17,6 +17,8 @@ from .. import client
 from .. import sql
 from .. import core
 from .. import misc
+from .. import dtypes
+
 import asyncio
 import _discord as discord
 
@@ -38,28 +40,26 @@ class VoiceMESSAGE(BaseMESSAGE):
     """
     This class is used for creating objects that represent messages which will be streamed to voice channels.
 
-    .. versionchanged:: v2.0
+    .. deprecated:: v2.1
 
-        - Added the ``volume`` parameter
-        - Renamed ``channel_ids`` parameter to ``channels``
-        - Channels parameter now also accepts channel objects instead of int
+        - start_in (start_now) - Using bool value to dictate whether the message should be sent at framework start.
+        - start_period, end_period - Using int values, use ``timedelta`` object instead.
+    
+    .. versionchanged:: v2.1
+
+        - start_period, end_period Accept timedelta objects.
+        - start_now - renamed into ``start_in`` which describes when the message should be first sent.
 
     Parameters
     ------------
-    start_period: Union[int, None]
+    start_period: Union[int, timedelta, None]
         The value of this parameter can be:
 
-        ..  table::
-
-            ===========  =================================================================================================================
-             Value        Info
-            ===========  =================================================================================================================
-             None         Messages are sent in a constant time period equal to the value of ``end_period``.
-             int > 0      Messages are sent in a randomized time period. ``start_period`` represents the bottom limit of this period.
-            ===========  =================================================================================================================
+        - None - Use this value for a fixed (not randomized) sending period
+        - timedelta object - object describing time difference, if this is used, then the parameter represents the bottom limit of the **randomized** sending period.
 
     end_period: int
-        If ``start_period`` > 0, then this represents the upper limit of randomized time period in which messages will be sent.
+        If ``start_period`` is not None, then this represents the upper limit of randomized time period in which messages will be sent.
         If ``start_period`` is None, then this represents the actual time period between each message send.
 
         .. code-block:: python
@@ -83,7 +83,7 @@ class VoiceMESSAGE(BaseMESSAGE):
     volume: int
         The volume (0-100%) at which to play the audio. Defaults to 50%. This was added in v2.0.0
     start_in: timedelta
-        If True, then the framework will send the message as soon as it is run.
+        When should the message be first sent.
     """
 
     __slots__ = (
@@ -107,6 +107,9 @@ class VoiceMESSAGE(BaseMESSAGE):
                  channels: Iterable[Union[int, discord.VoiceChannel]],
                  volume: int=50,
                  start_in: Union[timedelta, bool]=timedelta(seconds=0)):
+
+        if not dtypes.GLOBALS.voice_installed:
+            raise ModuleNotFoundError("You need to install extra requirements: pip install discord-advert-framework[voice]")
 
         super().__init__(start_period, end_period, data, start_in)
         self.volume = max(0, min(100, volume)) # Clamp the volume to 0-100 %

@@ -28,10 +28,15 @@ class BaseMESSAGE:
     This is the base class for all the different classes that
     represent a message you want to be sent into discord.
 
-    .. deprecated:: 2.1
-        (start_now) - Using bool value to dictate whether the message should be sent at framework start.
+    .. deprecated:: v2.1
 
-        Use ``timedelta`` object instead describing the delay before first send.
+        - start_in (start_now) - Using bool value to dictate whether the message should be sent at framework start.
+        - start_period, end_period - Using int values, use ``timedelta`` object instead.
+    
+    .. versionchanged:: v2.1
+
+        - start_period, end_period Accept timedelta objects.
+        - start_now - renamed into ``start_in`` which describes when the message should be first sent.
     
     Parameters
     -----------------
@@ -44,13 +49,8 @@ class BaseMESSAGE:
     data: inherited class dependant
         The data to be sent to discord.
     start_in: timedelta
-        Dictates when, the first send should be
+        When should the message be first sent.
 
-
-    Raises
-    ----------------
-    TypeError
-        The parameter end_period cannot be None.
     """
     __slots__ = (
         "period",

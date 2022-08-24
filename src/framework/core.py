@@ -338,13 +338,15 @@ def run(token : str,
         user_callback : Optional[Callable]=None,
         server_log_output : Optional[str] ="History",
         sql_manager: Optional[sql.LoggerSQL]=None,
-        intents: Optional[dc.Intents]=dc.Intents.default(),
+        intents: Optional[dc.Intents]=None,
         debug : Optional[bool]=True,
         proxy: Optional[str]=None) -> None:
     """
-    Runs the framework.
+    Runs the framework and does not return until the framework is stopped (:func:`framework.core.shutdown`).
+    After stopping, it returns None.
 
-    This is the very first thing that needs to be called to start the framework.
+    .. versionchanged:: v2.1
+        Added ``proxy`` parameter
 
     Parameters
     ---------------
@@ -364,7 +366,19 @@ def run(token : str,
         Discord Intents object (represents settings to which events it will be listened to).
     debug: Optional[bool]
         Print trace message to the console, useful for debugging.
+    proxy: Optional[str]
+        URL of a proxy you want the framework to use.
+
+    Raises
+    ---------------
+    ModuleNotFoundError
+        Missing modules for the wanted functionality, install with ``pip install discord-advert-framework[optional-group]``.
+    
+    ValueError
+        Invalid proxy url.
     """
+    if intents is None: # Sphinx doesn't like if this is directly in the declaration
+        intents = dc.Intents.default()
 
     guild.GLOBALS.server_log_path = server_log_output               # Logging folder
     GLOBALS.temp_server_list = server_list                          # List of guild objects to iterate thru in the advertiser task
