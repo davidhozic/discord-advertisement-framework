@@ -1,6 +1,6 @@
 sphinx
 jinja2
-sphinx-inline-tabs
+sphinx-design
 sphinx-autobuild
 sphinx-copybutton
 furo

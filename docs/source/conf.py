@@ -38,7 +38,7 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.autosummary",
     "sphinx.ext.autosectionlabel",
-    "sphinx_inline_tabs",
+    "sphinx_design",
     "sphinx_copybutton",
     "enum_tools.autoenum",
 ]

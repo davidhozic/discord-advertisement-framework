@@ -862,7 +862,7 @@ class Paginator(_discord.ui.View):
         allowed_mentions: Optional[:class:`~discord.AllowedMentions`]
             Controls the mentions being processed in this message. If this is
             passed, then the object is merged with :attr:`~discord.Client.allowed_mentions`.
-            The merging behavior only overrides attributes that have been explicitly passed
+            The merging behaviour only overrides attributes that have been explicitly passed
             to the object, otherwise it uses the attributes set in :attr:`~discord.Client.allowed_mentions`.
             If no object is passed at all then the defaults given by :attr:`~discord.Client.allowed_mentions`
             are used instead.
@@ -951,7 +951,7 @@ class Paginator(_discord.ui.View):
         allowed_mentions: Optional[:class:`~discord.AllowedMentions`]
             Controls the mentions being processed in this message. If this is
             passed, then the object is merged with :attr:`~discord.Client.allowed_mentions`.
-            The merging behavior only overrides attributes that have been explicitly passed
+            The merging behaviour only overrides attributes that have been explicitly passed
             to the object, otherwise it uses the attributes set in :attr:`~discord.Client.allowed_mentions`.
             If no object is passed at all then the defaults given by :attr:`~discord.Client.allowed_mentions`
             are used instead.

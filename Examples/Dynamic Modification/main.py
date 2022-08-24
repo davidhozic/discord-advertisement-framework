@@ -5,10 +5,10 @@ any of the allowed_strings words.
 It then dynamically adds an object, and later calls .update() method to change the initialization parameters
 passed at the start.
 """
-
+from datetime import timedelta
 import asyncio
-import  framework as fw
-from framework import trace
+import framework as fw
+
 
 
 # Create a list in which we will automatically add guilds
@@ -35,7 +35,7 @@ async def user_task():
             if any([x in channel.name for x in allowed_strings]): # Check if any of the strings in allowed_strings are in the channel name
                 channels.append(channel)
 
-        text_msg = fw.TextMESSAGE(None, 15, data_to_shill, channels, "send", True)
+        text_msg = fw.TextMESSAGE(None, timedelta(seconds=5), data_to_shill, channels, "send", timedelta(seconds=0))
 
         # Dynamically add a message to the list
         await fw.add_object(text_msg, guild.id)
@@ -44,11 +44,11 @@ async def user_task():
     #   Dynamic text message modification of the shill data and send period
     #########################################################################
     await asyncio.sleep(10)
-    trace("Updating the TextMESSAGE object")
+    fw.trace("Updating the TextMESSAGE object")
     # Update the object
     await text_msg.update(data="Updated Data", end_period=60) 
 
-    trace("Now shilling 'Updated Data' with period of 60 seconds")
+    fw.trace("Now shilling 'Updated Data' with period of 60 seconds")
     #########################################################################
 
 ############################################################################################################################################################################

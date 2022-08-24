@@ -122,7 +122,7 @@ def _cleanup_loop(loop: asyncio.AbstractEventLoop) -> None:
         loop.run_until_complete(loop.shutdown_asyncgens())
     finally:
         _log.info("Closing the event loop.")
-        loop.close()
+        loop.call_soon(loop.close)
 
 
 class Client:

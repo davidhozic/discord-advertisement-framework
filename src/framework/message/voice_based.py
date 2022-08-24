@@ -2,6 +2,7 @@
     Contains definitions related to voice messaging."""
 
 
+from contextlib import suppress
 from typing import Any, Dict, List, Iterable, Optional, Union
 from datetime import timedelta
 from typeguard import typechecked
@@ -16,6 +17,8 @@ from .. import client
 from .. import sql
 from .. import core
 from .. import misc
+from .. import dtypes
+
 import asyncio
 import _discord as discord
 
@@ -37,28 +40,26 @@ class VoiceMESSAGE(BaseMESSAGE):
     """
     This class is used for creating objects that represent messages which will be streamed to voice channels.
 
-    .. versionchanged:: v2.0
+    .. deprecated:: v2.1
 
-        - Added the ``volume`` parameter
-        - Renamed ``channel_ids`` parameter to ``channels``
-        - Channels parameter now also accepts channel objects instead of int
+        - start_in (start_now) - Using bool value to dictate whether the message should be sent at framework start.
+        - start_period, end_period - Using int values, use ``timedelta`` object instead.
+    
+    .. versionchanged:: v2.1
+
+        - start_period, end_period Accept timedelta objects.
+        - start_now - renamed into ``start_in`` which describes when the message should be first sent.
 
     Parameters
     ------------
-    start_period: Union[int, None]
+    start_period: Union[int, timedelta, None]
         The value of this parameter can be:
 
-        ..  table::
-
-            ===========  =================================================================================================================
-             Value        Info
-            ===========  =================================================================================================================
-             None         Messages are sent in a constant time period equal to the value of ``end_period``.
-             int > 0      Messages are sent in a randomized time period. ``start_period`` represents the bottom limit of this period.
-            ===========  =================================================================================================================
+        - None - Use this value for a fixed (not randomized) sending period
+        - timedelta object - object describing time difference, if this is used, then the parameter represents the bottom limit of the **randomized** sending period.
 
     end_period: int
-        If ``start_period`` > 0, then this represents the upper limit of randomized time period in which messages will be sent.
+        If ``start_period`` is not None, then this represents the upper limit of randomized time period in which messages will be sent.
         If ``start_period`` is None, then this represents the actual time period between each message send.
 
         .. code-block:: python
@@ -82,7 +83,7 @@ class VoiceMESSAGE(BaseMESSAGE):
     volume: int
         The volume (0-100%) at which to play the audio. Defaults to 50%. This was added in v2.0.0
     start_in: timedelta
-        If True, then the framework will send the message as soon as it is run.
+        When should the message be first sent.
     """
 
     __slots__ = (
@@ -107,6 +108,9 @@ class VoiceMESSAGE(BaseMESSAGE):
                  volume: int=50,
                  start_in: Union[timedelta, bool]=timedelta(seconds=0)):
 
+        if not dtypes.GLOBALS.voice_installed:
+            raise ModuleNotFoundError("You need to install extra requirements: pip install discord-advert-framework[voice]")
+
         super().__init__(start_period, end_period, data, start_in)
         self.volume = max(0, min(100, volume)) # Clamp the volume to 0-100 %
         self.channels = list(set(channels))    # Auto remove duplicates
@@ -114,7 +118,7 @@ class VoiceMESSAGE(BaseMESSAGE):
     def _generate_log_context(self,
                              audio: AUDIO,
                              succeeded_ch: List[discord.VoiceChannel],
-                             failed_ch: List[dict]) -> Dict[str, Any]:
+                             failed_ch: List[Dict[str, Any]]) -> Dict[str, Any]:
         """
         Generates information about the message send attempt that is to be saved into a log.
 
@@ -237,13 +241,17 @@ class VoiceMESSAGE(BaseMESSAGE):
             ch_perms = channel.permissions_for(channel.guild.get_member(client.get_client().user.id))
             if not all([ch_perms.connect, ch_perms.stream, ch_perms.speak]):
                 raise self._generate_exception(403, 50013, "You lack permissions to perform that action", discord.Forbidden)
+            
+            # Check if channel still exists in cache (has not been deleted)
+            if client.get_client().get_channel(channel.id) is None:
+                ex = self._generate_exception(404, 10003, "Channel was deleted", discord.NotFound)
 
             if GLOBALS.voice_client is None or not GLOBALS.voice_client.is_connected():
                 GLOBALS.voice_client = await channel.connect(timeout=C_VC_CONNECT_TIMEOUT)
             else:
                 await GLOBALS.voice_client.move_to(channel)
 
-            stream = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(audio.url), volume=self.volume/100)
+            stream = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(audio.url, options="-loglevel fatal"), volume=self.volume/100)
 
             GLOBALS.voice_client.play(stream)
 
@@ -251,12 +259,11 @@ class VoiceMESSAGE(BaseMESSAGE):
                 await asyncio.sleep(1)
             return {"success": True}
         except Exception as ex:
-            if client.get_client().get_channel(channel.id) is None:
-                ex = self._generate_exception(404, 10003, "Channel was deleted", discord.NotFound)
             return {"success": False, "reason": ex}
         finally:
-            if GLOBALS.voice_client is not None and GLOBALS.voice_client.is_connected():
-                await GLOBALS.voice_client.disconnect()
+            if GLOBALS.voice_client is not None:
+                with suppress(ConnectionResetError):
+                    await GLOBALS.voice_client.disconnect()
                 GLOBALS.voice_client = None
                 await asyncio.sleep(1) # Avoid sudden disconnect and connect to a new channel
 

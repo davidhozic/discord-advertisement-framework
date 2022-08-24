@@ -32,28 +32,26 @@ class TextMESSAGE(BaseMESSAGE):
     """
     This class is used for creating objects that represent messages which will be sent to Discord's TEXT CHANNELS.
 
-    .. versionchanged:: v2.0
+    .. deprecated:: v2.1
 
-        - Renamed ``channel_ids`` parameter to ``channels``
-        - Channels parameter now also accepts channel objects instead of int.
-        - .update method added.
+        - start_in (start_now) - Using bool value to dictate whether the message should be sent at framework start.
+        - start_period, end_period - Using int values, use ``timedelta`` object instead.
+    
+    .. versionchanged:: v2.1
+
+        - start_period, end_period Accept timedelta objects.
+        - start_now - renamed into ``start_in`` which describes when the message should be first sent.
 
     Parameters
     ------------
     start_period: Union[int, timedelta, None]
         The value of this parameter can be:
 
-        ..  table::
-
-            ===========  =================================================================================================================
-             Value        Info
-            ===========  =================================================================================================================
-             None         Messages are sent in a constant time period equal to the value of ``end_period``.
-             int > 0      Messages are sent in a randomized time period. ``start_period`` represents the bottom limit of this period.
-            ===========  =================================================================================================================
+        - None - Use this value for a fixed (not randomized) sending period
+        - timedelta object - object describing time difference, if this is used, then the parameter represents the bottom limit of the **randomized** sending period.
 
     end_period: Union[int, timedelta]
-        If ``start_period`` > 0, then this represents the upper limit of randomized time period in which messages will be sent.
+        If ``start_period`` is not None, then this represents the upper limit of randomized time period in which messages will be sent.
         If ``start_period`` is None, then this represents the actual time period between each message send.
 
         .. code-block:: python
@@ -82,19 +80,12 @@ class TextMESSAGE(BaseMESSAGE):
         Parameter that defines how message will be sent to a channel.
         It can be:
 
-        .. table::
-            :align: left
-
-            =================  =======================================================================================
-              Mode               Description
-            =================  =======================================================================================
-             "send"             each period a new message will be sent,
-             "edit"             each period the previously send message will be edited (if it exists)
-             "clear-send"       previous message will be deleted and a new one sent.
-            =================  =======================================================================================
+        - "send" -    each period a new message will be sent,
+        - "edit" -    each period the previously send message will be edited (if it exists)
+        - "clear-send" -    previous message will be deleted and a new one sent.
 
     start_in: timedelta
-        If True, then the framework will send the message as soon as it is run.
+        When should the message be first sent.
     """
 
     __slots__ = (
@@ -121,7 +112,7 @@ class TextMESSAGE(BaseMESSAGE):
                              embed: Optional[EMBED],
                              files: List[FILE],
                              succeeded_ch: List[Union[discord.TextChannel, discord.Thread]],
-                             failed_ch: List[Dict[Union[discord.TextChannel, discord.Thread], Exception]]):
+                             failed_ch: List[Dict[str, Any]]) -> Dict[str, Any]:
         """
         Generates information about the message send attempt that is to be saved into a log.
 
@@ -303,8 +294,13 @@ class TextMESSAGE(BaseMESSAGE):
         ch_perms = channel.permissions_for(channel.guild.get_member(client.get_client().user.id))
         for tries in range(3):  # Maximum 3 tries (if rate limit)
             try:
-                if ch_perms.send_messages is False: # Check if we have permissions
+                # Check if we have permissions
+                if ch_perms.send_messages is False:
                     raise self._generate_exception(403, 50013, "You lack permissions to perform that action", discord.Forbidden)
+
+                # Check if channel still exists in cache (has not been deleted)
+                if client.get_client().get_channel(channel.id) is None:
+                    ex = self._generate_exception(404, 10003, "Channel was deleted", discord.NotFound)
 
                 # Delete previous message if clear-send mode is chosen and message exists
                 if self.mode == "clear-send" and self.sent_messages.get(channel.id, None) is not None:
@@ -414,27 +410,26 @@ class DirectMESSAGE(BaseMESSAGE):
     """
     This class is used for creating objects that represent messages which will be sent to Discord's TEXT CHANNELS.
 
-    .. versionchanged:: v2.0
+    .. deprecated:: v2.1
 
-        - Channels parameter now also accepts channel objects instead of int.
-        - ``.update`` method added.
+        - start_in (start_now) - Using bool value to dictate whether the message should be sent at framework start.
+        - start_period, end_period - Using int values, use ``timedelta`` object instead.
+    
+    .. versionchanged:: v2.1
+
+        - start_period, end_period Accept timedelta objects.
+        - start_now - renamed into ``start_in`` which describes when the message should be first sent.
 
     Parameters
     ------------
     start_period: Union[int, timedelta, None]
         The value of this parameter can be:
 
-        ..  table::
-
-            ===========  =================================================================================================================
-             Value        Info
-            ===========  =================================================================================================================
-             None         Messages are sent in a constant time period equal to the value of ``end_period``.
-             int > 0      Messages are sent in a randomized time period. ``start_period`` represents the bottom limit of this period.
-            ===========  =================================================================================================================
+        - None - Use this value for a fixed (not randomized) sending period
+        - timedelta object - object describing time difference, if this is used, then the parameter represents the bottom limit of the **randomized** sending period.
 
     end_period: Union[int, timedelta]
-        If ``start_period`` > 0, then this represents the upper limit of randomized time period in which messages will be sent.
+        If ``start_period`` is not None, then this represents the upper limit of randomized time period in which messages will be sent.
         If ``start_period`` is None, then this represents the actual time period between each message send.
 
         .. code-block:: python
@@ -461,19 +456,12 @@ class DirectMESSAGE(BaseMESSAGE):
         Parameter that defines how message will be sent to a channel.
         It can be:
 
-        .. table::
-            :align: left
-
-            =================  =======================================================================================
-              Mode               Description
-            =================  =======================================================================================
-             "send"             each period a new message will be sent,
-             "edit"             each period the previously send message will be edited (if it exists)
-             "clear-send"       previous message will be deleted and a new one sent.
-            =================  =======================================================================================
+        - "send" -    each period a new message will be sent,
+        - "edit" -    each period the previously send message will be edited (if it exists)
+        - "clear-send" -    previous message will be deleted and a new one sent.
 
     start_in: timedelta
-        If True, then the framework will send the message as soon as it is run.
+        When should the message be first sent.
     """
 
     __slots__ = (
@@ -498,7 +486,7 @@ class DirectMESSAGE(BaseMESSAGE):
                               success_context: Dict[str, Union[bool, Optional[Exception]]],
                               text : Optional[str],
                               embed : Optional[EMBED],
-                              files : List[FILE]):
+                              files : List[FILE]) -> Dict[str, Any]:
         """
         Generates information about the message send attempt that is to be saved into a log.
 

@@ -1,3 +1,4 @@
+from datetime import timedelta
 import framework as fw
 
 rolls = [
@@ -21,7 +22,7 @@ servers = [
     fw.GUILD(
         snowflake=12345,
         messages=[
-            fw.TextMESSAGE(None, 5, get(rolls.copy()), [12345], "edit", True)
+            fw.TextMESSAGE(None, timedelta(seconds=10), get(rolls.copy()), [12345], "edit", timedelta(seconds=5))
         ],
         logging=True
     )

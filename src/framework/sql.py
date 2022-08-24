@@ -3,20 +3,14 @@
     relational database logging that is available in this shiller.
     It is only used if the sql logging is enabled by passing
     the framework.run function with the SqlCONTROLLER object.
+
+    .. versionchanged:: v2.1
+        Made SQL an optional functionality
 """
 from datetime import datetime
 from typing import Callable, Dict, List, Literal, Any, Union
 from contextlib import suppress
 from typeguard import typechecked
-from sqlalchemy import (
-                        SmallInteger, Integer, BigInteger, NVARCHAR, DateTime,
-                        Column, Identity, ForeignKey,
-                        create_engine, text
-                       )
-from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm import sessionmaker, Session
-from sqlalchemy.ext.declarative import declarative_base
-from pytds import ClosedConnectionError
 
 from .tracing import *
 from .timing import *
@@ -28,10 +22,10 @@ import copy
 import re
 import time
 import asyncio
-import pytds
-import sqlalchemy as sqa
+
 from . import core
 from . import misc
+
 
 __all__ = (
     "LoggerSQL",
@@ -47,6 +41,26 @@ class GLOBALS:
     manager = None
     enabled = False
     lt_types = []
+    sql_installed = False
+
+# ------------------------------------ Optional ------------------------------------
+try:
+    from sqlalchemy import (
+                            SmallInteger, Integer, BigInteger, NVARCHAR, DateTime,
+                            Column, Identity, ForeignKey,
+                            create_engine, text
+                        )
+    from sqlalchemy.exc import SQLAlchemyError
+    from sqlalchemy.orm import sessionmaker, Session
+    from sqlalchemy.ext.declarative import declarative_base
+    from pytds import ClosedConnectionError
+    import pytds
+    import sqlalchemy as sqa
+    GLOBALS.sql_installed = True
+except ImportError:
+    GLOBALS.sql_installed = False
+# ----------------------------------------------------------------------------------
+
 
 
 def _register_type(lookuptable: Literal["GuildTYPE", "MessageTYPE", "MessageMODE"]) -> Callable:
@@ -69,11 +83,14 @@ def _register_type(lookuptable: Literal["GuildTYPE", "MessageTYPE", "MessageMODE
     def decorator_register_type(cls):
         # Iterate thru all module globals to find the lookup table
         # and insert a row into that lookup table (name of the type is defined with __logname__)
-        for lt_name, lt_cls in globals().items():
-            if lt_name == lookuptable:
-                GLOBALS.lt_types.append( lt_cls(cls.__logname__) )
-                return cls
-        raise DAFNotFoundError(f"[SQL]: Unable to to find lookuptable: {lookuptable}", DAF_SQL_LOOKUPTABLE_NOT_FOUND)
+        if GLOBALS.sql_installed:
+            for lt_name, lt_cls in globals().items():
+                if lt_name == lookuptable:
+                    GLOBALS.lt_types.append( lt_cls(cls.__logname__) )
+                    return cls
+            raise DAFNotFoundError(f"[SQL]: Unable to to find lookuptable: {lookuptable}", DAF_SQL_LOOKUPTABLE_NOT_FOUND)
+        
+        return cls
 
     return decorator_register_type
 
@@ -94,7 +111,7 @@ class LoggerSQL:
         Name of the database used for logs.
     """
 
-    Base = declarative_base()
+    Base = declarative_base() if GLOBALS.sql_installed else None # Optional package group needs to be installed
     __slots__ = (
         "engine",
         "cursor",
@@ -117,6 +134,10 @@ class LoggerSQL:
                  password: str,
                  server: str,
                  database: str):
+
+        if not GLOBALS.sql_installed:
+            raise ModuleNotFoundError("You need to install extra requirements: pip install discord-advert-framework[sql]")
+
         # Save the connection parameters
         self.username = username
         self.password = password
@@ -165,7 +186,10 @@ class LoggerSQL:
             Custom number of positional arguments of caching dictionaries to clear.
         """
         if len(to_clear) == 0:  # Clear all cached tables if nothing was passed
-            to_clear = self.__slots__
+            to_clear = [table.__name__ for table in self.Base.__subclasses__() if table.__name__ in self.__slots__]
+        else:
+            to_clear = [table for table in to_clear if table in self.__slots__]
+
         for k in to_clear:
             getattr(self, k).clear()
 
@@ -760,209 +784,211 @@ class LoggerSQL:
             raise
 
 
-class MessageTYPE(LoggerSQL.Base):
-    """
-    Lookup table for storing xMESSAGE types
+if GLOBALS.sql_installed:
+    # Do not create ORM classes if the optional group is not installed
+    class MessageTYPE(LoggerSQL.Base):
+        """
+        Lookup table for storing xMESSAGE types
 
-    Parameters
-    -----------
-    name: str
-        Name of the xMESSAGE class.
-    """
-    __tablename__ = "MessageTYPE"
+        Parameters
+        -----------
+        name: str
+            Name of the xMESSAGE class.
+        """
+        __tablename__ = "MessageTYPE"
 
-    id = Column(SmallInteger, Identity(start=0, increment=1), primary_key=True)
-    name = Column(NVARCHAR(20), unique=True)
+        id = Column(SmallInteger, Identity(start=0, increment=1), primary_key=True)
+        name = Column(NVARCHAR(20), unique=True)
 
-    def __init__(self, name: str=None):
-        self.name = name
-
-
-class MessageMODE(LoggerSQL.Base):
-    """
-    Lookup table for storing message sending modes.
-
-    Parameters
-    -----------
-    name: str
-        Name of the xMESSAGE class.
-    """
-
-    __tablename__ = "MessageMODE"
-
-    id = Column(SmallInteger, Identity(start=0, increment=1), primary_key=True)
-    name = Column(NVARCHAR(20), unique=True)
-
-    def __init__(self, name: str=None):
-        self.name = name
+        def __init__(self, name: str=None):
+            self.name = name
 
 
-class GuildTYPE(LoggerSQL.Base):
-    """
-    Lookup table for storing xGUILD types
+    class MessageMODE(LoggerSQL.Base):
+        """
+        Lookup table for storing message sending modes.
 
-    Parameters
-    -----------
-    name: str
-        Name of the xMESSAGE class.
-    """
+        Parameters
+        -----------
+        name: str
+            Name of the xMESSAGE class.
+        """
 
-    __tablename__ = "GuildTYPE"
+        __tablename__ = "MessageMODE"
 
-    id = Column(SmallInteger, Identity(start=0, increment=1), primary_key=True)
-    name = Column(NVARCHAR(20), unique=True)
+        id = Column(SmallInteger, Identity(start=0, increment=1), primary_key=True)
+        name = Column(NVARCHAR(20), unique=True)
 
-    def __init__(self, name: str=None):
-        self.name = name
-
-
-class GuildUSER(LoggerSQL.Base):
-    """
-    Table for storing different guilds and users.
-
-    Parameters
-    -----------
-    guild_type: int
-        Foreign key pointing to GuildTYPE.id.
-    snowflake: int
-        Discord's snowflake ID of the guild.
-    name: str
-        The name of the guild.
-    """
-    __tablename__ = "GuildUSER"
-
-    id = Column(Integer, Identity(start=0,increment=1),primary_key=True)
-    snowflake_id = Column(BigInteger)
-    name = Column(NVARCHAR)
-    guild_type = Column(SmallInteger, ForeignKey("GuildTYPE.id"), nullable=False)
-
-    def __init__(self,
-                 guild_type: int,
-                 snowflake: int,
-                 name: str):
-        self.snowflake_id = snowflake
-        self.name = name
-        self.guild_type = guild_type
+        def __init__(self, name: str=None):
+            self.name = name
 
 
-class CHANNEL(LoggerSQL.Base):
-    """
-    Table for storing different channels.
+    class GuildTYPE(LoggerSQL.Base):
+        """
+        Lookup table for storing xGUILD types
 
-    Parameters
-    -----------
-    snowflake: int
-        Discord's snowflake ID of the channel.
-    name: str
-        The name of the channel.
-    guild_id: int
-        Foreign key pointing to GuildUSER.id.
-    """
+        Parameters
+        -----------
+        name: str
+            Name of the xMESSAGE class.
+        """
 
+        __tablename__ = "GuildTYPE"
 
-    __tablename__ = "CHANNEL"
-    id = Column(Integer, Identity(start=0,increment=1),primary_key=True)
-    snowflake_id = Column(BigInteger)
-    name = Column(NVARCHAR)
-    guild_id = Column(Integer, ForeignKey("GuildUSER.id"), nullable=False)
+        id = Column(SmallInteger, Identity(start=0, increment=1), primary_key=True)
+        name = Column(NVARCHAR(20), unique=True)
 
-    def __init__(self,
-                 snowflake: int,
-                 name: str,
-                 guild_id: int):
-        self.snowflake_id = snowflake
-        self.name = name
-        self.guild_id = guild_id
+        def __init__(self, name: str=None):
+            self.name = name
 
 
-class DataHISTORY(LoggerSQL.Base):
-    """
-    Table used for storing all the different data(JSON) that was ever sent (to reduce redundancy -> and file size in the MessageLOG).
+    class GuildUSER(LoggerSQL.Base):
+        """
+        Table for storing different guilds and users.
 
-    Parameters
-    -----------
-    content: str
-        The JSON string representing sent data.
-    """
-    __tablename__ = "DataHISTORY"
+        Parameters
+        -----------
+        guild_type: int
+            Foreign key pointing to GuildTYPE.id.
+        snowflake: int
+            Discord's snowflake ID of the guild.
+        name: str
+            The name of the guild.
+        """
+        __tablename__ = "GuildUSER"
 
-    id = Column(Integer, Identity(start=0, increment=1), primary_key= True)
-    content = Column(NVARCHAR)
+        id = Column(Integer, Identity(start=0,increment=1),primary_key=True)
+        snowflake_id = Column(BigInteger)
+        name = Column(NVARCHAR)
+        guild_type = Column(SmallInteger, ForeignKey("GuildTYPE.id"), nullable=False)
 
-    def __init__(self,
-                 content: str):
-        self.content = content
-
-class MessageLOG(LoggerSQL.Base):
-    """
-    Table containing information for each message send attempt.
-
-    NOTE: This table is missing successful and failed channels (or DM success status).That is because those are a separate table.
-
-    Parameters
-    ------------
-    sent_data: str
-        JSONized data that was sent by the xMESSAGE object.
-    message_type: int
-        Foreign key  pointing to a row inside the MessageTYPE lookup table.
-    message_mode: int
-        Foreign key pointing to a row inside the MessageMODE lookup table.
-    dm_reason: str
-        If DM sent succeeded, it is null, if it failed it contains a string description of the error.
-    guild_id: int
-        Foreign key pointing the guild this message was advertised to.
-    """
-
-    __tablename__ = "MessageLOG"
-
-    id = Column(Integer, Identity(start=0, increment=1), primary_key=True)
-    sent_data = Column(Integer, ForeignKey("DataHISTORY.id"))
-    message_type = Column(SmallInteger, ForeignKey("MessageTYPE.id"), nullable=False)
-    guild_id = Column(Integer, ForeignKey("GuildUSER.id"), nullable=False)
-    message_mode = Column(SmallInteger, ForeignKey("MessageMODE.id")) # [TextMESSAGE, DirectMESSAGE]
-    dm_reason = Column(NVARCHAR)  # [DirectMESSAGE]
-    timestamp = Column(DateTime)
-
-    def __init__(self,
-                 sent_data: str=None,
-                 message_type: int=None,
-                 message_mode: int=None,
-                 dm_reason: str=None,
-                 guild_id: int=None):
-        self.sent_data = sent_data
-        self.message_type = message_type
-        self.message_mode = message_mode
-        self.dm_reason = dm_reason
-        self.guild_id = guild_id
-        self.timestamp = datetime.now().replace(microsecond=0)
+        def __init__(self,
+                    guild_type: int,
+                    snowflake: int,
+                    name: str):
+            self.snowflake_id = snowflake
+            self.name = name
+            self.guild_type = guild_type
 
 
-class MessageChannelLOG(LoggerSQL.Base):
-    """
-    This is a table that contains a log of channels that are linked to a certain message log.
+    class CHANNEL(LoggerSQL.Base):
+        """
+        Table for storing different channels.
 
-    Parameters
-    ------------
-    message_log_id: int
-        Foreign key pointing to MessageLOG.id.
-    channel_id: int
-        Foreign key pointing to CHANNEL.id.
-    reason: str
-        Stringified description of Exception that caused the send attempt to be successful for a certain channel.
-    """
+        Parameters
+        -----------
+        snowflake: int
+            Discord's snowflake ID of the channel.
+        name: str
+            The name of the channel.
+        guild_id: int
+            Foreign key pointing to GuildUSER.id.
+        """
 
-    __tablename__ = "MessageChannelLOG"
 
-    log_id = Column(Integer, ForeignKey("MessageLOG.id", ondelete="CASCADE"), primary_key=True)
-    channel_id = Column(Integer, ForeignKey("CHANNEL.id"), primary_key=True)
-    reason = Column(NVARCHAR)
-    def __init__(self,
-                 message_log_id: int,
-                 channel_id: int,
-                 reason: str=None):
-        self.log_id = message_log_id
-        self.channel_id = channel_id
-        self.reason = reason
+        __tablename__ = "CHANNEL"
+        id = Column(Integer, Identity(start=0,increment=1),primary_key=True)
+        snowflake_id = Column(BigInteger)
+        name = Column(NVARCHAR)
+        guild_id = Column(Integer, ForeignKey("GuildUSER.id"), nullable=False)
+
+        def __init__(self,
+                    snowflake: int,
+                    name: str,
+                    guild_id: int):
+            self.snowflake_id = snowflake
+            self.name = name
+            self.guild_id = guild_id
+
+
+    class DataHISTORY(LoggerSQL.Base):
+        """
+        Table used for storing all the different data(JSON) that was ever sent (to reduce redundancy -> and file size in the MessageLOG).
+
+        Parameters
+        -----------
+        content: str
+            The JSON string representing sent data.
+        """
+        __tablename__ = "DataHISTORY"
+
+        id = Column(Integer, Identity(start=0, increment=1), primary_key= True)
+        content = Column(NVARCHAR)
+
+        def __init__(self,
+                    content: str):
+            self.content = content
+
+    class MessageLOG(LoggerSQL.Base):
+        """
+        Table containing information for each message send attempt.
+
+        NOTE: This table is missing successful and failed channels (or DM success status).That is because those are a separate table.
+
+        Parameters
+        ------------
+        sent_data: str
+            JSONized data that was sent by the xMESSAGE object.
+        message_type: int
+            Foreign key  pointing to a row inside the MessageTYPE lookup table.
+        message_mode: int
+            Foreign key pointing to a row inside the MessageMODE lookup table.
+        dm_reason: str
+            If DM sent succeeded, it is null, if it failed it contains a string description of the error.
+        guild_id: int
+            Foreign key pointing the guild this message was advertised to.
+        """
+
+        __tablename__ = "MessageLOG"
+
+        id = Column(Integer, Identity(start=0, increment=1), primary_key=True)
+        sent_data = Column(Integer, ForeignKey("DataHISTORY.id"))
+        message_type = Column(SmallInteger, ForeignKey("MessageTYPE.id"), nullable=False)
+        guild_id = Column(Integer, ForeignKey("GuildUSER.id"), nullable=False)
+        message_mode = Column(SmallInteger, ForeignKey("MessageMODE.id")) # [TextMESSAGE, DirectMESSAGE]
+        dm_reason = Column(NVARCHAR)  # [DirectMESSAGE]
+        timestamp = Column(DateTime)
+
+        def __init__(self,
+                    sent_data: str=None,
+                    message_type: int=None,
+                    message_mode: int=None,
+                    dm_reason: str=None,
+                    guild_id: int=None):
+            self.sent_data = sent_data
+            self.message_type = message_type
+            self.message_mode = message_mode
+            self.dm_reason = dm_reason
+            self.guild_id = guild_id
+            self.timestamp = datetime.now().replace(microsecond=0)
+
+
+    class MessageChannelLOG(LoggerSQL.Base):
+        """
+        This is a table that contains a log of channels that are linked to a certain message log.
+
+        Parameters
+        ------------
+        message_log_id: int
+            Foreign key pointing to MessageLOG.id.
+        channel_id: int
+            Foreign key pointing to CHANNEL.id.
+        reason: str
+            Stringified description of Exception that caused the send attempt to be successful for a certain channel.
+        """
+
+        __tablename__ = "MessageChannelLOG"
+
+        log_id = Column(Integer, ForeignKey("MessageLOG.id", ondelete="CASCADE"), primary_key=True)
+        channel_id = Column(Integer, ForeignKey("CHANNEL.id"), primary_key=True)
+        reason = Column(NVARCHAR)
+        def __init__(self,
+                    message_log_id: int,
+                    channel_id: int,
+                    reason: str=None):
+            self.log_id = message_log_id
+            self.channel_id = channel_id
+            self.reason = reason
 
 
 async def initialize(mgr_object: LoggerSQL):

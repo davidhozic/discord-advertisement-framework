@@ -406,7 +406,7 @@ class Cog(metaclass=CogMeta):
         This function **cannot** be a coroutine. It must be a regular
         function.
 
-        Subclasses must replace this if they want special unloading behavior.
+        Subclasses must replace this if they want special unloading behaviour.
         """
         pass
 

@@ -9,12 +9,19 @@ Logging
 The framework allows to log sent messages for each :ref:`GUILD`/:ref:`USER` (if you set the "generate_log" to True inside the :ref:`GUILD` or :ref:`USER` object).
 There are 2 different types of logs:
 
-- :ref:`Relational Database Log`
+- :ref:`Relational Database Log (SQL)` 
 - :ref:`JSON Logging (file)`
     
-Relational Database Log
+Relational Database Log (SQL)
 ================================
 .. versionadded:: v1.9
+
+.. versionchanged:: v2.1
+    Turned into an optional feature.
+
+    .. code-block:: bash
+        
+        pip install discord-advert-framework[sql]
 
 This type of logging enables saving logs to a remote server inside the database. Currently **only Microsoft SQL server is supported.**.
 In addition to being smaller in size, database logging takes up less space and it allows easier data analysis.
@@ -150,6 +157,9 @@ MessageChannelLOG
 
 SQL custom data types
 --------------------------------
+.. warning::
+    These will be removed in the next version.
+
 This sections contains descriptions on all SQL data types that are user-defined.
 
 t_tmp_channel_log
@@ -166,6 +176,8 @@ t_tmp_channel_log
 
 SQL Stored Procedures (SP)
 --------------------------------
+.. warning::
+    These will be removed in the next version.
 
 This section contains the description on all the saved procedures inside the SQL database.
 
@@ -194,6 +206,9 @@ sp_save_log
 
 SQL User Defined Functions (UDF)
 ----------------------------------
+.. warning::
+    These will be removed in the next version.
+
 This section contains the description on all user defined functions inside the SQL database.
 
 fn_log_success_rate
@@ -242,6 +257,9 @@ fn_guilduser_success_rate
 
 Views
 ----------------------------------
+.. warning::
+    These will be removed in the next version.
+
 This section contains the description on all views inside the SQL database.
 
 vMessageLogFullDETAIL
@@ -254,6 +272,9 @@ vMessageLogFullDETAIL
 
 Triggers
 ----------------------------------
+.. warning::
+    These will be removed in the next version.
+
 This section contains the description on all the triggers inside the SQL database.
 
 tr_delete_msg_log

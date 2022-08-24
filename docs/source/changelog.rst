@@ -9,14 +9,18 @@ Changelog
 
 v2.1
 ----------------------
+- Proxy support
+- Removed discord.EmbedField class, it is now replaced with discord.EmbedField
 - ``timedelta`` object on ``start_period/end_period`` parameters
 - Replaced ``start_now`` with ``start_in`` parameter, deprecated use of bool value
 - :class:`framework.TextMESSAGE` and :class:`framework.VoiceMESSAGE` now check if the given channels are actually inside the guild
+- Optional dependencies `voice` and `proxy` - to install use ``pip install discord-advert-framework[voice]`` and ``pip install discord-advert-framework[proxy]``
 - Time slippage correction:
 
 .. figure:: images/changelog_2_1_slippage_fix.png    
 
     Time slippage correction
+
   
 
 v2.0
@@ -32,7 +36,7 @@ v2.0
 
 v1.9.0
 ----------------------
-- Added support for logging into a SQL database (MS SQL Server only). See :ref:`relational database log`.
+- Added support for logging into a SQL database (MS SQL Server only). See :ref:`relational database log (SQL)`.
 - :func:`framework.run` function now accepts discord.Intents.
 - :func:`framework.add_object` and :func:`framework.remove_object` functions created to allow for dynamic modification of the shilling list.
 - Other small improvements.

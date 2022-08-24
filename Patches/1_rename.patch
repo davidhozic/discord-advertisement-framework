@@ -1,0 +1,2630 @@
+diff --git a/src/discord/__init__.py b/src/_discord/__init__.py
+similarity index 100%
+rename from src/discord/__init__.py
+rename to src/_discord/__init__.py
+diff --git a/src/discord/__main__.py b/src/_discord/__main__.py
+similarity index 99%
+rename from src/discord/__main__.py
+rename to src/_discord/__main__.py
+index 07c00ef..d437faa 100644
+--- a/src/discord/__main__.py
++++ b/src/_discord/__main__.py
+@@ -32,13 +32,13 @@ from typing import Tuple
+ import aiohttp
+ import pkg_resources
+ 
+-import discord
++import _discord
+ 
+ 
+ def show_version() -> None:
+     entries = ["- Python v{0.major}.{0.minor}.{0.micro}-{0.releaselevel}".format(sys.version_info)]
+ 
+-    version_info = discord.version_info
++    version_info = _discord.version_info
+     entries.append("- py-cord v{0.major}.{0.minor}.{0.micro}-{0.releaselevel}".format(version_info))
+     if version_info.releaselevel != "final":
+         pkg = pkg_resources.get_distribution("py-cord")
+diff --git a/src/discord/abc.py b/src/_discord/abc.py
+similarity index 100%
+rename from src/discord/abc.py
+rename to src/_discord/abc.py
+diff --git a/src/discord/activity.py b/src/_discord/activity.py
+similarity index 100%
+rename from src/discord/activity.py
+rename to src/_discord/activity.py
+diff --git a/src/discord/appinfo.py b/src/_discord/appinfo.py
+similarity index 100%
+rename from src/discord/appinfo.py
+rename to src/_discord/appinfo.py
+diff --git a/src/discord/asset.py b/src/_discord/asset.py
+similarity index 100%
+rename from src/discord/asset.py
+rename to src/_discord/asset.py
+diff --git a/src/discord/audit_logs.py b/src/_discord/audit_logs.py
+similarity index 100%
+rename from src/discord/audit_logs.py
+rename to src/_discord/audit_logs.py
+diff --git a/src/discord/automod.py b/src/_discord/automod.py
+similarity index 100%
+rename from src/discord/automod.py
+rename to src/_discord/automod.py
+diff --git a/src/discord/backoff.py b/src/_discord/backoff.py
+similarity index 100%
+rename from src/discord/backoff.py
+rename to src/_discord/backoff.py
+diff --git a/src/discord/bin/COPYING b/src/_discord/bin/COPYING
+similarity index 100%
+rename from src/discord/bin/COPYING
+rename to src/_discord/bin/COPYING
+diff --git a/src/discord/bin/libopus-0.x64.dll b/src/_discord/bin/libopus-0.x64.dll
+similarity index 100%
+rename from src/discord/bin/libopus-0.x64.dll
+rename to src/_discord/bin/libopus-0.x64.dll
+diff --git a/src/discord/bin/libopus-0.x86.dll b/src/_discord/bin/libopus-0.x86.dll
+similarity index 100%
+rename from src/discord/bin/libopus-0.x86.dll
+rename to src/_discord/bin/libopus-0.x86.dll
+diff --git a/src/discord/bot.py b/src/_discord/bot.py
+similarity index 100%
+rename from src/discord/bot.py
+rename to src/_discord/bot.py
+diff --git a/src/discord/channel.py b/src/_discord/channel.py
+similarity index 98%
+rename from src/discord/channel.py
+rename to src/_discord/channel.py
+index 10ebb42..dc9a736 100644
+--- a/src/discord/channel.py
++++ b/src/_discord/channel.py
+@@ -42,7 +42,7 @@ from typing import (
+     overload,
+ )
+ 
+-import discord.abc
++import _discord.abc
+ 
+ from . import utils
+ from .asset import Asset
+@@ -99,7 +99,7 @@ if TYPE_CHECKING:
+     from .webhook import Webhook
+ 
+ 
+-class _TextChannel(discord.abc.GuildChannel, Hashable):
++class _TextChannel(_discord.abc.GuildChannel, Hashable):
+     """Represents a Discord text channel.
+ 
+     .. container:: operations
+@@ -218,7 +218,7 @@ class _TextChannel(discord.abc.GuildChannel, Hashable):
+     def _sorting_bucket(self) -> int:
+         return ChannelType.text.value
+ 
+-    @utils.copy_doc(discord.abc.GuildChannel.permissions_for)
++    @utils.copy_doc(_discord.abc.GuildChannel.permissions_for)
+     def permissions_for(self, obj: Union[Member, Role], /) -> Permissions:
+         base = super().permissions_for(obj)
+ 
+@@ -358,7 +358,7 @@ class _TextChannel(discord.abc.GuildChannel, Hashable):
+             # the payload will always be the proper channel payload
+             return self.__class__(state=self._state, guild=self.guild, data=payload)  # type: ignore
+ 
+-    @utils.copy_doc(discord.abc.GuildChannel.clone)
++    @utils.copy_doc(_discord.abc.GuildChannel.clone)
+     async def clone(self, *, name: Optional[str] = None, reason: Optional[str] = None) -> TextChannel:
+         return await self._clone_impl(
+             {
+@@ -490,7 +490,7 @@ class _TextChannel(discord.abc.GuildChannel, Hashable):
+         List[:class:`.Message`]
+             The list of messages that were deleted.
+         """
+-        return await discord.abc._purge_messages_helper(
++        return await _discord.abc._purge_messages_helper(
+             self,
+             limit=limit,
+             check=check,
+@@ -705,7 +705,7 @@ class _TextChannel(discord.abc.GuildChannel, Hashable):
+         )
+ 
+ 
+-class TextChannel(discord.abc.Messageable, _TextChannel):
++class TextChannel(_discord.abc.Messageable, _TextChannel):
+     def __init__(self, *, state: ConnectionState, guild: Guild, data: TextChannelPayload):
+         super().__init__(state=state, guild=guild, data=data)
+ 
+@@ -990,7 +990,7 @@ class ForumChannel(_TextChannel):
+         return ret
+ 
+ 
+-class VocalGuildChannel(discord.abc.Connectable, discord.abc.GuildChannel, Hashable):
++class VocalGuildChannel(_discord.abc.Connectable, _discord.abc.GuildChannel, Hashable):
+     __slots__ = (
+         "name",
+         "id",
+@@ -1075,7 +1075,7 @@ class VocalGuildChannel(discord.abc.Connectable, discord.abc.GuildChannel, Hasha
+             if value.channel and value.channel.id == self.id
+         }
+ 
+-    @utils.copy_doc(discord.abc.GuildChannel.permissions_for)
++    @utils.copy_doc(_discord.abc.GuildChannel.permissions_for)
+     def permissions_for(self, obj: Union[Member, Role], /) -> Permissions:
+         base = super().permissions_for(obj)
+ 
+@@ -1088,7 +1088,7 @@ class VocalGuildChannel(discord.abc.Connectable, discord.abc.GuildChannel, Hasha
+         return base
+ 
+ 
+-class VoiceChannel(discord.abc.Messageable, VocalGuildChannel):
++class VoiceChannel(_discord.abc.Messageable, VocalGuildChannel):
+     """Represents a Discord guild voice channel.
+ 
+     .. container:: operations
+@@ -1336,7 +1336,7 @@ class VoiceChannel(discord.abc.Messageable, VocalGuildChannel):
+         List[:class:`.Message`]
+             The list of messages that were deleted.
+         """
+-        return await discord.abc._purge_messages_helper(
++        return await _discord.abc._purge_messages_helper(
+             self,
+             limit=limit,
+             check=check,
+@@ -1419,7 +1419,7 @@ class VoiceChannel(discord.abc.Messageable, VocalGuildChannel):
+         """:class:`ChannelType`: The channel's Discord type."""
+         return ChannelType.voice
+ 
+-    @utils.copy_doc(discord.abc.GuildChannel.clone)
++    @utils.copy_doc(_discord.abc.GuildChannel.clone)
+     async def clone(self, *, name: Optional[str] = None, reason: Optional[str] = None) -> VoiceChannel:
+         return await self._clone_impl(
+             {"bitrate": self.bitrate, "user_limit": self.user_limit},
+@@ -1684,7 +1684,7 @@ class StageChannel(VocalGuildChannel):
+         """:class:`ChannelType`: The channel's Discord type."""
+         return ChannelType.stage_voice
+ 
+-    @utils.copy_doc(discord.abc.GuildChannel.clone)
++    @utils.copy_doc(_discord.abc.GuildChannel.clone)
+     async def clone(self, *, name: Optional[str] = None, reason: Optional[str] = None) -> StageChannel:
+         return await self._clone_impl({}, name=name, reason=reason)
+ 
+@@ -1854,7 +1854,7 @@ class StageChannel(VocalGuildChannel):
+             return self.__class__(state=self._state, guild=self.guild, data=payload)  # type: ignore
+ 
+ 
+-class CategoryChannel(discord.abc.GuildChannel, Hashable):
++class CategoryChannel(_discord.abc.GuildChannel, Hashable):
+     """Represents a Discord channel category.
+ 
+     These are useful to group channels to logical compartments.
+@@ -1942,7 +1942,7 @@ class CategoryChannel(discord.abc.GuildChannel, Hashable):
+         """:class:`bool`: Checks if the category is NSFW."""
+         return self.nsfw
+ 
+-    @utils.copy_doc(discord.abc.GuildChannel.clone)
++    @utils.copy_doc(_discord.abc.GuildChannel.clone)
+     async def clone(self, *, name: Optional[str] = None, reason: Optional[str] = None) -> CategoryChannel:
+         return await self._clone_impl({"nsfw": self.nsfw}, name=name, reason=reason)
+ 
+@@ -2011,7 +2011,7 @@ class CategoryChannel(discord.abc.GuildChannel, Hashable):
+             # the payload will always be the proper channel payload
+             return self.__class__(state=self._state, guild=self.guild, data=payload)  # type: ignore
+ 
+-    @utils.copy_doc(discord.abc.GuildChannel.move)
++    @utils.copy_doc(_discord.abc.GuildChannel.move)
+     async def move(self, **kwargs):
+         kwargs.pop("category", None)
+         await super().move(**kwargs)
+@@ -2120,7 +2120,7 @@ class CategoryChannel(discord.abc.GuildChannel, Hashable):
+ DMC = TypeVar("DMC", bound="DMChannel")
+ 
+ 
+-class DMChannel(discord.abc.Messageable, Hashable):
++class DMChannel(_discord.abc.Messageable, Hashable):
+     """Represents a Discord direct message channel.
+ 
+     .. container:: operations
+@@ -2254,7 +2254,7 @@ class DMChannel(discord.abc.Messageable, Hashable):
+         return PartialMessage(channel=self, id=message_id)
+ 
+ 
+-class GroupChannel(discord.abc.Messageable, Hashable):
++class GroupChannel(_discord.abc.Messageable, Hashable):
+     """Represents a Discord group channel.
+ 
+     .. container:: operations
+@@ -2414,7 +2414,7 @@ class GroupChannel(discord.abc.Messageable, Hashable):
+         await self._state.http.leave_group(self.id)
+ 
+ 
+-class PartialMessageable(discord.abc.Messageable, Hashable):
++class PartialMessageable(_discord.abc.Messageable, Hashable):
+     """Represents a partial messageable to aid with working messageable channels when
+     only a channel ID are present.
+ 
+diff --git a/src/discord/client.py b/src/_discord/client.py
+similarity index 100%
+rename from src/discord/client.py
+rename to src/_discord/client.py
+diff --git a/src/discord/cog.py b/src/_discord/cog.py
+similarity index 99%
+rename from src/discord/cog.py
+rename to src/_discord/cog.py
+index 5844c46..f20f7b4 100644
+--- a/src/discord/cog.py
++++ b/src/_discord/cog.py
+@@ -45,7 +45,7 @@ from typing import (
+     Union,
+ )
+ 
+-import discord.utils
++import _discord.utils
+ 
+ from . import errors
+ from .commands import (
+@@ -64,7 +64,7 @@ __all__ = (
+ CogT = TypeVar("CogT", bound="Cog")
+ FuncT = TypeVar("FuncT", bound=Callable[..., Any])
+ 
+-MISSING: Any = discord.utils.MISSING
++MISSING: Any = _discord.utils.MISSING
+ 
+ 
+ def _is_submodule(parent: str, child: str) -> bool:
+@@ -597,7 +597,7 @@ class CogMixin:
+ 
+         if existing is not None:
+             if not override:
+-                raise discord.ClientException(f"Cog named {cog_name!r} already loaded")
++                raise _discord.ClientException(f"Cog named {cog_name!r} already loaded")
+             self.remove_cog(cog_name)
+ 
+         cog = cog._inject(self)
+diff --git a/src/discord/colour.py b/src/_discord/colour.py
+similarity index 100%
+rename from src/discord/colour.py
+rename to src/_discord/colour.py
+diff --git a/src/discord/commands/__init__.py b/src/_discord/commands/__init__.py
+similarity index 100%
+rename from src/discord/commands/__init__.py
+rename to src/_discord/commands/__init__.py
+diff --git a/src/discord/commands/context.py b/src/_discord/commands/context.py
+similarity index 95%
+rename from src/discord/commands/context.py
+rename to src/_discord/commands/context.py
+index b3576c3..d6c3699 100644
+--- a/src/discord/commands/context.py
++++ b/src/_discord/commands/context.py
+@@ -26,14 +26,14 @@ from __future__ import annotations
+ 
+ from typing import TYPE_CHECKING, Dict, List, Optional, TypeVar, Union
+ 
+-import discord.abc
+-from discord.interactions import InteractionMessage, InteractionResponse, Interaction
+-from discord.webhook.async_ import Webhook
++import _discord.abc
++from _discord.interactions import InteractionMessage, InteractionResponse, Interaction
++from _discord.webhook.async_ import Webhook
+ 
+ if TYPE_CHECKING:
+     from typing_extensions import ParamSpec
+ 
+-    import discord
++    import _discord
+     from .. import Bot
+     from ..state import ConnectionState
+     from ..voice_client import VoiceProtocol
+@@ -46,7 +46,7 @@ if TYPE_CHECKING:
+     from ..user import User
+     from ..permissions import Permissions
+     from ..client import ClientUser
+-    from discord.webhook.async_ import Webhook
++    from _discord.webhook.async_ import Webhook
+ 
+     from ..cog import Cog
+     from ..webhook import WebhookMessage
+@@ -66,7 +66,7 @@ else:
+ __all__ = ("ApplicationContext", "AutocompleteContext")
+ 
+ 
+-class ApplicationContext(discord.abc.Messageable):
++class ApplicationContext(_discord.abc.Messageable):
+     """Represents a Discord application command interaction context.
+ 
+     This class is not created manually and is instead passed to application
+@@ -238,7 +238,7 @@ class ApplicationContext(discord.abc.Messageable):
+         return None
+ 
+     @property
+-    @discord.utils.copy_doc(InteractionResponse.send_modal)
++    @_discord.utils.copy_doc(InteractionResponse.send_modal)
+     def send_modal(self) -> Callable[..., Awaitable[Interaction]]:
+         return self.interaction.response.send_modal
+ 
+@@ -258,11 +258,11 @@ class ApplicationContext(discord.abc.Messageable):
+                 return await self.interaction.response.send_message(*args, **kwargs)  # self.response
+             else:
+                 return await self.followup.send(*args, **kwargs)  # self.send_followup
+-        except discord.errors.InteractionResponded:
++        except _discord.errors.InteractionResponded:
+             return await self.followup.send(*args, **kwargs)
+ 
+     @property
+-    @discord.utils.copy_doc(InteractionResponse.send_message)
++    @_discord.utils.copy_doc(InteractionResponse.send_message)
+     def send_response(self) -> Callable[..., Awaitable[Interaction]]:
+         if not self.interaction.response.is_done():
+             return self.interaction.response.send_message
+@@ -272,7 +272,7 @@ class ApplicationContext(discord.abc.Messageable):
+             )
+ 
+     @property
+-    @discord.utils.copy_doc(Webhook.send)
++    @_discord.utils.copy_doc(Webhook.send)
+     def send_followup(self) -> Callable[..., Awaitable[WebhookMessage]]:
+         if self.interaction.response.is_done():
+             return self.followup.send
+@@ -282,7 +282,7 @@ class ApplicationContext(discord.abc.Messageable):
+             )
+ 
+     @property
+-    @discord.utils.copy_doc(InteractionResponse.defer)
++    @_discord.utils.copy_doc(InteractionResponse.defer)
+     def defer(self) -> Callable[..., Awaitable[None]]:
+         return self.interaction.response.defer
+ 
+@@ -316,7 +316,7 @@ class ApplicationContext(discord.abc.Messageable):
+         return await self.interaction.delete_original_message(delay=delay)
+ 
+     @property
+-    @discord.utils.copy_doc(Interaction.edit_original_message)
++    @_discord.utils.copy_doc(Interaction.edit_original_message)
+     def edit(self) -> Callable[..., Awaitable[InteractionMessage]]:
+         return self.interaction.edit_original_message
+ 
+diff --git a/src/discord/commands/core.py b/src/_discord/commands/core.py
+similarity index 99%
+rename from src/discord/commands/core.py
+rename to src/_discord/commands/core.py
+index 04e1488..3be42fa 100644
+--- a/src/discord/commands/core.py
++++ b/src/_discord/commands/core.py
+@@ -846,7 +846,7 @@ class SlashCommand(ApplicationCommand):
+                     arg = Object(id=int(arg))
+ 
+             elif op.input_type == SlashCommandOptionType.string and (converter := op.converter) is not None:
+-                from discord.ext.commands import Converter
++                from _discord.ext.commands import Converter
+                 if isinstance(converter, Converter):
+                     arg = await converter.convert(ctx, arg)
+                 elif isinstance(converter, type) and hasattr(converter, "convert"):
+diff --git a/src/discord/commands/options.py b/src/_discord/commands/options.py
+similarity index 100%
+rename from src/discord/commands/options.py
+rename to src/_discord/commands/options.py
+diff --git a/src/discord/commands/permissions.py b/src/_discord/commands/permissions.py
+similarity index 100%
+rename from src/discord/commands/permissions.py
+rename to src/_discord/commands/permissions.py
+diff --git a/src/discord/components.py b/src/_discord/components.py
+similarity index 100%
+rename from src/discord/components.py
+rename to src/_discord/components.py
+diff --git a/src/discord/context_managers.py b/src/_discord/context_managers.py
+similarity index 100%
+rename from src/discord/context_managers.py
+rename to src/_discord/context_managers.py
+diff --git a/src/discord/embeds.py b/src/_discord/embeds.py
+similarity index 99%
+rename from src/discord/embeds.py
+rename to src/_discord/embeds.py
+index 07cebbf..6b699ec 100644
+--- a/src/discord/embeds.py
++++ b/src/_discord/embeds.py
+@@ -81,8 +81,8 @@ class EmbedProxy:
+ E = TypeVar("E", bound="Embed")
+ 
+ if TYPE_CHECKING:
+-    from discord.types.embed import Embed as EmbedData
+-    from discord.types.embed import EmbedType
++    from _discord.types.embed import Embed as EmbedData
++    from _discord.types.embed import EmbedType
+ 
+     T = TypeVar("T")
+     MaybeEmpty = Union[T, _EmptyEmbed]
+diff --git a/src/discord/emoji.py b/src/_discord/emoji.py
+similarity index 100%
+rename from src/discord/emoji.py
+rename to src/_discord/emoji.py
+diff --git a/src/discord/enums.py b/src/_discord/enums.py
+similarity index 100%
+rename from src/discord/enums.py
+rename to src/_discord/enums.py
+diff --git a/src/discord/errors.py b/src/_discord/errors.py
+similarity index 100%
+rename from src/discord/errors.py
+rename to src/_discord/errors.py
+diff --git a/src/discord/ext/bridge/__init__.py b/src/_discord/ext/bridge/__init__.py
+similarity index 100%
+rename from src/discord/ext/bridge/__init__.py
+rename to src/_discord/ext/bridge/__init__.py
+diff --git a/src/discord/ext/bridge/bot.py b/src/_discord/ext/bridge/bot.py
+similarity index 97%
+rename from src/discord/ext/bridge/bot.py
+rename to src/_discord/ext/bridge/bot.py
+index b13fe3c..a9fa2b7 100644
+--- a/src/discord/ext/bridge/bot.py
++++ b/src/_discord/ext/bridge/bot.py
+@@ -24,8 +24,8 @@ DEALINGS IN THE SOFTWARE.
+ """
+ from abc import ABC
+ 
+-from discord.interactions import Interaction
+-from discord.message import Message
++from _discord.interactions import Interaction
++from _discord.message import Message
+ 
+ from ..commands import AutoShardedBot as ExtAutoShardedBot
+ from ..commands import Bot as ExtBot
+diff --git a/src/discord/ext/bridge/context.py b/src/_discord/ext/bridge/context.py
+similarity index 97%
+rename from src/discord/ext/bridge/context.py
+rename to src/_discord/ext/bridge/context.py
+index 5024d37..0225715 100644
+--- a/src/discord/ext/bridge/context.py
++++ b/src/_discord/ext/bridge/context.py
+@@ -25,10 +25,10 @@ DEALINGS IN THE SOFTWARE.
+ from abc import ABC, abstractmethod
+ from typing import TYPE_CHECKING, Any, Optional, Union
+ 
+-from discord.commands import ApplicationContext
+-from discord.interactions import Interaction, InteractionMessage
+-from discord.message import Message
+-from discord.webhook import WebhookMessage
++from _discord.commands import ApplicationContext
++from _discord.interactions import Interaction, InteractionMessage
++from _discord.message import Message
++from _discord.webhook import WebhookMessage
+ 
+ from ..commands import Context
+ 
+diff --git a/src/discord/ext/bridge/core.py b/src/_discord/ext/bridge/core.py
+similarity index 98%
+rename from src/discord/ext/bridge/core.py
+rename to src/_discord/ext/bridge/core.py
+index 5b55ee5..b427095 100644
+--- a/src/discord/ext/bridge/core.py
++++ b/src/_discord/ext/bridge/core.py
+@@ -25,9 +25,9 @@ DEALINGS IN THE SOFTWARE.
+ from typing import Any, List, Union
+ import asyncio
+ 
+-import discord.commands.options
+-from discord.commands import Option, SlashCommand
+-from discord.enums import SlashCommandOptionType
++import _discord.commands.options
++from _discord.commands import Option, SlashCommand
++from _discord.enums import SlashCommandOptionType
+ 
+ from ..commands import AutoShardedBot as ExtAutoShardedBot
+ from ..commands import BadArgument
+@@ -276,4 +276,4 @@ class BridgeOption(Option, Converter):
+             raise BadArgument() from exc
+ 
+ 
+-discord.commands.options.Option = BridgeOption
++_discord.commands.options.Option = BridgeOption
+diff --git a/src/discord/ext/commands/__init__.py b/src/_discord/ext/commands/__init__.py
+similarity index 100%
+rename from src/discord/ext/commands/__init__.py
+rename to src/_discord/ext/commands/__init__.py
+diff --git a/src/discord/ext/commands/_types.py b/src/_discord/ext/commands/_types.py
+similarity index 100%
+rename from src/discord/ext/commands/_types.py
+rename to src/_discord/ext/commands/_types.py
+diff --git a/src/discord/ext/commands/bot.py b/src/_discord/ext/commands/bot.py
+similarity index 96%
+rename from src/discord/ext/commands/bot.py
+rename to src/_discord/ext/commands/bot.py
+index 121ebdf..29361b0 100644
+--- a/src/discord/ext/commands/bot.py
++++ b/src/_discord/ext/commands/bot.py
+@@ -31,7 +31,7 @@ import sys
+ import traceback
+ from typing import TYPE_CHECKING, Any, Callable, List, Optional, Type, TypeVar, Union
+ 
+-import discord
++import _discord
+ 
+ from . import errors
+ from .context import Context
+@@ -42,7 +42,7 @@ from .view import StringView
+ if TYPE_CHECKING:
+     import importlib.machinery
+ 
+-    from discord.message import Message
++    from _discord.message import Message
+ 
+     from ._types import Check, CoroFunc
+ 
+@@ -53,7 +53,7 @@ __all__ = (
+     "AutoShardedBot",
+ )
+ 
+-MISSING: Any = discord.utils.MISSING
++MISSING: Any = _discord.utils.MISSING
+ 
+ T = TypeVar("T")
+ CFT = TypeVar("CFT", bound="CoroFunc")
+@@ -121,7 +121,7 @@ class _DefaultRepr:
+ _default = _DefaultRepr()
+ 
+ 
+-class BotBase(GroupMixin, discord.cog.CogMixin):
++class BotBase(GroupMixin, _discord.cog.CogMixin):
+     _supports_prefixed_commands = True
+ 
+     def __init__(self, command_prefix=when_mentioned, help_command=_default, **options):
+@@ -135,7 +135,7 @@ class BotBase(GroupMixin, discord.cog.CogMixin):
+         else:
+             self.help_command = help_command
+ 
+-    @discord.utils.copy_doc(discord.Client.close)
++    @_discord.utils.copy_doc(_discord.Client.close)
+     async def close(self) -> None:
+         for extension in tuple(self.__extensions):
+             try:
+@@ -182,7 +182,7 @@ class BotBase(GroupMixin, discord.cog.CogMixin):
+             return True
+ 
+         # type-checker doesn't distinguish between functions and methods
+-        return await discord.utils.async_all(f(ctx) for f in data)  # type: ignore
++        return await _discord.utils.async_all(f(ctx) for f in data)  # type: ignore
+ 
+     # help command stuff
+ 
+@@ -226,7 +226,7 @@ class BotBase(GroupMixin, discord.cog.CogMixin):
+         """
+         prefix = ret = self.command_prefix
+         if callable(prefix):
+-            ret = await discord.utils.maybe_coroutine(prefix, self, message)
++            ret = await _discord.utils.maybe_coroutine(prefix, self, message)
+ 
+         if not isinstance(ret, str):
+             try:
+@@ -294,7 +294,7 @@ class BotBase(GroupMixin, discord.cog.CogMixin):
+                 # if the context class' __init__ consumes something from the view this
+                 # will be wrong.  That seems unreasonable though.
+                 if message.content.startswith(tuple(prefix)):
+-                    invoked_prefix = discord.utils.find(view.skip_string, prefix)
++                    invoked_prefix = _discord.utils.find(view.skip_string, prefix)
+                 else:
+                     return ctx
+ 
+@@ -384,7 +384,7 @@ class BotBase(GroupMixin, discord.cog.CogMixin):
+         await self.process_commands(message)
+ 
+ 
+-class Bot(BotBase, discord.Bot):
++class Bot(BotBase, _discord.Bot):
+     """Represents a discord bot.
+ 
+     This class is a subclass of :class:`discord.Bot` and as a result
+@@ -448,7 +448,7 @@ class Bot(BotBase, discord.Bot):
+     pass
+ 
+ 
+-class AutoShardedBot(BotBase, discord.AutoShardedBot):
++class AutoShardedBot(BotBase, _discord.AutoShardedBot):
+     """This is similar to :class:`.Bot` except that it is inherited from
+     :class:`discord.AutoShardedBot` instead.
+     """
+diff --git a/src/discord/ext/commands/cog.py b/src/_discord/ext/commands/cog.py
+similarity index 98%
+rename from src/discord/ext/commands/cog.py
+rename to src/_discord/ext/commands/cog.py
+index 974e77b..cadcbb5 100644
+--- a/src/discord/ext/commands/cog.py
++++ b/src/_discord/ext/commands/cog.py
+@@ -26,7 +26,7 @@ from __future__ import annotations
+ 
+ from typing import TYPE_CHECKING, Any, Callable, Generator, List, Type, TypeVar, Union
+ 
+-import discord
++import _discord
+ 
+ from ...cog import Cog
+ from ...commands import ApplicationCommand, SlashCommandGroup
+@@ -39,7 +39,7 @@ __all__ = ("Cog",)
+ CogT = TypeVar("CogT", bound="Cog")
+ FuncT = TypeVar("FuncT", bound=Callable[..., Any])
+ 
+-MISSING: Any = discord.utils.MISSING
++MISSING: Any = _discord.utils.MISSING
+ 
+ 
+ class Cog(Cog):
+diff --git a/src/discord/ext/commands/context.py b/src/_discord/ext/commands/context.py
+similarity index 95%
+rename from src/discord/ext/commands/context.py
+rename to src/_discord/ext/commands/context.py
+index de2097f..d94c517 100644
+--- a/src/discord/ext/commands/context.py
++++ b/src/_discord/ext/commands/context.py
+@@ -28,19 +28,19 @@ import inspect
+ import re
+ from typing import TYPE_CHECKING, Any, Dict, Generic, List, Optional, TypeVar, Union
+ 
+-import discord.abc
+-import discord.utils
+-from discord.message import Message
++import _discord.abc
++import _discord.utils
++from _discord.message import Message
+ 
+ if TYPE_CHECKING:
+     from typing_extensions import ParamSpec
+ 
+-    from discord.abc import MessageableChannel
+-    from discord.guild import Guild
+-    from discord.member import Member
+-    from discord.state import ConnectionState
+-    from discord.user import ClientUser, User
+-    from discord.voice_client import VoiceProtocol
++    from _discord.abc import MessageableChannel
++    from _discord.guild import Guild
++    from _discord.member import Member
++    from _discord.state import ConnectionState
++    from _discord.user import ClientUser, User
++    from _discord.voice_client import VoiceProtocol
+ 
+     from .bot import AutoShardedBot, Bot
+     from .cog import Cog
+@@ -50,7 +50,7 @@ if TYPE_CHECKING:
+ 
+ __all__ = ("Context",)
+ 
+-MISSING: Any = discord.utils.MISSING
++MISSING: Any = _discord.utils.MISSING
+ 
+ 
+ T = TypeVar("T")
+@@ -63,7 +63,7 @@ else:
+     P = TypeVar("P")
+ 
+ 
+-class Context(discord.abc.Messageable, Generic[BotT]):
++class Context(_discord.abc.Messageable, Generic[BotT]):
+     r"""Represents the context in which a command is being invoked under.
+ 
+     This class contains a lot of meta data to help you understand more about
+@@ -251,7 +251,7 @@ class Context(discord.abc.Messageable, Generic[BotT]):
+         """:class:`bool`: Checks if the invocation context is valid to be invoked with."""
+         return self.prefix is not None and self.command is not None
+ 
+-    async def _get_channel(self) -> discord.abc.Messageable:
++    async def _get_channel(self) -> _discord.abc.Messageable:
+         return self.channel
+ 
+     @property
+@@ -279,26 +279,26 @@ class Context(discord.abc.Messageable, Generic[BotT]):
+             return None
+         return self.command.cog
+ 
+-    @discord.utils.cached_property
++    @_discord.utils.cached_property
+     def guild(self) -> Optional[Guild]:
+         """Optional[:class:`.Guild`]: Returns the guild associated with this context's command. None if not available."""
+         return self.message.guild
+ 
+-    @discord.utils.cached_property
++    @_discord.utils.cached_property
+     def channel(self) -> MessageableChannel:
+         """Union[:class:`.abc.Messageable`]: Returns the channel associated with this context's command.
+         Shorthand for :attr:`.Message.channel`.
+         """
+         return self.message.channel
+ 
+-    @discord.utils.cached_property
++    @_discord.utils.cached_property
+     def author(self) -> Union[User, Member]:
+         """Union[:class:`~discord.User`, :class:`.Member`]:
+         Returns the author associated with this context's command. Shorthand for :attr:`.Message.author`
+         """
+         return self.message.author
+ 
+-    @discord.utils.cached_property
++    @_discord.utils.cached_property
+     def me(self) -> Union[Member, ClientUser]:
+         """Union[:class:`.Member`, :class:`.ClientUser`]:
+         Similar to :attr:`.Guild.me` except it may return the :class:`.ClientUser` in private message
+@@ -394,6 +394,6 @@ class Context(discord.abc.Messageable, Generic[BotT]):
+         except CommandError as e:
+             await cmd.on_help_command_error(self, e)
+ 
+-    @discord.utils.copy_doc(Message.reply)
++    @_discord.utils.copy_doc(Message.reply)
+     async def reply(self, content: Optional[str] = None, **kwargs: Any) -> Message:
+         return await self.message.reply(content, **kwargs)
+diff --git a/src/discord/ext/commands/converter.py b/src/_discord/ext/commands/converter.py
+similarity index 85%
+rename from src/discord/ext/commands/converter.py
+rename to src/_discord/ext/commands/converter.py
+index 1de137b..e527c5d 100644
+--- a/src/discord/ext/commands/converter.py
++++ b/src/_discord/ext/commands/converter.py
+@@ -44,12 +44,12 @@ from typing import (
+     runtime_checkable,
+ )
+ 
+-import discord
++import _discord
+ 
+ from .errors import *
+ 
+ if TYPE_CHECKING:
+-    from discord.message import PartialMessageableChannel
++    from _discord.message import PartialMessageableChannel
+ 
+     from .context import Context
+ 
+@@ -93,11 +93,11 @@ def _get_from_guilds(bot, getter, argument):
+     return result
+ 
+ 
+-_utils_get = discord.utils.get
++_utils_get = _discord.utils.get
+ T = TypeVar("T")
+ T_co = TypeVar("T_co", covariant=True)
+-CT = TypeVar("CT", bound=discord.abc.GuildChannel)
+-TT = TypeVar("TT", bound=discord.Thread)
++CT = TypeVar("CT", bound=_discord.abc.GuildChannel)
++TT = TypeVar("TT", bound=_discord.Thread)
+ 
+ 
+ @runtime_checkable
+@@ -147,7 +147,7 @@ class IDConverter(Converter[T_co]):
+         return _ID_REGEX.match(argument)
+ 
+ 
+-class ObjectConverter(IDConverter[discord.Object]):
++class ObjectConverter(IDConverter[_discord.Object]):
+     """Converts to a :class:`~discord.Object`.
+ 
+     The argument must follow the valid ID or mention formats (e.g. `<@80088516616269824>`).
+@@ -160,7 +160,7 @@ class ObjectConverter(IDConverter[discord.Object]):
+     2. Lookup by member, role, or channel mention.
+     """
+ 
+-    async def convert(self, ctx: Context, argument: str) -> discord.Object:
++    async def convert(self, ctx: Context, argument: str) -> _discord.Object:
+         match = self._get_id_match(argument) or re.match(r"<(?:@[!&]?|#)([0-9]{15,20})>$", argument)
+ 
+         if match is None:
+@@ -168,10 +168,10 @@ class ObjectConverter(IDConverter[discord.Object]):
+ 
+         result = int(match.group(1))
+ 
+-        return discord.Object(id=result)
++        return _discord.Object(id=result)
+ 
+ 
+-class MemberConverter(IDConverter[discord.Member]):
++class MemberConverter(IDConverter[_discord.Member]):
+     """Converts to a :class:`~discord.Member`.
+ 
+     All lookups are via the local guild. If in a DM context, then the lookup
+@@ -198,10 +198,10 @@ class MemberConverter(IDConverter[discord.Member]):
+         if len(argument) > 5 and argument[-5] == "#":
+             username, _, discriminator = argument.rpartition("#")
+             members = await guild.query_members(username, limit=100, cache=cache)
+-            return discord.utils.get(members, name=username, discriminator=discriminator)
++            return _discord.utils.get(members, name=username, discriminator=discriminator)
+         else:
+             members = await guild.query_members(argument, limit=100, cache=cache)
+-            return discord.utils.find(lambda m: m.name == argument or m.nick == argument, members)
++            return _discord.utils.find(lambda m: m.name == argument or m.nick == argument, members)
+ 
+     async def query_member_by_id(self, bot, guild, user_id):
+         ws = bot._get_websocket(shard_id=guild.shard_id)
+@@ -211,7 +211,7 @@ class MemberConverter(IDConverter[discord.Member]):
+             # So we don't have to wait ~60 seconds for the query to finish
+             try:
+                 member = await guild.fetch_member(user_id)
+-            except discord.HTTPException:
++            except _discord.HTTPException:
+                 return None
+ 
+             if cache:
+@@ -224,7 +224,7 @@ class MemberConverter(IDConverter[discord.Member]):
+             return None
+         return members[0]
+ 
+-    async def convert(self, ctx: Context, argument: str) -> discord.Member:
++    async def convert(self, ctx: Context, argument: str) -> _discord.Member:
+         bot = ctx.bot
+         match = self._get_id_match(argument) or re.match(r"<@!?([0-9]{15,20})>$", argument)
+         guild = ctx.guild
+@@ -260,7 +260,7 @@ class MemberConverter(IDConverter[discord.Member]):
+         return result
+ 
+ 
+-class UserConverter(IDConverter[discord.User]):
++class UserConverter(IDConverter[_discord.User]):
+     """Converts to a :class:`~discord.User`.
+ 
+     All lookups are via the global user cache.
+@@ -280,7 +280,7 @@ class UserConverter(IDConverter[discord.User]):
+         and it's not available in cache.
+     """
+ 
+-    async def convert(self, ctx: Context, argument: str) -> discord.User:
++    async def convert(self, ctx: Context, argument: str) -> _discord.User:
+         match = self._get_id_match(argument) or re.match(r"<@!?([0-9]{15,20})>$", argument)
+         result = None
+         state = ctx._state
+@@ -293,7 +293,7 @@ class UserConverter(IDConverter[discord.User]):
+             if result is None:
+                 try:
+                     result = await ctx.bot.fetch_user(user_id)
+-                except discord.HTTPException:
++                except _discord.HTTPException:
+                     raise UserNotFound(argument) from None
+ 
+             return result
+@@ -310,12 +310,12 @@ class UserConverter(IDConverter[discord.User]):
+             discrim = arg[-4:]
+             name = arg[:-5]
+             predicate = lambda u: u.name == name and u.discriminator == discrim
+-            result = discord.utils.find(predicate, state._users.values())
++            result = _discord.utils.find(predicate, state._users.values())
+             if result is not None:
+                 return result
+ 
+         predicate = lambda u: u.name == arg
+-        result = discord.utils.find(predicate, state._users.values())
++        result = _discord.utils.find(predicate, state._users.values())
+ 
+         if result is None:
+             raise UserNotFound(argument)
+@@ -323,7 +323,7 @@ class UserConverter(IDConverter[discord.User]):
+         return result
+ 
+ 
+-class PartialMessageConverter(Converter[discord.PartialMessage]):
++class PartialMessageConverter(Converter[_discord.PartialMessage]):
+     """Converts to a :class:`discord.PartialMessage`.
+ 
+     .. versionadded:: 1.7
+@@ -373,15 +373,15 @@ class PartialMessageConverter(Converter[discord.PartialMessage]):
+         else:
+             return ctx.bot.get_channel(channel_id) if channel_id else ctx.channel
+ 
+-    async def convert(self, ctx: Context, argument: str) -> discord.PartialMessage:
++    async def convert(self, ctx: Context, argument: str) -> _discord.PartialMessage:
+         guild_id, message_id, channel_id = self._get_id_matches(ctx, argument)
+         channel = self._resolve_channel(ctx, guild_id, channel_id)
+         if not channel:
+             raise ChannelNotFound(channel_id)
+-        return discord.PartialMessage(channel=channel, id=message_id)
++        return _discord.PartialMessage(channel=channel, id=message_id)
+ 
+ 
+-class MessageConverter(IDConverter[discord.Message]):
++class MessageConverter(IDConverter[_discord.Message]):
+     """Converts to a :class:`discord.Message`.
+ 
+     .. versionadded:: 1.1
+@@ -396,7 +396,7 @@ class MessageConverter(IDConverter[discord.Message]):
+          Raise :exc:`.ChannelNotFound`, :exc:`.MessageNotFound` or :exc:`.ChannelNotReadable` instead of generic :exc:`.BadArgument`
+     """
+ 
+-    async def convert(self, ctx: Context, argument: str) -> discord.Message:
++    async def convert(self, ctx: Context, argument: str) -> _discord.Message:
+         guild_id, message_id, channel_id = PartialMessageConverter._get_id_matches(ctx, argument)
+         message = ctx.bot._connection._get_message(message_id)
+         if message:
+@@ -406,13 +406,13 @@ class MessageConverter(IDConverter[discord.Message]):
+             raise ChannelNotFound(channel_id)
+         try:
+             return await channel.fetch_message(message_id)
+-        except discord.NotFound:
++        except _discord.NotFound:
+             raise MessageNotFound(argument)
+-        except discord.Forbidden:
++        except _discord.Forbidden:
+             raise ChannelNotReadable(channel)
+ 
+ 
+-class GuildChannelConverter(IDConverter[discord.abc.GuildChannel]):
++class GuildChannelConverter(IDConverter[_discord.abc.GuildChannel]):
+     """Converts to a :class:`~discord.abc.GuildChannel`.
+ 
+     All lookups are via the local guild. If in a DM context, then the lookup
+@@ -427,8 +427,8 @@ class GuildChannelConverter(IDConverter[discord.abc.GuildChannel]):
+     .. versionadded:: 2.0
+     """
+ 
+-    async def convert(self, ctx: Context, argument: str) -> discord.abc.GuildChannel:
+-        return self._resolve_channel(ctx, argument, "channels", discord.abc.GuildChannel)
++    async def convert(self, ctx: Context, argument: str) -> _discord.abc.GuildChannel:
++        return self._resolve_channel(ctx, argument, "channels", _discord.abc.GuildChannel)
+ 
+     @staticmethod
+     def _resolve_channel(ctx: Context, argument: str, attribute: str, type: Type[CT]) -> CT:
+@@ -442,13 +442,13 @@ class GuildChannelConverter(IDConverter[discord.abc.GuildChannel]):
+             # not a mention
+             if guild:
+                 iterable: Iterable[CT] = getattr(guild, attribute)
+-                result: Optional[CT] = discord.utils.get(iterable, name=argument)
++                result: Optional[CT] = _discord.utils.get(iterable, name=argument)
+             else:
+ 
+                 def check(c):
+                     return isinstance(c, type) and c.name == argument
+ 
+-                result = discord.utils.find(check, bot.get_all_channels())
++                result = _discord.utils.find(check, bot.get_all_channels())
+         else:
+             channel_id = int(match.group(1))
+             if guild:
+@@ -473,7 +473,7 @@ class GuildChannelConverter(IDConverter[discord.abc.GuildChannel]):
+             # not a mention
+             if guild:
+                 iterable: Iterable[TT] = getattr(guild, attribute)
+-                result: Optional[TT] = discord.utils.get(iterable, name=argument)
++                result: Optional[TT] = _discord.utils.get(iterable, name=argument)
+         else:
+             thread_id = int(match.group(1))
+             if guild:
+@@ -485,7 +485,7 @@ class GuildChannelConverter(IDConverter[discord.abc.GuildChannel]):
+         return result
+ 
+ 
+-class TextChannelConverter(IDConverter[discord.TextChannel]):
++class TextChannelConverter(IDConverter[_discord.TextChannel]):
+     """Converts to a :class:`~discord.TextChannel`.
+ 
+     All lookups are via the local guild. If in a DM context, then the lookup
+@@ -501,11 +501,11 @@ class TextChannelConverter(IDConverter[discord.TextChannel]):
+          Raise :exc:`.ChannelNotFound` instead of generic :exc:`.BadArgument`
+     """
+ 
+-    async def convert(self, ctx: Context, argument: str) -> discord.TextChannel:
+-        return GuildChannelConverter._resolve_channel(ctx, argument, "text_channels", discord.TextChannel)
++    async def convert(self, ctx: Context, argument: str) -> _discord.TextChannel:
++        return GuildChannelConverter._resolve_channel(ctx, argument, "text_channels", _discord.TextChannel)
+ 
+ 
+-class VoiceChannelConverter(IDConverter[discord.VoiceChannel]):
++class VoiceChannelConverter(IDConverter[_discord.VoiceChannel]):
+     """Converts to a :class:`~discord.VoiceChannel`.
+ 
+     All lookups are via the local guild. If in a DM context, then the lookup
+@@ -521,11 +521,11 @@ class VoiceChannelConverter(IDConverter[discord.VoiceChannel]):
+          Raise :exc:`.ChannelNotFound` instead of generic :exc:`.BadArgument`
+     """
+ 
+-    async def convert(self, ctx: Context, argument: str) -> discord.VoiceChannel:
+-        return GuildChannelConverter._resolve_channel(ctx, argument, "voice_channels", discord.VoiceChannel)
++    async def convert(self, ctx: Context, argument: str) -> _discord.VoiceChannel:
++        return GuildChannelConverter._resolve_channel(ctx, argument, "voice_channels", _discord.VoiceChannel)
+ 
+ 
+-class StageChannelConverter(IDConverter[discord.StageChannel]):
++class StageChannelConverter(IDConverter[_discord.StageChannel]):
+     """Converts to a :class:`~discord.StageChannel`.
+ 
+     .. versionadded:: 1.7
+@@ -540,11 +540,11 @@ class StageChannelConverter(IDConverter[discord.StageChannel]):
+     3. Lookup by name
+     """
+ 
+-    async def convert(self, ctx: Context, argument: str) -> discord.StageChannel:
+-        return GuildChannelConverter._resolve_channel(ctx, argument, "stage_channels", discord.StageChannel)
++    async def convert(self, ctx: Context, argument: str) -> _discord.StageChannel:
++        return GuildChannelConverter._resolve_channel(ctx, argument, "stage_channels", _discord.StageChannel)
+ 
+ 
+-class CategoryChannelConverter(IDConverter[discord.CategoryChannel]):
++class CategoryChannelConverter(IDConverter[_discord.CategoryChannel]):
+     """Converts to a :class:`~discord.CategoryChannel`.
+ 
+     All lookups are via the local guild. If in a DM context, then the lookup
+@@ -560,11 +560,11 @@ class CategoryChannelConverter(IDConverter[discord.CategoryChannel]):
+          Raise :exc:`.ChannelNotFound` instead of generic :exc:`.BadArgument`
+     """
+ 
+-    async def convert(self, ctx: Context, argument: str) -> discord.CategoryChannel:
+-        return GuildChannelConverter._resolve_channel(ctx, argument, "categories", discord.CategoryChannel)
++    async def convert(self, ctx: Context, argument: str) -> _discord.CategoryChannel:
++        return GuildChannelConverter._resolve_channel(ctx, argument, "categories", _discord.CategoryChannel)
+ 
+ 
+-class ForumChannelConverter(IDConverter[discord.ForumChannel]):
++class ForumChannelConverter(IDConverter[_discord.ForumChannel]):
+     """Converts to a :class:`~discord.ForumChannel`.
+ 
+     All lookups are via the local guild. If in a DM context, then the lookup
+@@ -579,11 +579,11 @@ class ForumChannelConverter(IDConverter[discord.ForumChannel]):
+     .. versionadded:: 2.0
+     """
+ 
+-    async def convert(self, ctx: Context, argument: str) -> discord.ForumChannel:
+-        return GuildChannelConverter._resolve_channel(ctx, argument, "forum_channels", discord.ForumChannel)
++    async def convert(self, ctx: Context, argument: str) -> _discord.ForumChannel:
++        return GuildChannelConverter._resolve_channel(ctx, argument, "forum_channels", _discord.ForumChannel)
+ 
+ 
+-class ThreadConverter(IDConverter[discord.Thread]):
++class ThreadConverter(IDConverter[_discord.Thread]):
+     """Coverts to a :class:`~discord.Thread`.
+ 
+     All lookups are via the local guild.
+@@ -597,11 +597,11 @@ class ThreadConverter(IDConverter[discord.Thread]):
+     .. versionadded: 2.0
+     """
+ 
+-    async def convert(self, ctx: Context, argument: str) -> discord.Thread:
+-        return GuildChannelConverter._resolve_thread(ctx, argument, "threads", discord.Thread)
++    async def convert(self, ctx: Context, argument: str) -> _discord.Thread:
++        return GuildChannelConverter._resolve_thread(ctx, argument, "threads", _discord.Thread)
+ 
+ 
+-class ColourConverter(Converter[discord.Colour]):
++class ColourConverter(Converter[_discord.Colour]):
+     """Converts to a :class:`~discord.Colour`.
+ 
+     .. versionchanged:: 1.5
+@@ -638,7 +638,7 @@ class ColourConverter(Converter[discord.Colour]):
+         except ValueError:
+             raise BadColourArgument(argument)
+         else:
+-            return discord.Color(value=value)
++            return _discord.Color(value=value)
+ 
+     def parse_rgb_number(self, argument, number):
+         if number[-1] == "%":
+@@ -660,9 +660,9 @@ class ColourConverter(Converter[discord.Colour]):
+         red = self.parse_rgb_number(argument, match.group("r"))
+         green = self.parse_rgb_number(argument, match.group("g"))
+         blue = self.parse_rgb_number(argument, match.group("b"))
+-        return discord.Color.from_rgb(red, green, blue)
++        return _discord.Color.from_rgb(red, green, blue)
+ 
+-    async def convert(self, ctx: Context, argument: str) -> discord.Colour:
++    async def convert(self, ctx: Context, argument: str) -> _discord.Colour:
+         if argument[0] == "#":
+             return self.parse_hex_number(argument[1:])
+ 
+@@ -678,7 +678,7 @@ class ColourConverter(Converter[discord.Colour]):
+             return self.parse_rgb(arg)
+ 
+         arg = arg.replace(" ", "_")
+-        method = getattr(discord.Colour, arg, None)
++        method = getattr(_discord.Colour, arg, None)
+         if arg.startswith("from_") or method is None or not inspect.ismethod(method):
+             raise BadColourArgument(arg)
+         return method()
+@@ -687,7 +687,7 @@ class ColourConverter(Converter[discord.Colour]):
+ ColorConverter = ColourConverter
+ 
+ 
+-class RoleConverter(IDConverter[discord.Role]):
++class RoleConverter(IDConverter[_discord.Role]):
+     """Converts to a :class:`~discord.Role`.
+ 
+     All lookups are via the local guild. If in a DM context, the converter raises
+@@ -703,7 +703,7 @@ class RoleConverter(IDConverter[discord.Role]):
+          Raise :exc:`.RoleNotFound` instead of generic :exc:`.BadArgument`
+     """
+ 
+-    async def convert(self, ctx: Context, argument: str) -> discord.Role:
++    async def convert(self, ctx: Context, argument: str) -> _discord.Role:
+         guild = ctx.guild
+         if not guild:
+             raise NoPrivateMessage()
+@@ -712,21 +712,21 @@ class RoleConverter(IDConverter[discord.Role]):
+         if match:
+             result = guild.get_role(int(match.group(1)))
+         else:
+-            result = discord.utils.get(guild._roles.values(), name=argument)
++            result = _discord.utils.get(guild._roles.values(), name=argument)
+ 
+         if result is None:
+             raise RoleNotFound(argument)
+         return result
+ 
+ 
+-class GameConverter(Converter[discord.Game]):
++class GameConverter(Converter[_discord.Game]):
+     """Converts to :class:`~discord.Game`."""
+ 
+-    async def convert(self, ctx: Context, argument: str) -> discord.Game:
+-        return discord.Game(name=argument)
++    async def convert(self, ctx: Context, argument: str) -> _discord.Game:
++        return _discord.Game(name=argument)
+ 
+ 
+-class InviteConverter(Converter[discord.Invite]):
++class InviteConverter(Converter[_discord.Invite]):
+     """Converts to a :class:`~discord.Invite`.
+ 
+     This is done via an HTTP request using :meth:`.Bot.fetch_invite`.
+@@ -735,7 +735,7 @@ class InviteConverter(Converter[discord.Invite]):
+          Raise :exc:`.BadInviteArgument` instead of generic :exc:`.BadArgument`
+     """
+ 
+-    async def convert(self, ctx: Context, argument: str) -> discord.Invite:
++    async def convert(self, ctx: Context, argument: str) -> _discord.Invite:
+         try:
+             invite = await ctx.bot.fetch_invite(argument)
+             return invite
+@@ -743,7 +743,7 @@ class InviteConverter(Converter[discord.Invite]):
+             raise BadInviteArgument(argument) from exc
+ 
+ 
+-class GuildConverter(IDConverter[discord.Guild]):
++class GuildConverter(IDConverter[_discord.Guild]):
+     """Converts to a :class:`~discord.Guild`.
+ 
+     The lookup strategy is as follows (in order):
+@@ -754,7 +754,7 @@ class GuildConverter(IDConverter[discord.Guild]):
+     .. versionadded:: 1.7
+     """
+ 
+-    async def convert(self, ctx: Context, argument: str) -> discord.Guild:
++    async def convert(self, ctx: Context, argument: str) -> _discord.Guild:
+         match = self._get_id_match(argument)
+         result = None
+ 
+@@ -763,14 +763,14 @@ class GuildConverter(IDConverter[discord.Guild]):
+             result = ctx.bot.get_guild(guild_id)
+ 
+         if result is None:
+-            result = discord.utils.get(ctx.bot.guilds, name=argument)
++            result = _discord.utils.get(ctx.bot.guilds, name=argument)
+ 
+             if result is None:
+                 raise GuildNotFound(argument)
+         return result
+ 
+ 
+-class EmojiConverter(IDConverter[discord.Emoji]):
++class EmojiConverter(IDConverter[_discord.Emoji]):
+     """Converts to a :class:`~discord.Emoji`.
+ 
+     All lookups are done for the local guild first, if available. If that lookup
+@@ -786,7 +786,7 @@ class EmojiConverter(IDConverter[discord.Emoji]):
+          Raise :exc:`.EmojiNotFound` instead of generic :exc:`.BadArgument`
+     """
+ 
+-    async def convert(self, ctx: Context, argument: str) -> discord.Emoji:
++    async def convert(self, ctx: Context, argument: str) -> _discord.Emoji:
+         match = self._get_id_match(argument) or re.match(r"<a?:\w{1,32}:([0-9]{15,20})>$", argument)
+         result = None
+         bot = ctx.bot
+@@ -795,10 +795,10 @@ class EmojiConverter(IDConverter[discord.Emoji]):
+         if match is None:
+             # Try to get the emoji by name. Try local guild first.
+             if guild:
+-                result = discord.utils.get(guild.emojis, name=argument)
++                result = _discord.utils.get(guild.emojis, name=argument)
+ 
+             if result is None:
+-                result = discord.utils.get(bot.emojis, name=argument)
++                result = _discord.utils.get(bot.emojis, name=argument)
+         else:
+             emoji_id = int(match.group(1))
+ 
+@@ -811,7 +811,7 @@ class EmojiConverter(IDConverter[discord.Emoji]):
+         return result
+ 
+ 
+-class PartialEmojiConverter(Converter[discord.PartialEmoji]):
++class PartialEmojiConverter(Converter[_discord.PartialEmoji]):
+     """Converts to a :class:`~discord.PartialEmoji`.
+ 
+     This is done by extracting the animated flag, name and ID from the emoji.
+@@ -820,7 +820,7 @@ class PartialEmojiConverter(Converter[discord.PartialEmoji]):
+          Raise :exc:`.PartialEmojiConversionFailure` instead of generic :exc:`.BadArgument`
+     """
+ 
+-    async def convert(self, ctx: Context, argument: str) -> discord.PartialEmoji:
++    async def convert(self, ctx: Context, argument: str) -> _discord.PartialEmoji:
+         match = re.match(r"<(a?):(\w{1,32}):([0-9]{15,20})>$", argument)
+ 
+         if match:
+@@ -828,7 +828,7 @@ class PartialEmojiConverter(Converter[discord.PartialEmoji]):
+             emoji_name = match.group(2)
+             emoji_id = int(match.group(3))
+ 
+-            return discord.PartialEmoji.with_state(
++            return _discord.PartialEmoji.with_state(
+                 ctx.bot._connection,
+                 animated=emoji_animated,
+                 name=emoji_name,
+@@ -838,7 +838,7 @@ class PartialEmojiConverter(Converter[discord.PartialEmoji]):
+         raise PartialEmojiConversionFailure(argument)
+ 
+ 
+-class GuildStickerConverter(IDConverter[discord.GuildSticker]):
++class GuildStickerConverter(IDConverter[_discord.GuildSticker]):
+     """Converts to a :class:`~discord.GuildSticker`.
+ 
+     All lookups are done for the local guild first, if available. If that lookup
+@@ -852,7 +852,7 @@ class GuildStickerConverter(IDConverter[discord.GuildSticker]):
+     .. versionadded:: 2.0
+     """
+ 
+-    async def convert(self, ctx: Context, argument: str) -> discord.GuildSticker:
++    async def convert(self, ctx: Context, argument: str) -> _discord.GuildSticker:
+         match = self._get_id_match(argument)
+         result = None
+         bot = ctx.bot
+@@ -861,10 +861,10 @@ class GuildStickerConverter(IDConverter[discord.GuildSticker]):
+         if match is None:
+             # Try to get the sticker by name. Try local guild first.
+             if guild:
+-                result = discord.utils.get(guild.stickers, name=argument)
++                result = _discord.utils.get(guild.stickers, name=argument)
+ 
+             if result is None:
+-                result = discord.utils.get(bot.stickers, name=argument)
++                result = _discord.utils.get(bot.stickers, name=argument)
+         else:
+             sticker_id = int(match.group(1))
+ 
+@@ -958,12 +958,12 @@ class clean_content(Converter[str]):
+ 
+         result = re.sub(r"<(@[!&]?|#)([0-9]{15,20})>", repl, argument)
+         if self.escape_markdown:
+-            result = discord.utils.escape_markdown(result)
++            result = _discord.utils.escape_markdown(result)
+         elif self.remove_markdown:
+-            result = discord.utils.remove_markdown(result)
++            result = _discord.utils.remove_markdown(result)
+ 
+         # Completely ensure no mentions escape:
+-        return discord.utils.escape_mentions(result)
++        return _discord.utils.escape_mentions(result)
+ 
+ 
+ class Greedy(List[T]):
+@@ -1047,26 +1047,26 @@ def is_generic_type(tp: Any, *, _GenericAlias: Type = _GenericAlias) -> bool:
+ 
+ 
+ CONVERTER_MAPPING: Dict[Type[Any], Any] = {
+-    discord.Object: ObjectConverter,
+-    discord.Member: MemberConverter,
+-    discord.User: UserConverter,
+-    discord.Message: MessageConverter,
+-    discord.PartialMessage: PartialMessageConverter,
+-    discord.TextChannel: TextChannelConverter,
+-    discord.Invite: InviteConverter,
+-    discord.Guild: GuildConverter,
+-    discord.Role: RoleConverter,
+-    discord.Game: GameConverter,
+-    discord.Colour: ColourConverter,
+-    discord.VoiceChannel: VoiceChannelConverter,
+-    discord.StageChannel: StageChannelConverter,
+-    discord.Emoji: EmojiConverter,
+-    discord.PartialEmoji: PartialEmojiConverter,
+-    discord.CategoryChannel: CategoryChannelConverter,
+-    discord.ForumChannel: ForumChannelConverter,
+-    discord.Thread: ThreadConverter,
+-    discord.abc.GuildChannel: GuildChannelConverter,
+-    discord.GuildSticker: GuildStickerConverter,
++    _discord.Object: ObjectConverter,
++    _discord.Member: MemberConverter,
++    _discord.User: UserConverter,
++    _discord.Message: MessageConverter,
++    _discord.PartialMessage: PartialMessageConverter,
++    _discord.TextChannel: TextChannelConverter,
++    _discord.Invite: InviteConverter,
++    _discord.Guild: GuildConverter,
++    _discord.Role: RoleConverter,
++    _discord.Game: GameConverter,
++    _discord.Colour: ColourConverter,
++    _discord.VoiceChannel: VoiceChannelConverter,
++    _discord.StageChannel: StageChannelConverter,
++    _discord.Emoji: EmojiConverter,
++    _discord.PartialEmoji: PartialEmojiConverter,
++    _discord.CategoryChannel: CategoryChannelConverter,
++    _discord.ForumChannel: ForumChannelConverter,
++    _discord.Thread: ThreadConverter,
++    _discord.abc.GuildChannel: GuildChannelConverter,
++    _discord.GuildSticker: GuildStickerConverter,
+ }
+ 
+ 
+diff --git a/src/discord/ext/commands/cooldowns.py b/src/_discord/ext/commands/cooldowns.py
+similarity index 99%
+rename from src/discord/ext/commands/cooldowns.py
+rename to src/_discord/ext/commands/cooldowns.py
+index 7fb3488..7e22832 100644
+--- a/src/discord/ext/commands/cooldowns.py
++++ b/src/_discord/ext/commands/cooldowns.py
+@@ -30,7 +30,7 @@ import time
+ from collections import deque
+ from typing import TYPE_CHECKING, Any, Callable, Deque, Dict, Optional, Type, TypeVar
+ 
+-from discord.enums import Enum
++from _discord.enums import Enum
+ 
+ from ...abc import PrivateChannel
+ from .errors import MaxConcurrencyReached
+diff --git a/src/discord/ext/commands/core.py b/src/_discord/ext/commands/core.py
+similarity index 98%
+rename from src/discord/ext/commands/core.py
+rename to src/_discord/ext/commands/core.py
+index 582c6aa..d47fccb 100644
+--- a/src/discord/ext/commands/core.py
++++ b/src/_discord/ext/commands/core.py
+@@ -48,7 +48,7 @@ from typing import (
+     overload,
+ )
+ 
+-import discord
++import _discord
+ 
+ from ...commands import (
+     ApplicationCommand,
+@@ -75,7 +75,7 @@ from .errors import *
+ if TYPE_CHECKING:
+     from typing_extensions import Concatenate, ParamSpec, TypeGuard
+ 
+-    from discord.message import Message
++    from _discord.message import Message
+ 
+     from ._types import Check, Coro, CoroFunc, Error, Hook
+ 
+@@ -110,7 +110,7 @@ __all__ = (
+     "message_command",
+ )
+ 
+-MISSING: Any = discord.utils.MISSING
++MISSING: Any = _discord.utils.MISSING
+ 
+ T = TypeVar("T")
+ CogT = TypeVar("CogT", bound="Cog")
+@@ -142,7 +142,7 @@ def get_signature_parameters(function: Callable[..., Any], globalns: Dict[str, A
+     signature = inspect.signature(function)
+     params = {}
+     cache: Dict[str, Any] = {}
+-    eval_annotation = discord.utils.evaluate_annotation
++    eval_annotation = _discord.utils.evaluate_annotation
+     for name, parameter in signature.parameters.items():
+         annotation = parameter.annotation
+         if annotation is parameter.empty:
+@@ -765,13 +765,13 @@ class Command(_BaseCommand, Generic[CogT, P, T]):
+             try:
+                 next(iterator)
+             except StopIteration:
+-                raise discord.ClientException(f'Callback for {self.name} command is missing "self" parameter.')
++                raise _discord.ClientException(f'Callback for {self.name} command is missing "self" parameter.')
+ 
+         # next we have the 'ctx' as the next parameter
+         try:
+             next(iterator)
+         except StopIteration:
+-            raise discord.ClientException(f'Callback for {self.name} command is missing "ctx" parameter.')
++            raise _discord.ClientException(f'Callback for {self.name} command is missing "ctx" parameter.')
+ 
+         for name, param in iterator:
+             ctx.current_parameter = param
+@@ -1172,7 +1172,7 @@ class Command(_BaseCommand, Generic[CogT, P, T]):
+             if cog is not None:
+                 local_check = Cog._get_overridden_method(cog.cog_check)
+                 if local_check is not None:
+-                    ret = await discord.utils.maybe_coroutine(local_check, ctx)
++                    ret = await _discord.utils.maybe_coroutine(local_check, ctx)
+                     if not ret:
+                         return False
+ 
+@@ -1181,7 +1181,7 @@ class Command(_BaseCommand, Generic[CogT, P, T]):
+                 # since we have no checks, then we just return True.
+                 return True
+ 
+-            return await discord.utils.async_all(predicate(ctx) for predicate in predicates)  # type: ignore
++            return await _discord.utils.async_all(predicate(ctx) for predicate in predicates)  # type: ignore
+         finally:
+             ctx.command = original
+ 
+@@ -1962,9 +1962,9 @@ def has_role(item: Union[int, str]) -> Callable[[T], T]:
+ 
+         # ctx.guild is None doesn't narrow ctx.author to Member
+         if isinstance(item, int):
+-            role = discord.utils.get(ctx.author.roles, id=item)  # type: ignore
++            role = _discord.utils.get(ctx.author.roles, id=item)  # type: ignore
+         else:
+-            role = discord.utils.get(ctx.author.roles, name=item)  # type: ignore
++            role = _discord.utils.get(ctx.author.roles, name=item)  # type: ignore
+         if role is None:
+             raise MissingRole(item)
+         return True
+@@ -2009,7 +2009,7 @@ def has_any_role(*items: Union[int, str]) -> Callable[[T], T]:
+             raise NoPrivateMessage()
+ 
+         # ctx.guild is None doesn't narrow ctx.author to Member
+-        getter = functools.partial(discord.utils.get, ctx.author.roles)  # type: ignore
++        getter = functools.partial(_discord.utils.get, ctx.author.roles)  # type: ignore
+         if any(
+             getter(id=item) is not None if isinstance(item, int) else getter(name=item) is not None for item in items
+         ):
+@@ -2039,9 +2039,9 @@ def bot_has_role(item: int) -> Callable[[T], T]:
+ 
+         me = ctx.me
+         if isinstance(item, int):
+-            role = discord.utils.get(me.roles, id=item)
++            role = _discord.utils.get(me.roles, id=item)
+         else:
+-            role = discord.utils.get(me.roles, name=item)
++            role = _discord.utils.get(me.roles, name=item)
+         if role is None:
+             raise BotMissingRole(item)
+         return True
+@@ -2068,7 +2068,7 @@ def bot_has_any_role(*items: int) -> Callable[[T], T]:
+             raise NoPrivateMessage()
+ 
+         me = ctx.me
+-        getter = functools.partial(discord.utils.get, me.roles)
++        getter = functools.partial(_discord.utils.get, me.roles)
+         if any(
+             getter(id=item) is not None if isinstance(item, int) else getter(name=item) is not None for item in items
+         ):
+@@ -2110,7 +2110,7 @@ def has_permissions(**perms: bool) -> Callable[[T], T]:
+ 
+     """
+ 
+-    invalid = set(perms) - set(discord.Permissions.VALID_FLAGS)
++    invalid = set(perms) - set(_discord.Permissions.VALID_FLAGS)
+     if invalid:
+         raise TypeError(f"Invalid permission(s): {', '.join(invalid)}")
+ 
+@@ -2136,7 +2136,7 @@ def bot_has_permissions(**perms: bool) -> Callable[[T], T]:
+     that is inherited from :exc:`.CheckFailure`.
+     """
+ 
+-    invalid = set(perms) - set(discord.Permissions.VALID_FLAGS)
++    invalid = set(perms) - set(_discord.Permissions.VALID_FLAGS)
+     if invalid:
+         raise TypeError(f"Invalid permission(s): {', '.join(invalid)}")
+ 
+@@ -2171,7 +2171,7 @@ def has_guild_permissions(**perms: bool) -> Callable[[T], T]:
+     .. versionadded:: 1.3
+     """
+ 
+-    invalid = set(perms) - set(discord.Permissions.VALID_FLAGS)
++    invalid = set(perms) - set(_discord.Permissions.VALID_FLAGS)
+     if invalid:
+         raise TypeError(f"Invalid permission(s): {', '.join(invalid)}")
+ 
+@@ -2197,7 +2197,7 @@ def bot_has_guild_permissions(**perms: bool) -> Callable[[T], T]:
+     .. versionadded:: 1.3
+     """
+ 
+-    invalid = set(perms) - set(discord.Permissions.VALID_FLAGS)
++    invalid = set(perms) - set(_discord.Permissions.VALID_FLAGS)
+     if invalid:
+         raise TypeError(f"Invalid permission(s): {', '.join(invalid)}")
+ 
+@@ -2284,7 +2284,7 @@ def is_nsfw() -> Callable[[T], T]:
+ 
+     def pred(ctx: Context) -> bool:
+         ch = ctx.channel
+-        if ctx.guild is None or (isinstance(ch, (discord.TextChannel, discord.Thread)) and ch.is_nsfw()):
++        if ctx.guild is None or (isinstance(ch, (_discord.TextChannel, _discord.Thread)) and ch.is_nsfw()):
+             return True
+         raise NSFWChannelRequired(ch)  # type: ignore
+ 
+diff --git a/src/discord/ext/commands/errors.py b/src/_discord/ext/commands/errors.py
+similarity index 99%
+rename from src/discord/ext/commands/errors.py
+rename to src/_discord/ext/commands/errors.py
+index 1b463a4..5bb73e7 100644
+--- a/src/discord/ext/commands/errors.py
++++ b/src/_discord/ext/commands/errors.py
+@@ -27,14 +27,14 @@ from __future__ import annotations
+ 
+ from typing import TYPE_CHECKING, Any, Callable, List, Optional, Tuple, Type, Union
+ 
+-from discord.errors import ClientException, DiscordException
++from _discord.errors import ClientException, DiscordException
+ 
+ if TYPE_CHECKING:
+     from inspect import Parameter
+ 
+-    from discord.abc import GuildChannel
+-    from discord.threads import Thread
+-    from discord.types.snowflake import Snowflake, SnowflakeList
++    from _discord.abc import GuildChannel
++    from _discord.threads import Thread
++    from _discord.types.snowflake import Snowflake, SnowflakeList
+ 
+     from .context import Context
+     from .converter import Converter
+diff --git a/src/discord/ext/commands/flags.py b/src/_discord/ext/commands/flags.py
+similarity index 99%
+rename from src/discord/ext/commands/flags.py
+rename to src/_discord/ext/commands/flags.py
+index bc8e01e..094ff4d 100644
+--- a/src/discord/ext/commands/flags.py
++++ b/src/_discord/ext/commands/flags.py
+@@ -45,7 +45,7 @@ from typing import (
+     Union,
+ )
+ 
+-from discord.utils import MISSING, maybe_coroutine, resolve_annotation
++from _discord.utils import MISSING, maybe_coroutine, resolve_annotation
+ 
+ from .converter import run_converters
+ from .errors import (
+diff --git a/src/discord/ext/commands/help.py b/src/_discord/ext/commands/help.py
+similarity index 99%
+rename from src/discord/ext/commands/help.py
+rename to src/_discord/ext/commands/help.py
+index 200abd2..8790f39 100644
+--- a/src/discord/ext/commands/help.py
++++ b/src/_discord/ext/commands/help.py
+@@ -29,7 +29,7 @@ import itertools
+ import re
+ from typing import TYPE_CHECKING
+ 
+-import discord.utils
++import _discord.utils
+ 
+ from .core import Command, Group
+ from .errors import CommandError
+@@ -325,7 +325,7 @@ class HelpCommand:
+         self.command_attrs = attrs = options.pop("command_attrs", {})
+         attrs.setdefault("name", "help")
+         attrs.setdefault("help", "Shows this message")
+-        self.context: Context = discord.utils.MISSING
++        self.context: Context = _discord.utils.MISSING
+         self._command_impl = _HelpCommandImpl(self, **self.command_attrs)
+ 
+     def copy(self):
+@@ -559,7 +559,7 @@ class HelpCommand:
+ 
+         # Ignore Application Commands cause they dont have hidden/docs
+         prefix_commands = [
+-            command for command in commands if not isinstance(command, discord.commands.ApplicationCommand)
++            command for command in commands if not isinstance(command, _discord.commands.ApplicationCommand)
+         ]
+         iterator = prefix_commands if self.show_hidden else filter(lambda c: not c.hidden, prefix_commands)
+ 
+@@ -603,7 +603,7 @@ class HelpCommand:
+             The maximum width of the commands.
+         """
+ 
+-        as_lengths = (discord.utils._string_width(c.name) for c in commands)
++        as_lengths = (_discord.utils._string_width(c.name) for c in commands)
+         return max(as_lengths, default=0)
+ 
+     def get_destination(self):
+@@ -843,7 +843,7 @@ class HelpCommand:
+         if cog is not None:
+             return await self.send_cog_help(cog)
+ 
+-        maybe_coro = discord.utils.maybe_coroutine
++        maybe_coro = _discord.utils.maybe_coroutine
+ 
+         # If it's not a cog then it's a command.
+         # Since we want to have detailed errors when someone
+@@ -967,7 +967,7 @@ class DefaultHelpCommand(HelpCommand):
+         self.paginator.add_line(heading)
+         max_size = max_size or self.get_max_size(commands)
+ 
+-        get_width = discord.utils._string_width
++        get_width = _discord.utils._string_width
+         for command in commands:
+             name = command.name
+             width = max_size - (get_width(name) - len(name))
+diff --git a/src/discord/ext/commands/view.py b/src/_discord/ext/commands/view.py
+similarity index 100%
+rename from src/discord/ext/commands/view.py
+rename to src/_discord/ext/commands/view.py
+diff --git a/src/discord/ext/pages/__init__.py b/src/_discord/ext/pages/__init__.py
+similarity index 100%
+rename from src/discord/ext/pages/__init__.py
+rename to src/_discord/ext/pages/__init__.py
+diff --git a/src/discord/ext/pages/pagination.py b/src/_discord/ext/pages/pagination.py
+similarity index 89%
+rename from src/discord/ext/pages/pagination.py
+rename to src/_discord/ext/pages/pagination.py
+index b2a5aa7..ae66496 100644
+--- a/src/discord/ext/pages/pagination.py
++++ b/src/_discord/ext/pages/pagination.py
+@@ -23,9 +23,9 @@ DEALINGS IN THE SOFTWARE.
+ """
+ from typing import Dict, List, Optional, Union
+ 
+-import discord
+-from discord.ext.bridge import BridgeContext
+-from discord.ext.commands import Context
++import _discord
++from _discord.ext.bridge import BridgeContext
++from _discord.ext.commands import Context
+ 
+ __all__ = (
+     "PaginatorButton",
+@@ -36,7 +36,7 @@ __all__ = (
+ )
+ 
+ 
+-class PaginatorButton(discord.ui.Button):
++class PaginatorButton(_discord.ui.Button):
+     """Creates a button used to navigate the paginator.
+ 
+     Parameters
+@@ -65,8 +65,8 @@ class PaginatorButton(discord.ui.Button):
+         self,
+         button_type: str,
+         label: str = None,
+-        emoji: Union[str, discord.Emoji, discord.PartialEmoji] = None,
+-        style: discord.ButtonStyle = discord.ButtonStyle.green,
++        emoji: Union[str, _discord.Emoji, _discord.PartialEmoji] = None,
++        style: _discord.ButtonStyle = _discord.ButtonStyle.green,
+         disabled: bool = False,
+         custom_id: str = None,
+         row: int = 0,
+@@ -82,13 +82,13 @@ class PaginatorButton(discord.ui.Button):
+         )
+         self.button_type = button_type
+         self.label = label if label or emoji else button_type.capitalize()
+-        self.emoji: Union[str, discord.Emoji, discord.PartialEmoji] = emoji
++        self.emoji: Union[str, _discord.Emoji, _discord.PartialEmoji] = emoji
+         self.style = style
+         self.disabled = disabled
+         self.loop_label = self.label if not loop_label else loop_label
+         self.paginator = None
+ 
+-    async def callback(self, interaction: discord.Interaction):
++    async def callback(self, interaction: _discord.Interaction):
+         """|coro|
+ 
+         The coroutine that is called when the navigation button is clicked.
+@@ -135,19 +135,19 @@ class Page:
+     def __init__(
+         self,
+         content: Optional[str] = None,
+-        embeds: Optional[List[Union[List[discord.Embed], discord.Embed]]] = None,
+-        custom_view: Optional[discord.ui.View] = None,
+-        files: Optional[List[discord.File]] = None,
++        embeds: Optional[List[Union[List[_discord.Embed], _discord.Embed]]] = None,
++        custom_view: Optional[_discord.ui.View] = None,
++        files: Optional[List[_discord.File]] = None,
+         **kwargs,
+     ):
+         if content is None and embeds is None:
+-            raise discord.InvalidArgument("A page cannot have both content and embeds equal to None.")
++            raise _discord.InvalidArgument("A page cannot have both content and embeds equal to None.")
+         self._content = content
+         self._embeds = embeds or []
+         self._custom_view = custom_view
+         self._files = files or []
+ 
+-    async def callback(self, interaction: Optional[discord.Interaction] = None):
++    async def callback(self, interaction: Optional[_discord.Interaction] = None):
+         """|coro|
+ 
+         The coroutine associated to a specific page. If `Paginator.page_action()` is used, this coroutine is called.
+@@ -159,12 +159,12 @@ class Page:
+         """
+         pass
+ 
+-    def update_files(self) -> Optional[List[discord.File]]:
++    def update_files(self) -> Optional[List[_discord.File]]:
+         """Updates the files associated with the page by re-uploading them.
+         Typically used when the page is changed."""
+         for file in self._files:
+             with open(file.fp.name, "rb") as fp:  # type: ignore
+-                self._files[self._files.index(file)] = discord.File(
++                self._files[self._files.index(file)] = _discord.File(
+                     fp,  # type: ignore
+                     filename=file.filename,
+                     description=file.description,
+@@ -183,32 +183,32 @@ class Page:
+         self._content = value
+ 
+     @property
+-    def embeds(self) -> Optional[List[Union[List[discord.Embed], discord.Embed]]]:
++    def embeds(self) -> Optional[List[Union[List[_discord.Embed], _discord.Embed]]]:
+         """Gets the embeds for the page."""
+         return self._embeds
+ 
+     @embeds.setter
+-    def embeds(self, value: Optional[List[Union[List[discord.Embed], discord.Embed]]]):
++    def embeds(self, value: Optional[List[Union[List[_discord.Embed], _discord.Embed]]]):
+         """Sets the embeds for the page."""
+         self._embeds = value
+ 
+     @property
+-    def custom_view(self) -> Optional[discord.ui.View]:
++    def custom_view(self) -> Optional[_discord.ui.View]:
+         """Gets the custom view assigned to the page."""
+         return self._custom_view
+ 
+     @custom_view.setter
+-    def custom_view(self, value: Optional[discord.ui.View]):
++    def custom_view(self, value: Optional[_discord.ui.View]):
+         """Assigns a custom view to be shown when the page is displayed."""
+         self._custom_view = value
+ 
+     @property
+-    def files(self) -> Optional[List[discord.File]]:
++    def files(self) -> Optional[List[_discord.File]]:
+         """Gets the files associated with the page."""
+         return self._files
+ 
+     @files.setter
+-    def files(self, value: Optional[List[discord.File]]):
++    def files(self, value: Optional[List[_discord.File]]):
+         """Sets the files associated with the page."""
+         self._files = value
+ 
+@@ -265,10 +265,10 @@ class PageGroup:
+ 
+     def __init__(
+         self,
+-        pages: Union[List[str], List[Page], List[Union[List[discord.Embed], discord.Embed]]],
++        pages: Union[List[str], List[Page], List[Union[List[_discord.Embed], _discord.Embed]]],
+         label: str,
+         description: Optional[str] = None,
+-        emoji: Union[str, discord.Emoji, discord.PartialEmoji] = None,
++        emoji: Union[str, _discord.Emoji, _discord.PartialEmoji] = None,
+         default: Optional[bool] = None,
+         show_disabled: Optional[bool] = None,
+         show_indicator: Optional[bool] = None,
+@@ -277,15 +277,15 @@ class PageGroup:
+         use_default_buttons: Optional[bool] = None,
+         default_button_row: int = 0,
+         loop_pages: Optional[bool] = None,
+-        custom_view: Optional[discord.ui.View] = None,
++        custom_view: Optional[_discord.ui.View] = None,
+         timeout: Optional[float] = None,
+         custom_buttons: Optional[List[PaginatorButton]] = None,
+         trigger_on_display: Optional[bool] = None,
+     ):
+         self.label = label
+         self.description: Optional[str] = description
+-        self.emoji: Union[str, discord.Emoji, discord.PartialEmoji] = emoji
+-        self.pages: Union[List[str], List[Union[List[discord.Embed], discord.Embed]]] = pages
++        self.emoji: Union[str, _discord.Emoji, _discord.PartialEmoji] = emoji
++        self.pages: Union[List[str], List[Union[List[_discord.Embed], _discord.Embed]]] = pages
+         self.default: Optional[bool] = default
+         self.show_disabled = show_disabled
+         self.show_indicator = show_indicator
+@@ -294,13 +294,13 @@ class PageGroup:
+         self.use_default_buttons = use_default_buttons
+         self.default_button_row = default_button_row
+         self.loop_pages = loop_pages
+-        self.custom_view: discord.ui.View = custom_view
++        self.custom_view: _discord.ui.View = custom_view
+         self.timeout: float = timeout
+         self.custom_buttons: List = custom_buttons
+         self.trigger_on_display = trigger_on_display
+ 
+ 
+-class Paginator(discord.ui.View):
++class Paginator(_discord.ui.View):
+     """Creates a paginator which can be sent as a message and uses buttons for navigation.
+ 
+     Parameters
+@@ -361,7 +361,7 @@ class Paginator(discord.ui.View):
+ 
+     def __init__(
+         self,
+-        pages: Union[List[PageGroup], List[Page], List[str], List[Union[List[discord.Embed], discord.Embed]]],
++        pages: Union[List[PageGroup], List[Page], List[str], List[Union[List[_discord.Embed], _discord.Embed]]],
+         show_disabled: bool = True,
+         show_indicator=True,
+         show_menu=False,
+@@ -371,7 +371,7 @@ class Paginator(discord.ui.View):
+         use_default_buttons=True,
+         default_button_row: int = 0,
+         loop_pages=False,
+-        custom_view: Optional[discord.ui.View] = None,
++        custom_view: Optional[_discord.ui.View] = None,
+         timeout: Optional[float] = 180.0,
+         custom_buttons: Optional[List[PaginatorButton]] = None,
+         trigger_on_display: Optional[bool] = None,
+@@ -379,7 +379,7 @@ class Paginator(discord.ui.View):
+         super().__init__(timeout=timeout)
+         self.timeout: float = timeout
+         self.pages: Union[
+-            List[PageGroup], List[str], List[Page], List[Union[List[discord.Embed], discord.Embed]]
++            List[PageGroup], List[str], List[Page], List[Union[List[_discord.Embed], _discord.Embed]]
+         ] = pages
+         self.current_page = 0
+         self.menu: Optional[PaginatorMenu] = None
+@@ -407,9 +407,9 @@ class Paginator(discord.ui.View):
+         self.use_default_buttons = use_default_buttons
+         self.default_button_row = default_button_row
+         self.loop_pages = loop_pages
+-        self.custom_view: discord.ui.View = custom_view
++        self.custom_view: _discord.ui.View = custom_view
+         self.trigger_on_display = trigger_on_display
+-        self.message: Union[discord.Message, discord.WebhookMessage, None] = None
++        self.message: Union[_discord.Message, _discord.WebhookMessage, None] = None
+ 
+         if self.custom_buttons and not self.use_default_buttons:
+             for button in custom_buttons:
+@@ -426,7 +426,7 @@ class Paginator(discord.ui.View):
+     async def update(
+         self,
+         pages: Optional[
+-            Union[List[PageGroup], List[Page], List[str], List[Union[List[discord.Embed], discord.Embed]]]
++            Union[List[PageGroup], List[Page], List[str], List[Union[List[_discord.Embed], _discord.Embed]]]
+         ] = None,
+         show_disabled: Optional[bool] = None,
+         show_indicator: Optional[bool] = None,
+@@ -437,11 +437,11 @@ class Paginator(discord.ui.View):
+         use_default_buttons: Optional[bool] = None,
+         default_button_row: Optional[int] = None,
+         loop_pages: Optional[bool] = None,
+-        custom_view: Optional[discord.ui.View] = None,
++        custom_view: Optional[_discord.ui.View] = None,
+         timeout: Optional[float] = None,
+         custom_buttons: Optional[List[PaginatorButton]] = None,
+         trigger_on_display: Optional[bool] = None,
+-        interaction: Optional[discord.Interaction] = None,
++        interaction: Optional[_discord.Interaction] = None,
+     ):
+         """Updates the existing :class:`Paginator` instance with the provided options.
+ 
+@@ -484,7 +484,7 @@ class Paginator(discord.ui.View):
+         """
+ 
+         # Update pages and reset current_page to 0 (default)
+-        self.pages: Union[List[PageGroup], List[str], List[Page], List[Union[List[discord.Embed], discord.Embed]]] = (
++        self.pages: Union[List[PageGroup], List[str], List[Page], List[Union[List[_discord.Embed], _discord.Embed]]] = (
+             pages if pages is not None else self.pages
+         )
+         self.show_menu = show_menu if show_menu is not None else self.show_menu
+@@ -508,7 +508,7 @@ class Paginator(discord.ui.View):
+         self.use_default_buttons = use_default_buttons if use_default_buttons is not None else self.use_default_buttons
+         self.default_button_row = default_button_row if default_button_row is not None else self.default_button_row
+         self.loop_pages = loop_pages if loop_pages is not None else self.loop_pages
+-        self.custom_view: discord.ui.View = None if custom_view is None else custom_view
++        self.custom_view: _discord.ui.View = None if custom_view is None else custom_view
+         self.timeout: float = timeout if timeout is not None else self.timeout
+         self.trigger_on_display = trigger_on_display if trigger_on_display is not None else self.trigger_on_display
+         if custom_buttons and not self.use_default_buttons:
+@@ -538,7 +538,7 @@ class Paginator(discord.ui.View):
+     async def disable(
+         self,
+         include_custom: bool = False,
+-        page: Optional[Union[str, Page, Union[List[discord.Embed], discord.Embed]]] = None,
++        page: Optional[Union[str, Page, Union[List[_discord.Embed], _discord.Embed]]] = None,
+     ) -> None:
+         """Stops the paginator, disabling all of its components.
+ 
+@@ -565,7 +565,7 @@ class Paginator(discord.ui.View):
+     async def cancel(
+         self,
+         include_custom: bool = False,
+-        page: Optional[Union[str, Page, Union[List[discord.Embed], discord.Embed]]] = None,
++        page: Optional[Union[str, Page, Union[List[_discord.Embed], _discord.Embed]]] = None,
+     ) -> None:
+         """Cancels the paginator, removing all of its components from the message.
+ 
+@@ -590,7 +590,7 @@ class Paginator(discord.ui.View):
+         else:
+             await self.message.edit(view=self)
+ 
+-    async def goto_page(self, page_number: int = 0, *, interaction: Optional[discord.Interaction] = None) -> None:
++    async def goto_page(self, page_number: int = 0, *, interaction: Optional[_discord.Interaction] = None) -> None:
+         """Updates the paginator message to show the specified page number.
+ 
+         Parameters
+@@ -645,7 +645,7 @@ class Paginator(discord.ui.View):
+         if self.trigger_on_display:
+             await self.page_action(interaction=interaction)
+ 
+-    async def interaction_check(self, interaction: discord.Interaction) -> bool:
++    async def interaction_check(self, interaction: _discord.Interaction) -> bool:
+         if self.usercheck:
+             return self.user == interaction.user
+         return True
+@@ -663,33 +663,33 @@ class Paginator(discord.ui.View):
+             PaginatorButton(
+                 "first",
+                 label="<<",
+-                style=discord.ButtonStyle.blurple,
++                style=_discord.ButtonStyle.blurple,
+                 row=self.default_button_row,
+             ),
+             PaginatorButton(
+                 "prev",
+                 label="<",
+-                style=discord.ButtonStyle.red,
++                style=_discord.ButtonStyle.red,
+                 loop_label="↪",
+                 row=self.default_button_row,
+             ),
+             PaginatorButton(
+                 "page_indicator",
+-                style=discord.ButtonStyle.gray,
++                style=_discord.ButtonStyle.gray,
+                 disabled=True,
+                 row=self.default_button_row,
+             ),
+             PaginatorButton(
+                 "next",
+                 label=">",
+-                style=discord.ButtonStyle.green,
++                style=_discord.ButtonStyle.green,
+                 loop_label="↩",
+                 row=self.default_button_row,
+             ),
+             PaginatorButton(
+                 "last",
+                 label=">>",
+-                style=discord.ButtonStyle.blurple,
++                style=_discord.ButtonStyle.blurple,
+                 row=self.default_button_row,
+             ),
+         ]
+@@ -699,7 +699,7 @@ class Paginator(discord.ui.View):
+     def add_button(self, button: PaginatorButton):
+         """Adds a :class:`PaginatorButton` to the paginator."""
+         self.buttons[button.button_type] = {
+-            "object": discord.ui.Button(
++            "object": _discord.ui.Button(
+                 style=button.style,
+                 label=button.label
+                 if button.label or button.emoji
+@@ -788,9 +788,9 @@ class Paginator(discord.ui.View):
+ 
+         return self.buttons
+ 
+-    def update_custom_view(self, custom_view: discord.ui.View):
++    def update_custom_view(self, custom_view: _discord.ui.View):
+         """Updates the custom view shown on the paginator."""
+-        if isinstance(self.custom_view, discord.ui.View):
++        if isinstance(self.custom_view, _discord.ui.View):
+             for item in self.custom_view.children:
+                 self.remove_item(item)
+         for item in custom_view.children:
+@@ -801,20 +801,20 @@ class Paginator(discord.ui.View):
+         return [self.get_page_content(page) for page in page_group.pages]
+ 
+     @staticmethod
+-    def get_page_content(page: Union[Page, str, discord.Embed, List[discord.Embed]]) -> Page:
++    def get_page_content(page: Union[Page, str, _discord.Embed, List[_discord.Embed]]) -> Page:
+         """Converts a page into a :class:`Page` object based on its content."""
+         if isinstance(page, Page):
+             return page
+         elif isinstance(page, str):
+             return Page(content=page, embeds=[], files=[])
+-        elif isinstance(page, discord.Embed):
++        elif isinstance(page, _discord.Embed):
+             return Page(content=None, embeds=[page], files=[])
+-        elif isinstance(page, discord.File):
++        elif isinstance(page, _discord.File):
+             return Page(content=None, embeds=[], files=[page])
+         elif isinstance(page, List):
+-            if all(isinstance(x, discord.Embed) for x in page):
++            if all(isinstance(x, _discord.Embed) for x in page):
+                 return Page(content=None, embeds=page, files=[])
+-            if all(isinstance(x, discord.File) for x in page):
++            if all(isinstance(x, _discord.File) for x in page):
+                 return Page(content=None, embeds=[], files=page)
+             else:
+                 raise TypeError("All list items must be embeds or files.")
+@@ -823,7 +823,7 @@ class Paginator(discord.ui.View):
+                 "Page content must be a Page object, string, an embed, a list of embeds, a file, or a list of files."
+             )
+ 
+-    async def page_action(self, interaction: Optional[discord.Interaction] = None) -> None:
++    async def page_action(self, interaction: Optional[_discord.Interaction] = None) -> None:
+         """Triggers the callback associated with the current page, if any.
+ 
+         Parameters
+@@ -837,13 +837,13 @@ class Paginator(discord.ui.View):
+     async def send(
+         self,
+         ctx: Context,
+-        target: Optional[discord.abc.Messageable] = None,
++        target: Optional[_discord.abc.Messageable] = None,
+         target_message: Optional[str] = None,
+-        reference: Optional[Union[discord.Message, discord.MessageReference, discord.PartialMessage]] = None,
+-        allowed_mentions: Optional[discord.AllowedMentions] = None,
++        reference: Optional[Union[_discord.Message, _discord.MessageReference, _discord.PartialMessage]] = None,
++        allowed_mentions: Optional[_discord.AllowedMentions] = None,
+         mention_author: Optional[bool] = None,
+         delete_after: Optional[float] = None,
+-    ) -> discord.Message:
++    ) -> _discord.Message:
+         """Sends a message with the paginated items.
+ 
+         Parameters
+@@ -879,15 +879,15 @@ class Paginator(discord.ui.View):
+         if not isinstance(ctx, Context):
+             raise TypeError(f"expected Context not {ctx.__class__!r}")
+ 
+-        if target is not None and not isinstance(target, discord.abc.Messageable):
++        if target is not None and not isinstance(target, _discord.abc.Messageable):
+             raise TypeError(f"expected abc.Messageable not {target.__class__!r}")
+ 
+         if reference is not None and not isinstance(
+-            reference, (discord.Message, discord.MessageReference, discord.PartialMessage)
++            reference, (_discord.Message, _discord.MessageReference, _discord.PartialMessage)
+         ):
+             raise TypeError(f"expected Message, MessageReference, or PartialMessage not {reference.__class__!r}")
+ 
+-        if allowed_mentions is not None and not isinstance(allowed_mentions, discord.AllowedMentions):
++        if allowed_mentions is not None and not isinstance(allowed_mentions, _discord.AllowedMentions):
+             raise TypeError(f"expected AllowedMentions not {allowed_mentions.__class__!r}")
+ 
+         if mention_author is not None and not isinstance(mention_author, bool):
+@@ -927,11 +927,11 @@ class Paginator(discord.ui.View):
+ 
+     async def edit(
+         self,
+-        message: discord.Message,
++        message: _discord.Message,
+         suppress: Optional[bool] = None,
+-        allowed_mentions: Optional[discord.AllowedMentions] = None,
++        allowed_mentions: Optional[_discord.AllowedMentions] = None,
+         delete_after: Optional[float] = None,
+-    ) -> Optional[discord.Message]:
++    ) -> Optional[_discord.Message]:
+         """Edits an existing message to replace it with the paginator contents.
+ 
+         .. note::
+@@ -963,12 +963,12 @@ class Paginator(discord.ui.View):
+         Optional[:class:`discord.Message`]
+             The message that was edited. Returns ``None`` if the operation failed.
+         """
+-        if not isinstance(message, discord.Message):
++        if not isinstance(message, _discord.Message):
+             raise TypeError(f"expected Message not {message.__class__!r}")
+ 
+         self.update_buttons()
+ 
+-        page: Union[Page, str, discord.Embed, List[discord.Embed]] = self.pages[self.current_page]
++        page: Union[Page, str, _discord.Embed, List[_discord.Embed]] = self.pages[self.current_page]
+         page_content: Page = self.get_page_content(page)
+ 
+         if page_content.custom_view:
+@@ -987,18 +987,18 @@ class Paginator(discord.ui.View):
+                 allowed_mentions=allowed_mentions,
+                 delete_after=delete_after,
+             )
+-        except (discord.NotFound, discord.Forbidden):
++        except (_discord.NotFound, _discord.Forbidden):
+             pass
+ 
+         return self.message
+ 
+     async def respond(
+         self,
+-        interaction: Union[discord.Interaction, BridgeContext],
++        interaction: Union[_discord.Interaction, BridgeContext],
+         ephemeral: bool = False,
+-        target: Optional[discord.abc.Messageable] = None,
++        target: Optional[_discord.abc.Messageable] = None,
+         target_message: str = "Paginator sent!",
+-    ) -> Union[discord.Message, discord.WebhookMessage]:
++    ) -> Union[_discord.Message, _discord.WebhookMessage]:
+         """Sends an interaction response or followup with the paginated items.
+ 
+         Parameters
+@@ -1025,10 +1025,10 @@ class Paginator(discord.ui.View):
+             The :class:`~discord.Message` or :class:`~discord.WebhookMessage` that was sent with the paginator.
+         """
+ 
+-        if not isinstance(interaction, (discord.Interaction, BridgeContext)):
++        if not isinstance(interaction, (_discord.Interaction, BridgeContext)):
+             raise TypeError(f"expected Interaction or BridgeContext, not {interaction.__class__!r}")
+ 
+-        if target is not None and not isinstance(target, discord.abc.Messageable):
++        if target is not None and not isinstance(target, _discord.abc.Messageable):
+             raise TypeError(f"expected abc.Messageable not {target.__class__!r}")
+ 
+         if ephemeral and (self.timeout >= 900 or self.timeout is None):
+@@ -1038,13 +1038,13 @@ class Paginator(discord.ui.View):
+ 
+         self.update_buttons()
+ 
+-        page: Union[Page, str, discord.Embed, List[discord.Embed]] = self.pages[self.current_page]
++        page: Union[Page, str, _discord.Embed, List[_discord.Embed]] = self.pages[self.current_page]
+         page_content: Page = self.get_page_content(page)
+ 
+         if page_content.custom_view:
+             self.update_custom_view(page_content.custom_view)
+ 
+-        if isinstance(interaction, discord.Interaction):
++        if isinstance(interaction, _discord.Interaction):
+             self.user = interaction.user
+ 
+             if target:
+@@ -1092,15 +1092,15 @@ class Paginator(discord.ui.View):
+                     files=page_content.files,
+                     view=self,
+                 )
+-        if isinstance(msg, (discord.Message, discord.WebhookMessage)):
++        if isinstance(msg, (_discord.Message, _discord.WebhookMessage)):
+             self.message = msg
+-        elif isinstance(msg, discord.Interaction):
++        elif isinstance(msg, _discord.Interaction):
+             self.message = await msg.original_message()
+ 
+         return self.message
+ 
+ 
+-class PaginatorMenu(discord.ui.Select):
++class PaginatorMenu(_discord.ui.Select):
+     """Creates a select menu used to switch between page groups, which can each have their own set of buttons.
+ 
+     Parameters
+@@ -1124,7 +1124,7 @@ class PaginatorMenu(discord.ui.Select):
+         self.page_groups = page_groups
+         self.paginator: Optional[Paginator] = None
+         opts = [
+-            discord.SelectOption(
++            _discord.SelectOption(
+                 label=page_group.label,
+                 value=page_group.label,
+                 description=page_group.description,
+@@ -1134,7 +1134,7 @@ class PaginatorMenu(discord.ui.Select):
+         ]
+         super().__init__(placeholder=placeholder, max_values=1, min_values=1, options=opts, custom_id=custom_id)
+ 
+-    async def callback(self, interaction: discord.Interaction):
++    async def callback(self, interaction: _discord.Interaction):
+         """|coro|
+ 
+         The coroutine that is called when a menu option is selected.
+diff --git a/src/discord/ext/tasks/__init__.py b/src/_discord/ext/tasks/__init__.py
+similarity index 98%
+rename from src/discord/ext/tasks/__init__.py
+rename to src/_discord/ext/tasks/__init__.py
+index 5d7cccb..33dd716 100644
+--- a/src/discord/ext/tasks/__init__.py
++++ b/src/_discord/ext/tasks/__init__.py
+@@ -46,9 +46,9 @@ from typing import (
+ 
+ import aiohttp
+ 
+-import discord
+-from discord.backoff import ExponentialBackoff
+-from discord.utils import MISSING
++import _discord
++from _discord.backoff import ExponentialBackoff
++from _discord.utils import MISSING
+ 
+ __all__ = ("loop",)
+ 
+@@ -65,12 +65,12 @@ class SleepHandle:
+     def __init__(self, dt: datetime.datetime, *, loop: asyncio.AbstractEventLoop) -> None:
+         self.loop = loop
+         self.future = future = loop.create_future()
+-        relative_delta = discord.utils.compute_timedelta(dt)
++        relative_delta = _discord.utils.compute_timedelta(dt)
+         self.handle = loop.call_later(relative_delta, future.set_result, True)
+ 
+     def recalculate(self, dt: datetime.datetime) -> None:
+         self.handle.cancel()
+-        relative_delta = discord.utils.compute_timedelta(dt)
++        relative_delta = _discord.utils.compute_timedelta(dt)
+         self.handle = self.loop.call_later(relative_delta, self.future.set_result, True)
+ 
+     def wait(self) -> asyncio.Future[Any]:
+@@ -111,8 +111,8 @@ class Loop(Generic[LF]):
+         self._injected = None
+         self._valid_exception = (
+             OSError,
+-            discord.GatewayNotFound,
+-            discord.ConnectionClosed,
++            _discord.GatewayNotFound,
++            _discord.ConnectionClosed,
+             aiohttp.ClientError,
+             asyncio.TimeoutError,
+         )
+diff --git a/src/discord/file.py b/src/_discord/file.py
+similarity index 100%
+rename from src/discord/file.py
+rename to src/_discord/file.py
+diff --git a/src/discord/flags.py b/src/_discord/flags.py
+similarity index 100%
+rename from src/discord/flags.py
+rename to src/_discord/flags.py
+diff --git a/src/discord/gateway.py b/src/_discord/gateway.py
+similarity index 100%
+rename from src/discord/gateway.py
+rename to src/_discord/gateway.py
+diff --git a/src/discord/guild.py b/src/_discord/guild.py
+similarity index 100%
+rename from src/discord/guild.py
+rename to src/_discord/guild.py
+diff --git a/src/discord/http.py b/src/_discord/http.py
+similarity index 100%
+rename from src/discord/http.py
+rename to src/_discord/http.py
+diff --git a/src/discord/integrations.py b/src/_discord/integrations.py
+similarity index 100%
+rename from src/discord/integrations.py
+rename to src/_discord/integrations.py
+diff --git a/src/discord/interactions.py b/src/_discord/interactions.py
+similarity index 100%
+rename from src/discord/interactions.py
+rename to src/_discord/interactions.py
+diff --git a/src/discord/invite.py b/src/_discord/invite.py
+similarity index 100%
+rename from src/discord/invite.py
+rename to src/_discord/invite.py
+diff --git a/src/discord/iterators.py b/src/_discord/iterators.py
+similarity index 100%
+rename from src/discord/iterators.py
+rename to src/_discord/iterators.py
+diff --git a/src/discord/member.py b/src/_discord/member.py
+similarity index 99%
+rename from src/discord/member.py
+rename to src/_discord/member.py
+index d8e5605..927de8f 100644
+--- a/src/discord/member.py
++++ b/src/_discord/member.py
+@@ -43,7 +43,7 @@ from typing import (
+     Union,
+ )
+ 
+-import discord.abc
++import _discord.abc
+ 
+ from . import utils
+ from .activity import ActivityTypes, create_activity
+@@ -212,7 +212,7 @@ M = TypeVar("M", bound="Member")
+ 
+ 
+ @flatten_user
+-class Member(discord.abc.Messageable, _UserTag):
++class Member(_discord.abc.Messageable, _UserTag):
+     """Represents a Discord member to a :class:`Guild`.
+ 
+     This implements a lot of the functionality of :class:`User`.
+@@ -685,7 +685,7 @@ class Member(discord.abc.Messageable, _UserTag):
+         mute: bool = MISSING,
+         deafen: bool = MISSING,
+         suppress: bool = MISSING,
+-        roles: List[discord.abc.Snowflake] = MISSING,
++        roles: List[_discord.abc.Snowflake] = MISSING,
+         voice_channel: Optional[VocalGuildChannel] = MISSING,
+         reason: Optional[str] = None,
+         communication_disabled_until: Optional[datetime.datetime] = MISSING,
+diff --git a/src/discord/mentions.py b/src/_discord/mentions.py
+similarity index 100%
+rename from src/discord/mentions.py
+rename to src/_discord/mentions.py
+diff --git a/src/discord/message.py b/src/_discord/message.py
+similarity index 100%
+rename from src/discord/message.py
+rename to src/_discord/message.py
+diff --git a/src/discord/mixins.py b/src/_discord/mixins.py
+similarity index 100%
+rename from src/discord/mixins.py
+rename to src/_discord/mixins.py
+diff --git a/src/discord/object.py b/src/_discord/object.py
+similarity index 100%
+rename from src/discord/object.py
+rename to src/_discord/object.py
+diff --git a/src/discord/oggparse.py b/src/_discord/oggparse.py
+similarity index 100%
+rename from src/discord/oggparse.py
+rename to src/_discord/oggparse.py
+diff --git a/src/discord/opus.py b/src/_discord/opus.py
+similarity index 100%
+rename from src/discord/opus.py
+rename to src/_discord/opus.py
+diff --git a/src/discord/partial_emoji.py b/src/_discord/partial_emoji.py
+similarity index 100%
+rename from src/discord/partial_emoji.py
+rename to src/_discord/partial_emoji.py
+diff --git a/src/discord/permissions.py b/src/_discord/permissions.py
+similarity index 100%
+rename from src/discord/permissions.py
+rename to src/_discord/permissions.py
+diff --git a/src/discord/player.py b/src/_discord/player.py
+similarity index 100%
+rename from src/discord/player.py
+rename to src/_discord/player.py
+diff --git a/src/discord/py.typed b/src/_discord/py.typed
+similarity index 100%
+rename from src/discord/py.typed
+rename to src/_discord/py.typed
+diff --git a/src/discord/raw_models.py b/src/_discord/raw_models.py
+similarity index 100%
+rename from src/discord/raw_models.py
+rename to src/_discord/raw_models.py
+diff --git a/src/discord/reaction.py b/src/_discord/reaction.py
+similarity index 100%
+rename from src/discord/reaction.py
+rename to src/_discord/reaction.py
+diff --git a/src/discord/role.py b/src/_discord/role.py
+similarity index 100%
+rename from src/discord/role.py
+rename to src/_discord/role.py
+diff --git a/src/discord/scheduled_events.py b/src/_discord/scheduled_events.py
+similarity index 100%
+rename from src/discord/scheduled_events.py
+rename to src/_discord/scheduled_events.py
+diff --git a/src/discord/shard.py b/src/_discord/shard.py
+similarity index 100%
+rename from src/discord/shard.py
+rename to src/_discord/shard.py
+diff --git a/src/discord/sinks/__init__.py b/src/_discord/sinks/__init__.py
+similarity index 100%
+rename from src/discord/sinks/__init__.py
+rename to src/_discord/sinks/__init__.py
+diff --git a/src/discord/sinks/core.py b/src/_discord/sinks/core.py
+similarity index 100%
+rename from src/discord/sinks/core.py
+rename to src/_discord/sinks/core.py
+diff --git a/src/discord/sinks/errors.py b/src/_discord/sinks/errors.py
+similarity index 98%
+rename from src/discord/sinks/errors.py
+rename to src/_discord/sinks/errors.py
+index d4ef9cb..e9e5e9b 100644
+--- a/src/discord/sinks/errors.py
++++ b/src/_discord/sinks/errors.py
+@@ -21,7 +21,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+ DEALINGS IN THE SOFTWARE.
+ """
+-from discord.errors import DiscordException
++from _discord.errors import DiscordException
+ 
+ 
+ class SinkException(DiscordException):
+diff --git a/src/discord/sinks/m4a.py b/src/_discord/sinks/m4a.py
+similarity index 100%
+rename from src/discord/sinks/m4a.py
+rename to src/_discord/sinks/m4a.py
+diff --git a/src/discord/sinks/mka.py b/src/_discord/sinks/mka.py
+similarity index 100%
+rename from src/discord/sinks/mka.py
+rename to src/_discord/sinks/mka.py
+diff --git a/src/discord/sinks/mkv.py b/src/_discord/sinks/mkv.py
+similarity index 100%
+rename from src/discord/sinks/mkv.py
+rename to src/_discord/sinks/mkv.py
+diff --git a/src/discord/sinks/mp3.py b/src/_discord/sinks/mp3.py
+similarity index 100%
+rename from src/discord/sinks/mp3.py
+rename to src/_discord/sinks/mp3.py
+diff --git a/src/discord/sinks/mp4.py b/src/_discord/sinks/mp4.py
+similarity index 100%
+rename from src/discord/sinks/mp4.py
+rename to src/_discord/sinks/mp4.py
+diff --git a/src/discord/sinks/ogg.py b/src/_discord/sinks/ogg.py
+similarity index 100%
+rename from src/discord/sinks/ogg.py
+rename to src/_discord/sinks/ogg.py
+diff --git a/src/discord/sinks/pcm.py b/src/_discord/sinks/pcm.py
+similarity index 100%
+rename from src/discord/sinks/pcm.py
+rename to src/_discord/sinks/pcm.py
+diff --git a/src/discord/sinks/wave.py b/src/_discord/sinks/wave.py
+similarity index 100%
+rename from src/discord/sinks/wave.py
+rename to src/_discord/sinks/wave.py
+diff --git a/src/discord/stage_instance.py b/src/_discord/stage_instance.py
+similarity index 100%
+rename from src/discord/stage_instance.py
+rename to src/_discord/stage_instance.py
+diff --git a/src/discord/state.py b/src/_discord/state.py
+similarity index 100%
+rename from src/discord/state.py
+rename to src/_discord/state.py
+diff --git a/src/discord/sticker.py b/src/_discord/sticker.py
+similarity index 100%
+rename from src/discord/sticker.py
+rename to src/_discord/sticker.py
+diff --git a/src/discord/team.py b/src/_discord/team.py
+similarity index 100%
+rename from src/discord/team.py
+rename to src/_discord/team.py
+diff --git a/src/discord/template.py b/src/_discord/template.py
+similarity index 100%
+rename from src/discord/template.py
+rename to src/_discord/template.py
+diff --git a/src/discord/threads.py b/src/_discord/threads.py
+similarity index 100%
+rename from src/discord/threads.py
+rename to src/_discord/threads.py
+diff --git a/src/discord/types/__init__.py b/src/_discord/types/__init__.py
+similarity index 100%
+rename from src/discord/types/__init__.py
+rename to src/_discord/types/__init__.py
+diff --git a/src/discord/types/activity.py b/src/_discord/types/activity.py
+similarity index 100%
+rename from src/discord/types/activity.py
+rename to src/_discord/types/activity.py
+diff --git a/src/discord/types/appinfo.py b/src/_discord/types/appinfo.py
+similarity index 100%
+rename from src/discord/types/appinfo.py
+rename to src/_discord/types/appinfo.py
+diff --git a/src/discord/types/audit_log.py b/src/_discord/types/audit_log.py
+similarity index 100%
+rename from src/discord/types/audit_log.py
+rename to src/_discord/types/audit_log.py
+diff --git a/src/discord/types/automod.py b/src/_discord/types/automod.py
+similarity index 100%
+rename from src/discord/types/automod.py
+rename to src/_discord/types/automod.py
+diff --git a/src/discord/types/channel.py b/src/_discord/types/channel.py
+similarity index 100%
+rename from src/discord/types/channel.py
+rename to src/_discord/types/channel.py
+diff --git a/src/discord/types/components.py b/src/_discord/types/components.py
+similarity index 100%
+rename from src/discord/types/components.py
+rename to src/_discord/types/components.py
+diff --git a/src/discord/types/embed.py b/src/_discord/types/embed.py
+similarity index 100%
+rename from src/discord/types/embed.py
+rename to src/_discord/types/embed.py
+diff --git a/src/discord/types/emoji.py b/src/_discord/types/emoji.py
+similarity index 100%
+rename from src/discord/types/emoji.py
+rename to src/_discord/types/emoji.py
+diff --git a/src/discord/types/gateway.py b/src/_discord/types/gateway.py
+similarity index 100%
+rename from src/discord/types/gateway.py
+rename to src/_discord/types/gateway.py
+diff --git a/src/discord/types/guild.py b/src/_discord/types/guild.py
+similarity index 100%
+rename from src/discord/types/guild.py
+rename to src/_discord/types/guild.py
+diff --git a/src/discord/types/integration.py b/src/_discord/types/integration.py
+similarity index 100%
+rename from src/discord/types/integration.py
+rename to src/_discord/types/integration.py
+diff --git a/src/discord/types/interactions.py b/src/_discord/types/interactions.py
+similarity index 100%
+rename from src/discord/types/interactions.py
+rename to src/_discord/types/interactions.py
+diff --git a/src/discord/types/invite.py b/src/_discord/types/invite.py
+similarity index 100%
+rename from src/discord/types/invite.py
+rename to src/_discord/types/invite.py
+diff --git a/src/discord/types/member.py b/src/_discord/types/member.py
+similarity index 100%
+rename from src/discord/types/member.py
+rename to src/_discord/types/member.py
+diff --git a/src/discord/types/message.py b/src/_discord/types/message.py
+similarity index 100%
+rename from src/discord/types/message.py
+rename to src/_discord/types/message.py
+diff --git a/src/discord/types/raw_models.py b/src/_discord/types/raw_models.py
+similarity index 100%
+rename from src/discord/types/raw_models.py
+rename to src/_discord/types/raw_models.py
+diff --git a/src/discord/types/role.py b/src/_discord/types/role.py
+similarity index 100%
+rename from src/discord/types/role.py
+rename to src/_discord/types/role.py
+diff --git a/src/discord/types/scheduled_events.py b/src/_discord/types/scheduled_events.py
+similarity index 100%
+rename from src/discord/types/scheduled_events.py
+rename to src/_discord/types/scheduled_events.py
+diff --git a/src/discord/types/snowflake.py b/src/_discord/types/snowflake.py
+similarity index 100%
+rename from src/discord/types/snowflake.py
+rename to src/_discord/types/snowflake.py
+diff --git a/src/discord/types/sticker.py b/src/_discord/types/sticker.py
+similarity index 100%
+rename from src/discord/types/sticker.py
+rename to src/_discord/types/sticker.py
+diff --git a/src/discord/types/team.py b/src/_discord/types/team.py
+similarity index 100%
+rename from src/discord/types/team.py
+rename to src/_discord/types/team.py
+diff --git a/src/discord/types/template.py b/src/_discord/types/template.py
+similarity index 100%
+rename from src/discord/types/template.py
+rename to src/_discord/types/template.py
+diff --git a/src/discord/types/threads.py b/src/_discord/types/threads.py
+similarity index 100%
+rename from src/discord/types/threads.py
+rename to src/_discord/types/threads.py
+diff --git a/src/discord/types/user.py b/src/_discord/types/user.py
+similarity index 100%
+rename from src/discord/types/user.py
+rename to src/_discord/types/user.py
+diff --git a/src/discord/types/voice.py b/src/_discord/types/voice.py
+similarity index 100%
+rename from src/discord/types/voice.py
+rename to src/_discord/types/voice.py
+diff --git a/src/discord/types/webhook.py b/src/_discord/types/webhook.py
+similarity index 100%
+rename from src/discord/types/webhook.py
+rename to src/_discord/types/webhook.py
+diff --git a/src/discord/types/welcome_screen.py b/src/_discord/types/welcome_screen.py
+similarity index 100%
+rename from src/discord/types/welcome_screen.py
+rename to src/_discord/types/welcome_screen.py
+diff --git a/src/discord/types/widget.py b/src/_discord/types/widget.py
+similarity index 100%
+rename from src/discord/types/widget.py
+rename to src/_discord/types/widget.py
+diff --git a/src/discord/ui/__init__.py b/src/_discord/ui/__init__.py
+similarity index 100%
+rename from src/discord/ui/__init__.py
+rename to src/_discord/ui/__init__.py
+diff --git a/src/discord/ui/button.py b/src/_discord/ui/button.py
+similarity index 100%
+rename from src/discord/ui/button.py
+rename to src/_discord/ui/button.py
+diff --git a/src/discord/ui/input_text.py b/src/_discord/ui/input_text.py
+similarity index 100%
+rename from src/discord/ui/input_text.py
+rename to src/_discord/ui/input_text.py
+diff --git a/src/discord/ui/item.py b/src/_discord/ui/item.py
+similarity index 100%
+rename from src/discord/ui/item.py
+rename to src/_discord/ui/item.py
+diff --git a/src/discord/ui/modal.py b/src/_discord/ui/modal.py
+similarity index 100%
+rename from src/discord/ui/modal.py
+rename to src/_discord/ui/modal.py
+diff --git a/src/discord/ui/select.py b/src/_discord/ui/select.py
+similarity index 100%
+rename from src/discord/ui/select.py
+rename to src/_discord/ui/select.py
+diff --git a/src/discord/ui/view.py b/src/_discord/ui/view.py
+similarity index 100%
+rename from src/discord/ui/view.py
+rename to src/_discord/ui/view.py
+diff --git a/src/discord/user.py b/src/_discord/user.py
+similarity index 99%
+rename from src/discord/user.py
+rename to src/_discord/user.py
+index 3a51f3a..730a74f 100644
+--- a/src/discord/user.py
++++ b/src/_discord/user.py
+@@ -27,7 +27,7 @@ from __future__ import annotations
+ 
+ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Type, TypeVar
+ 
+-import discord.abc
++import _discord.abc
+ 
+ from .asset import Asset
+ from .colour import Colour
+@@ -404,7 +404,7 @@ class ClientUser(BaseUser):
+         return ClientUser(state=self._state, data=data)
+ 
+ 
+-class User(BaseUser, discord.abc.Messageable):
++class User(BaseUser, _discord.abc.Messageable):
+     """Represents a Discord user.
+ 
+     .. container:: operations
+diff --git a/src/discord/utils.py b/src/_discord/utils.py
+similarity index 100%
+rename from src/discord/utils.py
+rename to src/_discord/utils.py
+diff --git a/src/discord/voice_client.py b/src/_discord/voice_client.py
+similarity index 100%
+rename from src/discord/voice_client.py
+rename to src/_discord/voice_client.py
+diff --git a/src/discord/webhook/__init__.py b/src/_discord/webhook/__init__.py
+similarity index 100%
+rename from src/discord/webhook/__init__.py
+rename to src/_discord/webhook/__init__.py
+diff --git a/src/discord/webhook/async_.py b/src/_discord/webhook/async_.py
+similarity index 100%
+rename from src/discord/webhook/async_.py
+rename to src/_discord/webhook/async_.py
+diff --git a/src/discord/webhook/sync.py b/src/_discord/webhook/sync.py
+similarity index 100%
+rename from src/discord/webhook/sync.py
+rename to src/_discord/webhook/sync.py
+diff --git a/src/discord/welcome_screen.py b/src/_discord/welcome_screen.py
+similarity index 100%
+rename from src/discord/welcome_screen.py
+rename to src/_discord/welcome_screen.py
+diff --git a/src/discord/widget.py b/src/_discord/widget.py
+similarity index 100%
+rename from src/discord/widget.py
+rename to src/_discord/widget.py

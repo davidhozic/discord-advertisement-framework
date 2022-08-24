@@ -1,0 +1,5 @@
+{
+    "voice" : ["PyNaCl", "yt-dlp"],
+    "proxy" : ["aiohttp_socks"],
+    "sql" : ["python-tds", "sqlalchemy-pytds", "sqlalchemy"]
+}
