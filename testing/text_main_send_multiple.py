@@ -17,12 +17,12 @@ author_name="Developer",
 author_icon="https://solarsystem.nasa.gov/system/basic_html_elements/11561_Sun.png",
 fields=\
     [
-        framework.EmbedFIELD("Test 1", "Hello World", True),
-        framework.EmbedFIELD("Test 2", "Hello World 2", True),
-        framework.EmbedFIELD("Test 3", "Hello World 3", True),
-        framework.EmbedFIELD("No Inline", "This is without inline", False),
-        framework.EmbedFIELD("Test 4", "Hello World 4", True),
-        framework.EmbedFIELD("Test 5", "Hello World 5", True)
+        discord.EmbedField("Test 1", "Hello World", True),
+        discord.EmbedField("Test 2", "Hello World 2", True),
+        discord.EmbedField("Test 3", "Hello World 3", True),
+        discord.EmbedField("No Inline", "This is without inline", False),
+        discord.EmbedField("Test 4", "Hello World 4", True),
+        discord.EmbedField("Test 5", "Hello World 5", True)
     ]
 )
 

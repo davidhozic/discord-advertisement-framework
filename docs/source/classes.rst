@@ -16,6 +16,8 @@ GUILD
 
    .. autoproperty:: snowflake
 
+   .. autoproperty:: created_at
+
 USER
 =====================
 .. autoclass:: framework.guild.USER
@@ -25,6 +27,7 @@ USER
 
    .. autoproperty:: snowflake
 
+   .. autoproperty:: created_at
 
 -----------------------------
 Messages
@@ -152,77 +155,57 @@ Error codes
 
 .. glossary::
 
-    DAF_GUILD_ALREADY_ADDED:
-        Value: 0
-
-        Info: Guild with specified snowflake is already added.
-
-    DAF_GUILD_ID_REQUIRED:
+    DAF_SNOWFLAKE_NOT_FOUND:
         Value: 1
-
-        Info: Guild ID is required but was not passed.
-
-    DAF_GUILD_ID_NOT_FOUND:
-        Value: 2
 
         Info: Guild with specified snowflake was not found (or user).
 
     DAF_USER_CREATE_DM:
-        Value: 3
+        Value: 2
 
         Info: Was unable to create DM with user (probably user not found).
 
     DAF_YOUTUBE_STREAM_ERROR:
-        Value: 5
+        Value: 3
 
         Info: The given youtube link could not be streamed (AUDIO, VoiceMESSAGE).
 
     DAF_FILE_NOT_FOUND:
-        Value: 6
+        Value: 4
 
         Info: The given file was not found.
 
-    DAF_MISSING_PARAMETER:
-        Value: 7
-
-        Info: The parameter(s) is(are) missing.
-
-    DAF_CHANNEL_GUILD_MISMATCH_ERROR:
-        Value: 8
-
-        Info: The channel with given ID does not belong into this guild but is part of a different guild.
-
     DAF_SQL_CREATE_TABLES_ERROR:
-        Value: 9
+        Value: 5
 
         Info: Unable to create all the tables.
 
     DAF_SQL_LOOKUPTABLE_NOT_FOUND:
-        Value: 10
+        Value: 6
 
         Info: The lookup table was not found.
 
     DAF_SQL_BEGIN_ENGINE_ERROR:
-        Value: 11
+        Value: 7
 
         Info: Unable to start engine.
 
     DAF_SQL_CR_LT_VALUES_ERROR:
-        Value: 12
+        Value: 8
 
         Info: Unable to create lookuptables' rows.
 
     DAF_SQL_CREATE_DT_ERROR:
-        Value: 13
+        Value: 9
 
         Info: Unable to create SQL data types.
 
     DAF_SQL_CREATE_VPF_ERROR:
-        Value: 14
+        Value: 10
 
         Info: Unable to create views, procedures and functions.
 
     DAF_SQL_CURSOR_CONN_ERROR:
-        Value: 15
+        Value: 11
 
         Info: Unable to connect the cursor.

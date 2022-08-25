@@ -157,7 +157,7 @@ async def add_object(obj: Union[message.DirectMESSAGE, message.TextMESSAGE, mess
         The object provided is not supported for addition.
     TypeError
         Missing snowflake parameter.
-    DAFNotFoundError(code=DAF_GUILD_ID_NOT_FOUND)
+    DAFNotFoundError(code=DAF_SNOWFLAKE_NOT_FOUND)
         Could not find guild with that id.
     Other
         Raised in the obj.add_message() method
@@ -188,7 +188,7 @@ async def add_object(obj, snowflake=None):
                 await guild_user.add_message(obj)
                 return
 
-        raise DAFNotFoundError(f"Guild or user with snowflake `{snowflake}` was not found in the framework.", DAF_GUILD_ID_NOT_FOUND)
+        raise DAFNotFoundError(f"Guild or user with snowflake `{snowflake}` was not found in the framework.", DAF_SNOWFLAKE_NOT_FOUND)
 
     else:
         raise TypeError(f"Invalid object type `{object_type_name}`.")
@@ -206,14 +206,14 @@ def remove_object(snowflake: Union[int, dc.Object, dc.Guild, dc.User, dc.Object,
 
     Raises
     --------------
-    DAFNotFoundError(code=DAF_GUILD_ID_NOT_FOUND)
+    DAFNotFoundError(code=DAF_SNOWFLAKE_NOT_FOUND)
          Could not find guild with that id.
     TypeError
         Invalid argument."""    
     if isinstance(snowflake, message.BaseMESSAGE):
-        for guild in GLOBALS.server_list:
-            if snowflake in guild.messages:
-                guild.remove_message(snowflake)
+        for _guild in GLOBALS.server_list:
+            if snowflake in _guild.messages:
+                _guild.remove_message(snowflake)
         return
 
     if isinstance(snowflake, int):
@@ -225,7 +225,7 @@ def remove_object(snowflake: Union[int, dc.Object, dc.Guild, dc.User, dc.Object,
     if snowflake is not None and snowflake in GLOBALS.server_list:
         GLOBALS.server_list.remove(snowflake)
     else:
-        raise DAFNotFoundError(f"GUILD/USER not in the shilling list.", DAF_GUILD_ID_NOT_FOUND)
+        raise DAFNotFoundError(f"GUILD/USER not in the shilling list.", DAF_SNOWFLAKE_NOT_FOUND)
 
 
 def get_guild_user(snowflake: Union[int, dc.Object, dc.Guild, dc.User, dc.Object]) -> Union[guild.GUILD, guild.USER, None]:

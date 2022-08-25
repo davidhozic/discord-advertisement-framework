@@ -6,8 +6,9 @@
 from __future__ import annotations
 import asyncio
 from contextlib import suppress
-from typing import Any, Literal, Union, List, Optional
+from typing import Any, Coroutine, Literal, Union, List, Optional, Dict, Callable
 from typeguard import typechecked
+from datetime import timedelta, datetime
 
 from .exceptions import *
 from .tracing import *
@@ -44,36 +45,50 @@ class _BaseGUILD:
     """
     Represents an universal guild.
 
-    .. versionchanged::
-        v2.0
+    .. versionchanged:: v2.1
 
-            - Added the update method.
-            - snowflake parameter can now be a discord.Object object.
+        - Added ``created_at`` attribute
+        - Added ``remove_after`` parameter
 
 
     Parameters
     ---------------
     snowflake: Union[int, discord.Object]
         Discord's snowflake id or a Discord object that has the ID attribute.
-    generate_log: bool
+    messages: Optional[List[MessageType]]
+        List of messages to shill.
+    generate_log: Optional[bool]
         Set to True if you wish to have message logs for this guild.
+    remove_after: Optional[Union[int, timedelta, datetime]]
+        Deletes the message after:
+
+        * int - N sends, where each send of all TextMESSAGE objects and each send of all  counts decrements the counter.
+        * timedelta - the specified time difference
+        * datetime - specific date & time
     """
 
     __slots__ = (       # Faster attribute access
         "apiobject",
         "logging",
-        "_messages",
+        "_messages_uninitialized",
+        "message_dict",
+        "remove_after",
+        "_created_at"
     )
     __logname__ = "_BaseGUILD" # Dummy to demonstrate correct definition for @sql._register_type decorator
-
+    
     def __init__(self,
                  snowflake: Any,
                  messages: Optional[List]=[],
-                 logging: Optional[bool]=False) -> None:
+                 logging: Optional[bool]=False,
+                 remove_after: Optional[Union[int, timedelta, datetime]]=None) -> None:
 
         self.apiobject: discord.Object = snowflake
         self.logging: bool= logging
-        self._messages: list = messages  # Contains all the different message objects, this gets sorted in `.initialize()` method
+        self._messages_uninitialized: list = messages   # Contains all the different message objects, this gets sorted in `.initialize()` method
+        self.message_dict: Dict[str, List[BaseMESSAGE]] = {"text": [], "voice": []}  # Dictionary, which's keys hold the discord message type(text, voice) and keys are a list of messages
+        self.remove_after = remove_after  # int - after n sends; timedelta - after amount of time; datetime - after that time
+        self._created_at = datetime.now() # The time this object was created
 
     @property
     def _log_file_name(self):
@@ -105,6 +120,31 @@ class _BaseGUILD:
         Returns the discord's snowflake ID.
         """
         return self.apiobject if isinstance(self.apiobject, int) else self.apiobject.id
+    
+    @property
+    def created_at(self) -> datetime:
+        """
+        .. versionadded:: v2.1
+
+        Returns the datetime of when the object has been created.
+        """
+        return self._created_at
+
+    def _check_state(self) -> bool:
+        """
+        Checks if the guild is ready to be deleted.
+
+        Returns
+        ----------
+        True
+            The guild should be deleted.
+        False
+            The guild is in proper state, do not delete.
+        """
+        rm_after_type = type(self.remove_after)
+        return (rm_after_type is int and self.remove_after == 0 or # Remove after N attempts, self.remove_after is decremented in .advertise
+                rm_after_type is timedelta and datetime.now() - self._created_at > self.remove_after or # The difference from creation time is bigger than remove_after
+                rm_after_type is datetime and datetime.now() > self.remove_after) # The current time is larger than remove_after
 
     def __eq__(self, other: _BaseGUILD) -> bool:
         """
@@ -123,25 +163,42 @@ class _BaseGUILD:
         """
         raise NotImplementedError
 
-    async def initialize(self):
+    async def initialize(self, getter: Callable) -> None:
         """
-        Initializes the guild and then any message objects
-        the guild may hold.
-        """
-        raise NotImplementedError
+        This function initializes the API related objects and then tries to initialize the MESSAGE objects.
 
-    async def advertise(self,
-                        mode: Literal["text", "voice"]):
-        """
-        Main coroutine responsible for sending all the messages to this specific guild,
-        it is called from the core module's advertiser task.
+        .. warning::
+            This should NOT be manually called, it is called automatically after adding the message.
+
+        .. versionchanged:: v2.1
+            Merged derived classes' methods into base method to reduce code.
 
         Parameters
-        --------------
-        mode: Literal["text", "voice"]
-            Tells which task called this method (there is one task for textual messages and one for voice like messages).
+        ------------
+        getter: Callable
+            Callable function or async generator used for retrieving an api object (client.get_*).
+
+        Raises
+        -----------
+        DAFNotFoundError(code=DAF_SNOWFLAKE_NOT_FOUND)
+            Raised when the guild_id wasn't found.
+        Other
+            Raised from .add_message(message_object) method.
         """
-        raise NotImplementedError
+        guild_id = self.snowflake
+        if isinstance(self.apiobject, int):
+            self.apiobject = getter(guild_id)
+            if isinstance(self.apiobject, Coroutine):
+                self.apiobject = await self.apiobject
+
+        if self.apiobject is not None:
+            for message in self._messages_uninitialized:
+                await self.add_message(message)
+
+            self._messages_uninitialized.clear()
+            return
+
+        raise DAFNotFoundError(f"Unable to find object with ID: {guild_id}", DAF_SNOWFLAKE_NOT_FOUND)
 
     def remove_message(self, message: BaseMESSAGE):
         """
@@ -173,7 +230,41 @@ class _BaseGUILD:
         """
         raise NotImplementedError
 
-    async def generate_log(self,
+    @misc._async_safe("update_semaphore", 1)
+    async def advertise(self,
+                        mode: Literal["text", "voice"]):
+        """
+        Main coroutine responsible for sending all the messages to this specific guild,
+        it is called from the core module's advertiser task.
+
+        Parameters
+        --------------
+        mode: Literal["text", "voice"]
+            Tells which task called this method (there is one task for textual messages and one for voice like messages).
+        """
+        msg_list = self.message_dict[mode]
+        for message in msg_list[:]: # Copy the avoid issues with the list being modified while iterating (add_message/remove_message)
+            if message.is_ready():
+                message.reset_timer()
+                message_ret = await message._send()
+                       
+                # Remove message
+                if message._check_state():
+                    self.remove_message(message)
+
+                # Generate log (JSON or SQL)
+                if self.logging and message_ret is not None:
+                    await self._generate_log(message_ret)
+
+                # Remove this object from the shill list due to exceeded amounts of sends
+                if type(self.remove_after) is int:
+                    self.remove_after -= 1
+
+                if self._check_state():
+                    trace(f"[GUILD:] Removing GUILD object representing {self.apiobject}")
+                    core.remove_object(self)
+
+    async def _generate_log(self,
                            message_context: dict) -> None:
         """
         Generates a .json type log or logs to a SQL database for each message send attempt.
@@ -183,7 +274,7 @@ class _BaseGUILD:
         Parameter:
         -----------
         data_context: dict
-            Dictionary containing data describing the message send attempt. (Return of ``message.send()``)
+            Dictionary containing data describing the message send attempt. (Return of ``message._send()``)
         """
         guild_context = {
             "name" : str(self.apiobject),
@@ -261,12 +352,10 @@ class GUILD(_BaseGUILD):
     """
     The GUILD object represents a server to which messages will be sent.
 
-    .. versionchanged:: v2.0
+    .. versionchanged:: v2.1
 
-        - Added the update method
-        - Renamed param ``guild_id`` to ``snowflake``
-        - Renamed ``generate_log`` parameter to ``logging``
-        - snowflake parameter can now be a discord.Guild object.
+        - Added ``created_at`` attribute
+        - Added ``remove_after`` parameter
 
     Parameters
     ------------
@@ -274,24 +363,27 @@ class GUILD(_BaseGUILD):
         Discord's snowflake ID of the guild or discord.Guild object.
     messages: Optional[List[Union[TextMESSAGE, VoiceMESSAGE]]]
         Optional list of TextMESSAGE/VoiceMESSAGE objects.
-    logging:  Optional[bool]
+    logging: Optional[bool]
         Optional variable dictating whatever to log sent messages inside this guild.
+    remove_after: Optional[Union[int, timedelta, datetime]]
+        Deletes the message after:
+
+        * int - N sends, where each send of all TextMESSAGE objects and each send of all  counts decrements the counter.
+        * timedelta - the specified time difference
+        * datetime - specific date & time
     """
 
     __logname__ = "GUILD" # For sql._register_type
     __slots__ = (
-        "t_messages",
-        "vc_messages",
         "update_semaphore",
     )
 
     def __init__(self,
                  snowflake: Union[int, discord.Guild],
                  messages: Optional[List[Union[TextMESSAGE, VoiceMESSAGE]]]=[],
-                 logging: Optional[bool]=False):
-        super().__init__(snowflake, messages, logging)
-        self.t_messages: List[TextMESSAGE] = []
-        self.vc_messages: List[VoiceMESSAGE] = []
+                 logging: Optional[bool]=False,
+                 remove_after: Optional[Union[int, timedelta, datetime]]=None):
+        super().__init__(snowflake, messages, logging, remove_after)
         misc._write_attr_once(self, "update_semaphore", asyncio.Semaphore(2))
 
     @property
@@ -317,13 +409,8 @@ class GUILD(_BaseGUILD):
         Other
             Raised from message.initialize() method.
         """
-
         await message.initialize(guild=self.apiobject)
-
-        if isinstance(message, TextMESSAGE):
-            self.t_messages.append(message)
-        elif isinstance(message, VoiceMESSAGE):
-            self.vc_messages.append(message)
+        self.message_dict["text" if isinstance(message, TextMESSAGE) else "voice"].append(message)
 
     def remove_message(self, message: Union[TextMESSAGE, VoiceMESSAGE]):
         """
@@ -341,66 +428,25 @@ class GUILD(_BaseGUILD):
         ValueError
             Raised when the message is not present in the list.
         """
-        if isinstance(message, TextMESSAGE):
-            message._delete()
-            self.t_messages.remove(message)
-            return
-
-        elif isinstance(message, VoiceMESSAGE):
-            message._delete()
-            self.vc_messages.remove(message)
-            return
+        message._delete()
+        self.message_dict["text" if isinstance(message, TextMESSAGE) else "voice"].remove(message)
 
     async def initialize(self) -> None:
         """
         This function initializes the API related objects and then tries to initialize the MESSAGE objects.
 
+        .. note::
+            This should NOT be manually called, it is called automatically after adding the message.
+
         Raises
         -----------
-        DAFNotFoundError(code=DAF_GUILD_ID_NOT_FOUND)
+        DAFNotFoundError(code=DAF_SNOWFLAKE_NOT_FOUND)
             Raised when the guild_id wasn't found.
 
         Other
             Raised from .add_message(message_object) method.
         """
-        guild_id = self.snowflake
-        if isinstance(self.apiobject, int):
-            cl = client.get_client()
-            self.apiobject = cl.get_guild(guild_id)
-
-        if self.apiobject is not None:
-            for message in self._messages:
-                await self.add_message(message)
-
-            self._messages.clear()
-            return
-
-        raise DAFNotFoundError(f"Unable to find guild with ID: {guild_id}", DAF_GUILD_ID_NOT_FOUND)
-
-    @misc._async_safe("update_semaphore", 1)
-    async def advertise(self,
-                        mode: Literal["text", "voice"]):
-        """
-        Main coroutine responsible for sending all the messages to this specific guild,
-        it is called from the core module's advertiser task.
-
-        Parameters
-        --------------
-        mode: Literal["text", "voice"]
-            Tells which task called this method (there is one task for textual messages and one for voice like messages).
-        """
-        msg_list = self.t_messages if mode == "text" else self.vc_messages
-        for message in msg_list[:]: # Copy the avoid issues with the list being modified while iterating (add_message/remove_message)
-            if message.is_ready():
-                message.reset_timer()
-                message_ret = await message.send()
-                # Check if the message still has any channels (as they can be auto removed on 404 status)
-                if not len(message.channels) and message in msg_list:
-                    self.remove_message(message) # All channels were removed (either not found or forbidden) -> remove message from send list
-                    trace(f"[GUILD]: Removing a {type(message).__name__} because it's channels were removed, in guild {self.apiobject.name}(ID: {self.snowflake})", TraceLEVELS.WARNING)
-                if self.logging and message_ret is not None:
-                    await self.generate_log(message_ret)
-
+        return await super().initialize(client.get_client().get_guild)
 
     @misc._async_safe("update_semaphore", 2) # Take 2 since 2 tasks share access
     async def update(self, **kwargs):
@@ -441,11 +487,10 @@ class USER(_BaseGUILD):
     """
     The USER object represents a user to whom messages will be sent.
 
-    .. versionchanged:: v2.0
+    .. versionchanged:: v2.1
 
-        - ``user_id`` parameter renamed to ``snowflake``
-        - ``snowflake`` can now also be a ``discord.User`` object
-        - renamed ``generate_log`` parameter to ``logging``.
+        - Added ``created_at`` attribute
+        - Added ``remove_after`` parameter
 
     Parameters
     ------------
@@ -455,11 +500,16 @@ class USER(_BaseGUILD):
         Optional list of DirectMESSAGE objects.
     logging: Optional[bool]
         Optional variable dictating whatever to log sent messages inside this guild.
+    remove_after: Optional[Union[int, timedelta, datetime]]
+        Deletes the message after:
+
+        * int - N sends, where each send of all TextMESSAGE objects and each send of all  counts decrements the counter.
+        * timedelta - the specified time difference
+        * datetime - specific date & time
     """
 
     __logname__ = "USER" # For sql._register_type
     __slots__ = (
-        "t_messages",
         "update_semaphore",
     )
 
@@ -470,10 +520,9 @@ class USER(_BaseGUILD):
     def __init__(self,
                  snowflake: Union[int, discord.User],
                  messages: Optional[List[DirectMESSAGE]]=[],
-                 logging: Optional[bool] = False) -> None:
-        super().__init__(snowflake, messages, logging)
-        self.t_messages: List[DirectMESSAGE] = []
-
+                 logging: Optional[bool] = False,
+                 remove_after: Optional[Union[int, timedelta, datetime]]=None) -> None:
+        super().__init__(snowflake, messages, logging, remove_after)
         misc._write_attr_once(self, "update_semaphore", asyncio.Semaphore(2)) # Only allows re-referencing this attribute once
 
     async def add_message(self, message: DirectMESSAGE):
@@ -496,7 +545,7 @@ class USER(_BaseGUILD):
             Raised from message.initialize() method.
         """
         await message.initialize(user=self.apiobject)
-        self.t_messages.append(message)
+        self.message_dict["text"].append(message)
 
     def remove_message(self, message: DirectMESSAGE):
         """
@@ -523,54 +572,12 @@ class USER(_BaseGUILD):
 
         Raises
         -----------
-        DAFNotFoundError(code=DAF_USER_CREATE_DM)
+        DAFNotFoundError(code=DAF_SNOWFLAKE_NOT_FOUND)
             Raised when the DM could not be created.
         Other
             Raised from .add_message(message_object) method.
         """
-        user_id = self.snowflake
-        if isinstance(self.apiobject, int):
-            cl = client.get_client()
-            self.apiobject = await cl.get_or_fetch_user(user_id) # Get object from cache
-
-        # Api object was found in cache or fetched from API -> initialize messages
-        if self.apiobject is not None:
-            for message in self._messages:
-                await self.add_message(message)
-
-            self._messages.clear()
-            return
-
-        # Api object wasn't found, even after direct API call to discord.
-        raise DAFNotFoundError(f"[USER]: Unable to create DM with user id: {user_id}", DAF_USER_CREATE_DM)
-
-    @misc._async_safe("update_semaphore", 1)
-    async def advertise(self,
-                        mode: Literal["text", "voice"]) -> None:
-        """
-        Main coroutine responsible for sending all the messages to this specific guild,
-        it is called from the core module's advertiser task.
-
-        Parameters
-        --------------
-        mode: Literal["text", "voice"]
-            Tells which task called this method (there is one task for textual messages and one for voice like messages).
-        """
-        if mode == "text":  # Does not have voice messages, only text based (DirectMESSAGE)
-            for message in self.t_messages[:]: # Copy the avoid issues with the list being modified while iterating (add_message/remove_message)
-                if message.is_ready():
-                    message.reset_timer()
-                    message_ret = await message.send()
-                    if message_ret is not None:
-                        if self.logging:
-                            await self.generate_log(message_ret)
-
-                        if message.deleted:  # Only True on critical errors that need to be handled by removing all messages
-                            for msg in self.t_messages:
-                                self.remove_message(msg)
-
-                            trace(f"Removing all messages for user {self.apiobject.display_name}#{self.apiobject.discriminator} (ID: {self.snowflake}) because we do not have permissions to send to that user.", TraceLEVELS.WARNING)
-                            break
+        return await super().initialize(client.get_client().get_or_fetch_user)
 
     @misc._async_safe("update_semaphore", 2)
     async def update(self, **kwargs):
