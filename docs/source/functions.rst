@@ -67,9 +67,19 @@ get_guild_user
 .. autofunction:: framework.core.get_guild_user
 
 
+get_shill_list
+=======================
+.. autofunction:: framework.core.get_shill_list
+
+
 get_sql_manager
 =======================
 .. autofunction:: framework.sql.get_sql_manager
+
+
+get_user_callback
+=======================
+.. autofunction:: framework.core.get_user_callback
 
 
 ------------------------------

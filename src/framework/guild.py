@@ -6,7 +6,7 @@
 from __future__ import annotations
 import asyncio
 from contextlib import suppress
-from typing import Any, Coroutine, Literal, Union, List, Optional, Dict, Callable
+from typing import Any, Coroutine, Union, List, Optional, Dict, Callable, TypeVar
 from typeguard import typechecked
 from datetime import timedelta, datetime
 
@@ -25,6 +25,8 @@ import time
 import json
 import pathlib
 import shutil
+import operator
+
 
 __all__ = (
     "GUILD",
@@ -59,10 +61,9 @@ class _BaseGUILD:
         List of messages to shill.
     generate_log: Optional[bool]
         Set to True if you wish to have message logs for this guild.
-    remove_after: Optional[Union[int, timedelta, datetime]]
-        Deletes the message after:
+    remove_after: Optional[Union[timedelta, datetime]]
+        Deletes the guild after:
 
-        * int - N sends, where each send of all TextMESSAGE objects and each send of all  counts decrements the counter.
         * timedelta - the specified time difference
         * datetime - specific date & time
     """
@@ -81,14 +82,17 @@ class _BaseGUILD:
                  snowflake: Any,
                  messages: Optional[List]=[],
                  logging: Optional[bool]=False,
-                 remove_after: Optional[Union[int, timedelta, datetime]]=None) -> None:
+                 remove_after: Optional[Union[timedelta, datetime]]=None) -> None:
 
         self.apiobject: discord.Object = snowflake
         self.logging: bool= logging
         self._messages_uninitialized: list = messages   # Contains all the different message objects, this gets sorted in `.initialize()` method
-        self.message_dict: Dict[str, List[BaseMESSAGE]] = {"text": [], "voice": []}  # Dictionary, which's keys hold the discord message type(text, voice) and keys are a list of messages
+        self.message_dict: Dict[str, List[BaseMESSAGE]] = {core.AdvertiseTaskType.TEXT_ISH: [], core.AdvertiseTaskType.VOICE: []}  # Dictionary, which's keys hold the discord message type(text, voice) and keys are a list of messages
         self.remove_after = remove_after  # int - after n sends; timedelta - after amount of time; datetime - after that time
         self._created_at = datetime.now() # The time this object was created
+
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}(discord={self.apiobject})"
 
     @property
     def _log_file_name(self):
@@ -106,11 +110,7 @@ class _BaseGUILD:
 
         .. versionadded:: v2.0
         """
-        ret = []
-        for x in self.__slots__:
-            if hasattr(self, x) and not x.startswith("_") and x.endswith("messages"):
-                ret.extend(getattr(self , x))
-        return ret
+        return operator.add(*self.message_dict.values()) # Merge lists
 
     @property
     def snowflake(self) -> int:
@@ -142,9 +142,8 @@ class _BaseGUILD:
             The guild is in proper state, do not delete.
         """
         rm_after_type = type(self.remove_after)
-        return (rm_after_type is int and self.remove_after == 0 or # Remove after N attempts, self.remove_after is decremented in .advertise
-                rm_after_type is timedelta and datetime.now() - self._created_at > self.remove_after or # The difference from creation time is bigger than remove_after
-                rm_after_type is datetime and datetime.now() > self.remove_after) # The current time is larger than remove_after
+        return (rm_after_type is timedelta and datetime.now() - self._created_at > self.remove_after or # The difference from creation time is bigger than remove_after
+                rm_after_type is datetime and datetime.now() > self.remove_after) # The current time is larger than remove_after 
 
     def __eq__(self, other: _BaseGUILD) -> bool:
         """
@@ -231,15 +230,15 @@ class _BaseGUILD:
         raise NotImplementedError
 
     @misc._async_safe("update_semaphore", 1)
-    async def advertise(self,
-                        mode: Literal["text", "voice"]):
+    async def _advertise(self,
+                         mode: core.AdvertiseTaskType):
         """
         Main coroutine responsible for sending all the messages to this specific guild,
         it is called from the core module's advertiser task.
 
         Parameters
         --------------
-        mode: Literal["text", "voice"]
+        mode: AdvertiseTaskType
             Tells which task called this method (there is one task for textual messages and one for voice like messages).
         """
         msg_list = self.message_dict[mode]
@@ -247,22 +246,20 @@ class _BaseGUILD:
             if message.is_ready():
                 message.reset_timer()
                 message_ret = await message._send()
-                       
-                # Remove message
-                if message._check_state():
-                    self.remove_message(message)
 
                 # Generate log (JSON or SQL)
                 if self.logging and message_ret is not None:
                     await self._generate_log(message_ret)
 
-                # Remove this object from the shill list due to exceeded amounts of sends
-                if type(self.remove_after) is int:
-                    self.remove_after -= 1
+                # Remove message               Check due to asynchronous operations
+                if message._check_state() and message in self.messages:
+                    trace(f"[GUILD:] Removing {message} which is part of {self}")
+                    self.remove_message(message)
 
-                if self._check_state():
-                    trace(f"[GUILD:] Removing GUILD object representing {self.apiobject}")
-                    core.remove_object(self)
+        # Check if the guild has expired and check if the guild is in the list (could not be due to asynchronous operations)
+        if self._check_state() and self in core.get_shill_list():
+            trace(f"[GUILD:] Removing {self}")
+            core.remove_object(self)
 
     async def _generate_log(self,
                            message_context: dict) -> None:
@@ -365,10 +362,9 @@ class GUILD(_BaseGUILD):
         Optional list of TextMESSAGE/VoiceMESSAGE objects.
     logging: Optional[bool]
         Optional variable dictating whatever to log sent messages inside this guild.
-    remove_after: Optional[Union[int, timedelta, datetime]]
-        Deletes the message after:
-
-        * int - N sends, where each send of all TextMESSAGE objects and each send of all  counts decrements the counter.
+    remove_after: Optional[Union[timedelta, datetime]]
+        Deletes the guild after:
+        
         * timedelta - the specified time difference
         * datetime - specific date & time
     """
@@ -382,7 +378,7 @@ class GUILD(_BaseGUILD):
                  snowflake: Union[int, discord.Guild],
                  messages: Optional[List[Union[TextMESSAGE, VoiceMESSAGE]]]=[],
                  logging: Optional[bool]=False,
-                 remove_after: Optional[Union[int, timedelta, datetime]]=None):
+                 remove_after: Optional[Union[timedelta, datetime]]=None):
         super().__init__(snowflake, messages, logging, remove_after)
         misc._write_attr_once(self, "update_semaphore", asyncio.Semaphore(2))
 
@@ -409,8 +405,8 @@ class GUILD(_BaseGUILD):
         Other
             Raised from message.initialize() method.
         """
-        await message.initialize(guild=self.apiobject)
-        self.message_dict["text" if isinstance(message, TextMESSAGE) else "voice"].append(message)
+        await message.initialize(parent=self)
+        self.message_dict[core.AdvertiseTaskType.TEXT_ISH if isinstance(message, TextMESSAGE) else core.AdvertiseTaskType.VOICE].append(message)
 
     def remove_message(self, message: Union[TextMESSAGE, VoiceMESSAGE]):
         """
@@ -428,8 +424,7 @@ class GUILD(_BaseGUILD):
         ValueError
             Raised when the message is not present in the list.
         """
-        message._delete()
-        self.message_dict["text" if isinstance(message, TextMESSAGE) else "voice"].remove(message)
+        self.message_dict[core.AdvertiseTaskType.TEXT_ISH if isinstance(message, TextMESSAGE) else core.AdvertiseTaskType.VOICE].remove(message)
 
     async def initialize(self) -> None:
         """
@@ -500,10 +495,9 @@ class USER(_BaseGUILD):
         Optional list of DirectMESSAGE objects.
     logging: Optional[bool]
         Optional variable dictating whatever to log sent messages inside this guild.
-    remove_after: Optional[Union[int, timedelta, datetime]]
-        Deletes the message after:
+    remove_after: Optional[Union[timedelta, datetime]]
+        Deletes the user after:
 
-        * int - N sends, where each send of all TextMESSAGE objects and each send of all  counts decrements the counter.
         * timedelta - the specified time difference
         * datetime - specific date & time
     """
@@ -521,7 +515,7 @@ class USER(_BaseGUILD):
                  snowflake: Union[int, discord.User],
                  messages: Optional[List[DirectMESSAGE]]=[],
                  logging: Optional[bool] = False,
-                 remove_after: Optional[Union[int, timedelta, datetime]]=None) -> None:
+                 remove_after: Optional[Union[timedelta, datetime]]=None) -> None:
         super().__init__(snowflake, messages, logging, remove_after)
         misc._write_attr_once(self, "update_semaphore", asyncio.Semaphore(2)) # Only allows re-referencing this attribute once
 
@@ -544,8 +538,8 @@ class USER(_BaseGUILD):
         Other
             Raised from message.initialize() method.
         """
-        await message.initialize(user=self.apiobject)
-        self.message_dict["text"].append(message)
+        await message.initialize(parent=self)
+        self.message_dict[core.AdvertiseTaskType.TEXT_ISH].append(message)
 
     def remove_message(self, message: DirectMESSAGE):
         """
@@ -563,8 +557,7 @@ class USER(_BaseGUILD):
         TypeError
             Raised when the message is not of type DirectMESSAGE.
         """
-        message._delete()
-        self.t_messages.remove(message)
+        self.message_dict[core.AdvertiseTaskType.TEXT_ISH].remove(message)
 
     async def initialize(self):
         """

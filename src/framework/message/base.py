@@ -1,7 +1,7 @@
 """
     Contains base definitions for different message classes."""
 
-from typing import Any, Iterable, Union, TypeVar
+from typing import Any, Iterable, Union, TypeVar, Optional
 from datetime import timedelta, datetime
 from typeguard import check_type, typechecked
 
@@ -37,6 +37,7 @@ class BaseMESSAGE:
 
         - start_period, end_period Accept timedelta objects.
         - start_now - renamed into ``start_in`` which describes when the message should be first sent.
+        - removed ``deleted`` property
     
     Parameters
     -----------------
@@ -50,7 +51,12 @@ class BaseMESSAGE:
         The data to be sent to discord.
     start_in: timedelta
         When should the message be first sent.
+    remove_after: Optional[Union[int, timedelta, datetime]]
+        Deletes the guild after:
 
+        * int - provided amounts of sends
+        * timedelta - the specified time difference
+        * datetime - specific date & time
     """
     __slots__ = (
         "period",
@@ -60,18 +66,19 @@ class BaseMESSAGE:
         "next_send_time",
         "data",
         "update_semaphore",
-        "_deleted",
-        "parent"
+        "parent",
+        "remove_after",
+        "_created_at"
     )
 
     __logname__: str = "" # Used for registering SQL types and to get the message type for saving the log
 
     def __init__(self,
-                start_period: Union[int, timedelta, None],
+                start_period: Optional[Union[int, timedelta]],
                 end_period: Union[int, timedelta],
                 data: Any,
-                start_in: Union[timedelta, bool]): # TODO: Add remove_after parameter
-        
+                start_in: Union[timedelta, bool],
+                remove_after: Optional[Union[int, timedelta, datetime]]):
         # Data parameter checks
         if isinstance(data, Iterable):
             if not len(data):
@@ -113,41 +120,41 @@ class BaseMESSAGE:
         self.end_period = end_period
 
         self.parent = None # The xGUILD object this message is in (needed for update method).
+        self.remove_after = remove_after # Remove the message from the list after this
+        self._created_at = datetime.now()
 
         # Attributes created with this function will not be re-referenced to a different object
         # if the function is called again, ensuring safety (.update_method)
-        misc._write_attr_once(self, "_deleted", False)
         misc._write_attr_once(self, "update_semaphore", asyncio.Semaphore(1))
 
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}(data={self.data})"
+
     @property
-    def deleted(self) -> bool:
-        """
-        Property that indicates if an object has been deleted from the shilling list.
-
-        If this is True, you should dereference this object from any variables.
-        """
-        return self._deleted
-
-    def _delete(self):
-        """
-        Sets the deleted flag to True, indicating the user should stop
-        using this message.
-        """
-        self._deleted = True
+    def created_at(self) -> datetime:
+        "Returns the datetime of when the object was created"
+        return self._created_at
 
     def _check_state(self) -> bool:
         """
         Checks if the message is ready to be deleted.
-        This is method is extended in the derived classes.
+        This is extended in subclasses.
         
         Returns
-        ------------
+        ----------
         True
             The message should be deleted.
         False
-            The message should not be deleted.
+            The message is in proper state, do not delete.
         """
-        return False # TODO: Implement
+        # Check remove_after
+        type_ = type(self.remove_after)
+        if type_ is int:
+            self.remove_after -= 1 
+            return self.remove_after == 0
+
+        return (type_ is timedelta and datetime.now() - self._created_at > self.remove_after or # The difference from creation time is bigger than remove_after
+                type_ is datetime and datetime.now() > self.remove_after) # The current time is larger than remove_after
 
     def _generate_exception(self,
                            status: int,

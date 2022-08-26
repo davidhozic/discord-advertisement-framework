@@ -4,7 +4,7 @@
 
 from contextlib import suppress
 from typing import Any, Dict, List, Iterable, Optional, Union
-from datetime import timedelta
+from datetime import timedelta, datetime
 from typeguard import typechecked
 
 from .base import *
@@ -49,6 +49,7 @@ class VoiceMESSAGE(BaseMESSAGE):
 
         - start_period, end_period Accept timedelta objects.
         - start_now - renamed into ``start_in`` which describes when the message should be first sent.
+        - removed ``deleted`` property
 
     Parameters
     ------------
@@ -84,6 +85,12 @@ class VoiceMESSAGE(BaseMESSAGE):
         The volume (0-100%) at which to play the audio. Defaults to 50%. This was added in v2.0.0
     start_in: timedelta
         When should the message be first sent.
+    remove_after: Optional[Union[int, timedelta, datetime]]
+        Deletes the guild after:
+
+        * int - provided amounts of sends
+        * timedelta - the specified time difference
+        * datetime - specific date & time
     """
 
     __slots__ = (
@@ -106,14 +113,28 @@ class VoiceMESSAGE(BaseMESSAGE):
                  data: AUDIO,
                  channels: Iterable[Union[int, discord.VoiceChannel]],
                  volume: int=50,
-                 start_in: Union[timedelta, bool]=timedelta(seconds=0)):
+                 start_in: Union[timedelta, bool]=timedelta(seconds=0),
+                 remove_after: Optional[Union[int, timedelta, datetime]]=None):
 
         if not dtypes.GLOBALS.voice_installed:
             raise ModuleNotFoundError("You need to install extra requirements: pip install discord-advert-framework[voice]")
 
-        super().__init__(start_period, end_period, data, start_in)
+        super().__init__(start_period, end_period, data, start_in, remove_after)
         self.volume = max(0, min(100, volume)) # Clamp the volume to 0-100 %
         self.channels = list(set(channels))    # Auto remove duplicates
+
+    def _check_state(self) -> bool:
+        """
+        Checks if the message is ready to be deleted.
+        
+        Returns
+        ----------
+        True
+            The message should be deleted.
+        False
+            The message is in proper state, do not delete.
+        """
+        return super()._check_state() or not bool(self.channels)
 
     def _generate_log_context(self,
                              audio: AUDIO,
