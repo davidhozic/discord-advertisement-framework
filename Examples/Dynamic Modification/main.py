@@ -46,7 +46,7 @@ async def user_task():
     await asyncio.sleep(10)
     fw.trace("Updating the TextMESSAGE object")
     # Update the object
-    await text_msg.update(data="Updated Data", end_period=60) 
+    await text_msg.update(data="Updated Data", end_period=timedelta(seconds=60)) 
 
     fw.trace("Now shilling 'Updated Data' with period of 60 seconds")
     #########################################################################

@@ -67,13 +67,13 @@ class VoiceMESSAGE(BaseMESSAGE):
             :caption: **Randomized** sending period between **5** seconds and **10** seconds.
 
             # Time between each send is somewhere between 5 seconds and 10 seconds.
-            framework.VoiceMESSAGE(start_period=None, end_period=10, data=framework.AUDIO("msg.mp3"), channels=[12345], start_in=timedelta(seconds=0), volume=50)
+            framework.VoiceMESSAGE(start_period=None, end_period=timedelta(10), data=framework.AUDIO("msg.mp3"), channels=[12345], start_in=timedelta(seconds=0), volume=50)
 
         .. code-block:: python
             :caption: **Fixed** sending period at **10** seconds
 
             # Time between each send is exactly 10 seconds.
-            framework.VoiceMESSAGE(start_period=None, end_period=10, data=framework.AUDIO("msg.mp3"), channels=[12345], start_in=timedelta(seconds=0), volume=50)
+            framework.VoiceMESSAGE(start_period=None, end_period=timedelta(10), data=framework.AUDIO("msg.mp3"), channels=[12345], start_in=timedelta(seconds=0), volume=50)
 
     data: AUDIO
         The data parameter is the actual data that will be sent using discord's API. The data types of this parameter can be:
@@ -86,7 +86,7 @@ class VoiceMESSAGE(BaseMESSAGE):
     start_in: timedelta
         When should the message be first sent.
     remove_after: Optional[Union[int, timedelta, datetime]]
-        Deletes the guild after:
+        Deletes the message after:
 
         * int - provided amounts of sends
         * timedelta - the specified time difference
@@ -197,14 +197,14 @@ class VoiceMESSAGE(BaseMESSAGE):
                     _data_to_send["audio"] = element
         return _data_to_send
 
-    async def initialize(self, guild: discord.Guild):
+    async def initialize(self, parent: Any):
         """
         This method initializes the implementation specific api objects and checks for the correct channel input context.
 
         Parameters
-        --------------
-        guild: discord.Guild
-            Discord's guild object, this is used to check if channels given are in the correct guild.
+        ------------
+        parent: framework.guild.GUILD
+            The GUILD this message is in.
 
         Raises
         ------------
@@ -217,7 +217,8 @@ class VoiceMESSAGE(BaseMESSAGE):
         """
         ch_i = 0
         cl = client.get_client()
-        self.parent = guild
+        self.parent = parent
+        _guild = parent.apiobject
         while ch_i < len(self.channels):
             channel = self.channels[ch_i]
             if isinstance(channel, discord.abc.GuildChannel):
@@ -231,8 +232,8 @@ class VoiceMESSAGE(BaseMESSAGE):
                 self.channels.remove(channel)
             elif type(channel) not in {discord.VoiceChannel}:
                 raise TypeError(f"TextMESSAGE object received channel type of {type(channel).__name__}, but was expecting VoiceChannel")
-            elif channel.guild != guild:
-                raise ValueError(f"The channel {channel.name}(ID: {channel_id}) does not belong into {guild.name}(ID: {guild.id}) but is part of {channel.guild.name}(ID: {channel.guild.id})")
+            elif channel.guild != _guild:
+                raise ValueError(f"The channel {channel.name}(ID: {channel_id}) does not belong into {_guild.name}(ID: {_guild.id}) but is part of {channel.guild.name}(ID: {channel.guild.id})")
             else:
                 ch_i += 1
 

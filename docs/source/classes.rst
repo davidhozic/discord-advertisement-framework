@@ -38,22 +38,22 @@ TextMESSAGE
 .. autoclass:: framework.message.TextMESSAGE
     :members:
 
-    .. autoproperty:: deleted
+    .. autoproperty:: created_at
 
 VoiceMESSAGE
 =====================
 .. autoclass:: framework.message.VoiceMESSAGE
     :members:
 
-    .. autoproperty:: deleted
+    .. autoproperty:: created_at
+
 
 DirectMESSAGE
 =====================
 .. autoclass:: framework.message.DirectMESSAGE
     :members:
 
-    .. autoproperty:: deleted
-
+    .. autoproperty:: created_at
 
 
 -----------------------------

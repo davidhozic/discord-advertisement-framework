@@ -60,13 +60,13 @@ class TextMESSAGE(BaseMESSAGE):
             :caption: **Randomized** sending period between **5** seconds and **10** seconds.
 
             # Time between each send is somewhere between 5 seconds and 10 seconds.
-            framework.TextMESSAGE(start_period=5, end_period=10, data="Second Message", channels=[12345], mode="send", start_in=timedelta(seconds=0))
+            framework.TextMESSAGE(start_period=5, end_period=timedelta(10), data="Second Message", channels=[12345], mode="send", start_in=timedelta(seconds=0))
 
         .. code-block:: python
             :caption: **Fixed** sending period at **10** seconds
 
             # Time between each send is exactly 10 seconds.
-            framework.TextMESSAGE(start_period=None, end_period=10, data="Second Message", channels=[12345], mode="send", start_in=timedelta(seconds=0))
+            framework.TextMESSAGE(start_period=None, end_period=timedelta(10), data="Second Message", channels=[12345], mode="send", start_in=timedelta(seconds=0))
 
     data: Union[str, EMBED, FILE, List[Union[str, EMBED, FILE]], _FunctionBaseCLASS]
         The data parameter is the actual data that will be sent using discord's API. The data types of this parameter can be:
@@ -89,7 +89,7 @@ class TextMESSAGE(BaseMESSAGE):
     start_in: timedelta
         When should the message be first sent.
     remove_after: Optional[Union[int, timedelta, datetime]]
-        Deletes the guild after:
+        Deletes the message after:
 
         * int - provided amounts of sends
         * timedelta - the specified time difference
@@ -223,8 +223,8 @@ class TextMESSAGE(BaseMESSAGE):
 
         Parameters
         --------------
-        guild: discord.Guild
-            Discord's guild object, this is used to check if channels given are in the correct guild.
+        parent: framework.guild.GUILD
+            The GUILD this message is in
 
         Raises
         ------------
@@ -460,13 +460,13 @@ class DirectMESSAGE(BaseMESSAGE):
             :caption: **Randomized** sending period between **5** seconds and **10** seconds.
 
             # Time between each send is somewhere between 5 seconds and 10 seconds.
-            framework.DirectMESSAGE(start_period=5, end_period=10, data="Second Message",  mode="send", start_in=timedelta(seconds=0))
+            framework.DirectMESSAGE(start_period=5, end_period=timedelta(10), data="Second Message",  mode="send", start_in=timedelta(seconds=0))
 
         .. code-block:: python
             :caption: **Fixed** sending period at **10** seconds
 
             # Time between each send is exactly 10 seconds.
-            framework.DirectMESSAGE(start_period=None, end_period=10, data="Second Message",  mode="send", start_in=timedelta(seconds=0))
+            framework.DirectMESSAGE(start_period=None, end_period=timedelta(10), data="Second Message",  mode="send", start_in=timedelta(seconds=0))
 
     data: Union[str, EMBED, FILE, List[Union[str, EMBED, FILE]], _FunctionBaseCLASS]
         The data parameter is the actual data that will be sent using discord's API. The data types of this parameter can be:
@@ -592,11 +592,13 @@ class DirectMESSAGE(BaseMESSAGE):
 
         Parameters
         -----------
-        - parent: USER - The USER object in which this message is in.
+        parent: framework.guild.USER
+            The USER this message is in
 
         Raises
         ---------
-        - DAFNotFoundError(code=DAF_USER_CREATE_DM) - Raised when the direct message channel could not be created
+        DAFNotFoundError(code=DAF_USER_CREATE_DM)
+            Raised when the direct message channel could not be created
         """
         try:
             user = parent.apiobject
@@ -710,7 +712,7 @@ class DirectMESSAGE(BaseMESSAGE):
 
         Parameters
         -------------
-        **kwargs: Any
+        kwargs: Any
             Custom number of keyword parameters which you want to update, these can be anything that is available during the object creation.
 
         Raises

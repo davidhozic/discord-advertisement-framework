@@ -52,7 +52,7 @@ class BaseMESSAGE:
     start_in: timedelta
         When should the message be first sent.
     remove_after: Optional[Union[int, timedelta, datetime]]
-        Deletes the guild after:
+        Deletes the message after:
 
         * int - provided amounts of sends
         * timedelta - the specified time difference
