@@ -206,6 +206,9 @@ class FILE:
     def __init__(self,
                  filename: str):
         self.filename = filename
+    
+    def __str__(self) -> str:
+        return f"FILE(filename={self.filename})"
 
 
 @typechecked
@@ -266,6 +269,9 @@ class AUDIO:
                     pass
             except FileNotFoundError:
                 raise DAFNotFoundError(f"The file {self.url} could not be found.", DAF_FILE_NOT_FOUND)
+    
+    def __str__(self):
+        return f"AUDIO({str(self.to_dict())})"
 
     def to_dict(self):
         """

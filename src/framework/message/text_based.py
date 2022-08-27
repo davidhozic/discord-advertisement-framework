@@ -128,6 +128,18 @@ class TextMESSAGE(BaseMESSAGE):
             The message is in proper state, do not delete.
         """
         return super()._check_state() or not bool(self.channels)
+   
+    def _update_state(self, err_channels: List[dict]):
+        "Updates the state of the object based on errored channels."
+        super()._update_state()
+        # Remove any channels that returned with code status 404 (They no longer exist)
+        for data in err_channels:
+            reason = data["reason"]
+            channel = data["channel"]
+            if isinstance(reason, discord.HTTPException):
+                if (reason.status == 403 or                    # Forbidden
+                    reason.code in {50007, 10003}):     # Not Forbidden, but bad error codes
+                    self.channels.remove(channel)
 
     def _generate_log_context(self,
                              text: Optional[str],
@@ -379,19 +391,8 @@ class TextMESSAGE(BaseMESSAGE):
                 else:
                     errored_channels.append({"channel":channel, "reason": context["reason"]})
 
-            # Remove any channels that returned with code status 404 (They no longer exist)
-            for data in errored_channels:
-                reason = data["reason"]
-                channel = data["channel"]
-                if isinstance(reason, discord.HTTPException):
-                    if (reason.status == 403 or                    # Forbidden
-                        reason.code in {50007, 10003}     # Not Forbidden, but bad error codes
-                    ):
-                        self.channels.remove(channel)
-                        trace(f"Channel {channel.name}(ID: {channel.id}) {'was deleted' if reason.code == 10003 else 'does not have permissions'}, removing it from the send list", TraceLEVELS.WARNING)
-
-            # Return sent data + failed and successful function for logging purposes
-            return self._generate_log_context(**data_to_send, succeeded_ch=succeeded_channels, failed_ch=errored_channels)
+            self._update_state(errored_channels)
+            return self._generate_log_context(**data_to_send, succeeded_ch=succeeded_channels, failed_ch=errored_channels) # Return sent data + failed and successful function for logging purposes
 
         return None
 
@@ -633,7 +634,8 @@ class DirectMESSAGE(BaseMESSAGE):
                 # Not permitted to send messages to that user!
                 # Remove all messages to prevent an account ban
                 for m in self.parent.messages:
-                    self.parent.remove_message(m)
+                    if m in self.parent.messages:
+                        self.parent.remove_message(m)
 
             if ex.status in {400, 403}: # Bad Request
                 await asyncio.sleep(RLIM_USER_WAIT_TIME * 5) # To avoid triggering self-bot detection
