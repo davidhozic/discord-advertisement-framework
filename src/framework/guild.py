@@ -254,8 +254,8 @@ class _BaseGUILD:
                 trace(f"[GUILD:] Removing {message} which is part of {self}")
                 self.remove_message(message)
 
-            elif message.is_ready():
-                message.reset_timer()
+            elif message._is_ready():
+                message._reset_timer()
                 message_ret = await message._send()
 
                 # Generate log (JSON or SQL)

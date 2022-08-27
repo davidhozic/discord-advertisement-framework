@@ -9,7 +9,6 @@ C_MINUTE_TO_SECOND = 60
 
 # TASK CONSTANTS
 C_TASK_SLEEP_DELAY = 0.010 # Advertiser task sleep
-C_VC_CONNECT_TIMEOUT = 3 # Timeout of voice channels
 
 # RATE LIMIT CONSTANTS
 RLIM_USER_WAIT_TIME = 1.5  # Initial rate limit avoidance time for user accounts
@@ -25,3 +24,7 @@ SQL_CONNECTOR_TIMEOUT = 6
 
 # OTHER CONSTANTS
 C_FILE_NAME_FORBIDDEN_CHAR = ('<','>','"','/','\\','|','?','*',":")
+
+# MESSAGE SETTINGS
+C_VC_CONNECT_TIMEOUT = 3 # Timeout of voice channels
+C_PERIOD_MINIMUM_SEC = 1 # Minimal seconds the period can be

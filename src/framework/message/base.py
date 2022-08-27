@@ -5,6 +5,7 @@ from typing import Any, Iterable, Union, TypeVar, Optional
 from datetime import timedelta, datetime
 from typeguard import check_type, typechecked
 
+from ..const import *
 from ..dtypes import *
 from ..tracing import *
 from ..timing import *
@@ -82,47 +83,42 @@ class BaseMESSAGE:
         # Data parameter checks
         if isinstance(data, Iterable):
             if not len(data):
-                raise TypeError(f"data parameter cannot be an empty iterable. Got: '{data}'")
+                raise TypeError(f"data parameter cannot be an empty iterable. Got: '{data}.'")
             
             annots = self.__init__.__annotations__["data"]  
             for element in data:
                 if isinstance(element, _FunctionBaseCLASS): # Check if function is being used standalone
-                    raise TypeError(f"The function can only be used on the data parameter directly, not in a iterable. Function: '{element})'")
+                    raise TypeError(f"The function can only be used on the data parameter directly, not in a iterable. Function: '{element}).'")
                 
                 # Check if the list elements are of correct type (typeguard does not protect iterable's elements)
                 check_type("data", element, annots)
 
-        # Deprecated int, use timedelta
+        # Deprecated int since v2.1
         if isinstance(start_period, int):
-            trace("Using int on start_period is deprecated, use timedelta object instead", TraceLEVELS.WARNING)
+            trace("Using int on start_period is deprecated, use timedelta object instead.", TraceLEVELS.WARNING)
             start_period = timedelta(seconds=start_period)
 
         if isinstance(end_period, int):
-            trace("Using int on end_period is deprecated, use timedelta object instead", TraceLEVELS.WARNING)
+            trace("Using int on end_period is deprecated, use timedelta object instead.", TraceLEVELS.WARNING)
             end_period = timedelta(seconds=end_period)
-        
-        if start_period is None:
-            self.period = end_period    # Fixed period is used, equal to end_period
-        else:
-            range = map(int, [start_period.total_seconds(), end_period.total_seconds()])
-            self.period = random.randrange(*range) # Randomized period is used
-            
-        if isinstance(start_in, bool): # Deprecated since 2.1
-            self.next_send_time = datetime.now() if start_in else datetime.now() + self.period
+                
+        # Clamp periods to minimum level (prevent infinite loops)
+        self.start_period = start_period if start_period is None else max(start_period, timedelta(seconds=C_PERIOD_MINIMUM_SEC))
+        self.end_period = max(end_period, timedelta(seconds=C_PERIOD_MINIMUM_SEC))
+        self.period = self.end_period # This can randomize in _reset_timer
+
+        # Deprecated bool since v2.1
+        if isinstance(start_in, bool): 
+            self.next_send_time = datetime.now() if start_in else datetime.now() + self.end_period
             trace("Using bool value for 'start_in' ('start_now') parameter is deprecated. Use timedelta object instead.", TraceLEVELS.WARNING)
         else:
             self.next_send_time = datetime.now() + start_in
 
-
-        self.force_retry = {"ENABLED" : False, "TIMESTAMP" : None}
-        self.data = data
-        self.start_period = start_period
-        self.end_period = end_period
-
         self.parent = None # The xGUILD object this message is in (needed for update method).
         self.remove_after = remove_after # Remove the message from the list after this
         self._created_at = datetime.now()
-
+        self.force_retry = {"ENABLED" : False, "TIMESTAMP" : None}
+        self.data = data
         # Attributes created with this function will not be re-referenced to a different object
         # if the function is called again, ensuring safety (.update_method)
         misc._write_attr_once(self, "update_semaphore", asyncio.Semaphore(1))
@@ -212,14 +208,14 @@ class BaseMESSAGE:
         """
         raise NotImplementedError
 
-    def is_ready(self) -> bool:
+    def _is_ready(self) -> bool:
         """
         This method returns bool indicating if message is ready to be sent.
         """
         return (datetime.now() >= self.force_retry["TIMESTAMP"] if self.force_retry["ENABLED"]
                 else datetime.now() >= self.next_send_time)
 
-    def reset_timer(self) -> None:
+    def _reset_timer(self) -> None:
         """
         Resets internal timer
         """
