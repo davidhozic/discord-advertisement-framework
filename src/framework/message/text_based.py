@@ -696,8 +696,9 @@ class DirectMESSAGE(BaseMESSAGE):
         if any(data_to_send.values()):
             if core.GLOBALS.is_user:
                 await asyncio.sleep(RLIM_USER_WAIT_TIME)
+            
             context = await self._send_channel(**data_to_send)
-
+            self._update_state()
             return self._generate_log_context(context, **data_to_send)
 
         return None
