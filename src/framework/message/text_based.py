@@ -1,5 +1,5 @@
 """
-Contains definitions for message classes that are text based (TextMESSAGE & DirectMESSAGE)."""
+Contains definitions for message classes that are text based."""
 
 
 from typing import Any, Dict, List, Iterable, Optional, Union, Literal
@@ -16,6 +16,7 @@ from .. import core
 from .. import client
 from .. import sql
 from .. import misc
+
 import asyncio
 import _discord as discord
 
@@ -41,6 +42,7 @@ class TextMESSAGE(BaseMESSAGE):
 
         - start_period, end_period Accept timedelta objects.
         - start_now - renamed into ``start_in`` which describes when the message should be first sent.
+        - removed ``deleted`` property
 
     Parameters
     ------------
@@ -58,13 +60,13 @@ class TextMESSAGE(BaseMESSAGE):
             :caption: **Randomized** sending period between **5** seconds and **10** seconds.
 
             # Time between each send is somewhere between 5 seconds and 10 seconds.
-            framework.TextMESSAGE(start_period=5, end_period=10, data="Second Message", channels=[12345], mode="send", start_in=timedelta(seconds=0))
+            framework.TextMESSAGE(start_period=5, end_period=timedelta(10), data="Second Message", channels=[12345], mode="send", start_in=timedelta(seconds=0))
 
         .. code-block:: python
             :caption: **Fixed** sending period at **10** seconds
 
             # Time between each send is exactly 10 seconds.
-            framework.TextMESSAGE(start_period=None, end_period=10, data="Second Message", channels=[12345], mode="send", start_in=timedelta(seconds=0))
+            framework.TextMESSAGE(start_period=None, end_period=timedelta(10), data="Second Message", channels=[12345], mode="send", start_in=timedelta(seconds=0))
 
     data: Union[str, EMBED, FILE, List[Union[str, EMBED, FILE]], _FunctionBaseCLASS]
         The data parameter is the actual data that will be sent using discord's API. The data types of this parameter can be:
@@ -86,6 +88,12 @@ class TextMESSAGE(BaseMESSAGE):
 
     start_in: timedelta
         When should the message be first sent.
+    remove_after: Optional[Union[int, timedelta, datetime]]
+        Deletes the message after:
+
+        * int - provided amounts of sends
+        * timedelta - the specified time difference
+        * datetime - specific date & time
     """
 
     __slots__ = (
@@ -101,12 +109,38 @@ class TextMESSAGE(BaseMESSAGE):
                  data: Union[str, EMBED, FILE, Iterable[Union[str, EMBED, FILE]], _FunctionBaseCLASS],
                  channels: Iterable[Union[int, discord.TextChannel, discord.Thread]],
                  mode: Literal["send", "edit", "clear-send"] = "send",
-                 start_in: Union[timedelta, bool]=timedelta(seconds=0)):
-        super().__init__(start_period, end_period, data, start_in)
+                 start_in: Union[timedelta, bool]=timedelta(seconds=0),
+                 remove_after: Optional[Union[int, timedelta, datetime]]=None):
+        super().__init__(start_period, end_period, data, start_in, remove_after)
         self.mode = mode
         self.channels = list(set(channels)) # Automatically removes duplicates
         self.sent_messages = {} # Dictionary for storing last sent message for each channel
     
+    def _check_state(self) -> bool:
+        """
+        Checks if the message is ready to be deleted.
+        
+        Returns
+        ----------
+        True
+            The message should be deleted.
+        False
+            The message is in proper state, do not delete.
+        """
+        return super()._check_state() or not bool(self.channels)
+   
+    def _update_state(self, err_channels: List[dict]):
+        "Updates the state of the object based on errored channels."
+        super()._update_state()
+        # Remove any channels that returned with code status 404 (They no longer exist)
+        for data in err_channels:
+            reason = data["reason"]
+            channel = data["channel"]
+            if isinstance(reason, discord.HTTPException):
+                if (reason.status == 403 or                    # Forbidden
+                    reason.code in {50007, 10003}):     # Not Forbidden, but bad error codes
+                    self.channels.remove(channel)
+
     def _generate_log_context(self,
                              text: Optional[str],
                              embed: Optional[EMBED],
@@ -179,7 +213,7 @@ class TextMESSAGE(BaseMESSAGE):
     def _get_data(self) -> dict:
         """"
         Returns a dictionary of keyword arguments that is then expanded
-        into other methods eg. `_send_channel, generate_log`
+        into other methods eg. `_send_channel, _generate_log`
         """
         data = self.data.get_data() if isinstance(self.data, _FunctionBaseCLASS) else self.data
         _data_to_send = {"embed": None, "text": None, "files": []}
@@ -195,14 +229,14 @@ class TextMESSAGE(BaseMESSAGE):
                     _data_to_send["files"].append(element)
         return _data_to_send
 
-    async def initialize(self, guild: discord.Guild):
+    async def initialize(self, parent: Any):
         """
         This method initializes the implementation specific api objects and checks for the correct channel input context.
 
         Parameters
         --------------
-        guild: discord.Guild
-            Discord's guild object, this is used to check if channels given are in the correct guild.
+        parent: framework.guild.GUILD
+            The GUILD this message is in
 
         Raises
         ------------
@@ -210,12 +244,13 @@ class TextMESSAGE(BaseMESSAGE):
             Channel contains invalid channels
         ValueError
             Channel does not belong to the guild this message is in.
-        DAFNotFoundError(code=DAF_MISSING_PARAMETER)
-            Raised when no channels could be found were parsed.
+        ValueError
+            No valid channels were passed to object"
         """
         ch_i = 0
         cl = client.get_client()
-        self.parent = guild
+        self.parent = parent
+        _guild = self.parent.apiobject
         while ch_i < len(self.channels):
             channel = self.channels[ch_i]
             if isinstance(channel, discord.abc.GuildChannel):
@@ -229,13 +264,13 @@ class TextMESSAGE(BaseMESSAGE):
                 self.channels.remove(channel)
             elif type(channel) not in {discord.TextChannel, discord.Thread}:
                 raise TypeError(f"TextMESSAGE object received channel type of {type(channel).__name__}, but was expecting discord.TextChannel or discord.Thread")
-            elif channel.guild != guild:
-                raise ValueError(f"The channel {channel.name}(ID: {channel_id}) does not belong into {guild.name}(ID: {guild.id}) but is part of {channel.guild.name}(ID: {channel.guild.id})")
+            elif channel.guild != _guild:
+                raise ValueError(f"The channel {channel.name}(ID: {channel_id}) does not belong into {_guild.name}(ID: {_guild.id}) but is part of {channel.guild.name}(ID: {channel.guild.id})")
             else:
                 ch_i += 1
 
         if not len(self.channels):
-            raise DAFNotFoundError(f"No valid channels were passed to {type(self)} object", DAF_MISSING_PARAMETER)
+            raise ValueError(f"No valid channels were passed to {type(self)} object")
 
     async def _handle_error(self, channel: Union[discord.TextChannel, discord.Thread], ex: Exception) -> bool:
         """
@@ -328,7 +363,7 @@ class TextMESSAGE(BaseMESSAGE):
                     return {"success" : False, "reason" : ex}
 
     @misc._async_safe("update_semaphore")
-    async def send(self) -> Union[dict, None]:
+    async def _send(self) -> Union[dict, None]:
         """
         Sends the data into the channels.
 
@@ -337,7 +372,7 @@ class TextMESSAGE(BaseMESSAGE):
         Union[Dict, None]
             Returns a dictionary generated by the ``_generate_log_context`` method or the None object if message wasn't ready to be sent (:ref:`data_function` returned None or an invalid type)
 
-            This is then passed to :ref:`GUILD`.generate_log method.
+            This is then passed to :ref:`GUILD`._generate_log method.
         """
         # Acquire mutex to prevent update method from writing while sending
         data_to_send = self._get_data()
@@ -356,19 +391,8 @@ class TextMESSAGE(BaseMESSAGE):
                 else:
                     errored_channels.append({"channel":channel, "reason": context["reason"]})
 
-            # Remove any channels that returned with code status 404 (They no longer exist)
-            for data in errored_channels:
-                reason = data["reason"]
-                channel = data["channel"]
-                if isinstance(reason, discord.HTTPException):
-                    if (reason.status == 403 or                    # Forbidden
-                        reason.code in {50007, 10003}     # Not Forbidden, but bad error codes
-                    ):
-                        self.channels.remove(channel)
-                        trace(f"Channel {channel.name}(ID: {channel.id}) {'was deleted' if reason.code == 10003 else 'does not have permissions'}, removing it from the send list", TraceLEVELS.WARNING)
-
-            # Return sent data + failed and successful function for logging purposes
-            return self._generate_log_context(**data_to_send, succeeded_ch=succeeded_channels, failed_ch=errored_channels)
+            self._update_state(errored_channels)
+            return self._generate_log_context(**data_to_send, succeeded_ch=succeeded_channels, failed_ch=errored_channels) # Return sent data + failed and successful function for logging purposes
 
         return None
 
@@ -399,7 +423,7 @@ class TextMESSAGE(BaseMESSAGE):
             kwargs["start_in"] = timedelta(seconds=0)
         
         if not len(_init_options):
-            _init_options = {"guild": self.parent}
+            _init_options = {"guild": self.parent.apiobject}
 
         await core._update(self, init_options=_init_options, **kwargs) # No additional modifications are required
 
@@ -419,6 +443,7 @@ class DirectMESSAGE(BaseMESSAGE):
 
         - start_period, end_period Accept timedelta objects.
         - start_now - renamed into ``start_in`` which describes when the message should be first sent.
+        - removed ``deleted`` property
 
     Parameters
     ------------
@@ -436,13 +461,13 @@ class DirectMESSAGE(BaseMESSAGE):
             :caption: **Randomized** sending period between **5** seconds and **10** seconds.
 
             # Time between each send is somewhere between 5 seconds and 10 seconds.
-            framework.DirectMESSAGE(start_period=5, end_period=10, data="Second Message",  mode="send", start_in=timedelta(seconds=0))
+            framework.DirectMESSAGE(start_period=5, end_period=timedelta(10), data="Second Message",  mode="send", start_in=timedelta(seconds=0))
 
         .. code-block:: python
             :caption: **Fixed** sending period at **10** seconds
 
             # Time between each send is exactly 10 seconds.
-            framework.DirectMESSAGE(start_period=None, end_period=10, data="Second Message",  mode="send", start_in=timedelta(seconds=0))
+            framework.DirectMESSAGE(start_period=None, end_period=timedelta(10), data="Second Message",  mode="send", start_in=timedelta(seconds=0))
 
     data: Union[str, EMBED, FILE, List[Union[str, EMBED, FILE]], _FunctionBaseCLASS]
         The data parameter is the actual data that will be sent using discord's API. The data types of this parameter can be:
@@ -462,6 +487,12 @@ class DirectMESSAGE(BaseMESSAGE):
 
     start_in: timedelta
         When should the message be first sent.
+    remove_after: Optional[Union[int, timedelta, datetime]]
+        Deletes the guild after:
+
+        * int - provided amounts of sends
+        * timedelta - the specified time difference
+        * datetime - specific date & time
     """
 
     __slots__ = (
@@ -476,12 +507,13 @@ class DirectMESSAGE(BaseMESSAGE):
                  end_period: Union[int, timedelta],
                  data: Union[str, EMBED, FILE, Iterable[Union[str, EMBED, FILE]], _FunctionBaseCLASS],
                  mode: Literal["send", "edit", "clear-send"] = "send",
-                 start_in: Union[timedelta, bool] = timedelta(seconds=0)):
-        super().__init__(start_period, end_period, data, start_in)
+                 start_in: Union[timedelta, bool] = timedelta(seconds=0),
+                 remove_after: Optional[Union[int, timedelta, datetime]]=None):
+        super().__init__(start_period, end_period, data, start_in, remove_after)
         self.mode = mode
         self.dm_channel = None
         self.previous_message = None
-
+    
     def _generate_log_context(self,
                               success_context: Dict[str, Union[bool, Optional[Exception]]],
                               text : Optional[str],
@@ -546,28 +578,34 @@ class DirectMESSAGE(BaseMESSAGE):
     def _get_data(self) -> dict:
         """
         Returns a dictionary of keyword arguments that is then expanded
-        into other functions (_send_channel, generate_log).
+        into other functions (_send_channel, _generate_log).
         This is exactly the same as in :ref:`TextMESSAGE`
         """
         return TextMESSAGE._get_data(self)
 
-    async def initialize(self, user: discord.User):
+    async def initialize(self, parent: Any):
         """
         The method creates a direct message channel and
         returns True on success or False on failure
 
+        .. versionchanged:: v2.1
+            Renamed user to and changed the type from discord.User to framework.guild.USER
+
         Parameters
         -----------
-        - user: discord.User - discord User object to whom the DM will be created for
+        parent: framework.guild.USER
+            The USER this message is in
 
         Raises
         ---------
-        - DAFNotFoundError(code=DAF_USER_CREATE_DM) - Raised when the direct message channel could not be created
+        DAFNotFoundError(code=DAF_USER_CREATE_DM)
+            Raised when the direct message channel could not be created
         """
         try:
+            user = parent.apiobject
             await user.create_dm()
             self.dm_channel = user
-            self.parent = user
+            self.parent = parent
         except discord.HTTPException as ex:
             raise DAFNotFoundError(f"Unable to create DM with user {user.display_name}\nReason: {ex}", DAF_USER_CREATE_DM)
 
@@ -593,10 +631,14 @@ class DirectMESSAGE(BaseMESSAGE):
                     self.previous_message = None
                     handled = True
             elif ex.status == 403 or ex.code in {50007, 10001, 10003}:
-                self._delete()
+                # Not permitted to send messages to that user!
+                # Remove all messages to prevent an account ban
+                for m in self.parent.messages:
+                    if m in self.parent.messages:
+                        self.parent.remove_message(m)
 
             if ex.status in {400, 403}: # Bad Request
-                await asyncio.sleep(RLIM_USER_WAIT_TIME * 5) # To avoid triggering selfbot detection
+                await asyncio.sleep(RLIM_USER_WAIT_TIME * 5) # To avoid triggering self-bot detection
 
         return handled
 
@@ -638,7 +680,7 @@ class DirectMESSAGE(BaseMESSAGE):
                     return {"success" : False, "reason" : ex}
 
     @misc._async_safe("update_semaphore")
-    async def send(self) -> Union[dict, None]:
+    async def _send(self) -> Union[dict, None]:
         """
         Sends the data into the channels
 
@@ -647,15 +689,16 @@ class DirectMESSAGE(BaseMESSAGE):
         Union[Dict, None]
             Returns a dictionary generated by the ``_generate_log_context`` method or the None object if message wasn't ready to be sent (:ref:`data_function` returned None or an invalid type)
 
-            This is then passed to :ref:`GUILD`.generate_log method.
+            This is then passed to :ref:`GUILD`._generate_log method.
         """
         # Parse data from the data parameter
         data_to_send = self._get_data()
         if any(data_to_send.values()):
             if core.GLOBALS.is_user:
                 await asyncio.sleep(RLIM_USER_WAIT_TIME)
+            
             context = await self._send_channel(**data_to_send)
-
+            self._update_state()
             return self._generate_log_context(context, **data_to_send)
 
         return None
@@ -672,7 +715,7 @@ class DirectMESSAGE(BaseMESSAGE):
 
         Parameters
         -------------
-        **kwargs: Any
+        kwargs: Any
             Custom number of keyword parameters which you want to update, these can be anything that is available during the object creation.
 
         Raises
@@ -688,6 +731,6 @@ class DirectMESSAGE(BaseMESSAGE):
             kwargs["start_in"] = timedelta(seconds=0)
 
         if not len(_init_options):
-            _init_options = {"user" : self.parent}
+            _init_options = {"user" : self.parent.apiobject}
 
         await core._update(self, init_options=_init_options, **kwargs) # No additional modifications are required

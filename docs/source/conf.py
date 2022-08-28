@@ -60,7 +60,7 @@ exclude_patterns = []
 
 
 # Autodoc
-autodoc_typehints = "both"
+autodoc_typehints = "signature"
 autodoc_typehints_format = "short"
 
 

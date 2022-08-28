@@ -30,6 +30,8 @@ def trace(message: str,
           level: TraceLEVELS = TraceLEVELS.NORMAL):
     """
     Prints a trace to the console.
+    
+    This is thread safe.
 
     Parameters
     --------------

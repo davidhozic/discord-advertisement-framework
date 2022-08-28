@@ -45,21 +45,16 @@ class DAFSQLError(DAFError):
 
 # Error Codes
 # Guild codes
-DAF_GUILD_ALREADY_ADDED = 0                 #: Guild with specified snowflake is already added.
-DAF_GUILD_ID_REQUIRED = 1                   #: Guild ID is required but was not passed.
-DAF_GUILD_ID_NOT_FOUND = 2                  #: Guild with specified snowflake was not found (or user).
-DAF_USER_CREATE_DM = 3                      #: Was unable to create DM with user (probably user not found).
+DAF_SNOWFLAKE_NOT_FOUND = 1          #: Guild with specified snowflake was not found (or user).
+DAF_USER_CREATE_DM = 2               #: Was unable to create DM with user (probably user not found).
 # Data type codes
-DAF_YOUTUBE_STREAM_ERROR = 5                #: The given youtube link could not be streamed (AUDIO, VoiceMESSAGE).
-DAF_FILE_NOT_FOUND = 6                      #: The given file was not found.
-# Parameter specific errors
-DAF_MISSING_PARAMETER = 7                   #: The parameter(s) is(are) missing.
-DAF_CHANNEL_GUILD_MISMATCH_ERROR = 8        #: The channel with given ID does not belong into this guild but is part of a different guild.
+DAF_YOUTUBE_STREAM_ERROR = 3         #: The given youtube link could not be streamed (AUDIO, VoiceMESSAGE).
+DAF_FILE_NOT_FOUND = 4               #: The given file was not found.
 # SQL Exceptions
-DAF_SQL_CREATE_TABLES_ERROR = 9            #: Unable to create all the tables.
-DAF_SQL_LOOKUPTABLE_NOT_FOUND = 10          #: The lookup table was not found.
-DAF_SQL_BEGIN_ENGINE_ERROR = 11             #: Unable to start engine.
-DAF_SQL_CR_LT_VALUES_ERROR = 12             #: Unable to create lookuptables' rows.
-DAF_SQL_CREATE_DT_ERROR = 13                #: Unable to create SQL data types.
-DAF_SQL_CREATE_VPF_ERROR = 14               #: Unable to create views, procedures and functions.
-DAF_SQL_CURSOR_CONN_ERROR = 15              #: Unable to connect the cursor.
+DAF_SQL_CREATE_TABLES_ERROR = 5      #: Unable to create all the tables.
+DAF_SQL_LOOKUPTABLE_NOT_FOUND = 6    #: The lookup table was not found.
+DAF_SQL_BEGIN_ENGINE_ERROR = 7       #: Unable to start engine.
+DAF_SQL_CR_LT_VALUES_ERROR = 8       #: Unable to create lookuptables' rows.
+DAF_SQL_CREATE_DT_ERROR = 9          #: Unable to create SQL data types.
+DAF_SQL_CREATE_VPF_ERROR = 10        #: Unable to create views, procedures and functions.     
+DAF_SQL_CURSOR_CONN_ERROR = 11       #: Unable to connect the cursor.

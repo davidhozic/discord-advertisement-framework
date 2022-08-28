@@ -23,7 +23,7 @@ guilds = [
                                                             # the previous message and then send a new one
                               start_in=timedelta(seconds=0)                # Start sending now (True) or wait until period
                               ),
-            framework.TextMESSAGE(start_period=5, end_period=10, data="Second Message", channels=[12345], mode="send", start_in=timedelta(seconds=0))  
+            framework.TextMESSAGE(start_period=5, end_period=timedelta(10), data="Second Message", channels=[12345], mode="send", start_in=timedelta(seconds=0))  
         ],
         logging=True                                   ## Generate file log of sent messages (and failed attempts) for this user
     )

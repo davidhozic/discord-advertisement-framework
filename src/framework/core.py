@@ -6,6 +6,7 @@
 from typing import (Any, Iterable, Literal,
                     Callable, List, Optional,
                     Union, overload)
+from enum import Enum
 
 from .const import *
 from .exceptions import *
@@ -49,7 +50,14 @@ class GLOBALS:
 #######################################################################
 # Tasks
 #######################################################################
-async def _advertiser(message_type: Literal["text", "voice"]) -> None:
+class AdvertiseTaskType(Enum):
+    """
+    Used for identifying advertiser tasks
+    """
+    TEXT_ISH = 0
+    VOICE = 1
+
+async def _advertiser(message_type: AdvertiseTaskType) -> None:
     """
     The task that is responsible for shilling to channels.
     This is the most top level task.
@@ -63,7 +71,7 @@ async def _advertiser(message_type: Literal["text", "voice"]) -> None:
     while True:
         await asyncio.sleep(C_TASK_SLEEP_DELAY)
         for guild_user in GLOBALS.server_list[:]: # Shallow copy list to allow dynamic removal and addition of objects
-            await guild_user.advertise(message_type)
+            await guild_user._advertise(message_type)
 
 
 #######################################################################
@@ -97,8 +105,8 @@ async def _initialize() -> None:
 
     # Create advertiser tasks
     trace("[CORE]: Creating advertiser tasks", TraceLEVELS.NORMAL)
-    _client.loop.create_task(_advertiser("text"))
-    _client.loop.create_task(_advertiser("voice"))
+    _client.loop.create_task(_advertiser(AdvertiseTaskType.TEXT_ISH))
+    _client.loop.create_task(_advertiser(AdvertiseTaskType.VOICE))
 
     # Create the user callback task
     callback = get_user_callback()
@@ -157,7 +165,7 @@ async def add_object(obj: Union[message.DirectMESSAGE, message.TextMESSAGE, mess
         The object provided is not supported for addition.
     TypeError
         Missing snowflake parameter.
-    DAFNotFoundError(code=DAF_GUILD_ID_NOT_FOUND)
+    DAFNotFoundError(code=DAF_SNOWFLAKE_NOT_FOUND)
         Could not find guild with that id.
     Other
         Raised in the obj.add_message() method
@@ -188,7 +196,7 @@ async def add_object(obj, snowflake=None):
                 await guild_user.add_message(obj)
                 return
 
-        raise DAFNotFoundError(f"Guild or user with snowflake `{snowflake}` was not found in the framework.", DAF_GUILD_ID_NOT_FOUND)
+        raise DAFNotFoundError(f"Guild or user with snowflake `{snowflake}` was not found in the framework.", DAF_SNOWFLAKE_NOT_FOUND)
 
     else:
         raise TypeError(f"Invalid object type `{object_type_name}`.")
@@ -206,14 +214,14 @@ def remove_object(snowflake: Union[int, dc.Object, dc.Guild, dc.User, dc.Object,
 
     Raises
     --------------
-    DAFNotFoundError(code=DAF_GUILD_ID_NOT_FOUND)
+    DAFNotFoundError(code=DAF_SNOWFLAKE_NOT_FOUND)
          Could not find guild with that id.
     TypeError
         Invalid argument."""    
     if isinstance(snowflake, message.BaseMESSAGE):
-        for guild in GLOBALS.server_list:
-            if snowflake in guild.messages:
-                guild.remove_message(snowflake)
+        for _guild in GLOBALS.server_list:
+            if snowflake in _guild.messages:
+                _guild.remove_message(snowflake)
         return
 
     if isinstance(snowflake, int):
@@ -225,7 +233,7 @@ def remove_object(snowflake: Union[int, dc.Object, dc.Guild, dc.User, dc.Object,
     if snowflake is not None and snowflake in GLOBALS.server_list:
         GLOBALS.server_list.remove(snowflake)
     else:
-        raise DAFNotFoundError(f"GUILD/USER not in the shilling list.", DAF_GUILD_ID_NOT_FOUND)
+        raise DAFNotFoundError(f"GUILD/USER not in the shilling list.", DAF_SNOWFLAKE_NOT_FOUND)
 
 
 def get_guild_user(snowflake: Union[int, dc.Object, dc.Guild, dc.User, dc.Object]) -> Union[guild.GUILD, guild.USER, None]:
@@ -327,9 +335,23 @@ async def shutdown() -> None:
 
 def get_user_callback() -> Callable:
     """
-    Returns the user coroutine.
+    Returns
+    -----------
+    Callable
+        The callback coroutine provided at :ref:`run`
     """
     return GLOBALS.user_callback
+
+def get_shill_list() -> List[Union[guild.GUILD, guild.USER]]:
+    """
+    .. versionadded:: v2.1
+
+    Returns
+    -----------
+    List[Union[guild.GUILD, guild.USER]]
+        The shilling list.
+    """
+    return GLOBALS.server_list.copy()
 
 
 def run(token : str,

@@ -4,7 +4,7 @@
 
 from contextlib import suppress
 from typing import Any, Dict, List, Iterable, Optional, Union
-from datetime import timedelta
+from datetime import timedelta, datetime
 from typeguard import typechecked
 
 from .base import *
@@ -49,6 +49,7 @@ class VoiceMESSAGE(BaseMESSAGE):
 
         - start_period, end_period Accept timedelta objects.
         - start_now - renamed into ``start_in`` which describes when the message should be first sent.
+        - removed ``deleted`` property
 
     Parameters
     ------------
@@ -66,13 +67,13 @@ class VoiceMESSAGE(BaseMESSAGE):
             :caption: **Randomized** sending period between **5** seconds and **10** seconds.
 
             # Time between each send is somewhere between 5 seconds and 10 seconds.
-            framework.VoiceMESSAGE(start_period=None, end_period=10, data=framework.AUDIO("msg.mp3"), channels=[12345], start_in=timedelta(seconds=0), volume=50)
+            framework.VoiceMESSAGE(start_period=None, end_period=timedelta(10), data=framework.AUDIO("msg.mp3"), channels=[12345], start_in=timedelta(seconds=0), volume=50)
 
         .. code-block:: python
             :caption: **Fixed** sending period at **10** seconds
 
             # Time between each send is exactly 10 seconds.
-            framework.VoiceMESSAGE(start_period=None, end_period=10, data=framework.AUDIO("msg.mp3"), channels=[12345], start_in=timedelta(seconds=0), volume=50)
+            framework.VoiceMESSAGE(start_period=None, end_period=timedelta(10), data=framework.AUDIO("msg.mp3"), channels=[12345], start_in=timedelta(seconds=0), volume=50)
 
     data: AUDIO
         The data parameter is the actual data that will be sent using discord's API. The data types of this parameter can be:
@@ -84,6 +85,12 @@ class VoiceMESSAGE(BaseMESSAGE):
         The volume (0-100%) at which to play the audio. Defaults to 50%. This was added in v2.0.0
     start_in: timedelta
         When should the message be first sent.
+    remove_after: Optional[Union[int, timedelta, datetime]]
+        Deletes the message after:
+
+        * int - provided amounts of sends
+        * timedelta - the specified time difference
+        * datetime - specific date & time
     """
 
     __slots__ = (
@@ -106,14 +113,40 @@ class VoiceMESSAGE(BaseMESSAGE):
                  data: AUDIO,
                  channels: Iterable[Union[int, discord.VoiceChannel]],
                  volume: int=50,
-                 start_in: Union[timedelta, bool]=timedelta(seconds=0)):
+                 start_in: Union[timedelta, bool]=timedelta(seconds=0),
+                 remove_after: Optional[Union[int, timedelta, datetime]]=None):
 
         if not dtypes.GLOBALS.voice_installed:
             raise ModuleNotFoundError("You need to install extra requirements: pip install discord-advert-framework[voice]")
 
-        super().__init__(start_period, end_period, data, start_in)
+        super().__init__(start_period, end_period, data, start_in, remove_after)
         self.volume = max(0, min(100, volume)) # Clamp the volume to 0-100 %
         self.channels = list(set(channels))    # Auto remove duplicates
+
+    def _check_state(self) -> bool:
+        """
+        Checks if the message is ready to be deleted.
+        
+        Returns
+        ----------
+        True
+            The message should be deleted.
+        False
+            The message is in proper state, do not delete.
+        """
+        return super()._check_state() or not bool(self.channels)
+
+    def _update_state(self, err_channels: List[dict]):
+        "Updates the state of the object based on errored channels."
+        super()._update_state()
+        # Remove any channels that returned with code status 404 (They no longer exist)
+        for data in err_channels:
+            reason = data["reason"]
+            channel = data["channel"]
+            if isinstance(reason, discord.HTTPException):
+                if (reason.status == 403 or                    # Forbidden
+                    reason.code in {50007, 10003}):     # Not Forbidden, but bad error codes
+                    self.channels.remove(channel)
 
     def _generate_log_context(self,
                              audio: AUDIO,
@@ -163,7 +196,7 @@ class VoiceMESSAGE(BaseMESSAGE):
     def _get_data(self) -> dict:
         """"
         Returns a dictionary of keyword arguments that is then expanded
-        into other methods eg. `_send_channel, generate_log`
+        into other methods eg. `_send_channel, _generate_log`
         """
         data = None
         _data_to_send = {}
@@ -176,14 +209,14 @@ class VoiceMESSAGE(BaseMESSAGE):
                     _data_to_send["audio"] = element
         return _data_to_send
 
-    async def initialize(self, guild: discord.Guild):
+    async def initialize(self, parent: Any):
         """
         This method initializes the implementation specific api objects and checks for the correct channel input context.
 
         Parameters
-        --------------
-        guild: discord.Guild
-            Discord's guild object, this is used to check if channels given are in the correct guild.
+        ------------
+        parent: framework.guild.GUILD
+            The GUILD this message is in.
 
         Raises
         ------------
@@ -191,12 +224,13 @@ class VoiceMESSAGE(BaseMESSAGE):
             Channel contains invalid channels
         ValueError
             Channel does not belong to the guild this message is in.
-        DAFNotFoundError(code=DAF_MISSING_PARAMETER)
-            Raised when no channels could be found were parsed.
+        ValueError
+            No valid channels were passed to object"
         """
         ch_i = 0
         cl = client.get_client()
-        self.parent = guild
+        self.parent = parent
+        _guild = parent.apiobject
         while ch_i < len(self.channels):
             channel = self.channels[ch_i]
             if isinstance(channel, discord.abc.GuildChannel):
@@ -210,13 +244,13 @@ class VoiceMESSAGE(BaseMESSAGE):
                 self.channels.remove(channel)
             elif type(channel) not in {discord.VoiceChannel}:
                 raise TypeError(f"TextMESSAGE object received channel type of {type(channel).__name__}, but was expecting VoiceChannel")
-            elif channel.guild != guild:
-                raise ValueError(f"The channel {channel.name}(ID: {channel_id}) does not belong into {guild.name}(ID: {guild.id}) but is part of {channel.guild.name}(ID: {channel.guild.id})")
+            elif channel.guild != _guild:
+                raise ValueError(f"The channel {channel.name}(ID: {channel_id}) does not belong into {_guild.name}(ID: {_guild.id}) but is part of {channel.guild.name}(ID: {channel.guild.id})")
             else:
                 ch_i += 1
 
         if not len(self.channels):
-            raise DAFNotFoundError(f"No valid channels were passed to {type(self)} object", DAF_MISSING_PARAMETER)
+            raise ValueError(f"No valid channels were passed to {type(self)} object")
 
     async def _send_channel(self,
                            channel: discord.VoiceChannel,
@@ -268,7 +302,7 @@ class VoiceMESSAGE(BaseMESSAGE):
                 await asyncio.sleep(1) # Avoid sudden disconnect and connect to a new channel
 
     @misc._async_safe("update_semaphore")
-    async def send(self) -> Union[dict, None]:
+    async def _send(self) -> Union[dict, None]:
         """
         Sends the data into each channel.
 
@@ -277,7 +311,7 @@ class VoiceMESSAGE(BaseMESSAGE):
         Union[Dict, None]
             Returns a dictionary generated by the ``_generate_log_context`` method or the None object if message wasn't ready to be sent (:ref:`data_function` returned None or an invalid type)
 
-            This is then passed to :ref:`GUILD`.generate_log method.
+            This is then passed to :ref:`GUILD`._generate_log method.
         """
         _data_to_send = self._get_data()
         if any(_data_to_send.values()):
@@ -291,17 +325,7 @@ class VoiceMESSAGE(BaseMESSAGE):
                 else:
                     errored_channels.append({"channel":channel, "reason": context["reason"]})
 
-            # Remove any channels that returned with code status 404 (They no longer exist)
-            for data in errored_channels:
-                reason = data["reason"]
-                channel = data["channel"]
-                if isinstance(reason, discord.HTTPException):
-                    if (reason.status == 403 or
-                        reason.code in {10003, 50013} # Unknown, Permissions
-                    ):
-                        self.channels.remove(channel)
-                        trace(f"Channel {channel.name}(ID: {channel.id}) {'was deleted' if reason.code == 10003 else 'does not have permissions'}, removing it from the send list", TraceLEVELS.WARNING)
-
+            self._update_state(errored_channels)
             return self._generate_log_context(**_data_to_send, succeeded_ch=succeeded_channels, failed_ch=errored_channels)
 
         return None

@@ -81,8 +81,6 @@ def _async_safe(semaphore: str, amount: Optional[int]=1) -> Callable:
 
             return result
 
-        wrapper.__annotations__ = coroutine.__annotations__ # Keep the same type hints
-
         return wrapper
 
 
