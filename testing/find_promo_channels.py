@@ -5,7 +5,7 @@ list based on the `allowed_strings` list (contains strings that must appear in t
 
 We pass the framework a user_callback function named `find_advertisement_channels` which autofills the `servers` list with GUILD objects.
 """
-import framework as fw
+import discron as fw
 import secret
 
 # Create a list in which we will automatically add guilds

@@ -4,9 +4,9 @@ This is an example of an additional application layer you can build with this fr
 The application sends a message saying 'Good morning' every day at 10 AM and then sends a picture of a coffe cup from a randomized list.
 """
 from datetime import timedelta
-import  framework as fw
+import  discron as fw
 import app.app
-from framework import discord
+from discron import discord
 
 
 

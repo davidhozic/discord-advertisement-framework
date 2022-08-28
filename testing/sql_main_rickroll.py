@@ -1,4 +1,4 @@
-import framework as fw
+import discron as fw
 import secret
 
 rolls = [

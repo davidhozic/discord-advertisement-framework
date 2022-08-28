@@ -1,5 +1,5 @@
-import  framework, secret
-from framework import discord
+import  discron, secret
+from discron import discord
 
 
 
@@ -8,29 +8,29 @@ from framework import discord
 ############################################################################################
 
 # File object representing file that will be sent
-l_file1 = framework.FILE("./Examples/main_send_file.py")
-l_file2 = framework.FILE("./Examples/main_send_multiple.py")
+l_file1 = discron.FILE("./Examples/main_send_file.py")
+l_file2 = discron.FILE("./Examples/main_send_multiple.py")
 
 ## Embedded
-l_embed = framework.EMBED(
+l_embed = discron.EMBED(
 author_name="Developer",
 author_icon="https://solarsystem.nasa.gov/system/basic_html_elements/11561_Sun.png",
 fields=\
     [
-        framework.EmbedFIELD("Test 1", "Hello World", True),
-        framework.EmbedFIELD("Test 2", "Hello World 2", True),
-        framework.EmbedFIELD("Test 3", "Hello World 3", True),
-        framework.EmbedFIELD("No Inline", "This is without inline", False),
-        framework.EmbedFIELD("Test 4", "Hello World 4", True),
-        framework.EmbedFIELD("Test 5", "Hello World 5", True)
+        discron.EmbedFIELD("Test 1", "Hello World", True),
+        discron.EmbedFIELD("Test 2", "Hello World 2", True),
+        discron.EmbedFIELD("Test 3", "Hello World 3", True),
+        discron.EmbedFIELD("No Inline", "This is without inline", False),
+        discron.EmbedFIELD("Test 4", "Hello World 4", True),
+        discron.EmbedFIELD("Test 5", "Hello World 5", True)
     ]
 )
 
 guilds = [
-    framework.USER(
+    discron.USER(
         user_id=123456789,                                 # ID of server (guild)
         messages_to_send=[                                  # List MESSAGE objects
-            framework.DirectMESSAGE(
+            discron.DirectMESSAGE(
                               start_period=None,            # If None, messages will be send on a fixed period (end period)
                               end_period=15,                # If start_period is None, it dictates the fixed sending period,
                                                             # If start period is defined, it dictates the maximum limit of randomized period
@@ -51,7 +51,7 @@ guilds = [
 ############################################################################################
 
 if __name__ == "__main__":
-    framework.run(  token=secret.C_TOKEN,               # MANDATORY
+    discron.run(  token=secret.C_TOKEN,               # MANDATORY
                     intents=discord.Intents.default(),  # OPTIONAL (see https://docs.pycord.dev/en/master/intents.html)
                     server_list=guilds,                 # MANDATORY
                     is_user=False,                      # OPTIONAL

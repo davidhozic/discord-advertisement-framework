@@ -1,5 +1,5 @@
-import  framework, secret
-from framework import discord
+import  discron, secret
+from discron import discord
 from datetime import timedelta
 
 
@@ -8,11 +8,11 @@ from datetime import timedelta
 ############################################################################################
 
 # File object representing file that will be sent
-l_file1 = framework.FILE("./Examples/main_send_file.py")
-l_file2 = framework.FILE("./Examples/main_send_multiple.py")
+l_file1 = discron.FILE("./Examples/main_send_file.py")
+l_file2 = discron.FILE("./Examples/main_send_multiple.py")
 
 ## Embedded
-l_embed = framework.EMBED(
+l_embed = discron.EMBED(
 author_name="Developer",
 author_icon="https://solarsystem.nasa.gov/system/basic_html_elements/11561_Sun.png",
 fields=\
@@ -28,10 +28,10 @@ fields=\
 
 
 guilds = [
-    framework.GUILD(
+    discron.GUILD(
         snowflake=123456789,                                 # ID of server (guild) or a discord.Guild object
         messages=[                                  # List MESSAGE objects
-            framework.TextMESSAGE(
+            discron.TextMESSAGE(
                               start_period=None,            # If None, messages will be send on a fixed period (end period)
                               end_period=timedelta(seconds=15),                # If start_period is None, it dictates the fixed sending period,
                                                             # If start period is defined, it dictates the maximum limit of randomized period
@@ -52,6 +52,6 @@ guilds = [
                                      
 ############################################################################################
 
-framework.run(token=secret.C_TOKEN,        
+discron.run(token=secret.C_TOKEN,        
         server_list=guilds,
         is_user=False)

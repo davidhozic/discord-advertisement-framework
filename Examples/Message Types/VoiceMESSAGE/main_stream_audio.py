@@ -1,15 +1,15 @@
-import  framework, secret
+import  discron, secret
 from datetime import timedelta
-from framework import discord
+from discron import discord
 
 
-some_audio_file = framework.AUDIO("VoiceMessage.mp3")
+some_audio_file = discron.AUDIO("VoiceMessage.mp3")
 
 guilds = [
-    framework.GUILD(
+    discron.GUILD(
         snowflake=123456789,                                    # ID of server (guild) or a discord.Guild object or a discord.Guild object
         messages=[                                      # List MESSAGE objects 
-            framework.VoiceMESSAGE(
+            discron.VoiceMESSAGE(
                               start_period=None,                # If None, messages will be send on a fixed period (end period)
                               end_period=timedelta(seconds=15),                    # If start_period is None, it dictates the fixed sending period,
                                                                 # If start period is defined, it dictates the maximum limit of randomized period
@@ -25,6 +25,6 @@ guilds = [
 
 ############################################################################################
 
-framework.run(token=secret.C_TOKEN,        
+discron.run(token=secret.C_TOKEN,        
         server_list=guilds,
         is_user=False)

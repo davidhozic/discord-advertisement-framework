@@ -1,5 +1,5 @@
-import  framework, datetime, secret
-from framework import discord
+import  discron, datetime, secret
+from discron import discord
 from datetime import timedelta
 
 
@@ -8,16 +8,16 @@ from datetime import timedelta
 ############################################################################################
 
 
-@framework.data_function
+@discron.data_function
 def get_data(parameter):
     l_time = datetime.datetime.now()
     return f"Parameter: {parameter}\nTimestamp: {l_time.day}.{l_time.month}.{l_time.year} :: {l_time.hour}:{l_time.minute}:{l_time.second}"
 
 guilds = [
-    framework.GUILD(
+    discron.GUILD(
         snowflake=123456789,                                 # ID of server (guild) or a discord.Guild object
         messages=[                                  # List MESSAGE objects 
-            framework.TextMESSAGE(
+            discron.TextMESSAGE(
                               start_period=None,            # If None, messages will be send on a fixed period (end period)
                               end_period=timedelta(seconds=15),                # If start_period is None, it dictates the fixed sending period,
                                                             # If start period is defined, it dictates the maximum limit of randomized period
@@ -36,7 +36,7 @@ guilds = [
 
 ############################################################################################
 
-framework.run(token=secret.C_TOKEN,        
+discron.run(token=secret.C_TOKEN,        
         server_list=guilds,
         is_user=False)
     

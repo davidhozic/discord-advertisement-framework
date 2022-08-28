@@ -7,7 +7,7 @@ passed at the start.
 """
 from datetime import timedelta
 import asyncio
-import framework as fw
+import discron as fw
 
 
 

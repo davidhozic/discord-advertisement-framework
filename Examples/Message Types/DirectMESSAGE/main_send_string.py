@@ -1,6 +1,6 @@
 from datetime import timedelta
-import  framework, secret
-from framework import discord
+import  discron, secret
+from discron import discord
 
 
 
@@ -9,10 +9,10 @@ from framework import discord
 ############################################################################################
 
 guilds = [
-    framework.USER(
+    discron.USER(
         user_id=123456789,                                 # ID of server (guild) or a discord.Guild object
         messages=[                                  # List MESSAGE objects
-            framework.DirectMESSAGE(
+            discron.DirectMESSAGE(
                               start_period=None,            # If None, messages will be send on a fixed period (end period)
                               end_period=timedelta(seconds=15),                # If start_period is None, it dictates the fixed sending period,
                                                             # If start period is defined, it dictates the maximum limit of randomized period
@@ -23,7 +23,7 @@ guilds = [
                                                             # the previous message and then send a new one
                               start_in=timedelta(seconds=0)                # Start sending now (True) or wait until period
                               ),
-            framework.TextMESSAGE(start_period=5, end_period=timedelta(10), data="Second Message", channels=[12345], mode="send", start_in=timedelta(seconds=0))  
+            discron.TextMESSAGE(start_period=5, end_period=timedelta(10), data="Second Message", channels=[12345], mode="send", start_in=timedelta(seconds=0))  
         ],
         logging=True                                   ## Generate file log of sent messages (and failed attempts) for this user
     )
@@ -31,6 +31,6 @@ guilds = [
                                      
 ############################################################################################
 
-framework.run(token=secret.C_TOKEN,        
+discron.run(token=secret.C_TOKEN,        
         server_list=guilds,
         is_user=False)

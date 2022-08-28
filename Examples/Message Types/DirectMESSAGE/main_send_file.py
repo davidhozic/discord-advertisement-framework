@@ -1,5 +1,5 @@
-import  framework, secret
-from framework import discord
+import  discron, secret
+from discron import discord
 
 
 
@@ -8,13 +8,13 @@ from framework import discord
 ############################################################################################
 
 # File object representing file that will be sent
-l_file = framework.FILE("./Examples/main_send_file.py")
+l_file = discron.FILE("./Examples/main_send_file.py")
 
 guilds = [
-    framework.USER(
+    discron.USER(
         user_id=123456789,                                 # ID of server (guild) or a discord.Guild object
         messages=[                                  # List MESSAGE objects
-            framework.DirectMESSAGE(
+            discron.DirectMESSAGE(
                               start_period=None,            # If None, messages will be send on a fixed period (end period)
                               end_period=timedelta(seconds=15),                # If start_period is None, it dictates the fixed sending period,
                                                             # If start period is defined, it dictates the maximum limit of randomized period
@@ -32,7 +32,7 @@ guilds = [
                                      
 ############################################################################################
 
-framework.run(token=secret.C_TOKEN,        
+discron.run(token=secret.C_TOKEN,        
         server_list=guilds,
         is_user=False)
     

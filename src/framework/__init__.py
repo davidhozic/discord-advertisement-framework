@@ -1,15 +1,5 @@
-"""
-Discord Advertisement Framework
+import time
+from discron import *
 
-Version 2.0
-"""
-import _discord as discord
-from .client import *
-from .const import *
-from .core import *
-from .dtypes import *
-from .guild import *
-from .message import *
-from .tracing import *
-from .sql import *
-from .exceptions import *
+trace("USING the name 'framework' is DEPRECATED! The project has been renamed to 'discron'", TraceLEVELS.WARNING, force=True)
+time.sleep(5)

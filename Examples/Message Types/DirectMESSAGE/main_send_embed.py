@@ -1,6 +1,6 @@
 from datetime import timedelta
-import  framework as fw, secret
-from framework import discord
+import  discron as fw, secret
+from discron import discord
 ############################################################################################
 #                               EMBED VARIABLE DEFINITON                                   #
 ############################################################################################

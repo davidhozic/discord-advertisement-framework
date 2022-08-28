@@ -8,8 +8,8 @@ conf.py file.
 
 
 from contextlib import suppress
-from framework import discord
-import framework as fw
+from discron import discord
+import discron as fw
 import asyncio
 import conf
 import os
