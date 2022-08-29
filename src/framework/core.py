@@ -3,7 +3,6 @@
     and functions needed for the framework to run,
     as well as user function to control the framework
 """
-from configparser import NoSectionError
 from typing import (Callable, List, Optional, Union, overload)
 from typeguard import typechecked
 
@@ -67,7 +66,7 @@ async def _initialize(token : str,
                       is_user : Optional[bool] =False,
                       user_callback : Optional[Callable]=None,
                       server_log_output : Optional[str] ="History",
-                      sql_manager: Optional[sql.LoggerSQL]=NoSectionError,
+                      sql_manager: Optional[sql.LoggerSQL]=None,
                       intents: Optional[dc.Intents]=None,
                       debug : Optional[bool]=True,
                       proxy: Optional[str]=None) -> None:
