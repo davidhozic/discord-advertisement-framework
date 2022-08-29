@@ -10,12 +10,11 @@ from typeguard import typechecked
 from .base import *
 from ..dtypes import *
 from ..tracing import *
-from ..const import *
+from ..common import *
 from ..exceptions import *
 
 from .. import client
 from .. import sql
-from .. import core
 from .. import misc
 from .. import dtypes
 
@@ -359,4 +358,4 @@ class VoiceMESSAGE(BaseMESSAGE):
         if not len(_init_options):
             _init_options = {"guild": self.parent}
 
-        await core._update(self, init_options=_init_options, **kwargs) # No additional modifications are required
+        await misc._update(self, init_options=_init_options, **kwargs) # No additional modifications are required

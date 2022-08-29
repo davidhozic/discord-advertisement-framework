@@ -5,7 +5,7 @@ Version 2.0
 """
 import _discord as discord
 from .client import *
-from .const import *
+from .common import *
 from .core import *
 from .dtypes import *
 from .guild import *

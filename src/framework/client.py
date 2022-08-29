@@ -3,18 +3,16 @@
 """
 
 from typing import Optional
-import _discord as discord
 from .tracing import *
-from . import core
-
+import _discord as discord
+import asyncio
 
 
 #######################################################################
 # Globals
 #######################################################################
 __all__ = (
-    "CLIENT",
-    "get_client"
+    "get_client",
 )
 
 class GLOBALS:
@@ -31,35 +29,11 @@ except ImportError:
     GLOBALS.proxy_installed = False
 # -------------------------------------------- #
 
-
-class CLIENT(discord.Client):
+async def _initialize(token: str, *,
+                      bot: bool,
+                      proxy: Optional[str],
+                      intents: discord.Intents):
     """
-    The same as `discord.Client <https://docs.pycord.dev/en/master/api.html?highlight=client#discord.Client>`_,
-    except it contains an on_ready coroutine.
-
-    .. note::
-        This is automatically created by the framework.
-        You can retrieve the object created by calling :ref:`get_client` function.
-    """
-    async def on_ready(self) -> None:
-        """
-        Gets run at login, creates the main initialization task inside the core module.
-        """
-        if GLOBALS.running:
-            return
-
-        GLOBALS.running = True
-        trace(f"[CLIENT]: Logged in as {self.user}", TraceLEVELS.NORMAL)
-        # Initialize all the modules from the core module
-        self.loop.create_task(core._initialize())
-
-
-def _initialize(token: str, *,
-                bot: bool,
-                proxy: Optional[str],
-                intents: discord.Intents):
-    """
-
     Initializes the client module (Pycord).
 
     Parameters
@@ -74,6 +48,16 @@ def _initialize(token: str, *,
         The intents discord object. Intents are settings that
         dictate which dictates the events that the client will listen for.
     """
+    login_event = asyncio.Event()
+
+    async def on_ready():
+        """
+        Coroutine used to set the login event,
+        which notifies the upper layer to continue
+        with it's initialization.
+        """
+        login_event.set()
+
     connector = None
     if proxy is not None:
         if not GLOBALS.proxy_installed:
@@ -81,13 +65,18 @@ def _initialize(token: str, *,
         
         connector = ProxyConnector.from_url(proxy)
 
-    GLOBALS.client = CLIENT(intents=intents, connector=connector)
+    GLOBALS.client = discord.Client(intents=intents, connector=connector)
+    _client = GLOBALS.client
     if not bot:
         trace("[CLIENT]: Bot is an user account which is against discord's ToS",TraceLEVELS.WARNING)
-    GLOBALS.client.run(token, bot=bot)
+
+    _client.event(on_ready)
+    await _client.login(token, bot=bot)
+    asyncio.create_task(_client.connect())
+    await login_event.wait() # Wait for the login to complete and the discord lib to initialize.
 
 
-def get_client() -> CLIENT:
+def get_client() -> discord.Client:
     """
     Returns the `CLIENT` object used for communicating with Discord.
     """

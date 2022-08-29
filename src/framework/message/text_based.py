@@ -2,6 +2,7 @@
 Contains definitions for message classes that are text based."""
 
 
+from pickle import GLOBAL
 from typing import Any, Dict, List, Iterable, Optional, Union, Literal
 from datetime import datetime, timedelta
 from typeguard import typechecked
@@ -9,10 +10,9 @@ from typeguard import typechecked
 from .base import *
 from ..dtypes import *
 from ..tracing import *
-from ..const import *
+from ..common import *
 from ..exceptions import *
 
-from .. import core
 from .. import client
 from .. import sql
 from .. import misc
@@ -25,7 +25,6 @@ __all__ = (
     "TextMESSAGE",
     "DirectMESSAGE"
 )
-
 
 @typechecked
 @sql._register_type("MessageTYPE")
@@ -383,8 +382,6 @@ class TextMESSAGE(BaseMESSAGE):
             # Send to channels
             for channel in self.channels:
                 # Clear previous messages sent to channel if mode is MODE_DELETE_SEND
-                if core.GLOBALS.is_user:
-                    await asyncio.sleep(RLIM_USER_WAIT_TIME)
                 context = await self._send_channel(channel, **data_to_send)
                 if context["success"]:
                     succeeded_channels.append(channel)
@@ -425,7 +422,7 @@ class TextMESSAGE(BaseMESSAGE):
         if not len(_init_options):
             _init_options = {"guild": self.parent.apiobject}
 
-        await core._update(self, init_options=_init_options, **kwargs) # No additional modifications are required
+        await misc._update(self, init_options=_init_options, **kwargs) # No additional modifications are required
 
 
 @typechecked
@@ -693,10 +690,7 @@ class DirectMESSAGE(BaseMESSAGE):
         """
         # Parse data from the data parameter
         data_to_send = self._get_data()
-        if any(data_to_send.values()):
-            if core.GLOBALS.is_user:
-                await asyncio.sleep(RLIM_USER_WAIT_TIME)
-            
+        if any(data_to_send.values()):            
             context = await self._send_channel(**data_to_send)
             self._update_state()
             return self._generate_log_context(context, **data_to_send)
@@ -733,4 +727,4 @@ class DirectMESSAGE(BaseMESSAGE):
         if not len(_init_options):
             _init_options = {"user" : self.parent.apiobject}
 
-        await core._update(self, init_options=_init_options, **kwargs) # No additional modifications are required
+        await misc._update(self, init_options=_init_options, **kwargs) # No additional modifications are required

@@ -14,7 +14,7 @@ from typeguard import typechecked
 
 from .tracing import *
 from .timing import *
-from .const import *
+from .common import *
 from .exceptions import *
 
 import json
@@ -23,7 +23,6 @@ import re
 import time
 import asyncio
 
-from . import core
 from . import misc
 
 
@@ -525,9 +524,9 @@ class LoggerSQL:
         GLOBALS.enabled = True
 
     def _get_insert_guild(self,
-                    snowflake: int,
-                    name: str,
-                    _type: str) -> int:
+                          snowflake: int,
+                          name: str,
+                          _type: str) -> int:
         """
         Inserts the guild into the db if it doesn't exist,
         adds it to cache and returns it's internal db id from cache.
@@ -776,7 +775,7 @@ class LoggerSQL:
         """
         try:
             self._stop_engine()
-            await core._update(self, **kwargs)
+            await misc._update(self, **kwargs)
             GLOBALS.enabled = True
         except Exception:
             # Reinitialize since engine was disconnected
@@ -991,24 +990,41 @@ if GLOBALS.sql_installed:
             self.reason = reason
 
 
-async def initialize(mgr_object: LoggerSQL):
+async def initialize(mgr_object: LoggerSQL) -> bool:
     """
     This function initializes the sql manager and also the selected database.
 
     Parameters
     -----------
-    - mgr_object: LoggerSQL - SQL database manager object responsible for saving the logs into the SQL database.
+    mgr_object: LoggerSQL
+        SQL database manager object responsible for saving the logs into the SQL database.
+
+    Returns
+    ----------
+    True
+        Logging will be SQL.
+    False
+        Logging will be file based.
 
     Raises
     ------------
-    Any exceptions raised in mgr_object.initialize() method
+    Any
+        Any exceptions raised in mgr_object.initialize() method
     """
+    _ret = False
+    if mgr_object is not None:    
+        trace("[SQL]: Initializing logging...", TraceLEVELS.NORMAL)
+        try:
+            await mgr_object.initialize()
+            _ret = True
+        except DAFSQLError as exc:
+            trace(f"[SQL:] Unable to initialize manager, reason\n: {exc}", TraceLEVELS.ERROR)
+    else:
+        mgr_object = LoggerSQL("", "", "", "")
 
-    trace("[SQL]: Initializing logging...", TraceLEVELS.NORMAL)
-    if mgr_object is not None:
-        await mgr_object.initialize()
-        GLOBALS.manager = mgr_object
-        trace("[SQL]: Initialization was successful!", TraceLEVELS.NORMAL)
+    GLOBALS.manager = mgr_object
+    trace("[SQL]: Initialization was successful!", TraceLEVELS.NORMAL)
+    return _ret
 
 
 def get_sql_manager() -> LoggerSQL:
@@ -1016,4 +1032,4 @@ def get_sql_manager() -> LoggerSQL:
     Returns the LoggerSQL object that was originally passed to the
     framework.run(...) function or None if the SQL logging is disabled
     """
-    return GLOBALS.manager if GLOBALS.enabled else None
+    return GLOBALS.manager
