@@ -108,7 +108,7 @@ async def _initialize(token : str,
     # Create the user callback task
     if user_callback is not None:
         trace("[CORE]: Starting user callback function", TraceLEVELS.NORMAL)
-        loop.create_task(user_callback)
+        loop.create_task(user_callback())
 
     trace("[CORE]: Initialization complete.", TraceLEVELS.NORMAL)
 

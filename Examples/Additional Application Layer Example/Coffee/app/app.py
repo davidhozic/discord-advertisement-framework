@@ -1,4 +1,4 @@
-import framework, datetime, os, random
+import daf, datetime, os, random
 
 
 
@@ -7,7 +7,7 @@ randomized_images = []
 
 IMAGE_PATH = "./app/images/"
 
-@framework.data_function
+@daf.data_function
 def get_data():
     global already_sent, randomized_images
     datum=datetime.datetime.now()
@@ -22,7 +22,7 @@ def get_data():
         """\
     Good morning @everyone\nDate: {:02d}.{:02d}.{:02d} - {:02d}:{:02d}\
     """.format(datum.day,datum.month,datum.year,datum.hour,datum.minute)
-        return text, framework.FILE(image) # Return message to be sent
+        return text, daf.FILE(image) # Return message to be sent
 
     elif datum.hour == 11 and already_sent:
         already_sent = False

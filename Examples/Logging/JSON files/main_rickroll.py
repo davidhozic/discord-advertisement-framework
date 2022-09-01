@@ -1,6 +1,6 @@
 from datetime import timedelta
-from framework import trace
-import framework as fw
+from daf import trace
+import daf
 
 rolls = [
     "https://i.pinimg.com/originals/b7/fb/80/b7fb80122cf46d0e584f3a0768aef282.gif",
@@ -13,24 +13,24 @@ rolls = [
     "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
 ]
 
-@fw.data_function
+@daf.data_function
 def get(st):
     item = st.pop(0)
     st.append(item)
     return item
 
 servers = [
-    fw.GUILD(
+    daf.GUILD(
         snowflake=12345,
         messages=[
-            fw.TextMESSAGE(None, timedelta(seconds=5), get(rolls.copy()), [12345], "edit", timedelta(seconds=5))
+            daf.TextMESSAGE(None, timedelta(seconds=5), get(rolls.copy()), [12345], "edit", timedelta(seconds=5))
         ],
         logging=True
     )
 ]
 
 
-fw.run(
+daf.run(
     token="OSDSJ44JNnnJNJ2NJDBWQUGHSHFAJSHDUQHFDBADVAHJVERAHGDVAHJSVDE",   # Example account token
     is_user=False, 
     server_list=servers

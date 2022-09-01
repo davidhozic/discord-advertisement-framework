@@ -8,8 +8,8 @@ conf.py file.
 
 
 from contextlib import suppress
-from framework import discord
-import framework as fw
+from daf import discord
+import daf
 import asyncio
 import conf
 import os
@@ -154,7 +154,7 @@ async def message_deleter():
         if they are older than the configured period in conf.py (DELETE_PERIOD).
         The resolution is 1 hour.
     """
-    client = fw.get_client()
+    client = daf.get_client()
     channels = []
     for guild in conf.WHITELISTED_GUILDS:
         guild["CHANNEL-IDs"] = [x for x in [client.get_channel(x) for x in guild["CHANNEL-IDs"] if x not in conf.DO_NOT_DELETE_CH_IDS] if x is not None]
@@ -178,10 +178,10 @@ async def message_deleter():
             except discord.HTTPException as ex:
                 pass
 
-        await asyncio.sleep(1*fw.C_HOUR_TO_SECOND)
+        await asyncio.sleep(1*daf.C_HOUR_TO_SECOND)
 
 
-@fw.data_function
+@daf.data_function
 def get_data(ch_id):
     """
     ~  get_data  ~
@@ -213,12 +213,12 @@ def get_data(ch_id):
                     tmp_file_path = os.path.join(conf.UPLOAD_TEMP_FILE_FOLDER,file_context.fname)
                     with open(tmp_file_path, "wb") as tmp_file:
                         tmp_file.write(file_context.fdata)
-                    l_ret.append( fw.FILE(tmp_file_path) )
+                    l_ret.append( daf.FILE(tmp_file_path) )
             if context.text is not None:
                 l_ret.append(context.text)
             if context.embed is not None:
                 l_tr_datum = datetime.datetime.now()
-                l_fw_embed = fw.EMBED.from_discord_embed(context.embed).set_footer(text="{:02d}.{:02d}.{:04d}\t{:02d}:{:02d}".format(l_tr_datum.day,
+                l_fw_embed = daf.EMBED.from_discord_embed(context.embed).set_footer(text="{:02d}.{:02d}.{:04d}\t{:02d}:{:02d}".format(l_tr_datum.day,
                                                                                                                     l_tr_datum.month,
                                                                                                                     l_tr_datum.year,
                                                                                                                     l_tr_datum.hour,
@@ -249,10 +249,10 @@ async def main():
 
 # Create the server list
 servers = [
-        fw.GUILD (
+        daf.GUILD (
             snowflake=guild["SERVER-ID"], 
             messages= [
-                fw.TextMESSAGE(None, 1, get_data(ch_id), [ch_id], "send", True) for ch_id in guild["CHANNEL-IDs"]
+                daf.TextMESSAGE(None, 1, get_data(ch_id), [ch_id], "send", True) for ch_id in guild["CHANNEL-IDs"]
             ],
             logging=True
         ) for guild in conf.WHITELISTED_GUILDS   
@@ -260,7 +260,7 @@ servers = [
 
 
 if __name__ == "__main__":
-    fw.run(
+    daf.run(
             conf.TOKEN,
             servers,
             user_callback=main,

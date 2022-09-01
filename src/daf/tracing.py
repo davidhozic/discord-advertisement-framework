@@ -27,11 +27,15 @@ class TraceLEVELS(Enum):
     ERROR = auto()
 
 def trace(message: str,
-          level: TraceLEVELS = TraceLEVELS.NORMAL):
+          level: TraceLEVELS = TraceLEVELS.NORMAL,
+          force: bool = False):
     """
     Prints a trace to the console.
     
     This is thread safe.
+
+    .. versionchanged:: v2.1
+        Added ``force`` parameter.
 
     Parameters
     --------------
@@ -39,8 +43,10 @@ def trace(message: str,
         Trace message.
     level: TraceLEVELS
         Level of the trace. Defaults to TraceLEVELS.NORMAL.
+    force: bool
+        Trace even if tracing is disabled.
     """
-    if GLOBALS.use_debug:
+    if GLOBALS.use_debug or force:
         with GLOBALS.lock:
             timestruct = time.localtime()
             timestamp = "Date: {:02d}.{:02d}.{:04d} Time:{:02d}:{:02d}"

@@ -22,7 +22,7 @@ This is a minimal example of how to use the shiller.
 
 To start shilling you need to:
 
-1. Import the library with ``import framework``
+1. Import the library with ``import daf``
 2. Define a server list
 3. Start the shilling with :ref:`run` function. 
 
@@ -33,20 +33,20 @@ For help with the :ref:`GUILD`, :ref:`TextMESSAGE` object and see :ref:`Programm
 .. code-block:: python
 
     from datetime import timedelta
-    import framework as fw
+    
 
     # Define a server list
     servers = [
-        fw.GUILD(
+        daf.GUILD(
             snowflake=123456789012345678, # The snowflake id of the guild (This can be obtained by enabling developer mode and then right clicking on the guild's icon)
             messages=[
-                fw.TextMESSAGE(None, timedelta(seconds=5), "Hello world!", [123456789012345678], "send", True) # start_period, end_period, data, channels, mode, start_now
+                daf.TextMESSAGE(None, timedelta(seconds=5), "Hello world!", [123456789012345678], "send", True) # start_period, end_period, data, channels, mode, start_now
             ],
             logging=True # Generate logs for each sent message
         )
     ]
 
-    fw.run(
+    daf.run(
         token="DNASNDANDASKJNDAKSJDNASKJDNASKJNSDSAKDNAKLSNDSKAJDN", # The authorization token
         servers=servers # The server list
     )

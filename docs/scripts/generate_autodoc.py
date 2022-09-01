@@ -8,7 +8,7 @@ os.chdir(os.path.dirname(__file__))
 
 
 sys.path.append(os.path.abspath("../../src"))
-import framework
+import daf
 
 FUNCTION_TEMPLATE =\
 """
@@ -31,7 +31,7 @@ CLASS_TEMPLATE =\
 
 export_f = ""
 export_c = ""
-for item in inspect.getmembers(framework, lambda x: inspect.isclass(x) or inspect.isfunction(x)):
+for item in inspect.getmembers(daf, lambda x: inspect.isclass(x) or inspect.isfunction(x)):
     name, item = item
     if not name.startswith(("_", "Base")):
         if inspect.isfunction(item):
