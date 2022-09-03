@@ -31,33 +31,29 @@ Releases
 
 v2.1
 ===========
-:``remove_after`` parameter:
+- ``remove_after`` parameter:
     Classes: :class:`daf.guild.GUILD`, :class:`daf.guild.USER`, :class:`daf.message.TextMESSAGE`, :class:`daf.message.VoiceMESSAGE`, :class:`daf.message.DirectMESSAGE`
 
     now support the remove_after parameter which will remove the object from the shilling list when conditions met.
     
 
-:Proxies:
+- Proxies:
     Added support for using proxies.
     To use a proxy pass the :func:`daf.run` function with a ``proxy`` parameter
-:discord.EmbedField:
+- discord.EmbedField:
     |BREAK_CH| Replaced daf.EmbedFIELD with discord.EmbedField.
-:timedelta:
+- timedelta:
     start_period and end_period now support ``timedelta`` object to specify the send period.
     Use of ``int`` is deprecated
 
     |POTENT_BREAK_CH| Replaced ``start_now`` with ``start_in`` parameter, deprecated use of bool value.
-
-:Channel checking:
+- Channel checking:
     :class:`daf.TextMESSAGE` and :class:`daf.VoiceMESSAGE` now check if the given channels are actually inside the guild
-
-:Optionals:
+- Optionals:
     |POTENT_BREAK_CH| Made some functionality optional: ``voice``, ``proxy`` and ``sql`` - to install use ``pip install discord-advert-framework[dependency here]``
-
-:CLIENT:
+- CLIENT:
     |BREAK_CH| Removed the CLIENT object, discord.Client is now used as the CLIENT class is no longer needed due to improved startup
-
-:Bug fixes:
+- Bug fixes:
     Time slippage correction:
         This occurred if too many messages were ready at once, which resulted in discord's rate limit,
         causing a permanent slip.
