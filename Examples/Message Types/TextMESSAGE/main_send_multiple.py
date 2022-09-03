@@ -37,7 +37,7 @@ guilds = [
                                                             # If start period is defined, it dictates the maximum limit of randomized period
                               data=["Hello World",          # Data you want to sent to the function (Can be of types : str, embed, file, list of types to the left
                                     l_file1,                # or function that returns any of above types(or returns None if you don't have any data to send yet),
-                                    l_file2,                # where if you pass a function you need to use the framework.FUNCTION decorator on top of it ).
+                                    l_file2,                # where if you pass a function you need to use the daf.FUNCTION decorator on top of it ).
                                     l_embed],           
                               channels=[123456789],      # List of ids of all the channels you want this message to be sent into
                               mode="send",                  # "send" will send a new message every time, "edit" will edit the previous message, "clear-send" will delete

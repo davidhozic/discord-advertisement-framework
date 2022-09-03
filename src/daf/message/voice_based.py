@@ -66,18 +66,18 @@ class VoiceMESSAGE(BaseMESSAGE):
             :caption: **Randomized** sending period between **5** seconds and **10** seconds.
 
             # Time between each send is somewhere between 5 seconds and 10 seconds.
-            framework.VoiceMESSAGE(start_period=None, end_period=timedelta(10), data=framework.AUDIO("msg.mp3"), channels=[12345], start_in=timedelta(seconds=0), volume=50)
+            daf.VoiceMESSAGE(start_period=None, end_period=timedelta(10), data=daf.AUDIO("msg.mp3"), channels=[12345], start_in=timedelta(seconds=0), volume=50)
 
         .. code-block:: python
             :caption: **Fixed** sending period at **10** seconds
 
             # Time between each send is exactly 10 seconds.
-            framework.VoiceMESSAGE(start_period=None, end_period=timedelta(10), data=framework.AUDIO("msg.mp3"), channels=[12345], start_in=timedelta(seconds=0), volume=50)
+            daf.VoiceMESSAGE(start_period=None, end_period=timedelta(10), data=daf.AUDIO("msg.mp3"), channels=[12345], start_in=timedelta(seconds=0), volume=50)
 
     data: AUDIO
         The data parameter is the actual data that will be sent using discord's API. The data types of this parameter can be:
             - AUDIO object.
-            - Function that accepts any amount of parameters and returns an AUDIO object. To pass a function, YOU MUST USE THE :ref:`data_function` decorator on the function before passing the function to the framework.
+            - Function that accepts any amount of parameters and returns an AUDIO object. To pass a function, YOU MUST USE THE :ref:`data_function` decorator on the function before passing the function to the daf.
     channels: Iterable[Union[int, discord.VoiceChannel]]
         Channels that it will be advertised into (Can be snowflake ID or channel objects from PyCord).
     volume: int
@@ -100,8 +100,6 @@ class VoiceMESSAGE(BaseMESSAGE):
         "data",
         "volume",
         "channels",
-        "timer",
-        "force_retry",
     )
 
     __logname__ = "VoiceMESSAGE"    # For sql._register_type
@@ -214,7 +212,7 @@ class VoiceMESSAGE(BaseMESSAGE):
 
         Parameters
         ------------
-        parent: framework.guild.GUILD
+        parent: daf.guild.GUILD
             The GUILD this message is in.
 
         Raises

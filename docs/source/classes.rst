@@ -1,7 +1,7 @@
 =====================
 Classes
 =====================
-This page contains information about any classes that can be used in the framework.
+This page contains information about any classes that can be used in the daf.
 
 -----------------------------
 Guilds (Servers)
@@ -9,7 +9,7 @@ Guilds (Servers)
 
 GUILD
 =====================
-.. autoclass:: framework.guild.GUILD
+.. autoclass:: daf.guild.GUILD
    :members:
    
    .. autoproperty:: messages
@@ -20,7 +20,7 @@ GUILD
 
 USER
 =====================
-.. autoclass:: framework.guild.USER
+.. autoclass:: daf.guild.USER
    :members:
 
    .. autoproperty:: messages
@@ -35,14 +35,14 @@ Messages
 
 TextMESSAGE
 =====================
-.. autoclass:: framework.message.TextMESSAGE
+.. autoclass:: daf.message.TextMESSAGE
     :members:
 
     .. autoproperty:: created_at
 
 VoiceMESSAGE
 =====================
-.. autoclass:: framework.message.VoiceMESSAGE
+.. autoclass:: daf.message.VoiceMESSAGE
     :members:
 
     .. autoproperty:: created_at
@@ -50,7 +50,7 @@ VoiceMESSAGE
 
 DirectMESSAGE
 =====================
-.. autoclass:: framework.message.DirectMESSAGE
+.. autoclass:: daf.message.DirectMESSAGE
     :members:
 
     .. autoproperty:: created_at
@@ -63,18 +63,18 @@ These classes describe data that can be passed to the :ref:`Messages` objects
 
 EMBED
 =====================
-.. autoclass:: framework.dtypes.EMBED
+.. autoclass:: daf.dtypes.EMBED
     :members:
     :exclude-members: Color, Colour
 
 FILE
 =====================
-.. autoclass:: framework.dtypes.FILE
+.. autoclass:: daf.dtypes.FILE
     :members:
 
 AUDIO
 =====================
-.. autoclass:: framework.dtypes.AUDIO
+.. autoclass:: daf.dtypes.AUDIO
     :members:
 
 
@@ -85,14 +85,14 @@ Clients
 
 CLIENT
 =====================
-.. autoclass:: framework.client.CLIENT
+.. autoclass:: daf.client.CLIENT
     :members:
 
-    .. autoproperty:: framework.client.CLIENT.guilds
+    .. autoproperty:: daf.client.CLIENT.guilds
 
-    .. autoproperty:: framework.client.CLIENT.private_channels
+    .. autoproperty:: daf.client.CLIENT.private_channels
         
-    .. autoproperty:: framework.client.CLIENT.user
+    .. autoproperty:: daf.client.CLIENT.user
 
 
 -----------------------------
@@ -104,7 +104,7 @@ LoggerSQL
 .. note::
     See :ref:`relational database log (SQL)` for usage.
 
-.. autoclass:: framework.sql.LoggerSQL
+.. autoclass:: daf.sql.LoggerSQL
     :members:
     :exclude-members: Base
 
@@ -116,7 +116,7 @@ Tracing
 
 TraceLEVELS
 =====================
-.. autoenum:: framework.tracing.TraceLEVELS
+.. autoenum:: daf.tracing.TraceLEVELS
     :members:
 
 
@@ -130,20 +130,20 @@ Types
 DAFError
 ------------------------
 
-.. autoclass:: framework.exceptions.DAFError
+.. autoclass:: daf.exceptions.DAFError
     :members:
 
 DAFSQLError
 ------------------------
 
-.. autoclass:: framework.exceptions.DAFSQLError
+.. autoclass:: daf.exceptions.DAFSQLError
     :members:
 
 
 DAFNotFoundError
 ------------------------
 
-.. autoclass:: framework.exceptions.DAFNotFoundError
+.. autoclass:: daf.exceptions.DAFNotFoundError
     :members:
 
 

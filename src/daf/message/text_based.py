@@ -59,13 +59,13 @@ class TextMESSAGE(BaseMESSAGE):
             :caption: **Randomized** sending period between **5** seconds and **10** seconds.
 
             # Time between each send is somewhere between 5 seconds and 10 seconds.
-            framework.TextMESSAGE(start_period=5, end_period=timedelta(10), data="Second Message", channels=[12345], mode="send", start_in=timedelta(seconds=0))
+            daf.TextMESSAGE(start_period=5, end_period=timedelta(10), data="Second Message", channels=[12345], mode="send", start_in=timedelta(seconds=0))
 
         .. code-block:: python
             :caption: **Fixed** sending period at **10** seconds
 
             # Time between each send is exactly 10 seconds.
-            framework.TextMESSAGE(start_period=None, end_period=timedelta(10), data="Second Message", channels=[12345], mode="send", start_in=timedelta(seconds=0))
+            daf.TextMESSAGE(start_period=None, end_period=timedelta(10), data="Second Message", channels=[12345], mode="send", start_in=timedelta(seconds=0))
 
     data: Union[str, EMBED, FILE, List[Union[str, EMBED, FILE]], _FunctionBaseCLASS]
         The data parameter is the actual data that will be sent using discord's API. The data types of this parameter can be:
@@ -73,7 +73,7 @@ class TextMESSAGE(BaseMESSAGE):
             - :ref:`EMBED`,
             - :ref:`FILE`,
             - List/Tuple containing any of the above arguments (There can up to 1 string, up to 1 :ref:`EMBED` and up to 10 :ref:`FILE` objects. If more than 1 string or embeds are sent, the framework will only consider the last found).
-            - Function that accepts any amount of parameters and returns any of the above types. To pass a function, YOU MUST USE THE :ref:`data_function` decorator on the function before passing the function to the framework.
+            - Function that accepts any amount of parameters and returns any of the above types. To pass a function, YOU MUST USE THE :ref:`data_function` decorator on the function before passing the function to the daf.
 
     channels: Iterable[Union[int, discord.TextChannel, discord.Thread]]
         Channels that it will be advertised into (Can be snowflake ID or channel objects from PyCord).
@@ -234,7 +234,7 @@ class TextMESSAGE(BaseMESSAGE):
 
         Parameters
         --------------
-        parent: framework.guild.GUILD
+        parent: daf.guild.GUILD
             The GUILD this message is in
 
         Raises
@@ -286,19 +286,15 @@ class TextMESSAGE(BaseMESSAGE):
         handled = False
         if isinstance(ex, discord.HTTPException):
             if ex.status == 429:  # Rate limit
-                retry_after = int(ex.response.headers["Retry-After"])
+                retry_after = int(ex.response.headers["Retry-After"]) + 1
                 if ex.code == 20016:    # Slow Mode
-                    self.force_retry["ENABLED"] = True
-                    self.force_retry["TIMESTAMP"] = datetime.now() + timedelta(seconds=retry_after) # Set an overwrite timestamp for next send
+                    self.next_send_time = datetime.now() + timedelta(seconds=retry_after)
                     trace(f"{channel.name} is in slow mode, retrying in {retry_after} seconds", TraceLEVELS.WARNING)
-                    handled = False
-                else:
-                    handled = True
-                    await asyncio.sleep(retry_after * RLIM_SAFETY_FACTOR)
             elif ex.status == 404:      # Unknown object
                 if ex.code == 10008:    # Unknown message
                     self.sent_messages[channel.id] = None
                     handled = True
+
         return handled
 
     async def _send_channel(self,
@@ -458,13 +454,13 @@ class DirectMESSAGE(BaseMESSAGE):
             :caption: **Randomized** sending period between **5** seconds and **10** seconds.
 
             # Time between each send is somewhere between 5 seconds and 10 seconds.
-            framework.DirectMESSAGE(start_period=5, end_period=timedelta(10), data="Second Message",  mode="send", start_in=timedelta(seconds=0))
+            daf.DirectMESSAGE(start_period=5, end_period=timedelta(10), data="Second Message",  mode="send", start_in=timedelta(seconds=0))
 
         .. code-block:: python
             :caption: **Fixed** sending period at **10** seconds
 
             # Time between each send is exactly 10 seconds.
-            framework.DirectMESSAGE(start_period=None, end_period=timedelta(10), data="Second Message",  mode="send", start_in=timedelta(seconds=0))
+            daf.DirectMESSAGE(start_period=None, end_period=timedelta(10), data="Second Message",  mode="send", start_in=timedelta(seconds=0))
 
     data: Union[str, EMBED, FILE, List[Union[str, EMBED, FILE]], _FunctionBaseCLASS]
         The data parameter is the actual data that will be sent using discord's API. The data types of this parameter can be:
@@ -472,7 +468,7 @@ class DirectMESSAGE(BaseMESSAGE):
             - :ref:`EMBED`,
             - :ref:`FILE`,
             - List/Tuple containing any of the above arguments (There can up to 1 string, up to 1 :ref:`EMBED` and up to 10 :ref:`FILE` objects. If more than 1 string or embeds are sent, the framework will only consider the last found).
-            - Function that accepts any amount of parameters and returns any of the above types. To pass a function, YOU MUST USE THE :ref:`data_function` decorator on the function before passing the function to the framework.
+            - Function that accepts any amount of parameters and returns any of the above types. To pass a function, YOU MUST USE THE :ref:`data_function` decorator on the function before passing the function to the daf.
 
     mode: str
         Parameter that defines how message will be sent to a channel.
@@ -586,11 +582,11 @@ class DirectMESSAGE(BaseMESSAGE):
         returns True on success or False on failure
 
         .. versionchanged:: v2.1
-            Renamed user to and changed the type from discord.User to framework.guild.USER
+            Renamed user to and changed the type from discord.User to daf.guild.USER
 
         Parameters
         -----------
-        parent: framework.guild.USER
+        parent: daf.guild.USER
             The USER this message is in
 
         Raises
@@ -619,7 +615,7 @@ class DirectMESSAGE(BaseMESSAGE):
         handled = False
         if isinstance(ex, discord.HTTPException):
             if ex.status == 429 or ex.code == 40003: # Too Many Requests or opening DMs too fast
-                retry_after = float(ex.response.headers["Retry-After"]) * RLIM_SAFETY_FACTOR
+                retry_after = int(ex.response.headers["Retry-After"]) + 1
                 trace(f"Rate limited, sleeping for {retry_after} seconds", TraceLEVELS.WARNING)
                 await asyncio.sleep(retry_after)
                 handled = True

@@ -71,7 +71,7 @@ def data_function(fnc: Callable):
     @typechecked
     class FunctionCLASS(_FunctionBaseCLASS):
         """
-        Used for creating special classes that are then used to create objects in the framework.MESSAGE
+        Used for creating special classes that are then used to create objects in the daf.MESSAGE
         data parameter, allows for sending dynamic content received thru an user defined function.
 
         Parameters
@@ -138,7 +138,7 @@ class EMBED(discord.Embed):
         Parameters
         ------------
         _object: discord.Embed
-            The Discord Embed object you want converted into a framework.EMBED object.
+            The Discord Embed object you want converted into a daf.EMBED object.
         """
         ret = EMBED()
         # Copy attributes but not special methods to the new EMBED. "dir" is used instead of "vars" because the object does not support the function.

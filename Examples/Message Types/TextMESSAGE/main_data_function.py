@@ -4,7 +4,7 @@ from datetime import timedelta
 
 
 ############################################################################################
-# It's VERY IMPORTANT that you use @framework.data_function!
+# It's VERY IMPORTANT that you use @daf.data_function!
 ############################################################################################
 
 
@@ -23,7 +23,7 @@ guilds = [
                                                             # If start period is defined, it dictates the maximum limit of randomized period
                               data=get_data(123),           # Data you want to sent to the function (Can be of types : str, embed, file, list of types to the left
                                                             # or function that returns any of above types(or returns None if you don't have any data to send yet), 
-                                                            # where if you pass a function you need to use the framework.FUNCTION decorator on top of it ).
+                                                            # where if you pass a function you need to use the daf.FUNCTION decorator on top of it ).
                               channels=[123456789],      # List of ids of all the channels you want this message to be sent into
                               mode="send",                  # "send" will send a new message every time, "edit" will edit the previous message, "clear-send" will delete
                                                             # the previous message and then send a new one

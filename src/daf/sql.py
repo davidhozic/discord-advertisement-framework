@@ -2,7 +2,7 @@
     The sql module contains definitions related to the
     relational database logging that is available in this shiller.
     It is only used if the sql logging is enabled by passing
-    the framework.run function with the SqlCONTROLLER object.
+    the daf.run function with the SqlCONTROLLER object.
 
     .. versionchanged:: v2.1
         Made SQL an optional functionality
@@ -492,7 +492,7 @@ class LoggerSQL:
         and fills the lookuptables with types defined by the _register_type(lookup_table) function.
 
         .. note::
-            This is automatically called when running the framework.
+            This is automatically called when running the daf.
 
         Raises
         -----------
@@ -1030,6 +1030,6 @@ async def initialize(mgr_object: LoggerSQL) -> bool:
 def get_sql_manager() -> LoggerSQL:
     """
     Returns the LoggerSQL object that was originally passed to the
-    framework.run(...) function or None if the SQL logging is disabled
+    daf.run(...) function or None if the SQL logging is disabled
     """
     return GLOBALS.manager
