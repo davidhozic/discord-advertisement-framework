@@ -26,7 +26,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Callable, Generator, List, Type, TypeVar, Union
 
-import discord
+import _discord
 
 from ...cog import Cog
 from ...commands import ApplicationCommand, SlashCommandGroup
@@ -39,7 +39,7 @@ __all__ = ("Cog",)
 CogT = TypeVar("CogT", bound="Cog")
 FuncT = TypeVar("FuncT", bound=Callable[..., Any])
 
-MISSING: Any = discord.utils.MISSING
+MISSING: Any = _discord.utils.MISSING
 
 
 class Cog(Cog):

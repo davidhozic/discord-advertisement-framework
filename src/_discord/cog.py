@@ -45,7 +45,7 @@ from typing import (
     Union,
 )
 
-import discord.utils
+import _discord.utils
 
 from . import errors
 from .commands import (
@@ -64,7 +64,7 @@ __all__ = (
 CogT = TypeVar("CogT", bound="Cog")
 FuncT = TypeVar("FuncT", bound=Callable[..., Any])
 
-MISSING: Any = discord.utils.MISSING
+MISSING: Any = _discord.utils.MISSING
 
 
 def _is_submodule(parent: str, child: str) -> bool:
@@ -597,7 +597,7 @@ class CogMixin:
 
         if existing is not None:
             if not override:
-                raise discord.ClientException(f"Cog named {cog_name!r} already loaded")
+                raise _discord.ClientException(f"Cog named {cog_name!r} already loaded")
             self.remove_cog(cog_name)
 
         cog = cog._inject(self)

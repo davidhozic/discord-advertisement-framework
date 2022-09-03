@@ -25,9 +25,9 @@ DEALINGS IN THE SOFTWARE.
 from typing import Any, List, Union
 import asyncio
 
-import discord.commands.options
-from discord.commands import Option, SlashCommand
-from discord.enums import SlashCommandOptionType
+import _discord.commands.options
+from _discord.commands import Option, SlashCommand
+from _discord.enums import SlashCommandOptionType
 
 from ..commands import AutoShardedBot as ExtAutoShardedBot
 from ..commands import BadArgument
@@ -276,4 +276,4 @@ class BridgeOption(Option, Converter):
             raise BadArgument() from exc
 
 
-discord.commands.options.Option = BridgeOption
+_discord.commands.options.Option = BridgeOption

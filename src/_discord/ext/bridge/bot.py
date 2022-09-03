@@ -24,8 +24,8 @@ DEALINGS IN THE SOFTWARE.
 """
 from abc import ABC
 
-from discord.interactions import Interaction
-from discord.message import Message
+from _discord.interactions import Interaction
+from _discord.message import Message
 
 from ..commands import AutoShardedBot as ExtAutoShardedBot
 from ..commands import Bot as ExtBot

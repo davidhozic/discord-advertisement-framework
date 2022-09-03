@@ -26,14 +26,14 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Dict, List, Optional, TypeVar, Union
 
-import discord.abc
-from discord.interactions import InteractionMessage, InteractionResponse, Interaction
-from discord.webhook.async_ import Webhook
+import _discord.abc
+from _discord.interactions import InteractionMessage, InteractionResponse, Interaction
+from _discord.webhook.async_ import Webhook
 
 if TYPE_CHECKING:
     from typing_extensions import ParamSpec
 
-    import discord
+    import _discord
     from .. import Bot
     from ..state import ConnectionState
     from ..voice_client import VoiceProtocol
@@ -46,7 +46,7 @@ if TYPE_CHECKING:
     from ..user import User
     from ..permissions import Permissions
     from ..client import ClientUser
-    from discord.webhook.async_ import Webhook
+    from _discord.webhook.async_ import Webhook
 
     from ..cog import Cog
     from ..webhook import WebhookMessage
@@ -66,7 +66,7 @@ else:
 __all__ = ("ApplicationContext", "AutocompleteContext")
 
 
-class ApplicationContext(discord.abc.Messageable):
+class ApplicationContext(_discord.abc.Messageable):
     """Represents a Discord application command interaction context.
 
     This class is not created manually and is instead passed to application
@@ -238,7 +238,7 @@ class ApplicationContext(discord.abc.Messageable):
         return None
 
     @property
-    @discord.utils.copy_doc(InteractionResponse.send_modal)
+    @_discord.utils.copy_doc(InteractionResponse.send_modal)
     def send_modal(self) -> Callable[..., Awaitable[Interaction]]:
         return self.interaction.response.send_modal
 
@@ -258,11 +258,11 @@ class ApplicationContext(discord.abc.Messageable):
                 return await self.interaction.response.send_message(*args, **kwargs)  # self.response
             else:
                 return await self.followup.send(*args, **kwargs)  # self.send_followup
-        except discord.errors.InteractionResponded:
+        except _discord.errors.InteractionResponded:
             return await self.followup.send(*args, **kwargs)
 
     @property
-    @discord.utils.copy_doc(InteractionResponse.send_message)
+    @_discord.utils.copy_doc(InteractionResponse.send_message)
     def send_response(self) -> Callable[..., Awaitable[Interaction]]:
         if not self.interaction.response.is_done():
             return self.interaction.response.send_message
@@ -272,7 +272,7 @@ class ApplicationContext(discord.abc.Messageable):
             )
 
     @property
-    @discord.utils.copy_doc(Webhook.send)
+    @_discord.utils.copy_doc(Webhook.send)
     def send_followup(self) -> Callable[..., Awaitable[WebhookMessage]]:
         if self.interaction.response.is_done():
             return self.followup.send
@@ -282,7 +282,7 @@ class ApplicationContext(discord.abc.Messageable):
             )
 
     @property
-    @discord.utils.copy_doc(InteractionResponse.defer)
+    @_discord.utils.copy_doc(InteractionResponse.defer)
     def defer(self) -> Callable[..., Awaitable[None]]:
         return self.interaction.response.defer
 
@@ -316,7 +316,7 @@ class ApplicationContext(discord.abc.Messageable):
         return await self.interaction.delete_original_message(delay=delay)
 
     @property
-    @discord.utils.copy_doc(Interaction.edit_original_message)
+    @_discord.utils.copy_doc(Interaction.edit_original_message)
     def edit(self) -> Callable[..., Awaitable[InteractionMessage]]:
         return self.interaction.edit_original_message
 

@@ -25,10 +25,10 @@ DEALINGS IN THE SOFTWARE.
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, Optional, Union
 
-from discord.commands import ApplicationContext
-from discord.interactions import Interaction, InteractionMessage
-from discord.message import Message
-from discord.webhook import WebhookMessage
+from _discord.commands import ApplicationContext
+from _discord.interactions import Interaction, InteractionMessage
+from _discord.message import Message
+from _discord.webhook import WebhookMessage
 
 from ..commands import Context
 

@@ -45,7 +45,7 @@ from typing import (
     Union,
 )
 
-from discord.utils import MISSING, maybe_coroutine, resolve_annotation
+from _discord.utils import MISSING, maybe_coroutine, resolve_annotation
 
 from .converter import run_converters
 from .errors import (

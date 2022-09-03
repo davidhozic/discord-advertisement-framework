@@ -43,7 +43,7 @@ from typing import (
     Union,
 )
 
-import discord.abc
+import _discord.abc
 
 from . import utils
 from .activity import ActivityTypes, create_activity
@@ -212,7 +212,7 @@ M = TypeVar("M", bound="Member")
 
 
 @flatten_user
-class Member(discord.abc.Messageable, _UserTag):
+class Member(_discord.abc.Messageable, _UserTag):
     """Represents a Discord member to a :class:`Guild`.
 
     This implements a lot of the functionality of :class:`User`.
@@ -685,7 +685,7 @@ class Member(discord.abc.Messageable, _UserTag):
         mute: bool = MISSING,
         deafen: bool = MISSING,
         suppress: bool = MISSING,
-        roles: List[discord.abc.Snowflake] = MISSING,
+        roles: List[_discord.abc.Snowflake] = MISSING,
         voice_channel: Optional[VocalGuildChannel] = MISSING,
         reason: Optional[str] = None,
         communication_disabled_until: Optional[datetime.datetime] = MISSING,
