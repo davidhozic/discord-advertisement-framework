@@ -349,8 +349,11 @@ class HTTPClient:
 
                         # we are being rate limited
                         if response.status == 429:
-                            if not response.headers.get("Via") or isinstance(data, str) or (hasattr(response, "code") and response.code == 40003):
+                            if not response.headers.get("Via") or isinstance(data, str) or (hasattr(response, "code") and response.code == 20016):
                                 # Banned by Cloudflare more than likely.
+                                if not isinstance(data, str):
+                                    data["code"] = response.code
+
                                 raise HTTPException(response, data)
 
                             fmt = 'We are being rate limited. Retrying in %.2f seconds. Handled under the bucket "%s"'

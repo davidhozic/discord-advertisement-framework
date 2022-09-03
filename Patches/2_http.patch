@@ -89,7 +89,7 @@ index 4fce824..30cbd2a 100644
                          # we are being rate limited
                          if response.status == 429:
 -                            if not response.headers.get("Via") or isinstance(data, str):
-+                            if not response.headers.get("Via") or isinstance(data, str) or (hasattr(response, "code") and response.code == 40003):
++                            if not response.headers.get("Via") or isinstance(data, str) or (hasattr(response, "code") and response.code == 20016):
                                  # Banned by Cloudflare more than likely.
                                  raise HTTPException(response, data)
  
