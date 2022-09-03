@@ -114,6 +114,30 @@ async def json_or_text(response: aiohttp.ClientResponse) -> Union[Dict[str, Any]
     return text
 
 
+class UserLimit:
+    def __init__(self) -> None:
+        self.usages = 0
+        self.unlock_ev = asyncio.Event()
+
+    def start(self):
+        asyncio.create_task(self.clear_limit())
+
+    async def __aenter__(self):
+        if self.usages >= 2:
+            await self.unlock_ev.wait()
+            self.unlock_ev.clear()
+        self.usages += 1
+
+    async def __aexit__(self, *args):
+        pass
+
+    async def clear_limit(self):
+        while True:
+            self.unlock_ev.set()
+            self.usages = 0
+            await asyncio.sleep(4.5)
+
+
 class Route:
     def __init__(self, method: str, path: str, **parameters: Any) -> None:
         self.path: str = path
@@ -176,6 +200,7 @@ class HTTPClient:
         proxy_auth: Optional[aiohttp.BasicAuth] = None,
         loop: Optional[asyncio.AbstractEventLoop] = None,
         unsync_clock: bool = True,
+        bot = True
     ) -> None:
         self.loop: asyncio.AbstractEventLoop = asyncio.get_event_loop() if loop is None else loop
         self.connector = connector
@@ -184,13 +209,19 @@ class HTTPClient:
         self._global_over: asyncio.Event = asyncio.Event()
         self._global_over.set()
         self.token: Optional[str] = None
-        self.bot_token: bool = False
+        self.bot_token: bool = bot
         self.proxy: Optional[str] = proxy
         self.proxy_auth: Optional[aiohttp.BasicAuth] = proxy_auth
         self.use_clock: bool = not unsync_clock
 
-        user_agent = "DiscordBot (https://github.com/Pycord-Development/pycord {0}) Python/{1[0]}.{1[1]} aiohttp/{2}"
-        self.user_agent: str = user_agent.format(__version__, sys.version_info, aiohttp.__version__)
+        self.user_limit = UserLimit()
+        if not bot:
+            self.user_limit.start()
+            self.user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.5005.63 Safari/537.36"
+        else:
+            user_agent = "DiscordBot (https://github.com/Pycord-Development/pycord {0}) Python/{1[0]}.{1[1]} aiohttp/{2}"
+            self.user_agent: str = user_agent.format(__version__, sys.version_info, aiohttp.__version__)
+        
 
     def recreate(self) -> None:
         if self.__session.closed:
@@ -235,24 +266,10 @@ class HTTPClient:
         # header creation
         headers: Dict[str, str] = {
             "User-Agent": self.user_agent,
-        }\
-            if self.is_bot else \
-        {
-			"Accept": "*/*",
-			"Accept-Encoding": "gzip, deflate",
-			"Accept-Language": "en-US,en;q=0.9,sl;q=0.8",
-			"Cache-Control": "no-cache",
-			"Sec-Ch-Ua": '" Not A;Brand";v="99", "Chromium";v="102", "Google Chrome";v="102"',
-			"Sec-Ch-Ua-Mobile": '?0',
-			"Sec-Ch-Ua-Platform": "Windows",
-			"Sec-Fetch-Dest": "empty",
-			"Sec-Fetch-Mode": "cors",
-			"Sec-Fetch-Site": "same-origin",
-			"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.5005.63 Safari/537.36",
-		}
+        }
 
         if self.token is not None:
-            headers["Authorization"] = f"Bot {self.token}" if self.is_bot else self.token
+            headers["Authorization"] = self.token
         # some checking if it's a JSON request
         if "json" in kwargs:
             headers["Content-Type"] = "application/json"
@@ -296,6 +313,10 @@ class HTTPClient:
                     kwargs["data"] = form_data
 
                 try:
+                    if not self.bot_token:
+                        async with self.user_limit:
+                            pass
+
                     async with self.__session.request(method, url, **kwargs) as response:
                         _log.debug(
                             "%s %s with %s has returned %s",
@@ -409,14 +430,13 @@ class HTTPClient:
 
     # login management
 
-    async def static_login(self, token: str, *, bot: bool) -> user.User:
+    async def static_login(self, token: str) -> user.User:
         # Necessary to get aiohttp to stop complaining about session creation
         self.__session = aiohttp.ClientSession(
             connector=self.connector, ws_response_class=DiscordClientWebSocketResponse
         )
         old_token = self.token
-        self.token = token
-        self.is_bot = bot
+        self.token = f"Bot {token}" if self.bot_token else token
 
         try:
             data = await self.request(Route("GET", "/users/@me"))
@@ -2655,4 +2675,4 @@ class HTTPClient:
         return self.request(Route("GET", "/users/{user_id}", user_id=user_id))
 
     def get_relationships(self) -> Response[List[user.User]]:
-        return self.request(Route("GET", "/users/@me/relationships"))
+        return self.request(Route("GET", "/users/@me/relationships"))
