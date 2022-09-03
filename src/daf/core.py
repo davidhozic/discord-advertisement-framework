@@ -74,6 +74,12 @@ async def _initialize(token : str,
     The main initialization function.
     It initializes all the other modules, creates advertising tasks
     and initializes all the core functionality.
+    If you want to control your own event loop, use this instead of run.
+
+    Parameters
+    ---------------
+    Any: Any
+        Parameters are the same as in :func:`daf.core.run`.
     """
     loop = asyncio.get_event_loop()
     tracing.initialize(debug) # Print trace messages to the console for debugging purposes
