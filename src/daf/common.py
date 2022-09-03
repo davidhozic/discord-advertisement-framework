@@ -2,6 +2,8 @@
     This module contains all the different constants that
     can be common to more modules
 """
+from enum import Enum
+
 # TIME CONSTANTS
 C_DAY_TO_SECOND = 86400
 C_HOUR_TO_SECOND = 3600
@@ -28,3 +30,12 @@ C_FILE_NAME_FORBIDDEN_CHAR = ('<','>','"','/','\\','|','?','*',":")
 # MESSAGE SETTINGS
 C_VC_CONNECT_TIMEOUT = 3 # Timeout of voice channels
 C_PERIOD_MINIMUM_SEC = 1 # Minimal seconds the period can be
+
+
+# Classes
+class AdvertiseTaskType(Enum):
+    """
+    Used for identifying advertiser tasks
+    """
+    TEXT_ISH = 0
+    VOICE = 1

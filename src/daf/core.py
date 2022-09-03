@@ -3,12 +3,10 @@
     and functions needed for the framework to run,
     as well as user function to control the framework
 """
-from typing import (Any, Iterable, Literal,
-                    Callable, List, Optional,
-                    Union, overload)
-from enum import Enum
+from typing import (Callable, List, Optional, Union, overload)
+from typeguard import typechecked
 
-from .const import *
+from .common import *
 from .exceptions import *
 from .import tracing
 from .tracing import *
@@ -17,9 +15,9 @@ from . import guild
 from . import client
 from . import sql
 from . import message
+from . import misc
+
 import asyncio
-import copy
-import inspect
 import _discord as dc
 
 #######################################################################
@@ -40,23 +38,12 @@ class GLOBALS:
     """
     Storage class used for holding global variables.
     """
-    user_callback: Callable = None
     server_list: List[guild._BaseGUILD] = []
-    temp_server_list: List[guild._BaseGUILD] = [] # Holds the guilds that are awaiting initialization (set in framework.run and cleared after initialization)
-    sql_manager: sql.LoggerSQL = None,
-    is_user: bool = False
 
 
 #######################################################################
-# Tasks
+# Coroutines
 #######################################################################
-class AdvertiseTaskType(Enum):
-    """
-    Used for identifying advertiser tasks
-    """
-    TEXT_ISH = 0
-    VOICE = 1
-
 async def _advertiser(message_type: AdvertiseTaskType) -> None:
     """
     The task that is responsible for shilling to channels.
@@ -74,51 +61,61 @@ async def _advertiser(message_type: AdvertiseTaskType) -> None:
             await guild_user._advertise(message_type)
 
 
-#######################################################################
-# Functions
-#######################################################################
-async def _initialize() -> None:
+async def _initialize(token : str,
+                      server_list : Optional[List[Union[guild.GUILD, guild.USER]]]=[],
+                      is_user : Optional[bool] =False,
+                      user_callback : Optional[Callable]=None,
+                      server_log_output : Optional[str] ="History",
+                      sql_manager: Optional[sql.LoggerSQL]=None,
+                      intents: Optional[dc.Intents]=None,
+                      debug : Optional[bool]=True,
+                      proxy: Optional[str]=None) -> None:
     """
     The main initialization function.
     It initializes all the other modules, creates advertising tasks
     and initializes all the core functionality.
     """
-    # Initialize the SQL module if manager is provided
-    # If manager is not provided, use JSON based file logs
-    sql_manager = GLOBALS.sql_manager
-    _client = client.get_client()
-    if sql_manager is not None:
-        try:
-            await sql.initialize(sql_manager) # Initialize the SQL database
-        except DAFSQLError as ex:
-            trace(f"Unable to initialize the SQL manager, JSON logs will be used.\nReason: {ex}", TraceLEVELS.WARNING)
-    else:
-        trace("[CORE]: No SQL manager provided, logging will be JSON based", TraceLEVELS.NORMAL)
+    loop = asyncio.get_event_loop()
+    tracing.initialize(debug) # Print trace messages to the console for debugging purposes
+    
+    if intents is None: # Sphinx doesn't like if this is directly in the declaration
+        intents = dc.Intents.default()
+
+    # Initialize discord client
+    trace("[CORE:] Logging in...")
+    await client._initialize(token, bot=not is_user, intents=intents, proxy=proxy)
+
+    # Initialize guild
+    await guild._initialize(server_log_output)
 
     # Initialize the servers (and their message objects)
     trace("[CORE]: Initializing servers", TraceLEVELS.NORMAL)
-    for server in GLOBALS.temp_server_list:
+    for server in server_list:
         try:
             await add_object(server) # Add each guild to the shilling list
         except DAFError as ex:
             trace(ex)
+    
+    # Initialize SQL module
+    if not await sql.initialize(sql_manager):
+        trace("[CORE:] JSON based file logging will be used")
 
     # Create advertiser tasks
     trace("[CORE]: Creating advertiser tasks", TraceLEVELS.NORMAL)
-    _client.loop.create_task(_advertiser(AdvertiseTaskType.TEXT_ISH))
-    _client.loop.create_task(_advertiser(AdvertiseTaskType.VOICE))
+    loop.create_task(_advertiser(AdvertiseTaskType.TEXT_ISH))
+    loop.create_task(_advertiser(AdvertiseTaskType.VOICE))
 
     # Create the user callback task
-    callback = get_user_callback()
-    if callback is not None:
+    if user_callback is not None:
         trace("[CORE]: Starting user callback function", TraceLEVELS.NORMAL)
-        _client.loop.create_task(callback)
-
-    del GLOBALS.sql_manager         # Variable is no longer needed, instead the sql_manager inside sql.py is used
-    del GLOBALS.temp_server_list    # Variable is no longer needed
+        loop.create_task(user_callback())
 
     trace("[CORE]: Initialization complete.", TraceLEVELS.NORMAL)
 
+
+#######################################################################
+# Functions
+#######################################################################
 
 @overload
 async def add_object(obj: Union[guild.USER, guild.GUILD]) -> None:
@@ -267,80 +264,35 @@ def get_guild_user(snowflake: Union[int, dc.Object, dc.Guild, dc.User, dc.Object
     return None
 
 
-async def _update(obj: Any, *, init_options: dict = {}, **kwargs):
-    """
-    .. versionadded:: v2.0
-
-    Used for changing the initialization parameters the obj was initialized with.
-
-    .. warning::
-        Upon updating, the internal state of objects get's reset, meaning you basically have a brand new created object.
-
-    .. warning::
-        This is not meant for manual use, but should be used only by the obj's method.
-
-    Parameters
-    -------------
-    obj: Any
-        The object that contains a .update() method.
-    init_options: dict
-        Contains the initialization options used in .initialize() method for re-initializing certain objects.
-        This is implementation specific and not necessarily available.
-    Other:
-        Other allowed parameters are the initialization parameters first used on creation of the object.
-
-    Raises
-    ------------
-    TypeError
-        Invalid keyword argument was passed.
-    Other
-        Raised from .initialize() method.
-    """
-    init_keys = inspect.getfullargspec(obj.__init__.__wrapped__ if hasattr(obj.__init__, "__wrapped__") else obj.__init__).args # Retrieves list of call args
-    init_keys.remove("self")
-    current_state = copy.copy(obj) # Make a copy of the current object for restoration in case of update failure
-    try:
-        for k in kwargs:
-            if k not in init_keys:
-                raise TypeError(f"Keyword argument `{k}` was passed which is not allowed. The update method only accepts the following keyword arguments: {init_keys}")
-        # Most of the variables inside the object have the same names as in the __init__ function.
-        # This section stores attributes, that are the same, into the `updated_params` dictionary and
-        # then calls the __init__ method with the same parameters, with the exception of start_period, end_period and start_now parameters
-        updated_params = {}
-        for k in init_keys:
-            # Store the attributes that match the __init__ parameters into `updated_params`
-            updated_params[k] = kwargs[k] if k in kwargs else getattr(obj, k)
-
-        # Call the implementation __init__ function and then initialize API related things
-        obj.__init__(**updated_params)
-        # Call additional initialization function (if it has one)
-        if hasattr(obj, "initialize"):
-            await obj.initialize(**init_options)
-
-    except Exception:
-        # In case of failure, restore to original attributes
-        for k in type(obj).__slots__:
-            setattr(obj, k, getattr(current_state, k))
-
-        raise
-
-
-async def shutdown() -> None:
+def shutdown(loop: Optional[asyncio.AbstractEventLoop]=None) -> None:
     """
     Stops the framework and any user tasks.
+
+    .. versionchanged:: v2.1
+        Made the function non async and shutdown everything.
+
+    Parameters
+    ----------
+    loop: Optional[asyncio.AbstractEventLoop]
+        The loop everything is running in.
+        Leave empty for default loop.
     """
+    if loop is None:
+        loop = asyncio.get_event_loop()
+
+    # Shutdown discord
     cl = client.get_client()
-    await cl.close()
+    loop.run_until_complete(cl.close()) 
+    # Cancell all tasks
+    tasks = [task for task in asyncio.all_tasks(loop) if not task.done()]
+    for task in tasks:
+        task.cancel()
 
+    loop.run_until_complete(asyncio.gather(*tasks, return_exceptions=True))
+    loop.run_until_complete(loop.shutdown_asyncgens())
+    loop.run_until_complete(loop.shutdown_default_executor())
+    loop.close()
 
-def get_user_callback() -> Callable:
-    """
-    Returns
-    -----------
-    Callable
-        The callback coroutine provided at :ref:`run`
-    """
-    return GLOBALS.user_callback
 
 def get_shill_list() -> List[Union[guild.GUILD, guild.USER]]:
     """
@@ -354,6 +306,7 @@ def get_shill_list() -> List[Union[guild.GUILD, guild.USER]]:
     return GLOBALS.server_list.copy()
 
 
+@typechecked
 def run(token : str,
         server_list : Optional[List[Union[guild.GUILD, guild.USER]]]=[],
         is_user : Optional[bool] =False,
@@ -399,15 +352,14 @@ def run(token : str,
     ValueError
         Invalid proxy url.
     """
-    if intents is None: # Sphinx doesn't like if this is directly in the declaration
-        intents = dc.Intents.default()
-
-    guild.GLOBALS.server_log_path = server_log_output               # Logging folder
-    GLOBALS.temp_server_list = server_list                          # List of guild objects to iterate thru in the advertiser task
-    GLOBALS.sql_manager = sql_manager                               # SQL manager object
-    GLOBALS.is_user = is_user                                       # Is the token from an user account
-    if user_callback is not None:
-        GLOBALS.user_callback = user_callback()                     # Called after framework has started
-
-    tracing.initialize(debug)                                       # Print trace messages to the console for debugging purposes
-    client._initialize(token, bot=not is_user, intents=intents, proxy=proxy)
+    _params = locals().copy()
+    loop = asyncio.get_event_loop()
+    try:
+        loop.create_task(_initialize(**_params))
+        loop.run_forever()
+    except asyncio.CancelledError as exc:
+        trace(exc, TraceLEVELS.ERROR)
+    except KeyboardInterrupt:
+        trace("Received a cancellation event. Stopping..", TraceLEVELS.WARNING)
+    finally:
+        shutdown(loop)

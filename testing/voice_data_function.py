@@ -1,20 +1,20 @@
-import  framework, datetime, secret
-from framework import discord
+import  daf, datetime, secret
+from daf import discord
 
 
 
 ############################################################################################
 # It's VERY IMPORTANT that you use @framework.data_function!
 ############################################################################################
-@framework.data_function
+@daf.data_function
 def get_data(param1, param2):
-    return framework.AUDIO("VoiceMessage.mp3")
+    return daf.AUDIO("VoiceMessage.mp3")
 
 guilds = [
-    framework.GUILD(
+    daf.GUILD(
         guild_id=123456789,                                 # ID of server (guild)
         messages_to_send=[                                  # List MESSAGE objects 
-            framework.VoiceMESSAGE(
+            daf.VoiceMESSAGE(
                               start_period=None,            # If None, messages will be send on a fixed period (end period)
                               end_period=15,                # If start_period is None, it dictates the fixed sending period,
                                                             # If start period is defined, it dictates the maximum limit of randomized period
@@ -30,7 +30,7 @@ guilds = [
 ############################################################################################
 
 if __name__ == "__main__":
-    framework.run(  token=secret.C_TOKEN,               # MANDATORY
+    daf.run(  token=secret.C_TOKEN,               # MANDATORY
                     intents=discord.Intents.default(),  # OPTIONAL (see https://docs.pycord.dev/en/master/intents.html)
                     server_list=guilds,                 # MANDATORY
                     is_user=False,                      # OPTIONAL

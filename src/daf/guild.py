@@ -12,7 +12,7 @@ from datetime import timedelta, datetime
 
 from .exceptions import *
 from .tracing import *
-from .const import *
+from .common import *
 from .message import *
 
 from . import client
@@ -87,7 +87,7 @@ class _BaseGUILD:
         self.apiobject: discord.Object = snowflake
         self.logging: bool= logging
         self._messages_uninitialized: list = messages   # Contains all the different message objects, this gets sorted in `.initialize()` method
-        self.message_dict: Dict[str, List[BaseMESSAGE]] = {core.AdvertiseTaskType.TEXT_ISH: [], core.AdvertiseTaskType.VOICE: []}  # Dictionary, which's keys hold the discord message type(text, voice) and keys are a list of messages
+        self.message_dict: Dict[str, List[BaseMESSAGE]] = {AdvertiseTaskType.TEXT_ISH: [], AdvertiseTaskType.VOICE: []}  # Dictionary, which's keys hold the discord message type(text, voice) and keys are a list of messages
         self.remove_after = remove_after  # int - after n sends; timedelta - after amount of time; datetime - after that time
         self._created_at = datetime.now() # The time this object was created
 
@@ -231,7 +231,7 @@ class _BaseGUILD:
 
     @misc._async_safe("update_semaphore", 1)
     async def _advertise(self,
-                         mode: core.AdvertiseTaskType):
+                         mode: AdvertiseTaskType):
         """
         Main coroutine responsible for sending all the messages to this specific guild,
         it is called from the core module's advertiser task.
@@ -407,7 +407,7 @@ class GUILD(_BaseGUILD):
             Raised from message.initialize() method.
         """
         await message.initialize(parent=self)
-        self.message_dict[core.AdvertiseTaskType.TEXT_ISH if isinstance(message, TextMESSAGE) else core.AdvertiseTaskType.VOICE].append(message)
+        self.message_dict[AdvertiseTaskType.TEXT_ISH if isinstance(message, TextMESSAGE) else AdvertiseTaskType.VOICE].append(message)
 
     def remove_message(self, message: Union[TextMESSAGE, VoiceMESSAGE]):
         """
@@ -425,7 +425,7 @@ class GUILD(_BaseGUILD):
         ValueError
             Raised when the message is not present in the list.
         """
-        self.message_dict[core.AdvertiseTaskType.TEXT_ISH if isinstance(message, TextMESSAGE) else core.AdvertiseTaskType.VOICE].remove(message)
+        self.message_dict[AdvertiseTaskType.TEXT_ISH if isinstance(message, TextMESSAGE) else AdvertiseTaskType.VOICE].remove(message)
 
     async def initialize(self) -> None:
         """
@@ -471,7 +471,7 @@ class GUILD(_BaseGUILD):
         if "snowflake" not in kwargs:
             kwargs["snowflake"] = self.snowflake
 
-        await core._update(self, **kwargs)
+        await misc._update(self, **kwargs)
         # Update messages
         for message in self.messages:
             await message.update(_init_options={"guild": self.apiobject})
@@ -540,7 +540,7 @@ class USER(_BaseGUILD):
             Raised from message.initialize() method.
         """
         await message.initialize(parent=self)
-        self.message_dict[core.AdvertiseTaskType.TEXT_ISH].append(message)
+        self.message_dict[AdvertiseTaskType.TEXT_ISH].append(message)
 
     def remove_message(self, message: DirectMESSAGE):
         """
@@ -558,7 +558,7 @@ class USER(_BaseGUILD):
         TypeError
             Raised when the message is not of type DirectMESSAGE.
         """
-        self.message_dict[core.AdvertiseTaskType.TEXT_ISH].remove(message)
+        self.message_dict[AdvertiseTaskType.TEXT_ISH].remove(message)
 
     async def initialize(self):
         """
@@ -600,7 +600,12 @@ class USER(_BaseGUILD):
         if "snowflake" not in kwargs:
             kwargs["snowflake"] = self.snowflake
 
-        await core._update(self, **kwargs)
+        await misc._update(self, **kwargs)
         # Update messages
         for message in self.messages:
             await message.update(_init_options={"user" : self.apiobject})
+
+
+async def _initialize(logging_path: str):
+    "Initializes the guild module"
+    GLOBALS.server_log_path = logging_path
