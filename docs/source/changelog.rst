@@ -54,6 +54,9 @@ v2.1
 :Optionals:
     |POTENT_BREAK_CH| Made some functionality optional: ``voice``, ``proxy`` and ``sql`` - to install use ``pip install discord-advert-framework[dependency here]``
 
+:CLIENT:
+    |BREAK_CH| Removed the CLIENT object, discord.Client is now used as the CLIENT class is no longer needed due to improved startup
+
 :Bug fixes:
     Time slippage correction:
         This occurred if too many messages were ready at once, which resulted in discord's rate limit,

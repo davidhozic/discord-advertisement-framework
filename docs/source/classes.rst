@@ -78,23 +78,6 @@ AUDIO
     :members:
 
 
-
------------------------------
-Clients
------------------------------
-
-CLIENT
-=====================
-.. autoclass:: daf.client.CLIENT
-    :members:
-
-    .. autoproperty:: daf.client.CLIENT.guilds
-
-    .. autoproperty:: daf.client.CLIENT.private_channels
-        
-    .. autoproperty:: daf.client.CLIENT.user
-
-
 -----------------------------
 SQL
 -----------------------------

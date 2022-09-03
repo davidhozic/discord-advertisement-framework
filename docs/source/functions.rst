@@ -77,11 +77,6 @@ get_sql_manager
 .. autofunction:: daf.sql.get_sql_manager
 
 
-get_user_callback
-=======================
-.. autofunction:: daf.core.get_user_callback
-
-
 ------------------------------
 Decorators
 ------------------------------

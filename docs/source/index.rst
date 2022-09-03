@@ -20,6 +20,7 @@ Links
             ref
             logging
             changelog
+            archive/archive
 
 
     .. tab-item:: My links
