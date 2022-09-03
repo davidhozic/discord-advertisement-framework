@@ -31,30 +31,29 @@ Releases
 
 v2.1
 ===========
-:``remove_after`` parameter:
-    Classes: :class:`framework.guild.GUILD`, :class:`framework.guild.USER`, :class:`framework.message.TextMESSAGE`, :class:`framework.message.VoiceMESSAGE`, :class:`framework.message.DirectMESSAGE`
+- ``remove_after`` parameter:
+    Classes: :class:`daf.guild.GUILD`, :class:`daf.guild.USER`, :class:`daf.message.TextMESSAGE`, :class:`daf.message.VoiceMESSAGE`, :class:`daf.message.DirectMESSAGE`
 
     now support the remove_after parameter which will remove the object from the shilling list when conditions met.
     
 
-:Proxies:
+- Proxies:
     Added support for using proxies.
-    To use a proxy pass the :func:`framework.run` function with a ``proxy`` parameter
-:discord.EmbedField:
-    |BREAK_CH| Replaced framework.EmbedFIELD with discord.EmbedField.
-:timedelta:
+    To use a proxy pass the :func:`daf.run` function with a ``proxy`` parameter
+- discord.EmbedField:
+    |BREAK_CH| Replaced daf.EmbedFIELD with discord.EmbedField.
+- timedelta:
     start_period and end_period now support ``timedelta`` object to specify the send period.
     Use of ``int`` is deprecated
 
     |POTENT_BREAK_CH| Replaced ``start_now`` with ``start_in`` parameter, deprecated use of bool value.
-
-:Channel checking:
-    :class:`framework.TextMESSAGE` and :class:`framework.VoiceMESSAGE` now check if the given channels are actually inside the guild
-
-:Optionals:
+- Channel checking:
+    :class:`daf.TextMESSAGE` and :class:`daf.VoiceMESSAGE` now check if the given channels are actually inside the guild
+- Optionals:
     |POTENT_BREAK_CH| Made some functionality optional: ``voice``, ``proxy`` and ``sql`` - to install use ``pip install discord-advert-framework[dependency here]``
-
-:Bug fixes:
+- CLIENT:
+    |BREAK_CH| Removed the CLIENT object, discord.Client is now used as the CLIENT class is no longer needed due to improved startup
+- Bug fixes:
     Time slippage correction:
         This occurred if too many messages were ready at once, which resulted in discord's rate limit,
         causing a permanent slip.
@@ -67,19 +66,19 @@ v2.1
 v2.0
 ===========
 - New cool looking web documentation (the one you're reading now)
-- Added volume parameter to :class:`framework.VoiceMESSAGE`
-- Changed ``channel_ids`` to ``channels`` for :class:`framework.VoiceMESSAGE` and :class:`framework.TextMESSAGE`. It can now also accept discord.<Type>Channel objects.
-- Changed ``user_id``/ ``guild_id`` to ``snowflake`` in :class:`framework.GUILD` and :class:`framework.USER`. This parameter now also accept discord.Guild (:class:`framework.GUILD`) and discord.User (:class:`framework.USER`)
+- Added volume parameter to :class:`daf.VoiceMESSAGE`
+- Changed ``channel_ids`` to ``channels`` for :class:`daf.VoiceMESSAGE` and :class:`daf.TextMESSAGE`. It can now also accept discord.<Type>Channel objects.
+- Changed ``user_id``/ ``guild_id`` to ``snowflake`` in :class:`daf.GUILD` and :class:`daf.USER`. This parameter now also accept discord.Guild (:class:`daf.GUILD`) and discord.User (:class:`daf.USER`)
 - Added ``.update`` method to some objects for allowing dynamic modifications of initialization parameters.
-- :class:`framework.AUDIO` now also accepts a YouTube link for streaming YouTube videos.
+- :class:`daf.AUDIO` now also accepts a YouTube link for streaming YouTube videos.
 - New :ref:`Exceptions` system - most functions now raise exceptions instead of just returning bool to allow better detection of errors.
 - Bug fixes and other small improvements.
 
 v1.9.0
 ===========
 - Added support for logging into a SQL database (MS SQL Server only). See :ref:`relational database log (SQL)`.
-- :func:`framework.run` function now accepts discord.Intents.
-- :func:`framework.add_object` and :func:`framework.remove_object` functions created to allow for dynamic modification of the shilling list.
+- :func:`daf.run` function now accepts discord.Intents.
+- :func:`daf.add_object` and :func:`daf.remove_object` functions created to allow for dynamic modification of the shilling list.
 - Other small improvements.
 
 v1.8.1
@@ -90,6 +89,6 @@ v1.8.1
 
 v1.7.9
 ===========
-- :class:`framework.DirectMESSAGE` and :class:`framework.USER` classes created for direct messaging.
+- :class:`daf.DirectMESSAGE` and :class:`daf.USER` classes created for direct messaging.
 
 

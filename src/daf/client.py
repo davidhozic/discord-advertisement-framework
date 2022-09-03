@@ -65,13 +65,13 @@ async def _initialize(token: str, *,
         
         connector = ProxyConnector.from_url(proxy)
 
-    GLOBALS.client = discord.Client(intents=intents, connector=connector)
+    GLOBALS.client = discord.Client(intents=intents, connector=connector, bot=bot)
     _client = GLOBALS.client
     if not bot:
         trace("[CLIENT]: Bot is an user account which is against discord's ToS",TraceLEVELS.WARNING)
 
     _client.event(on_ready)
-    await _client.login(token, bot=bot)
+    await _client.login(token)
     asyncio.create_task(_client.connect())
     await login_event.wait() # Wait for the login to complete and the discord lib to initialize.
 

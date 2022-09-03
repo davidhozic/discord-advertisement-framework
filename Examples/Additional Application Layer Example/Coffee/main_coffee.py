@@ -1,6 +1,6 @@
 """
 Description:
-This is an example of an additional application layer you can build with this framework.
+This is an example of an additional application layer you can build with this daf.
 The application sends a message saying 'Good morning' every day at 10 AM and then sends a picture of a coffe cup from a randomized list.
 """
 import os

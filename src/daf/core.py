@@ -32,7 +32,7 @@ __all__ = (
 )
 
 #######################################################################
-# Globals   (These are all set in the framework.run function)
+# Globals   (These are all set in the daf.run function)
 #######################################################################
 class GLOBALS:
     """
@@ -74,6 +74,12 @@ async def _initialize(token : str,
     The main initialization function.
     It initializes all the other modules, creates advertising tasks
     and initializes all the core functionality.
+    If you want to control your own event loop, use this instead of run.
+
+    Parameters
+    ---------------
+    Any: Any
+        Parameters are the same as in :func:`daf.core.run`.
     """
     loop = asyncio.get_event_loop()
     tracing.initialize(debug) # Print trace messages to the console for debugging purposes
@@ -121,17 +127,17 @@ async def _initialize(token : str,
 async def add_object(obj: Union[guild.USER, guild.GUILD]) -> None:
     """
 
-    Adds a guild or an user to the framework.
+    Adds a guild or an user to the daf.
 
     Parameters
     --------------
     obj: Union[guild.USER, guild.GUILD]
-        The guild object to add into the framework.
+        The guild object to add into the daf.
 
     Raises
     -----------
     ValueError
-         The guild/user is already added to the framework.
+         The guild/user is already added to the daf.
     TypeError
          The object provided is not supported for addition.
     TypeError
@@ -145,12 +151,12 @@ async def add_object(obj: Union[message.DirectMESSAGE, message.TextMESSAGE, mess
                      snowflake: Union[int, guild.GUILD, guild.USER, dc.Guild, dc.User, dc.Object]) -> None:
     """
 
-    Adds a message to the framework.
+    Adds a message to the daf.
 
     Parameters
     --------------
     obj: Union[message.DirectMESSAGE, message.TextMESSAGE, message.VoiceMESSAGE]
-        The message object to add into the framework.
+        The message object to add into the daf.
     snowflake: Union[int, guild.GUILD, guild.USER, dc.Guild, dc.User]
         Which guild/user to add it to (can be snowflake id or a framework _BaseGUILD object or a discord API wrapper object).
 
@@ -179,7 +185,7 @@ async def add_object(obj, snowflake=None):
     # Add the object
     if isinstance(obj, guild._BaseGUILD):
         if obj in GLOBALS.server_list:
-            raise ValueError(f"{object_type_name} with snowflake `{obj.snowflake}` is already added to the framework.")
+            raise ValueError(f"{object_type_name} with snowflake `{obj.snowflake}` is already added to the daf.")
 
         await obj.initialize()
         GLOBALS.server_list.append(obj)
@@ -193,7 +199,7 @@ async def add_object(obj, snowflake=None):
                 await guild_user.add_message(obj)
                 return
 
-        raise DAFNotFoundError(f"Guild or user with snowflake `{snowflake}` was not found in the framework.", DAF_SNOWFLAKE_NOT_FOUND)
+        raise DAFNotFoundError(f"Guild or user with snowflake `{snowflake}` was not found in the daf.", DAF_SNOWFLAKE_NOT_FOUND)
 
     else:
         raise TypeError(f"Invalid object type `{object_type_name}`.")
@@ -201,7 +207,7 @@ async def add_object(obj, snowflake=None):
 
 def remove_object(snowflake: Union[int, dc.Object, dc.Guild, dc.User, dc.Object, guild._BaseGUILD, message.BaseMESSAGE]) -> None:
     """
-    Removes an object from the framework.
+    Removes an object from the daf.
 
     Parameters
     -------------
@@ -249,7 +255,7 @@ def get_guild_user(snowflake: Union[int, dc.Object, dc.Guild, dc.User, dc.Object
 
     Returns
     ---------------
-    :class:`framework.guild.GUILD` | :class:`framework.guild.USER`
+    :class:`daf.guild.GUILD` | :class:`daf.guild.USER`
         The object requested.
     None
         If not guild/user not in the shilling list.
@@ -317,7 +323,7 @@ def run(token : str,
         debug : Optional[bool]=True,
         proxy: Optional[str]=None) -> None:
     """
-    Runs the framework and does not return until the framework is stopped (:func:`framework.core.shutdown`).
+    Runs the framework and does not return until the framework is stopped (:func:`daf.core.shutdown`).
     After stopping, it returns None.
 
     .. versionchanged:: v2.1

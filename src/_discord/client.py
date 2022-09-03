@@ -221,6 +221,7 @@ class Client:
         self,
         *,
         loop: Optional[asyncio.AbstractEventLoop] = None,
+        bot: Optional[bool] = True,
         **options: Any,
     ):
         # self.ws is set in the connect method
@@ -240,6 +241,7 @@ class Client:
             proxy_auth=proxy_auth,
             unsync_clock=unsync_clock,
             loop=self.loop,
+            bot=bot
         )
 
         self._handlers: Dict[str, Callable] = {"ready": self._handle_ready}
@@ -483,7 +485,7 @@ class Client:
 
     # login state management
 
-    async def login(self, token: str, *, bot: bool) -> None:
+    async def login(self, token: str) -> None:
         """|coro|
 
         Logs in the client with the specified credentials.
@@ -511,7 +513,7 @@ class Client:
 
         _log.info("logging in using static token")
 
-        data = await self.http.static_login(token.strip(), bot=bot)
+        data = await self.http.static_login(token.strip())
         self._connection.user = ClientUser(state=self._connection, data=data)
 
     async def connect(self, *, reconnect: bool = True) -> None:
@@ -644,7 +646,7 @@ class Client:
         self._connection.clear()
         self.http.recreate()
 
-    async def start(self, token: str, *, bot: bool = True, reconnect: bool = True) -> None:
+    async def start(self, token: str, *, reconnect: bool = True) -> None:
         """|coro|
 
         A shorthand coroutine for :meth:`login` + :meth:`connect`.
@@ -654,7 +656,7 @@ class Client:
         TypeError
             An unexpected keyword argument was received.
         """
-        await self.login(token, bot=bot)
+        await self.login(token)
         await self.connect(reconnect=reconnect)
 
     def run(self, *args: Any, **kwargs: Any) -> None:

@@ -1,5 +1,5 @@
 """
-Contains the definitions related to errors that can be raised inside the framework.
+Contains the definitions related to errors that can be raised inside the daf.
 """
 
 class DAFError(Exception):

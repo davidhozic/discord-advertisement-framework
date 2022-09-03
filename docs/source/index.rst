@@ -20,6 +20,7 @@ Links
             ref
             logging
             changelog
+            archive/archive
 
 
     .. tab-item:: My links
@@ -82,7 +83,7 @@ Installation
 
         Some functionality needs to be installed separately.
         
-        This was done to reduce the needed space by the framework.
+        This was done to reduce the needed space by the daf.
 
         - .. code-block:: bash
             :caption: Voice Messaging / AUDIO

@@ -5,7 +5,7 @@ from daf import discord
 
 
 ############################################################################################
-# It's VERY IMPORTANT that you use @framework.data_function!
+# It's VERY IMPORTANT that you use @daf.data_function!
 ############################################################################################
 @daf.data_function
 def get_data(param1, param2):

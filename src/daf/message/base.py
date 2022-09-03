@@ -62,7 +62,6 @@ class BaseMESSAGE:
     __slots__ = (
         "period",
         "start_period",
-        "force_retry",
         "end_period",
         "next_send_time",
         "data",
@@ -117,7 +116,6 @@ class BaseMESSAGE:
         self.parent = None # The xGUILD object this message is in (needed for update method).
         self.remove_after = remove_after # Remove the message from the list after this
         self._created_at = datetime.now()
-        self.force_retry = {"ENABLED" : False, "TIMESTAMP" : None}
         self.data = data
         # Attributes created with this function will not be re-referenced to a different object
         # if the function is called again, ensuring safety (.update_method)
@@ -212,14 +210,12 @@ class BaseMESSAGE:
         """
         This method returns bool indicating if message is ready to be sent.
         """
-        return (datetime.now() >= self.force_retry["TIMESTAMP"] if self.force_retry["ENABLED"]
-                else datetime.now() >= self.next_send_time)
+        return datetime.now() >= self.next_send_time
 
     def _reset_timer(self) -> None:
         """
         Resets internal timer
         """
-        self.force_retry["ENABLED"] = False
         if self.start_period is not None:
             range = map(int, [self.start_period.total_seconds(), self.end_period.total_seconds()])
             self.period = timedelta(seconds=random.randrange(*range))
