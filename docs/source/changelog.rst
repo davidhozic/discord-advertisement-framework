@@ -31,12 +31,11 @@ Releases
 
 v2.1
 ===========
+- Changed the import ``import framework`` to ``import daf``. Using ``import framework`` is now deprecated.
 - ``remove_after`` parameter:
     Classes: :class:`daf.guild.GUILD`, :class:`daf.guild.USER`, :class:`daf.message.TextMESSAGE`, :class:`daf.message.VoiceMESSAGE`, :class:`daf.message.DirectMESSAGE`
 
     now support the remove_after parameter which will remove the object from the shilling list when conditions met.
-    
-
 - Proxies:
     Added support for using proxies.
     To use a proxy pass the :func:`daf.run` function with a ``proxy`` parameter
@@ -61,6 +60,9 @@ v2.1
         .. figure:: images/changelog_2_1_slippage_fix.png    
 
             Time slippage correction
+
+    Slow mode correction:
+        Whenever a channel was in slow mode, it was not properly handled. This is now fixed.
 
 
 v2.0
