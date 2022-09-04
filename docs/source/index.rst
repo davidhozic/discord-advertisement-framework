@@ -6,7 +6,7 @@ The Discord advertisement framework is a  **shilling tool** that allows easy adv
 
 
 
-----------------------
+---------------------
 Links
 ----------------------
 .. tab-set::
