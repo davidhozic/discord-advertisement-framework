@@ -74,6 +74,8 @@ autodoc_default_options = {
 
 # ----------- HTML ----------- #
 html_title = project
+html_logo = "images/logo.png"
+html_favicon = html_logo
 html_theme = 'furo'
 html_static_path = ['_static']
 html_theme_options = {
