@@ -1017,13 +1017,11 @@ async def initialize(mgr_object: LoggerSQL) -> bool:
         try:
             await mgr_object.initialize()
             _ret = True
+            trace("[SQL]: Initialization was successful!", TraceLEVELS.NORMAL)
         except DAFSQLError as exc:
             trace(f"[SQL:] Unable to initialize manager, reason\n: {exc}", TraceLEVELS.ERROR)
-    else:
-        mgr_object = LoggerSQL("", "", "", "")
 
     GLOBALS.manager = mgr_object
-    trace("[SQL]: Initialization was successful!", TraceLEVELS.NORMAL)
     return _ret
 
 
