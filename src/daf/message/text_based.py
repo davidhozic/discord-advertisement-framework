@@ -59,7 +59,7 @@ class TextMESSAGE(BaseMESSAGE):
             :caption: **Randomized** sending period between **5** seconds and **10** seconds.
 
             # Time between each send is somewhere between 5 seconds and 10 seconds.
-            daf.TextMESSAGE(start_period=5, end_period=timedelta(10), data="Second Message", channels=[12345], mode="send", start_in=timedelta(seconds=0))
+            daf.TextMESSAGE(start_period=timedelta(5), end_period=timedelta(10), data="Second Message", channels=[12345], mode="send", start_in=timedelta(seconds=0))
 
         .. code-block:: python
             :caption: **Fixed** sending period at **10** seconds
@@ -454,7 +454,7 @@ class DirectMESSAGE(BaseMESSAGE):
             :caption: **Randomized** sending period between **5** seconds and **10** seconds.
 
             # Time between each send is somewhere between 5 seconds and 10 seconds.
-            daf.DirectMESSAGE(start_period=5, end_period=timedelta(10), data="Second Message",  mode="send", start_in=timedelta(seconds=0))
+            daf.DirectMESSAGE(start_period=timedelta(5), end_period=timedelta(10), data="Second Message",  mode="send", start_in=timedelta(seconds=0))
 
         .. code-block:: python
             :caption: **Fixed** sending period at **10** seconds
