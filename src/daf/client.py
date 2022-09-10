@@ -3,7 +3,7 @@
 """
 
 from typing import Optional
-from .tracing import *
+from .logging.tracing import *
 import _discord as discord
 import asyncio
 

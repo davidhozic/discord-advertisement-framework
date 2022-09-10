@@ -94,6 +94,9 @@ run
 =======================
 .. autofunction:: daf.core.run
 
+initialize
+======================
+.. autofunction:: daf.core.initialize
 
 shutdown
 =======================

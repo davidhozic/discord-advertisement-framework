@@ -5,26 +5,22 @@
 """
 from __future__ import annotations
 import asyncio
-from contextlib import suppress
-from typing import Any, Coroutine, Union, List, Optional, Dict, Callable, TypeVar
+from typing import Any, Coroutine, Union, List, Optional, Dict, Callable
 from typeguard import typechecked
 from datetime import timedelta, datetime
 
 from .exceptions import *
-from .tracing import *
+from .logging.tracing import *
 from .common import *
 from .message import *
 
 from . import client
-from . import sql
+from .logging import sql
 from . import core
 from . import misc
+from .logging import logging
 
 import _discord as discord
-import time
-import json
-import pathlib
-import shutil
 import operator
 
 
@@ -33,16 +29,7 @@ __all__ = (
     "USER"
 )
 
-#######################################################################
-# Globals
-#######################################################################
-class GLOBALS:
-    """
-    Contains the global variables for the module.
-    """
-    server_log_path = None
 
-@typechecked
 class _BaseGUILD:
     """
     Represents an universal guild.
@@ -93,15 +80,6 @@ class _BaseGUILD:
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}(discord={self.apiobject})"
-
-    @property
-    def _log_file_name(self):
-        """
-        Returns a string that transforms the xGUILD's discord name into
-        a string that contains only allowed character. This is a method instead of
-        property because the name can change overtime.
-        """
-        raise NotImplementedError
 
     @property
     def messages(self) -> List[BaseMESSAGE]:
@@ -260,91 +238,24 @@ class _BaseGUILD:
 
                 # Generate log (JSON or SQL)
                 if self.logging and message_ret is not None:
-                    await self._generate_log(message_ret)
+                    await logging.save_log(self._generate_log_context(), message_ret)
 
-    async def _generate_log(self,
-                           message_context: dict) -> None:
+    def _generate_log_context(self) -> Dict[str, Union[str, int]]:
         """
-        Generates a .json type log or logs to a SQL database for each message send attempt.
+        Generates a dictionary of the guild's context,
+        which is then used for logging.
 
-        Prioritizes SQL logging.
-
-        Parameter:
-        -----------
-        data_context: dict
-            Dictionary containing data describing the message send attempt. (Return of ``message._send()``)
+        Returns
+        ---------
+        Dict[str, Union[str, int]]
         """
-        guild_context = {
-            "name" : str(self.apiobject),
-            "id" : self.snowflake,
-            "type" : type(self).__logname__,
+        return {
+            "name": self.apiobject.name,
+            "id": self.apiobject.id,
+            "type": type(self).__name__
         }
 
-        try:
-            # Try to obtain the sql manager. If it returns None (sql logging disabled), save into file
-            manager = sql.get_sql_manager()
-            if (
-                manager is None or  # Short circuit evaluation
-                not await manager._save_log(guild_context, message_context)
-            ):
-                timestruct = time.localtime()
-                timestamp = "{:02d}.{:02d}.{:04d} {:02d}:{:02d}:{:02d}".format(timestruct.tm_mday,
-                                                                            timestruct.tm_mon,
-                                                                            timestruct.tm_year,
-                                                                            timestruct.tm_hour,
-                                                                            timestruct.tm_min,
-                                                                            timestruct.tm_sec)
-                logging_output = pathlib.Path(GLOBALS.server_log_path)\
-                            .joinpath("{:02d}".format(timestruct.tm_year))\
-                            .joinpath("{:02d}".format(timestruct.tm_mon))\
-                            .joinpath("{:02d}".format(timestruct.tm_mday))
-                with suppress(FileExistsError):
-                    logging_output.mkdir(parents=True,exist_ok=True)
 
-                logging_output = str(logging_output.joinpath(self._log_file_name))
-
-                # Create file if it doesn't exist
-                fresh_file = False
-                with suppress(FileExistsError), open(logging_output, "x", encoding="utf-8"):
-                    fresh_file = True
-
-                # Write to file
-                with open(logging_output,'r+', encoding='utf-8') as appender:
-                    appender_data = None
-                    appender.seek(0) # Append moves cursor to the end of the file
-                    try:
-                        appender_data: dict = json.load(appender)
-                    except json.JSONDecodeError:
-                        # No valid json in the file, create new data
-                        # and create a .old file to store this invalid data
-                        # Copy-paste to .old file to prevent data loss
-                        if not fresh_file: ## Failed because the file was just created, no need to copy-paste
-                            # File not newly created, and has invalid data
-                            shutil.copyfile(logging_output, f"{logging_output}.old")
-                        # Create new data
-                        appender_data = {}
-                        appender_data["name"] = guild_context["name"]
-                        appender_data["id"] = guild_context["id"]
-                        appender_data["type"] = guild_context["type"]
-                        appender_data["message_history"] = []
-                    finally:
-                        appender.seek(0) # Reset cursor to the beginning of the file after reading
-
-                    appender_data["message_history"].insert(0,
-                        {
-                            **message_context,
-                            "index": appender_data["message_history"][0]["index"] + 1 if len(appender_data["message_history"]) else 0,
-                            "timestamp": timestamp
-                        })
-                    json.dump(appender_data, appender, indent=4)
-                    appender.truncate() # Remove any old data
-
-        except Exception as exception:
-            # Any uncaught exception (prevent from complete framework stop)
-            trace(f"[{type(self).__name__}]: Unable to save log. Exception: {exception}", TraceLEVELS.WARNING)
-
-
-@typechecked
 @sql._register_type("GuildTYPE")
 class GUILD(_BaseGUILD):
     """
@@ -375,6 +286,7 @@ class GUILD(_BaseGUILD):
         "update_semaphore",
     )
 
+    @typechecked
     def __init__(self,
                  snowflake: Union[int, discord.Guild],
                  messages: Optional[List[Union[TextMESSAGE, VoiceMESSAGE]]]=[],
@@ -383,10 +295,7 @@ class GUILD(_BaseGUILD):
         super().__init__(snowflake, messages, logging, remove_after)
         misc._write_attr_once(self, "update_semaphore", asyncio.Semaphore(2))
 
-    @property
-    def _log_file_name(self):
-        return "".join(char if char not in C_FILE_NAME_FORBIDDEN_CHAR else "#" for char in self.apiobject.name) + ".json"
-
+    @typechecked
     async def add_message(self, message: Union[TextMESSAGE, VoiceMESSAGE]):
         """
         Adds a message to the message list.
@@ -409,6 +318,7 @@ class GUILD(_BaseGUILD):
         await message.initialize(parent=self)
         self.message_dict[AdvertiseTaskType.TEXT_ISH if isinstance(message, TextMESSAGE) else AdvertiseTaskType.VOICE].append(message)
 
+    @typechecked
     def remove_message(self, message: Union[TextMESSAGE, VoiceMESSAGE]):
         """
         Removes a message from the message list.
@@ -477,7 +387,7 @@ class GUILD(_BaseGUILD):
             await message.update(_init_options={"guild": self.apiobject})
 
 
-@typechecked
+
 @sql._register_type("GuildTYPE")
 class USER(_BaseGUILD):
     """
@@ -508,10 +418,7 @@ class USER(_BaseGUILD):
         "update_semaphore",
     )
 
-    @property
-    def _log_file_name(self):
-        return "".join(char if char not in C_FILE_NAME_FORBIDDEN_CHAR else "#" for char in f"{self.apiobject.display_name}#{self.apiobject.discriminator}") + ".json"
-
+    @typechecked
     def __init__(self,
                  snowflake: Union[int, discord.User],
                  messages: Optional[List[DirectMESSAGE]]=[],
@@ -520,6 +427,7 @@ class USER(_BaseGUILD):
         super().__init__(snowflake, messages, logging, remove_after)
         misc._write_attr_once(self, "update_semaphore", asyncio.Semaphore(2)) # Only allows re-referencing this attribute once
 
+    @typechecked
     async def add_message(self, message: DirectMESSAGE):
         """
         Adds a message to the message list.
@@ -542,6 +450,7 @@ class USER(_BaseGUILD):
         await message.initialize(parent=self)
         self.message_dict[AdvertiseTaskType.TEXT_ISH].append(message)
 
+    @typechecked
     def remove_message(self, message: DirectMESSAGE):
         """
         .. versionadded:: v2.0
@@ -604,8 +513,3 @@ class USER(_BaseGUILD):
         # Update messages
         for message in self.messages:
             await message.update(_init_options={"user" : self.apiobject})
-
-
-async def _initialize(logging_path: str):
-    "Initializes the guild module"
-    GLOBALS.server_log_path = logging_path

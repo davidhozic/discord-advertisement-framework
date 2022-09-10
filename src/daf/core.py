@@ -3,19 +3,18 @@
     and functions needed for the framework to run,
     as well as user function to control the framework
 """
-from typing import (Callable, List, Optional, Union, overload)
+from typing import Callable, List, Optional, Union, overload
 from typeguard import typechecked
 
 from .common import *
 from .exceptions import *
-from .import tracing
-from .tracing import *
+from .logging.tracing import *
 
 from . import guild
 from . import client
-from . import sql
+from .logging import sql
 from . import message
-from . import misc
+from .logging import logging, tracing
 
 import asyncio
 import _discord as dc
@@ -28,7 +27,8 @@ __all__ = (
     "shutdown",
     "add_object",
     "remove_object",
-    "get_guild_user"
+    "get_guild_user",
+    "initialize"
 )
 
 #######################################################################
@@ -61,15 +61,16 @@ async def _advertiser(message_type: AdvertiseTaskType) -> None:
             await guild_user._advertise(message_type)
 
 
-async def _initialize(token : str,
-                      server_list : Optional[List[Union[guild.GUILD, guild.USER]]]=[],
-                      is_user : Optional[bool] =False,
-                      user_callback : Optional[Callable]=None,
-                      server_log_output : Optional[str] ="History",
-                      sql_manager: Optional[sql.LoggerSQL]=None,
-                      intents: Optional[dc.Intents]=None,
-                      debug : Optional[bool]=True,
-                      proxy: Optional[str]=None) -> None:
+async def initialize(token : str,
+                     server_list : Optional[List[Union[guild.GUILD, guild.USER]]]=[],
+                     is_user : Optional[bool] =False,
+                     user_callback : Optional[Callable]=None,
+                     server_log_output : Optional[str] =None,
+                     sql_manager: Optional[sql.LoggerSQL]=None,
+                     intents: Optional[dc.Intents]=None,
+                     debug : Optional[bool]=True,
+                     proxy: Optional[str]=None,
+                     logger: Optional[logging.LoggerBASE]=None) -> None:
     """
     The main initialization function.
     It initializes all the other modules, creates advertising tasks
@@ -91,8 +92,28 @@ async def _initialize(token : str,
     trace("[CORE:] Logging in...")
     await client._initialize(token, bot=not is_user, intents=intents, proxy=proxy)
 
-    # Initialize guild
-    await guild._initialize(server_log_output)
+    # Initialize logging
+    # --------------- DEPRECATED -------------------- #
+    if server_log_output is not None:
+        if logger is None:
+            trace("DEPRECATED! Using this parameter is deprecated and scheduled for removal\nIt is implicitly converted to logger=LoggerJSON(path=\"History\")",
+                  TraceLEVELS.WARNING)
+            logger = logging.LoggerJSON(path=server_log_output)
+        else:
+            trace("logger parameter was passed, ignoring server_log_output", TraceLEVELS.WARNING)
+    
+    if sql_manager is not None:
+        if logger is None:
+            trace("DEPRECATED! Using this parameter is deprecated and scheduled for removal\nIt is implicitly converted to logger=LoggerSQL(...)",
+                  TraceLEVELS.WARNING)
+            logger = sql_manager
+        else:
+            trace("logger parameter was passed, ignoring sql_manager", TraceLEVELS.WARNING)
+    # ----------------------------------------------- #
+    if logger is None:
+        logger = logging.LoggerJSON(path="History")
+
+    await logging.initialize(logger)
 
     # Initialize the servers (and their message objects)
     trace("[CORE]: Initializing servers", TraceLEVELS.NORMAL)
@@ -102,10 +123,6 @@ async def _initialize(token : str,
         except (DAFError, ValueError, TypeError) as ex:
             trace(ex)
     
-    # Initialize SQL module
-    if not await sql.initialize(sql_manager):
-        trace("[CORE:] JSON based file logging will be used")
-
     # Create advertiser tasks
     trace("[CORE]: Creating advertiser tasks", TraceLEVELS.NORMAL)
     loop.create_task(_advertiser(AdvertiseTaskType.TEXT_ISH))
@@ -317,17 +334,28 @@ def run(token : str,
         server_list : Optional[List[Union[guild.GUILD, guild.USER]]]=[],
         is_user : Optional[bool] =False,
         user_callback : Optional[Callable]=None,
-        server_log_output : Optional[str] ="History",
+        server_log_output : Optional[str] =None,
         sql_manager: Optional[sql.LoggerSQL]=None,
         intents: Optional[dc.Intents]=None,
         debug : Optional[bool]=True,
-        proxy: Optional[str]=None) -> None:
+        proxy: Optional[str]=None,
+        logger: Optional[logging.LoggerBASE]=None) -> None:
     """
     Runs the framework and does not return until the framework is stopped (:func:`daf.core.shutdown`).
     After stopping, it returns None.
 
-    .. versionchanged:: v2.1
-        Added ``proxy`` parameter
+    This will block until the framework is stopped, if you want manual control over the
+    asyncio event loop, eg. you want to start the framework as a task, use
+    the ``initialize`` coroutine.
+
+    .. versionchanged:: v2.2
+        Added ``logger`` parameter
+
+    .. deprecated:: v2.2
+        sql_manager
+            This parameter is replaced with ``logger`` parameter.
+        server_log_output
+            This parameter is replaced with ``logger`` parameter.
 
     Parameters
     ---------------
@@ -349,19 +377,21 @@ def run(token : str,
         Print trace message to the console, useful for debugging.
     proxy: Optional[str]
         URL of a proxy you want the framework to use.
+    logger: Optional[loggers.LoggerBASE]
+        The logging class to use.
+        If this is not provided, JSON is automatically used.
 
     Raises
     ---------------
     ModuleNotFoundError
         Missing modules for the wanted functionality, install with ``pip install discord-advert-framework[optional-group]``.
-    
     ValueError
         Invalid proxy url.
     """
     _params = locals().copy()
     loop = asyncio.get_event_loop()
     try:
-        loop.create_task(_initialize(**_params))
+        loop.create_task(initialize(**_params))
         loop.run_forever()
     except asyncio.CancelledError as exc:
         trace(exc, TraceLEVELS.ERROR)

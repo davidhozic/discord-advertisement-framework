@@ -9,12 +9,12 @@ from typeguard import typechecked
 
 from .base import *
 from ..dtypes import *
-from ..tracing import *
+from ..logging.tracing import *
 from ..common import *
 from ..exceptions import *
 
 from .. import client
-from .. import sql
+from ..logging import sql
 from .. import misc
 from .. import dtypes
 
@@ -33,7 +33,6 @@ class GLOBALS:
     voice_client: discord.VoiceClient = None
 
 
-@typechecked
 @sql._register_type("MessageTYPE")
 class VoiceMESSAGE(BaseMESSAGE):
     """
@@ -104,6 +103,7 @@ class VoiceMESSAGE(BaseMESSAGE):
 
     __logname__ = "VoiceMESSAGE"    # For sql._register_type
 
+    @typechecked
     def __init__(self,
                  start_period: Union[int, timedelta, None],
                  end_period: Union[int, timedelta],
@@ -327,6 +327,7 @@ class VoiceMESSAGE(BaseMESSAGE):
 
         return None
 
+    @typechecked
     @misc._async_safe("update_semaphore")
     async def update(self, _init_options: Optional[dict] = {}, **kwargs):
         """

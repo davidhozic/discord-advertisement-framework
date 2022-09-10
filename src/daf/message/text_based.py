@@ -9,12 +9,12 @@ from typeguard import typechecked
 
 from .base import *
 from ..dtypes import *
-from ..tracing import *
+from ..logging.tracing import *
 from ..common import *
 from ..exceptions import *
 
 from .. import client
-from .. import sql
+from ..logging import sql
 from .. import misc
 
 import asyncio
@@ -26,7 +26,7 @@ __all__ = (
     "DirectMESSAGE"
 )
 
-@typechecked
+
 @sql._register_type("MessageTYPE")
 class TextMESSAGE(BaseMESSAGE):
     """
@@ -102,6 +102,7 @@ class TextMESSAGE(BaseMESSAGE):
     )
     __logname__: str = "TextMESSAGE"               # Used for registering SQL types and to get the message type for saving the log
 
+    @typechecked
     def __init__(self, 
                  start_period: Union[int, timedelta, None],
                  end_period: Union[int, timedelta],
@@ -389,6 +390,7 @@ class TextMESSAGE(BaseMESSAGE):
 
         return None
 
+    @typechecked
     @misc._async_safe("update_semaphore")
     async def update(self, _init_options: Optional[dict] = {}, **kwargs: Any):
         """
@@ -421,7 +423,6 @@ class TextMESSAGE(BaseMESSAGE):
         await misc._update(self, init_options=_init_options, **kwargs) # No additional modifications are required
 
 
-@typechecked
 @sql._register_type("MessageTYPE")
 class DirectMESSAGE(BaseMESSAGE):
     """
@@ -495,6 +496,7 @@ class DirectMESSAGE(BaseMESSAGE):
     )
     __logname__ = "DirectMESSAGE"               # Used for logging (type key) and sql lookup table type registration
 
+    @typechecked
     def __init__(self,
                  start_period: Union[int, timedelta, None],
                  end_period: Union[int, timedelta],
@@ -693,6 +695,7 @@ class DirectMESSAGE(BaseMESSAGE):
 
         return None
 
+    @typechecked
     @misc._async_safe("update_semaphore")
     async def update(self, _init_options: Optional[dict] = {}, **kwargs):
         """

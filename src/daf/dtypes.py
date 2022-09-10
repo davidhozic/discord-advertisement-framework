@@ -68,7 +68,6 @@ def data_function(fnc: Callable):
     .. literalinclude:: ../../Examples/Message Types/TextMESSAGE/main_data_function.py
         :language: python
     """
-    @typechecked
     class FunctionCLASS(_FunctionBaseCLASS):
         """
         Used for creating special classes that are then used to create objects in the daf.MESSAGE

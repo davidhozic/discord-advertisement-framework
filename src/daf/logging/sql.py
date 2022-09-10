@@ -8,14 +8,16 @@
         Made SQL an optional functionality
 """
 from datetime import datetime
-from typing import Callable, Dict, List, Literal, Any, Union
+from typing import Callable, Dict, List, Literal, Any, Union, Optional
 from contextlib import suppress
 from typeguard import typechecked
 
 from .tracing import *
-from .timing import *
-from .common import *
-from .exceptions import *
+from ..timing import *
+from ..common import *
+from ..exceptions import *
+
+from . import logging
 
 import json
 import copy
@@ -23,22 +25,13 @@ import re
 import time
 import asyncio
 
-from . import misc
-
-
-__all__ = (
-    "LoggerSQL",
-    "_register_type",
-    "get_sql_manager"
-)
+from .. import misc
 
 
 class GLOBALS:
     """
     Stores global module variables.
     """
-    manager = None
-    enabled = False
     lt_types = []
     sql_installed = False
 
@@ -60,6 +53,10 @@ except ImportError:
     GLOBALS.sql_installed = False
 # ----------------------------------------------------------------------------------
 
+
+__all__ = (
+    "LoggerSQL",
+)
 
 
 def _register_type(lookuptable: Literal["GuildTYPE", "MessageTYPE", "MessageMODE"]) -> Callable:
@@ -93,8 +90,9 @@ def _register_type(lookuptable: Literal["GuildTYPE", "MessageTYPE", "MessageMODE
 
     return decorator_register_type
 
-@typechecked
-class LoggerSQL:
+
+
+class LoggerSQL(logging.LoggerBASE):
     """
     Used for controlling the SQL database used for message logs.
 
@@ -108,31 +106,18 @@ class LoggerSQL:
         Address of the SQL server.
     database: str
         Name of the database used for logs.
+    fallback: Optional[LoggerBASE]
+        The fallback manager to use in case SQL logging fails.
     """
+    Base = declarative_base() if GLOBALS.sql_installed else None
 
-    Base = declarative_base() if GLOBALS.sql_installed else None # Optional package group needs to be installed
-    __slots__ = (
-        "engine",
-        "cursor",
-        "_sessionmaker",
-        "username",
-        "password",
-        "server",
-        "database",
-        "safe_sem",
-        # Caching dictionaries
-        "MessageMODE",
-        "MessageTYPE",
-        "GuildTYPE",
-        "GuildUSER",
-        "CHANNEL"
-    )
-
+    @typechecked
     def __init__(self,
-                 username: str,
-                 password: str,
-                 server: str,
-                 database: str):
+                username: str,
+                password: str,
+                server: str,
+                database: str,
+                fallback: Optional[logging.LoggerBASE] = None):
 
         if not GLOBALS.sql_installed:
             raise ModuleNotFoundError("You need to install extra requirements: pip install discord-advert-framework[sql]")
@@ -142,6 +127,8 @@ class LoggerSQL:
         self.password = password
         self.server = server
         self.database = database
+        self.fallback = fallback
+
         self.engine: sqa.engine.Engine = None
         self.cursor: pytds.Cursor = None
         self._sessionmaker: sessionmaker = None
@@ -149,8 +136,10 @@ class LoggerSQL:
         # Semaphore used to prevent multiple tasks from trying to access the `._save_log()` method at once.
         # Also used in the `.update()` method to prevent race conditions.
         self.safe_sem = asyncio.Semaphore(1)
+        self.reconnecting = False # Flag that is True while reconnecting, used for emergency exit of other tasks
 
         # Caching (to avoid unnecessary queries)
+        # TODO: Implement misc.CACHE object
         ## Lookup table caching
         self.MessageMODE = {}
         self.MessageTYPE = {}
@@ -166,11 +155,11 @@ class LoggerSQL:
 
         Parameters
         ------------
-        - table: Base
+        table: Base
             Name of the table to cache the row in.
-        - key: Any
+        key: Any
             Row key.
-        - value: Any
+        value: Any
             Row value.
         """
         getattr(self, table.__name__)[key] = value
@@ -209,20 +198,20 @@ class LoggerSQL:
             it retries after <wait>
             """
             for tries in range(SQL_RECONNECT_ATTEMPTS):
+                trace(f"[SQL]: Retrying to connect in {wait} seconds.")
+                time.sleep(wait)
                 trace(f"[SQL]: Reconnecting to database {self.database}.")
                 with suppress(DAFSQLError):
                     self._begin_engine()
+                    self._connect_cursor()
                     trace(f"[SQL]: Reconnected to the database {self.database}.")
-                    GLOBALS.enabled = True
+                    self.reconnecting = False
+                    logging._set_logger(self)
                     return
-
-                if tries != SQL_RECONNECT_ATTEMPTS - 1: # Don't wait if it's the last attempt
-                    trace(f"[SQL]: Retrying to connect in {wait} seconds.")
-                    time.sleep(wait)
 
             trace(f"[SQL]: Failed to reconnect in {SQL_RECONNECT_ATTEMPTS} attempts, SQL logging is now disabled.")
 
-        GLOBALS.enabled = False
+        self.reconnecting = True
         self._stop_engine()
         loop.run_in_executor(None, _reconnect)
 
@@ -359,20 +348,20 @@ class LoggerSQL:
                 "name" : "sp_save_log",
                 "stm" : """
                 PROCEDURE {}(@sent_data nvarchar(max),
-                             @message_type smallint,
-                             @guild_id int,
-                             @message_mode smallint,
-                             @dm_reason nvarchar(max),
-                             @channels t_tmp_channel_log READONLY) AS
+                            @message_type smallint,
+                            @guild_id int,
+                            @message_mode smallint,
+                            @dm_reason nvarchar(max),
+                            @channels t_tmp_channel_log READONLY) AS
                 /* Procedure that saves the log							 
                 * This is done within sql instead of python for speed optimization
                 */
                 BEGIN
-	                BEGIN TRY
+                    BEGIN TRY
                         DECLARE @existing_data_id int = NULL;
-                   	    DECLARE @last_log_id      int = NULL;
+                        DECLARE @last_log_id      int = NULL;
 
-                	    SELECT @existing_data_id = id FROM DataHISTORY dh WHERE dh.content = @sent_data;	
+                        SELECT @existing_data_id = id FROM DataHISTORY dh WHERE dh.content = @sent_data;	
 
                         IF @existing_data_id IS NULL
                         BEGIN
@@ -381,27 +370,27 @@ class LoggerSQL:
                         END
 
 
-	                    INSERT INTO MessageLOG(sent_data, message_type, guild_id, message_mode, dm_reason, [timestamp]) VALUES(
-	                        @existing_data_id, @message_type, @guild_id, @message_mode, @dm_reason, GETDATE()
-	                    );
-	                                      		
-	                   SET @last_log_id = SCOPE_IDENTITY();
-	                   
-	                   DECLARE @existence tinyint;
-                	   SELECT @existence = (CASE WHEN EXISTS(SELECT TOP(1) 1 FROM @channels) THEN 1 ELSE 0 END)
-                	   
-	                   IF @existence = 1
-	                   BEGIN        
-	                    	INSERT INTO MessageChannelLOG (log_id, channel_id, reason)
-	                   		SELECT @last_log_id, ch.id, ch.reason FROM @channels ch;
-	                   END
-	                   COMMIT;
-	                   BEGIN TRAN;
+                        INSERT INTO MessageLOG(sent_data, message_type, guild_id, message_mode, dm_reason, [timestamp]) VALUES(
+                            @existing_data_id, @message_type, @guild_id, @message_mode, @dm_reason, GETDATE()
+                        );
+                                                
+                    SET @last_log_id = SCOPE_IDENTITY();
+                    
+                    DECLARE @existence tinyint;
+                    SELECT @existence = (CASE WHEN EXISTS(SELECT TOP(1) 1 FROM @channels) THEN 1 ELSE 0 END)
+                    
+                    IF @existence = 1
+                    BEGIN        
+                            INSERT INTO MessageChannelLOG (log_id, channel_id, reason)
+                            SELECT @last_log_id, ch.id, ch.reason FROM @channels ch;
+                    END
+                    COMMIT;
+                    BEGIN TRAN;
 
-	                END TRY
+                    END TRY
                     BEGIN CATCH
-                   		ROLLBACK;
-                   		BEGIN TRAN;
+                        ROLLBACK;
+                        BEGIN TRAN;
                         THROW;                   		
                     END CATCH
                 END"""
@@ -521,12 +510,11 @@ class LoggerSQL:
         self._create_analytic_objects()
         # Connect the cursor for faster procedure calls
         self._connect_cursor()
-        GLOBALS.enabled = True
 
     def _get_insert_guild(self,
-                          snowflake: int,
-                          name: str,
-                          _type: str) -> int:
+                        snowflake: int,
+                        name: str,
+                        _type: str) -> int:
         """
         Inserts the guild into the db if it doesn't exist,
         adds it to cache and returns it's internal db id from cache.
@@ -609,11 +597,10 @@ class LoggerSQL:
         """
         self.cursor.close()
         self.engine.dispose()
-        GLOBALS.enabled = False
 
     def _handle_error(self,
-                     exception: int, message: str,
-                     loop: asyncio.AbstractEventLoop) -> bool:
+                    exception: int, message: str,
+                    loop: asyncio.AbstractEventLoop) -> bool:
         """
         Used to handle errors that happen in the _save_log method.
 
@@ -641,6 +628,7 @@ class LoggerSQL:
 
             elif exception in {-1, 2, 53}:  # Disconnect error, reconnect after period
                 self._reconnect_after(SQL_RECONNECT_TIME, loop)
+                logging._set_logger(self.fallback) # Temporarily save logs to the fallback until we reconnect
                 res = False # Don't try to save while reconnecting
 
             elif exception == 2812:
@@ -667,11 +655,11 @@ class LoggerSQL:
 
     # _async_safe prevents multiple tasks from attempting to do operations on the database at the same time.
     # This is to avoid eg. procedures being called while they are being created,
-    # handle error being called from different tasks, update method from causing a race condition,etc.
+    # handle error being called from different tasks, update method from causing a race condition,etc
     @misc._async_safe("safe_sem", 1)
     async def _save_log(self,
-                 guild_context: dict,
-                 message_context: dict) -> bool:
+                guild_context: dict,
+                message_context: dict):
         """
         This method saves the log generated by the xGUILD object into the database.
 
@@ -681,17 +669,14 @@ class LoggerSQL:
             Context generated by the xGUILD object, see guild.xGUILD._generate_log() for more info.
         message_context: dict
             Context generated by the xMESSAGE object, see guild.xMESSAGE._generate_log_context() for more info.
-
-        Return
-        -------
-        Returns bool value indicating success (True) or failure (False).
         """
 
-        if not GLOBALS.enabled:
-            # While current task was waiting for safe_sem to be released,
-            # some other task disabled the logging due to an recoverable error.
-            # Proceeding would result in failure anyway, so just return False.
-            return False
+        if self.reconnecting: 
+            # The SQL logger is in the middle of reconnection process
+            # This means the logging is switched to something else but we still got here
+            # since we entered before that happened and landed on a semaphore.
+            logging.save_log(guild_context, message_context)
+            return
 
         # Parse the data
         sent_data: dict = message_context.get("sent_data")
@@ -728,9 +713,7 @@ class LoggerSQL:
                                                     self.MessageMODE.get(message_mode, None),
                                                     dm_success_info_reason,
                                                     _channels)) # Execute the stored procedure
-
-                return True
-
+                break
             except Exception as ex:
                 if isinstance(ex, SQLAlchemyError):
                     ex = ex.orig  # Get the original exception
@@ -741,14 +724,11 @@ class LoggerSQL:
 
                 code = ex.number if hasattr(ex, "number") else -1     # The exception does't have a number attribute
                 message = ex.text if hasattr(ex, "text") else str(ex) # The exception does't have a text attribute
-                trace(f"[SQL]: Saving log failed. {code} - {message}. Attempting recovery... (Tries left: {SQL_MAX_SAVE_ATTEMPTS - tries - 1})")
+                trace(f"[SQL]: Saving log failed. Code: {code}, Message: {message}. Attempting recovery... (Tries left: {SQL_MAX_SAVE_ATTEMPTS - tries - 1})", TraceLEVELS.WARNING)
                 loop = asyncio.get_event_loop()
                 # Run in executor to prevent blocking
                 if not await loop.run_in_executor(None, self._handle_error, code, message, asyncio.get_event_loop()):
-                    break
-
-        trace("[SQL]: Saving log failed. Switching to file logging.")
-        return False
+                    raise DAFSQLError("Unable to handle SQL error", DAF_SQL_SAVE_LOG_ERROR) from ex
 
     @misc._async_safe("safe_sem", 1)
     async def update(self, **kwargs):
@@ -776,7 +756,6 @@ class LoggerSQL:
         try:
             self._stop_engine()
             await misc._update(self, **kwargs)
-            GLOBALS.enabled = True
         except Exception:
             # Reinitialize since engine was disconnected
             await self.initialize()
@@ -988,46 +967,3 @@ if GLOBALS.sql_installed:
             self.log_id = message_log_id
             self.channel_id = channel_id
             self.reason = reason
-
-
-async def initialize(mgr_object: LoggerSQL) -> bool:
-    """
-    This function initializes the sql manager and also the selected database.
-
-    Parameters
-    -----------
-    mgr_object: LoggerSQL
-        SQL database manager object responsible for saving the logs into the SQL database.
-
-    Returns
-    ----------
-    True
-        Logging will be SQL.
-    False
-        Logging will be file based.
-
-    Raises
-    ------------
-    Any
-        Any exceptions raised in mgr_object.initialize() method
-    """
-    _ret = False
-    if mgr_object is not None:    
-        trace("[SQL]: Initializing logging...", TraceLEVELS.NORMAL)
-        try:
-            await mgr_object.initialize()
-            _ret = True
-            trace("[SQL]: Initialization was successful!", TraceLEVELS.NORMAL)
-        except DAFSQLError as exc:
-            trace(f"[SQL:] Unable to initialize manager, reason\n: {exc}", TraceLEVELS.ERROR)
-
-    GLOBALS.manager = mgr_object
-    return _ret
-
-
-def get_sql_manager() -> LoggerSQL:
-    """
-    Returns the LoggerSQL object that was originally passed to the
-    daf.run(...) function or None if the SQL logging is disabled
-    """
-    return GLOBALS.manager

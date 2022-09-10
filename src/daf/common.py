@@ -24,9 +24,6 @@ SQL_RECONNECT_TIME = 5 * C_MINUTE_TO_SECOND
 SQL_RECONNECT_ATTEMPTS = 3
 SQL_CONNECTOR_TIMEOUT = 6
 
-# OTHER CONSTANTS
-C_FILE_NAME_FORBIDDEN_CHAR = ('<','>','"','/','\\','|','?','*',":")
-
 # MESSAGE SETTINGS
 C_VC_CONNECT_TIMEOUT = 3 # Timeout of voice channels
 C_PERIOD_MINIMUM_SEC = 1 # Minimal seconds the period can be

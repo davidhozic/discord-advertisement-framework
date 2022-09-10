@@ -7,7 +7,7 @@ from typeguard import check_type, typechecked
 
 from ..common import *
 from ..dtypes import *
-from ..tracing import *
+from ..logging.tracing import *
 from ..timing import *
 from ..exceptions import *
 from .. import misc
