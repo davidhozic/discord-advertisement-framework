@@ -127,11 +127,11 @@ def _async_safe(semaphore: str, amount: Optional[int]=1) -> Callable:
             sem: Semaphore = getattr(self, semaphore)
             for i in range(amount):
                 await sem.acquire()
-
-            result = await coroutine(self, *args, **kwargs)
-
-            for i in range(amount):
-                sem.release()
+            try:
+                result = await coroutine(self, *args, **kwargs)
+            finally:
+                for i in range(amount):
+                    sem.release()
 
             return result
 
