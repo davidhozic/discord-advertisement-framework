@@ -3,7 +3,6 @@ This module is responsible for the logging in daf.
 It contains all the logging classes.
 """
 from __future__ import annotations
-import asyncio
 from contextlib import suppress
 from datetime import datetime
 from typing import Optional
@@ -200,7 +199,7 @@ def get_logger() -> LoggerBASE:
     Returns
     ---------
     LoggerBASE
-        The selected logging object.
+        The selected logging object which is of inherited type from LoggerBASE.
     """
     return GLOBAL.logger
 

@@ -344,9 +344,10 @@ def run(token : str,
     Runs the framework and does not return until the framework is stopped (:func:`daf.core.shutdown`).
     After stopping, it returns None.
 
-    This will block until the framework is stopped, if you want manual control over the
-    asyncio event loop, eg. you want to start the framework as a task, use
-    the ``initialize`` coroutine.
+    .. warning::
+        This will block until the framework is stopped, if you want manual control over the
+        asyncio event loop, eg. you want to start the framework as a task, use
+        the ``initialize`` coroutine.
 
     .. versionchanged:: v2.2
         Added ``logger`` parameter

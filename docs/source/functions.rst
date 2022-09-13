@@ -72,9 +72,9 @@ get_shill_list
 .. autofunction:: daf.core.get_shill_list
 
 
-get_sql_manager
+get_logger
 =======================
-.. autofunction:: daf.sql.get_sql_manager
+.. autofunction:: daf.logging.logging.get_logger
 
 
 ------------------------------
