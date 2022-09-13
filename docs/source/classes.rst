@@ -3,139 +3,73 @@ Classes
 =====================
 This page contains information about any classes that can be used in the daf.
 
------------------------------
-Guilds (Servers)
------------------------------
 
-GUILD
-=====================
-.. autoclass:: daf.guild.GUILD
-   :members:
-   
-   .. autoproperty:: messages
-
-   .. autoproperty:: snowflake
-
-   .. autoproperty:: created_at
-
-USER
-=====================
-.. autoclass:: daf.guild.USER
-   :members:
-
-   .. autoproperty:: messages
-
-   .. autoproperty:: snowflake
-
-   .. autoproperty:: created_at
-
------------------------------
-Messages
------------------------------
-
-TextMESSAGE
-=====================
-.. autoclass:: daf.message.TextMESSAGE
-    :members:
-
-    .. autoproperty:: created_at
-
-VoiceMESSAGE
-=====================
-.. autoclass:: daf.message.VoiceMESSAGE
-    :members:
-
-    .. autoproperty:: created_at
-
-
-DirectMESSAGE
-=====================
-.. autoclass:: daf.message.DirectMESSAGE
-    :members:
-
-    .. autoproperty:: created_at
-
-
------------------------------
-Message data types
------------------------------
-These classes describe data that can be passed to the :ref:`Messages` objects
-
-EMBED
-=====================
-.. autoclass:: daf.dtypes.EMBED
-    :members:
-    :exclude-members: Color, Colour
-
-FILE
-=====================
-.. autoclass:: daf.dtypes.FILE
-    :members:
-
-AUDIO
-=====================
-.. autoclass:: daf.dtypes.AUDIO
-    :members:
-
-
------------------------------
-SQL
------------------------------
-
-LoggerSQL
-=====================
-.. note::
-    See :ref:`relational database log (SQL)` for usage.
-
-.. autoclass:: daf.sql.LoggerSQL
-    :members:
-    :exclude-members: Base
-
-
-
------------------------------
+------------------------
 Tracing
------------------------------
-
-TraceLEVELS
-=====================
-.. autoenum:: daf.tracing.TraceLEVELS
-    :members:
-
-
------------------------------
-Exceptions
------------------------------
-
-Types
-=====================
-
-DAFError
 ------------------------
 
+
+TraceLEVELS
+========================
+.. autoenum:: daf.logging.tracing.TraceLEVELS
+    :members:
+
+    
+
+
+------------------------
+Logging
+------------------------
+
+
+LoggerJSON
+========================
+.. autoclass:: daf.logging.logging.LoggerJSON
+    :members:
+
+    
+
+
+
+LoggerSQL
+========================
+.. autoclass:: daf.logging.sql.LoggerSQL
+    :members:
+
+    
+
+
+------------------------
+Exceptions
+------------------------
+
+
+DAFError
+========================
 .. autoclass:: daf.exceptions.DAFError
     :members:
 
-DAFSQLError
-------------------------
+    
 
-.. autoclass:: daf.exceptions.DAFSQLError
-    :members:
 
 
 DAFNotFoundError
-------------------------
-
+========================
 .. autoclass:: daf.exceptions.DAFNotFoundError
     :members:
 
+    
 
+
+
+DAFSQLError
+========================
+.. autoclass:: daf.exceptions.DAFSQLError
+    :members:
+
+    
 Error codes
-=====================
-.. Caution::
-    The error code's number can change when a new version is released.
-    If you want to check if an exception has a certain code, use the constant name instead.
-
+========================
 .. glossary::
 
     DAF_SNOWFLAKE_NOT_FOUND:
@@ -192,3 +126,119 @@ Error codes
         Value: 11
 
         Info: Unable to connect the cursor.
+
+    DAF_SQL_SAVE_LOG_ERROR:
+        Value: 12
+
+        Info: Unable to save the log to SQL
+
+
+------------------------
+Message data types
+------------------------
+
+
+EMBED
+========================
+.. autoclass:: daf.dtypes.EMBED
+    :members:
+
+    .. autoproperty:: daf.dtypes.EMBED.author
+
+    .. autoproperty:: daf.dtypes.EMBED.color
+
+    .. autoproperty:: daf.dtypes.EMBED.colour
+
+    .. autoproperty:: daf.dtypes.EMBED.fields
+
+    .. autoproperty:: daf.dtypes.EMBED.footer
+
+    .. autoproperty:: daf.dtypes.EMBED.image
+
+    .. autoproperty:: daf.dtypes.EMBED.provider
+
+    .. autoproperty:: daf.dtypes.EMBED.thumbnail
+
+    .. autoproperty:: daf.dtypes.EMBED.timestamp
+
+    .. autoproperty:: daf.dtypes.EMBED.video
+
+
+
+FILE
+========================
+.. autoclass:: daf.dtypes.FILE
+    :members:
+
+    
+
+
+
+AUDIO
+========================
+.. autoclass:: daf.dtypes.AUDIO
+    :members:
+
+    
+
+
+------------------------
+Messages
+------------------------
+
+
+TextMESSAGE
+========================
+.. autoclass:: daf.message.text_based.TextMESSAGE
+    :members:
+
+    .. autoproperty:: daf.message.text_based.TextMESSAGE.created_at
+
+
+
+DirectMESSAGE
+========================
+.. autoclass:: daf.message.text_based.DirectMESSAGE
+    :members:
+
+    .. autoproperty:: daf.message.text_based.DirectMESSAGE.created_at
+
+
+
+VoiceMESSAGE
+========================
+.. autoclass:: daf.message.voice_based.VoiceMESSAGE
+    :members:
+
+    .. autoproperty:: daf.message.voice_based.VoiceMESSAGE.created_at
+
+
+------------------------
+Guilds
+------------------------
+
+
+GUILD
+========================
+.. autoclass:: daf.guild.GUILD
+    :members:
+
+    .. autoproperty:: daf.guild.GUILD.created_at
+
+    .. autoproperty:: daf.guild.GUILD.messages
+
+    .. autoproperty:: daf.guild.GUILD.snowflake
+
+
+
+USER
+========================
+.. autoclass:: daf.guild.USER
+    :members:
+
+    .. autoproperty:: daf.guild.USER.created_at
+
+    .. autoproperty:: daf.guild.USER.messages
+
+    .. autoproperty:: daf.guild.USER.snowflake
+

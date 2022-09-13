@@ -255,7 +255,7 @@ class _BaseGUILD:
             "type": type(self).__name__
         }
 
-
+@misc.doc_category("Guilds")
 @sql._register_type("GuildTYPE")
 class GUILD(_BaseGUILD):
     """
@@ -387,7 +387,7 @@ class GUILD(_BaseGUILD):
             await message.update(_init_options={"guild": self.apiobject})
 
 
-
+@misc.doc_category("Guilds")
 @sql._register_type("GuildTYPE")
 class USER(_BaseGUILD):
     """

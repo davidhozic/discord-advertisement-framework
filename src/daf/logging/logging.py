@@ -81,7 +81,7 @@ class LoggerBASE:
         """
         await misc._update(self, **kwargs)
 
-
+@misc.doc_category("Logging")
 class LoggerJSON(LoggerBASE):
     """
     .. versionadded:: v2.2
@@ -105,6 +105,10 @@ class LoggerJSON(LoggerBASE):
         Path to the folder where logs will be saved.
     fallback: Optional[LoggerBASE]
         The manager to use, in case saving using this manager fails.
+
+    Category
+    -------------
+    Test
 
     Raises
     ----------
@@ -176,7 +180,7 @@ class LoggerJSON(LoggerBASE):
 async def initialize(logger: LoggerBASE) -> None:
     """
     Initialization coroutine for the module.
-
+    
     Parameters
     --------------
     The logger manager to use for saving logs.
@@ -194,6 +198,8 @@ async def initialize(logger: LoggerBASE) -> None:
     GLOBAL.logger = logger
 
 
+@misc.doc_category("Getters")
+@misc.doc_category("Logging")
 def get_logger() -> LoggerBASE:
     """
     Returns

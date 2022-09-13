@@ -2,11 +2,12 @@
     This module contains definitions regarding miscellaneous
     items that can appear in multiple modules
 """
-from typing import Coroutine, Callable, Any, Optional
+from typing import Coroutine, Callable, Any, Dict, Optional
 from asyncio import Semaphore
 from functools import wraps
 from inspect import getfullargspec
 from copy import copy
+import sys
 
 ###############################
 # Safe access functions
@@ -142,3 +143,42 @@ def _async_safe(semaphore: str, amount: Optional[int]=1) -> Callable:
         raise TypeError("semaphore parameter must be an attribute name of the asyncio semaphore inside the object")
 
     return __safe_access
+
+
+# Documentation
+DOCUMENTATION_MODE = "DOCUMENTATION" in sys.argv
+if DOCUMENTATION_MODE:
+    doc_titles: Dict[str, list] = {}
+
+def doc_category(cat: str, manual=False):
+    """
+    Used for marking under which category this should
+    be put when auto generating documentation.
+
+    Parameters
+    ------------
+    cat: str
+        The name of the category to put this in.
+
+    manual: Optional[bool]
+        Should documentation be manually generated
+
+    Returns
+    ----------
+    Decorator
+        Returns decorator which marks the object
+        to the category.
+    """
+    def _category(item):
+        if DOCUMENTATION_MODE:
+            doc_titles[cat].append((item, manual))
+        return item
+
+    if DOCUMENTATION_MODE:
+        if cat not in doc_titles:
+            doc_titles[cat] = []
+
+    return _category
+
+
+

@@ -4,6 +4,9 @@
 
 from typing import Optional
 from .logging.tracing import *
+
+from . import misc
+
 import _discord as discord
 import asyncio
 
@@ -76,6 +79,7 @@ async def _initialize(token: str, *,
     await login_event.wait() # Wait for the login to complete and the discord lib to initialize.
 
 
+@misc.doc_category("Getters")
 def get_client() -> discord.Client:
     """
     Returns the `CLIENT` object used for communicating with Discord.

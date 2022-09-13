@@ -5,8 +5,9 @@
 from typing import Any, Callable, List, Union, TypeVar
 from contextlib import suppress
 from typeguard import typechecked
-
 from .exceptions import *
+
+from . import misc
 
 import copy
 import datetime
@@ -48,7 +49,7 @@ class _FunctionBaseCLASS:
     the object to it's class or to the base class from which the object class is inherited from.
     """
 
-
+@misc.doc_category("Decorators")
 def data_function(fnc: Callable):
     """
     Decorator used to create a framework FunctionCLASS class that wraps the function.
@@ -107,6 +108,7 @@ def data_function(fnc: Callable):
 # Other
 #######################################################################
 @typechecked
+@misc.doc_category("Message data types")
 class EMBED(discord.Embed):
     """
     Derived class of discord.Embed created to provide additional arguments in the creation.
@@ -187,6 +189,7 @@ class EMBED(discord.Embed):
             self.set_thumbnail(url=thumbnail)
 
 @typechecked
+@misc.doc_category("Message data types")
 class FILE:
     """
     FILE object used as a data parameter to the MESSAGE objects.
@@ -211,6 +214,7 @@ class FILE:
 
 
 @typechecked
+@misc.doc_category("Message data types")
 class AUDIO:
     """
     Used for streaming audio from file or YouTube.

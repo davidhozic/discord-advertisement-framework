@@ -123,7 +123,7 @@ MessageMODE
 GuildTYPE
 ~~~~~~~~~~~~~~~~~~~~
 :Description:
-    This is a lookup table containing types of the guilds inside the framework (:ref:`Guilds (Servers)`).
+    This is a lookup table containing types of the guilds inside the framework (:ref:`Guilds`).
 
 :Attributes:
   - |PK| id: int -  Internal identifier of the guild type inside the database.

@@ -5,6 +5,7 @@
 from enum import Enum, auto
 import time
 from threading import Lock
+from .. import misc
 
 __all__ = (
     "TraceLEVELS",
@@ -16,6 +17,7 @@ class GLOBALS:
     use_debug = None
     lock = Lock() # For print thread safety
 
+@misc.doc_category("Tracing")
 class TraceLEVELS(Enum):
     """
     Levels of trace for debug.
@@ -26,6 +28,7 @@ class TraceLEVELS(Enum):
     WARNING = auto()
     ERROR = auto()
 
+@misc.doc_category("Tracing")
 def trace(message: str,
           level: TraceLEVELS = TraceLEVELS.NORMAL,
           force: bool = False):

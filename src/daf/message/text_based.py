@@ -26,7 +26,7 @@ __all__ = (
     "DirectMESSAGE"
 )
 
-
+@misc.doc_category("Messages")
 @sql._register_type("MessageTYPE")
 class TextMESSAGE(BaseMESSAGE):
     """
@@ -422,7 +422,7 @@ class TextMESSAGE(BaseMESSAGE):
 
         await misc._update(self, init_options=_init_options, **kwargs) # No additional modifications are required
 
-
+@misc.doc_category("Messages")
 @sql._register_type("MessageTYPE")
 class DirectMESSAGE(BaseMESSAGE):
     """

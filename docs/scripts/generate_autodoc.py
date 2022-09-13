@@ -1,3 +1,4 @@
+from __future__ import annotations
 from contextlib import suppress
 import inspect
 import os
@@ -8,34 +9,57 @@ os.chdir(os.path.dirname(__file__))
 
 
 sys.path.append(os.path.abspath("../../src"))
+sys.argv.append("DOCUMENTATION")
 import daf
 
-FUNCTION_TEMPLATE =\
+
+CATEGORY_TEMPLATE = \
+"""
+------------------------
+{category_name}
+------------------------
+"""
+
+AUTO_FUNCTION_TEMPLATE =\
 """
 {function_name}
---------------------------
+========================
 .. autofunction:: {module}.{function_name}
 """
 
-CLASS_TEMPLATE =\
+AUTO_CLASS_TEMPLATE =\
 """
 
 {class_name}
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+========================
 .. autoclass:: {class_path}
     :members:
 
     {properties}
 """
 
+MANUAL_FUNCTION_TEMPLATE = \
+"""
+{function_name}
+========================
+.. function:: {module}.{function_name}({annotations})
+    {docstring}
 
-export_f = ""
+"""
+
+
+titles = daf.misc.doc_titles
 export_c = ""
-for item in inspect.getmembers(daf, lambda x: inspect.isclass(x) or inspect.isfunction(x)):
-    name, item = item
-    if not name.startswith(("_", "Base")):
+export_f = ""
+for category, items in titles.items():
+    export_c_items = ""
+    export_f_items = ""
+    for item, manual in items:
         if inspect.isfunction(item):
-            export_f += FUNCTION_TEMPLATE.format(module= item.__module__, function_name=item.__name__) + "\n"
+            if manual:
+                export_f_items += MANUAL_FUNCTION_TEMPLATE.format(module=item.__module__, function_name=item.__name__, annotations=",".join(f"{k}: {v}" for k, v in item.__annotations__.items()), docstring=item.__doc__) + "\n"
+            else:
+                export_f_items += AUTO_FUNCTION_TEMPLATE.format(module=item.__module__, function_name=item.__name__) + "\n"
         elif inspect.isclass(item):
             # Fill properties 
             properties = []
@@ -45,8 +69,15 @@ for item in inspect.getmembers(daf, lambda x: inspect.isclass(x) or inspect.isfu
                 if isinstance(attr, property):
                     properties.append(f".. autoproperty:: {cls_path}.{name}")
 
-            export_c += CLASS_TEMPLATE.format(class_name=item.__name__, class_path=cls_path, properties="\n\n    ".join(properties)) + "\n"
-            
+            export_c_items += AUTO_CLASS_TEMPLATE.format(class_name=item.__name__, class_path=cls_path, properties="\n\n    ".join(properties)) + "\n"
+
+    if export_f_items:
+        export_f += CATEGORY_TEMPLATE.format(category_name=category)
+        export_f += export_f_items
+    
+    if export_c_items:
+        export_c += CATEGORY_TEMPLATE.format(category_name=category)
+        export_c += export_c_items
 
 
 with open("__autodoc_export_funct.rst", "w") as f:

@@ -32,7 +32,7 @@ class GLOBALS:
     """
     voice_client: discord.VoiceClient = None
 
-
+@misc.doc_category("Messages")
 @sql._register_type("MessageTYPE")
 class VoiceMESSAGE(BaseMESSAGE):
     """

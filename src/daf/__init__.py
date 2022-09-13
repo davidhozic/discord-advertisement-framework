@@ -12,3 +12,7 @@ from .guild import *
 from .message import *
 from .logging import *
 from .exceptions import *
+
+from .misc import DOCUMENTATION_MODE
+if DOCUMENTATION_MODE:
+    from .misc import *

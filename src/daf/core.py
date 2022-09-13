@@ -9,12 +9,12 @@ from typeguard import typechecked
 from .common import *
 from .exceptions import *
 from .logging.tracing import *
+from .logging import sql, logging, tracing
 
 from . import guild
 from . import client
-from .logging import sql
+from . import misc
 from . import message
-from .logging import logging, tracing
 
 import asyncio
 import _discord as dc
@@ -61,6 +61,7 @@ async def _advertiser(message_type: AdvertiseTaskType) -> None:
             await guild_user._advertise(message_type)
 
 
+@misc.doc_category("Core control")
 async def initialize(token : str,
                      server_list : Optional[List[Union[guild.GUILD, guild.USER]]]=[],
                      is_user : Optional[bool] =False,
@@ -141,56 +142,54 @@ async def initialize(token : str,
 #######################################################################
 
 @overload
+@misc.doc_category("Shilling list modification", True)
 async def add_object(obj: Union[guild.USER, guild.GUILD]) -> None:
     """
 
     Adds a guild or an user to the daf.
 
-    Parameters
-    --------------
-    obj: Union[guild.USER, guild.GUILD]
-        The guild object to add into the daf.
+    :Parameters:
+        obj: Union[guild.USER, guild.GUILD]
+            The guild object to add into the daf.
 
-    Raises
-    -----------
-    ValueError
-         The guild/user is already added to the daf.
-    TypeError
-         The object provided is not supported for addition.
-    TypeError
-        Invalid parameter type.
-    Other
-        Raised in the obj.initialize() method
+    :Raises:
+        ValueError
+            The guild/user is already added to the daf.
+        TypeError
+            The object provided is not supported for addition.
+        TypeError
+            Invalid parameter type.
+        Other
+            Raised in the obj.initialize() method
     """
     ...
 @overload
+@misc.doc_category("Shilling list modification", True)
 async def add_object(obj: Union[message.DirectMESSAGE, message.TextMESSAGE, message.VoiceMESSAGE],
                      snowflake: Union[int, guild.GUILD, guild.USER, dc.Guild, dc.User, dc.Object]) -> None:
     """
-
     Adds a message to the daf.
 
-    Parameters
-    --------------
-    obj: Union[message.DirectMESSAGE, message.TextMESSAGE, message.VoiceMESSAGE]
-        The message object to add into the daf.
-    snowflake: Union[int, guild.GUILD, guild.USER, dc.Guild, dc.User]
-        Which guild/user to add it to (can be snowflake id or a framework _BaseGUILD object or a discord API wrapper object).
+    :Parameters:
+        obj: Union[message.DirectMESSAGE, message.TextMESSAGE, message.VoiceMESSAGE]
+            The message object to add into the daf.
+        snowflake: Union[int, guild.GUILD, guild.USER, dc.Guild, dc.User]
+            Which guild/user to add it to (can be snowflake id or a framework _BaseGUILD object or a discord API wrapper object).
 
-    Raises
-    -----------
-    ValueError
-        guild_id wasn't provided when adding a message object (to which guild should it add)
-    TypeError
-        The object provided is not supported for addition.
-    TypeError
-        Missing snowflake parameter.
-    DAFNotFoundError(code=DAF_SNOWFLAKE_NOT_FOUND)
-        Could not find guild with that id.
-    Other
-        Raised in the obj.add_message() method
+    :Raises:
+        ValueError
+            guild_id wasn't provided when adding a message object (to which guild should it add)
+        TypeError
+            The object provided is not supported for addition.
+        TypeError
+            Missing snowflake parameter.
+        DAFNotFoundError(code=DAF_SNOWFLAKE_NOT_FOUND)
+            Could not find guild with that id.
+        Other
+            Raised in the obj.add_message() method
     """
     ...
+
 async def add_object(obj, snowflake=None):
     object_type_name = type(obj).__name__
     # Convert the `snowflake` object into a discord snowflake ID (only if adding a message to guild)
@@ -222,6 +221,7 @@ async def add_object(obj, snowflake=None):
         raise TypeError(f"Invalid object type `{object_type_name}`.")
 
 
+@misc.doc_category("Shilling list modification")
 def remove_object(snowflake: Union[int, dc.Object, dc.Guild, dc.User, dc.Object, guild._BaseGUILD, message.BaseMESSAGE]) -> None:
     """
     Removes an object from the daf.
@@ -256,6 +256,7 @@ def remove_object(snowflake: Union[int, dc.Object, dc.Guild, dc.User, dc.Object,
         raise DAFNotFoundError(f"GUILD/USER not in the shilling list.", DAF_SNOWFLAKE_NOT_FOUND)
 
 
+@misc.doc_category("Getters")
 def get_guild_user(snowflake: Union[int, dc.Object, dc.Guild, dc.User, dc.Object]) -> Union[guild.GUILD, guild.USER, None]:
     """
     Retrieves the GUILD/USER object that has the ``snowflake`` ID from the shilling list. 
@@ -287,6 +288,7 @@ def get_guild_user(snowflake: Union[int, dc.Object, dc.Guild, dc.User, dc.Object
     return None
 
 
+@misc.doc_category("Core control")
 def shutdown(loop: Optional[asyncio.AbstractEventLoop]=None) -> None:
     """
     Stops the framework and any user tasks.
@@ -317,6 +319,7 @@ def shutdown(loop: Optional[asyncio.AbstractEventLoop]=None) -> None:
     loop.close()
 
 
+@misc.doc_category("Getters")
 def get_shill_list() -> List[Union[guild.GUILD, guild.USER]]:
     """
     .. versionadded:: v2.1
@@ -330,6 +333,7 @@ def get_shill_list() -> List[Union[guild.GUILD, guild.USER]]:
 
 
 @typechecked
+@misc.doc_category("Core control")
 def run(token : str,
         server_list : Optional[List[Union[guild.GUILD, guild.USER]]]=[],
         is_user : Optional[bool] =False,
