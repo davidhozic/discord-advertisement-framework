@@ -289,9 +289,9 @@ def get_guild_user(snowflake: Union[int, dc.Object, dc.Guild, dc.User, dc.Object
 
 
 @misc.doc_category("Core control")
-def shutdown(loop: Optional[asyncio.AbstractEventLoop]=None) -> None:
+async def shutdown(loop: Optional[asyncio.AbstractEventLoop]=None) -> None:
     """
-    Stops the framework and any user tasks.
+    Stops the framework.
 
     .. versionchanged:: v2.1
         Made the function non async and shutdown everything.
@@ -304,11 +304,21 @@ def shutdown(loop: Optional[asyncio.AbstractEventLoop]=None) -> None:
     """
     if loop is None:
         loop = asyncio.get_event_loop()
+    
+    loop.stop()
 
-    # Shutdown discord
+def _shutdown_clean(loop: asyncio.AbstractEventLoop) -> None:
+    """
+    Fully stops all the tasks and then closes the event loop
+
+    Parameters
+    ---------------
+    loop: asyncio.AbstractEventLoop
+        The loop to stop.
+    """
     cl = client.get_client()
-    loop.run_until_complete(cl.close()) 
-    # Cancell all tasks
+    loop.run_until_complete(cl.close())
+    # Cancel all tasks
     tasks = [task for task in asyncio.all_tasks(loop) if not task.done()]
     for task in tasks:
         task.cancel()
@@ -403,4 +413,4 @@ def run(token : str,
     except KeyboardInterrupt:
         trace("Received a cancellation event. Stopping..", TraceLEVELS.WARNING)
     finally:
-        shutdown(loop)
+        _shutdown_clean(loop)
