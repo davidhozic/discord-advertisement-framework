@@ -10,7 +10,6 @@ from typeguard import typechecked
 from .base import *
 from ..dtypes import *
 from ..logging.tracing import *
-from ..common import *
 from ..exceptions import *
 
 from .. import client
@@ -31,6 +30,11 @@ class GLOBALS:
     - @Info: Contains global variables used in the voice messaging.
     """
     voice_client: discord.VoiceClient = None
+
+# Configuration
+# ----------------------#
+C_VC_CONNECT_TIMEOUT = 3 # Timeout of voice channels
+
 
 @misc.doc_category("Messages")
 @sql._register_type("MessageTYPE")

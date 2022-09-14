@@ -23,12 +23,14 @@ __all__ = (
     "get_logger"
 )
 
+# Constants
+# ---------------------#
+C_FILE_NAME_FORBIDDEN_CHAR = ('<','>','"','/','\\','|','?','*',":")
+
 
 class GLOBAL:
     "Singleton for global variables"
-    logger: LoggerBASE = None
-    # OTHER CONSTANTS
-    C_FILE_NAME_FORBIDDEN_CHAR = ('<','>','"','/','\\','|','?','*',":")
+    logger: LoggerBASE = None  
 
 
 class LoggerBASE:
@@ -48,9 +50,11 @@ class LoggerBASE:
         self.fallback = fallback
         raise NotImplementedError
 
-    async def initialize(self):
-        "Initializes the logging object"
-        raise NotImplementedError
+    async def initialize(self) -> None:
+        "Initializes self and the fallback"
+        if self.fallback is not None:
+            with suppress(Exception): # Suppress anything
+                await self.fallback.initialize()
 
     async def _save_log(self, guild_context: dict, message_context: dict):
         """
@@ -93,14 +97,9 @@ class LoggerCSV(LoggerBASE):
     The logs are saved into CSV files and fragmented
     by guild/user and day (each day, new file for each guild).
 
-    For example, if today is 13.07.2023, and the guild is "AwesomeDavid",
-    then the logs will be saved into file:
-
-    <path>
-        └──2023
-            └──07
-                └──13
-                    └──AwesomeDavid.csv
+    Each entry is in the following format:
+        <Guild Type, Guild Name, Guild Snowflake, Message Type, Sent Data, Message Mode (Optional),
+        Channels (Optional), Success Info (Optional), Timestamp>
 
     Parameters
     ----------------
@@ -121,11 +120,6 @@ class LoggerCSV(LoggerBASE):
         self.path = path
         self.fallback = fallback
         self.delimiter = delimiter
-
-    async def initialize(self) -> None:
-        "Initializes self and the fallback"
-        if self.fallback is not None:
-            await self.fallback.initialize()
     
     async def _save_log(self, guild_context: dict, message_context: dict) -> None:
         timestruct = datetime.now()
@@ -138,36 +132,25 @@ class LoggerCSV(LoggerBASE):
                         .joinpath("{:02d}".format(timestruct.day)))
 
         logging_output.mkdir(parents=True,exist_ok=True)
-        logging_output = logging_output.joinpath("".join(char if char not in GLOBAL.C_FILE_NAME_FORBIDDEN_CHAR
+        logging_output = logging_output.joinpath("".join(char if char not in C_FILE_NAME_FORBIDDEN_CHAR
                                                               else "#" for char in guild_context["name"]) + ".csv")          
         # Create file if it doesn't exist
-        fresh_file = False
         if not logging_output.exists():
             logging_output.touch()
-            fresh_file = True
 
         # Write to file
         with open(logging_output,'a', encoding='utf-8', newline='') as f_writer:
             try:
-                if fresh_file:
-                    # Write CSV headers
-                    f_writer.reconfigure(newline="\n")
-                    dlim = self.delimiter
-                    header = \
-                    f"guild_type{dlim}guild_name{dlim}guild_id{dlim}"\
-                    f"message_type{dlim}sent_data{dlim}mode{dlim}channels{dlim}success_info\n"
-                    f_writer.write(header)
-                    f_writer.reconfigure(newline="")
-
                 csv_writer = csv.writer(f_writer, delimiter=self.delimiter, quoting=csv.QUOTE_NONNUMERIC, quotechar='"')
+                # Guild Type, Guild Name, Guild Snowflake, Message Type, Sent Data, Message Mode, Message Channels, Success Info, Timestamp
                 csv_data = [
                     guild_context["type"], guild_context["name"], guild_context["id"],
                     message_context["type"], message_context["sent_data"], message_context.get("mode", ""),
-                    message_context.get("channels", ""), message_context.get("success_info", "")
+                    message_context.get("channels", ""), message_context.get("success_info", ""), timestamp
                 ]
                 csv_writer.writerow(csv_data)
             except Exception as exc:
-                raise OSError(*exc.args) from exc
+                raise OSError(*exc.args) from exc # Raise OSError for any type of exceptions
 
 
 @misc.doc_category("Logging")
@@ -178,15 +161,6 @@ class LoggerJSON(LoggerBASE):
     Logging class for generating .json file logs.
     The logs are saved into JSON files and fragmented
     by guild/user and day (each day, new file for each guild).
-
-    For example, if today is 13.07.2023, and the guild is "AwesomeDavid",
-    then the logs will be saved into file:
-
-    <path>
-        └──2023
-            └──07
-                └──13
-                    └──AwesomeDavid.json
 
     Parameters
     ----------------
@@ -204,11 +178,6 @@ class LoggerJSON(LoggerBASE):
     def __init__(self, path: str, fallback: Optional[LoggerBASE] = None) -> None:
         self.path = path
         self.fallback = fallback
-
-    async def initialize(self) -> None:
-        "Initializes self and the fallback"
-        if self.fallback is not None:
-            await self.fallback.initialize()
     
     async def _save_log(self, guild_context: dict, message_context: dict) -> None:
         timestruct = datetime.now()
@@ -221,7 +190,7 @@ class LoggerJSON(LoggerBASE):
                         .joinpath("{:02d}".format(timestruct.day)))
 
         logging_output.mkdir(parents=True,exist_ok=True)
-        logging_output = logging_output.joinpath("".join(char if char not in GLOBAL.C_FILE_NAME_FORBIDDEN_CHAR
+        logging_output = logging_output.joinpath("".join(char if char not in C_FILE_NAME_FORBIDDEN_CHAR
                                                               else "#" for char in guild_context["name"]) + ".json")          
         # Create file if it doesn't exist
         fresh_file = False
@@ -275,7 +244,7 @@ async def initialize(logger: LoggerBASE) -> None:
             await logger.initialize()
             break
 
-        trace(f"Could not initialize manager {type(logger).__name__}, falling to {type(logger.fallback).__name__}")
+        trace(f"Could not initialize manager {type(logger).__name__}, falling to {type(logger.fallback).__name__}", TraceLEVELS.WARNING)
         logger = logger.fallback # Could not initialize, try fallback
     else:
         trace("Logging will be disabled as the logging manager and it's fallbacks all failed initialization", TraceLEVELS.ERROR)
@@ -324,7 +293,7 @@ async def save_log(guild_context: dict, message_context: dict):
             await mgr._save_log(guild_context, message_context)
             break
         except Exception as exc:
-            trace(f"{type(mgr).__name__} failed, falling to {type(mgr.fallback).__name__}\nReason: {exc}")
+            trace(f"{type(mgr).__name__} failed, falling to {type(mgr.fallback).__name__}\nReason: {exc}", TraceLEVELS.WARNING)
             mgr = mgr.fallback # Could not initialize, try fallback
     else:
         trace("Could not save log to the manager or any of it's fallback", TraceLEVELS.ERROR)

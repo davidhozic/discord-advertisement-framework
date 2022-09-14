@@ -14,7 +14,6 @@ from typeguard import typechecked
 
 from .tracing import *
 from ..timing import *
-from ..common import *
 from ..exceptions import *
 
 from . import logging
@@ -34,6 +33,15 @@ class GLOBALS:
     """
     lt_types = []
     sql_installed = False
+
+# ------------------------------------ Configuration -------------------------------
+SQL_MAX_SAVE_ATTEMPTS = 10
+SQL_MAX_EHANDLE_ATTEMPTS = 3
+SQL_RECOVERY_TIME = 0.5
+SQL_RECONNECT_TIME = 5 * 60
+SQL_RECONNECT_ATTEMPTS = 3
+SQL_CONNECTOR_TIMEOUT = 6
+
 
 # ------------------------------------ Optional ------------------------------------
 try:
@@ -117,7 +125,7 @@ class LoggerSQL(logging.LoggerBASE):
                 password: str,
                 server: str,
                 database: str,
-                fallback: Optional[logging.LoggerBASE] = None):
+                fallback: Optional[logging.LoggerBASE] = logging.LoggerJSON("History")):
 
         if not GLOBALS.sql_installed:
             raise ModuleNotFoundError("You need to install extra requirements: pip install discord-advert-framework[sql]")
@@ -192,14 +200,10 @@ class LoggerSQL(logging.LoggerBASE):
         loop: AbstractEventLoop
             Asyncio event loop (for thread executor).
         """
-        def _reconnect():
-            """
-            Tries to reconnect after <wait>, if it failed,
-            it retries after <wait>
-            """
+        async def _reconnector():
             for tries in range(SQL_RECONNECT_ATTEMPTS):
                 trace(f"[SQL]: Retrying to connect in {wait} seconds.")
-                time.sleep(wait)
+                await asyncio.sleep(wait)
                 trace(f"[SQL]: Reconnecting to database {self.database}.")
                 with suppress(DAFSQLError):
                     self._begin_engine()
@@ -210,10 +214,11 @@ class LoggerSQL(logging.LoggerBASE):
                     return
 
             trace(f"[SQL]: Failed to reconnect in {SQL_RECONNECT_ATTEMPTS} attempts, SQL logging is now disabled.")
-
+           
         self.reconnecting = True
         self._stop_engine()
-        loop.run_in_executor(None, _reconnect)
+        logging._set_logger(self.fallback)
+        loop.create_task(_reconnector())
 
     def _create_data_types(self) -> None:
         """
@@ -510,6 +515,7 @@ class LoggerSQL(logging.LoggerBASE):
         self._create_analytic_objects()
         # Connect the cursor for faster procedure calls
         self._connect_cursor()
+        await super().initialize()
 
     def _get_insert_guild(self,
                         snowflake: int,
@@ -628,7 +634,6 @@ class LoggerSQL(logging.LoggerBASE):
 
             elif exception in {-1, 2, 53}:  # Disconnect error, reconnect after period
                 self._reconnect_after(SQL_RECONNECT_TIME, loop)
-                logging._set_logger(self.fallback) # Temporarily save logs to the fallback until we reconnect
                 res = False # Don't try to save while reconnecting
 
             elif exception == 2812:
@@ -727,7 +732,7 @@ class LoggerSQL(logging.LoggerBASE):
                 trace(f"[SQL]: Saving log failed. Code: {code}, Message: {message}. Attempting recovery... (Tries left: {SQL_MAX_SAVE_ATTEMPTS - tries - 1})", TraceLEVELS.WARNING)
                 loop = asyncio.get_event_loop()
                 # Run in executor to prevent blocking
-                if not await loop.run_in_executor(None, self._handle_error, code, message, asyncio.get_event_loop()):
+                if not await loop.run_in_executor(None, self._handle_error, code, message, loop):
                     raise DAFSQLError("Unable to handle SQL error", DAF_SQL_SAVE_LOG_ERROR) from ex
 
     @misc._async_safe("safe_sem", 1)

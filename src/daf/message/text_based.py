@@ -10,7 +10,6 @@ from typeguard import typechecked
 from .base import *
 from ..dtypes import *
 from ..logging.tracing import *
-from ..common import *
 from ..exceptions import *
 
 from .. import client
@@ -25,6 +24,10 @@ __all__ = (
     "TextMESSAGE",
     "DirectMESSAGE"
 )
+
+# Configuration
+# ---------------------------
+RLIM_USER_WAIT_TIME = 20
 
 @misc.doc_category("Messages")
 @sql._register_type("MessageTYPE")
@@ -633,7 +636,7 @@ class DirectMESSAGE(BaseMESSAGE):
                         self.parent.remove_message(m)
 
             if ex.status in {400, 403}: # Bad Request
-                await asyncio.sleep(RLIM_USER_WAIT_TIME * 5) # To avoid triggering self-bot detection
+                await asyncio.sleep(RLIM_USER_WAIT_TIME) # To avoid triggering self-bot detection
 
         return handled
 

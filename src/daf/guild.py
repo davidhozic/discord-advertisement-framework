@@ -8,10 +8,10 @@ import asyncio
 from typing import Any, Coroutine, Union, List, Optional, Dict, Callable
 from typeguard import typechecked
 from datetime import timedelta, datetime
+from enum import Enum
 
 from .exceptions import *
 from .logging.tracing import *
-from .common import *
 from .message import *
 
 from . import client
@@ -28,6 +28,13 @@ __all__ = (
     "GUILD",
     "USER"
 )
+
+class AdvertiseTaskType(Enum):
+    """
+    Used for identifying advertiser tasks
+    """
+    TEXT_ISH = 0
+    VOICE = 1
 
 
 class _BaseGUILD:

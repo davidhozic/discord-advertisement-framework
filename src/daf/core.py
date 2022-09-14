@@ -6,7 +6,6 @@
 from typing import Callable, List, Optional, Union, overload
 from typeguard import typechecked
 
-from .common import *
 from .exceptions import *
 from .logging.tracing import *
 from .logging import sql, logging, tracing
@@ -18,6 +17,12 @@ from . import message
 
 import asyncio
 import _discord as dc
+
+#######################################################################
+# Configuration
+#######################################################################
+C_TASK_SLEEP_DELAY = 0.010 # Advertiser task sleep
+
 
 #######################################################################
 # Exports
@@ -44,7 +49,7 @@ class GLOBALS:
 #######################################################################
 # Coroutines
 #######################################################################
-async def _advertiser(message_type: AdvertiseTaskType) -> None:
+async def _advertiser(message_type: guild.AdvertiseTaskType) -> None:
     """
     The task that is responsible for shilling to channels.
     This is the most top level task.
@@ -126,8 +131,8 @@ async def initialize(token : str,
     
     # Create advertiser tasks
     trace("[CORE]: Creating advertiser tasks", TraceLEVELS.NORMAL)
-    loop.create_task(_advertiser(AdvertiseTaskType.TEXT_ISH))
-    loop.create_task(_advertiser(AdvertiseTaskType.VOICE))
+    loop.create_task(_advertiser(guild.AdvertiseTaskType.TEXT_ISH))
+    loop.create_task(_advertiser(guild.AdvertiseTaskType.VOICE))
 
     # Create the user callback task
     if user_callback is not None:

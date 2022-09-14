@@ -5,7 +5,6 @@ from typing import Any, Iterable, Union, TypeVar, Optional
 from datetime import timedelta, datetime
 from typeguard import check_type, typechecked
 
-from ..common import *
 from ..dtypes import *
 from ..logging.tracing import *
 from ..timing import *
@@ -21,6 +20,10 @@ __all__ = (
 )
 
 T = TypeVar("T")
+
+# Configuration
+# ----------------------
+C_PERIOD_MINIMUM_SEC = 1 # Minimal seconds the period can be
 
 
 @typechecked
@@ -102,7 +105,7 @@ class BaseMESSAGE:
             end_period = timedelta(seconds=end_period)
                 
         # Clamp periods to minimum level (prevent infinite loops)
-        self.start_period = start_period if start_period is None else max(start_period, timedelta(seconds=C_PERIOD_MINIMUM_SEC))
+        self.start_period = None if start_period is None else max(start_period, timedelta(seconds=C_PERIOD_MINIMUM_SEC))
         self.end_period = max(end_period, timedelta(seconds=C_PERIOD_MINIMUM_SEC))
         self.period = self.end_period # This can randomize in _reset_timer
 
