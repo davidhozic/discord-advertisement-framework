@@ -1,5 +1,6 @@
 from __future__ import annotations
 from contextlib import suppress
+from enum import EnumMeta
 import inspect
 import os
 import sys
@@ -29,7 +30,6 @@ AUTO_FUNCTION_TEMPLATE =\
 
 AUTO_CLASS_TEMPLATE =\
 """
-
 {class_name}
 ========================
 .. autoclass:: {class_path}
@@ -38,13 +38,21 @@ AUTO_CLASS_TEMPLATE =\
     {properties}
 """
 
+AUTO_ENUM_TEMPLATE =\
+"""
+{class_name}
+========================
+.. autoenum:: {class_path}
+    :members:
+"""
+
 MANUAL_FUNCTION_TEMPLATE = \
 """
 {function_name}
 ========================
 .. function:: {module}.{function_name}({annotations})
+    
     {docstring}
-
 """
 
 
@@ -57,19 +65,27 @@ for category, items in titles.items():
     for item, manual in items:
         if inspect.isfunction(item):
             if manual:
-                export_f_items += MANUAL_FUNCTION_TEMPLATE.format(module=item.__module__, function_name=item.__name__, annotations=",".join(f"{k}: {v}" for k, v in item.__annotations__.items()), docstring=item.__doc__) + "\n"
+                annotations = item.__annotations__
+                del annotations["return"]
+                export_f_items += MANUAL_FUNCTION_TEMPLATE.format(module=item.__module__,
+                                                                  function_name=item.__name__, annotations=",".join(f"{k}: {v}" for k, v in annotations.items()),
+                                                                  docstring="\n\t".join(inspect.cleandoc(item.__doc__).splitlines())) + "\n"
             else:
                 export_f_items += AUTO_FUNCTION_TEMPLATE.format(module=item.__module__, function_name=item.__name__) + "\n"
         elif inspect.isclass(item):
             # Fill properties 
-            properties = []
             cls_path = f"{item.__module__}.{item.__name__}"
-            for name in dir(item):
-                attr = getattr(item, name)
-                if isinstance(attr, property):
-                    properties.append(f".. autoproperty:: {cls_path}.{name}")
+            if isinstance(item, EnumMeta):
+                export_c_items += AUTO_ENUM_TEMPLATE.format(class_name=item.__name__, class_path=cls_path) + "\n"
+            else:
+                properties = []
+                for name in dir(item):
+                    attr = getattr(item, name)
+                    if isinstance(attr, property):
+                        properties.append(f".. autoproperty:: {cls_path}.{name}")
 
-            export_c_items += AUTO_CLASS_TEMPLATE.format(class_name=item.__name__, class_path=cls_path, properties="\n\n    ".join(properties)) + "\n"
+                export_c_items += AUTO_CLASS_TEMPLATE.format(class_name=item.__name__, class_path=cls_path, properties="\n\n    ".join(properties)) + "\n"
+
 
     if export_f_items:
         export_f += CATEGORY_TEMPLATE.format(category_name=category)

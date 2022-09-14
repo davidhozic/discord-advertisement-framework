@@ -67,8 +67,8 @@ DAFSQLError
 .. autoclass:: daf.exceptions.DAFSQLError
     :members:
 
-    
-Error codes
+
+Codes    
 ========================
 .. glossary::
 
@@ -110,7 +110,7 @@ Error codes
     DAF_SQL_CR_LT_VALUES_ERROR:
         Value: 8
 
-        Info: Unable to create lookuptables' rows.
+        Info: Unable to create lookup tables' rows.
 
     DAF_SQL_CREATE_DT_ERROR:
         Value: 9
