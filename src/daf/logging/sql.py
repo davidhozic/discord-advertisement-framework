@@ -680,7 +680,7 @@ class LoggerSQL(logging.LoggerBASE):
             # The SQL logger is in the middle of reconnection process
             # This means the logging is switched to something else but we still got here
             # since we entered before that happened and landed on a semaphore.
-            logging.save_log(guild_context, message_context)
+            await logging.save_log(guild_context, message_context)
             return
 
         # Parse the data

@@ -53,8 +53,12 @@ class LoggerBASE:
     async def initialize(self) -> None:
         "Initializes self and the fallback"
         if self.fallback is not None:
-            with suppress(Exception): # Suppress anything
+            try:
                 await self.fallback.initialize()
+            except Exception as exc:
+                trace(f"[Logging:] Could not initialize {type(self).__name__}'s fallback: {type(self.fallback).__name__}", TraceLEVELS.WARNING)
+                self.fallback = None
+
 
     async def _save_log(self, guild_context: dict, message_context: dict):
         """
