@@ -8,18 +8,21 @@ This page contains information about any classes that can be used in the daf.
 Tracing
 ------------------------
 
-
 TraceLEVELS
 ========================
 .. autoenum:: daf.logging.tracing.TraceLEVELS
     :members:
 
-    
-
-
 ------------------------
 Logging
 ------------------------
+
+LoggerCSV
+========================
+.. autoclass:: daf.logging.logging.LoggerCSV
+    :members:
+
+
 
 
 LoggerJSON
@@ -28,7 +31,6 @@ LoggerJSON
     :members:
 
     
-
 
 
 LoggerSQL
@@ -43,14 +45,12 @@ LoggerSQL
 Exceptions
 ------------------------
 
-
 DAFError
 ========================
 .. autoclass:: daf.exceptions.DAFError
     :members:
 
     
-
 
 
 DAFNotFoundError
@@ -61,14 +61,13 @@ DAFNotFoundError
     
 
 
-
 DAFSQLError
 ========================
 .. autoclass:: daf.exceptions.DAFSQLError
     :members:
 
 
-Codes    
+Error codes
 ========================
 .. glossary::
 
@@ -110,7 +109,7 @@ Codes
     DAF_SQL_CR_LT_VALUES_ERROR:
         Value: 8
 
-        Info: Unable to create lookup tables' rows.
+        Info: Unable to create lookuptables' rows.
 
     DAF_SQL_CREATE_DT_ERROR:
         Value: 9
@@ -136,7 +135,6 @@ Codes
 ------------------------
 Message data types
 ------------------------
-
 
 EMBED
 ========================
@@ -164,14 +162,12 @@ EMBED
     .. autoproperty:: daf.dtypes.EMBED.video
 
 
-
 FILE
 ========================
 .. autoclass:: daf.dtypes.FILE
     :members:
 
     
-
 
 
 AUDIO
@@ -186,7 +182,6 @@ AUDIO
 Messages
 ------------------------
 
-
 TextMESSAGE
 ========================
 .. autoclass:: daf.message.text_based.TextMESSAGE
@@ -195,14 +190,12 @@ TextMESSAGE
     .. autoproperty:: daf.message.text_based.TextMESSAGE.created_at
 
 
-
 DirectMESSAGE
 ========================
 .. autoclass:: daf.message.text_based.DirectMESSAGE
     :members:
 
     .. autoproperty:: daf.message.text_based.DirectMESSAGE.created_at
-
 
 
 VoiceMESSAGE
@@ -217,7 +210,6 @@ VoiceMESSAGE
 Guilds
 ------------------------
 
-
 GUILD
 ========================
 .. autoclass:: daf.guild.GUILD
@@ -228,7 +220,6 @@ GUILD
     .. autoproperty:: daf.guild.GUILD.messages
 
     .. autoproperty:: daf.guild.GUILD.snowflake
-
 
 
 USER
