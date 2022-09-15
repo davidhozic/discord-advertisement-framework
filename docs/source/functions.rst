@@ -66,9 +66,9 @@ run
 .. autofunction:: daf.core.run
 
 
-------------------------
+----------------------------
 Shilling list modification
-------------------------
+----------------------------
 
 add_object
 ========================
@@ -90,9 +90,6 @@ add_object
 	    Other
 	        Raised in the obj.initialize() method
 
-
-add_object
-========================
 .. function:: daf.core.add_object(obj: typing.Union[daf.message.text_based.DirectMESSAGE, daf.message.text_based.TextMESSAGE, daf.message.voice_based.VoiceMESSAGE],snowflake: typing.Union[int, daf.guild.GUILD, daf.guild.USER, _discord.guild.Guild, _discord.user.User, _discord.object.Object])
     
     Adds a message to the daf.
