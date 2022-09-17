@@ -92,7 +92,7 @@ class LoggerBASE:
         await misc._update(self, **kwargs)
 
 
-@misc.doc_category("Logging")
+@misc.doc_category("Logging", path="logging")
 class LoggerCSV(LoggerBASE):
     """
     .. versionadded:: v2.2
@@ -102,8 +102,9 @@ class LoggerCSV(LoggerBASE):
     by guild/user and day (each day, new file for each guild).
 
     Each entry is in the following format:
-        <Guild Type, Guild Name, Guild Snowflake, Message Type, Sent Data, Message Mode (Optional),
-        Channels (Optional), Success Info (Optional), Timestamp>
+    
+    ``<Guild Type, Guild Name, Guild Snowflake, Message Type, Sent Data, Message Mode (Optional),
+    Channels (Optional), Success Info (Optional), Timestamp>``
 
     Parameters
     ----------------
@@ -157,7 +158,7 @@ class LoggerCSV(LoggerBASE):
                 raise OSError(*exc.args) from exc # Raise OSError for any type of exceptions
 
 
-@misc.doc_category("Logging")
+@misc.doc_category("Logging", path="logging")
 class LoggerJSON(LoggerBASE):
     """
     .. versionadded:: v2.2

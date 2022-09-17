@@ -4,6 +4,7 @@ from enum import EnumMeta
 import inspect
 import os
 import sys
+import re
 
 # Set current working directory to scripts folder
 os.chdir(os.path.dirname(__file__))
@@ -23,16 +24,16 @@ CATEGORY_TEMPLATE = \
 
 AUTO_FUNCTION_TEMPLATE =\
 """
-{function_name}
+{object_name}
 ========================
-.. autofunction:: {module}.{function_name}
+.. autofunction:: {object_path}
 """
 
 AUTO_CLASS_TEMPLATE =\
 """
-{class_name}
+{object_name}
 ========================
-.. autoclass:: {class_path}
+.. autoclass:: {object_path}
     :members:
 
     {properties}
@@ -40,20 +41,21 @@ AUTO_CLASS_TEMPLATE =\
 
 AUTO_ENUM_TEMPLATE =\
 """
-{class_name}
+{object_name}
 ========================
-.. autoenum:: {class_path}
+.. autoenum:: {object_path}
     :members:
 """
 
 MANUAL_FUNCTION_TEMPLATE = \
 """
-{function_name}
+{object_name}
 ========================
-.. function:: {module}.{function_name}({annotations})
+.. function:: {object_path}({annotations}) -> {return_}
     
     {docstring}
 """
+
 
 
 titles = daf.misc.doc_titles
@@ -62,29 +64,38 @@ export_f = ""
 for category, items in titles.items():
     export_c_items = ""
     export_f_items = ""
-    for item, manual in items:
+    for item, manual, path in items:
+        object_name = item.__name__
+        object_path = f"{item.__module__}.{object_name}" if path is None else f"daf.{path}.{object_name}"
         if inspect.isfunction(item):
             if manual:
                 annotations = item.__annotations__
-                del annotations["return"]
-                export_f_items += MANUAL_FUNCTION_TEMPLATE.format(module=item.__module__,
-                                                                  function_name=item.__name__, annotations=",".join(f"{k}: {v}" for k, v in annotations.items()),
-                                                                  docstring="\n\t".join(inspect.cleandoc(item.__doc__).splitlines())) + "\n"
+                return_ano = annotations.pop("return")
+                doc_str = inspect.cleandoc(item.__doc__)
+                doc_str_titles = re.findall(r"[A-z]+\n-+", doc_str)
+                for title in doc_str_titles:
+                    new_title = f':{re.sub(r"-{2,}", "", title).strip()}:'
+                    doc_str = doc_str.replace(title, new_title)
+
+                export_f_items += MANUAL_FUNCTION_TEMPLATE.format(object_name=object_name,
+                                                                  annotations=",".join(f"{k}: {v}" for k, v in annotations.items()),
+                                                                  object_path=object_path,
+                                                                  docstring="\n    ".join(doc_str.splitlines()),
+                                                                  return_=return_ano) + "\n"
             else:
-                export_f_items += AUTO_FUNCTION_TEMPLATE.format(module=item.__module__, function_name=item.__name__) + "\n"
+                export_f_items += AUTO_FUNCTION_TEMPLATE.format(object_name=object_name, object_path=object_path,) + "\n"
         elif inspect.isclass(item):
             # Fill properties 
-            cls_path = f"{item.__module__}.{item.__name__}"
             if isinstance(item, EnumMeta):
-                export_c_items += AUTO_ENUM_TEMPLATE.format(class_name=item.__name__, class_path=cls_path) + "\n"
+                export_c_items += AUTO_ENUM_TEMPLATE.format(object_name=object_name, object_path=object_path) + "\n"
             else:
                 properties = []
                 for name in dir(item):
                     attr = getattr(item, name)
                     if isinstance(attr, property):
-                        properties.append(f".. autoproperty:: {cls_path}.{name}")
+                        properties.append(f".. autoproperty:: {object_path}")
 
-                export_c_items += AUTO_CLASS_TEMPLATE.format(class_name=item.__name__, class_path=cls_path, properties="\n\n    ".join(properties)) + "\n"
+                export_c_items += AUTO_CLASS_TEMPLATE.format(object_name=object_name, object_path=object_path, properties="\n\n    ".join(properties)) + "\n"
 
 
     if export_f_items:

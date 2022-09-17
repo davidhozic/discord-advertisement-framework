@@ -150,7 +150,7 @@ DOCUMENTATION_MODE = "DOCUMENTATION" in sys.argv
 if DOCUMENTATION_MODE:
     doc_titles: Dict[str, list] = {}
 
-def doc_category(cat: str, manual=False):
+def doc_category(cat: str, manual: Optional[bool] = False, path: Optional[str]=None):
     """
     Used for marking under which category this should
     be put when auto generating documentation.
@@ -159,9 +159,10 @@ def doc_category(cat: str, manual=False):
     ------------
     cat: str
         The name of the category to put this in.
-
     manual: Optional[bool]
         Should documentation be manually generated
+    path: Optional[str]
+        Custom path to the object.
 
     Returns
     ----------
@@ -171,7 +172,7 @@ def doc_category(cat: str, manual=False):
     """
     def _category(item):
         if DOCUMENTATION_MODE:
-            doc_titles[cat].append((item, manual))
+            doc_titles[cat].append((item, manual, path))
         return item
 
     if DOCUMENTATION_MODE:

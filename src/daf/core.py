@@ -153,19 +153,21 @@ async def add_object(obj: Union[guild.USER, guild.GUILD]) -> None:
 
     Adds a guild or an user to the daf.
 
-    :Parameters:
-        obj: Union[guild.USER, guild.GUILD]
-            The guild object to add into the daf.
+    Parameters
+    -----------
+    - obj: Union[guild.USER, guild.GUILD]
+        The guild object to add into the daf.
 
-    :Raises:
-        ValueError
-            The guild/user is already added to the daf.
-        TypeError
-            The object provided is not supported for addition.
-        TypeError
-            Invalid parameter type.
-        Other
-            Raised in the obj.initialize() method
+    Raises
+    ----------
+    - ValueError
+        The guild/user is already added to the daf.
+    - TypeError
+        The object provided is not supported for addition.
+    - TypeError
+        Invalid parameter type.
+    - Other
+        Raised in the obj.initialize() method
     """
     ...
 @overload
