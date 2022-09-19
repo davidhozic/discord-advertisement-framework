@@ -99,7 +99,7 @@ async def _initialize(token : str,
     for server in server_list:
         try:
             await add_object(server) # Add each guild to the shilling list
-        except DAFError as ex:
+        except (DAFError, ValueError, TypeError) as ex:
             trace(ex)
     
     # Initialize SQL module
