@@ -1,3 +1,4 @@
+import os
 import setuptools
 import json
 
@@ -12,11 +13,6 @@ with open("./requirements.txt" , 'r', encoding="utf-8") as rf:
     req = rf.readlines()
 
 
-version = ""
-with open("./version.txt", "r", encoding="utf-8") as rf:
-    version = rf.read().strip()
-
-
 optional_install = None
 with open("./optional.json", "r", encoding="utf-8") as rf:
     optional_install = json.load(rf)
@@ -25,7 +21,7 @@ with open("./optional.json", "r", encoding="utf-8") as rf:
 
 __metadata__ = \
 {
-    "version" : version,
+    "version" : os.environ["GITHUB_REF_NAME"],
     "requirements" : req,
     "minimum_py_version" : "3.8",
 }
