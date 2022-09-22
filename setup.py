@@ -12,6 +12,9 @@ req = None
 with open("./requirements.txt" , 'r', encoding="utf-8") as rf:
     req = rf.readlines()
 
+version = ""
+with open("./version.txt", "r", encoding="utf-8") as rf:
+    version = rf.read().strip()
 
 optional_install = None
 with open("./optional.json", "r", encoding="utf-8") as rf:
@@ -21,7 +24,7 @@ with open("./optional.json", "r", encoding="utf-8") as rf:
 
 __metadata__ = \
 {
-    "version" : os.environ["GITHUB_REF_NAME"],
+    "version" : version,
     "requirements" : req,
     "minimum_py_version" : "3.8",
 }
