@@ -70,7 +70,7 @@ class _BaseGUILD:
         "remove_after",
         "_created_at"
     )
-    __logname__ = "_BaseGUILD" # Dummy to demonstrate correct definition for @sql._register_type decorator
+    __logname__ = "_BaseGUILD" # Dummy to demonstrate correct definition for @sql.register_type decorator
     
     def __init__(self,
                  snowflake: Any,
@@ -245,9 +245,9 @@ class _BaseGUILD:
 
                 # Generate log (JSON or SQL)
                 if self.logging and message_ret is not None:
-                    await logging.save_log(self._generate_log_context(), message_ret)
+                    await logging.save_log(self.generate_log_context(), message_ret)
 
-    def _generate_log_context(self) -> Dict[str, Union[str, int]]:
+    def generate_log_context(self) -> Dict[str, Union[str, int]]:
         """
         Generates a dictionary of the guild's context,
         which is then used for logging.
@@ -263,7 +263,7 @@ class _BaseGUILD:
         }
 
 @misc.doc_category("Guilds")
-@sql._register_type("GuildTYPE")
+@sql.register_type("GuildTYPE")
 class GUILD(_BaseGUILD):
     """
     The GUILD object represents a server to which messages will be sent.
@@ -288,7 +288,7 @@ class GUILD(_BaseGUILD):
         * datetime - specific date & time
     """
 
-    __logname__ = "GUILD" # For sql._register_type
+    __logname__ = "GUILD" # For sql.register_type
     __slots__ = (
         "update_semaphore",
     )
@@ -360,7 +360,7 @@ class GUILD(_BaseGUILD):
             Raised from .add_message(message_object) method.
         """
         return await super().initialize(client.get_client().get_guild)
-
+    
     @misc._async_safe("update_semaphore", 2) # Take 2 since 2 tasks share access
     async def update(self, **kwargs):
         """
@@ -395,7 +395,7 @@ class GUILD(_BaseGUILD):
 
 
 @misc.doc_category("Guilds")
-@sql._register_type("GuildTYPE")
+@sql.register_type("GuildTYPE")
 class USER(_BaseGUILD):
     """
     The USER object represents a user to whom messages will be sent.
@@ -420,7 +420,7 @@ class USER(_BaseGUILD):
         * datetime - specific date & time
     """
 
-    __logname__ = "USER" # For sql._register_type
+    __logname__ = "USER" # For sql.register_type
     __slots__ = (
         "update_semaphore",
     )

@@ -10,7 +10,7 @@ Tracing
 
 TraceLEVELS
 ========================
-.. autoenum:: daf.logging.tracing.TraceLEVELS
+.. autoenum:: daf.logging.TraceLEVELS
     :members:
 
 ------------------------
@@ -19,7 +19,7 @@ Logging
 
 LoggerCSV
 ========================
-.. autoclass:: daf.logging.logging.LoggerCSV
+.. autoclass:: daf.logging.LoggerCSV
     :members:
 
 
@@ -27,7 +27,7 @@ LoggerCSV
 
 LoggerJSON
 ========================
-.. autoclass:: daf.logging.logging.LoggerJSON
+.. autoclass:: daf.logging.LoggerJSON
     :members:
 
     
@@ -184,7 +184,7 @@ Messages
 
 TextMESSAGE
 ========================
-.. autoclass:: daf.message.text_based.TextMESSAGE
+.. autoclass:: daf.message.TextMESSAGE
     :members:
 
     .. autoproperty:: daf.message.text_based.TextMESSAGE.created_at
@@ -192,7 +192,7 @@ TextMESSAGE
 
 DirectMESSAGE
 ========================
-.. autoclass:: daf.message.text_based.DirectMESSAGE
+.. autoclass:: daf.message.DirectMESSAGE
     :members:
 
     .. autoproperty:: daf.message.text_based.DirectMESSAGE.created_at
@@ -200,7 +200,7 @@ DirectMESSAGE
 
 VoiceMESSAGE
 ========================
-.. autoclass:: daf.message.voice_based.VoiceMESSAGE
+.. autoclass:: daf.message.VoiceMESSAGE
     :members:
 
     .. autoproperty:: daf.message.voice_based.VoiceMESSAGE.created_at

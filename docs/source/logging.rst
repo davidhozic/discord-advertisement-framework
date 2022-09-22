@@ -7,11 +7,114 @@ Logging
 
 
 The framework allows to log sent messages for each :ref:`GUILD`/:ref:`USER` (if you set the "logging" to True inside the :ref:`GUILD` or :ref:`USER` object).
-There are 2 different types of logs:
 
-- :ref:`Relational Database Log (SQL)` 
-- :ref:`JSON Logging (file)`
+Logging is handled thru so called **logging managers**. Currently, 3 different managers exists:
+
+- LoggerJSON: Used for saving file logs in the JSON format. (:ref:`JSON Logging (file)`)
+- LoggerCSV:  Used for saving file logs in the CSV format, where certain fields are still JSON. (:ref:`CSV Logging (file)`)
+- LoggerSQL:  Used for saving relational database logs into a remote database. (:ref:`Relational Database Log (SQL)`)
+
+
+
+If a logging managers fails saving a log, then it's fallback manager will be used temporarily to store the log.
+It will only use the fallback once and then, at the next message, the original manager will be used unless :func:`_set_logger` was used
+to manually set the manager to something permanently.
+
+.. figure:: images/logging_process.png
     
+    Logging process with fallback
+
+
+
+JSON Logging (file)
+=========================
+The logs are written in the JSON format and saved into a JSON file, that has the name of the guild or an user you were sending messages into.
+The JSON files are fragmented by day and stored into folder ``Year/Month/Day``, this means that each day a new JSON file will be generated for that specific day for easier managing,
+for example, if today is ``13.07.2022``, the log will be saved into the file that is located in 
+
+.. code-block::
+
+    History
+    └───2022
+    │   └───07
+    │       └───13
+    |           └─── #David's dungeon.json
+
+
+Structure
+------------------
+The log structure is the same for both :class:`~daf.guild.USER` and :class:`~daf.guild.GUILD`.
+All logs will contain keys:
+
+- "name": The name of the guild/user
+- "id": Snowflake ID of the guild/user
+- "type": object type (GUILD/USER) that generated the log.
+- "message_history": Array of logs for each sent message to the guild/user, the structure is message type dependant and is generated inside  methods:
+
+  + :py:meth:`daf.message.TextMESSAGE.generate_log_context`
+  + :py:meth:`daf.message.VoiceMESSAGE.generate_log_context`
+  + :py:meth:`daf.message.DirectMESSAGE.generate_log_context`
+
+.. seealso:: 
+    :download:`Example structure <../../Examples/Logging/JSON files/History/2022/05/23/#David's dungeon.json>`
+
+
+Code Example
+-----------------
+.. literalinclude:: ../../Examples/Logging/JSON files/main_rickroll.py
+    :language: python
+    :caption: Code to produce JSON logs
+    :emphasize-lines: 27, 36
+
+
+
+CSV Logging (file)
+=========================
+The logs are written in the CSV format and saved into a CSV file, that has the name of the guild or an user you were sending messages into.
+The CSV files are fragmented by day and stored into folder ``Year/Month/Day``, this means that each day a new CSV file will be generated for that specific day for easier managing,
+for example, if today is ``13.07.2023``, the log will be saved into the file that is located in 
+
+.. code-block::
+
+    History
+    └───2023
+    │   └───07
+    │       └───13
+    |           └─── #David's dungeon.csv
+
+
+Structure
+------------------
+The structure contains the following attributes:
+
+- Timestamp (string)
+- Guild Type (string),
+- Guild Name (string),
+- Guild Snowflake (integer),
+- Message Type (string),
+- Sent Data (json),
+- Message Mode (non-empty for :class:`~daf.message.TextMESSAGE` and :class:`~daf.message.DirectMESSAGE`) (string),
+- Message Channels (non-empty for :class:`~daf.message.TextMESSAGE` and :class:`~daf.message.VoiceMESSAGE`) (json),
+- Success Info (non-empty for :class:`~daf.message.DirectMESSAGE`) (json),
+
+.. note::
+    Attributes marked with ``(json)`` are the same as in :ref:`JSON Logging (file)`
+
+.. seealso::
+    :download:`Structure example <../../Examples/Logging/CSV files/History/2022/09/22/David's py dungeon.csv>`
+
+
+Code Example
+-----------------
+.. literalinclude:: ../../Examples/Logging/CSV files/main_rickroll.py
+    :language: python
+    :caption: Code to produce JSON logs
+    :emphasize-lines: 27, 36
+
+
+
+
+
 Relational Database Log (SQL)
 ================================
 .. versionadded:: v1.9
@@ -32,6 +135,7 @@ To use a SQL base for logging, you need to pass the :ref:`run` function with the
 
 .. literalinclude:: ../../Examples/Logging/SQL Logging/main_rickroll.py
     :language: python
+    :emphasize-lines: 27, 36, 37
 
 Features
 --------------------------------
@@ -284,31 +388,3 @@ tr_delete_msg_log
     Entries in :ref:`MessageChannelLOG` get deleted if an entry inside :ref:`MessageLOG` gets deleted due to the :ref:`MessageChannelLOG` table having a cascading foreign key pointing to the :ref:`MessageLOG` table. However reverse is not the same, the :ref:`MessageLOG` table does not have anything pointing to the :ref:`MessageChannelLOG` table meaning that cascading based on foreign keys is not possible. 
     This trigger's job is to delete an entry inside the MessageLOG when all the entries in :ref:`MessageChannelLOG` referencing it get deleted. 
 
-
-JSON Logging (file)
-=============================================================
-The logs are written in the JSON format and saved into a JSON file, that has the name of the guild or an user you were sending messages into.
-The JSON files are fragmented by day and stored into folder ``Year/Month/Day``, this means that each day a new JSON file will be generated for that specific day for easier managing,
-for example, if today is ``13.07.2022``, the log will be saved into the file that is located in 
-
-.. code-block::
-
-    History
-    └───2022
-    │   └───07
-    │       └───13
-    |           └─── #David's dungeon.json
-
-
-Code Example
------------------
-.. literalinclude:: ../../Examples/Logging/JSON files/main_rickroll.py
-    :language: python
-    :caption: Code to produce JSON logs
-
-
-Example of a log
-------------------
-.. literalinclude:: ../../Examples/Logging/JSON files/History/2022/05/23/#David's dungeon.json
-    :language: python
-    :caption: JSON file log

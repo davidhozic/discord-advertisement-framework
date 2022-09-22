@@ -20,7 +20,7 @@ Getters
 
 get_logger
 ========================
-.. autofunction:: daf.logging.logging.get_logger
+.. autofunction:: daf.logging.get_logger
 
 
 get_client
