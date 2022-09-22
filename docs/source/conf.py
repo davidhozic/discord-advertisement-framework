@@ -18,7 +18,6 @@ sys.path.insert(0, os.path.abspath('../../src/'))
 sys.path.insert(0, os.path.abspath('.'))
 
 # -- Project information -----------------------------------------------------
-
 project = 'Discord Advertisement Framework'
 copyright = '2022, David Hozic'
 author = 'David Hozic'
@@ -42,6 +41,8 @@ extensions = [
     "sphinx_copybutton",
     "enum_tools.autoenum",
 ]
+
+master_doc = 'index'
 
 
 source_suffix = {
