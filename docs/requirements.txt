@@ -1,7 +1,0 @@
-sphinx
-jinja2
-sphinx-design
-sphinx-autobuild
-sphinx-copybutton
-furo
-enum-tools[sphinx]
