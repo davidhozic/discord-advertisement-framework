@@ -5,6 +5,7 @@
 from typing import Any, Callable, List, Union, TypeVar
 from contextlib import suppress
 from typeguard import typechecked
+from urllib.parse import urlparse
 from .exceptions import *
 
 from . import misc
@@ -252,7 +253,8 @@ class AUDIO:
         if not GLOBALS.voice_installed:
             raise ModuleNotFoundError("You need to install extra requirements: pip install discord-advert-framework[voice]")
 
-        if "youtube.com" in self.orig.lower(): # If the url contains http, assume it's a youtube link
+        url_info = urlparse(filename) # Check if it's youtube
+        if "www.youtube.com" == url_info.hostname:
             try:
                 self.is_stream = True
                 youtube_dl = yt_dlp.YoutubeDL(params=self.ytdl_options)
