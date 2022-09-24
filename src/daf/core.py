@@ -155,18 +155,18 @@ async def add_object(obj: Union[guild.USER, guild.GUILD]) -> None:
 
     Parameters
     -----------
-    - obj: Union[guild.USER, guild.GUILD]
+    obj: Union[guild.USER, guild.GUILD]
         The guild object to add into the daf.
 
     Raises
     ----------
-    - ValueError
+    ValueError
         The guild/user is already added to the daf.
-    - TypeError
+    TypeError
         The object provided is not supported for addition.
-    - TypeError
+    TypeError
         Invalid parameter type.
-    - Other
+    Other
         Raised in the obj.initialize() method
     """
     ...
@@ -177,23 +177,25 @@ async def add_object(obj: Union[message.DirectMESSAGE, message.TextMESSAGE, mess
     """
     Adds a message to the daf.
 
-    :Parameters:
-        obj: Union[message.DirectMESSAGE, message.TextMESSAGE, message.VoiceMESSAGE]
-            The message object to add into the daf.
-        snowflake: Union[int, guild.GUILD, guild.USER, dc.Guild, dc.User]
-            Which guild/user to add it to (can be snowflake id or a framework _BaseGUILD object or a discord API wrapper object).
+    Parameters
+    -----------
+    obj: Union[message.DirectMESSAGE, message.TextMESSAGE, message.VoiceMESSAGE]
+        The message object to add into the daf.
+    snowflake: Union[int, guild.GUILD, guild.USER, dc.Guild, dc.User]
+        Which guild/user to add it to (can be snowflake id or a framework _BaseGUILD object or a discord API wrapper object).
 
-    :Raises:
-        ValueError
-            guild_id wasn't provided when adding a message object (to which guild should it add)
-        TypeError
-            The object provided is not supported for addition.
-        TypeError
-            Missing snowflake parameter.
-        DAFNotFoundError(code=DAF_SNOWFLAKE_NOT_FOUND)
-            Could not find guild with that id.
-        Other
-            Raised in the obj.add_message() method
+    Raises
+    ----------
+    ValueError
+        guild_id wasn't provided when adding a message object (to which guild should it add)
+    TypeError
+        The object provided is not supported for addition.
+    TypeError
+        Missing snowflake parameter.
+    DAFNotFoundError(code=DAF_SNOWFLAKE_NOT_FOUND)
+        Could not find guild with that id.
+    Other
+        Raised in the obj.add_message() method
     """
     ...
 

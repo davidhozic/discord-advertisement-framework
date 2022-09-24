@@ -210,14 +210,14 @@ class LoggerSQL(logging.LoggerBASE):
                     self._connect_cursor()
                     trace(f"[SQL]: Reconnected to the database {self.database}.")
                     self.reconnecting = False
-                    logging._set_logger(self)
+                    logging.set_logger(self)
                     return
 
             trace(f"[SQL]: Failed to reconnect in {SQL_RECONNECT_ATTEMPTS} attempts, SQL logging is now disabled.")
            
         self.reconnecting = True
         self._stop_engine()
-        logging._set_logger(self.fallback)
+        logging.set_logger(self.fallback)
         loop.create_task(_reconnector())
 
     def _create_data_types(self) -> None:

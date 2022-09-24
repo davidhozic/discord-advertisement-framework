@@ -5,6 +5,7 @@ import inspect
 import os
 import sys
 import re
+from typing import List
 
 # Set current working directory to scripts folder
 os.chdir(os.path.dirname(__file__))
@@ -17,9 +18,9 @@ import daf
 
 CATEGORY_TEMPLATE = \
 """
-------------------------
+----------------------------
 {category_name}
-------------------------
+----------------------------
 """
 
 AUTO_FUNCTION_TEMPLATE =\
@@ -72,10 +73,20 @@ for category, items in titles.items():
                 annotations = item.__annotations__
                 return_ano = annotations.pop("return")
                 doc_str = inspect.cleandoc(item.__doc__)
+                # Replace titles with list titles
                 doc_str_titles = re.findall(r"[A-z]+\n-+", doc_str)
+                # Replace numpy style lists
+                numpy_list: List[str] = re.findall(r".+\n {2,}.+", doc_str)
+
                 for title in doc_str_titles:
                     new_title = f':{re.sub(r"-{2,}", "", title).strip()}:'
                     doc_str = doc_str.replace(title, new_title)
+
+                for numpy in numpy_list:
+                    title, desc = numpy.split("\n")
+                    title = f"    - {title}"
+                    desc = f"      {desc}"
+                    doc_str = doc_str.replace(numpy, f"{title}\n{desc}")
 
                 export_f_items += MANUAL_FUNCTION_TEMPLATE.format(object_name=object_name,
                                                                   annotations=",".join(f"{k}: {v}" for k, v in annotations.items()),

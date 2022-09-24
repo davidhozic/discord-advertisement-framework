@@ -17,6 +17,14 @@ TraceLEVELS
 Logging
 ------------------------
 
+LoggerBASE
+========================
+.. autoclass:: daf.logging.LoggerBASE
+    :members:
+
+
+
+
 LoggerCSV
 ========================
 .. autoclass:: daf.logging.LoggerCSV

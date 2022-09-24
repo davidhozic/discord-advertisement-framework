@@ -20,7 +20,8 @@ __all__ = (
     "LoggerBASE",
     "LoggerJSON",
     "LoggerCSV",
-    "get_logger"
+    "get_logger",
+    "set_logger"
 )
 
 # Constants
@@ -33,6 +34,7 @@ class GLOBAL:
     logger: LoggerBASE = None  
 
 
+@misc.doc_category("Logging", path="logging")
 class LoggerBASE:
     """
     .. versionadded:: v2.2
@@ -265,16 +267,23 @@ def get_logger() -> LoggerBASE:
     """
     return GLOBAL.logger
 
-def _set_logger(logger: LoggerBASE):
+
+@misc.doc_category("Setters", path="logging")
+async def set_logger(logger: LoggerBASE):
     """
-    Helper function that sets the logger to the specified logger.
-    Must already be initialized
+    Coroutine changes the used logger.
 
     Parameters
     -------------
     logger: LoggerBASE
-        The logger to set.
+        The logger to use.
+
+    Raises
+    -------------
+    Any
+        Exceptions raised in logger.initialize()
     """
+    await logger.initialize()
     GLOBAL.logger = logger
 
 
@@ -300,6 +309,3 @@ async def save_log(guild_context: dict, message_context: dict):
             mgr = mgr.fallback # Could not initialize, try fallback
     else:
         trace("Could not save log to the manager or any of it's fallback", TraceLEVELS.ERROR)
-
-
-

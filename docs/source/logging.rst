@@ -13,11 +13,11 @@ Logging is handled thru so called **logging managers**. Currently, 3 different m
 - LoggerJSON: Used for saving file logs in the JSON format. (:ref:`JSON Logging (file)`)
 - LoggerCSV:  Used for saving file logs in the CSV format, where certain fields are still JSON. (:ref:`CSV Logging (file)`)
 - LoggerSQL:  Used for saving relational database logs into a remote database. (:ref:`Relational Database Log (SQL)`)
-
+- Custom logger: User can create a custom logger if they desire. (:ref:`Custom Logger`)
 
 
 If a logging managers fails saving a log, then it's fallback manager will be used temporarily to store the log.
-It will only use the fallback once and then, at the next message, the original manager will be used unless :func:`_set_logger` was used
+It will only use the fallback once and then, at the next message, the original manager will be used unless :func:`set_logger` was used
 to manually set the manager to something permanently.
 
 .. figure:: images/logging_process.png
@@ -41,7 +41,7 @@ for example, if today is ``13.07.2022``, the log will be saved into the file tha
     |           └─── #David's dungeon.json
 
 
-Structure
+JSON structure
 ------------------
 The log structure is the same for both :class:`~daf.guild.USER` and :class:`~daf.guild.GUILD`.
 All logs will contain keys:
@@ -59,7 +59,7 @@ All logs will contain keys:
     :download:`Example structure <../../Examples/Logging/JSON files/History/2022/05/23/#David's dungeon.json>`
 
 
-Code Example
+JSON code example
 -----------------
 .. literalinclude:: ../../Examples/Logging/JSON files/main_rickroll.py
     :language: python
@@ -83,7 +83,7 @@ for example, if today is ``13.07.2023``, the log will be saved into the file tha
     |           └─── #David's dungeon.csv
 
 
-Structure
+CSV structure
 ------------------
 The structure contains the following attributes:
 
@@ -104,7 +104,7 @@ The structure contains the following attributes:
     :download:`Structure example <../../Examples/Logging/CSV files/History/2022/09/22/David's py dungeon.csv>`
 
 
-Code Example
+CSV code example
 -----------------
 .. literalinclude:: ../../Examples/Logging/CSV files/main_rickroll.py
     :language: python
@@ -388,3 +388,82 @@ tr_delete_msg_log
     Entries in :ref:`MessageChannelLOG` get deleted if an entry inside :ref:`MessageLOG` gets deleted due to the :ref:`MessageChannelLOG` table having a cascading foreign key pointing to the :ref:`MessageLOG` table. However reverse is not the same, the :ref:`MessageLOG` table does not have anything pointing to the :ref:`MessageChannelLOG` table meaning that cascading based on foreign keys is not possible. 
     This trigger's job is to delete an entry inside the MessageLOG when all the entries in :ref:`MessageChannelLOG` referencing it get deleted. 
 
+
+
+
+Custom Logger
+====================
+If you want to use a different logging scheme than the ones built in, you can do so by creating a custom logging manager that 
+inherits the :class:`daf.logging.LoggerBASE`.
+
+The derived logger class can then implement the following methods:
+
+1. __init__(self, param1, param2, ...) [Required]:
+    The method used for passing parameters and for basic non-async initialization.
+    This method must contain a fallback parameter and also needs to have an attribute of the same name.
+
+2. async initialize(self) [Optional]:
+    The base's ``initialize`` method calls ``initialize`` method of it's fallback,
+    if it fails then the fallback is set to None.
+    
+    If you wish to do additional initialization that requires async/await operations, you can implement
+    your own ``initialize`` method but make sure you call the base's method in the end.
+    
+    .. code-block:: python
+        :caption: Custom initialize method
+
+        class LoggerCUSTOM(daf.logging.LoggerBASE):
+            ... # Other methods
+
+            async def initialize(self):
+                ... # Custom implementation code
+                await super().initialize()
+    
+
+3. async _save_log(self, guild_context: dict, message_context: dict) [Required]:
+    Method that stores the message log. 
+    If there is any error in saving the log an exception should be raised, which will then
+    make the logging module automatically use the fallback manager, do not call the fallback manager from this method.
+
+    If the error cannot be immediately handled, and you want to permanently switch to a different manager, use
+    :func:`set_logger` function.
+
+    :Parameters:
+        **guild_context** (dict) - Contains keys:
+        
+        - "name": The name of the guild/user (str)
+        - "id": Snowflake ID of the guild/user (int)
+        - "type": object type (GUILD/USER) that generated the log. (str)
+
+        **message_context** (dict) - Dictionary returned by:
+        
+        - :py:meth:`daf.message.TextMESSAGE.generate_log_context`
+        - :py:meth:`daf.message.VoiceMESSAGE.generate_log_context`
+        - :py:meth:`daf.message.DirectMESSAGE.generate_log_context`
+
+4. async update(self, \*\*kwargs) [Optional]:
+    Custom implementation of the ``update`` method.
+
+    This method is used for updating the parameters that are available thru ``__init__`` method and
+    is not required if the attributes inside the object have the same name as the parameters inside the ``__init__`` function
+    and there are no pre-required steps that need to be taken before updating (see :ref:`JSON Logging (file)`'s code for example).
+
+    However if the name of attributes differ from parameter name or the attribute doesn't exist at all or other steps are 
+    required than just re-initialization (see :class:`daf.logging.sql.LoggerSQL`'s update method), then this method is required to be implemented.
+    It should be implemented in a way that it calls the base update method.
+    Example:
+    
+    .. code-block:: python
+    
+        class LoggerCUSTOM(daf.logging.LoggerBASE):
+            ... # Other methods
+
+            async def update(self, **kwargs)
+                # Only modify if the parameter is not passed to update method
+                if "name" not kwargs: 
+                    # The name parameter is stored under "_name" attribute instead of "name"
+                    kwargs["name"] = self._name
+
+                ... # Other pre-required code (eg. remote SQL server needs to be disconnected)
+
+                super().update(**kwargs) # Call base update method
