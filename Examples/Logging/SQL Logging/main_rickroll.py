@@ -33,6 +33,6 @@ daf.run(
     token="OSDSJ44JNnnJNJ2NJDBWQUGHSHFAJSHDUQHFDBADVAHJVERAHGDVAHJSVDE",                # Example account token
     is_user=False, 
     server_list=servers,
-    sql_manager=daf.LoggerSQL("username", "password", "server address", "database name") # *Note: The database must be created manually,
+    logger=daf.LoggerSQL("username", "password", "server address", "database name") # *Note: The database must be created manually,
                                                                                         #  everything else in the database is then created automatically
 )

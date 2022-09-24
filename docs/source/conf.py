@@ -35,9 +35,7 @@ with open("../../version.txt", "r", encoding="utf-8") as rf:
 extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.napoleon",
-    "sphinx.ext.autosummary",
     "sphinx.ext.autosectionlabel",
-    "sphinx_design",
     "sphinx_copybutton",
     "enum_tools.autoenum",
 ]

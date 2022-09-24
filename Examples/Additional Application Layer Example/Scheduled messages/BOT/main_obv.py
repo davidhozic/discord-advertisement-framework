@@ -178,7 +178,7 @@ async def message_deleter():
             except discord.HTTPException as ex:
                 pass
 
-        await asyncio.sleep(1*daf.C_HOUR_TO_SECOND)
+        await asyncio.sleep(datetime.timedelta(hours=1).total_seconds())
 
 
 @daf.data_function
