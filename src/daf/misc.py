@@ -2,11 +2,12 @@
     This module contains definitions regarding miscellaneous
     items that can appear in multiple modules
 """
-from typing import Coroutine, Callable, Any, Optional
+from typing import Coroutine, Callable, Any, Dict, Optional
 from asyncio import Semaphore
 from functools import wraps
 from inspect import getfullargspec
 from copy import copy
+import sys
 
 ###############################
 # Safe access functions
@@ -127,11 +128,11 @@ def _async_safe(semaphore: str, amount: Optional[int]=1) -> Callable:
             sem: Semaphore = getattr(self, semaphore)
             for i in range(amount):
                 await sem.acquire()
-
-            result = await coroutine(self, *args, **kwargs)
-
-            for i in range(amount):
-                sem.release()
+            try:
+                result = await coroutine(self, *args, **kwargs)
+            finally:
+                for i in range(amount):
+                    sem.release()
 
             return result
 
@@ -142,3 +143,43 @@ def _async_safe(semaphore: str, amount: Optional[int]=1) -> Callable:
         raise TypeError("semaphore parameter must be an attribute name of the asyncio semaphore inside the object")
 
     return __safe_access
+
+
+# Documentation
+DOCUMENTATION_MODE = "DOCUMENTATION" in sys.argv
+if DOCUMENTATION_MODE:
+    doc_titles: Dict[str, list] = {}
+
+def doc_category(cat: str, manual: Optional[bool] = False, path: Optional[str]=None):
+    """
+    Used for marking under which category this should
+    be put when auto generating documentation.
+
+    Parameters
+    ------------
+    cat: str
+        The name of the category to put this in.
+    manual: Optional[bool]
+        Should documentation be manually generated
+    path: Optional[str]
+        Custom path to the object.
+
+    Returns
+    ----------
+    Decorator
+        Returns decorator which marks the object
+        to the category.
+    """
+    def _category(item):
+        if DOCUMENTATION_MODE:
+            doc_titles[cat].append((item, manual, path))
+        return item
+
+    if DOCUMENTATION_MODE:
+        if cat not in doc_titles:
+            doc_titles[cat] = []
+
+    return _category
+
+
+
