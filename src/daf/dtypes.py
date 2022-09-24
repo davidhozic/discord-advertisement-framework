@@ -5,8 +5,10 @@
 from typing import Any, Callable, List, Union, TypeVar
 from contextlib import suppress
 from typeguard import typechecked
-
+from urllib.parse import urlparse
 from .exceptions import *
+
+from . import misc
 
 import copy
 import datetime
@@ -48,7 +50,7 @@ class _FunctionBaseCLASS:
     the object to it's class or to the base class from which the object class is inherited from.
     """
 
-
+@misc.doc_category("Decorators")
 def data_function(fnc: Callable):
     """
     Decorator used to create a framework FunctionCLASS class that wraps the function.
@@ -68,7 +70,6 @@ def data_function(fnc: Callable):
     .. literalinclude:: ../../Examples/Message Types/TextMESSAGE/main_data_function.py
         :language: python
     """
-    @typechecked
     class FunctionCLASS(_FunctionBaseCLASS):
         """
         Used for creating special classes that are then used to create objects in the daf.MESSAGE
@@ -108,6 +109,7 @@ def data_function(fnc: Callable):
 # Other
 #######################################################################
 @typechecked
+@misc.doc_category("Message data types")
 class EMBED(discord.Embed):
     """
     Derived class of discord.Embed created to provide additional arguments in the creation.
@@ -188,6 +190,7 @@ class EMBED(discord.Embed):
             self.set_thumbnail(url=thumbnail)
 
 @typechecked
+@misc.doc_category("Message data types")
 class FILE:
     """
     FILE object used as a data parameter to the MESSAGE objects.
@@ -212,6 +215,7 @@ class FILE:
 
 
 @typechecked
+@misc.doc_category("Message data types")
 class AUDIO:
     """
     Used for streaming audio from file or YouTube.
@@ -249,7 +253,8 @@ class AUDIO:
         if not GLOBALS.voice_installed:
             raise ModuleNotFoundError("You need to install extra requirements: pip install discord-advert-framework[voice]")
 
-        if "youtube.com" in self.orig.lower(): # If the url contains http, assume it's a youtube link
+        url_info = urlparse(filename) # Check if it's youtube
+        if "www.youtube.com" == url_info.hostname:
             try:
                 self.is_stream = True
                 youtube_dl = yt_dlp.YoutubeDL(params=self.ytdl_options)

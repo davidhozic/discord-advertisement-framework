@@ -23,7 +23,7 @@ EXCEPTION_TEMPLATE =\
 
 export_e = ".. glossary::\n"
 fdata = ""
-with open("../../src/framework/exceptions.py", "r") as f:
+with open("../../src/daf/exceptions.py", "r") as f:
     fdata += f.read()
 
 excs = re.findall(r"\w+.+#:.+", fdata)

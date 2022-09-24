@@ -24,10 +24,26 @@ Glossary
     |BREAK_CH|
         Means that the change will break functionality from previous version.
 
+    |POTENT_BREAK_CH|
+        The change could break functionality from previous versions but only if it
+        was used in a certain way.
 
 ----------------------
 Releases
 ----------------------
+
+v2.2
+===========
+- |BREAK_CH| Removed ``get_sql_manager`` function.
+- :func:`daf.core.run`:
+    + Added ``logging`` parameter
+    + Deprecated parameters ``server_log_output`` and ``sql_manager``.
+- Logging manager objects: LoggerJSON, LoggerCSV, LoggerSQL
+- New :func:`daf.logging.logging.get_logger` function for retrieving the logger object used.
+- :func:`daf.core.initialize` for manual control of asyncio (same as :func:`daf.core.run` except it is async)
+- Development:
+    + ``doc_category`` decorator for automatic documentation
+    + Removed ``common`` module and moved constants to appropriate modules
 
 v2.1.3
 ===========
@@ -46,6 +62,7 @@ v2.1.1
 ===========
 - Fixed ``[Bug]: Predefined servers' errors are not suppressed #189.``
 - Support for readthedocs.
+
 
 v2.1
 ===========
