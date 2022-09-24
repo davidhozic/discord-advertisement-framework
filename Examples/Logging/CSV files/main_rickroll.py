@@ -33,5 +33,5 @@ daf.run(
     token="OSDSJ44JNnnJNJ2NJDBWQUGHSHFAJSHDUQHFDBADVAHJVERAHGDVAHJSVDE",   # Example account token
     is_user=False, 
     server_list=servers,
-    logger=daf.LoggerJSON("History")
+    logger=daf.LoggerCSV("History", ";")
 )

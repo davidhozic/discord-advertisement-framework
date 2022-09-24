@@ -2,6 +2,9 @@
 Contains the definitions related to errors that can be raised inside the daf.
 """
 
+from . import misc
+
+@misc.doc_category("Exceptions")
 class DAFError(Exception):
     """
     Base exception class for all DAF exceptions.
@@ -17,7 +20,7 @@ class DAFError(Exception):
         self.code = code # Error code
         super().__init__(message)
 
-
+@misc.doc_category("Exceptions")
 class DAFNotFoundError(DAFError):
     """
     Raised when an object is not found.
@@ -30,7 +33,7 @@ class DAFNotFoundError(DAFError):
         The error code.
     """
 
-
+@misc.doc_category("Exceptions")
 class DAFSQLError(DAFError):
     """
     Raised whenever there's an error with SQL.
@@ -58,3 +61,4 @@ DAF_SQL_CR_LT_VALUES_ERROR = 8       #: Unable to create lookuptables' rows.
 DAF_SQL_CREATE_DT_ERROR = 9          #: Unable to create SQL data types.
 DAF_SQL_CREATE_VPF_ERROR = 10        #: Unable to create views, procedures and functions.     
 DAF_SQL_CURSOR_CONN_ERROR = 11       #: Unable to connect the cursor.
+DAF_SQL_SAVE_LOG_ERROR = 12          #: Unable to save the log to SQL
