@@ -1,6 +1,6 @@
 {
     "voice" : ["PyNaCl", "yt-dlp"],
     "proxy" : ["aiohttp_socks"],
-    "sql" : ["python-tds", "sqlalchemy-pytds", "sqlalchemy"],
+    "sql" : ["sqlalchemy[asyncio]", "aiosqlite"],
     "docs" : ["sphinx", "sphinx-design", "sphinx-autobuild", "sphinx-copybutton", "furo", "enum-tools[sphinx]"]
 }
