@@ -26,11 +26,11 @@ jobs:
     - name: Install requirements
       run: pip install .[docs]
     - name: Build html, latex
-      run: cd docs && make html && make latex
+      run: cd docs && make html && make latex && cd build/latex && ls -l
     - name: Build pdf
       uses: xu-cheng/latex-action@v2
       with:
-          working_directory: build/latex
+          working_directory: ./docs/build/latex
           root_file: "*.tex"
           glob_root_file: true
       
