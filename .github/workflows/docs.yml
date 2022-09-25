@@ -1,6 +1,6 @@
 # This is a basic workflow to help you get started with Actions
 
-name: CI
+name: Build documentation
 
 # Controls when the workflow will run
 on:
@@ -25,6 +25,5 @@ jobs:
           python-version: '3.8' 
     - name: Install requirements
       run: pip install .[docs]
-    - uses: ammaraskar/sphinx-action@master
-      with:
-        docs-folder: "docs/"
+    - name: Build docs
+      run: cd docs && make html && make latexpdf
