@@ -247,7 +247,7 @@ class VoiceMESSAGE(BaseMESSAGE):
                 ch_i += 1
 
         if not len(self.channels):
-            raise ValueError(f"No valid channels were passed to {type(self)} object")
+            raise ValueError(f"No valid channels were passed to {self} object")
 
     async def _send_channel(self,
                            channel: discord.VoiceChannel,
@@ -275,7 +275,7 @@ class VoiceMESSAGE(BaseMESSAGE):
             
             # Check if channel still exists in cache (has not been deleted)
             if client.get_client().get_channel(channel.id) is None:
-                ex = self._generate_exception(404, 10003, "Channel was deleted", discord.NotFound)
+                raise self._generate_exception(404, 10003, "Channel was deleted", discord.NotFound)
 
             if GLOBALS.voice_client is None or not GLOBALS.voice_client.is_connected():
                 GLOBALS.voice_client = await channel.connect(timeout=C_VC_CONNECT_TIMEOUT)

@@ -269,7 +269,7 @@ class TextMESSAGE(BaseMESSAGE):
                 ch_i += 1
 
         if not len(self.channels):
-            raise ValueError(f"No valid channels were passed to {type(self)} object")
+            raise ValueError(f"No valid channels were passed to {self} object")
 
     async def _handle_error(self, channel: Union[discord.TextChannel, discord.Thread], ex: Exception) -> bool:
         """
@@ -330,7 +330,7 @@ class TextMESSAGE(BaseMESSAGE):
 
                 # Check if channel still exists in cache (has not been deleted)
                 if client.get_client().get_channel(channel.id) is None:
-                    ex = self._generate_exception(404, 10003, "Channel was deleted", discord.NotFound)
+                    raise self._generate_exception(404, 10003, "Channel was deleted", discord.NotFound)
 
                 # Delete previous message if clear-send mode is chosen and message exists
                 if self.mode == "clear-send" and self.sent_messages.get(channel.id, None) is not None:

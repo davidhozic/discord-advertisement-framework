@@ -192,7 +192,11 @@ class _BaseGUILD:
 
         if self.apiobject is not None:
             for message in self._messages_uninitialized:
-                await self.add_message(message)
+                try:
+                    await self.add_message(message)
+                except (TypeError, ValueError, DAFError) as exc:
+                    trace(f"[GUILD:] Unable to initialize message {message}, in {self}\nReason: {exc}", TraceLEVELS.WARNING)
+
 
             self._messages_uninitialized.clear()
             return
