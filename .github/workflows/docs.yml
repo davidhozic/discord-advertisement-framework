@@ -25,5 +25,12 @@ jobs:
           python-version: '3.8' 
     - name: Install requirements
       run: pip install .[docs]
-    - name: Build docs
-      run: cd docs && make html && make latexpdf
+    - name: Build html, latex
+      run: cd docs && make html && make latex
+    - name: Build pdf
+      uses: xu-cheng/latex-action@v2
+      with:
+          working_directory: build/latex
+          root_file: "*.tex"
+          glob_root_file: true
+      
