@@ -334,7 +334,6 @@ def _shutdown_clean(loop: asyncio.AbstractEventLoop) -> None:
 
     loop.run_until_complete(asyncio.gather(*tasks, return_exceptions=True))
     loop.run_until_complete(loop.shutdown_asyncgens())
-    loop.run_until_complete(loop.shutdown_default_executor())
     loop.close()
 
 
