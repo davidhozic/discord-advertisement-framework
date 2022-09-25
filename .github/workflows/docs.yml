@@ -26,7 +26,7 @@ jobs:
     - name: Install requirements
       run: pip install .[docs]
     - name: Build html, latex
-      run: cd docs && make html && make latex && cd build/latex && ls -l
+      run: cd docs && make html && make latex
     - name: Build pdf
       uses: xu-cheng/latex-action@v2
       with:
