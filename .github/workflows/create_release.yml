@@ -4,6 +4,9 @@ on:
       version:
         type: string
         description: Version to create tag on
+      changelog:
+        type: environment
+        description: Enter changelog
 
 name: Create Release
 
