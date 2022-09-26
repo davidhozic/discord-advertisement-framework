@@ -34,7 +34,7 @@ class GLOBAL:
     logger: LoggerBASE = None  
 
 
-@misc.doc_category("Logging", path="logging")
+@misc.doc_category("Logging related", path="logging")
 class LoggerBASE:
     """
     .. versionadded:: v2.2
@@ -94,7 +94,7 @@ class LoggerBASE:
         await misc._update(self, **kwargs)
 
 
-@misc.doc_category("Logging", path="logging")
+@misc.doc_category("Logging related", path="logging")
 class LoggerCSV(LoggerBASE):
     """
     .. versionadded:: v2.2
@@ -160,7 +160,7 @@ class LoggerCSV(LoggerBASE):
                 raise OSError(*exc.args) from exc # Raise OSError for any type of exceptions
 
 
-@misc.doc_category("Logging", path="logging")
+@misc.doc_category("Logging related", path="logging")
 class LoggerJSON(LoggerBASE):
     """
     .. versionadded:: v2.2

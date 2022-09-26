@@ -169,20 +169,33 @@ class TextMESSAGE(BaseMESSAGE):
         Returns
         ----------
         Dict[str, Any]
-            Dictionary containing:
-              - sent_data: Dict[str, Any]:
-              
-                - text: str - The text that was sent.
-                - embed: Dict[str, Any] - The embed that was sent.
-                - files: List[str] - List of files that were sent.
-              
-              - channels: Dict[str, List]:
+            .. code-block:: python
                 
-                - successful: List[Dict[str, int]] - List of dictionaries containing name of the channel and snowflake id of the channels.
-                - failed: List[Dict[str, Any]] - List of dictionaries containing name of the channel (str), snowflake id (int) and reason why streaming to channel failed (str).
-  
-              - type: str - The type of the message, this is always TextMESSAGE.
-              - mode: str - The mode used to send the message (send, edit, clear-send).
+                {
+                    sent_data:
+                    {
+                        text: str - The text that was sent,
+                        embed: Dict[str, Any] - The embed that was sent,
+                        files: List[str] - List of files that were sent
+                    },
+                    
+                    channels:
+                    {
+                        successful:
+                        {
+                            id: int - Snowflake id,
+                            name: str - Channel name
+                        },
+                        failed:
+                        {
+                            id: int - Snowflake id,
+                            name: str - Channel name,
+                            reason: str - Exception that caused the error
+                        }
+                    },
+                    type: str - The type of the message, this is always TextMESSAGE,
+                    mode: str - The mode used to send the message (send, edit, clear-send)
+                }
         """
 
         succeeded_ch = [{"name": str(channel), "id" : channel.id} for channel in succeeded_ch]
@@ -534,20 +547,23 @@ class DirectMESSAGE(BaseMESSAGE):
         Returns
         ----------
         Dict[str, Any]
-            Dictionary containing:
-              - sent_data: Dict[str, str]:
+            .. code-block:: python
 
-                - text: str - The text that was sent.
-                - embed: Dict[str, Any] - The embed that was sent.
-                - files: List[str] - List of files that were sent.
-
-              - success_info: Dict[str, Any]:
-
-                - success: bool - Was sending successful or not
-                - reason:  str  - If it was unsuccessful, what was the reason
-
-              - type: str - The type of the message, this is always DirectMESSAGE.
-              - mode: str - The mode used to send the message (send, edit, clear-send).
+                {
+                    sent_data:
+                    {
+                        text: str - The text that was sent,
+                        embed: Dict[str, Any] - The embed that was sent,
+                        files: List[str] - List of files that were sent.
+                    },
+                    success_info:
+                    {
+                        success: bool - Was sending successful or not,
+                        reason:  str  - If it was unsuccessful, what was the reason
+                    },
+                    type: str - The type of the message, this is always DirectMESSAGE,
+                    mode: str - The mode used to send the message (send, edit, clear-send)
+                }
         """
         embed = embed.to_dict() if embed is not None else None
         files = [x.filename for x in files]
