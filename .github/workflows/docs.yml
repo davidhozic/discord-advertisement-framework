@@ -25,12 +25,8 @@ jobs:
           python-version: '3.8' 
     - name: Install requirements
       run: pip install .[docs]
-    - name: Build html, latex
-      run: cd docs && make html && make latex
-    - name: Build pdf
-      uses: xu-cheng/latex-action@v2
-      with:
-          working_directory: ./docs/build/latex
-          root_file: "*.tex"
-          glob_root_file: true
+    - name: Install latex
+      run: sudo apt-get update && sudo apt-get install texlive texlive-publishers texlive-science latexmk cm-super
+    - name: Build html, latex, pdf
+      run: cd docs && make html && make latexpdf
       
