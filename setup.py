@@ -12,14 +12,22 @@ req = None
 with open("./requirements.txt" , 'r', encoding="utf-8") as rf:
     req = rf.readlines()
 
-version = ""
-with open("./version.txt", "r", encoding="utf-8") as rf:
-    version = rf.read().strip()
-
 optional_install = None
 with open("./optional.json", "r", encoding="utf-8") as rf:
     optional_install = json.load(rf)
 
+# Parse version
+gh_release = os.environ.get("GITHUB_REF_NAME", default=None) # Workflow run release
+readthedocs_release = os.environ.get("READTHEDOCS_VERSION", default=None) # Readthe docs version
+
+version = None
+if gh_release is not None:
+    version = gh_release
+elif readthedocs_release is not None:
+    version = readthedocs_release
+else:
+    with open("./version.txt", "r", encoding="utf-8") as rf:
+        version = rf.read().strip()
 
 
 __metadata__ = \
