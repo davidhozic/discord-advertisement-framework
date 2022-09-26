@@ -29,6 +29,24 @@ Glossary
 Releases
 ----------------------
 
+v2.1.3
+===========
+Bug fixes:
+
+- ``[Bug]: KeyError: 'code' on rate limit #198``
+
+v2.1.2
+===========
+Bug fixes:
+
+- #195 VoiceMESSAGE did not delete deleted channels
+- Exception on initialization of static server list in case any of the messages had failed their initialization.
+
+v2.1.1
+===========
+- Fixed ``[Bug]: Predefined servers' errors are not suppressed #189.``
+- Support for readthedocs.
+
 v2.1
 ===========
 - Changed the import ``import framework`` to ``import daf``. Using ``import framework`` is now deprecated.
