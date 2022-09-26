@@ -58,6 +58,7 @@ try:
     import sqlalchemy as sqa
     GLOBALS.sql_installed = True
 except ImportError as exc:
+    SQLAlchemyError = Exception
     GLOBALS.sql_installed = False
 # ----------------------------------------------------------------------------------
 
