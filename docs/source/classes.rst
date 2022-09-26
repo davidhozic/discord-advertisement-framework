@@ -14,7 +14,7 @@ TraceLEVELS
     :members:
 
 ------------------------
-Logging
+Logging related
 ------------------------
 
 LoggerBASE
