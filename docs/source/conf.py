@@ -38,6 +38,7 @@ extensions = [
     "sphinx.ext.autosectionlabel",
     "sphinx_copybutton",
     "enum_tools.autoenum",
+    "sphinx_tabs.tabs"
 ]
 
 master_doc = 'index'
@@ -70,6 +71,9 @@ autodoc_default_options = {
 
 
 
+# -------- Sphinx Tabs ------- #
+sphinx_tabs_disable_css_loading = False
+sphinx_tabs_disable_tab_closing = True
 
 # ----------- HTML ----------- #
 html_title = project
