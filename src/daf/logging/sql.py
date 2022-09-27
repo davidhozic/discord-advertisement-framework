@@ -42,7 +42,7 @@ SQL_RECOVERY_TIME = 0.5
 SQL_RECONNECT_TIME = 5 * 60
 SQL_RECONNECT_ATTEMPTS = 3
 SQL_CONNECTOR_TIMEOUT = 6
-
+SQL_ENABLE_DEBUG = False
 
 # ------------------------------------ Optional ------------------------------------
 try:
@@ -52,13 +52,15 @@ try:
                         )            
     from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
     from sqlalchemy.engine import URL as SQLURL
-    from sqlalchemy.exc import SQLAlchemyError
-    from sqlalchemy.orm import sessionmaker, Session
+    from sqlalchemy.exc import SQLAlchemyError, NoSuchTableError
+    from sqlalchemy.orm import sessionmaker
     from sqlalchemy.ext.declarative import declarative_base
     import sqlalchemy as sqa
     GLOBALS.sql_installed = True
+    ORMBase = declarative_base()
 except ImportError as exc:
     SQLAlchemyError = Exception
+    ORMBase = object
     GLOBALS.sql_installed = False
 # ----------------------------------------------------------------------------------
 
@@ -68,35 +70,35 @@ __all__ = (
 )
 
 
-def register_type(lookuptable: Literal["GuildTYPE", "MessageTYPE", "MessageMODE"]) -> Callable:
+def register_type(lookuptable: Literal["GuildTYPE", "MessageTYPE", "MessageMODE"], name_override: Optional[str] = None) -> Callable:
     """
     Returns a decorator which will create a row inside <lookuptable> table.
-    The name of the inserted item is defined with the __logname__ variable
-    which must be present in each framework class that is to be added to the lookuptable.
-    The __logname__ also defines the object type name inside text logs (and sql).
 
     Parameters
     ------------
     lookuptable: Literal["GuildTYPE", "MessageTYPE", "MessageMODE"]
         Name of the lookup table to insert the value into.
+    name_override: Optional[str]
+        Optional name override for the object to insert into the ``lookuptable``.
+        If this is not passed, class name is used.
 
     Raises
     --------------
-    DAFNotFoundError(code=DAF_SQL_LOOKUPTABLE_NOT_FOUND)
-        Raised when the lookuptable descriptor class was not found.
+    ValueError
+        Lookup table not found.
     """
     def decorator_register_type(cls):
         # Iterate thru all module globals to find the lookup table
-        # and insert a row into that lookup table (name of the type is defined with __logname__)
         if GLOBALS.sql_installed:
-            for lt_name, lt_cls in globals().items():
-                if lt_name == lookuptable:
-                    GLOBALS.lt_types.append( lt_cls(cls.__logname__) )
-                    return cls
-            raise DAFNotFoundError(f"[SQL]: Unable to to find lookuptable: {lookuptable}", DAF_SQL_LOOKUPTABLE_NOT_FOUND)
+            for table_cls in ORMBase.__subclasses__():
+                if table_cls.__tablename__ == lookuptable:
+                    GLOBALS.lt_types.append( table_cls(name_override if name_override is not None else cls.__name__) )
+                    break
+            else:
+                raise ValueError(f"Lookup table {lookuptable} not found")
         
         return cls
-
+    
     return decorator_register_type
 
 
@@ -120,7 +122,6 @@ class LoggerSQL(logging.LoggerBASE):
     fallback: Optional[LoggerBASE]
         The fallback manager to use in case SQL logging fails.
     """
-    Base = declarative_base() if GLOBALS.sql_installed else None
 
     @typechecked
     def __init__(self,
@@ -168,8 +169,9 @@ class LoggerSQL(logging.LoggerBASE):
         ## Other object caching
         self.GuildUSER = {}
         self.CHANNEL = {}
+        self.DataHISTORY = {}
 
-    def _add_to_cache(self, table: Base, key: Any, value: Any) -> None:
+    def _add_to_cache(self, table: ORMBase, key: Any, value: Any) -> None:
         """
         Adds a value to the internal cache of a certain table.
 
@@ -194,7 +196,7 @@ class LoggerSQL(logging.LoggerBASE):
             Custom number of positional arguments of caching dictionaries to clear.
         """
         if len(to_clear) == 0:  # Clear all cached tables if nothing was passed
-            to_clear = [table.__name__ for table in self.Base.__subclasses__() if table.__name__ in self.__slots__]
+            to_clear = [table.__name__ for table in ORMBase.__subclasses__() if table.__name__ in self.__slots__]
         else:
             to_clear = [table for table in to_clear if table in self.__slots__]
 
@@ -238,7 +240,7 @@ class LoggerSQL(logging.LoggerBASE):
         DAFSQLError(code=DAF_SQL_CR_LT_VALUES_ERROR)
             Raised when lookuptable values could not be inserted into the database.
         """
-        session : Session
+        session : AsyncSession
         try:
             trace("[SQL]: Generating lookuptable values...", TraceLEVELS.NORMAL)
             async with self._sessionmaker() as session:
@@ -268,7 +270,7 @@ class LoggerSQL(logging.LoggerBASE):
         try:
             trace("[SQL]: Creating tables...", TraceLEVELS.NORMAL)
             async with self.engine.begin() as tran:
-                await tran.run_sync(self.Base.metadata.create_all)
+                await tran.run_sync(ORMBase.metadata.create_all)
             
         except Exception as ex:
             raise DAFSQLError(f"Unable to create all the tables.\nReason: {ex}", DAF_SQL_CREATE_TABLES_ERROR)
@@ -297,7 +299,7 @@ class LoggerSQL(logging.LoggerBASE):
             )
 
             self.engine = create_async_engine(sqlurl,
-                                        echo=True, future=True, pool_pre_ping=True,
+                                        echo=SQL_ENABLE_DEBUG, future=True, pool_pre_ping=True,
                                         connect_args={"timeout" : SQL_CONNECTOR_TIMEOUT})
 
             self._sessionmaker = sessionmaker(bind=self.engine, class_=AsyncSession)
@@ -332,7 +334,8 @@ class LoggerSQL(logging.LoggerBASE):
     async def _get_insert_guild(self,
                         snowflake: int,
                         name: str,
-                        _type: str) -> int:
+                        guild_type: int,
+                        session: AsyncSession) -> int:
         """
         Inserts the guild into the db if it doesn't exist,
         adds it to cache and returns it's internal db id from cache.
@@ -343,31 +346,33 @@ class LoggerSQL(logging.LoggerBASE):
             The snowflake of the guild.
         name: name
             The name of the guild.
-        _type: str
-            The type of the guild.
+        guild_type: int
+            ID of key pointing to guild_type.
+        session: AsyncSession
+            The session to use as transaction.
         """
         result = None
         if snowflake not in self.GuildUSER:
-            async with self._sessionmaker.begin() as session:
-                session: Session
-                result = session.query(GuildUSER.id).filter(GuildUSER.snowflake_id == snowflake).first()
-                if result is not None:
-                    result = result[0]
-                    self._add_to_cache(GuildUSER, snowflake, result)
-                else:
-                    guild_type = self.GuildTYPE[_type]
-                    result = GuildUSER(guild_type, snowflake, name)
-                    session.add(result)
-                    await session.flush()
-                    result = result.id
-                    self._add_to_cache(GuildUSER, snowflake, result)
+            result = (await session.execute(select(GuildUSER.id).where(GuildUSER.snowflake_id == snowflake))).first()
+            if result is not None:
+                result = result[0]
+                self._add_to_cache(GuildUSER, snowflake, result)
+            else:
+                result = GuildUSER(guild_type, snowflake, name)
+                savepoint = await session.begin_nested() # Savepoint
+                session.add(result)
+                await savepoint.commit()
+                result = result.id
+                self._add_to_cache(GuildUSER, snowflake, result)
         else:
             result = self.GuildUSER[snowflake]
+
         return result
 
     async def _get_insert_channels(self,
-                        channels: List[dict],
-                        guild_id: int) -> List[Dict[int, Union[str, None]]]:
+                                   channels: List[dict],
+                                   guild_id: int,
+                                   session: AsyncSession) -> List[Dict[int, Union[str, None]]]:
         """
         Adds missing channels to the database, then caches those added
         for performance.
@@ -378,6 +383,8 @@ class LoggerSQL(logging.LoggerBASE):
             List of dictionaries containing values for snowflake id ("id") and name of the channel ("name"). If sending to failed, it also contains text like description of the error ("reason").
         guild_id: int
             The internal DB id of the guild where the channels are in.
+        session: AsyncSession:
+            Session to use for transaction.
 
         Return
         -------------
@@ -389,22 +396,57 @@ class LoggerSQL(logging.LoggerBASE):
         not_cached = [{"id": x["id"], "name": x["name"]} for x in channels if x["id"] not in self.CHANNEL] # Get snowflakes that are not cached
         not_cached_snow = [x["id"] for x in not_cached]
         if len(not_cached):
-            async with self._sessionmaker.begin() as session:
-                session: Session
-                result = session.query(CHANNEL.id, CHANNEL.snowflake_id).where(CHANNEL.snowflake_id.in_(not_cached_snow)).all()
-                for internal_id, snowflake_id in result:
-                    self._add_to_cache(CHANNEL, snowflake_id, internal_id)
-                to_add = [CHANNEL(x["id"], x["name"], guild_id) for x in not_cached if x["id"] not in self.CHANNEL]
-                if len(to_add):
-                    session.add_all(to_add)
-                    await session.flush()
-                    for channel in to_add:
-                        self._add_to_cache(CHANNEL, channel.snowflake_id, channel.id)
+            # Search the database for non cached channels
+            result = (await session.execute(select(CHANNEL.id, CHANNEL.snowflake_id).where(CHANNEL.snowflake_id.in_(not_cached_snow)))).all()
+            for internal_id, snowflake_id in result:
+                self._add_to_cache(CHANNEL, snowflake_id, internal_id)
+            
+            # Add the channels that are not in the database
+            to_add = [CHANNEL(x["id"], x["name"], guild_id) for x in not_cached if x["id"] not in self.CHANNEL]
+            if len(to_add):
+                savepoint = await session.begin_nested() # Savepoint
+                session.add_all(to_add)
+                await savepoint.commit()
+                for channel in to_add:
+                    self._add_to_cache(CHANNEL, channel.snowflake_id, channel.id)
 
         # Get from cache
-        ret = [(self.CHANNEL.get(d["id"],None), d.get("reason", None)) for d in channels]
+        ret = [{"id" : self.CHANNEL.get(d["id"], None), "reason" : d.get("reason", None)} for d in channels]
         return ret
 
+    async def _get_insert_data(self, data: dict, session: AsyncSession) -> int:
+        """
+        Get's data's row ID from the cache/database, if it does not exists,
+        it inserts into the database and then caches the value.
+
+        Parameters
+        -------------
+        data: dict
+            The data dictionary which represents sent data
+        session: AsyncSession
+            Session to use for transaction.
+
+        Returns
+        -------------
+        int
+            Primary key of a row inside DataHISTORY table.
+        """
+        json_data = json.dumps(data)
+        result: tuple = None
+        if json_data not in self.DataHISTORY:
+            result = (await session.execute(select(DataHISTORY.id).where(DataHISTORY.content == json_data))).first()
+            if result is None:
+                # Add to the database
+                to_add = DataHISTORY(json_data)
+                savepoint = await session.begin_nested()
+                session.add(to_add)
+                await savepoint.commit()
+                result = (to_add.id,)
+            
+            self._add_to_cache(DataHISTORY, json_data, result[0])
+
+        return self.DataHISTORY.get(json_data)
+            
     async def _stop_engine(self):
         """
         Closes the engine and the cursor.
@@ -412,31 +454,31 @@ class LoggerSQL(logging.LoggerBASE):
         await self.engine.dispose()
 
     async def _handle_error(self,
-                            exception: SQLAlchemyError) -> bool:
+                            exc: SQLAlchemyError) -> bool:
         """
         Used to handle errors that happen in the _save_log method.
 
         Parameters
         ---------------
-        exception: SQLAlchemyError
-            SQLAlchemy exception
+        exc: SQLAlchemyError
+            The exception object.
 
         Return
         --------
         bool
             Returns True on successful handling.
         """
-        session: Session
+        session: AsyncSession
+        message = exc.args[0]
         res = True
-        message = str(exception)
-        code = exception.code
         time.sleep(SQL_RECOVERY_TIME)
         try:
+            # TODO: Update to work on latest version
             # Handle the error
-            if code == 208:  # Invalid object name (table deleted)
-                self._create_tables()
+            if "no such table" in message:  # Invalid object name (table deleted)
+                await self._create_tables()
 
-            elif code in {547, 515}:   # Constraint conflict, NULL value
+            elif "" in message:   # Constraint conflict, NULL value
                 r_table = re.search(r'(?<=table "dbo.).+(?=")', message) # Try to parse the table name with regex
                 if r_table is not None:
                     self._clear_cache(r_table.group(0))  # Clears only the affected table cache
@@ -452,7 +494,7 @@ class LoggerSQL(logging.LoggerBASE):
                 pass # Just retry
 
             elif code == 1205: # Transaction deadlocked
-                async with self._sessionmaker() as session:
+                async with self._sessionmaker.begin() as session:
                     await session.commit()
 
             else: # No handling instruction known
@@ -469,6 +511,7 @@ class LoggerSQL(logging.LoggerBASE):
     # _async_safe prevents multiple tasks from attempting to do operations on the database at the same time.
     # This is to avoid eg. procedures being called while they are being created,
     # handle error being called from different tasks, update method from causing a race condition,etc
+    @timeit(15)
     @misc._async_safe("safe_sem", 1)
     async def _save_log(self,
                         guild_context: dict,
@@ -495,12 +538,16 @@ class LoggerSQL(logging.LoggerBASE):
         sent_data: dict = message_context.get("sent_data")
         guild_snowflake: int = guild_context.get("id")
         guild_name: str = guild_context.get("name")
-        guild_type: str = guild_context.get("type")
-        message_type: str = message_context.get("type")
-        message_mode: str = message_context.get("mode", None)
         channels: List[dict] = message_context.get("channels", None)
         dm_success_info: dict = message_context.get("success_info", None)
         dm_success_info_reason: str = None
+
+        # Lookup table values
+        guild_type: int = self.GuildTYPE.get(guild_context["type"])
+        message_type: int = self.MessageTYPE.get(message_context["type"])
+        message_mode: Union[int, str, None] = message_context.get("mode", None)
+        if message_mode is not None:
+            message_mode = self.MessageMODE.get(message_mode)
 
         if dm_success_info is not None:
             if "reason" in dm_success_info:
@@ -514,31 +561,29 @@ class LoggerSQL(logging.LoggerBASE):
         for tries in range(SQL_MAX_SAVE_ATTEMPTS):
             try:
                 # Insert guild into the database and cache if it doesn't exist
-                guild_id = await self._get_insert_guild(guild_snowflake, guild_name, guild_type)
-                if channels is not None:
+                session: AsyncSession
+                async with self._sessionmaker.begin() as session:
+                    guild_id = await self._get_insert_guild(guild_snowflake, guild_name, guild_type, session)
+                    if channels is not None:
                     # Insert channels into the database and cache if it doesn't exist
-                    _channels = await self._get_insert_channels(channels, guild_id)
-                
-                # TODO: Replace with python sqlalchemy code
-                #     _channels = pytds.TableValuedParam("t_tmp_channel_log", rows=_channels)
-                # # Execute the saved procedure that saves the log
-                # self.cursor.callproc("sp_save_log", (json.dumps(sent_data),
-                #                                     self.MessageTYPE.get(message_type, None),
-                #                                     guild_id,
-                #                                     self.MessageMODE.get(message_mode, None),
-                #                                     dm_success_info_reason,
-                #                                     _channels)) # Execute the stored procedure
+                        _channels = await self._get_insert_channels(channels, guild_id, session)
+
+                    data_id = await self._get_insert_data(sent_data, session)
+
+                    # Save message log
+                    message_log = MessageLOG(data_id, message_type, message_mode, dm_success_info_reason, guild_id)
+                    session.add(message_log)
+                    await session.flush()
+                    if channels is not None:
+                        to_add = [MessageChannelLOG(message_log.id, ch_id, reason) for ch_id, reason in (channel.values() for channel in _channels)]
+                        session.add_all(to_add)
                 break
-            except SQLAlchemyError as ex:
-                #####################
-                # TODO: Test for correctness
-                code = ex.code
-                message = str(ex)
-                #####################
-                trace(f"[SQL]: Saving log failed. Code: {code}, Message: {message}. Attempting recovery... (Tries left: {SQL_MAX_SAVE_ATTEMPTS - tries - 1})", TraceLEVELS.WARNING)
+            except SQLAlchemyError as exc:
                 # Run in executor to prevent blocking
-                if not await self._handle_error(code, message):
-                    raise DAFSQLError("Unable to handle SQL error", DAF_SQL_SAVE_LOG_ERROR) from ex
+                if not await self._handle_error(exc):
+                    raise DAFSQLError("Unable to handle SQL error", DAF_SQL_SAVE_LOG_ERROR) from exc
+        else:
+            DAFSQLError(f"Unable to save log within {SQL_MAX_SAVE_ATTEMPTS} tries", DAF_SQL_SAVE_LOG_ERROR)
 
     @misc._async_safe("safe_sem", 1)
     async def update(self, **kwargs):
@@ -574,7 +619,7 @@ class LoggerSQL(logging.LoggerBASE):
 
 if GLOBALS.sql_installed:
     # Do not create ORM classes if the optional group is not installed
-    class MessageTYPE(LoggerSQL.Base):
+    class MessageTYPE(ORMBase):
         """
         Lookup table for storing xMESSAGE types
 
@@ -592,7 +637,7 @@ if GLOBALS.sql_installed:
             self.name = name
 
 
-    class MessageMODE(LoggerSQL.Base):
+    class MessageMODE(ORMBase):
         """
         Lookup table for storing message sending modes.
 
@@ -611,7 +656,7 @@ if GLOBALS.sql_installed:
             self.name = name
 
 
-    class GuildTYPE(LoggerSQL.Base):
+    class GuildTYPE(ORMBase):
         """
         Lookup table for storing xGUILD types
 
@@ -630,7 +675,7 @@ if GLOBALS.sql_installed:
             self.name = name
 
 
-    class GuildUSER(LoggerSQL.Base):
+    class GuildUSER(ORMBase):
         """
         Table for storing different guilds and users.
 
@@ -659,7 +704,7 @@ if GLOBALS.sql_installed:
             self.guild_type = guild_type
 
 
-    class CHANNEL(LoggerSQL.Base):
+    class CHANNEL(ORMBase):
         """
         Table for storing different channels.
 
@@ -689,7 +734,7 @@ if GLOBALS.sql_installed:
             self.guild_id = guild_id
 
 
-    class DataHISTORY(LoggerSQL.Base):
+    class DataHISTORY(ORMBase):
         """
         Table used for storing all the different data(JSON) that was ever sent (to reduce redundancy -> and file size in the MessageLOG).
 
@@ -707,7 +752,7 @@ if GLOBALS.sql_installed:
                     content: str):
             self.content = content
 
-    class MessageLOG(LoggerSQL.Base):
+    class MessageLOG(ORMBase):
         """
         Table containing information for each message send attempt.
 
@@ -738,7 +783,7 @@ if GLOBALS.sql_installed:
         timestamp = Column(DateTime)
 
         def __init__(self,
-                    sent_data: str=None,
+                    sent_data: int=None,
                     message_type: int=None,
                     message_mode: int=None,
                     dm_reason: str=None,
@@ -751,7 +796,7 @@ if GLOBALS.sql_installed:
             self.timestamp = datetime.now().replace(microsecond=0)
 
 
-    class MessageChannelLOG(LoggerSQL.Base):
+    class MessageChannelLOG(ORMBase):
         """
         This is a table that contains a log of channels that are linked to a certain message log.
 

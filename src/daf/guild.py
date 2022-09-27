@@ -70,7 +70,6 @@ class _BaseGUILD:
         "remove_after",
         "_created_at"
     )
-    __logname__ = "_BaseGUILD" # Dummy to demonstrate correct definition for @sql.register_type decorator
     
     def __init__(self,
                  snowflake: Any,
@@ -291,8 +290,6 @@ class GUILD(_BaseGUILD):
         * timedelta - the specified time difference
         * datetime - specific date & time
     """
-
-    __logname__ = "GUILD" # For sql.register_type
     __slots__ = (
         "update_semaphore",
     )
@@ -423,8 +420,6 @@ class USER(_BaseGUILD):
         * timedelta - the specified time difference
         * datetime - specific date & time
     """
-
-    __logname__ = "USER" # For sql.register_type
     __slots__ = (
         "update_semaphore",
     )
