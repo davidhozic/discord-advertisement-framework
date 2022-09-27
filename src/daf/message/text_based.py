@@ -29,6 +29,12 @@ __all__ = (
 # ---------------------------
 RLIM_USER_WAIT_TIME = 20
 
+
+# Register message modes
+sql.register_type("MessageMODE", "send")(None)
+sql.register_type("MessageMODE", "edit")(None)
+sql.register_type("MessageMODE", "clear-send")(None)
+
 @misc.doc_category("Messages", path="message")
 @sql.register_type("MessageTYPE")
 class TextMESSAGE(BaseMESSAGE):
