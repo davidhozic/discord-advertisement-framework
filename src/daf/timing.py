@@ -17,12 +17,12 @@ def timeit(num: int):
     def _timeit(fnc):
         sum = 0
         ct = 0
-        def __timeit(*args, **kwargs):
+        async def __timeit(*args, **kwargs):
             nonlocal sum
             nonlocal ct
 
             start = time.time()
-            ret = fnc(*args, **kwargs)
+            ret = await fnc(*args, **kwargs)
             end = time.time()
             ms = (end-start)*1000
 
