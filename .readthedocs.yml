@@ -1,5 +1,5 @@
 version: 2
-formats: ["pdf", "html"]
+formats: ["pdf"]
 
 build:
   image: latest
