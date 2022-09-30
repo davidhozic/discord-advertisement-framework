@@ -51,9 +51,9 @@ try:
                             Column, ForeignKey, Sequence, select
                         )            
     from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
-    from sqlalchemy.engine import URL as SQLURL
+    from sqlalchemy.engine import URL as SQLURL, create_engine
     from sqlalchemy.exc import SQLAlchemyError, NoSuchTableError
-    from sqlalchemy.orm import sessionmaker
+    from sqlalchemy.orm import sessionmaker, Session
     from sqlalchemy.ext.declarative import declarative_base
     import sqlalchemy as sqa
     GLOBALS.sql_installed = True
@@ -137,6 +137,7 @@ class LoggerSQL(logging.LoggerBASE):
             raise ModuleNotFoundError("You need to install extra requirements: pip install discord-advert-framework[sql]")
 
         # Save the connection parameters
+        self.is_async = False # Set in _begin_engine
         self.username = username
         self.password = password
         self.server = server
@@ -170,6 +171,26 @@ class LoggerSQL(logging.LoggerBASE):
         self.GuildUSER = {}
         self.CHANNEL = {}
         self.DataHISTORY = {}
+
+    async def _run_async(self, method: Callable, *args, **kwargs):
+        """
+        Helper method that abstracts calls of
+        non async functions so await can always be used
+
+        Parameters
+        -----------
+        method: Callable
+            The async/non-async method to call
+        args
+            Positional arguments for the method
+        kwargs
+            Keyword arguments for the method
+        """
+        result = method(*args, **kwargs)
+        if self.is_async:
+            result = await result
+
+        return result
 
     def _add_to_cache(self, table: ORMBase, key: Any, value: Any) -> None:
         """
@@ -240,21 +261,24 @@ class LoggerSQL(logging.LoggerBASE):
         DAFSQLError(code=DAF_SQL_CR_LT_VALUES_ERROR)
             Raised when lookuptable values could not be inserted into the database.
         """
-        session : AsyncSession
+        session : Union[Session, AsyncSession]
         try:
             trace("[SQL]: Generating lookuptable values...", TraceLEVELS.NORMAL)
-            async with self._sessionmaker() as session:
-                async with session.begin():
-                    for to_add in copy.deepcopy(GLOBALS.lt_types):  # Deep copied to prevent SQLAlchemy from deleting the data
-                        existing = (await session.execute(select(type(to_add)).where(type(to_add).name == to_add.name))).fetchone()
-                        if existing is not None:
-                            existing = existing[0]
-                        else:
-                            session.add(to_add)
-                            await session.flush()
-                            existing = to_add
+            session = self._sessionmaker()
 
-                        self._add_to_cache(type(to_add), to_add.name, existing.id)
+            for to_add in copy.deepcopy(GLOBALS.lt_types):  # Deep copied to prevent SQLAlchemy from deleting the data
+                existing = await self._run_async(session.execute, select(type(to_add)).where(type(to_add).name == to_add.name))
+                existing = existing.fetchone()
+                if existing is not None:
+                    existing = existing[0]
+                else:
+                    session.add(to_add)
+                    await self._run_async(session.flush)
+                    existing = to_add
+
+                self._add_to_cache(type(to_add), to_add.name, existing.id)
+            
+            await self._run_async(session.commit)
         except Exception as ex:
             raise DAFSQLError(f"Unable to create lookuptables' rows.\nReason: {ex}", DAF_SQL_CR_LT_VALUES_ERROR)
 
@@ -269,8 +293,13 @@ class LoggerSQL(logging.LoggerBASE):
         """
         try:
             trace("[SQL]: Creating tables...", TraceLEVELS.NORMAL)
-            async with self.engine.begin() as tran:
-                await tran.run_sync(ORMBase.metadata.create_all)
+            if self.is_async:
+                async with self.engine.begin() as tran:
+                    await tran.run_sync(ORMBase.metadata.create_all)
+            else:
+                with self.engine.connect() as tran:
+                    tran.run_callable(ORMBase.metadata.create_all)
+                    tran.commit()
             
         except Exception as ex:
             raise DAFSQLError(f"Unable to create all the tables.\nReason: {ex}", DAF_SQL_CREATE_TABLES_ERROR)
@@ -285,12 +314,25 @@ class LoggerSQL(logging.LoggerBASE):
             Raised when the engine could not connect to the specified database.
         """
         try:
-            dialect = self.dialect
-            if dialect == "sqlite":
-                self.dialect += "+aiosqlite"
+            # Dictionary mapping the database dialect to it's connector
+            dialect_conn_map = {
+                "sqlite" : "aiosqlite",
+                "mssql" : "pymssql"
+            }
 
+            dialect = self.dialect
+            if dialect == "mssql":
+                # The only dialect that doesn't have async connectors
+                self.is_async = False
+                create_engine_ = create_engine
+                session_class = Session
+            else:
+                self.is_async = True
+                create_engine_ = create_async_engine
+                session_class = AsyncSession
+            
             sqlurl = SQLURL.create(
-                self.dialect,
+                f"{dialect}+{dialect_conn_map[dialect]}",
                 self.username,
                 self.password,
                 self.server,
@@ -298,11 +340,11 @@ class LoggerSQL(logging.LoggerBASE):
                 self.database
             )
 
-            self.engine = create_async_engine(sqlurl,
-                                        echo=SQL_ENABLE_DEBUG, future=True, pool_pre_ping=True,
-                                        connect_args={"timeout" : SQL_CONNECTOR_TIMEOUT})
+            self.engine = create_engine_(sqlurl,
+                                         echo=SQL_ENABLE_DEBUG, future=True, pool_pre_ping=True,
+                                         connect_args={"timeout" : SQL_CONNECTOR_TIMEOUT})
 
-            self._sessionmaker = sessionmaker(bind=self.engine, class_=AsyncSession)
+            self._sessionmaker = sessionmaker(bind=self.engine, class_=session_class)
         except Exception as ex:
             raise DAFSQLError(f"Unable to start engine.\nError: {ex}", DAF_SQL_BEGIN_ENGINE_ERROR)
 
@@ -353,15 +395,19 @@ class LoggerSQL(logging.LoggerBASE):
         """
         result = None
         if snowflake not in self.GuildUSER:
-            result = (await session.execute(select(GuildUSER.id).where(GuildUSER.snowflake_id == snowflake))).first()
+            result = await self._run_async(session.execute, select(GuildUSER.id).where(GuildUSER.snowflake_id == snowflake))
+
+            result = result.first()
             if result is not None:
                 result = result[0]
                 self._add_to_cache(GuildUSER, snowflake, result)
             else:
                 result = GuildUSER(guild_type, snowflake, name)
-                savepoint = await session.begin_nested() # Savepoint
+                savepoint = await self._run_async(session.begin_nested) # Savepoint
+
                 session.add(result)
-                await savepoint.commit()
+                await self._run_async(savepoint.commit)
+
                 result = result.id
                 self._add_to_cache(GuildUSER, snowflake, result)
         else:
@@ -397,16 +443,17 @@ class LoggerSQL(logging.LoggerBASE):
         not_cached_snow = [x["id"] for x in not_cached]
         if len(not_cached):
             # Search the database for non cached channels
-            result = (await session.execute(select(CHANNEL.id, CHANNEL.snowflake_id).where(CHANNEL.snowflake_id.in_(not_cached_snow)))).all()
+            result = await self._run_async(session.execute, select(CHANNEL.id, CHANNEL.snowflake_id).where(CHANNEL.snowflake_id.in_(not_cached_snow)))
+            result = result.all()
             for internal_id, snowflake_id in result:
                 self._add_to_cache(CHANNEL, snowflake_id, internal_id)
             
             # Add the channels that are not in the database
             to_add = [CHANNEL(x["id"], x["name"], guild_id) for x in not_cached if x["id"] not in self.CHANNEL]
             if len(to_add):
-                savepoint = await session.begin_nested() # Savepoint
+                savepoint = await self._run_async(session.begin_nested) # Savepoint
                 session.add_all(to_add)
-                await savepoint.commit()
+                await self._run_async(savepoint.commit)
                 for channel in to_add:
                     self._add_to_cache(CHANNEL, channel.snowflake_id, channel.id)
 
@@ -434,13 +481,14 @@ class LoggerSQL(logging.LoggerBASE):
         json_data = json.dumps(data)
         result: tuple = None
         if json_data not in self.DataHISTORY:
-            result = (await session.execute(select(DataHISTORY.id).where(DataHISTORY.content == json_data))).first()
+            result = await self._run_async(session.execute, select(DataHISTORY.id).where(DataHISTORY.content == json_data))
+            result = result.first()
             if result is None:
                 # Add to the database
                 to_add = DataHISTORY(json_data)
-                savepoint = await session.begin_nested()
+                savepoint = await self._run_async(session.begin_nested)
                 session.add(to_add)
-                await savepoint.commit()
+                await self._run_async(savepoint.commit)
                 result = (to_add.id,)
             
             self._add_to_cache(DataHISTORY, json_data, result[0])
@@ -451,7 +499,7 @@ class LoggerSQL(logging.LoggerBASE):
         """
         Closes the engine and the cursor.
         """
-        await self.engine.dispose()
+        await self._run_async(self.engine.dispose)
 
     async def _handle_error(self,
                             exc: SQLAlchemyError) -> bool:
@@ -562,21 +610,23 @@ class LoggerSQL(logging.LoggerBASE):
             try:
                 # Insert guild into the database and cache if it doesn't exist
                 session: AsyncSession
-                async with self._sessionmaker.begin() as session:
-                    guild_id = await self._get_insert_guild(guild_snowflake, guild_name, guild_type, session)
-                    if channels is not None:
-                    # Insert channels into the database and cache if it doesn't exist
-                        _channels = await self._get_insert_channels(channels, guild_id, session)
+                session = self._sessionmaker()
+                guild_id = await self._get_insert_guild(guild_snowflake, guild_name, guild_type, session)
+                if channels is not None:
+                # Insert channels into the database and cache if it doesn't exist
+                    _channels = await self._get_insert_channels(channels, guild_id, session)
 
-                    data_id = await self._get_insert_data(sent_data, session)
+                data_id = await self._get_insert_data(sent_data, session)
 
-                    # Save message log
-                    message_log = MessageLOG(data_id, message_type, message_mode, dm_success_info_reason, guild_id)
-                    session.add(message_log)
-                    await session.flush()
-                    if channels is not None:
-                        to_add = [MessageChannelLOG(message_log.id, ch_id, reason) for ch_id, reason in (channel.values() for channel in _channels)]
-                        session.add_all(to_add)
+                # Save message log
+                message_log = MessageLOG(data_id, message_type, message_mode, dm_success_info_reason, guild_id)
+                session.add(message_log)
+                await self._run_async(session.flush)
+                if channels is not None:
+                    to_add = [MessageChannelLOG(message_log.id, ch_id, reason) for ch_id, reason in (channel.values() for channel in _channels)]
+                    session.add_all(to_add)
+                
+                await self._run_async(session.commit)
                 break
             except SQLAlchemyError as exc:
                 # Run in executor to prevent blocking
@@ -630,7 +680,7 @@ if GLOBALS.sql_installed:
         """
         __tablename__ = "MessageTYPE"
 
-        id = Column(Integer, primary_key=True)
+        id = Column(SmallInteger().with_variant(Integer, "sqlite"), primary_key=True)
         name = Column(NVARCHAR(20), unique=True)
 
         def __init__(self, name: str=None):
@@ -649,7 +699,7 @@ if GLOBALS.sql_installed:
 
         __tablename__ = "MessageMODE"
 
-        id = Column(Integer, primary_key=True)
+        id = Column(SmallInteger().with_variant(Integer, "sqlite"), primary_key=True)
         name = Column(NVARCHAR(20), unique=True)
 
         def __init__(self, name: str=None):
@@ -668,7 +718,7 @@ if GLOBALS.sql_installed:
 
         __tablename__ = "GuildTYPE"
 
-        id = Column(Integer, primary_key=True)
+        id = Column(SmallInteger().with_variant(Integer, "sqlite"), primary_key=True)
         name = Column(NVARCHAR(20), unique=True)
 
         def __init__(self, name: str=None):
