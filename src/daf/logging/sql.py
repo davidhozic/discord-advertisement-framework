@@ -47,12 +47,12 @@ SQL_ENABLE_DEBUG = False
 # ------------------------------------ Optional ------------------------------------
 try:
     from sqlalchemy import (
-                            SmallInteger, Integer, BigInteger, NVARCHAR, DateTime,
+                            SmallInteger, Integer, BigInteger, String, DateTime,
                             Column, ForeignKey, Sequence, select
                         )            
     from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
     from sqlalchemy.engine import URL as SQLURL, create_engine
-    from sqlalchemy.exc import SQLAlchemyError, NoSuchTableError
+    from sqlalchemy.exc import SQLAlchemyError
     from sqlalchemy.orm import sessionmaker, Session
     from sqlalchemy.ext.declarative import declarative_base
     import sqlalchemy as sqa
@@ -280,7 +280,11 @@ class LoggerSQL(logging.LoggerBASE):
             
             await self._run_async(session.commit)
         except Exception as ex:
+            await self._run_async(session.rollback)
             raise DAFSQLError(f"Unable to create lookuptables' rows.\nReason: {ex}", DAF_SQL_CR_LT_VALUES_ERROR)
+        finally:
+            await self._run_async(session.close)
+
 
     async def _create_tables(self) -> None:
         """
@@ -292,14 +296,14 @@ class LoggerSQL(logging.LoggerBASE):
             Raised when tables could not be created.
         """
         try:
+            session: AsyncSession
             trace("[SQL]: Creating tables...", TraceLEVELS.NORMAL)
             if self.is_async:
-                async with self.engine.begin() as tran:
+                async with self.engine.connect() as tran:
                     await tran.run_sync(ORMBase.metadata.create_all)
             else:
                 with self.engine.connect() as tran:
                     tran.run_callable(ORMBase.metadata.create_all)
-                    tran.commit()
             
         except Exception as ex:
             raise DAFSQLError(f"Unable to create all the tables.\nReason: {ex}", DAF_SQL_CREATE_TABLES_ERROR)
@@ -317,7 +321,8 @@ class LoggerSQL(logging.LoggerBASE):
             # Dictionary mapping the database dialect to it's connector
             dialect_conn_map = {
                 "sqlite" : "aiosqlite",
-                "mssql" : "pymssql"
+                "mssql" : "pymssql",
+                "postgresql" : "asyncpg"
             }
 
             dialect = self.dialect
@@ -341,7 +346,7 @@ class LoggerSQL(logging.LoggerBASE):
             )
 
             self.engine = create_engine_(sqlurl,
-                                         echo=SQL_ENABLE_DEBUG, future=True, pool_pre_ping=True,
+                                         echo=SQL_ENABLE_DEBUG,
                                          connect_args={"timeout" : SQL_CONNECTOR_TIMEOUT})
 
             self._sessionmaker = sessionmaker(bind=self.engine, class_=session_class)
@@ -559,7 +564,7 @@ class LoggerSQL(logging.LoggerBASE):
     # _async_safe prevents multiple tasks from attempting to do operations on the database at the same time.
     # This is to avoid eg. procedures being called while they are being created,
     # handle error being called from different tasks, update method from causing a race condition,etc
-    @timeit(15)
+    @timeit(5)
     @misc._async_safe("safe_sem", 1)
     async def _save_log(self,
                         guild_context: dict,
@@ -629,9 +634,13 @@ class LoggerSQL(logging.LoggerBASE):
                 await self._run_async(session.commit)
                 break
             except SQLAlchemyError as exc:
+                await self._run_async(session.rollback)
                 # Run in executor to prevent blocking
                 if not await self._handle_error(exc):
                     raise DAFSQLError("Unable to handle SQL error", DAF_SQL_SAVE_LOG_ERROR) from exc
+            finally:
+                await self._run_async(session.close)
+
         else:
             DAFSQLError(f"Unable to save log within {SQL_MAX_SAVE_ATTEMPTS} tries", DAF_SQL_SAVE_LOG_ERROR)
 
@@ -681,7 +690,7 @@ if GLOBALS.sql_installed:
         __tablename__ = "MessageTYPE"
 
         id = Column(SmallInteger().with_variant(Integer, "sqlite"), primary_key=True)
-        name = Column(NVARCHAR(20), unique=True)
+        name = Column(String(20), unique=True)
 
         def __init__(self, name: str=None):
             self.name = name
@@ -700,7 +709,7 @@ if GLOBALS.sql_installed:
         __tablename__ = "MessageMODE"
 
         id = Column(SmallInteger().with_variant(Integer, "sqlite"), primary_key=True)
-        name = Column(NVARCHAR(20), unique=True)
+        name = Column(String(20), unique=True)
 
         def __init__(self, name: str=None):
             self.name = name
@@ -719,7 +728,7 @@ if GLOBALS.sql_installed:
         __tablename__ = "GuildTYPE"
 
         id = Column(SmallInteger().with_variant(Integer, "sqlite"), primary_key=True)
-        name = Column(NVARCHAR(20), unique=True)
+        name = Column(String(20), unique=True)
 
         def __init__(self, name: str=None):
             self.name = name
@@ -742,7 +751,7 @@ if GLOBALS.sql_installed:
 
         id = Column(Integer, primary_key=True)
         snowflake_id = Column(BigInteger)
-        name = Column(NVARCHAR)
+        name = Column(String)
         guild_type = Column(SmallInteger, ForeignKey("GuildTYPE.id"), nullable=False)
 
         def __init__(self,
@@ -772,7 +781,7 @@ if GLOBALS.sql_installed:
         __tablename__ = "CHANNEL"
         id = Column(Integer, primary_key=True)
         snowflake_id = Column(BigInteger)
-        name = Column(NVARCHAR)
+        name = Column(String)
         guild_id = Column(Integer, ForeignKey("GuildUSER.id"), nullable=False)
 
         def __init__(self,
@@ -796,7 +805,7 @@ if GLOBALS.sql_installed:
         __tablename__ = "DataHISTORY"
 
         id = Column(Integer, primary_key= True)
-        content = Column(NVARCHAR)
+        content = Column(String)
 
         def __init__(self,
                     content: str):
@@ -829,7 +838,7 @@ if GLOBALS.sql_installed:
         message_type = Column(SmallInteger, ForeignKey("MessageTYPE.id"), nullable=False)
         guild_id = Column(Integer, ForeignKey("GuildUSER.id"), nullable=False)
         message_mode = Column(SmallInteger, ForeignKey("MessageMODE.id")) # [TextMESSAGE, DirectMESSAGE]
-        dm_reason = Column(NVARCHAR)  # [DirectMESSAGE]
+        dm_reason = Column(String)  # [DirectMESSAGE]
         timestamp = Column(DateTime)
 
         def __init__(self,
@@ -864,7 +873,7 @@ if GLOBALS.sql_installed:
 
         log_id = Column(Integer, ForeignKey("MessageLOG.id", ondelete="CASCADE"), primary_key=True)
         channel_id = Column(Integer, ForeignKey("CHANNEL.id"), primary_key=True)
-        reason = Column(NVARCHAR)
+        reason = Column(String)
         def __init__(self,
                     message_log_id: int,
                     channel_id: int,
