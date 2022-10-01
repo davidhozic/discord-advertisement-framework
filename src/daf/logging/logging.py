@@ -14,7 +14,7 @@ import json
 import csv
 import pathlib
 import shutil
-
+import asyncio
 
 __all__ = (
     "LoggerBASE",
@@ -302,7 +302,7 @@ async def save_log(guild_context: dict, message_context: dict):
     mgr = GLOBAL.logger
     while mgr is not None:
         try:
-            await mgr._save_log(guild_context, message_context)
+            await asyncio.shield(mgr._save_log(guild_context, message_context))
             break
         except Exception as exc:
             trace(f"{type(mgr).__name__} failed, falling to {type(mgr.fallback).__name__}\nReason: {exc}", TraceLEVELS.WARNING)
