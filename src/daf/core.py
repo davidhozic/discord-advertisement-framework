@@ -22,7 +22,7 @@ import _discord as dc
 # Configuration
 #######################################################################
 C_TASK_SLEEP_DELAY = 0.010 # Advertiser task sleep
-
+EVENT_LOOP_CLOSE_DELAY = 1
 
 #######################################################################
 # Exports
@@ -334,7 +334,7 @@ def _shutdown_clean(loop: asyncio.AbstractEventLoop) -> None:
             task.cancel()
 
     loop.run_until_complete(asyncio.gather(*tasks, return_exceptions=True))
-    loop.run_until_complete(asyncio.sleep(1)) # Yield for one second to allow aiohttp cleanup
+    loop.run_until_complete(asyncio.sleep(EVENT_LOOP_CLOSE_DELAY)) # Yield for one second to allow aiohttp cleanup
     loop.close()
 
 

@@ -298,9 +298,11 @@ class LoggerSQL(logging.LoggerBASE):
             if self.is_async:
                 async with self.engine.connect() as tran:
                     await tran.run_sync(ORMBase.metadata.create_all)
+                    await tran.commit()
             else:
                 with self.engine.connect() as tran:
                     tran.run_callable(ORMBase.metadata.create_all)
+                    tran.commit()
             
         except Exception as ex:
             raise DAFSQLError(f"Unable to create all the tables.\nReason: {ex}", DAF_SQL_CREATE_TABLES_ERROR)
@@ -536,7 +538,7 @@ class LoggerSQL(logging.LoggerBASE):
         session: AsyncSession
         message = exc.args[0]
         res = True
-        time.sleep(SQL_RECOVERY_TIME)
+        await asyncio.sleep(SQL_RECOVERY_TIME)
         try:
             # TODO: Update to work on latest version
             # Handle the error
