@@ -26,7 +26,6 @@ T = TypeVar("T")
 C_PERIOD_MINIMUM_SEC = 1 # Minimal seconds the period can be
 
 
-@typechecked
 class BaseMESSAGE:
     """
     This is the base class for all the different classes that
@@ -76,6 +75,7 @@ class BaseMESSAGE:
 
     __logname__: str = "" # Used for registering SQL types and to get the message type for saving the log
 
+    @typechecked
     def __init__(self,
                 start_period: Optional[Union[int, timedelta]],
                 end_period: Union[int, timedelta],

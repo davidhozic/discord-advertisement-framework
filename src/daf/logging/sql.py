@@ -152,8 +152,9 @@ class LoggerSQL(logging.LoggerBASE):
 
         self.fallback = fallback
 
+        # Set in ._begin_engine
         self.engine: sqa.engine.Engine = None
-        self._sessionmaker: sessionmaker = None
+        self.session_maker: sessionmaker = None
 
         # Semaphore used to prevent multiple tasks from trying to access the `._save_log()` method at once.
         # Also used in the `.update()` method to prevent race conditions.
@@ -264,26 +265,22 @@ class LoggerSQL(logging.LoggerBASE):
         session : Union[Session, AsyncSession]
         try:
             trace("[SQL]: Generating lookuptable values...", TraceLEVELS.NORMAL)
-            session = self._sessionmaker()
+            async with self.session_maker() as session:
+                for to_add in copy.deepcopy(GLOBALS.lt_types):  # Deep copied to prevent SQLAlchemy from deleting the data
+                    existing = await self._run_async(session.execute, select(type(to_add)).where(type(to_add).name == to_add.name))
+                    existing = existing.fetchone()
+                    if existing is not None:
+                        existing = existing[0]
+                    else:
+                        session.add(to_add)
+                        await self._run_async(session.flush)
+                        existing = to_add
 
-            for to_add in copy.deepcopy(GLOBALS.lt_types):  # Deep copied to prevent SQLAlchemy from deleting the data
-                existing = await self._run_async(session.execute, select(type(to_add)).where(type(to_add).name == to_add.name))
-                existing = existing.fetchone()
-                if existing is not None:
-                    existing = existing[0]
-                else:
-                    session.add(to_add)
-                    await self._run_async(session.flush)
-                    existing = to_add
-
-                self._add_to_cache(type(to_add), to_add.name, existing.id)
-            
-            await self._run_async(session.commit)
+                    self._add_to_cache(type(to_add), to_add.name, existing.id)
+                
+                await self._run_async(session.commit)
         except Exception as ex:
-            await self._run_async(session.rollback)
             raise DAFSQLError(f"Unable to create lookuptables' rows.\nReason: {ex}", DAF_SQL_CR_LT_VALUES_ERROR)
-        finally:
-            await self._run_async(session.close)
 
 
     async def _create_tables(self) -> None:
@@ -349,7 +346,24 @@ class LoggerSQL(logging.LoggerBASE):
                                          echo=SQL_ENABLE_DEBUG,
                                          connect_args={"timeout" : SQL_CONNECTOR_TIMEOUT})
 
-            self._sessionmaker = sessionmaker(bind=self.engine, class_=session_class)
+            class SessionWrapper(session_class):
+                """
+                Wrapper class for the session that can always be used
+                in async mode, even if the session it wraps is not async.
+                """
+                async def __aenter__(self_):
+                    if self.is_async:
+                        return await super().__aenter__()
+
+                    return super().__enter__()
+                
+                async def __aexit__(self_, *args):
+                    if self.is_async:
+                        return await super().__aexit__(*args)
+
+                    return super().__exit__(*args)
+
+            self.session_maker = sessionmaker(bind=self.engine, class_=SessionWrapper)
         except Exception as ex:
             raise DAFSQLError(f"Unable to start engine.\nError: {ex}", DAF_SQL_BEGIN_ENGINE_ERROR)
 
@@ -409,10 +423,8 @@ class LoggerSQL(logging.LoggerBASE):
             else:
                 result = GuildUSER(guild_type, snowflake, name)
                 savepoint = await self._run_async(session.begin_nested) # Savepoint
-
                 session.add(result)
                 await self._run_async(savepoint.commit)
-
                 result = result.id
                 self._add_to_cache(GuildUSER, snowflake, result)
         else:
@@ -547,7 +559,7 @@ class LoggerSQL(logging.LoggerBASE):
                 pass # Just retry
 
             elif code == 1205: # Transaction deadlocked
-                async with self._sessionmaker.begin() as session:
+                async with self.session_maker() as session:
                     await session.commit()
 
             else: # No handling instruction known
@@ -615,31 +627,29 @@ class LoggerSQL(logging.LoggerBASE):
             try:
                 # Insert guild into the database and cache if it doesn't exist
                 session: AsyncSession
-                session = self._sessionmaker()
-                guild_id = await self._get_insert_guild(guild_snowflake, guild_name, guild_type, session)
-                if channels is not None:
-                # Insert channels into the database and cache if it doesn't exist
-                    _channels = await self._get_insert_channels(channels, guild_id, session)
+                async with self.session_maker() as session:
+                    guild_id = await self._get_insert_guild(guild_snowflake, guild_name, guild_type, session)
+                    if channels is not None:
+                    # Insert channels into the database and cache if it doesn't exist
+                        _channels = await self._get_insert_channels(channels, guild_id, session)
 
-                data_id = await self._get_insert_data(sent_data, session)
+                    data_id = await self._get_insert_data(sent_data, session)
 
-                # Save message log
-                message_log = MessageLOG(data_id, message_type, message_mode, dm_success_info_reason, guild_id)
-                session.add(message_log)
-                await self._run_async(session.flush)
-                if channels is not None:
-                    to_add = [MessageChannelLOG(message_log.id, ch_id, reason) for ch_id, reason in (channel.values() for channel in _channels)]
-                    session.add_all(to_add)
-                
-                await self._run_async(session.commit)
+                    # Save message log
+                    message_log = MessageLOG(data_id, message_type, message_mode, dm_success_info_reason, guild_id)
+                    session.add(message_log)
+                    await self._run_async(session.flush)
+                    if channels is not None:
+                        to_add = [MessageChannelLOG(message_log.id, ch_id, reason) for ch_id, reason in (channel.values() for channel in _channels)]
+                        session.add_all(to_add)
+
+                    await self._run_async(session.commit)
+
                 break
             except SQLAlchemyError as exc:
-                await self._run_async(session.rollback)
                 # Run in executor to prevent blocking
                 if not await self._handle_error(exc):
                     raise DAFSQLError("Unable to handle SQL error", DAF_SQL_SAVE_LOG_ERROR) from exc
-            finally:
-                await self._run_async(session.close)
 
         else:
             DAFSQLError(f"Unable to save log within {SQL_MAX_SAVE_ATTEMPTS} tries", DAF_SQL_SAVE_LOG_ERROR)
@@ -689,7 +699,7 @@ if GLOBALS.sql_installed:
         """
         __tablename__ = "MessageTYPE"
 
-        id = Column(SmallInteger().with_variant(Integer, "sqlite"), primary_key=True)
+        id = Column(SmallInteger().with_variant(Integer, "sqlite"), Sequence("msg_tp_seq", 0, 1, minvalue=0, data_type=SmallInteger, cycle=True), primary_key=True)
         name = Column(String(20), unique=True)
 
         def __init__(self, name: str=None):
@@ -708,7 +718,7 @@ if GLOBALS.sql_installed:
 
         __tablename__ = "MessageMODE"
 
-        id = Column(SmallInteger().with_variant(Integer, "sqlite"), primary_key=True)
+        id = Column(SmallInteger().with_variant(Integer, "sqlite"), Sequence("msg_mode_seq", 0, 1, minvalue=0, data_type=SmallInteger, cycle=True), primary_key=True)
         name = Column(String(20), unique=True)
 
         def __init__(self, name: str=None):
@@ -727,7 +737,7 @@ if GLOBALS.sql_installed:
 
         __tablename__ = "GuildTYPE"
 
-        id = Column(SmallInteger().with_variant(Integer, "sqlite"), primary_key=True)
+        id = Column(SmallInteger().with_variant(Integer, "sqlite"), Sequence("guild_tp_seq", 0, 1, minvalue=0, data_type=SmallInteger, cycle=True),  primary_key=True)
         name = Column(String(20), unique=True)
 
         def __init__(self, name: str=None):
@@ -749,7 +759,7 @@ if GLOBALS.sql_installed:
         """
         __tablename__ = "GuildUSER"
 
-        id = Column(Integer, primary_key=True)
+        id = Column(Integer, Sequence("guild_user_seq", 0, 1, minvalue=0, data_type=Integer, cycle=True), primary_key=True)
         snowflake_id = Column(BigInteger)
         name = Column(String)
         guild_type = Column(SmallInteger, ForeignKey("GuildTYPE.id"), nullable=False)
@@ -779,7 +789,7 @@ if GLOBALS.sql_installed:
 
 
         __tablename__ = "CHANNEL"
-        id = Column(Integer, primary_key=True)
+        id = Column(Integer, Sequence("channel_seq", 0, 1, minvalue=0, data_type=Integer, cycle=True), primary_key=True)
         snowflake_id = Column(BigInteger)
         name = Column(String)
         guild_id = Column(Integer, ForeignKey("GuildUSER.id"), nullable=False)
@@ -804,7 +814,7 @@ if GLOBALS.sql_installed:
         """
         __tablename__ = "DataHISTORY"
 
-        id = Column(Integer, primary_key= True)
+        id = Column(Integer, Sequence("dhist_seq", 0, 1, minvalue=0, data_type=Integer, cycle=True), primary_key= True)
         content = Column(String)
 
         def __init__(self,
@@ -833,7 +843,7 @@ if GLOBALS.sql_installed:
 
         __tablename__ = "MessageLOG"
 
-        id = Column(Integer, primary_key=True)
+        id = Column(Integer, Sequence("ml_seq", 0, 1, minvalue=0, data_type=Integer, cycle=True), primary_key=True)
         sent_data = Column(Integer, ForeignKey("DataHISTORY.id"))
         message_type = Column(SmallInteger, ForeignKey("MessageTYPE.id"), nullable=False)
         guild_id = Column(Integer, ForeignKey("GuildUSER.id"), nullable=False)
