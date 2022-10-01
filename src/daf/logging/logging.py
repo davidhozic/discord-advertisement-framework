@@ -286,7 +286,7 @@ async def set_logger(logger: LoggerBASE):
     await logger.initialize()
     GLOBAL.logger = logger
 
-
+@misc._async_cancellation_safe
 async def save_log(guild_context: dict, message_context: dict):
     """
     Saves the log to the selected manager or saves
