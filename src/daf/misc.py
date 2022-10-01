@@ -2,6 +2,7 @@
     This module contains definitions regarding miscellaneous
     items that can appear in multiple modules
 """
+import signal
 from typing import Coroutine, Callable, Any, Dict, Optional
 from asyncio import Semaphore
 from functools import wraps
@@ -94,6 +95,33 @@ async def _update(obj: Any, *, init_options: dict = {}, **kwargs):
 ###########################
 # Decorators
 ###########################
+def sigint_handler(signum, frame):
+    pass
+
+def _async_cancellation_safe(func: Callable):
+    """
+    Decorator that wraps coroutine and prevents the interrupt signal.
+
+    Parameters
+    ------------
+    func: Callable
+        Function which returns a coroutine.
+    """
+    @wraps(func)
+    async def wrapper(*args, **kwargs):
+        old_handler = signal.signal(signal.SIGINT, sigint_handler)
+        return_ = await func(*args, **kwargs)
+        if old_handler != sigint_handler:
+            # This can happen since we have an await statement.
+            # If we create 2 tasks Task1 and Task2 and Task1 finishes before Task2,
+            # then Task2 would eventually set the signal handler back to sigint_handler
+            # instead to the original system handler
+            signal.signal(signal.SIGINT, old_handler)
+        
+        return return_
+
+    return wrapper
+
 def _async_safe(semaphore: str, amount: Optional[int]=1) -> Callable:
     """
     Function that returns a safety decorator, which uses the :strong:`semaphore` parameter
