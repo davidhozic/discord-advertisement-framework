@@ -14,7 +14,16 @@ with open("./requirements.txt" , 'r', encoding="utf-8") as rf:
 
 optional_install = None
 with open("./optional.json", "r", encoding="utf-8") as rf:
-    optional_install = json.load(rf)
+    optional_install: dict = json.load(rf)
+    # Make a key that will install all requirements
+    all_deps = []
+    for key, deps in optional_install.items():
+        if key == "docs":
+            continue
+        
+        all_deps.extend(deps)
+    
+    optional_install["all"] = all_deps
 
 # Parse version
 gh_release = os.environ.get("GITHUB_REF_NAME", default=None) # Workflow run release
