@@ -24,7 +24,9 @@ jobs:
       with:
           python-version: '3.8' 
     - name: Install requirements
-      run: pip install .[docs]
+      run: |
+        pip install .[all]
+        pip install .[docs]
     - name: Install latex
       run: sudo apt-get update && sudo apt-get install texlive texlive-publishers texlive-science latexmk cm-super
     - name: Build html, latex, pdf
