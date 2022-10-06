@@ -1,17 +1,14 @@
-=========================================================
 DAF
 =========================================================
-.. image:: docs/source/images/logo.png
-    :width: 100
     
 The Discord advertisement framework is a  **shilling tool** that allows easy advertising on Discord.
 
-----------------------
+
 Other information
 ----------------------
-For more information see the project's `Webpage <https://daf.davidhozic.top>`_.
+For more information see the project's webpage: https://daf.davidhozic.top.
 
-----------------------
+
 Key features
 ----------------------
 - Ability to run on **user** accounts (against discord's ToS) or **bot** accounts
@@ -21,12 +18,13 @@ Key features
 - Ability to add additional application layers with help of asyncio
 - Easy to setup
 
-.. caution::
-    While running this on user accounts is possible, it is **not recommended** since it is against Discord's ToS.
-    I am not responsible if your account get's disabled for using self-bots, however there are some protections to make
-    it harder for the API to detect a self-bot.
+Caution!
 
---------------------
+While running this on user accounts is possible, it is **not recommended** since it is against Discord's ToS.
+I am not responsible if your account get's disabled for using self-bots, however there are some protections to make
+it harder for the API to detect a self-bot.
+
+
 Basic example
 --------------------
-For basic example see `main_send_string.py <Examples/Message%20Types/TextMESSAGE/main_send_string.py>`_
+For basic example see https://github.com/davidhozic/discord-advertisement-framework/blob/master/Examples/Message%20Types/TextMESSAGE/main_send_string.py

@@ -89,3 +89,12 @@ Installation
 
                     pip install discord-advert-framework[sql]
 
+            .. tab:: All
+                
+                Install all of the (left) optional dependencies
+
+                - .. code-block:: bash
+                    :caption: SQL logging
+
+                    pip install discord-advert-framework[all]
+
