@@ -50,7 +50,6 @@ class LoggerBASE:
     """
     def __init__(self, fallback: Optional[LoggerBASE] = None) -> None:
         self.fallback = fallback
-        raise NotImplementedError
 
     async def initialize(self) -> None:
         "Initializes self and the fallback"
@@ -58,7 +57,7 @@ class LoggerBASE:
             try:
                 await self.fallback.initialize()
             except Exception as exc:
-                trace(f"[Logging:] Could not initialize {type(self).__name__}'s fallback: {type(self.fallback).__name__}", TraceLEVELS.WARNING)
+                trace(f"[Logging:] Could not initialize {type(self).__name__}'s fallback: {type(self.fallback).__name__}.\nReason: {exc}", TraceLEVELS.WARNING)
                 self.fallback = None
 
 
@@ -125,8 +124,8 @@ class LoggerCSV(LoggerBASE):
     """
     def __init__(self, path: str, delimiter: str, fallback: Optional[LoggerBASE] = None) -> None:
         self.path = path
-        self.fallback = fallback
         self.delimiter = delimiter
+        super().__init__(fallback)
     
     async def _save_log(self, guild_context: dict, message_context: dict) -> None:
         timestruct = datetime.now()
@@ -184,7 +183,7 @@ class LoggerJSON(LoggerBASE):
     """
     def __init__(self, path: str, fallback: Optional[LoggerBASE] = None) -> None:
         self.path = path
-        self.fallback = fallback
+        super().__init__(fallback)
     
     async def _save_log(self, guild_context: dict, message_context: dict) -> None:
         timestruct = datetime.now()
@@ -245,12 +244,12 @@ async def initialize(logger: LoggerBASE) -> None:
     The logger manager to use for saving logs.
     """
     while logger is not None:
-        with suppress(Exception):
+        try:
             await logger.initialize()
             break
-
-        trace(f"Could not initialize manager {type(logger).__name__}, falling to {type(logger.fallback).__name__}", TraceLEVELS.WARNING)
-        logger = logger.fallback # Could not initialize, try fallback
+        except Exception as exc:
+            trace(f"Could not initialize manager {type(logger).__name__}, falling to {type(logger.fallback).__name__}\nReason: {exc}", TraceLEVELS.WARNING)
+            logger = logger.fallback # Could not initialize, try fallback
     else:
         trace("Logging will be disabled as the logging manager and it's fallbacks all failed initialization", TraceLEVELS.ERROR)
 
@@ -300,6 +299,11 @@ async def save_log(guild_context: dict, message_context: dict):
         Information about the message sent
     """
     mgr = GLOBAL.logger
+    
+    # Don't spam the console if no loggers are available
+    if mgr is None:
+        return
+
     while mgr is not None:
         try:
             await asyncio.shield(mgr._save_log(guild_context, message_context))

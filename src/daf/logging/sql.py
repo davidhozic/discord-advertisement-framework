@@ -41,14 +41,13 @@ SQL_MAX_EHANDLE_ATTEMPTS = 3
 SQL_RECOVERY_TIME = 0.5
 SQL_RECONNECT_TIME = 5 * 60
 SQL_RECONNECT_ATTEMPTS = 3
-SQL_CONNECTOR_TIMEOUT = 6
 SQL_ENABLE_DEBUG = False
 
 # ------------------------------------ Optional ------------------------------------
 try:
     from sqlalchemy import (
-                            SmallInteger, Integer, BigInteger, String, DateTime,
-                            Column, ForeignKey, Sequence, select
+                            SmallInteger, Integer, BigInteger, DateTime,
+                            Column, ForeignKey, Sequence, String, select
                         )            
     from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
     from sqlalchemy.engine import URL as SQLURL, create_engine
@@ -121,6 +120,11 @@ class LoggerSQL(logging.LoggerBASE):
         Dialect or database type (SQLite, mssql, )
     fallback: Optional[LoggerBASE]
         The fallback manager to use in case SQL logging fails.
+
+    Raises
+    ----------
+    ValueError
+        Unsupported dialect (db type).
     """
 
     @typechecked
@@ -136,6 +140,17 @@ class LoggerSQL(logging.LoggerBASE):
         if not GLOBALS.sql_installed:
             raise ModuleNotFoundError("You need to install extra requirements: pip install discord-advert-framework[sql]")
 
+        # Dictionary mapping the database dialect to it's connector
+        self.dialect_conn_map = {
+            "sqlite" : "aiosqlite",
+            "mssql" : "pymssql",
+            "postgresql" : "asyncpg",
+            "mysql": "asyncmy"
+        }
+
+        if dialect not in self.dialect_conn_map:
+            raise ValueError(f"Unsupported dialect (db type): '{dialect}'. Supported types are: {tuple(self.dialect_conn_map.keys())}.")
+
         # Save the connection parameters
         self.is_async = False # Set in _begin_engine
         self.username = username
@@ -149,8 +164,6 @@ class LoggerSQL(logging.LoggerBASE):
 
         if self.dialect == "sqlite":
             self.database += ".db"
-
-        self.fallback = fallback
 
         # Set in ._begin_engine
         self.engine: sqa.engine.Engine = None
@@ -172,6 +185,8 @@ class LoggerSQL(logging.LoggerBASE):
         self.GuildUSER = {}
         self.CHANNEL = {}
         self.DataHISTORY = {}
+
+        super().__init__(fallback)
 
     async def _run_async(self, method: Callable, *args, **kwargs):
         """
@@ -296,13 +311,11 @@ class LoggerSQL(logging.LoggerBASE):
             session: AsyncSession
             trace("[SQL]: Creating tables...", TraceLEVELS.NORMAL)
             if self.is_async:
-                async with self.engine.connect() as tran:
+                async with self.engine.begin() as tran:
                     await tran.run_sync(ORMBase.metadata.create_all)
-                    await tran.commit()
             else:
                 with self.engine.connect() as tran:
                     tran.run_callable(ORMBase.metadata.create_all)
-                    tran.commit()
             
         except Exception as ex:
             raise DAFSQLError(f"Unable to create all the tables.\nReason: {ex}", DAF_SQL_CREATE_TABLES_ERROR)
@@ -317,13 +330,6 @@ class LoggerSQL(logging.LoggerBASE):
             Raised when the engine could not connect to the specified database.
         """
         try:
-            # Dictionary mapping the database dialect to it's connector
-            dialect_conn_map = {
-                "sqlite" : "aiosqlite",
-                "mssql" : "pymssql",
-                "postgresql" : "asyncpg"
-            }
-
             dialect = self.dialect
             if dialect == "mssql":
                 # The only dialect that doesn't have async connectors
@@ -336,7 +342,7 @@ class LoggerSQL(logging.LoggerBASE):
                 session_class = AsyncSession
             
             sqlurl = SQLURL.create(
-                f"{dialect}+{dialect_conn_map[dialect]}",
+                f"{dialect}+{self.dialect_conn_map[dialect]}",
                 self.username,
                 self.password,
                 self.server,
@@ -345,8 +351,7 @@ class LoggerSQL(logging.LoggerBASE):
             )
 
             self.engine = create_engine_(sqlurl,
-                                         echo=SQL_ENABLE_DEBUG,
-                                         connect_args={"timeout" : SQL_CONNECTOR_TIMEOUT})
+                                         echo=SQL_ENABLE_DEBUG)
 
             class SessionWrapper(session_class):
                 """
@@ -372,7 +377,7 @@ class LoggerSQL(logging.LoggerBASE):
     async def initialize(self) -> None:
         """
         This method initializes the connection to the database, creates the missing tables
-        and fills the lookuptables with types defined by the register_type(lookup_table) function.
+        and fills the lookup tables with types defined by the register_type(lookup_table) function.
 
         .. note::
             This is automatically called when running the daf.
@@ -701,8 +706,8 @@ if GLOBALS.sql_installed:
         """
         __tablename__ = "MessageTYPE"
 
-        id = Column(SmallInteger().with_variant(Integer, "sqlite"), Sequence("msg_tp_seq", 0, 1, minvalue=0, data_type=SmallInteger, cycle=True), primary_key=True)
-        name = Column(String(20), unique=True)
+        id = Column(SmallInteger().with_variant(Integer, "sqlite"), Sequence("msg_tp_seq", 0, 1, minvalue=0, maxvalue=32767, cycle=True), primary_key=True)
+        name = Column(String(3072), unique=True)
 
         def __init__(self, name: str=None):
             self.name = name
@@ -720,8 +725,8 @@ if GLOBALS.sql_installed:
 
         __tablename__ = "MessageMODE"
 
-        id = Column(SmallInteger().with_variant(Integer, "sqlite"), Sequence("msg_mode_seq", 0, 1, minvalue=0, data_type=SmallInteger, cycle=True), primary_key=True)
-        name = Column(String(20), unique=True)
+        id = Column(SmallInteger().with_variant(Integer, "sqlite"), Sequence("msg_mode_seq", 0, 1, minvalue=0, maxvalue=32767, cycle=True), primary_key=True)
+        name = Column(String(3072), unique=True)
 
         def __init__(self, name: str=None):
             self.name = name
@@ -739,8 +744,8 @@ if GLOBALS.sql_installed:
 
         __tablename__ = "GuildTYPE"
 
-        id = Column(SmallInteger().with_variant(Integer, "sqlite"), Sequence("guild_tp_seq", 0, 1, minvalue=0, data_type=SmallInteger, cycle=True),  primary_key=True)
-        name = Column(String(20), unique=True)
+        id = Column(SmallInteger().with_variant(Integer, "sqlite"), Sequence("guild_tp_seq", 0, 1, minvalue=0, maxvalue=32767, cycle=True),  primary_key=True)
+        name = Column(String(3072), unique=True)
 
         def __init__(self, name: str=None):
             self.name = name
@@ -761,9 +766,9 @@ if GLOBALS.sql_installed:
         """
         __tablename__ = "GuildUSER"
 
-        id = Column(Integer, Sequence("guild_user_seq", 0, 1, minvalue=0, data_type=Integer, cycle=True), primary_key=True)
+        id = Column(Integer, Sequence("guild_user_seq", 0, 1, minvalue=0, maxvalue=2147483647, cycle=True), primary_key=True)
         snowflake_id = Column(BigInteger)
-        name = Column(String)
+        name = Column(String(3072))
         guild_type = Column(SmallInteger, ForeignKey("GuildTYPE.id"), nullable=False)
 
         def __init__(self,
@@ -791,9 +796,9 @@ if GLOBALS.sql_installed:
 
 
         __tablename__ = "CHANNEL"
-        id = Column(Integer, Sequence("channel_seq", 0, 1, minvalue=0, data_type=Integer, cycle=True), primary_key=True)
+        id = Column(Integer, Sequence("channel_seq", 0, 1, minvalue=0, maxvalue=2147483647, cycle=True), primary_key=True)
         snowflake_id = Column(BigInteger)
-        name = Column(String)
+        name = Column(String(3072))
         guild_id = Column(Integer, ForeignKey("GuildUSER.id"), nullable=False)
 
         def __init__(self,
@@ -816,8 +821,8 @@ if GLOBALS.sql_installed:
         """
         __tablename__ = "DataHISTORY"
 
-        id = Column(Integer, Sequence("dhist_seq", 0, 1, minvalue=0, data_type=Integer, cycle=True), primary_key= True)
-        content = Column(String)
+        id = Column(Integer, Sequence("dhist_seq", 0, 1, minvalue=0, maxvalue=2147483647, cycle=True), primary_key= True)
+        content = Column(String(3072))
 
         def __init__(self,
                     content: str):
@@ -845,12 +850,12 @@ if GLOBALS.sql_installed:
 
         __tablename__ = "MessageLOG"
 
-        id = Column(Integer, Sequence("ml_seq", 0, 1, minvalue=0, data_type=Integer, cycle=True), primary_key=True)
+        id = Column(Integer, Sequence("ml_seq", 0, 1, minvalue=0, maxvalue=2147483647, cycle=True), primary_key=True)
         sent_data = Column(Integer, ForeignKey("DataHISTORY.id"))
         message_type = Column(SmallInteger, ForeignKey("MessageTYPE.id"), nullable=False)
         guild_id = Column(Integer, ForeignKey("GuildUSER.id"), nullable=False)
         message_mode = Column(SmallInteger, ForeignKey("MessageMODE.id")) # [TextMESSAGE, DirectMESSAGE]
-        dm_reason = Column(String)  # [DirectMESSAGE]
+        dm_reason = Column(String(3072))  # [DirectMESSAGE]
         timestamp = Column(DateTime)
 
         def __init__(self,
@@ -885,7 +890,7 @@ if GLOBALS.sql_installed:
 
         log_id = Column(Integer, ForeignKey("MessageLOG.id", ondelete="CASCADE"), primary_key=True)
         channel_id = Column(Integer, ForeignKey("CHANNEL.id"), primary_key=True)
-        reason = Column(String)
+        reason = Column(String(3072))
         def __init__(self,
                     message_log_id: int,
                     channel_id: int,
