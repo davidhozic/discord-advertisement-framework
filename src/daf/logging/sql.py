@@ -7,7 +7,7 @@
     .. versionchanged:: v2.1
         Made SQL an optional functionality
 """
-# TODO: Replace .query-s with select
+# TODO: Error recovery
 from datetime import datetime
 from typing import Callable, Dict, List, Literal, Any, Union, Optional
 from contextlib import suppress
@@ -42,6 +42,13 @@ SQL_RECOVERY_TIME = 0.5
 SQL_RECONNECT_TIME = 5 * 60
 SQL_RECONNECT_ATTEMPTS = 3
 SQL_ENABLE_DEBUG = False
+# Dictionary mapping the database dialect to it's connector
+DIALECT_CONN_MAP = {
+    "sqlite" : "aiosqlite",
+    "mssql" : "pymssql",
+    "postgresql" : "asyncpg",
+    "mysql": "asyncmy"
+}
 
 # ------------------------------------ Optional ------------------------------------
 try:
@@ -140,16 +147,8 @@ class LoggerSQL(logging.LoggerBASE):
         if not GLOBALS.sql_installed:
             raise ModuleNotFoundError("You need to install extra requirements: pip install discord-advert-framework[sql]")
 
-        # Dictionary mapping the database dialect to it's connector
-        self.dialect_conn_map = {
-            "sqlite" : "aiosqlite",
-            "mssql" : "pymssql",
-            "postgresql" : "asyncpg",
-            "mysql": "asyncmy"
-        }
-
-        if dialect not in self.dialect_conn_map:
-            raise ValueError(f"Unsupported dialect (db type): '{dialect}'. Supported types are: {tuple(self.dialect_conn_map.keys())}.")
+        if dialect not in DIALECT_CONN_MAP:
+            raise ValueError(f"Unsupported dialect (db type): '{dialect}'. Supported types are: {tuple(DIALECT_CONN_MAP.keys())}.")
 
         # Save the connection parameters
         self.is_async = False # Set in _begin_engine
@@ -342,7 +341,7 @@ class LoggerSQL(logging.LoggerBASE):
                 session_class = AsyncSession
             
             sqlurl = SQLURL.create(
-                f"{dialect}+{self.dialect_conn_map[dialect]}",
+                f"{dialect}+{DIALECT_CONN_MAP[dialect]}",
                 self.username,
                 self.password,
                 self.server,
