@@ -1,7 +1,7 @@
-======================
+
+===============================
 Functions
-======================
-This page contains information about any functions that can be called.
+===============================
 
 ----------------------------
 Tracing
@@ -34,15 +34,6 @@ get_guild_user
 get_shill_list
 ========================
 .. autofunction:: daf.core.get_shill_list
-
-
-----------------------------
-Setters
-----------------------------
-
-set_logger
-========================
-.. autofunction:: daf.logging.set_logger
 
 
 ----------------------------

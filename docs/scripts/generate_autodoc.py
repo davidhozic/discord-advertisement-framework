@@ -60,8 +60,8 @@ MANUAL_FUNCTION_TEMPLATE = \
 
 
 titles = daf.misc.doc_titles
-export_c = ""
-export_f = ""
+export_c = "===============================\nClasses\n===============================\n"
+export_f = "===============================\nFunctions\n===============================\n"
 for category, items in titles.items():
     export_c_items = ""
     export_f_items = ""
@@ -104,7 +104,7 @@ for category, items in titles.items():
                 for name in dir(item):
                     attr = getattr(item, name)
                     if isinstance(attr, property):
-                        properties.append(f".. autoproperty:: {object_path}")
+                        properties.append(f".. autoproperty:: {object_path}.{name}")
 
                 export_c_items += AUTO_CLASS_TEMPLATE.format(object_name=object_name, object_path=object_path, properties="\n\n    ".join(properties)) + "\n"
 
