@@ -42,7 +42,7 @@ v2.2
 - New :func:`daf.logging.get_logger` function for retrieving the logger object used.
 - :func:`daf.core.initialize` for manual control of asyncio (same as :func:`daf.core.run` except it is async)
 - SQL:
-    + SQL logging now supports Microsoft SQL Server, MySQL, PostgreSQL and SQLite databases.
+    + SQL logging now supports **Microsoft SQL Server, MySQL, PostgreSQL and SQLite databases**.
     + |BREAK_CH| :class:`~daf.logging.sql.LoggerSQL`'s parameters are re-arranged, new parameters of which, the ``dialect`` (mssql, sqlite, mysql, postgresql) parameter must be passed.
 - Development:
     + ``doc_category`` decorator for automatic documentation

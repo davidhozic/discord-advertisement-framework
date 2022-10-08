@@ -126,12 +126,19 @@ Relational Database Log (SQL)
         
         pip install discord-advert-framework[sql]
 
-This type of logging enables saving logs to a remote server inside the database. Currently **only Microsoft SQL server is supported.**.
+This type of logging enables saving logs to a remote server inside the database.
 In addition to being smaller in size, database logging takes up less space and it allows easier data analysis.
+
+Supported dialects
+----------------------
+- Microsoft SQL Server
+- PostgreSQL
+- SQLite,
+- MySQL
 
 Usage
 --------------------------------
-To use a SQL base for logging, you need to pass the :ref:`run` function with the sql_manager parameter and pass it the LoggerSQL object.
+To use a SQL base for logging, you need to pass the :ref:`run` function with the ``logging`` parameter and pass it the LoggerSQL object.
 
 .. literalinclude:: ../../Examples/Logging/SQL Logging/main_rickroll.py
     :language: python
@@ -139,16 +146,16 @@ To use a SQL base for logging, you need to pass the :ref:`run` function with the
 
 Features
 --------------------------------
-+ Automatic creation of the schema
-+ Caching for faster logging
-+ Low redundancy for reduced file size
-+ Automatic error recovery
+- Automatic creation of the schema
+- Caching for faster logging
+- Low redundancy for reduced file size
+- Automatic error recovery
 
 .. note:: 
 
     The database must already exist! However it can be completely empty, no need to manually create the schema.
 
-ER diagram of the logs
+ER diagram
 --------------------------------
 .. image:: images/er_diagram.png
     :width: 500pt
@@ -160,7 +167,7 @@ MessageLOG
 ~~~~~~~~~~~~~~~~~~~~
 :Description:
     This table contains the actual logs of sent messages, if the message type is :ref:`DirectMESSAGE`, then all the information is stored in this table.
-    If the types are **Voice/Text** MESSAGE, then part of the log (to which channels it sent), is saved in the :ref:`MessageChannelLOG` table.
+    If the types are **Voice/Text** MESSAGE, then channel part of the log is saved in the :ref:`MessageChannelLOG` table.
 
 :Attributes:
   - |PK| id: Integer  - This is an internal ID of the log inside the database.
@@ -265,6 +272,17 @@ The derived logger class can then implement the following methods:
 1. __init__(self, param1, param2, ...) [Required]:
     The method used for passing parameters and for basic non-async initialization.
     This method must contain a fallback parameter and also needs to have an attribute of the same name.
+
+    .. code-block:: python
+        :caption: Custom __init__ method
+
+         class LoggerCUSTOM(daf.logging.LoggerBASE):
+            def __init__(self, ..., logger):
+                ... # Set attributes
+                super().__init__(logger)
+
+            ... # Other methods
+
 
 2. async initialize(self) [Optional]:
     The base's ``initialize`` method calls ``initialize`` method of it's fallback,
