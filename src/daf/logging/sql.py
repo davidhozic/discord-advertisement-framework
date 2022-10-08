@@ -117,6 +117,8 @@ class ConstDict(dict):
 class TableCache:
     """
     Used for caching table values to IDs for faster access.
+    When maximum cache is exceeded, 1/4 of the first added elements is purged
+    from cache.
     
     Parameters
     -------------
@@ -129,7 +131,6 @@ class TableCache:
         self.table = table
         self.limit = limit
         self.data = {}
-        self.keys = []
     
     def insert(self, key: Any, value: Any) -> None:
         """
@@ -142,18 +143,16 @@ class TableCache:
         value: Any
             What to insert.
         """
-        if len(self.keys) == self.limit:
-            # Remove element at front if we are at max elements
-            first_key = self.keys.pop(0)
-            self.data.pop(first_key)
+        if len(self.data) == self.limit:
+            # Remove 1/4 of the cache
+            for i in range(int(len(self.data)/4)):
+                self.remove()
 
         if key in self.data:
             # Remove the value if it already exists
-            self.keys.remove(key)
-            self.data.pop(key)
+            del self.data[key]
 
         # Add item to cache
-        self.keys.append(key)
         self.data[key] = value
 
     def get(self, key: Any) -> Any:
@@ -166,10 +165,34 @@ class TableCache:
         """
         return self.data.get(key)
 
+    def remove(self, key: Optional[Any]=None) -> None:
+        """
+        Removes the cache item at key.
+
+        Parameters
+        ------------
+        key: Optional[Any]
+            The key at which to remove the cached object.
+            If not passed, removes first element in cache.
+
+        Raises
+        ---------
+        ValueError
+            The item is not present in the cache.
+        ValueError
+            No elements are present in cache.
+        """
+        if key is None:
+            if not len(self.data):
+                raise ValueError("No elements are present in cache.")
+
+            key = next(iter(self.data))
+
+        del self.data[key]
+
     def clear(self) -> None:
         "Clears the cache of all values"
         self.data.clear()
-        self.keys.clear()
     
     def get_table(self) -> ORMBase:
         "Returns the table this cache is for"
@@ -315,10 +338,10 @@ class LoggerSQL(logging.LoggerBASE):
         if len(to_clear) == 0:  # Clear all cached tables if nothing was passed
             to_clear = [cache for cache in vars(self).values() if isinstance(cache, TableCache)]
         else:
-            to_clear = [table for table in to_clear if hasattr(self, table)]
+            to_clear = [getattr(self, table) for table in to_clear if hasattr(self, table)]
 
         for k in to_clear:
-            getattr(self, k).clear()
+            k.clear()
 
     async def _reconnect_after(self, wait: int) -> None:
         """
@@ -631,10 +654,10 @@ class LoggerSQL(logging.LoggerBASE):
                 await self._reconnect_after(SQL_RECONNECT_TIME)
             else:
                 await self._create_tables()
-                self._clear_cache()
+                self._clear_caches()
                 await self._generate_lookup_values()
 
-        except Exception:
+        except Exception as exc:
             # Error could not be handled, stop the engine
             res = False
             await self._stop_engine()
@@ -645,7 +668,6 @@ class LoggerSQL(logging.LoggerBASE):
     # _async_safe prevents multiple tasks from attempting to do operations on the database at the same time.
     # This is to avoid eg. procedures being called while they are being created,
     # handle error being called from different tasks, update method from causing a race condition,etc
-    @timeit(5)
     @misc._async_safe("safe_sem", 1)
     async def _save_log(self,
                         guild_context: dict,
@@ -689,12 +711,12 @@ class LoggerSQL(logging.LoggerBASE):
         for tries in range(SQL_MAX_SAVE_ATTEMPTS):
             try:
                 # Lookup table values
-                guild_type: int = self.guild_type_cache.get(guild_context["type"])
-                message_type: int = self.message_type_cache.get(message_context["type"])
-                message_mode = self.message_mode_cache.get(message_mode)
+                guild_type_key: int = self.guild_type_cache.get(guild_context["type"])
+                message_type_key: int = self.message_type_cache.get(message_context["type"])
+                message_mode_key = self.message_mode_cache.get(message_mode)
                 # Insert guild into the database and cache if it doesn't exist
                 async with self.session_maker() as session:
-                    guild_id = await self._get_insert_guild(guild_snowflake, guild_name, guild_type, session)
+                    guild_id = await self._get_insert_guild(guild_snowflake, guild_name, guild_type_key, session)
                     if channels is not None:
                         # Insert channels into the database and cache if it doesn't exist
                         _channels = await self._get_insert_channels(channels, guild_id, session)
@@ -702,7 +724,7 @@ class LoggerSQL(logging.LoggerBASE):
                     data_id = await self._get_insert_data(sent_data, session)
 
                     # Save message log
-                    message_log = MessageLOG(data_id, message_type, message_mode, dm_success_info_reason, guild_id)
+                    message_log = MessageLOG(data_id, message_type_key, message_mode_key, dm_success_info_reason, guild_id)
                     session.add(message_log)
                     await self._run_async(session.flush)
                     if channels is not None:
@@ -881,7 +903,7 @@ if GLOBALS.sql_installed:
         __tablename__ = "DataHISTORY"
 
         id = Column(Integer, Sequence("dhist_seq", 0, 1, minvalue=0, maxvalue=2147483647, cycle=True), primary_key= True)
-        content = Column(JSON()) # TODO: Update documentation
+        content = Column(JSON())
 
         def __init__(self,
                     content: ConstDict):
