@@ -40,6 +40,7 @@ SQL_RECOVERY_TIME = 0.5
 SQL_RECONNECT_TIME = 5 * 60
 SQL_RECONNECT_ATTEMPTS = 3
 SQL_ENABLE_DEBUG = False
+SQL_TABLE_CACHE_SIZE = 1000
 # Dictionary mapping the database dialect to it's connector
 DIALECT_CONN_MAP = {
     "sqlite" : "aiosqlite",
@@ -113,6 +114,78 @@ class ConstDict(dict):
     def __hash__(self):
         return hash(id(self))
 
+class TableCache:
+    """
+    Used for caching table values to IDs for faster access.
+    
+    Parameters
+    -------------
+    table: ORMBase
+        The table this cache is for.
+    limit: int
+        Max elements to hold.
+    """
+    def __init__(self, table: ORMBase, limit: int):
+        self.table = table
+        self.limit = limit
+        self.data = {}
+        self.keys = []
+    
+    def insert(self, key: Any, value: Any) -> None:
+        """
+        Inserts value to a specific key
+        
+        Parameters
+        ------------
+        key: Any
+            Where to insert.
+        value: Any
+            What to insert.
+        """
+        if len(self.keys) == self.limit:
+            # Remove element at front if we are at max elements
+            first_key = self.keys.pop(0)
+            self.data.pop(first_key)
+
+        if key in self.data:
+            # Remove the value if it already exists
+            self.keys.remove(key)
+            self.data.pop(key)
+
+        # Add item to cache
+        self.keys.append(key)
+        self.data[key] = value
+
+    def get(self, key: Any) -> Any:
+        """
+        Returns the cached value.
+
+        Parameters
+        key: Any
+            The key at which cached value is located.
+        """
+        return self.data.get(key)
+
+    def clear(self) -> None:
+        "Clears the cache of all values"
+        self.data.clear()
+        self.keys.clear()
+    
+    def get_table(self) -> ORMBase:
+        "Returns the table this cache is for"
+        return self.table
+
+    def exists(self, key: Any) -> bool:
+        """
+        Returns True if the key is cached.
+
+        Parameters
+        -----------
+        key: Any
+            Cache key to check.
+        """
+        return key in self.data
+
 
 @misc.doc_category("Logging related", path="logging.sql")
 class LoggerSQL(logging.LoggerBASE):
@@ -182,14 +255,14 @@ class LoggerSQL(logging.LoggerBASE):
         # Caching (to avoid unnecessary queries)
         # TODO: Implement misc.CACHE object
         ## Lookup table caching
-        self.MessageMODE = {}
-        self.MessageTYPE = {}
-        self.GuildTYPE = {}
+        self.message_mode_cache = TableCache(MessageMODE, SQL_TABLE_CACHE_SIZE)
+        self.message_type_cache = TableCache(MessageTYPE, SQL_TABLE_CACHE_SIZE)
+        self.guild_type_cache = TableCache(GuildTYPE, SQL_TABLE_CACHE_SIZE)
 
         ## Other object caching
-        self.GuildUSER = {}
-        self.CHANNEL = {}
-        self.DataHISTORY = {}
+        self.guild_user_cache = TableCache(GuildUSER, SQL_TABLE_CACHE_SIZE)
+        self.channel_cache = TableCache(CHANNEL, SQL_TABLE_CACHE_SIZE)
+        self.data_history_cache = TableCache(DataHISTORY, SQL_TABLE_CACHE_SIZE)
 
         super().__init__(fallback)
 
@@ -212,7 +285,7 @@ class LoggerSQL(logging.LoggerBASE):
             result = await result
 
         return result
-
+    
     def _add_to_cache(self, table: ORMBase, key: Any, value: Any) -> None:
         """
         Adds a value to the internal cache of a certain table.
@@ -226,9 +299,11 @@ class LoggerSQL(logging.LoggerBASE):
         value: Any
             Row value.
         """
-        getattr(self, table.__name__)[key] = value
+        for var in vars(self).values():
+            if isinstance(var, TableCache) and table is var.get_table():
+                var.insert(key, value)
 
-    def _clear_cache(self, *to_clear: str) -> None:
+    def _clear_caches(self, *to_clear: str) -> None:
         """
         Clears the caching dictionaries inside the object that match any of the tables.
 
@@ -238,9 +313,9 @@ class LoggerSQL(logging.LoggerBASE):
             Custom number of positional arguments of caching dictionaries to clear.
         """
         if len(to_clear) == 0:  # Clear all cached tables if nothing was passed
-            to_clear = [table.__name__ for table in ORMBase.__subclasses__() if hasattr(self, table.__name__)]
+            to_clear = [cache for cache in vars(self).values() if isinstance(cache, TableCache)]
         else:
-            to_clear = [table for table in to_clear if hasattr(self, table.__name__)]
+            to_clear = [table for table in to_clear if hasattr(self, table)]
 
         for k in to_clear:
             getattr(self, k).clear()
@@ -295,12 +370,10 @@ class LoggerSQL(logging.LoggerBASE):
                         existing = existing[0]
                     else:
                         session.add(to_add)
-                        await self._run_async(session.flush)
+                        await self._run_async(session.commit)
                         existing = to_add
 
                     self._add_to_cache(type(to_add), to_add.name, existing.id)
-                
-                await self._run_async(session.commit)
         except Exception as ex:
             raise DAFSQLError(f"Unable to create lookuptables' rows.\nReason: {ex}", DAF_SQL_CR_LT_VALUES_ERROR)
 
@@ -377,7 +450,7 @@ class LoggerSQL(logging.LoggerBASE):
 
                     return super().__exit__(*args)
 
-            self.session_maker = sessionmaker(bind=self.engine, class_=SessionWrapper)
+            self.session_maker = sessionmaker(bind=self.engine, class_=SessionWrapper, expire_on_commit=False)
         except Exception as ex:
             raise DAFSQLError(f"Unable to start engine.\nError: {ex}", DAF_SQL_BEGIN_ENGINE_ERROR)
 
@@ -427,22 +500,21 @@ class LoggerSQL(logging.LoggerBASE):
             The session to use as transaction.
         """
         result = None
-        if snowflake not in self.GuildUSER:
+        if not self.guild_user_cache.exists(snowflake):
             result = await self._run_async(session.execute, select(GuildUSER.id).where(GuildUSER.snowflake_id == snowflake))
-
             result = result.first()
             if result is not None:
                 result = result[0]
-                self._add_to_cache(GuildUSER, snowflake, result)
             else:
                 result = GuildUSER(guild_type, snowflake, name)
                 savepoint = await self._run_async(session.begin_nested) # Savepoint
                 session.add(result)
                 await self._run_async(savepoint.commit)
                 result = result.id
-                self._add_to_cache(GuildUSER, snowflake, result)
+            
+            self.guild_user_cache.insert(snowflake, result)
         else:
-            result = self.GuildUSER[snowflake]
+            result = self.guild_user_cache.get(snowflake)
 
         return result
 
@@ -470,26 +542,26 @@ class LoggerSQL(logging.LoggerBASE):
         """
 
         # Put into cache if it is not already
-        not_cached = [{"id": x["id"], "name": x["name"]} for x in channels if x["id"] not in self.CHANNEL] # Get snowflakes that are not cached
+        not_cached = [{"id": x["id"], "name": x["name"]} for x in channels if not self.channel_cache.exists(x["id"])] # Get snowflakes that are not cached
         not_cached_snow = [x["id"] for x in not_cached]
         if len(not_cached):
             # Search the database for non cached channels
             result = await self._run_async(session.execute, select(CHANNEL.id, CHANNEL.snowflake_id).where(CHANNEL.snowflake_id.in_(not_cached_snow)))
             result = result.all()
             for internal_id, snowflake_id in result:
-                self._add_to_cache(CHANNEL, snowflake_id, internal_id)
+                self.channel_cache.insert(snowflake_id, internal_id)
             
             # Add the channels that are not in the database
-            to_add = [CHANNEL(x["id"], x["name"], guild_id) for x in not_cached if x["id"] not in self.CHANNEL]
+            to_add = [CHANNEL(x["id"], x["name"], guild_id) for x in not_cached if not self.channel_cache.exists(x["id"])]
             if len(to_add):
                 savepoint = await self._run_async(session.begin_nested) # Savepoint
                 session.add_all(to_add)
                 await self._run_async(savepoint.commit)
                 for channel in to_add:
-                    self._add_to_cache(CHANNEL, channel.snowflake_id, channel.id)
+                    self.channel_cache.insert(channel.snowflake_id, channel.id)
 
         # Get from cache
-        ret = [{"id" : self.CHANNEL.get(d["id"], None), "reason" : d.get("reason", None)} for d in channels]
+        ret = [{"id" : self.channel_cache.get(d["id"]), "reason" : d.get("reason", None)} for d in channels]
         return ret
 
     async def _get_insert_data(self, data: dict, session: AsyncSession) -> int:
@@ -513,7 +585,7 @@ class LoggerSQL(logging.LoggerBASE):
         const_data = ConstDict()
         const_data.update(data)
 
-        if const_data not in self.DataHISTORY:
+        if not self.data_history_cache.exists(const_data):
             result = await self._run_async(session.execute, select(DataHISTORY.id).where(DataHISTORY.content.cast(String) == json.dumps(const_data)))
             result = result.first()
             if result is None:
@@ -523,10 +595,10 @@ class LoggerSQL(logging.LoggerBASE):
                 session.add(to_add)
                 await self._run_async(savepoint.commit)
                 result = (to_add.id,)
-            
-            self._add_to_cache(DataHISTORY, const_data, result[0])
 
-        return self.DataHISTORY.get(const_data)
+            self.data_history_cache.insert(const_data, result[0])
+
+        return self.data_history_cache.get(const_data)
             
     async def _stop_engine(self):
         """
@@ -617,9 +689,9 @@ class LoggerSQL(logging.LoggerBASE):
         for tries in range(SQL_MAX_SAVE_ATTEMPTS):
             try:
                 # Lookup table values
-                guild_type: int = self.GuildTYPE.get(guild_context["type"])
-                message_type: int = self.MessageTYPE.get(message_context["type"])
-                message_mode = self.MessageMODE.get(message_mode, None)
+                guild_type: int = self.guild_type_cache.get(guild_context["type"])
+                message_type: int = self.message_type_cache.get(message_context["type"])
+                message_mode = self.message_mode_cache.get(message_mode)
                 # Insert guild into the database and cache if it doesn't exist
                 async with self.session_maker() as session:
                     guild_id = await self._get_insert_guild(guild_snowflake, guild_name, guild_type, session)
