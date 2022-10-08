@@ -140,7 +140,7 @@ Usage
 --------------------------------
 To use a SQL base for logging, you need to pass the :ref:`run` function with the ``logging`` parameter and pass it the LoggerSQL object.
 
-.. literalinclude:: ../../Examples/Logging/SQL Logging/main_rickroll.py
+.. literalinclude:: ../../Examples/Logging/SQL Logging/rolls.py
     :language: python
     :emphasize-lines: 27, 36, 37
 
