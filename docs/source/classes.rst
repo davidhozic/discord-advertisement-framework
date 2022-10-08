@@ -126,6 +126,7 @@ EMBED
 ========================
 .. autoclass:: daf.dtypes.EMBED
     :members:
+    :exclude-members: Colour, Color
 
 
 FILE
