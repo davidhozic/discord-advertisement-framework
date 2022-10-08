@@ -21,8 +21,6 @@ from . import logging
 
 import json
 import copy
-import re
-import time
 import asyncio
 
 from .. import misc
@@ -54,7 +52,7 @@ DIALECT_CONN_MAP = {
 try:
     from sqlalchemy import (
                             SmallInteger, Integer, BigInteger, DateTime,
-                            Column, ForeignKey, Sequence, String, select
+                            Column, ForeignKey, Sequence, String, JSON, select, text
                         )            
     from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
     from sqlalchemy.engine import URL as SQLURL, create_engine
@@ -106,6 +104,14 @@ def register_type(lookuptable: Literal["GuildTYPE", "MessageTYPE", "MessageMODE"
         return cls
     
     return decorator_register_type
+
+
+class ConstDict(dict):
+    """
+    Dictionary that can be used as a key to another dictionary.
+    """
+    def __hash__(self):
+        return hash(id(self))
 
 
 @misc.doc_category("Logging related", path="logging.sql")
@@ -232,9 +238,9 @@ class LoggerSQL(logging.LoggerBASE):
             Custom number of positional arguments of caching dictionaries to clear.
         """
         if len(to_clear) == 0:  # Clear all cached tables if nothing was passed
-            to_clear = [table.__name__ for table in ORMBase.__subclasses__() if table.__name__ in self.__slots__]
+            to_clear = [table.__name__ for table in ORMBase.__subclasses__() if hasattr(self, table.__name__)]
         else:
-            to_clear = [table for table in to_clear if table in self.__slots__]
+            to_clear = [table for table in to_clear if hasattr(self, table.__name__)]
 
         for k in to_clear:
             getattr(self, k).clear()
@@ -249,22 +255,24 @@ class LoggerSQL(logging.LoggerBASE):
             Time in seconds after which reconnect.
         """
         async def _reconnector():
+            session: Union[Session, AsyncSession]
             for tries in range(SQL_RECONNECT_ATTEMPTS):
                 trace(f"[SQL]: Retrying to connect in {wait} seconds.")
                 await asyncio.sleep(wait)
                 trace(f"[SQL]: Reconnecting to database {self.database}.")
-                with suppress(DAFSQLError):
-                    self._begin_engine()
+                with suppress(SQLAlchemyError, ConnectionError):
+                    async with self.session_maker() as session: # Try to commit empty transaction to check for connection
+                        await self._run_async(session.execute, select(text("1")))
+
                     trace(f"[SQL]: Reconnected to the database {self.database}.")
                     self.reconnecting = False
-                    logging.set_logger(self)
+                    logging._set_logger(self)
                     return
 
             trace(f"[SQL]: Failed to reconnect in {SQL_RECONNECT_ATTEMPTS} attempts, SQL logging is now disabled.")
            
         self.reconnecting = True
-        await self._stop_engine()
-        logging.set_logger(self.fallback)
+        logging._set_logger(self.fallback)
         asyncio.create_task(_reconnector())
 
     async def _generate_lookup_values(self) -> None:
@@ -501,22 +509,24 @@ class LoggerSQL(logging.LoggerBASE):
         int
             Primary key of a row inside DataHISTORY table.
         """
-        json_data = json.dumps(data)
         result: tuple = None
-        if json_data not in self.DataHISTORY:
-            result = await self._run_async(session.execute, select(DataHISTORY.id).where(DataHISTORY.content == json_data))
+        const_data = ConstDict()
+        const_data.update(data)
+
+        if const_data not in self.DataHISTORY:
+            result = await self._run_async(session.execute, select(DataHISTORY.id).where(DataHISTORY.content.cast(String) == json.dumps(const_data)))
             result = result.first()
             if result is None:
                 # Add to the database
-                to_add = DataHISTORY(json_data)
+                to_add = DataHISTORY(const_data)
                 savepoint = await self._run_async(session.begin_nested)
                 session.add(to_add)
                 await self._run_async(savepoint.commit)
                 result = (to_add.id,)
             
-            self._add_to_cache(DataHISTORY, json_data, result[0])
+            self._add_to_cache(DataHISTORY, const_data, result[0])
 
-        return self.DataHISTORY.get(json_data)
+        return self.DataHISTORY.get(const_data)
             
     async def _stop_engine(self):
         """
@@ -544,32 +554,13 @@ class LoggerSQL(logging.LoggerBASE):
         res = True
         await asyncio.sleep(SQL_RECOVERY_TIME)
         try:
-            # TODO: Update to work on latest version
-            # Handle the error
-            if "no such table" in message:  # Invalid object name (table deleted)
-                await self._create_tables()
-
-            elif "" in message:   # Constraint conflict, NULL value
-                r_table = re.search(r'(?<=table "dbo.).+(?=")', message) # Try to parse the table name with regex
-                if r_table is not None:
-                    self._clear_cache(r_table.group(0))  # Clears only the affected table cache
-                else:
-                    self._clear_cache()  # Clears all caching tables
-                self._generate_lookup_values()
-
-            elif code in {-1, 2, 53}:  # Disconnect error, reconnect after period
-                await self._reconnect_after(SQL_RECONNECT_TIME)
-                res = False # Don't try to save while reconnecting
-
-            elif code == 2801: # Object was altered (via external source) after procedure was compiled
-                pass # Just retry
-
-            elif code == 1205: # Transaction deadlocked
-                async with self.session_maker() as session:
-                    await session.commit()
-
-            else: # No handling instruction known
+            if exc.connection_invalidated:
                 res = False
+                await self._reconnect_after(SQL_RECONNECT_TIME)
+            else:
+                await self._create_tables()
+                self._clear_cache()
+                await self._generate_lookup_values()
 
         except Exception:
             # Error could not be handled, stop the engine
@@ -612,13 +603,7 @@ class LoggerSQL(logging.LoggerBASE):
         channels: List[dict] = message_context.get("channels", None)
         dm_success_info: dict = message_context.get("success_info", None)
         dm_success_info_reason: str = None
-
-        # Lookup table values
-        guild_type: int = self.GuildTYPE.get(guild_context["type"])
-        message_type: int = self.MessageTYPE.get(message_context["type"])
         message_mode: Union[int, str, None] = message_context.get("mode", None)
-        if message_mode is not None:
-            message_mode = self.MessageMODE.get(message_mode)
 
         if dm_success_info is not None:
             if "reason" in dm_success_info:
@@ -628,15 +613,18 @@ class LoggerSQL(logging.LoggerBASE):
         if channels is not None:
             channels = channels['successful'] + channels['failed']
 
-
+        session: AsyncSession
         for tries in range(SQL_MAX_SAVE_ATTEMPTS):
             try:
+                # Lookup table values
+                guild_type: int = self.GuildTYPE.get(guild_context["type"])
+                message_type: int = self.MessageTYPE.get(message_context["type"])
+                message_mode = self.MessageMODE.get(message_mode, None)
                 # Insert guild into the database and cache if it doesn't exist
-                session: AsyncSession
                 async with self.session_maker() as session:
                     guild_id = await self._get_insert_guild(guild_snowflake, guild_name, guild_type, session)
                     if channels is not None:
-                    # Insert channels into the database and cache if it doesn't exist
+                        # Insert channels into the database and cache if it doesn't exist
                         _channels = await self._get_insert_channels(channels, guild_id, session)
 
                     data_id = await self._get_insert_data(sent_data, session)
@@ -658,7 +646,7 @@ class LoggerSQL(logging.LoggerBASE):
                     raise DAFSQLError("Unable to handle SQL error", DAF_SQL_SAVE_LOG_ERROR) from exc
 
         else:
-            DAFSQLError(f"Unable to save log within {SQL_MAX_SAVE_ATTEMPTS} tries", DAF_SQL_SAVE_LOG_ERROR)
+            raise DAFSQLError(f"Unable to save log within {SQL_MAX_SAVE_ATTEMPTS} tries", DAF_SQL_SAVE_LOG_ERROR)
 
     @misc._async_safe("safe_sem", 1)
     async def update(self, **kwargs):
@@ -821,10 +809,10 @@ if GLOBALS.sql_installed:
         __tablename__ = "DataHISTORY"
 
         id = Column(Integer, Sequence("dhist_seq", 0, 1, minvalue=0, maxvalue=2147483647, cycle=True), primary_key= True)
-        content = Column(String(3072))
+        content = Column(JSON()) # TODO: Update documentation
 
         def __init__(self,
-                    content: str):
+                    content: ConstDict):
             self.content = content
 
     class MessageLOG(ORMBase):

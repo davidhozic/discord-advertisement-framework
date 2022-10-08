@@ -21,7 +21,6 @@ __all__ = (
     "LoggerJSON",
     "LoggerCSV",
     "get_logger",
-    "set_logger"
 )
 
 # Constants
@@ -267,23 +266,17 @@ def get_logger() -> LoggerBASE:
     return GLOBAL.logger
 
 
-@misc.doc_category("Setters", path="logging")
-async def set_logger(logger: LoggerBASE):
+def _set_logger(logger: LoggerBASE):
     """
-    Coroutine changes the used logger.
+    Set's the logger to something new.
 
     Parameters
     -------------
     logger: LoggerBASE
         The logger to use.
-
-    Raises
-    -------------
-    Any
-        Exceptions raised in logger.initialize()
     """
-    await logger.initialize()
     GLOBAL.logger = logger
+
 
 @misc._async_cancellation_safe
 async def save_log(guild_context: dict, message_context: dict):
