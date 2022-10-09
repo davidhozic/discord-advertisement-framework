@@ -2,5 +2,5 @@
     "voice" : ["PyNaCl", "yt-dlp"],
     "proxy" : ["aiohttp_socks"],
     "sql"   : ["sqlalchemy[asyncio]", "aiosqlite", "pymssql", "asyncpg", "asyncmy"],
-    "docs"  : ["sphinx", "sphinx-autobuild", "sphinx-copybutton", "furo", "enum-tools[sphinx]", "sphinx-tabs"]
+    "docs"  : ["sphinx", "sphinx-autobuild", "sphinx-copybutton", "furo", "enum-tools[sphinx]", "sphinx-design[furo]"]
 }
