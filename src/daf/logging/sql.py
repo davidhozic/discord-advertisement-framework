@@ -61,6 +61,8 @@ try:
     SQL_INSTALLED = True
     ORMBase = declarative_base()
 except ImportError as exc:
+    AsyncSession = object
+    Session = object
     SQLAlchemyError = Exception
     ORMBase = object
     SQL_INSTALLED = False
@@ -414,7 +416,7 @@ class LoggerSQL(logging.LoggerBASE):
             Raised when tables could not be created.
         """
         try:
-            session: AsyncSession
+            session: Union[AsyncSession, Session]
             trace("[SQL]: Creating tables...", TraceLEVELS.NORMAL)
             if self.is_async:
                 async with self.engine.begin() as tran:
@@ -509,7 +511,7 @@ class LoggerSQL(logging.LoggerBASE):
                         snowflake: int,
                         name: str,
                         guild_type: int,
-                        session: AsyncSession) -> int:
+                        session: Union[AsyncSession, Session]) -> int:
         """
         Inserts the guild into the db if it doesn't exist,
         adds it to cache and returns it's internal db id from cache.
@@ -522,7 +524,7 @@ class LoggerSQL(logging.LoggerBASE):
             The name of the guild.
         guild_type: int
             ID of key pointing to guild_type.
-        session: AsyncSession
+        session: Union[AsyncSession, Session]
             The session to use as transaction.
         """
         result = None
@@ -547,18 +549,18 @@ class LoggerSQL(logging.LoggerBASE):
     async def _get_insert_channels(self,
                                    channels: List[dict],
                                    guild_id: int,
-                                   session: AsyncSession) -> List[Dict[int, Union[str, None]]]:
+                                   session: Union[AsyncSession, Session]) -> List[Dict[int, Union[str, None]]]:
         """
         Adds missing channels to the database, then caches those added
         for performance.
 
         Parameters
         ------------
-        channels: List[dict],
+        channels: List[dict]
             List of dictionaries containing values for snowflake id ("id") and name of the channel ("name"). If sending to failed, it also contains text like description of the error ("reason").
         guild_id: int
             The internal DB id of the guild where the channels are in.
-        session: AsyncSession:
+        session: Union[AsyncSession, Session]
             Session to use for transaction.
 
         Return
@@ -590,7 +592,7 @@ class LoggerSQL(logging.LoggerBASE):
         ret = [{"id" : self.channel_cache.get(d["id"]), "reason" : d.get("reason", None)} for d in channels]
         return ret
 
-    async def _get_insert_data(self, data: dict, session: AsyncSession) -> int:
+    async def _get_insert_data(self, data: dict, session: Union[AsyncSession, Session]) -> int:
         """
         Get's data's row ID from the cache/database, if it does not exists,
         it inserts into the database and then caches the value.
@@ -599,7 +601,7 @@ class LoggerSQL(logging.LoggerBASE):
         -------------
         data: dict
             The data dictionary which represents sent data
-        session: AsyncSession
+        session: Union[AsyncSession, Session]
             Session to use for transaction.
 
         Returns
@@ -647,7 +649,7 @@ class LoggerSQL(logging.LoggerBASE):
         bool
             Returns True on successful handling.
         """
-        session: AsyncSession
+        session: Union[AsyncSession, Session]
         message = exc.args[0]
         res = True
         await asyncio.sleep(SQL_RECOVERY_TIME)
@@ -710,7 +712,7 @@ class LoggerSQL(logging.LoggerBASE):
         if channels is not None:
             channels = channels['successful'] + channels['failed']
 
-        session: AsyncSession
+        session: Union[AsyncSession, Session]
         for tries in range(SQL_MAX_SAVE_ATTEMPTS):
             try:
                 # Lookup table values
