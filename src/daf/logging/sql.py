@@ -31,14 +31,11 @@ class GLOBALS:
     Stores global module variables.
     """
     lt_types = []
-    sql_installed = False
 
 # ------------------------------------ Configuration -------------------------------
-SQL_MAX_SAVE_ATTEMPTS = 10
-SQL_MAX_EHANDLE_ATTEMPTS = 3
-SQL_RECOVERY_TIME = 0.5
+SQL_MAX_SAVE_ATTEMPTS = 5
+SQL_RECOVERY_TIME = 1
 SQL_RECONNECT_TIME = 5 * 60
-SQL_RECONNECT_ATTEMPTS = 3
 SQL_ENABLE_DEBUG = False
 SQL_TABLE_CACHE_SIZE = 1000
 # Dictionary mapping the database dialect to it's connector
@@ -61,12 +58,12 @@ try:
     from sqlalchemy.orm import sessionmaker, Session
     from sqlalchemy.ext.declarative import declarative_base
     import sqlalchemy as sqa
-    GLOBALS.sql_installed = True
+    SQL_INSTALLED = True
     ORMBase = declarative_base()
 except ImportError as exc:
     SQLAlchemyError = Exception
     ORMBase = object
-    GLOBALS.sql_installed = False
+    SQL_INSTALLED = False
 # ----------------------------------------------------------------------------------
 
 
@@ -94,7 +91,7 @@ def register_type(lookuptable: Literal["GuildTYPE", "MessageTYPE", "MessageMODE"
     """
     def decorator_register_type(cls):
         # Iterate thru all module globals to find the lookup table
-        if GLOBALS.sql_installed:
+        if SQL_INSTALLED:
             for table_cls in ORMBase.__subclasses__():
                 if table_cls.__tablename__ == lookuptable:
                     GLOBALS.lt_types.append( table_cls(name_override if name_override is not None else cls.__name__) )
@@ -229,6 +226,7 @@ class LoggerSQL(logging.LoggerBASE):
         Dialect or database type (SQLite, mssql, )
     fallback: Optional[LoggerBASE]
         The fallback manager to use in case SQL logging fails.
+        (Default: :class:`~daf.logging.LoggerJSON` ("History"))
 
     Raises
     ----------
@@ -244,13 +242,18 @@ class LoggerSQL(logging.LoggerBASE):
                 port: Optional[int] = None,
                 database: Optional[str] = None,
                 dialect: Optional[str] = None,
-                fallback: Optional[logging.LoggerBASE] = logging.LoggerJSON("History")):
+                fallback: Optional[logging.LoggerBASE] = ...):
 
-        if not GLOBALS.sql_installed:
+        if not SQL_INSTALLED:
             raise ModuleNotFoundError("You need to install extra requirements: pip install discord-advert-framework[sql]")
 
         if dialect not in DIALECT_CONN_MAP:
             raise ValueError(f"Unsupported dialect (db type): '{dialect}'. Supported types are: {tuple(DIALECT_CONN_MAP.keys())}.")
+
+        if fallback is Ellipsis:
+            # Cannot use None as this can be a legit user value
+            # and cannot pass directly due to Sphinx issues
+            fallback = logging.LoggerJSON("History")
 
         # Save the connection parameters
         self.is_async = False # Set in _begin_engine
@@ -354,21 +357,21 @@ class LoggerSQL(logging.LoggerBASE):
         """
         async def _reconnector():
             session: Union[Session, AsyncSession]
-            for tries in range(SQL_RECONNECT_ATTEMPTS):
+            # Always try to reconnect
+            while True: 
                 trace(f"[SQL]: Retrying to connect in {wait} seconds.")
                 await asyncio.sleep(wait)
                 trace(f"[SQL]: Reconnecting to database {self.database}.")
                 with suppress(SQLAlchemyError, ConnectionError):
-                    async with self.session_maker() as session: # Try to commit empty transaction to check for connection
-                        await self._run_async(session.execute, select(text("1")))
+                    async with self.session_maker() as session:
+                        await self._run_async(session.execute, select(text("1"))) # Test with SELECT 1;
 
                     trace(f"[SQL]: Reconnected to the database {self.database}.")
                     self.reconnecting = False
                     logging._set_logger(self)
                     return
-
-            trace(f"[SQL]: Failed to reconnect in {SQL_RECONNECT_ATTEMPTS} attempts, SQL logging is now disabled.")
            
+
         self.reconnecting = True
         logging._set_logger(self.fallback)
         asyncio.create_task(_reconnector())
@@ -774,7 +777,7 @@ class LoggerSQL(logging.LoggerBASE):
             raise
 
 
-if GLOBALS.sql_installed:
+if SQL_INSTALLED:
     # Do not create ORM classes if the optional group is not installed
     class MessageTYPE(ORMBase):
         """

@@ -38,14 +38,3 @@ daf.run(
     #logger=daf.LoggerSQL(dialect="sqlite", database="testdb"),
     server_list=S
 )
-
-
-
-
-
-
-
-
-
-
-

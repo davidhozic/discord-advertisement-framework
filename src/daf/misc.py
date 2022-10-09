@@ -208,6 +208,3 @@ def doc_category(cat: str, manual: Optional[bool] = False, path: Optional[str]=N
             doc_titles[cat] = []
 
     return _category
-
-
-
