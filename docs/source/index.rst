@@ -16,15 +16,15 @@ The Discord advertisement framework is a  **shilling tool** that allows easy adv
 Links
 ---------------------
 
-.. tabs::
+.. tab-set::
 
-    .. tab:: Project
+    .. tab-item:: Project
 
         - `Github <https://github.com/davidhozic/discord-advertisement-framework>`_
         - `Examples <https://github.com/davidhozic/discord-advertisement-framework/tree/master/Examples>`_
         - `Releases <https://github.com/davidhozic/discord-advertisement-framework/releases>`_
 
-    .. tab:: API Wrapper (Pycord)
+    .. tab-item:: API Wrapper (Pycord)
 
         This framework uses a Discord API wrapper called PyCord and it is built to allow working directly with Pycord (eg. framework objects accept Pycord objects as arguments).
 
@@ -51,9 +51,9 @@ Key features
 ----------------------
 Installation
 ----------------------
-.. tabs::
+.. tab-set::
 
-    .. tab:: Main package
+    .. tab-item:: Main package
         
         Pre-requirement: `Python (minimum v3.8) <https://www.python.org/downloads/>`_
 
@@ -61,35 +61,35 @@ Installation
 
             pip install discord-advert-framework
 
-    .. tab:: Additional functionality
+    .. tab-item:: Additional functionality
         
         Some functionality needs to be installed separately.
         This was done to reduce the needed space by the daf.
         
-        .. tabs::
+        .. tab-set::
         
-            .. tab:: Voice
+            .. tab-item:: Voice
                 
                 - .. code-block:: bash
                     :caption: Voice Messaging / AUDIO
 
                     pip install discord-advert-framework[voice]
 
-            .. tab:: Proxies
+            .. tab-item:: Proxies
 
                 - .. code-block:: bash
                     :caption: Proxy support
 
                     pip install discord-advert-framework[proxy]
 
-            .. tab:: SQL
+            .. tab-item:: SQL
                 
                 - .. code-block:: bash
                     :caption: SQL logging
 
                     pip install discord-advert-framework[sql]
 
-            .. tab:: All
+            .. tab-item:: All
                 
                 Install all of the (left) optional dependencies
 
