@@ -9,7 +9,7 @@ The Discord advertisement framework is a  **shilling tool** that allows easy adv
 
     getting_started
     ref
-    logging
+    guide/index
     changelog
 
 ---------------------
