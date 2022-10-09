@@ -17,8 +17,7 @@ Logging is handled thru so called **logging managers**. Currently, 3 different m
 
 
 If a logging managers fails saving a log, then it's fallback manager will be used temporarily to store the log.
-It will only use the fallback once and then, at the next message, the original manager will be used unless :func:`set_logger` was used
-to manually set the manager to something permanently.
+It will only use the fallback once and then, at the next message, the original manager will be used.
 
 .. figure:: images/logging_process.png
     
@@ -56,12 +55,12 @@ All logs will contain keys:
   + :py:meth:`daf.message.DirectMESSAGE.generate_log_context`
 
 .. seealso:: 
-    :download:`Example structure <../../Examples/Logging/JSON files/History/2022/05/23/#David's dungeon.json>`
+    :download:`Example structure <../../../Examples/Logging/JSON files/History/2022/05/23/#David's dungeon.json>`
 
 
 JSON code example
 -----------------
-.. literalinclude:: ../../Examples/Logging/JSON files/main_rickroll.py
+.. literalinclude:: ../../../Examples/Logging/JSON files/main_rickroll.py
     :language: python
     :caption: Code to produce JSON logs
     :emphasize-lines: 27, 36
@@ -101,12 +100,12 @@ The structure contains the following attributes:
     Attributes marked with ``(json)`` are the same as in :ref:`JSON Logging (file)`
 
 .. seealso::
-    :download:`Structure example <../../Examples/Logging/CSV files/History/2022/09/22/David's py dungeon.csv>`
+    :download:`Structure example <../../../Examples/Logging/CSV files/History/2022/09/22/David's py dungeon.csv>`
 
 
 CSV code example
 -----------------
-.. literalinclude:: ../../Examples/Logging/CSV files/main_rickroll.py
+.. literalinclude:: ../../../Examples/Logging/CSV files/main_rickroll.py
     :language: python
     :caption: Code to produce JSON logs
     :emphasize-lines: 27, 36
@@ -126,34 +125,47 @@ Relational Database Log (SQL)
         
         pip install discord-advert-framework[sql]
 
-This type of logging enables saving logs to a remote server inside the database. Currently **only Microsoft SQL server is supported.**.
+This type of logging enables saving logs to a remote server inside the database.
 In addition to being smaller in size, database logging takes up less space and it allows easier data analysis.
+
+
+
+Dialects
+----------------------
+The dialect is selected via the ``dialect`` parameter in :class:`~daf.logging.sql.LoggerSQL`.
+The following dialects are supported:
+
+- Microsoft SQL Server
+- PostgreSQL
+- SQLite,
+- MySQL
+
+SQL logging process
+---------------------
+.. figure:: images/sql_initialization.png
+    
+    Initialization
 
 Usage
 --------------------------------
-To use a SQL base for logging, you need to pass the :ref:`run` function with the sql_manager parameter and pass it the LoggerSQL object.
+For daf to use SQL logging, you need to pass the :func:`~daf.core.run` function with the ``logging`` parameter and pass it the :class:`~daf.logging.sql.LoggerSQL` object.
 
-.. literalinclude:: ../../Examples/Logging/SQL Logging/main_rickroll.py
+.. literalinclude:: ../../../Examples/Logging/SQL Logging/rolls.py
     :language: python
-    :emphasize-lines: 27, 36, 37
+    :emphasize-lines: 27, 36
 
 Features
 --------------------------------
-+ Automatic creation of tables, procedures, functions, views, triggers
-+ Caching for faster logging
-+ Low redundancy for reduced file size
-+ Automatic error recovery:
-  
-  - Automatic reconnect on disconnect - Retries 3 times in delays of 5 minutes, then switches to file logging
-  - If tables are deleted, they are automatically recreated
-  - If cached values get corrupted, they are automatically re-cached
-  - If there are un-recoverable errors, the framework switches to file logging
+- Automatic creation of the schema
+- Caching for faster logging
+- Low redundancy for reduced file size
+- Automatic error recovery
 
 .. note:: 
 
     The database must already exist! However it can be completely empty, no need to manually create the schema.
 
-ER diagram of the logs
+ER diagram
 --------------------------------
 .. image:: images/er_diagram.png
     :width: 500pt
@@ -165,16 +177,16 @@ MessageLOG
 ~~~~~~~~~~~~~~~~~~~~
 :Description:
     This table contains the actual logs of sent messages, if the message type is :ref:`DirectMESSAGE`, then all the information is stored in this table.
-    If the types are **Voice/Text** MESSAGE, then part of the log (to which channels it sent), is saved in the :ref:`MessageChannelLOG` table.
+    If the types are **Voice/Text** MESSAGE, then channel part of the log is saved in the :ref:`MessageChannelLOG` table.
 
 :Attributes:
-  - |PK| id: int  - This is an internal ID of the log inside the database.
-  - sent_data: int - Foreign key pointing to a row inside the :ref:`DataHISTORY` table.
-  - message_type: int - Foreign key ID pointing to a entry inside the :ref:`MessageTYPE` table.
-  - guild_id: int -  Foreign key pointing to :ref:`GuildUSER` table.
-  - message_mode: int - Foreign key pointing to :ref:`MessageMODE` table. This is non-null only for :ref:`DirectMESSAGE`.
-  - dm_reason: str -  If MessageTYPE is not DirectMESSAGE or the send attempt was successful, this is NULL, otherwise it contains the string representation of the error that caused the message send attempt to be unsuccessful.
-  - timestamp: datetime - The timestamp of the message send attempt.
+  - |PK| id: Integer  - This is an internal ID of the log inside the database.
+  - sent_data: Integer - Foreign key pointing to a row inside the :ref:`DataHISTORY` table.
+  - message_type: SmallInteger - Foreign key ID pointing to a entry inside the :ref:`MessageTYPE` table.
+  - guild_id: Integer -  Foreign key pointing to :ref:`GuildUSER` table.
+  - message_mode: SmallInteger - Foreign key pointing to :ref:`MessageMODE` table. This is non-null only for :ref:`DirectMESSAGE`.
+  - dm_reason: String -  If MessageTYPE is not DirectMESSAGE or the send attempt was successful, this is NULL, otherwise it contains the string representation of the error that caused the message send attempt to be unsuccessful.
+  - timestamp: DateTime - The timestamp of the message send attempt.
   
 
 
@@ -188,8 +200,8 @@ DataHISTORY
     else a new row is created.
 
 :Attributes:
-  - |PK| id: int - Internal ID of data inside the database.
-  - content: str -  Actual data that was sent.
+  - |PK| id: Integer - Internal ID of data inside the database.
+  - content: JSON -  Actual data that was sent.
 
 
 MessageTYPE
@@ -198,8 +210,8 @@ MessageTYPE
     This is a lookup table containing the the different message types that exist within the framework (:ref:`Messages`).
 
 :Attributes:
-  - |PK| id: int - Internal ID of the message type inside the database.
-  - name: str - The name of the actual message type.
+  - |PK| id: SmallInteger - Internal ID of the message type inside the database.
+  - name: String - The name of the actual message type.
 
 GuildUSER
 ~~~~~~~~~~~~~~~~~~~~
@@ -207,10 +219,10 @@ GuildUSER
     The table contains all the guilds/users the framework ever generated a log for.
 
 :Attributes:
-  - |PK| id: int - Internal ID of the Guild/User inside the database.
-  - snowflake_id: int - The discord (snowflake) ID of the User/Guild
-  - name: str - Name of the Guild/User
-  - guild_type: int - Foreign key pointing to :ref:`GuildTYPE` table.
+  - |PK| id: Integer - Internal ID of the Guild/User inside the database.
+  - snowflake_id: BigInteger - The discord (snowflake) ID of the User/Guild
+  - name: String - Name of the Guild/User
+  - guild_type: SmallInteger - Foreign key pointing to :ref:`GuildTYPE` table.
 
 
 MessageMODE
@@ -219,8 +231,8 @@ MessageMODE
     This is a lookup table containing the the different message modes available by :ref:`TextMESSAGE` / :ref:`DirectMESSAGE`, it is set to null for :ref:`VoiceMESSAGE`.
 
 :Attributes:
-  - |PK| id: int - Internal identifier of the message mode inside the database.
-  - name: str - The name of the actual message mode.
+  - |PK| id: SmallInteger - Internal identifier of the message mode inside the database.
+  - name: String - The name of the actual message mode.
 
 
 
@@ -230,8 +242,8 @@ GuildTYPE
     This is a lookup table containing types of the guilds inside the framework (:ref:`Guilds`).
 
 :Attributes:
-  - |PK| id: int -  Internal identifier of the guild type inside the database.
-  - name: str - The name of the guild type.
+  - |PK| id: SmallInteger -  Internal identifier of the guild type inside the database.
+  - name: String - The name of the guild type.
 
 
 
@@ -241,10 +253,10 @@ CHANNEL
     The table contains all the channels that the framework ever advertised into.
 
 :Attributes:
-  - |PK| id: int - Internal identifier of the channel inside the database
-  - snowflake_id: int - The discord (snowflake) identifier representing specific channel
-  - name: str - The name of the channel
-  - guild_id: int - Foreign key pointing to a row inside the :ref:`GuildUSER` table. It points to a guild that the channel is part of.
+  - |PK| id: Integer - Internal identifier of the channel inside the database
+  - snowflake_id: BigInteger - The discord (snowflake) identifier representing specific channel
+  - name: String - The name of the channel
+  - guild_id: Integer - Foreign key pointing to a row inside the :ref:`GuildUSER` table. It points to a guild that the channel is part of.
 
 
 MessageChannelLOG
@@ -255,140 +267,9 @@ MessageChannelLOG
     This is why this table exists. It contains channels of each :ref:`MessageLOG`.
 
 :Attributes:
-  - |PK| |FK| log_id: int ~ Foreign key pointing to a row inside :ref:`MessageLOG` (to which log this channel log belongs to).
-  - |PK| |FK| channel_id  ~ Foreign key pointing to a row inside the :ref:`CHANNEL` table.
-
-
-SQL custom data types
---------------------------------
-.. warning::
-    These will be removed in the next version.
-
-This sections contains descriptions on all SQL data types that are user-defined.
-
-t_tmp_channel_log
-~~~~~~~~~~~~~~~~~~~~
-:Description:
-    This is only used in the :ref:`sp_save_log` procedure to accept a list of channels it was attempted to send into and the reason for failure.
-    This is a custom table type that contains attributes:
-
-:Attributes:
-    - id: int ~ Internal DB id pointing to :ref:`CHANNEL` table.
-    - reason: nvarchar ~ Reason why sending to the channel failed, if it was successful then this is NULL.
-
-
-
-SQL Stored Procedures (SP)
---------------------------------
-.. warning::
-    These will be removed in the next version.
-
-This section contains the description on all the saved procedures inside the SQL database.
-
-sp_save_log
-~~~~~~~~~~~~~~~~
-.. code-block:: t-sql
-
-    sp_save_log(@sent_data nvarchar(max),
-            @message_type smallint,
-            @guild_id int,
-            @message_mode smallint,
-            @dm_reason nvarchar(max),
-            @channels t_tmp_channel_log READONLY
-
-:Description:
-    This procedure is used by the SQL python module to store the log instead of using SQLAlchemy for faster saving speed.
-
-:Attributes:
-    - sent_data: nvarchar -  The data that was sent (jsonized).
-    - message_type: smallint - Internal DB id that points to :ref:`MessageTYPE` table.
-    - guild_id: int ~ Internal DB id that points to :ref:`GuildUSER` table.
-    - message_mode: smallint - Internal DB id that points to :ref:`MessageMODE` table.
-    - dm_reason: nvarchar -  This can only be different from NULL if the type of message is DirectMESSAGE. In the case that the message type is :ref:`DirectMESSAGE`, then this attribute is different from NULL when the send attempt failed, if send attempt succeeded, then this is NULL.
-    - channels: :ref:`t_tmp_channel_log` ~ Table Valued Parameter (TVP) - Holds channels it was advertised into, if message type is DirectMESSAGE, this is an empty table.
-
-
-SQL User Defined Functions (UDF)
-----------------------------------
-.. warning::
-    These will be removed in the next version.
-
-This section contains the description on all user defined functions inside the SQL database.
-
-fn_log_success_rate
-~~~~~~~~~~~~~~~~~~~~
-.. code-block:: t-sql
-
-    fn_log_success_rate(@log_id int)
-
-:Description:
-    This UDF can only be used for logs that have channels, so logs that originated from :ref:`TextMESSAGE` or :ref:`VoiceMESSAGE`. The UDF calculates relative success of sent channels for a specific log entry (successful channels / all channels) which is a number between 0 and 1, 0 meaning no channels succeeded and 1 meaning all channels succeeded.
-
-
-
-:Parameters:
-  - log_id: int - The DB id of a certain log that is inside the database.
-
-:Return:
-    The UDF returns the success rate - a number of type ``decimal`` with 5 decimals of precision.
-
-.. note:: 
-
-    If the log_id is an id of a message log that has no channels, the UDF will return 1.
-
-
-fn_guilduser_success_rate
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. code-block:: t-sql
-    
-    fn_log_success_rate(@snowflake_id bigint, @limit int = 1000)
-
-:Description:
-    This UDF returns relative success rate for specific GUILD/USER based on the last few logs.
-    Success rate is defined as (number of **fully** successful send attempts) / (number of all send attempts)
-
-:Parameters:
-  - snowflake_id: bigint ~ Discord's ID (snowflake id) of the USER or GUILD you want to get the success rate for
-  - limit: int ~ How many of the latest logs you want to use to calculate the relative success rate
-
-:Return:
-    The UDF returns the success rate ~ a number of type ``decimal`` with 5 decimals of precision.
-
-.. note::
-    
-    If no logs exist for specific GUILD/USER, 1 is returned.
-
-
-Views
-----------------------------------
-.. warning::
-    These will be removed in the next version.
-
-This section contains the description on all views inside the SQL database.
-
-vMessageLogFullDETAIL
-~~~~~~~~~~~~~~~~~~~~~~~~
-
-:Description:
-    The :ref:`MessageLOG` table contains mostly internal DB ids which makes it hard to see anything directly from it. This is why the :ref:`vMessageLogFullDETAIL` view exists. It contains all the information inside the MessageLOG table, but expanded with actual values and not just IDs making it easier to view the content of the log.
-
-
-
-Triggers
-----------------------------------
-.. warning::
-    These will be removed in the next version.
-
-This section contains the description on all the triggers inside the SQL database.
-
-tr_delete_msg_log
-~~~~~~~~~~~~~~~~~~~
-
-:Description:
-    Entries in :ref:`MessageChannelLOG` get deleted if an entry inside :ref:`MessageLOG` gets deleted due to the :ref:`MessageChannelLOG` table having a cascading foreign key pointing to the :ref:`MessageLOG` table. However reverse is not the same, the :ref:`MessageLOG` table does not have anything pointing to the :ref:`MessageChannelLOG` table meaning that cascading based on foreign keys is not possible. 
-    This trigger's job is to delete an entry inside the MessageLOG when all the entries in :ref:`MessageChannelLOG` referencing it get deleted. 
-
-
+  - |PK| |FK| log_id: Integer - Foreign key pointing to a row inside :ref:`MessageLOG` (to which log this channel log belongs to).
+  - |PK| |FK| channel_id: Integer  - Foreign key pointing to a row inside the :ref:`CHANNEL` table.
+  - reason: String - Reason why the send failed or ``NULL`` if send succeeded.
 
 
 Custom Logger
@@ -401,6 +282,17 @@ The derived logger class can then implement the following methods:
 1. __init__(self, param1, param2, ...) [Required]:
     The method used for passing parameters and for basic non-async initialization.
     This method must contain a fallback parameter and also needs to have an attribute of the same name.
+
+    .. code-block:: python
+        :caption: Custom __init__ method
+
+         class LoggerCUSTOM(daf.logging.LoggerBASE):
+            def __init__(self, ..., logger):
+                ... # Set attributes
+                super().__init__(logger)
+
+            ... # Other methods
+
 
 2. async initialize(self) [Optional]:
     The base's ``initialize`` method calls ``initialize`` method of it's fallback,
@@ -454,8 +346,13 @@ The derived logger class can then implement the following methods:
     Example:
     
     .. code-block:: python
+        :emphasize-lines: 3, 10-12
     
         class LoggerCUSTOM(daf.logging.LoggerBASE):
+            def __init__(self, name, fallback):
+                self._name = name
+                super().__init__(fallback)
+            
             ... # Other methods
 
             async def update(self, **kwargs)

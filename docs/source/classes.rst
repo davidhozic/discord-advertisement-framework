@@ -1,28 +1,28 @@
-=====================
+
+===============================
 Classes
-=====================
-This page contains information about any classes that can be used in the daf.
+===============================
 
-
-------------------------
+----------------------------
 Tracing
-------------------------
+----------------------------
 
 TraceLEVELS
 ========================
-.. autoenum:: daf.logging.TraceLEVELS
+.. autoenum:: daf.logging.tracing.TraceLEVELS
     :members:
 
-------------------------
-Logging
-------------------------
+
+----------------------------
+Logging related
+----------------------------
 
 LoggerBASE
 ========================
 .. autoclass:: daf.logging.LoggerBASE
     :members:
 
-
+    
 
 
 LoggerCSV
@@ -30,7 +30,7 @@ LoggerCSV
 .. autoclass:: daf.logging.LoggerCSV
     :members:
 
-
+    
 
 
 LoggerJSON
@@ -49,9 +49,9 @@ LoggerSQL
     
 
 
-------------------------
+----------------------------
 Exceptions
-------------------------
+----------------------------
 
 DAFError
 ========================
@@ -74,9 +74,7 @@ DAFSQLError
 .. autoclass:: daf.exceptions.DAFSQLError
     :members:
 
-
-Error codes
-========================
+    
 .. glossary::
 
     DAF_SNOWFLAKE_NOT_FOUND:
@@ -104,11 +102,6 @@ Error codes
 
         Info: Unable to create all the tables.
 
-    DAF_SQL_LOOKUPTABLE_NOT_FOUND:
-        Value: 6
-
-        Info: The lookup table was not found.
-
     DAF_SQL_BEGIN_ENGINE_ERROR:
         Value: 7
 
@@ -119,55 +112,21 @@ Error codes
 
         Info: Unable to create lookuptables' rows.
 
-    DAF_SQL_CREATE_DT_ERROR:
-        Value: 9
-
-        Info: Unable to create SQL data types.
-
-    DAF_SQL_CREATE_VPF_ERROR:
-        Value: 10
-
-        Info: Unable to create views, procedures and functions.
-
-    DAF_SQL_CURSOR_CONN_ERROR:
-        Value: 11
-
-        Info: Unable to connect the cursor.
-
     DAF_SQL_SAVE_LOG_ERROR:
         Value: 12
 
         Info: Unable to save the log to SQL
 
 
-------------------------
+----------------------------
 Message data types
-------------------------
+----------------------------
 
 EMBED
 ========================
 .. autoclass:: daf.dtypes.EMBED
     :members:
-
-    .. autoproperty:: daf.dtypes.EMBED.author
-
-    .. autoproperty:: daf.dtypes.EMBED.color
-
-    .. autoproperty:: daf.dtypes.EMBED.colour
-
-    .. autoproperty:: daf.dtypes.EMBED.fields
-
-    .. autoproperty:: daf.dtypes.EMBED.footer
-
-    .. autoproperty:: daf.dtypes.EMBED.image
-
-    .. autoproperty:: daf.dtypes.EMBED.provider
-
-    .. autoproperty:: daf.dtypes.EMBED.thumbnail
-
-    .. autoproperty:: daf.dtypes.EMBED.timestamp
-
-    .. autoproperty:: daf.dtypes.EMBED.video
+    :exclude-members: Colour, Color
 
 
 FILE
@@ -186,16 +145,16 @@ AUDIO
     
 
 
-------------------------
+----------------------------
 Messages
-------------------------
+----------------------------
 
 TextMESSAGE
 ========================
 .. autoclass:: daf.message.TextMESSAGE
     :members:
 
-    .. autoproperty:: daf.message.text_based.TextMESSAGE.created_at
+    .. autoproperty:: daf.message.TextMESSAGE.created_at
 
 
 DirectMESSAGE
@@ -203,7 +162,7 @@ DirectMESSAGE
 .. autoclass:: daf.message.DirectMESSAGE
     :members:
 
-    .. autoproperty:: daf.message.text_based.DirectMESSAGE.created_at
+    .. autoproperty:: daf.message.DirectMESSAGE.created_at
 
 
 VoiceMESSAGE
@@ -211,12 +170,12 @@ VoiceMESSAGE
 .. autoclass:: daf.message.VoiceMESSAGE
     :members:
 
-    .. autoproperty:: daf.message.voice_based.VoiceMESSAGE.created_at
+    .. autoproperty:: daf.message.VoiceMESSAGE.created_at
 
 
-------------------------
+----------------------------
 Guilds
-------------------------
+----------------------------
 
 GUILD
 ========================

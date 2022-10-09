@@ -14,14 +14,13 @@ import json
 import csv
 import pathlib
 import shutil
-
+import asyncio
 
 __all__ = (
     "LoggerBASE",
     "LoggerJSON",
     "LoggerCSV",
     "get_logger",
-    "set_logger"
 )
 
 # Constants
@@ -34,7 +33,7 @@ class GLOBAL:
     logger: LoggerBASE = None  
 
 
-@misc.doc_category("Logging", path="logging")
+@misc.doc_category("Logging related", path="logging")
 class LoggerBASE:
     """
     .. versionadded:: v2.2
@@ -50,7 +49,6 @@ class LoggerBASE:
     """
     def __init__(self, fallback: Optional[LoggerBASE] = None) -> None:
         self.fallback = fallback
-        raise NotImplementedError
 
     async def initialize(self) -> None:
         "Initializes self and the fallback"
@@ -58,7 +56,7 @@ class LoggerBASE:
             try:
                 await self.fallback.initialize()
             except Exception as exc:
-                trace(f"[Logging:] Could not initialize {type(self).__name__}'s fallback: {type(self.fallback).__name__}", TraceLEVELS.WARNING)
+                trace(f"[Logging:] Could not initialize {type(self).__name__}'s fallback: {type(self.fallback).__name__}.\nReason: {exc}", TraceLEVELS.WARNING)
                 self.fallback = None
 
 
@@ -94,7 +92,7 @@ class LoggerBASE:
         await misc._update(self, **kwargs)
 
 
-@misc.doc_category("Logging", path="logging")
+@misc.doc_category("Logging related", path="logging")
 class LoggerCSV(LoggerBASE):
     """
     .. versionadded:: v2.2
@@ -125,8 +123,8 @@ class LoggerCSV(LoggerBASE):
     """
     def __init__(self, path: str, delimiter: str, fallback: Optional[LoggerBASE] = None) -> None:
         self.path = path
-        self.fallback = fallback
         self.delimiter = delimiter
+        super().__init__(fallback)
     
     async def _save_log(self, guild_context: dict, message_context: dict) -> None:
         timestruct = datetime.now()
@@ -160,7 +158,7 @@ class LoggerCSV(LoggerBASE):
                 raise OSError(*exc.args) from exc # Raise OSError for any type of exceptions
 
 
-@misc.doc_category("Logging", path="logging")
+@misc.doc_category("Logging related", path="logging")
 class LoggerJSON(LoggerBASE):
     """
     .. versionadded:: v2.2
@@ -184,7 +182,7 @@ class LoggerJSON(LoggerBASE):
     """
     def __init__(self, path: str, fallback: Optional[LoggerBASE] = None) -> None:
         self.path = path
-        self.fallback = fallback
+        super().__init__(fallback)
     
     async def _save_log(self, guild_context: dict, message_context: dict) -> None:
         timestruct = datetime.now()
@@ -245,12 +243,12 @@ async def initialize(logger: LoggerBASE) -> None:
     The logger manager to use for saving logs.
     """
     while logger is not None:
-        with suppress(Exception):
+        try:
             await logger.initialize()
             break
-
-        trace(f"Could not initialize manager {type(logger).__name__}, falling to {type(logger.fallback).__name__}", TraceLEVELS.WARNING)
-        logger = logger.fallback # Could not initialize, try fallback
+        except Exception as exc:
+            trace(f"Could not initialize manager {type(logger).__name__}, falling to {type(logger.fallback).__name__}\nReason: {exc}", TraceLEVELS.WARNING)
+            logger = logger.fallback # Could not initialize, try fallback
     else:
         trace("Logging will be disabled as the logging manager and it's fallbacks all failed initialization", TraceLEVELS.ERROR)
 
@@ -268,25 +266,19 @@ def get_logger() -> LoggerBASE:
     return GLOBAL.logger
 
 
-@misc.doc_category("Setters", path="logging")
-async def set_logger(logger: LoggerBASE):
+def _set_logger(logger: LoggerBASE):
     """
-    Coroutine changes the used logger.
+    Set's the logger to something new.
 
     Parameters
     -------------
     logger: LoggerBASE
         The logger to use.
-
-    Raises
-    -------------
-    Any
-        Exceptions raised in logger.initialize()
     """
-    await logger.initialize()
     GLOBAL.logger = logger
 
 
+@misc._async_cancellation_safe
 async def save_log(guild_context: dict, message_context: dict):
     """
     Saves the log to the selected manager or saves
@@ -300,9 +292,14 @@ async def save_log(guild_context: dict, message_context: dict):
         Information about the message sent
     """
     mgr = GLOBAL.logger
+    
+    # Don't spam the console if no loggers are available
+    if mgr is None:
+        return
+
     while mgr is not None:
         try:
-            await mgr._save_log(guild_context, message_context)
+            await asyncio.shield(mgr._save_log(guild_context, message_context))
             break
         except Exception as exc:
             trace(f"{type(mgr).__name__} failed, falling to {type(mgr.fallback).__name__}\nReason: {exc}", TraceLEVELS.WARNING)

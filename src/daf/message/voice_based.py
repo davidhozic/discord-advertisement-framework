@@ -168,17 +168,29 @@ class VoiceMESSAGE(BaseMESSAGE):
         Returns
         ----------
         Dict[str, Any]
-            Dictionary containing:
-              - sent_data: Dict[str, str]:
-
-                - streamed_audio: str - The filename that was streamed/youtube url
-
-              - channels: Dict[str, List]:
-
-                - successful: List[Dict[str, int]] - List of dictionaries containing name of the channel and snowflake id of the channels.
-                - failed: List[Dict[str, Any]] - List of dictionaries containing name of the channel (str), snowflake id (int) and reason why streaming to channel failed (str).
-
-              - type: str - The type of the message, this is always VoiceMESSAGE.
+            .. code-block:: python
+              
+                {
+                    sent_data:
+                    {
+                        streamed_audio: str - The filename that was streamed/youtube url
+                    },
+                    channels:
+                    {
+                        successful:
+                        {
+                            id: int - Snowflake id,
+                            name: str - Channel name
+                        },
+                        failed:
+                        {
+                            id: int - Snowflake id,
+                            name: str - Channel name,
+                            reason: str - Exception that caused the error
+                        }
+                    },
+                    type: str - The type of the message, this is always VoiceMESSAGE.
+              }
         """
 
         succeeded_ch = [{"name": str(channel), "id" : channel.id} for channel in succeeded_ch]

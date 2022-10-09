@@ -12,8 +12,7 @@
 #
 import os
 import sys
-import re
-import typing
+
 sys.path.insert(0, os.path.abspath('../../src/'))
 sys.path.insert(0, os.path.abspath('.'))
 
@@ -21,10 +20,16 @@ sys.path.insert(0, os.path.abspath('.'))
 project = 'Discord Advertisement Framework'
 copyright = '2022, David Hozic'
 author = 'David Hozic'
-version = ""
-
-with open("../../version.txt", "r", encoding="utf-8") as rf:
-    version = rf.read().strip()
+version = None
+gh_release = os.environ.get("GITHUB_REF_NAME", default=None) # Workflow run release
+readthedocs_release = os.environ.get("READTHEDOCS_VERSION", default=None) # Readthe docs version
+if gh_release is not None:
+    version = gh_release
+elif readthedocs_release is not None:
+    version = readthedocs_release
+else:
+    with open("../../version.txt", "r", encoding="utf-8") as rf:
+        version = rf.read().strip()
 
 
 # -- General configuration ---------------------------------------------------
@@ -38,6 +43,7 @@ extensions = [
     "sphinx.ext.autosectionlabel",
     "sphinx_copybutton",
     "enum_tools.autoenum",
+    "sphinx_design"
 ]
 
 master_doc = 'index'
@@ -70,6 +76,9 @@ autodoc_default_options = {
 
 
 
+# -------- Sphinx Tabs ------- #
+sphinx_tabs_disable_css_loading = False
+sphinx_tabs_disable_tab_closing = True
 
 # ----------- HTML ----------- #
 html_title = project
