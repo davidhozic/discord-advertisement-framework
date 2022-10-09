@@ -43,7 +43,7 @@ extensions = [
     "sphinx.ext.autosectionlabel",
     "sphinx_copybutton",
     "enum_tools.autoenum",
-    "sphinx_tabs.tabs"
+    "sphinx_design"
 ]
 
 master_doc = 'index'
