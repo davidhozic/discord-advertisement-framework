@@ -48,7 +48,7 @@ For help with the :ref:`GUILD`, :ref:`TextMESSAGE` object and see :ref:`Programm
 
     daf.run(
         token="DNASNDANDASKJNDAKSJDNASKJDNASKJNSDSAKDNAKLSNDSKAJDN", # The authorization token
-        servers=servers # The server list
+        server_list=servers # The server list
     )
 
 .. seealso:: 
