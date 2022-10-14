@@ -28,6 +28,6 @@ jobs:
         with:
           tag_name: ${{ steps.tag_version.outputs.new_tag }}
           release_name: ${{ steps.tag_version.outputs.new_tag }}
-          body: "Changelog: https://daf.davidhozic.top/en/stable/changelog.html"
+          body: "Changelog: https://daf.davidhozic.top/en/v${{github.event.inputs.version}}"
           draft: false
           prerelease: false
