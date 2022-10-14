@@ -7,7 +7,6 @@ The Discord advertisement framework is a  **shilling tool** that allows easy adv
 .. toctree::
     :hidden:
 
-    getting_started
     ref
     guide/index
     changelog
@@ -44,13 +43,15 @@ Key features
 
 - Periodic advertisement to **Direct (Private) Messages**, **Text channels** and **Voice channels**
 - Advertising with either static data (text, embed, files, audio) or **dynamic data** (the data is obtained thru a function dynamically)
-- Logging of send attempts with **JSON** file logs or to a **SQL** server (Microsoft SQL Server only)
+- Logging of sent messages to different outputs (also includes SQL)
 - Ability to add additional application layers with help of asyncio
 - Easy to setup
 
 ----------------------
 Installation
 ----------------------
+DAF can be installed though command prompt/terminal using the bottom commands.
+
 .. tab-set::
 
     .. tab-item:: Main package
