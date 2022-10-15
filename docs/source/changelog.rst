@@ -72,6 +72,7 @@ v2.1.1
 - Fixed ``[Bug]: Predefined servers' errors are not suppressed #189``.
 - Support for readthedocs.
 
+
 v2.1
 ===========
 - Changed the import ``import framework`` to ``import daf``. Using ``import framework`` is now deprecated.
