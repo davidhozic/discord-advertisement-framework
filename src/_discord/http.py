@@ -100,6 +100,22 @@ async def json_or_text(response: aiohttp.ClientResponse) -> dict[str, Any] | str
     return text
 
 
+class UserLimit:
+    def __init__(self) -> None:
+        self.usages = 0
+        self.lock = asyncio.Lock()
+
+    async def __aenter__(self):
+        async with self.lock:
+            if self.usages >= 2:
+                await asyncio.sleep(4.5)
+                self.usages = 0
+
+            self.usages += 1
+
+    async def __aexit__(self, *args):
+        pass
+
 class Route:
     def __init__(self, method: str, path: str, **parameters: Any) -> None:
         self.path: str = path
@@ -167,6 +183,7 @@ class HTTPClient:
         proxy_auth: aiohttp.BasicAuth | None = None,
         loop: asyncio.AbstractEventLoop | None = None,
         unsync_clock: bool = True,
+        bot = True
     ) -> None:
         self.loop: asyncio.AbstractEventLoop = (
             asyncio.get_event_loop() if loop is None else loop
@@ -177,15 +194,19 @@ class HTTPClient:
         self._global_over: asyncio.Event = asyncio.Event()
         self._global_over.set()
         self.token: str | None = None
-        self.bot_token: bool = False
+        self.bot_token: bool = bot
         self.proxy: str | None = proxy
         self.proxy_auth: aiohttp.BasicAuth | None = proxy_auth
         self.use_clock: bool = not unsync_clock
 
         user_agent = "DiscordBot (https://github.com/Pycord-Development/pycord {0}) Python/{1[0]}.{1[1]} aiohttp/{2}"
-        self.user_agent: str = user_agent.format(
-            __version__, sys.version_info, aiohttp.__version__
-        )
+        self.user_agent: str = user_agent.format(__version__, sys.version_info, aiohttp.__version__)
+        self.user_limit = UserLimit()
+        if not bot:
+            self.user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.5005.63 Safari/537.36"
+        else:
+            user_agent = "DiscordBot (https://github.com/Pycord-Development/pycord {0}) Python/{1[0]}.{1[1]} aiohttp/{2}"
+            self.user_agent: str = user_agent.format(__version__, sys.version_info, aiohttp.__version__)
 
     def recreate(self) -> None:
         if self.__session.closed:
@@ -233,7 +254,7 @@ class HTTPClient:
         }
 
         if self.token is not None:
-            headers["Authorization"] = f"Bot {self.token}"
+            headers["Authorization"] = self.token
         # some checking if it's a JSON request
         if "json" in kwargs:
             headers["Content-Type"] = "application/json"
@@ -277,6 +298,11 @@ class HTTPClient:
                     kwargs["data"] = form_data
 
                 try:
+
+                    if not self.bot_token:
+                        async with self.user_limit:
+                            pass
+
                     async with self.__session.request(
                         method, url, **kwargs
                     ) as response:
@@ -313,7 +339,7 @@ class HTTPClient:
 
                         # we are being rate limited
                         if response.status == 429:
-                            if not response.headers.get("Via") or isinstance(data, str):
+                            if not response.headers.get("Via") or isinstance(data, str) or data["code"] == 20016:
                                 # Banned by Cloudflare more than likely.
                                 raise HTTPException(response, data)
 
@@ -394,13 +420,14 @@ class HTTPClient:
 
     # login management
 
-    async def static_login(self, token: str) -> user.User:
+    async def static_login(self, token: str, bot: bool) -> user.User:
         # Necessary to get aiohttp to stop complaining about session creation
         self.__session = aiohttp.ClientSession(
             connector=self.connector, ws_response_class=DiscordClientWebSocketResponse
         )
         old_token = self.token
-        self.token = token
+        self.bot_token = bot
+        self.token = f"Bot {token}" if self.bot_token else token
 
         try:
             data = await self.request(Route("GET", "/users/@me"))
@@ -2843,3 +2870,6 @@ class HTTPClient:
 
     def get_user(self, user_id: Snowflake) -> Response[user.User]:
         return self.request(Route("GET", "/users/{user_id}", user_id=user_id))
+
+    def get_relationships(self) -> Response[List[user.User]]:
+        return self.request(Route("GET", "/users/@me/relationships"))
