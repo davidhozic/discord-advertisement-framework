@@ -64,7 +64,7 @@ class Colour:
              Returns the raw colour value.
 
     Attributes
-    ------------
+    ----------
     value: :class:`int`
         The raw integer colour value.
     """
@@ -73,7 +73,9 @@ class Colour:
 
     def __init__(self, value: int):
         if not isinstance(value, int):
-            raise TypeError(f"Expected int parameter, received {value.__class__.__name__} instead.")
+            raise TypeError(
+                f"Expected int parameter, received {value.__class__.__name__} instead."
+            )
 
         self.value: int = value
 
@@ -115,7 +117,7 @@ class Colour:
 
     def to_rgb(self) -> Tuple[int, int, int]:
         """Tuple[:class:`int`, :class:`int`, :class:`int`]: Returns an (r, g, b) tuple representing the colour."""
-        return (self.r, self.g, self.b)
+        return self.r, self.g, self.b
 
     @classmethod
     def from_rgb(cls: Type[CT], r: int, g: int, b: int) -> CT:
@@ -149,7 +151,7 @@ class Colour:
         .. versionadded:: 1.6
 
         Parameters
-        ------------
+        ----------
         seed: Optional[Union[:class:`int`, :class:`str`, :class:`float`, :class:`bytes`, :class:`bytearray`]]
             The seed to initialize the RNG with. If ``None`` is passed the default RNG is used.
 
@@ -332,15 +334,17 @@ class Colour:
 
     @classmethod
     def embed_background(cls: Type[CT], theme: str = "dark") -> CT:
-        """A factory method that returns a :class:`Color` corresponding to the embed colors on discord clients, with a value of
-        ``0x2F3136`` (dark)
-        ``0xf2f3f5`` (light)
-        ``0x000000`` (amoled).
+        """A factory method that returns a :class:`Color` corresponding to the
+        embed colors on discord clients, with a value of:
+
+        - ``0x2F3136`` (dark)
+        - ``0xf2f3f5`` (light)
+        - ``0x000000`` (amoled).
 
         .. versionadded:: 2.0
 
         Parameters
-        -----------
+        ----------
         theme: :class:`str`
             The theme color to apply, must be one of "dark", "light", or "amoled".
         """
