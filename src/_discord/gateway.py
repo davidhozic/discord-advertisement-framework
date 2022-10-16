@@ -53,7 +53,7 @@ __all__ = (
 
 
 class ReconnectWebSocket(Exception):
-    """Signals to safely reconnect the websocket."""
+    """Signals to safely reconnect the WebSocket."""
 
     def __init__(self, shard_id, *, resume=True):
         self.shard_id = shard_id
@@ -63,8 +63,6 @@ class ReconnectWebSocket(Exception):
 
 class WebSocketClosure(Exception):
     """An exception to make up for the fact that aiohttp doesn't signal closure."""
-
-    pass
 
 
 EventListener = namedtuple("EventListener", "predicate event result future")
@@ -150,7 +148,9 @@ class KeepAliveHandler(threading.Thread):
                 try:
                     f.result()
                 except Exception:
-                    _log.exception("An error occurred while stopping the gateway. Ignoring.")
+                    _log.exception(
+                        "An error occurred while stopping the gateway. Ignoring."
+                    )
                 finally:
                     self.stop()
                     return
@@ -227,7 +227,7 @@ class DiscordWebSocket:
     """Implements a WebSocket for Discord's gateway v6.
 
     Attributes
-    -----------
+    ----------
     DISPATCH
         Receive only. Denotes an event to be sent to Discord, such as READY.
     HEARTBEAT
@@ -253,7 +253,7 @@ class DiscordWebSocket:
     HELLO
         Receive only. Tells the client the heartbeat interval.
     HEARTBEAT_ACK
-        Receive only. Confirms receiving of a heartbeat. Not having it implies
+        Receive only. Confirms receiving of a heartbeat. Not having one implies
         a connection issue.
     GUILD_SYNC
         Send only. Requests a guild sync.
@@ -292,6 +292,7 @@ class DiscordWebSocket:
         # ws related stuff
         self.session_id = None
         self.sequence = None
+        self.resume_gateway_url = None
         self._zlib = zlib.decompressobj()
         self._buffer = bytearray()
         self._close_code = None
@@ -367,7 +368,7 @@ class DiscordWebSocket:
         """Waits for a DISPATCH'd event that meets the predicate.
 
         Parameters
-        -----------
+        ----------
         event: :class:`str`
             The event name in all upper case to wait for.
         predicate
@@ -378,13 +379,15 @@ class DiscordWebSocket:
             the result to the future. If ``None``, returns the data.
 
         Returns
-        --------
+        -------
         asyncio.Future
             A future to wait for.
         """
 
         future = self.loop.create_future()
-        entry = EventListener(event=event, predicate=predicate, result=result, future=future)
+        entry = EventListener(
+            event=event, predicate=predicate, result=result, future=future
+        )
         self._dispatch_listeners.append(entry)
         return future
 
@@ -420,7 +423,9 @@ class DiscordWebSocket:
         if state._intents is not None:
             payload["d"]["intents"] = state._intents.value
 
-        await self.call_hooks("before_identify", self.shard_id, initial=self._initial_identify)
+        await self.call_hooks(
+            "before_identify", self.shard_id, initial=self._initial_identify
+        )
         await self.send_as_json(payload)
         _log.info("Shard ID %s has sent the IDENTIFY payload.", self.shard_id)
 
@@ -467,8 +472,8 @@ class DiscordWebSocket:
 
         if op != self.DISPATCH:
             if op == self.RECONNECT:
-                # "reconnect" can only be handled by the Client
-                # so we terminate our connection and raise an
+                # "reconnect" can only be handled by the Client, so we
+                # terminate our connection and raise an
                 # internal exception signalling to reconnect.
                 _log.debug("Received RECONNECT opcode.")
                 await self.close()
@@ -487,7 +492,9 @@ class DiscordWebSocket:
 
             if op == self.HELLO:
                 interval = data["heartbeat_interval"] / 1000.0
-                self._keep_alive = KeepAliveHandler(ws=self, interval=interval, shard_id=self.shard_id)
+                self._keep_alive = KeepAliveHandler(
+                    ws=self, interval=interval, shard_id=self.shard_id
+                )
                 # send a heartbeat immediately
                 await self.send_as_json(self._keep_alive.get_payload())
                 self._keep_alive.start()
@@ -511,6 +518,7 @@ class DiscordWebSocket:
             self._trace = trace = data.get("_trace", [])
             self.sequence = msg["s"]
             self.session_id = data["session_id"]
+            self.resume_gateway_url = data["resume_gateway_url"]
             # pass back shard ID to ready handler
             data["__shard_id__"] = self.shard_id
             _log.info(
@@ -613,7 +621,9 @@ class DiscordWebSocket:
                 raise ReconnectWebSocket(self.shard_id) from None
             else:
                 _log.info("Websocket closed with %s, cannot reconnect.", code)
-                raise ConnectionClosed(self.socket, shard_id=self.shard_id, code=code) from None
+                raise ConnectionClosed(
+                    self.socket, shard_id=self.shard_id, code=code
+                ) from None
 
     async def debug_send(self, data, /):
         await self._rate_limiter.block()
@@ -664,7 +674,9 @@ class DiscordWebSocket:
         _log.debug('Sending "%s" to change status', sent)
         await self.send(sent)
 
-    async def request_chunks(self, guild_id, query=None, *, limit, user_ids=None, presences=False, nonce=None):
+    async def request_chunks(
+        self, guild_id, query=None, *, limit, user_ids=None, presences=False, nonce=None
+    ):
         payload = {
             "op": self.REQUEST_MEMBERS,
             "d": {"guild_id": guild_id, "presences": presences, "limit": limit},
@@ -705,10 +717,10 @@ class DiscordWebSocket:
 
 
 class DiscordVoiceWebSocket:
-    """Implements the websocket protocol for handling voice connections.
+    """Implements the WebSocket protocol for handling voice connections.
 
     Attributes
-    -----------
+    ----------
     IDENTIFY
         Send only. Starts a new voice session.
     SELECT_PROTOCOL
@@ -851,7 +863,9 @@ class DiscordVoiceWebSocket:
             await self.load_secret_key(data)
         elif op == self.HELLO:
             interval = data["heartbeat_interval"] / 1000.0
-            self._keep_alive = VoiceKeepAliveHandler(ws=self, interval=min(interval, 5.0))
+            self._keep_alive = VoiceKeepAliveHandler(
+                ws=self, interval=min(interval, 5.0)
+            )
             self._keep_alive.start()
 
         elif op == self.SPEAKING:
@@ -888,7 +902,9 @@ class DiscordVoiceWebSocket:
         _log.debug("detected ip: %s port: %s", state.ip, state.port)
 
         # there *should* always be at least one supported mode (xsalsa20_poly1305)
-        modes = [mode for mode in data["modes"] if mode in self._connection.supported_modes]
+        modes = [
+            mode for mode in data["modes"] if mode in self._connection.supported_modes
+        ]
         _log.debug("received supported encryption modes: %s", ", ".join(modes))
 
         mode = modes[0]

@@ -74,8 +74,7 @@ async def _initialize(token: str, *,
         trace("[CLIENT]: Bot is an user account which is against discord's ToS",TraceLEVELS.WARNING)
 
     _client.event(on_ready)
-    await _client.login(token)
-    asyncio.create_task(_client.connect())
+    asyncio.create_task(_client.start(token, bot=bot))
     await login_event.wait() # Wait for the login to complete and the discord lib to initialize.
 
 

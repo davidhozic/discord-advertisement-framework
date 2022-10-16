@@ -47,7 +47,7 @@ class Object(Hashable):
     as a substitute instead. Note that even though this is the case, not all
     objects (if any) actually inherit from this class.
 
-    There are also some cases where some websocket events are received
+    There are also some cases where some WebSocket events are received
     in :issue:`strange order <21>` and when such events happened you would
     receive this class rather than the actual data class. These cases are
     extremely rare.
@@ -67,7 +67,7 @@ class Object(Hashable):
             Returns the object's hash.
 
     Attributes
-    -----------
+    ----------
     id: :class:`int`
         The ID of the object.
     """
@@ -76,7 +76,9 @@ class Object(Hashable):
         try:
             id = int(id)
         except ValueError:
-            raise TypeError(f"id parameter must be convertible to int not {id.__class__!r}") from None
+            raise TypeError(
+                f"id parameter must be convertible to int not {id.__class__!r}"
+            ) from None
         else:
             self.id = id
 

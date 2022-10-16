@@ -25,19 +25,7 @@ DEALINGS IN THE SOFTWARE.
 
 from __future__ import annotations
 
-from typing import (
-    Any,
-    Callable,
-    ClassVar,
-    Dict,
-    Iterator,
-    List,
-    Optional,
-    Tuple,
-    Type,
-    TypeVar,
-    overload,
-)
+from typing import Any, Callable, ClassVar, Iterator, TypeVar, overload
 
 from .enums import UserFlags
 
@@ -48,6 +36,7 @@ __all__ = (
     "Intents",
     "MemberCacheFlags",
     "ApplicationFlags",
+    "ChannelFlags",
 )
 
 FV = TypeVar("FV", bound="flag_value")
@@ -60,14 +49,14 @@ class flag_value:
         self.__doc__ = func.__doc__
 
     @overload
-    def __get__(self: FV, instance: None, owner: Type[BF]) -> FV:
+    def __get__(self: FV, instance: None, owner: type[BF]) -> FV:
         ...
 
     @overload
-    def __get__(self, instance: BF, owner: Type[BF]) -> bool:
+    def __get__(self, instance: BF, owner: type[BF]) -> bool:
         ...
 
-    def __get__(self, instance: Optional[BF], owner: Type[BF]) -> Any:
+    def __get__(self, instance: BF | None, owner: type[BF]) -> Any:
         if instance is None:
             return self
         return instance._has_flag(self.flag)
@@ -84,8 +73,12 @@ class alias_flag_value(flag_value):
 
 
 def fill_with_flags(*, inverted: bool = False):
-    def decorator(cls: Type[BF]):
-        cls.VALID_FLAGS = {name: value.flag for name, value in cls.__dict__.items() if isinstance(value, flag_value)}
+    def decorator(cls: type[BF]):
+        cls.VALID_FLAGS = {
+            name: value.flag
+            for name, value in cls.__dict__.items()
+            if isinstance(value, flag_value)
+        }
 
         if inverted:
             max_bits = max(cls.VALID_FLAGS.values()).bit_length()
@@ -100,7 +93,7 @@ def fill_with_flags(*, inverted: bool = False):
 
 # n.b. flags must inherit from this and use the decorator above
 class BaseFlags:
-    VALID_FLAGS: ClassVar[Dict[str, int]]
+    VALID_FLAGS: ClassVar[dict[str, int]]
     DEFAULT_VALUE: ClassVar[int]
 
     value: int
@@ -132,13 +125,59 @@ class BaseFlags:
     def __repr__(self) -> str:
         return f"<{self.__class__.__name__} value={self.value}>"
 
-    def __iter__(self) -> Iterator[Tuple[str, bool]]:
+    def __iter__(self) -> Iterator[tuple[str, bool]]:
         for name, value in self.__class__.__dict__.items():
             if isinstance(value, alias_flag_value):
                 continue
 
             if isinstance(value, flag_value):
-                yield (name, self._has_flag(value.flag))
+                yield name, self._has_flag(value.flag)
+
+    def __and__(self, other):
+        if isinstance(other, self.__class__):
+            return self.__class__._from_value(self.value & other.value)
+        elif isinstance(other, flag_value):
+            return self.__class__._from_value(self.value & other.flag)
+        else:
+            raise TypeError(
+                f"'&' not supported between instances of {type(self)} and {type(other)}"
+            )
+
+    def __or__(self, other):
+        if isinstance(other, self.__class__):
+            return self.__class__._from_value(self.value | other.value)
+        elif isinstance(other, flag_value):
+            return self.__class__._from_value(self.value | other.flag)
+        else:
+            raise TypeError(
+                f"'|' not supported between instances of {type(self)} and {type(other)}"
+            )
+
+    def __add__(self, other):
+        try:
+            return self | other
+        except TypeError:
+            raise TypeError(
+                f"'+' not supported between instances of {type(self)} and {type(other)}"
+            )
+
+    def __sub__(self, other):
+        if isinstance(other, self.__class__):
+            return self.__class__._from_value(self.value & ~other.value)
+        elif isinstance(other, flag_value):
+            return self.__class__._from_value(self.value & ~other.flag)
+        else:
+            raise TypeError(
+                f"'-' not supported between instances of {type(self)} and {type(other)}"
+            )
+
+    def __invert__(self):
+        return self.__class__._from_value(~self.value)
+
+    __rand__: Callable[[BaseFlags | flag_value], bool] = __and__
+    __ror__: Callable[[BaseFlags | flag_value], bool] = __or__
+    __radd__: Callable[[BaseFlags | flag_value], bool] = __add__
+    __rsub__: Callable[[BaseFlags | flag_value], bool] = __sub__
 
     def _has_flag(self, o: int) -> bool:
         return (self.value & o) == o
@@ -169,6 +208,21 @@ class SystemChannelFlags(BaseFlags):
         .. describe:: x != y
 
             Checks if two flags are not equal.
+        .. describe:: x + y
+
+            Adds two flags together. Equivalent to ``x | y``.
+        .. describe:: x - y
+
+            Subtracts two flags from each other.
+        .. describe:: x | y
+
+            Returns the union of two flags. Equivalent to ``x + y``.
+        .. describe:: x & y
+
+            Returns the intersection of two flags.
+        .. describe:: ~x
+
+            Returns the inverse of a flag.
         .. describe:: hash(x)
 
                Return the flag's hash.
@@ -242,6 +296,21 @@ class MessageFlags(BaseFlags):
         .. describe:: x != y
 
             Checks if two flags are not equal.
+        .. describe:: x + y
+
+            Adds two flags together. Equivalent to ``x | y``.
+        .. describe:: x - y
+
+            Subtracts two flags from each other.
+        .. describe:: x | y
+
+            Returns the union of two flags. Equivalent to ``x + y``.
+        .. describe:: x & y
+
+            Returns the intersection of two flags.
+        .. describe:: ~x
+
+            Returns the inverse of a flag.
         .. describe:: hash(x)
 
                Return the flag's hash.
@@ -337,6 +406,21 @@ class PublicUserFlags(BaseFlags):
         .. describe:: x != y
 
             Checks if two PublicUserFlags are not equal.
+        .. describe:: x + y
+
+            Adds two flags together. Equivalent to ``x | y``.
+        .. describe:: x - y
+
+            Subtracts two flags from each other.
+        .. describe:: x | y
+
+            Returns the union of two flags. Equivalent to ``x + y``.
+        .. describe:: x & y
+
+            Returns the intersection of two flags.
+        .. describe:: ~x
+
+            Returns the inverse of a flag.
         .. describe:: hash(x)
 
             Return the flag's hash.
@@ -452,9 +536,13 @@ class PublicUserFlags(BaseFlags):
         """
         return UserFlags.bot_http_interactions.value
 
-    def all(self) -> List[UserFlags]:
+    def all(self) -> list[UserFlags]:
         """List[:class:`UserFlags`]: Returns all public flags the user has."""
-        return [public_flag for public_flag in UserFlags if self._has_flag(public_flag.value)]
+        return [
+            public_flag
+            for public_flag in UserFlags
+            if self._has_flag(public_flag.value)
+        ]
 
 
 @fill_with_flags()
@@ -482,6 +570,21 @@ class Intents(BaseFlags):
         .. describe:: x != y
 
             Checks if two flags are not equal.
+        .. describe:: x + y
+
+            Adds two flags together. Equivalent to ``x | y``.
+        .. describe:: x - y
+
+            Subtracts two flags from each other.
+        .. describe:: x | y
+
+            Returns the union of two flags. Equivalent to ``x + y``.
+        .. describe:: x & y
+
+            Returns the intersection of two flags.
+        .. describe:: ~x
+
+            Returns the inverse of a flag.
         .. describe:: hash(x)
 
                Return the flag's hash.
@@ -507,7 +610,7 @@ class Intents(BaseFlags):
             setattr(self, key, value)
 
     @classmethod
-    def all(cls: Type[Intents]) -> Intents:
+    def all(cls: type[Intents]) -> Intents:
         """A factory method that creates a :class:`Intents` with everything enabled."""
         bits = max(cls.VALID_FLAGS.values()).bit_length()
         value = (1 << bits) - 1
@@ -516,14 +619,14 @@ class Intents(BaseFlags):
         return self
 
     @classmethod
-    def none(cls: Type[Intents]) -> Intents:
+    def none(cls: type[Intents]) -> Intents:
         """A factory method that creates a :class:`Intents` with everything disabled."""
         self = cls.__new__(cls)
         self.value = self.DEFAULT_VALUE
         return self
 
     @classmethod
-    def default(cls: Type[Intents]) -> Intents:
+    def default(cls: type[Intents]) -> Intents:
         """A factory method that creates a :class:`Intents` with everything enabled
         except :attr:`presences`, :attr:`members`, and :attr:`message_content`.
         """
@@ -589,8 +692,8 @@ class Intents(BaseFlags):
 
         .. note::
 
-            Currently, this requires opting in explicitly via the developer portal as well.
-            Bots in over 100 guilds will need to apply to Discord for verification.
+            This intent is privileged, meaning that bots in over 100 guilds that require this
+            intent would need to request this intent on the Developer Portal.
         """
         return 1 << 1
 
@@ -718,8 +821,8 @@ class Intents(BaseFlags):
 
         .. note::
 
-            Currently, this requires opting in explicitly via the developer portal as well.
-            Bots in over 100 guilds will need to apply to Discord for verification.
+            This intent is privileged, meaning that bots in over 100 guilds that require this
+            intent would need to request this intent on the Developer Portal.
         """
         return 1 << 8
 
@@ -781,7 +884,8 @@ class Intents(BaseFlags):
         - :func:`on_reaction_remove` (only for guilds)
         - :func:`on_reaction_clear` (only for guilds)
 
-        Without the :attr:`message_content` intent enabled, the following fields are either an empty string or empty array:
+        Without the :attr:`message_content` intent enabled,
+        the following fields are either an empty string or empty array:
 
         - :attr:`Message.content`
         - :attr:`Message.embeds`
@@ -943,10 +1047,10 @@ class Intents(BaseFlags):
 
         .. note::
 
-            As of April 2022 requires opting in explicitly via the developer portal to receive the actual content of the guild messages.
-            Bots in over 100 guilds will need to apply to Discord for verification.
+            As of September 2022 requires opting in explicitly via the Developer Portal to receive the actual content
+            of the guild messages. This intent is privileged, meaning that bots in over 100 guilds that require this
+            intent would need to request this intent on the Developer Portal.
             See https://support-dev.discord.com/hc/en-us/articles/4404772028055 for more information.
-
         """
         return 1 << 15
 
@@ -970,7 +1074,7 @@ class Intents(BaseFlags):
         - :meth:`Guild.get_scheduled_event`
         """
         return 1 << 16
-    
+
     @flag_value
     def auto_moderation_configuration(self):
         """:class:`bool`: Whether guild auto moderation configuration events are enabled.
@@ -982,7 +1086,7 @@ class Intents(BaseFlags):
         - :func:`on_auto_moderation_rule_delete`
         """
         return 1 << 20
-    
+
     @flag_value
     def auto_moderation_execution(self):
         """:class:`bool`: Whether guild auto moderation execution events are enabled.
@@ -1004,8 +1108,8 @@ class MemberCacheFlags(BaseFlags):
 
     Due to a quirk in how Discord works, in order to ensure proper cleanup
     of cache resources it is recommended to have :attr:`Intents.members`
-    enabled. Otherwise the library cannot know when a member leaves a guild and
-    is thus unable to cleanup after itself.
+    enabled. Otherwise, the library cannot know when a member leaves a guild and
+    is thus unable to clean up after itself.
 
     To construct an object you can pass keyword arguments denoting the flags
     to enable or disable.
@@ -1022,6 +1126,21 @@ class MemberCacheFlags(BaseFlags):
         .. describe:: x != y
 
             Checks if two flags are not equal.
+        .. describe:: x + y
+
+            Adds two flags together. Equivalent to ``x | y``.
+        .. describe:: x - y
+
+            Subtracts two flags from each other.
+        .. describe:: x | y
+
+            Returns the union of two flags. Equivalent to ``x + y``.
+        .. describe:: x & y
+
+            Returns the intersection of two flags.
+        .. describe:: ~x
+
+            Returns the inverse of a flag.
         .. describe:: hash(x)
 
                Return the flag's hash.
@@ -1031,7 +1150,7 @@ class MemberCacheFlags(BaseFlags):
                to be, for example, constructed as a dict or a list of pairs.
 
     Attributes
-    -----------
+    ----------
     value: :class:`int`
         The raw value. You should query flags via the properties
         rather than using this raw value.
@@ -1048,7 +1167,7 @@ class MemberCacheFlags(BaseFlags):
             setattr(self, key, value)
 
     @classmethod
-    def all(cls: Type[MemberCacheFlags]) -> MemberCacheFlags:
+    def all(cls: type[MemberCacheFlags]) -> MemberCacheFlags:
         """A factory method that creates a :class:`MemberCacheFlags` with everything enabled."""
         bits = max(cls.VALID_FLAGS.values()).bit_length()
         value = (1 << bits) - 1
@@ -1057,7 +1176,7 @@ class MemberCacheFlags(BaseFlags):
         return self
 
     @classmethod
-    def none(cls: Type[MemberCacheFlags]) -> MemberCacheFlags:
+    def none(cls: type[MemberCacheFlags]) -> MemberCacheFlags:
         """A factory method that creates a :class:`MemberCacheFlags` with everything disabled."""
         self = cls.__new__(cls)
         self.value = self.DEFAULT_VALUE
@@ -1098,17 +1217,17 @@ class MemberCacheFlags(BaseFlags):
         return 4
 
     @classmethod
-    def from_intents(cls: Type[MemberCacheFlags], intents: Intents) -> MemberCacheFlags:
+    def from_intents(cls: type[MemberCacheFlags], intents: Intents) -> MemberCacheFlags:
         """A factory method that creates a :class:`MemberCacheFlags` based on
         the currently selected :class:`Intents`.
 
         Parameters
-        ------------
+        ----------
         intents: :class:`Intents`
             The intents to select from.
 
         Returns
-        ---------
+        -------
         :class:`MemberCacheFlags`
             The resulting member cache flags.
         """
@@ -1146,6 +1265,21 @@ class ApplicationFlags(BaseFlags):
         .. describe:: x != y
 
             Checks if two ApplicationFlags are not equal.
+        .. describe:: x + y
+
+            Adds two flags together. Equivalent to ``x | y``.
+        .. describe:: x - y
+
+            Subtracts two flags from each other.
+        .. describe:: x | y
+
+            Returns the union of two flags. Equivalent to ``x + y``.
+        .. describe:: x & y
+
+            Returns the intersection of two flags.
+        .. describe:: ~x
+
+            Returns the inverse of a flag.
         .. describe:: hash(x)
 
             Return the flag's hash.
@@ -1231,6 +1365,15 @@ class ApplicationFlags(BaseFlags):
         """
         return 1 << 19
 
+    @flag_value
+    def app_commands_badge(self):
+        """:class:`bool`: Returns ``True`` if the application has registered at least one global application
+        command, and by extension has the badge.
+
+        .. versionadded:: 2.1
+        """
+        return 1 << 23
+
 
 @fill_with_flags()
 class ChannelFlags(BaseFlags):
@@ -1244,6 +1387,21 @@ class ChannelFlags(BaseFlags):
         .. describe:: x != y
 
             Checks if two ChannelFlags are not equal.
+        .. describe:: x + y
+
+            Adds two flags together. Equivalent to ``x | y``.
+        .. describe:: x - y
+
+            Subtracts two flags from each other.
+        .. describe:: x | y
+
+            Returns the union of two flags. Equivalent to ``x + y``.
+        .. describe:: x & y
+
+            Returns the intersection of two flags.
+        .. describe:: ~x
+
+            Returns the inverse of a flag.
         .. describe:: hash(x)
 
             Return the flag's hash.

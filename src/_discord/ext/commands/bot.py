@@ -29,7 +29,7 @@ import collections
 import collections.abc
 import sys
 import traceback
-from typing import TYPE_CHECKING, Any, Callable, List, Optional, Type, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Callable, TypeVar
 
 import _discord
 
@@ -40,11 +40,9 @@ from .help import DefaultHelpCommand, HelpCommand
 from .view import StringView
 
 if TYPE_CHECKING:
-    import importlib.machinery
-
     from _discord.message import Message
 
-    from ._types import Check, CoroFunc
+    from ._types import CoroFunc
 
 __all__ = (
     "when_mentioned",
@@ -60,7 +58,7 @@ CFT = TypeVar("CFT", bound="CoroFunc")
 CXT = TypeVar("CXT", bound="Context")
 
 
-def when_mentioned(bot: Union[Bot, AutoShardedBot], msg: Message) -> List[str]:
+def when_mentioned(bot: Bot | AutoShardedBot, msg: Message) -> list[str]:
     """A callable that implements a command prefix equivalent to being mentioned.
 
     These are meant to be passed into the :attr:`.Bot.command_prefix` attribute.
@@ -71,18 +69,21 @@ def when_mentioned(bot: Union[Bot, AutoShardedBot], msg: Message) -> List[str]:
 
 def when_mentioned_or(
     *prefixes: str,
-) -> Callable[[Union[Bot, AutoShardedBot], Message], List[str]]:
+) -> Callable[[Bot | AutoShardedBot, Message], list[str]]:
     """A callable that implements when mentioned or other prefixes provided.
 
     These are meant to be passed into the :attr:`.Bot.command_prefix` attribute.
 
-    Example
+    See Also
     --------
+    :func:`.when_mentioned`
+
+    Example
+    -------
 
     .. code-block:: python3
 
         bot = commands.Bot(command_prefix=commands.when_mentioned_or('!'))
-
 
     .. note::
 
@@ -94,11 +95,6 @@ def when_mentioned_or(
             async def get_prefix(bot, message):
                 extras = await prefixes_for(message.guild) # returns a list
                 return commands.when_mentioned_or(*extras)(bot, message)
-
-
-    See Also
-    ----------
-    :func:`.when_mentioned`
     """
 
     def inner(bot, msg):
@@ -151,12 +147,14 @@ class BotBase(GroupMixin, _discord.cog.CogMixin):
 
         await super().close()  # type: ignore
 
-    async def on_command_error(self, context: Context, exception: errors.CommandError) -> None:
+    async def on_command_error(
+        self, context: Context, exception: errors.CommandError
+    ) -> None:
         """|coro|
 
         The default command error handler provided by the bot.
 
-        By default this prints to :data:`sys.stderr` however it could be
+        By default, this prints to :data:`sys.stderr` however it could be
         overridden to have a different implementation.
 
         This only fires if you do not specify any listeners for command error.
@@ -173,7 +171,9 @@ class BotBase(GroupMixin, _discord.cog.CogMixin):
             return
 
         print(f"Ignoring exception in command {context.command}:", file=sys.stderr)
-        traceback.print_exception(type(exception), exception, exception.__traceback__, file=sys.stderr)
+        traceback.print_exception(
+            type(exception), exception, exception.__traceback__, file=sys.stderr
+        )
 
     async def can_run(self, ctx: Context, *, call_once: bool = False) -> bool:
         data = self._check_once if call_once else self._checks
@@ -187,11 +187,11 @@ class BotBase(GroupMixin, _discord.cog.CogMixin):
     # help command stuff
 
     @property
-    def help_command(self) -> Optional[HelpCommand]:
+    def help_command(self) -> HelpCommand | None:
         return self._help_command
 
     @help_command.setter
-    def help_command(self, value: Optional[HelpCommand]) -> None:
+    def help_command(self, value: HelpCommand | None) -> None:
         if value is not None:
             if not isinstance(value, HelpCommand):
                 raise TypeError("help_command must be a subclass of HelpCommand")
@@ -207,19 +207,19 @@ class BotBase(GroupMixin, _discord.cog.CogMixin):
 
     # command processing
 
-    async def get_prefix(self, message: Message) -> Union[List[str], str]:
+    async def get_prefix(self, message: Message) -> list[str] | str:
         """|coro|
 
         Retrieves the prefix the bot is listening to
         with the message as a context.
 
         Parameters
-        -----------
+        ----------
         message: :class:`discord.Message`
             The message context to get the prefix of.
 
         Returns
-        --------
+        -------
         Union[List[:class:`str`], :class:`str`]
             A list of prefixes or a single prefix that the bot is
             listening for.
@@ -243,17 +243,19 @@ class BotBase(GroupMixin, _discord.cog.CogMixin):
                 )
 
             if not ret:
-                raise ValueError("Iterable command_prefix must contain at least one prefix")
+                raise ValueError(
+                    "Iterable command_prefix must contain at least one prefix"
+                )
 
         return ret
 
-    async def get_context(self, message: Message, *, cls: Type[CXT] = Context) -> CXT:
+    async def get_context(self, message: Message, *, cls: type[CXT] = Context) -> CXT:
         r"""|coro|
 
         Returns the invocation context from the message.
 
         This is a more low-level counter-part for :meth:`.process_commands`
-        to allow users more fine grained control over the processing.
+        to allow users more fine-grained control over the processing.
 
         The returned context is not guaranteed to be a valid invocation
         context, :attr:`.Context.valid` must be checked to make sure it is.
@@ -333,7 +335,7 @@ class BotBase(GroupMixin, _discord.cog.CogMixin):
         handles all the internal event dispatch mechanisms.
 
         Parameters
-        -----------
+        ----------
         ctx: :class:`.Context`
             The invocation context to invoke.
         """
@@ -370,7 +372,7 @@ class BotBase(GroupMixin, _discord.cog.CogMixin):
         call :meth:`~.Bot.get_context` or :meth:`~.Bot.invoke` if so.
 
         Parameters
-        -----------
+        ----------
         message: :class:`discord.Message`
             The message to process commands for.
         """
@@ -399,7 +401,7 @@ class Bot(BotBase, _discord.Bot):
         Using prefixed commands requires :attr:`discord.Intents.message_content` to be enabled.
 
     Attributes
-    -----------
+    ----------
     command_prefix
         The command prefix is what the message content must contain initially
         to have a command invoked. This prefix could either be a string to
@@ -430,9 +432,9 @@ class Bot(BotBase, _discord.Bot):
             when passing an empty string, it should always be last as no prefix
             after it will be matched.
     case_insensitive: :class:`bool`
-        Whether the commands should be case insensitive. Defaults to ``False``. This
+        Whether the commands should be case-insensitive. Defaults to ``False``. This
         attribute does not carry over to groups. You must set it to every group if
-        you require group commands to be case insensitive as well.
+        you require group commands to be case-insensitive as well.
     help_command: Optional[:class:`.HelpCommand`]
         The help command implementation to use. This can be dynamically
         set at runtime. To remove the help command pass ``None``. For more
@@ -445,12 +447,8 @@ class Bot(BotBase, _discord.Bot):
         .. versionadded:: 1.7
     """
 
-    pass
-
 
 class AutoShardedBot(BotBase, _discord.AutoShardedBot):
     """This is similar to :class:`.Bot` except that it is inherited from
     :class:`discord.AutoShardedBot` instead.
     """
-
-    pass
