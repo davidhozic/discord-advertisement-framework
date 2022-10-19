@@ -75,11 +75,6 @@ autodoc_default_options = {
 }
 
 
-
-# -------- Sphinx Tabs ------- #
-sphinx_tabs_disable_css_loading = False
-sphinx_tabs_disable_tab_closing = True
-
 # ----------- HTML ----------- #
 html_title = project
 html_logo = "images/logo.png"
@@ -101,3 +96,14 @@ html_theme_options = {
         }
     ],
 }
+
+# ----------- Latex ----------- #
+latex_elements = {
+    "papersize" : "a4paper",
+    "pointsize" : "12pt"
+}
+
+
+latex_additional_files = []
+for path, dirs, files in os.walk("./diploma"):
+    latex_additional_files.extend(os.path.join(path, file) for file in files)

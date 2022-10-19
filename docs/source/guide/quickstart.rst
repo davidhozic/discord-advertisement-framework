@@ -55,7 +55,7 @@ Function :func:`~daf.core.run` accepts many parameters but there are **3 which a
             is_user=True # Set this to True, if the above token is from an user account.
         )
 
-- ``servers``
+- ``server_list``
     This parameter accepts a list of :class:`~daf.guild.GUILD` / :class:`~daf.guild.USER` objects and represents the servers to which the framework will shill.
     The below block shows a sample definition of the server list, which will send text messages. For full parameters see :class:`~daf.guild.GUILD` / :class:`~daf.guild.USER`
     and :class:`daf.message.TextMESSAGE` for the TextMESSAGE parameters.
