@@ -370,7 +370,7 @@ def run(token : str,
     .. warning::
         This will block until the framework is stopped, if you want manual control over the
         asyncio event loop, eg. you want to start the framework as a task, use
-        the ``initialize`` coroutine.
+        the :func:`daf.core.initialize` coroutine.
 
     .. versionchanged:: v2.2
         Added ``logger`` parameter

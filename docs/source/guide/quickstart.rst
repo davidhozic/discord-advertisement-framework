@@ -6,12 +6,33 @@ This page contains information to quickly getting started.
 
 The first thing you need is the library installed, see :ref:`Installation`.
 
+
+
 ----------------------
 Framework control
 ----------------------
 Only one function is needed to be called for the framework to start.
 
 The framework can be started using :func:`daf.core.run` function (and stopped with the :func:`daf.core.shutdown` function).
+
+.. note::
+    DAF is built for asynchronous usage and is using the ``asyncio`` module to run tasks.
+    :func:`~daf.core.run` starts an ``asyncio`` event loop and then creates the initialization task that
+    starts all the components.
+
+    If you wish to start the framework in a program that already has a running asyncio event loop, you can use the
+    :func:`daf.core.initialize` coroutine.
+
+    .. code-block:: python
+
+        import daf
+        import asyncio
+
+        async def some_program():
+            await daf.core.initialize(...) # Starts the framework in an asyncio loop that is already running.
+
+        asyncio.run(some_program())
+
 
 Function :func:`~daf.core.run` accepts many parameters but there are **3 which are most important**:
 
