@@ -88,9 +88,10 @@ Function :func:`~daf.core.run` accepts many parameters but there are **3 which a
         
         `Obtaining snowflake <https://support.discord.com/hc/en-us/articles/206346498-Where-can-I-find-my-User-Server-Message-ID->`_.
 
-
-    .. literalinclude:: ../../../Examples/Message Types/TextMESSAGE/main_send_string.py
-        :emphasize-lines: 4, 5, 8, 21, 32
+    .. only:: html
+        
+        .. literalinclude:: ../../../Examples/Message Types/TextMESSAGE/main_send_string.py
+            :emphasize-lines: 4, 5, 8, 21, 32
 
 
 

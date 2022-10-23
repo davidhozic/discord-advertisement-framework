@@ -38,15 +38,17 @@ The data that can be sent using this types of messages can be of type:
 4. list containing data that is one of the first 3 types.
 5. function on which the :class:`~daf.dtypes.data_function` was used (use for dynamically changeable data)
 
-.. literalinclude:: ../../../Examples/Message Types/TextMESSAGE/main_send_string.py
-    :language: Python
-    :emphasize-lines: 8
-    :caption: **TextMESSAGE example - normal text (string)**
+.. only:: html
 
-.. literalinclude:: ../../../Examples/Message Types/DirectMESSAGE/main_send_string.py
-    :language: Python
-    :emphasize-lines: 14
-    :caption: **DirectMESSAGE example - normal text (string)**
+    .. literalinclude:: ../../../Examples/Message Types/TextMESSAGE/main_send_string.py
+        :language: Python
+        :emphasize-lines: 8
+        :caption: **TextMESSAGE example - normal text (string)**
+
+    .. literalinclude:: ../../../Examples/Message Types/DirectMESSAGE/main_send_string.py
+        :language: Python
+        :emphasize-lines: 14
+        :caption: **DirectMESSAGE example - normal text (string)**
 
 
 Voice messages
@@ -55,9 +57,11 @@ Shilling an audio message requires |VoiceMESSAGE| objects.
 You can only stream audio to guilds, users(direct messages) are not supported.
 You can either stream a fixed audio file or a youtube video, both thru :class:`daf.dtypes.AUDIO` object.
 
-.. literalinclude:: ../../../Examples/Message Types/VoiceMESSAGE/main_stream_audio.py
-    :emphasize-lines: 12
-    :caption: **VoiceMESSAGE example - audio file**
+.. only:: html
+
+    .. literalinclude:: ../../../Examples/Message Types/VoiceMESSAGE/main_stream_audio.py
+        :emphasize-lines: 12
+        :caption: **VoiceMESSAGE example - audio file**
 
 The data that can be sent using this types of messages can be of type:
 

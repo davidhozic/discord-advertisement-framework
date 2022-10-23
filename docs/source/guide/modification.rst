@@ -56,9 +56,11 @@ The function can be used to add the following object types:
         await my_guild.add_message(daf.TextMESSAGE(...))
         ...
 
-.. literalinclude:: ../../../Examples/Dynamic Modification/main_add_object.py
-    :language: python
-    :emphasize-lines: 25-27, 38
+.. only:: html
+
+    .. literalinclude:: ../../../Examples/Dynamic Modification/main_add_object.py
+        :language: python
+        :emphasize-lines: 25-27, 38
 
 
 Dynamically removing objects
@@ -66,7 +68,8 @@ Dynamically removing objects
 As the framework supports dynamically adding new objects to the shilling list, it also supports dynamically removing those objects.
 Objects can be removed with the :func:`daf.core.remove_object`.
 
+.. only:: html
 
-.. literalinclude:: ../../../Examples/Dynamic Modification/main_remove_object.py
-    :language: python
-    :emphasize-lines: 8, 15
+    .. literalinclude:: ../../../Examples/Dynamic Modification/main_remove_object.py
+        :language: python
+        :emphasize-lines: 8, 15

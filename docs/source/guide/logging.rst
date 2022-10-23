@@ -58,12 +58,14 @@ All logs will contain keys:
     :download:`Example structure <../../../Examples/Logging/JSON files/History/2022/05/23/#David's dungeon.json>`
 
 
-JSON code example
------------------
-.. literalinclude:: ../../../Examples/Logging/JSON files/main_rickroll.py
-    :language: python
-    :caption: Code to produce JSON logs
-    :emphasize-lines: 27, 36
+.. only:: html
+
+    JSON code example
+    -----------------
+    .. literalinclude:: ../../../Examples/Logging/JSON files/main_rickroll.py
+        :language: python
+        :caption: Code to produce JSON logs
+        :emphasize-lines: 27, 36
 
 
 
@@ -103,12 +105,14 @@ The structure contains the following attributes:
     :download:`Structure example <../../../Examples/Logging/CSV files/History/2022/09/22/David's py dungeon.csv>`
 
 
-CSV code example
------------------
-.. literalinclude:: ../../../Examples/Logging/CSV files/main_rickroll.py
-    :language: python
-    :caption: Code to produce JSON logs
-    :emphasize-lines: 27, 36
+.. only:: html
+
+    CSV code example
+    -----------------
+    .. literalinclude:: ../../../Examples/Logging/CSV files/main_rickroll.py
+        :language: python
+        :caption: Code to produce JSON logs
+        :emphasize-lines: 27, 36
 
 
 
@@ -150,9 +154,11 @@ Usage
 --------------------------------
 For daf to use SQL logging, you need to pass the :func:`~daf.core.run` function with the ``logging`` parameter and pass it the :class:`~daf.logging.sql.LoggerSQL` object.
 
-.. literalinclude:: ../../../Examples/Logging/SQL Logging/rolls.py
-    :language: python
-    :emphasize-lines: 27, 36
+.. only:: html
+
+    .. literalinclude:: ../../../Examples/Logging/SQL Logging/rolls.py
+        :language: python
+        :emphasize-lines: 27, 36
 
 Features
 --------------------------------

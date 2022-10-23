@@ -22,7 +22,6 @@ Links
         - `PyCord Documentation <https://docs.pycord.dev/en/master/>`_
 
 
-
 ----------------------
 Key features
 ----------------------
