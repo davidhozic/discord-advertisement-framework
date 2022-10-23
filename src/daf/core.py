@@ -181,7 +181,7 @@ async def add_object(obj: Union[message.DirectMESSAGE, message.TextMESSAGE, mess
     -----------
     obj: Union[message.DirectMESSAGE, message.TextMESSAGE, message.VoiceMESSAGE]
         The message object to add into the daf.
-    snowflake: Union[int, guild.GUILD, guild.USER, dc.Guild, dc.User]
+    snowflake: Union[int, guild.GUILD, guild.USER, discord.Guild, discord.User]
         Which guild/user to add it to (can be snowflake id or a framework _BaseGUILD object or a discord API wrapper object).
 
     Raises
@@ -237,7 +237,7 @@ def remove_object(snowflake: Union[int, dc.Object, dc.Guild, dc.User, dc.Object,
 
     Parameters
     -------------
-    snowflake: Union[int, dc.Object, dc.Guild, dc.User, dc.Object, guild.GUILD, guild.USER , message.TextMESSAGE, message.VoiceMESSAGE, message.DirectMESSAGE]
+    snowflake: Union[int, discord.Object, discord.Guild, discord.User, discord.Object, guild.GUILD, guild.USER , message.TextMESSAGE, message.VoiceMESSAGE, message.DirectMESSAGE]
         The GUILD/USER object to remove/snowflake of GUILD/USER
         or a xMESSAGE object
 
@@ -272,7 +272,7 @@ def get_guild_user(snowflake: Union[int, dc.Object, dc.Guild, dc.User, dc.Object
 
     Parameters
     -------------
-    snowflake: Union[int, dc.Object, dc.Guild, dc.User, dc.Object]
+    snowflake: Union[int, discord.Object, discord.Guild, discord.User, discord.Object]
         Snowflake ID or discord objects containing snowflake id of the GUILD.
     
     Raises
@@ -370,7 +370,7 @@ def run(token : str,
     .. warning::
         This will block until the framework is stopped, if you want manual control over the
         asyncio event loop, eg. you want to start the framework as a task, use
-        the ``initialize`` coroutine.
+        the :func:`daf.core.initialize` coroutine.
 
     .. versionchanged:: v2.2
         Added ``logger`` parameter

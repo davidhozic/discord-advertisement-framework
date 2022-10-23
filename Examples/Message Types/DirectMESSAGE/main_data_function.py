@@ -27,10 +27,12 @@ guilds = [
                                                                     # where if you pass a function you need to use the daf.FUNCTION decorator on top of it ).
                               mode="send",                          # "send" will send a new message every time, "edit" will edit the previous message, "clear-send" will delete
                                                                     # the previous message and then send a new one
-                              start_in=timedelta(seconds=0)         # Start sending now (True) or wait until period
+                              start_in=timedelta(seconds=0),        # Start sending now (True) or wait until period
+                              remove_after=None                     # Remove the message never or after n-times, after specific date or after timedelta
                               ),  
         ],
-        logging=True # Generate file log of sent messages (and failed attempts) for this user
+        logging=True,       # Generate file log of sent messages (and failed attempts) for this user
+        remove_after=None   # When to remove the guild and it's message from the shilling list
     )
 ]
 

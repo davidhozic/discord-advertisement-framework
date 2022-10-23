@@ -3,20 +3,11 @@ DAF (|version|)
 =========================================================
 The Discord advertisement framework is a  **shilling tool** that allows easy advertising on Discord.
 
-
-.. toctree::
-    :hidden:
-
-    ref
-    guide/index
-    changelog
-
 ---------------------
 Links
 ---------------------
-
 .. tab-set::
-
+    
     .. tab-item:: Project
 
         - `Github <https://github.com/davidhozic/discord-advertisement-framework>`_
@@ -29,7 +20,6 @@ Links
 
         - `PyCord GitHub <https://github.com/Pycord-Development/pycord>`_
         - `PyCord Documentation <https://docs.pycord.dev/en/master/>`_
-
 
 
 ----------------------
@@ -99,3 +89,16 @@ DAF can be installed though command prompt/terminal using the bottom commands.
 
                     pip install discord-advert-framework[all]
 
+
+
+
+
+----------------------
+Table of contents
+----------------------
+.. toctree::
+    :maxdepth: 2
+
+    guide/index
+    ref
+    changelog

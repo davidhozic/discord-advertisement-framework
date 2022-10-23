@@ -41,6 +41,7 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.napoleon",
     "sphinx.ext.autosectionlabel",
+    "sphinx.ext.intersphinx",
     "sphinx_copybutton",
     "enum_tools.autoenum",
     "sphinx_design"
@@ -75,10 +76,10 @@ autodoc_default_options = {
 }
 
 
-
-# -------- Sphinx Tabs ------- #
-sphinx_tabs_disable_css_loading = False
-sphinx_tabs_disable_tab_closing = True
+# Intersphinx
+intersphinx_mapping = {
+    'PyCord': ("https://docs.pycord.dev/en/stable/", None)
+}
 
 # ----------- HTML ----------- #
 html_title = project
@@ -101,3 +102,93 @@ html_theme_options = {
         }
     ],
 }
+
+# ----------- Latex ----------- #
+latex_elements = {
+    "papersize" : "a4paper",
+    "pointsize" : "12pt",
+    'preamble': r'''
+        %*****************************************************************
+        %   Vzorec za pisanje diplomskega dela,
+        %   ki vsebuje navodila za izdelavo diplomskega dela
+        %
+        %   UNIVERZA V LJUBLJANI
+        %   Fakulteta za računalništvo in informatiko
+        %
+        %   Pripravila: Peter.Peer@fri.uni-lj.si
+        %               Franc.Solina@fri.uni-lj.si
+        %*****************************************************************
+        %Uporabljeni paketi
+        \usepackage[utf8]{inputenc}
+        \usepackage{cmap}
+        \usepackage{type1ec}
+        \usepackage[T1]{fontenc}
+        \usepackage{fancyhdr}
+        \usepackage{graphicx,epsfig}
+
+        %Velikost strani - dvostransko
+        \oddsidemargin 1.4cm
+        \evensidemargin 0.35cm
+        \textwidth 14cm
+        \topmargin 0.26cm
+        \headheight 0.6cm
+        \headsep 1.5cm
+        \textheight 20cm
+
+        %Nastavitev glave in repa strani
+        \pagestyle{fancy}
+        \fancyhead{}
+        \renewcommand{\chaptermark}[1]{\markboth{\textsf{Poglavje \thechapter:\ #1}}{}}
+        \renewcommand{\sectionmark}[1]{\markright{\textsf{\thesection\  #1}}{}}
+        \fancyhead[RE]{\leftmark}
+        \fancyhead[LO]{\rightmark}
+        \fancyhead[LE,RO]{\thepage}
+        \fancyfoot{}
+        \renewcommand{\headrulewidth}{0.0pt}
+        \renewcommand{\footrulewidth}{0.0pt}
+
+        \newcommand{\gnuplot}{\textbf{gnuplot}}
+        \newcommand{\pgfname}{\textsc{pgf}}
+        \newcommand{\tikzname}{Ti\emph{k}Z}
+    ''',
+    "maketitle" :
+    r"""
+        % stran 1 med uvodnimi listi
+        \thispagestyle{empty} 
+
+        \begin{center}
+        {\large 
+        UNIVERZA V LJUBLJANI\\
+        FAKULTETA ZA RAČUNALNIŠTVO IN INFORMATIKO\\
+        }
+
+        \vspace{3cm}
+        {\LARGE Ime Priimek}\\
+
+        \vspace{2cm}
+        \textsc{\textbf{\LARGE 
+        Navodila za izdelavo in vzorec za\\ 
+        pisanje diplomskega dela\\ 
+        }}
+
+        \vspace{2cm}
+        { DIPLOMSKO DELO}\\
+        { NA UNIVERZITETNEM ŠTUDIJU\\
+        }
+        { [NA INTERDISCIPLINARNEM UNIVERZITETNEM ŠTUDIJU]\\
+        }
+        { [NA VISOKOŠOLSKEM STROKOVNEM ŠTUDIJU]\\
+        }
+
+        \vspace{2cm} 
+        {\Large Mentor: prof. [doc.] dr. Ime Priimek}
+
+        \vfill
+        {\Large Ljubljana, 2022}
+        \end{center}
+        \ \thispagestyle{empty}
+    """
+}
+
+
+# latex_additional_files = [os.path.join("./latex", x) for x in os.listdir("./latex")]

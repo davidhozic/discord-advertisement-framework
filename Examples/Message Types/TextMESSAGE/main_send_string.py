@@ -16,7 +16,7 @@ guilds = [
                               mode="send",                      # "send" will send a new message every time, "edit" will edit the previous message, "clear-send" will delete
                                                                 # the previous message and then send a new one
                               start_in=timedelta(seconds=0),    # Delay before shilling start
-                              remove_after=None                 # Remove after never (None)
+                              remove_after=None                 # Remove the message never or after n-times, after specific date or after timedelta
                               ),
             daf.TextMESSAGE(start_period=5, end_period=timedelta(10), data="Second Message", channels=[12345], mode="send", start_in=timedelta(seconds=0))  
         ],

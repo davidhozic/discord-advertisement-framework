@@ -6,12 +6,33 @@ This page contains information to quickly getting started.
 
 The first thing you need is the library installed, see :ref:`Installation`.
 
+
+
 ----------------------
 Framework control
 ----------------------
 Only one function is needed to be called for the framework to start.
 
 The framework can be started using :func:`daf.core.run` function (and stopped with the :func:`daf.core.shutdown` function).
+
+.. note::
+    DAF is built for asynchronous usage and is using the ``asyncio`` module to run tasks.
+    :func:`~daf.core.run` starts an ``asyncio`` event loop and then creates the initialization task that
+    starts all the components.
+
+    If you wish to start the framework in a program that already has a running asyncio event loop, you can use the
+    :func:`daf.core.initialize` coroutine.
+
+    .. code-block:: python
+
+        import daf
+        import asyncio
+
+        async def some_program():
+            await daf.core.initialize(...) # Starts the framework in an asyncio loop that is already running.
+
+        asyncio.run(some_program())
+
 
 Function :func:`~daf.core.run` accepts many parameters but there are **3 which are most important**:
 
@@ -55,7 +76,7 @@ Function :func:`~daf.core.run` accepts many parameters but there are **3 which a
             is_user=True # Set this to True, if the above token is from an user account.
         )
 
-- ``servers``
+- ``server_list``
     This parameter accepts a list of :class:`~daf.guild.GUILD` / :class:`~daf.guild.USER` objects and represents the servers to which the framework will shill.
     The below block shows a sample definition of the server list, which will send text messages. For full parameters see :class:`~daf.guild.GUILD` / :class:`~daf.guild.USER`
     and :class:`daf.message.TextMESSAGE` for the TextMESSAGE parameters.
@@ -67,9 +88,10 @@ Function :func:`~daf.core.run` accepts many parameters but there are **3 which a
         
         `Obtaining snowflake <https://support.discord.com/hc/en-us/articles/206346498-Where-can-I-find-my-User-Server-Message-ID->`_.
 
-
-    .. literalinclude:: ../../../Examples/Message Types/TextMESSAGE/main_send_string.py
-        :emphasize-lines: 4, 5, 8, 21, 32
+    .. only:: html
+        
+        .. literalinclude:: ../../../Examples/Message Types/TextMESSAGE/main_send_string.py
+            :emphasize-lines: 4, 5, 8, 21, 32
 
 
 

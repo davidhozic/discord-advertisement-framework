@@ -58,12 +58,14 @@ All logs will contain keys:
     :download:`Example structure <../../../Examples/Logging/JSON files/History/2022/05/23/#David's dungeon.json>`
 
 
-JSON code example
------------------
-.. literalinclude:: ../../../Examples/Logging/JSON files/main_rickroll.py
-    :language: python
-    :caption: Code to produce JSON logs
-    :emphasize-lines: 27, 36
+.. only:: html
+
+    JSON code example
+    -----------------
+    .. literalinclude:: ../../../Examples/Logging/JSON files/main_rickroll.py
+        :language: python
+        :caption: Code to produce JSON logs
+        :emphasize-lines: 27, 36
 
 
 
@@ -103,12 +105,14 @@ The structure contains the following attributes:
     :download:`Structure example <../../../Examples/Logging/CSV files/History/2022/09/22/David's py dungeon.csv>`
 
 
-CSV code example
------------------
-.. literalinclude:: ../../../Examples/Logging/CSV files/main_rickroll.py
-    :language: python
-    :caption: Code to produce JSON logs
-    :emphasize-lines: 27, 36
+.. only:: html
+
+    CSV code example
+    -----------------
+    .. literalinclude:: ../../../Examples/Logging/CSV files/main_rickroll.py
+        :language: python
+        :caption: Code to produce JSON logs
+        :emphasize-lines: 27, 36
 
 
 
@@ -150,9 +154,11 @@ Usage
 --------------------------------
 For daf to use SQL logging, you need to pass the :func:`~daf.core.run` function with the ``logging`` parameter and pass it the :class:`~daf.logging.sql.LoggerSQL` object.
 
-.. literalinclude:: ../../../Examples/Logging/SQL Logging/rolls.py
-    :language: python
-    :emphasize-lines: 27, 36
+.. only:: html
+
+    .. literalinclude:: ../../../Examples/Logging/SQL Logging/rolls.py
+        :language: python
+        :emphasize-lines: 27, 36
 
 Features
 --------------------------------
@@ -315,10 +321,7 @@ The derived logger class can then implement the following methods:
 3. async _save_log(self, guild_context: dict, message_context: dict) [Required]:
     Method that stores the message log. 
     If there is any error in saving the log an exception should be raised, which will then
-    make the logging module automatically use the fallback manager, do not call the fallback manager from this method.
-
-    If the error cannot be immediately handled, and you want to permanently switch to a different manager, use
-    :func:`set_logger` function.
+    make the logging module automatically use the fallback manager, **do not call the fallback manager from this method!**
 
     :Parameters:
         **guild_context** (dict) - Contains keys:
@@ -337,7 +340,7 @@ The derived logger class can then implement the following methods:
     Custom implementation of the ``update`` method.
 
     This method is used for updating the parameters that are available thru ``__init__`` method and
-    is not required if the attributes inside the object have the same name as the parameters inside the ``__init__`` function
+    **is not required if the attributes inside the object have the same name as the parameters inside the** ``__init__`` **function**
     and there are no pre-required steps that need to be taken before updating (see :ref:`JSON Logging (file)`'s code for example).
 
     However if the name of attributes differ from parameter name or the attribute doesn't exist at all or other steps are 

@@ -53,7 +53,27 @@ class _FunctionBaseCLASS:
 @misc.doc_category("Decorators")
 def data_function(fnc: Callable):
     """
-    Decorator used to create a framework FunctionCLASS class that wraps the function.
+    Decorator used for wrapping a function that will return data to send when the message is ready.
+
+    The ``fnc`` function must return data that is of type that the **x**\ MESSAGE object supports.
+    **If the type returned is not valid, the send attempt will simply be ignored and nothing will be logged at at**,
+    this is useful if you want to use the ``fnc`` function to control whenever the message is ready to be sent.
+    For example: if we have a function defined like this:
+
+    .. code-block::
+        :emphasize-lines: 3
+
+        @daf.data_function
+        def get_data():
+            return None
+    
+        ...
+        daf.TextMESSAGE(..., data=get_data())
+        ...
+
+    then no messages will ever be sent, nor will any logs be made since invalid values are simply ignored by the framework.
+
+
 
     Parameters
     ------------
@@ -69,6 +89,7 @@ def data_function(fnc: Callable):
 
     .. literalinclude:: ../../Examples/Message Types/TextMESSAGE/main_data_function.py
         :language: python
+        :emphasize-lines: 11, 24
     """
     class FunctionCLASS(_FunctionBaseCLASS):
         """
