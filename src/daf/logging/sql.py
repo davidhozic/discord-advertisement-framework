@@ -7,7 +7,6 @@
     .. versionchanged:: v2.1
         Made SQL an optional functionality
 """
-# TODO: Error recovery
 from datetime import datetime
 from typing import Callable, Dict, List, Literal, Any, Union, Optional
 from contextlib import suppress
@@ -105,13 +104,13 @@ def register_type(lookuptable: Literal["GuildTYPE", "MessageTYPE", "MessageMODE"
     
     return decorator_register_type
 
-# TODO, change hash to calculate has of the concentrated values and keys
-class ConstDict(dict):
+
+class HashableDict(dict):
     """
     Dictionary that can be used as a key to another dictionary.
     """
     def __hash__(self):
-        return hash(id(self))
+        return hash(frozenset(self))
 
 class TableCache:
     """
@@ -240,13 +239,13 @@ class LoggerSQL(logging.LoggerBASE):
 
     @typechecked
     def __init__(self,
-                username: Optional[str] = None,
-                password: Optional[str] = None,
-                server: Optional[str] = None,
-                port: Optional[int] = None,
-                database: Optional[str] = None,
-                dialect: Optional[str] = None,
-                fallback: Optional[logging.LoggerBASE] = ...):
+                 username: Optional[str] = None,
+                 password: Optional[str] = None,
+                 server: Optional[str] = None,
+                 port: Optional[int] = None,
+                 database: Optional[str] = None,
+                 dialect: Optional[str] = None,
+                 fallback: Optional[logging.LoggerBASE] = ...):
 
         if not SQL_INSTALLED:
             raise ModuleNotFoundError("You need to install extra requirements: pip install discord-advert-framework[sql]")
@@ -285,7 +284,6 @@ class LoggerSQL(logging.LoggerBASE):
         self.reconnecting = False # Flag that is True while reconnecting, used for emergency exit of other tasks
 
         # Caching (to avoid unnecessary queries)
-        # TODO: Implement misc.CACHE object
         ## Lookup table caching
         self.message_mode_cache = TableCache(MessageMODE, SQL_TABLE_CACHE_SIZE)
         self.message_type_cache = TableCache(MessageTYPE, SQL_TABLE_CACHE_SIZE)
@@ -614,7 +612,7 @@ class LoggerSQL(logging.LoggerBASE):
             Primary key of a row inside DataHISTORY table.
         """
         result: tuple = None
-        const_data = ConstDict()
+        const_data = HashableDict()
         const_data.update(data)
 
         if not self.data_history_cache.exists(const_data):
@@ -915,7 +913,7 @@ if SQL_INSTALLED:
         content = Column(JSON())
 
         def __init__(self,
-                    content: ConstDict):
+                    content: HashableDict):
             self.content = content
 
     class MessageLOG(ORMBase):
