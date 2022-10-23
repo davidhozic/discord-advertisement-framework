@@ -76,12 +76,13 @@ class TextMESSAGE(BaseMESSAGE):
             # Time between each send is exactly 10 seconds.
             daf.TextMESSAGE(start_period=None, end_period=timedelta(10), data="Second Message", channels=[12345], mode="send", start_in=timedelta(seconds=0))
 
-    data: Union[str, EMBED, FILE, List[Union[str, EMBED, FILE]], _FunctionBaseCLASS]
+    data: Union[str, EMBED, discord.Embed, FILE, List[Union[str, EMBED, discord.Embed, FILE]], _FunctionBaseCLASS]
         The data parameter is the actual data that will be sent using discord's API. The data types of this parameter can be:
             - str (normal text),
-            - :ref:`EMBED`,
+            - :ref:`EMBED`
+            - :class:`discord.Embed`,
             - :ref:`FILE`,
-            - List/Tuple containing any of the above arguments (There can up to 1 string, up to 1 :ref:`EMBED` and up to 10 :ref:`FILE` objects. If more than 1 string or embeds are sent, the framework will only consider the last found).
+            - List/Tuple containing any of the above arguments (There can up to 1 string, up to 1 :ref:`EMBED` / :class:`discord.Embed` and up to 10 :ref:`FILE` objects. If more than 1 string or embeds are sent, the framework will only consider the last found).
             - Function that accepts any amount of parameters and returns any of the above types. To pass a function, YOU MUST USE THE :ref:`data_function` decorator on the function before passing the function to the daf.
 
     channels: Iterable[Union[int, discord.TextChannel, discord.Thread]]
@@ -115,7 +116,7 @@ class TextMESSAGE(BaseMESSAGE):
     def __init__(self, 
                  start_period: Union[int, timedelta, None],
                  end_period: Union[int, timedelta],
-                 data: Union[str, EMBED, FILE, Iterable[Union[str, EMBED, FILE]], _FunctionBaseCLASS],
+                 data: Union[str, EMBED, discord.Embed, FILE, Iterable[Union[str, EMBED, discord.Embed, FILE]], _FunctionBaseCLASS],
                  channels: Iterable[Union[int, discord.TextChannel, discord.Thread]],
                  mode: Literal["send", "edit", "clear-send"] = "send",
                  start_in: Union[timedelta, bool]=timedelta(seconds=0),
@@ -152,7 +153,7 @@ class TextMESSAGE(BaseMESSAGE):
 
     def generate_log_context(self,
                              text: Optional[str],
-                             embed: Optional[EMBED],
+                             embed: Union[discord.Embed, EMBED],
                              files: List[FILE],
                              succeeded_ch: List[Union[discord.TextChannel, discord.Thread]],
                              failed_ch: List[Dict[str, Any]]) -> Dict[str, Any]:
@@ -163,7 +164,7 @@ class TextMESSAGE(BaseMESSAGE):
         -----------
         text: str
             The text that was sent.
-        embed: EMBED
+        embed: Union[discord.Embed, EMBED]
             The embed that was sent.
         files: List[FILE]
             List of files that were sent.
@@ -243,7 +244,7 @@ class TextMESSAGE(BaseMESSAGE):
             for element in data:
                 if isinstance(element, str):
                     _data_to_send["text"] = element
-                elif isinstance(element, EMBED):
+                elif isinstance(element, (EMBED, discord.Embed)):
                     _data_to_send["embed"] = element
                 elif isinstance(element, FILE):
                     _data_to_send["files"].append(element)
@@ -321,7 +322,7 @@ class TextMESSAGE(BaseMESSAGE):
     async def _send_channel(self,
                            channel: Union[discord.TextChannel, discord.Thread, None],
                            text: Optional[str],
-                           embed: Optional[EMBED],
+                           embed: Optional[Union[discord.Embed, EMBED]],
                            files: List[FILE]) -> dict:
         """
         Sends data to specific channel
@@ -336,7 +337,7 @@ class TextMESSAGE(BaseMESSAGE):
             The channel in which to send the data.
         text: str
             The text to send.
-        embed: EMBED
+        embed: Union[discord.Embed, EMBED]
             The embedded frame to send.
         files: List[FILE]
             List of files to send.
@@ -483,12 +484,13 @@ class DirectMESSAGE(BaseMESSAGE):
             # Time between each send is exactly 10 seconds.
             daf.DirectMESSAGE(start_period=None, end_period=timedelta(10), data="Second Message",  mode="send", start_in=timedelta(seconds=0))
 
-    data: Union[str, EMBED, FILE, List[Union[str, EMBED, FILE]], _FunctionBaseCLASS]
+    data: Union[str, EMBED, discord.Embed FILE, List[Union[str, EMBED, discord.Embed, FILE]], _FunctionBaseCLASS]
         The data parameter is the actual data that will be sent using discord's API. The data types of this parameter can be:
             - str (normal text),
             - :ref:`EMBED`,
+            - :class:`discord.Embed`,
             - :ref:`FILE`,
-            - List/Tuple containing any of the above arguments (There can up to 1 string, up to 1 :ref:`EMBED` and up to 10 :ref:`FILE` objects. If more than 1 string or embeds are sent, the framework will only consider the last found).
+            - List/Tuple containing any of the above arguments (There can up to 1 string, up to 1 :ref:`EMBED` / :class:`discord.Embed` and up to 10 :ref:`FILE` objects. If more than 1 string or embeds are sent, the framework will only consider the last found).
             - Function that accepts any amount of parameters and returns any of the above types. To pass a function, YOU MUST USE THE :ref:`data_function` decorator on the function before passing the function to the daf.
 
     mode: str
@@ -520,7 +522,7 @@ class DirectMESSAGE(BaseMESSAGE):
     def __init__(self,
                  start_period: Union[int, timedelta, None],
                  end_period: Union[int, timedelta],
-                 data: Union[str, EMBED, FILE, Iterable[Union[str, EMBED, FILE]], _FunctionBaseCLASS],
+                 data: Union[str, EMBED, discord.Embed, FILE, Iterable[Union[str, EMBED, discord.Embed, FILE]], _FunctionBaseCLASS],
                  mode: Literal["send", "edit", "clear-send"] = "send",
                  start_in: Union[timedelta, bool] = timedelta(seconds=0),
                  remove_after: Optional[Union[int, timedelta, datetime]]=None):
@@ -532,7 +534,7 @@ class DirectMESSAGE(BaseMESSAGE):
     def generate_log_context(self,
                               success_context: Dict[str, Union[bool, Optional[Exception]]],
                               text : Optional[str],
-                              embed : Optional[EMBED],
+                              embed : Optional[Union[discord.Embed, EMBED]],
                               files : List[FILE]) -> Dict[str, Any]:
         """
         Generates information about the message send attempt that is to be saved into a log.
@@ -541,7 +543,7 @@ class DirectMESSAGE(BaseMESSAGE):
         -----------
         text: str
             The text that was sent.
-        embed: EMBED
+        embed: Union[discord.Embed, EMBED]
             The embed that was sent.
         files: List[FILE]
             List of files that were sent.
@@ -663,7 +665,7 @@ class DirectMESSAGE(BaseMESSAGE):
 
     async def _send_channel(self,
                            text: Optional[str],
-                           embed: Optional[EMBED],
+                           embed: Optional[Union[discord.Embed, EMBED]],
                            files: List[FILE]) -> dict:
         """
         Sends data to the DM channel (user).

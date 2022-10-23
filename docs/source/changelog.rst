@@ -84,7 +84,7 @@ v2.1
     Added support for using proxies.
     To use a proxy pass the :func:`daf.run` function with a ``proxy`` parameter
 - discord.EmbedField:
-    |BREAK_CH| Replaced daf.EmbedFIELD with discord.EmbedField.
+    |BREAK_CH| Replaced discord.EmbedField with discord.EmbedField.
 - timedelta:
     start_period and end_period now support ``timedelta`` object to specify the send period.
     Use of ``int`` is deprecated

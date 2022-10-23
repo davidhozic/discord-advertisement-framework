@@ -18,43 +18,41 @@ Dynamically adding objects
 Objects can be dynamically added using the :func:`daf.core.add_object` coroutine function.
 The function can be used to add the following object types:
 
-.. grid:: 1
+.. card::
 
-    .. grid-item-card::
+    Guilds
+    ^^^^^^^^^^^^
 
-        Guilds
-        ^^^^^^^^^^^^
+    :class:`daf.guild.GUILD`
 
-        :class:`daf.guild.GUILD`
+    :class:`daf.guild.USER`
 
-        :class:`daf.guild.USER`
+.. card::
+    
+    Messages
+    ^^^^^^^^^^^^
+    :class:`daf.message.TextMESSAGE`
 
-    .. grid-item-card::
-        
-        Messages
-        ^^^^^^^^^^^^
-        :class:`daf.message.TextMESSAGE`
+    :class:`daf.message.VoiceMESSAGE`
 
-        :class:`daf.message.VoiceMESSAGE`
+    :class:`daf.message.DirectMESSAGE`
+    
 
-        :class:`daf.message.DirectMESSAGE`
-        
+    .. note::   
+        Messages can also be added thru the :py:meth:`daf.guild.GUILD.add_message`
+        / :py:meth:`daf.guild.USER.add_message` method.
 
-        .. note::   
-            Messages can also be added thru the :py:meth:`daf.guild.GUILD.add_message`
-            / :py:meth:`daf.guild.USER.add_message` method.
+        .. caution::
+            The guild must already be added to the framework, otherwise this method will fail.
 
-            .. caution::
-                The guild must already be added to the framework, otherwise this method will fail.
+        .. code-block:: python
+            :emphasize-lines: 4
 
-            .. code-block:: python
-                :emphasize-lines: 4
-
-                ...
-                my_guild = daf.GUILD(guild.id, logging=True)
-                await daf.add_object(my_guild)
-                await my_guild.add_message(daf.TextMESSAGE(...))
-                ...
+            ...
+            my_guild = daf.GUILD(guild.id, logging=True)
+            await daf.add_object(my_guild)
+            await my_guild.add_message(daf.TextMESSAGE(...))
+            ...
 
 .. only:: html
 

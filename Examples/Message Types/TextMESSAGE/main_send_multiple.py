@@ -12,7 +12,7 @@ l_file1 = daf.FILE("./Examples/main_send_file.py")
 l_file2 = daf.FILE("./Examples/main_send_multiple.py")
 
 ## Embedded
-l_embed = daf.EMBED(
+l_embed = daf.discord.Embed(
 author_name="Developer",
 author_icon="https://solarsystem.nasa.gov/system/basic_html_elements/11561_Sun.png",
 fields=\

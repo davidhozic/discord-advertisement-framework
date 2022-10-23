@@ -251,13 +251,17 @@ class LoggerSQL(logging.LoggerBASE):
         if not SQL_INSTALLED:
             raise ModuleNotFoundError("You need to install extra requirements: pip install discord-advert-framework[sql]")
 
-        if dialect not in DIALECT_CONN_MAP:
-            raise ValueError(f"Unsupported dialect (db type): '{dialect}'. Supported types are: {tuple(DIALECT_CONN_MAP.keys())}.")
-
         if fallback is Ellipsis:
             # Cannot use None as this can be a legit user value
             # and cannot pass directly due to Sphinx issues
             fallback = logging.LoggerJSON("History")
+
+        if dialect is None:
+            dialect = "sqlite"
+
+        dialect = dialect.lower()
+        if dialect not in DIALECT_CONN_MAP:
+            raise ValueError(f"Unsupported dialect (db type): '{dialect}'. Supported types are: {tuple(DIALECT_CONN_MAP.keys())}.")
 
         # Save the connection parameters
         self.is_async = False # Set in _begin_engine
@@ -267,8 +271,6 @@ class LoggerSQL(logging.LoggerBASE):
         self.port = port
         self.database = database if database is not None else "messages"
         self.dialect = dialect
-        if self.dialect is None:
-            self.dialect = "sqlite"
 
         if self.dialect == "sqlite":
             self.database += ".db"

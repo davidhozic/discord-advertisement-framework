@@ -15,8 +15,8 @@ import daf
 allowed_strings = {"shill", "advert", "promo"}
 data_to_shill = (     # Example data set
                 "Hello World", 
-                daf.EMBED(title="Example Embed",
-                         color=daf.EMBED.Color.blue(),
+                daf.discord.Embed(title="Example Embed",
+                         color=daf.discord.Color.blue(),
                          description="This is a test embed")
                 )
 

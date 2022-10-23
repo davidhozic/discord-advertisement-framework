@@ -42,7 +42,7 @@ To add these messages to the guild, set the |GUILD| / |USER|'s ``messages`` para
 The data that can be sent using this types of messages can be of type:
 
 1. str (normal text, string)
-2. :class:`~daf.dtypes.EMBED`
+2. :class:`~daf.discord.Embed`
 3. :class:`~daf.dtypes.FILE`
 4. list containing data that is one of the first 3 types.
 5. function on which the :class:`~daf.dtypes.data_function` was used (use for dynamically changeable data)
