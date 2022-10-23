@@ -7,8 +7,8 @@ from datetime import timedelta
 # NOTE! There can only be one embed per message but you can add more fields inside that embed!
 
 
-# daf.EMBED example
-test_embed1 = daf.EMBED(
+# daf.discord.Embed example
+test_embed1 = daf.discord.Embed(
 author_name="Developer",
 author_icon="https://solarsystem.nasa.gov/system/basic_html_elements/11561_Sun.png",
 fields=\
@@ -32,8 +32,8 @@ test_embed2 = daf.discord.Embed(
                                 # ... other, refer to Pycord documentation
                               )
 
-# daf.EMBED from discord.Embed
-test_embed_fw_2 = daf.EMBED.from_discord_embed(test_embed2) ## Converts discord.Embed into daf.EMBED
+# daf.discord.Embed from discord.Embed
+test_embed_fw_2 = daf.EMBED.from_discord_embed(test_embed2) ## Converts discord.Embed into daf.discord.Embed
 
 
 

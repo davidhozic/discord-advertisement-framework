@@ -7,12 +7,14 @@ from contextlib import suppress
 from typeguard import typechecked
 from urllib.parse import urlparse
 from .exceptions import *
+from .logging.tracing import trace, TraceLEVELS
 
 from . import misc
 
 import copy
 import datetime
 import _discord as discord
+
 
 T = TypeVar("T")
 
@@ -133,7 +135,11 @@ def data_function(fnc: Callable):
 @misc.doc_category("Message data types")
 class EMBED(discord.Embed):
     """
-    Derived class of discord.Embed created to provide additional arguments in the creation.
+
+    .. deprecated:: v2.2
+        Use :class:`discord.Embed` instead.
+
+    Derived class of :class:`discord.Embed` created to provide additional arguments in the creation.
 
     **Original parameters** from **PyCord**: `PyCord docs <https://docs.pycord.dev/en/master/api.html?highlight=discord%20embed#discord.Embed>`_
 
@@ -161,7 +167,7 @@ class EMBED(discord.Embed):
         Parameters
         ------------
         _object: discord.Embed
-            The Discord Embed object you want converted into a daf.EMBED object.
+            The Discord Embed object you want converted into a daf.discord.Embed object.
         """
         ret = EMBED()
         # Copy attributes but not special methods to the new EMBED. "dir" is used instead of "vars" because the object does not support the function.
@@ -192,6 +198,8 @@ class EMBED(discord.Embed):
                 description = EmptyEmbed,
                 timestamp: datetime.datetime = None):
 
+        trace("[EMBED:] DEPRECATED! Using EMBED is deprecated since v2.2, please use discord.Embed:\
+            \n\nfrom daf import discord\n\ndiscord.Embed(...)", TraceLEVELS.WARNING, True)
         super().__init__(colour=colour,
                          color=color,
                          title=title,
