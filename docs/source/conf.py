@@ -191,4 +191,4 @@ latex_elements = {
 }
 
 
-latex_additional_files = [os.path.join("./latex", x) for x in os.listdir("./latex")]
+# latex_additional_files = [os.path.join("./latex", x) for x in os.listdir("./latex")]
