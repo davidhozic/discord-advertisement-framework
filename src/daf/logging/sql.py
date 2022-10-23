@@ -105,13 +105,6 @@ def register_type(lookuptable: Literal["GuildTYPE", "MessageTYPE", "MessageMODE"
     return decorator_register_type
 
 
-class HashableDict(dict):
-    """
-    Dictionary that can be used as a key to another dictionary.
-    """
-    def __hash__(self):
-        return hash(frozenset(self))
-
 class TableCache:
     """
     Used for caching table values to IDs for faster access.
@@ -612,8 +605,7 @@ class LoggerSQL(logging.LoggerBASE):
             Primary key of a row inside DataHISTORY table.
         """
         result: tuple = None
-        const_data = HashableDict()
-        const_data.update(data)
+        const_data = misc.ImmutableDict(data)
 
         if not self.data_history_cache.exists(const_data):
             result = await self._run_async(session.execute, select(DataHISTORY.id).where(DataHISTORY.content.cast(String) == json.dumps(const_data)))
@@ -913,7 +905,7 @@ if SQL_INSTALLED:
         content = Column(JSON())
 
         def __init__(self,
-                    content: HashableDict):
+                    content: misc.ImmutableDict):
             self.content = content
 
     class MessageLOG(ORMBase):

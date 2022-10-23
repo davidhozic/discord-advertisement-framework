@@ -2,12 +2,13 @@
     This module contains definitions regarding miscellaneous
     items that can appear in multiple modules
 """
-import signal
 from typing import Coroutine, Callable, Any, Dict, Optional
 from asyncio import Semaphore
 from functools import wraps
 from inspect import getfullargspec
 from copy import copy
+
+import signal
 import sys
 
 ###############################
@@ -208,3 +209,45 @@ def doc_category(cat: str, manual: Optional[bool] = False, path: Optional[str]=N
             doc_titles[cat] = []
 
     return _category
+
+
+
+
+###########################
+# Data types
+###########################
+class ImmutableDict(dict):
+    def __init__(self, *args, **kwargs):
+        """
+        Immutable dictionary implementation with a constant hash.
+        """
+        self._locked = False
+        self.hash = 1
+        super().__init__(*args, **kwargs)
+        if len(self.values()):
+            self.update(self)
+
+    def convert(self, val: Any):
+        if isinstance(val, dict):
+            return ImmutableDict().update(val)
+        elif isinstance(val, list):
+            for i, v in enumerate(val):
+                val[i] = self.convert(v)
+ 
+            val = tuple(val)
+
+        return val
+
+    def update(self, d: dict):
+        if self._locked:
+            raise AttributeError("This is a constant hash dictionary")
+
+        for k, v in d.items():
+            self[k] = self.convert(v)
+
+        self._locked = True
+        self.hash = abs(hash(frozenset(self.values())))
+        return self
+
+    def __hash__(self):
+        return self.hash
