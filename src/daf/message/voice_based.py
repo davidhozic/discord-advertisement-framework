@@ -69,13 +69,13 @@ class VoiceMESSAGE(BaseMESSAGE):
             :caption: **Randomized** sending period between **5** seconds and **10** seconds.
 
             # Time between each send is somewhere between 5 seconds and 10 seconds.
-            daf.VoiceMESSAGE(start_period=timedelta(5), end_period=timedelta(10), data=daf.AUDIO("msg.mp3"), channels=[12345], start_in=timedelta(seconds=0), volume=50)
+            daf.VoiceMESSAGE(start_period=timedelta(seconds=5), end_period=timedelta(seconds=10), data=daf.AUDIO("msg.mp3"), channels=[12345], start_in=timedelta(seconds=0), volume=50)
 
         .. code-block:: python
             :caption: **Fixed** sending period at **10** seconds
 
             # Time between each send is exactly 10 seconds.
-            daf.VoiceMESSAGE(start_period=None, end_period=timedelta(10), data=daf.AUDIO("msg.mp3"), channels=[12345], start_in=timedelta(seconds=0), volume=50)
+            daf.VoiceMESSAGE(start_period=None, end_period=timedelta(seconds=10), data=daf.AUDIO("msg.mp3"), channels=[12345], start_in=timedelta(seconds=0), volume=50)
 
     data: AUDIO
         The data parameter is the actual data that will be sent using discord's API. The data types of this parameter can be:

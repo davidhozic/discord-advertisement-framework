@@ -68,13 +68,13 @@ class TextMESSAGE(BaseMESSAGE):
             :caption: **Randomized** sending period between **5** seconds and **10** seconds.
 
             # Time between each send is somewhere between 5 seconds and 10 seconds.
-            daf.TextMESSAGE(start_period=timedelta(5), end_period=timedelta(10), data="Second Message", channels=[12345], mode="send", start_in=timedelta(seconds=0))
+            daf.TextMESSAGE(start_period=timedelta(seconds=5), end_period=timedelta(seconds=10), data="Second Message", channels=[12345], mode="send", start_in=timedelta(seconds=0))
 
         .. code-block:: python
             :caption: **Fixed** sending period at **10** seconds
 
             # Time between each send is exactly 10 seconds.
-            daf.TextMESSAGE(start_period=None, end_period=timedelta(10), data="Second Message", channels=[12345], mode="send", start_in=timedelta(seconds=0))
+            daf.TextMESSAGE(start_period=None, end_period=timedelta(seconds=10), data="Second Message", channels=[12345], mode="send", start_in=timedelta(seconds=0))
 
     data: Union[str, EMBED, discord.Embed, FILE, List[Union[str, EMBED, discord.Embed, FILE]], _FunctionBaseCLASS]
         The data parameter is the actual data that will be sent using discord's API. The data types of this parameter can be:
@@ -476,13 +476,13 @@ class DirectMESSAGE(BaseMESSAGE):
             :caption: **Randomized** sending period between **5** seconds and **10** seconds.
 
             # Time between each send is somewhere between 5 seconds and 10 seconds.
-            daf.DirectMESSAGE(start_period=timedelta(5), end_period=timedelta(10), data="Second Message",  mode="send", start_in=timedelta(seconds=0))
+            daf.DirectMESSAGE(start_period=timedelta(seconds=5), end_period=timedelta(seconds=10), data="Second Message",  mode="send", start_in=timedelta(seconds=0))
 
         .. code-block:: python
             :caption: **Fixed** sending period at **10** seconds
 
             # Time between each send is exactly 10 seconds.
-            daf.DirectMESSAGE(start_period=None, end_period=timedelta(10), data="Second Message",  mode="send", start_in=timedelta(seconds=0))
+            daf.DirectMESSAGE(start_period=None, end_period=timedelta(seconds=10), data="Second Message",  mode="send", start_in=timedelta(seconds=0))
 
     data: Union[str, EMBED, discord.Embed FILE, List[Union[str, EMBED, discord.Embed, FILE]], _FunctionBaseCLASS]
         The data parameter is the actual data that will be sent using discord's API. The data types of this parameter can be:
