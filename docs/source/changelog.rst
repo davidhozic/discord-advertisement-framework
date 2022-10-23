@@ -34,6 +34,8 @@ Releases
 
 v2.2
 ===========
+- ``user_callback`` parameter for function :func:`daf.core.run` can now also be a regular function instead of just ``async``.
+- Deprecated :class:`daf.dtypes.EMBED`, use :class:`discord.Embed` instead.
 - |BREAK_CH| Removed ``get_sql_manager`` function.
 - :func:`daf.core.run`:
     + Added ``logging`` parameter

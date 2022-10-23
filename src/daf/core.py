@@ -3,7 +3,7 @@
     and functions needed for the framework to run,
     as well as user function to control the framework
 """
-from typing import Callable, List, Optional, Union, overload
+from typing import Callable, Coroutine, List, Optional, Union, overload
 from typeguard import typechecked
 
 from .exceptions import *
@@ -70,7 +70,7 @@ async def _advertiser(message_type: guild.AdvertiseTaskType) -> None:
 async def initialize(token : str,
                      server_list : Optional[List[Union[guild.GUILD, guild.USER]]]=[],
                      is_user : Optional[bool] =False,
-                     user_callback : Optional[Callable]=None,
+                     user_callback : Optional[Union[Callable, Coroutine]]=None,
                      server_log_output : Optional[str] =None,
                      sql_manager: Optional[sql.LoggerSQL]=None,
                      intents: Optional[dc.Intents]=None,
@@ -137,7 +137,9 @@ async def initialize(token : str,
     # Create the user callback task
     if user_callback is not None:
         trace("[CORE]: Starting user callback function", TraceLEVELS.NORMAL)
-        loop.create_task(user_callback())
+        user_callback = user_callback()
+        if isinstance(user_callback, Coroutine):
+            await user_callback
 
     trace("[CORE]: Initialization complete.", TraceLEVELS.NORMAL)
 
@@ -356,7 +358,7 @@ def get_shill_list() -> List[Union[guild.GUILD, guild.USER]]:
 def run(token : str,
         server_list : Optional[List[Union[guild.GUILD, guild.USER]]]=[],
         is_user : Optional[bool] =False,
-        user_callback : Optional[Callable]=None,
+        user_callback : Optional[Union[Callable, Coroutine]]=None,
         server_log_output : Optional[str] =None,
         sql_manager: Optional[sql.LoggerSQL]=None,
         intents: Optional[dc.Intents]=None,
@@ -373,13 +375,22 @@ def run(token : str,
         the :func:`daf.core.initialize` coroutine.
 
     .. versionchanged:: v2.2
-        Added ``logger`` parameter
+
+        .. card::
+        
+            - Added ``logger`` parameter
+            - ``user_callback`` can now be a regular function as well as async
+        
 
     .. deprecated:: v2.2
-        sql_manager
-            This parameter is replaced with ``logger`` parameter.
-        server_log_output
-            This parameter is replaced with ``logger`` parameter.
+
+        .. card::
+
+            These parameters are replaced with ``logger`` parameter.
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+            - sql_manager
+            - server_log_output
+            
 
     Parameters
     ---------------
@@ -389,8 +400,8 @@ def run(token : str,
         Predefined server list (guild list) to shill.
     is_user: Optional[bool]
         Set to True if the token is for an user account.
-    user_callback: Optional[Callable]
-        Users coroutine (task) to run after the framework is run.
+    user_callback: Optional[Union[Callable, Coroutine]]
+        Function or async function to call after the framework has been started.
     server_log_output: Optional[str]
         Path where the server log files will be created.
     sql_manager: Optional[:ref:`LoggerSQL`]
