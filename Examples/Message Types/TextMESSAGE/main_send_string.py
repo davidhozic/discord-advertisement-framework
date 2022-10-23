@@ -18,7 +18,7 @@ guilds = [
                               start_in=timedelta(seconds=0),    # Delay before shilling start
                               remove_after=None                 # Remove the message never or after n-times, after specific date or after timedelta
                               ),
-            daf.TextMESSAGE(start_period=5, end_period=timedelta(10), data="Second Message", channels=[12345], mode="send", start_in=timedelta(seconds=0))  
+            daf.TextMESSAGE(start_period=5, end_period=timedelta(seconds=10), data="Second Message", channels=[12345], mode="send", start_in=timedelta(seconds=0))  
         ],
         logging=True,           # Generate file log of sent messages (and failed attempts) for this server 
         remove_after=None       # Never stop shilling to this guild
