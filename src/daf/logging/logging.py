@@ -148,10 +148,19 @@ class LoggerCSV(LoggerBASE):
             try:
                 csv_writer = csv.writer(f_writer, delimiter=self.delimiter, quoting=csv.QUOTE_NONNUMERIC, quotechar='"')
                 # Timestamp, Guild Type, Guild Name, Guild Snowflake, Message Type, Sent Data, Message Mode, Message Channels, Success Info
+                channels_str = message_context.get("channels", "")
+                success_info_str = message_context.get("success_info", "")
+
+                if channels_str != "":
+                    channels_str = json.dumps(channels_str, ensure_ascii=False)
+
+                if success_info_str != "":
+                    success_info_str = json.dumps(success_info_str, ensure_ascii=False)
+                
                 csv_writer.writerow([
                     timestamp, guild_context["type"], guild_context["name"], guild_context["id"],
-                    message_context["type"], message_context["sent_data"], message_context.get("mode", ""),
-                    message_context.get("channels", ""), message_context.get("success_info", "")
+                    message_context["type"], json.dumps(message_context["sent_data"], ensure_ascii=False), message_context.get("mode", ""),
+                    channels_str, success_info_str 
                 ])
                 
             except Exception as exc:
@@ -230,7 +239,7 @@ class LoggerJSON(LoggerBASE):
                     "index": json_data["message_history"][0]["index"] + 1 if len(json_data["message_history"]) else 0,
                     "timestamp": timestamp
                 })
-            json.dump(json_data, f_writer, indent=4)
+            json.dump(json_data, f_writer, indent=4, ensure_ascii=False)
             f_writer.truncate() # Remove any old data
 
 
