@@ -105,7 +105,7 @@ def register_type(lookuptable: Literal["GuildTYPE", "MessageTYPE", "MessageMODE"
     
     return decorator_register_type
 
-
+# TODO, change hash to calculate has of the concentrated values and keys
 class ConstDict(dict):
     """
     Dictionary that can be used as a key to another dictionary.
@@ -216,15 +216,17 @@ class LoggerSQL(logging.LoggerBASE):
 
     Parameters
     ------------
-    username: str
+    username: Optional[str]
         Username to login to the database with.
-    password: str
+    password: Optional[str]
         Password to use when logging into the database.
-    server:   str
-        Address of the SQL server.
-    database: str
+    server: Optional[str]
+        Address of the server.
+    port: Optional[int]
+        The port of the database server.
+    database: Optional[str]
         Name of the database used for logs.
-    dialect: str
+    dialect: Optional[str]
         Dialect or database type (SQLite, mssql, )
     fallback: Optional[LoggerBASE]
         The fallback manager to use in case SQL logging fails.

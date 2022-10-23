@@ -8,5 +8,6 @@ This section contains the guide to using this framework.
 
     quickstart
     messages
-    modification
     logging
+    modification
+    autogen

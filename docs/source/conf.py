@@ -41,6 +41,7 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.napoleon",
     "sphinx.ext.autosectionlabel",
+    "sphinx.ext.intersphinx",
     "sphinx_copybutton",
     "enum_tools.autoenum",
     "sphinx_design"
@@ -74,6 +75,11 @@ autodoc_default_options = {
     'member-order': 'bysource',
 }
 
+
+# Intersphinx
+intersphinx_mapping = {
+    'PyCord': ("https://docs.pycord.dev/en/stable/", None)
+}
 
 # ----------- HTML ----------- #
 html_title = project

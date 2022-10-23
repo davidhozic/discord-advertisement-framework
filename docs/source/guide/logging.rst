@@ -321,10 +321,7 @@ The derived logger class can then implement the following methods:
 3. async _save_log(self, guild_context: dict, message_context: dict) [Required]:
     Method that stores the message log. 
     If there is any error in saving the log an exception should be raised, which will then
-    make the logging module automatically use the fallback manager, do not call the fallback manager from this method.
-
-    If the error cannot be immediately handled, and you want to permanently switch to a different manager, use
-    :func:`set_logger` function.
+    make the logging module automatically use the fallback manager, **do not call the fallback manager from this method!**
 
     :Parameters:
         **guild_context** (dict) - Contains keys:
@@ -343,7 +340,7 @@ The derived logger class can then implement the following methods:
     Custom implementation of the ``update`` method.
 
     This method is used for updating the parameters that are available thru ``__init__`` method and
-    is not required if the attributes inside the object have the same name as the parameters inside the ``__init__`` function
+    **is not required if the attributes inside the object have the same name as the parameters inside the** ``__init__`` **function**
     and there are no pre-required steps that need to be taken before updating (see :ref:`JSON Logging (file)`'s code for example).
 
     However if the name of attributes differ from parameter name or the attribute doesn't exist at all or other steps are 
