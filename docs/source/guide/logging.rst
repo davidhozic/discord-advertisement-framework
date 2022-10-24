@@ -123,11 +123,23 @@ Relational Database Log (SQL)
 .. versionadded:: v1.9
 
 .. versionchanged:: v2.1
-    Turned into an optional feature.
-
-    .. code-block:: bash
+    
+    .. card::
         
-        pip install discord-advert-framework[sql]
+        Turned into an optional feature.
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        .. code-block:: bash
+            
+            pip install discord-advert-framework[sql]
+
+.. versionchanged:: v2.2
+
+    .. card::
+
+        :Additional dialect support: Microsoft SQL Server, PostgreSQL, MariaDB/MySQL, SQLite
+        :Better Caching: Improved caching to significantly increase logging speed
+        :asynchronous: All of the SQL connectors except MS SQL Server are asynchronous.
+
 
 This type of logging enables saving logs to a remote server inside the database.
 In addition to being smaller in size, database logging takes up less space and it allows easier data analysis.
@@ -144,11 +156,25 @@ The following dialects are supported:
 - SQLite,
 - MySQL
 
-SQL logging process
+SQL process diagram
 ---------------------
-.. figure:: images/sql_initialization.png
-    
-    Initialization
+
+.. card::
+
+    SQL initialization
+    ^^^^^^^^^^^^^^^^^^^^^
+    .. image:: images/sql_initialization.png
+        :scale: 75%
+
+
+.. card::
+
+    SQL logging process
+    ^^^^^^^^^^^^^^^^^^^^^
+    .. image:: images/sql_logging_diagram.png
+        :scale: 35%
+
+
 
 Usage
 --------------------------------
@@ -174,7 +200,6 @@ Features
 ER diagram
 --------------------------------
 .. image:: images/er_diagram.png
-    :width: 500pt
 
 Tables
 --------------------------------
