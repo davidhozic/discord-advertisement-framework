@@ -9,7 +9,7 @@ The Discord advertisement framework is a  **shilling tool** that allows easy adv
 ----------------------
 Other information
 ----------------------
-For more information see the project's `Webpage <https://daf.davidhozic.top>`_.
+For more information see the project's `Webpage <https://daf.davidhozic.com>`_.
 
 ----------------------
 Key features
