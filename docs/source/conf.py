@@ -33,7 +33,7 @@ else:
 
 
 # -- General configuration ---------------------------------------------------
-
+numfig = True
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
@@ -44,7 +44,8 @@ extensions = [
     "sphinx.ext.intersphinx",
     "sphinx_copybutton",
     "enum_tools.autoenum",
-    "sphinx_design"
+    "sphinx_design",
+    "sphinx_search.extension"
 ]
 
 master_doc = 'index'
