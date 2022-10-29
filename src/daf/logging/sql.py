@@ -303,11 +303,7 @@ class LoggerSQL(logging.LoggerBASE):
         kwargs
             Keyword arguments for the method
         """
-        result = method(*args, **kwargs)
-        if self.is_async:
-            result = await result
-
-        return result
+        raise NotImplementedError # This function is defined in .begin_engine
     
     def _add_to_cache(self, table: ORMBase, key: Any, value: Any) -> None:
         """
@@ -436,10 +432,16 @@ class LoggerSQL(logging.LoggerBASE):
             dialect = self.dialect
             if dialect == "mssql":
                 # The only dialect that doesn't have async connectors
+                async def _run_async(method: Callable, *args, **kwargs):
+                    return method(*args, **kwargs)
+
                 self.is_async = False
                 create_engine_ = create_engine
                 session_class = Session
             else:
+                async def _run_async(method: Callable, *args, **kwargs):
+                    return await method(*args, **kwargs)
+
                 self.is_async = True
                 create_engine_ = create_async_engine
                 session_class = AsyncSession
@@ -453,25 +455,26 @@ class LoggerSQL(logging.LoggerBASE):
                 self.database
             )
 
-            self.engine = create_engine_(sqlurl,
-                                         echo=SQL_ENABLE_DEBUG)
+            self.engine = create_engine_(sqlurl, echo=SQL_ENABLE_DEBUG)
+            self._run_async = _run_async
 
             class SessionWrapper(session_class):
                 """
                 Wrapper class for the session that can always be used
                 in async mode, even if the session it wraps is not async.
                 """
-                async def __aenter__(self_):
-                    if self.is_async:
+                if self.is_async:
+                    async def __aenter__(self_):
                         return await super().__aenter__()
 
-                    return super().__enter__()
-                
-                async def __aexit__(self_, *args):
-                    if self.is_async:
+                    async def __aexit__(self_, *args):
                         return await super().__aexit__(*args)
+                else:
+                    async def __aenter__(self_):
+                        return self_.__enter__()
 
-                    return super().__exit__(*args)
+                    async def __aexit__(self_, *args):
+                        return self_.__exit__(*args)
 
             self.session_maker = sessionmaker(bind=self.engine, class_=SessionWrapper, expire_on_commit=False)
         except Exception as ex:
@@ -605,10 +608,10 @@ class LoggerSQL(logging.LoggerBASE):
             Primary key of a row inside DataHISTORY table.
         """
         result: tuple = None
-        const_data = misc.ImmutableDict(data)
+        const_data = json.dumps(data)
 
         if not self.data_history_cache.exists(const_data):
-            result = await self._run_async(session.execute, select(DataHISTORY.id).where(DataHISTORY.content.cast(String) == json.dumps(const_data)))
+            result = await self._run_async(session.execute, select(DataHISTORY.id).where(DataHISTORY.content.cast(String) == const_data))
             result = result.first()
             if result is None:
                 # Add to the database
@@ -905,7 +908,7 @@ if SQL_INSTALLED:
         content = Column(JSON())
 
         def __init__(self,
-                    content: misc.ImmutableDict):
+                    content: dict):
             self.content = content
 
     class MessageLOG(ORMBase):
