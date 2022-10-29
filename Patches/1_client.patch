@@ -1,0 +1,67 @@
+diff --git a/src/_discord/client.py b/src/_discord/client.py
+index e6fa165..9c681a5 100644
+--- a/src/_discord/client.py
++++ b/src/_discord/client.py
+@@ -30,7 +30,7 @@ import logging
+ import signal
+ import sys
+ import traceback
+-from typing import TYPE_CHECKING, Any, Callable, Coroutine, Generator, Sequence, TypeVar
++from typing import TYPE_CHECKING, Any, Callable, Coroutine, Generator, Optional, Sequence, TypeVar
+ 
+ import aiohttp
+ 
+@@ -109,7 +109,7 @@ def _cleanup_loop(loop: asyncio.AbstractEventLoop) -> None:
+         loop.run_until_complete(loop.shutdown_asyncgens())
+     finally:
+         _log.info("Closing the event loop.")
+-        loop.close()
++        loop.call_soon(loop.close)
+ 
+ 
+ class Client:
+@@ -482,7 +482,7 @@ class Client:
+ 
+     # login state management
+ 
+-    async def login(self, token: str) -> None:
++    async def login(self, token: str, bot: bool) -> None:
+         """|coro|
+ 
+         Logs in the client with the specified credentials.
+@@ -492,6 +492,8 @@ class Client:
+         token: :class:`str`
+             The authentication token. Do not prefix this token with
+             anything as the library will do it for you.
++        bot: bool
++            Is the token from a bot account.
+ 
+         Raises
+         ------
+@@ -511,7 +513,7 @@ class Client:
+ 
+         _log.info("logging in using static token")
+ 
+-        data = await self.http.static_login(token.strip())
++        data = await self.http.static_login(token.strip(), bot)
+         self._connection.user = ClientUser(state=self._connection, data=data)
+ 
+     async def connect(self, *, reconnect: bool = True) -> None:
+@@ -646,7 +648,7 @@ class Client:
+         self._connection.clear()
+         self.http.recreate()
+ 
+-    async def start(self, token: str, *, reconnect: bool = True) -> None:
++    async def start(self, token: str, *, reconnect: bool = True, bot: Optional[bool] = True) -> None:
+         """|coro|
+ 
+         A shorthand coroutine for :meth:`login` + :meth:`connect`.
+@@ -656,7 +658,7 @@ class Client:
+         TypeError
+             An unexpected keyword argument was received.
+         """
+-        await self.login(token)
++        await self.login(token, bot=bot)
+         await self.connect(reconnect=reconnect)
+ 
+     def run(self, *args: Any, **kwargs: Any) -> None:

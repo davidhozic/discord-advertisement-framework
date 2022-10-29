@@ -15,28 +15,21 @@ import daf
 allowed_strings = {"shill", "advert", "promo"}
 data_to_shill = (     # Example data set
                 "Hello World", 
-                daf.EMBED(title="Example Embed",
-                         color=daf.EMBED.Color.blue(),
+                daf.discord.Embed(title="Example Embed",
+                         color=daf.discord.Color.blue(),
                          description="This is a test embed")
                 )
 
 
 async def user_task():
-    # Returns the client to send commands to discord, for more info about client see https://docs.pycord.dev/en/master/api.html?highlight=discord%20client#discord.Client
     client = daf.get_client()  
     for guild in client.guilds:  # Iterate thru all the guilds where the bot is in
-        await daf.add_object(
-            daf.GUILD(guild.id, logging=True)
-        )
-
-        # Find channels that match allowed_strings
+        await daf.add_object(daf.GUILD(guild.id, logging=True))
         channels = []
         for channel in guild.text_channels: # Iterate thru all the text channels in the guild
             if any([x in channel.name for x in allowed_strings]): # Check if any of the strings in allowed_strings are in the channel name
                 channels.append(channel)
-
         text_msg = daf.TextMESSAGE(None, timedelta(seconds=5), data_to_shill, channels, "send", timedelta(seconds=0))
-
         # Dynamically add a message to the list
         await daf.add_object(text_msg, guild.id)
 

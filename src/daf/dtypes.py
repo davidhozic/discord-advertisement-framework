@@ -5,12 +5,16 @@
 from typing import Any, Callable, List, Union, TypeVar
 from contextlib import suppress
 from typeguard import typechecked
-
+from urllib.parse import urlparse
 from .exceptions import *
+from .logging.tracing import trace, TraceLEVELS
+
+from . import misc
 
 import copy
 import datetime
 import _discord as discord
+
 
 T = TypeVar("T")
 
@@ -48,10 +52,30 @@ class _FunctionBaseCLASS:
     the object to it's class or to the base class from which the object class is inherited from.
     """
 
-
+@misc.doc_category("Decorators")
 def data_function(fnc: Callable):
     """
-    Decorator used to create a framework FunctionCLASS class that wraps the function.
+    Decorator used for wrapping a function that will return data to send when the message is ready.
+
+    The ``fnc`` function must return data that is of type that the **x**\ MESSAGE object supports.
+    **If the type returned is not valid, the send attempt will simply be ignored and nothing will be logged at at**,
+    this is useful if you want to use the ``fnc`` function to control whenever the message is ready to be sent.
+    For example: if we have a function defined like this:
+
+    .. code-block::
+        :emphasize-lines: 3
+
+        @daf.data_function
+        def get_data():
+            return None
+    
+        ...
+        daf.TextMESSAGE(..., data=get_data())
+        ...
+
+    then no messages will ever be sent, nor will any logs be made since invalid values are simply ignored by the framework.
+
+
 
     Parameters
     ------------
@@ -67,8 +91,8 @@ def data_function(fnc: Callable):
 
     .. literalinclude:: ../../Examples/Message Types/TextMESSAGE/main_data_function.py
         :language: python
+        :emphasize-lines: 11, 24
     """
-    @typechecked
     class FunctionCLASS(_FunctionBaseCLASS):
         """
         Used for creating special classes that are then used to create objects in the daf.MESSAGE
@@ -108,9 +132,14 @@ def data_function(fnc: Callable):
 # Other
 #######################################################################
 @typechecked
+@misc.doc_category("Message data types")
 class EMBED(discord.Embed):
     """
-    Derived class of discord.Embed created to provide additional arguments in the creation.
+
+    .. deprecated:: v2.2
+        Use :class:`discord.Embed` instead.
+
+    Derived class of :class:`discord.Embed` created to provide additional arguments in the creation.
 
     **Original parameters** from **PyCord**: `PyCord docs <https://docs.pycord.dev/en/master/api.html?highlight=discord%20embed#discord.Embed>`_
 
@@ -138,7 +167,7 @@ class EMBED(discord.Embed):
         Parameters
         ------------
         _object: discord.Embed
-            The Discord Embed object you want converted into a daf.EMBED object.
+            The Discord Embed object you want converted into a daf.discord.Embed object.
         """
         ret = EMBED()
         # Copy attributes but not special methods to the new EMBED. "dir" is used instead of "vars" because the object does not support the function.
@@ -169,6 +198,8 @@ class EMBED(discord.Embed):
                 description = EmptyEmbed,
                 timestamp: datetime.datetime = None):
 
+        trace("[EMBED:] DEPRECATED! Using EMBED is deprecated since v2.2, please use discord.Embed:\
+            \n\nfrom daf import discord\n\ndiscord.Embed(...)", TraceLEVELS.WARNING, True)
         super().__init__(colour=colour,
                          color=color,
                          title=title,
@@ -188,6 +219,7 @@ class EMBED(discord.Embed):
             self.set_thumbnail(url=thumbnail)
 
 @typechecked
+@misc.doc_category("Message data types")
 class FILE:
     """
     FILE object used as a data parameter to the MESSAGE objects.
@@ -212,6 +244,7 @@ class FILE:
 
 
 @typechecked
+@misc.doc_category("Message data types")
 class AUDIO:
     """
     Used for streaming audio from file or YouTube.
@@ -249,7 +282,8 @@ class AUDIO:
         if not GLOBALS.voice_installed:
             raise ModuleNotFoundError("You need to install extra requirements: pip install discord-advert-framework[voice]")
 
-        if "youtube.com" in self.orig.lower(): # If the url contains http, assume it's a youtube link
+        url_info = urlparse(filename) # Check if it's youtube
+        if "www.youtube.com" == url_info.hostname:
             try:
                 self.is_stream = True
                 youtube_dl = yt_dlp.YoutubeDL(params=self.ytdl_options)

@@ -12,17 +12,17 @@ l_file1 = daf.FILE("./Examples/main_send_file.py")
 l_file2 = daf.FILE("./Examples/main_send_multiple.py")
 
 ## Embedded
-l_embed = daf.EMBED(
+l_embed = daf.discord.Embed(
 author_name="Developer",
 author_icon="https://solarsystem.nasa.gov/system/basic_html_elements/11561_Sun.png",
 fields=\
     [
-        daf.EmbedFIELD("Test 1", "Hello World", True),
-        daf.EmbedFIELD("Test 2", "Hello World 2", True),
-        daf.EmbedFIELD("Test 3", "Hello World 3", True),
-        daf.EmbedFIELD("No Inline", "This is without inline", False),
-        daf.EmbedFIELD("Test 4", "Hello World 4", True),
-        daf.EmbedFIELD("Test 5", "Hello World 5", True)
+        discord.EmbedField("Test 1", "Hello World", True),
+        discord.EmbedField("Test 2", "Hello World 2", True),
+        discord.EmbedField("Test 3", "Hello World 3", True),
+        discord.EmbedField("No Inline", "This is without inline", False),
+        discord.EmbedField("Test 4", "Hello World 4", True),
+        discord.EmbedField("Test 5", "Hello World 5", True)
     ]
 )
 

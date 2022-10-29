@@ -3,22 +3,26 @@
     and functions needed for the framework to run,
     as well as user function to control the framework
 """
-from typing import (Callable, List, Optional, Union, overload)
+from typing import Callable, Coroutine, List, Optional, Union, overload
 from typeguard import typechecked
 
-from .common import *
 from .exceptions import *
-from .import tracing
-from .tracing import *
+from .logging.tracing import *
+from .logging import sql, logging, tracing
 
 from . import guild
 from . import client
-from . import sql
-from . import message
 from . import misc
+from . import message
 
 import asyncio
 import _discord as dc
+
+#######################################################################
+# Configuration
+#######################################################################
+C_TASK_SLEEP_DELAY = 0.010 # Advertiser task sleep
+EVENT_LOOP_CLOSE_DELAY = 1
 
 #######################################################################
 # Exports
@@ -28,7 +32,8 @@ __all__ = (
     "shutdown",
     "add_object",
     "remove_object",
-    "get_guild_user"
+    "get_guild_user",
+    "initialize"
 )
 
 #######################################################################
@@ -44,7 +49,7 @@ class GLOBALS:
 #######################################################################
 # Coroutines
 #######################################################################
-async def _advertiser(message_type: AdvertiseTaskType) -> None:
+async def _advertiser(message_type: guild.AdvertiseTaskType) -> None:
     """
     The task that is responsible for shilling to channels.
     This is the most top level task.
@@ -61,15 +66,17 @@ async def _advertiser(message_type: AdvertiseTaskType) -> None:
             await guild_user._advertise(message_type)
 
 
-async def _initialize(token : str,
-                      server_list : Optional[List[Union[guild.GUILD, guild.USER]]]=[],
-                      is_user : Optional[bool] =False,
-                      user_callback : Optional[Callable]=None,
-                      server_log_output : Optional[str] ="History",
-                      sql_manager: Optional[sql.LoggerSQL]=None,
-                      intents: Optional[dc.Intents]=None,
-                      debug : Optional[bool]=True,
-                      proxy: Optional[str]=None) -> None:
+@misc.doc_category("Core control")
+async def initialize(token : str,
+                     server_list : Optional[List[Union[guild.GUILD, guild.USER]]]=[],
+                     is_user : Optional[bool] =False,
+                     user_callback : Optional[Union[Callable, Coroutine]]=None,
+                     server_log_output : Optional[str] =None,
+                     sql_manager: Optional[sql.LoggerSQL]=None,
+                     intents: Optional[dc.Intents]=None,
+                     debug : Optional[bool]=True,
+                     proxy: Optional[str]=None,
+                     logger: Optional[logging.LoggerBASE]=None) -> None:
     """
     The main initialization function.
     It initializes all the other modules, creates advertising tasks
@@ -91,8 +98,28 @@ async def _initialize(token : str,
     trace("[CORE:] Logging in...")
     await client._initialize(token, bot=not is_user, intents=intents, proxy=proxy)
 
-    # Initialize guild
-    await guild._initialize(server_log_output)
+    # Initialize logging
+    # --------------- DEPRECATED -------------------- #
+    if server_log_output is not None:
+        if logger is None:
+            trace("DEPRECATED! Using this parameter is deprecated and scheduled for removal\nIt is implicitly converted to logger=LoggerJSON(path=\"History\")",
+                  TraceLEVELS.WARNING)
+            logger = logging.LoggerJSON(path=server_log_output)
+        else:
+            trace("logger parameter was passed, ignoring server_log_output", TraceLEVELS.WARNING)
+    
+    if sql_manager is not None:
+        if logger is None:
+            trace("DEPRECATED! Using this parameter is deprecated and scheduled for removal\nIt is implicitly converted to logger=LoggerSQL(...)",
+                  TraceLEVELS.WARNING)
+            logger = sql_manager
+        else:
+            trace("logger parameter was passed, ignoring sql_manager", TraceLEVELS.WARNING)
+    # ----------------------------------------------- #
+    if logger is None:
+        logger = logging.LoggerJSON(path="History")
+
+    await logging.initialize(logger)
 
     # Initialize the servers (and their message objects)
     trace("[CORE]: Initializing servers", TraceLEVELS.NORMAL)
@@ -102,19 +129,17 @@ async def _initialize(token : str,
         except (DAFError, ValueError, TypeError) as ex:
             trace(ex)
     
-    # Initialize SQL module
-    if not await sql.initialize(sql_manager):
-        trace("[CORE:] JSON based file logging will be used")
-
     # Create advertiser tasks
     trace("[CORE]: Creating advertiser tasks", TraceLEVELS.NORMAL)
-    loop.create_task(_advertiser(AdvertiseTaskType.TEXT_ISH))
-    loop.create_task(_advertiser(AdvertiseTaskType.VOICE))
+    loop.create_task(_advertiser(guild.AdvertiseTaskType.TEXT_ISH))
+    loop.create_task(_advertiser(guild.AdvertiseTaskType.VOICE))
 
     # Create the user callback task
     if user_callback is not None:
         trace("[CORE]: Starting user callback function", TraceLEVELS.NORMAL)
-        loop.create_task(user_callback())
+        user_callback = user_callback()
+        if isinstance(user_callback, Coroutine):
+            await user_callback
 
     trace("[CORE]: Initialization complete.", TraceLEVELS.NORMAL)
 
@@ -124,22 +149,23 @@ async def _initialize(token : str,
 #######################################################################
 
 @overload
+@misc.doc_category("Shilling list modification", True)
 async def add_object(obj: Union[guild.USER, guild.GUILD]) -> None:
     """
 
     Adds a guild or an user to the daf.
 
     Parameters
-    --------------
+    -----------
     obj: Union[guild.USER, guild.GUILD]
         The guild object to add into the daf.
 
     Raises
-    -----------
+    ----------
     ValueError
-         The guild/user is already added to the daf.
+        The guild/user is already added to the daf.
     TypeError
-         The object provided is not supported for addition.
+        The object provided is not supported for addition.
     TypeError
         Invalid parameter type.
     Other
@@ -147,21 +173,21 @@ async def add_object(obj: Union[guild.USER, guild.GUILD]) -> None:
     """
     ...
 @overload
+@misc.doc_category("Shilling list modification", True)
 async def add_object(obj: Union[message.DirectMESSAGE, message.TextMESSAGE, message.VoiceMESSAGE],
                      snowflake: Union[int, guild.GUILD, guild.USER, dc.Guild, dc.User, dc.Object]) -> None:
     """
-
     Adds a message to the daf.
 
     Parameters
-    --------------
+    -----------
     obj: Union[message.DirectMESSAGE, message.TextMESSAGE, message.VoiceMESSAGE]
         The message object to add into the daf.
-    snowflake: Union[int, guild.GUILD, guild.USER, dc.Guild, dc.User]
+    snowflake: Union[int, guild.GUILD, guild.USER, discord.Guild, discord.User]
         Which guild/user to add it to (can be snowflake id or a framework _BaseGUILD object or a discord API wrapper object).
 
     Raises
-    -----------
+    ----------
     ValueError
         guild_id wasn't provided when adding a message object (to which guild should it add)
     TypeError
@@ -174,6 +200,7 @@ async def add_object(obj: Union[message.DirectMESSAGE, message.TextMESSAGE, mess
         Raised in the obj.add_message() method
     """
     ...
+
 async def add_object(obj, snowflake=None):
     object_type_name = type(obj).__name__
     # Convert the `snowflake` object into a discord snowflake ID (only if adding a message to guild)
@@ -205,13 +232,14 @@ async def add_object(obj, snowflake=None):
         raise TypeError(f"Invalid object type `{object_type_name}`.")
 
 
+@misc.doc_category("Shilling list modification")
 def remove_object(snowflake: Union[int, dc.Object, dc.Guild, dc.User, dc.Object, guild._BaseGUILD, message.BaseMESSAGE]) -> None:
     """
     Removes an object from the daf.
 
     Parameters
     -------------
-    snowflake: Union[int, dc.Object, dc.Guild, dc.User, dc.Object, guild.GUILD, guild.USER , message.TextMESSAGE, message.VoiceMESSAGE, message.DirectMESSAGE]
+    snowflake: Union[int, discord.Object, discord.Guild, discord.User, discord.Object, guild.GUILD, guild.USER , message.TextMESSAGE, message.VoiceMESSAGE, message.DirectMESSAGE]
         The GUILD/USER object to remove/snowflake of GUILD/USER
         or a xMESSAGE object
 
@@ -239,13 +267,14 @@ def remove_object(snowflake: Union[int, dc.Object, dc.Guild, dc.User, dc.Object,
         raise DAFNotFoundError(f"GUILD/USER not in the shilling list.", DAF_SNOWFLAKE_NOT_FOUND)
 
 
+@misc.doc_category("Getters")
 def get_guild_user(snowflake: Union[int, dc.Object, dc.Guild, dc.User, dc.Object]) -> Union[guild.GUILD, guild.USER, None]:
     """
     Retrieves the GUILD/USER object that has the ``snowflake`` ID from the shilling list. 
 
     Parameters
     -------------
-    snowflake: Union[int, dc.Object, dc.Guild, dc.User, dc.Object]
+    snowflake: Union[int, discord.Object, discord.Guild, discord.User, discord.Object]
         Snowflake ID or discord objects containing snowflake id of the GUILD.
     
     Raises
@@ -270,9 +299,10 @@ def get_guild_user(snowflake: Union[int, dc.Object, dc.Guild, dc.User, dc.Object
     return None
 
 
-def shutdown(loop: Optional[asyncio.AbstractEventLoop]=None) -> None:
+@misc.doc_category("Core control")
+async def shutdown(loop: Optional[asyncio.AbstractEventLoop]=None) -> None:
     """
-    Stops the framework and any user tasks.
+    Stops the framework.
 
     .. versionchanged:: v2.1
         Made the function non async and shutdown everything.
@@ -285,21 +315,32 @@ def shutdown(loop: Optional[asyncio.AbstractEventLoop]=None) -> None:
     """
     if loop is None:
         loop = asyncio.get_event_loop()
+    
+    loop.stop()
 
-    # Shutdown discord
+def _shutdown_clean(loop: asyncio.AbstractEventLoop) -> None:
+    """
+    Fully stops all the tasks and then closes the event loop
+
+    Parameters
+    ---------------
+    loop: asyncio.AbstractEventLoop
+        The loop to stop.
+    """
     cl = client.get_client()
-    loop.run_until_complete(cl.close()) 
-    # Cancell all tasks
-    tasks = [task for task in asyncio.all_tasks(loop) if not task.done()]
+    loop.run_until_complete(cl.close())
+    # Cancel all tasks
+    tasks = asyncio.all_tasks(loop)
     for task in tasks:
-        task.cancel()
+        if not task.done():
+            task.cancel()
 
     loop.run_until_complete(asyncio.gather(*tasks, return_exceptions=True))
-    loop.run_until_complete(loop.shutdown_asyncgens())
-    loop.run_until_complete(loop.shutdown_default_executor())
+    loop.run_until_complete(asyncio.sleep(EVENT_LOOP_CLOSE_DELAY)) # Yield for one second to allow aiohttp cleanup
     loop.close()
 
 
+@misc.doc_category("Getters")
 def get_shill_list() -> List[Union[guild.GUILD, guild.USER]]:
     """
     .. versionadded:: v2.1
@@ -313,21 +354,43 @@ def get_shill_list() -> List[Union[guild.GUILD, guild.USER]]:
 
 
 @typechecked
+@misc.doc_category("Core control")
 def run(token : str,
         server_list : Optional[List[Union[guild.GUILD, guild.USER]]]=[],
         is_user : Optional[bool] =False,
-        user_callback : Optional[Callable]=None,
-        server_log_output : Optional[str] ="History",
+        user_callback : Optional[Union[Callable, Coroutine]]=None,
+        server_log_output : Optional[str] =None,
         sql_manager: Optional[sql.LoggerSQL]=None,
         intents: Optional[dc.Intents]=None,
         debug : Optional[bool]=True,
-        proxy: Optional[str]=None) -> None:
+        proxy: Optional[str]=None,
+        logger: Optional[logging.LoggerBASE]=None) -> None:
     """
     Runs the framework and does not return until the framework is stopped (:func:`daf.core.shutdown`).
     After stopping, it returns None.
 
-    .. versionchanged:: v2.1
-        Added ``proxy`` parameter
+    .. warning::
+        This will block until the framework is stopped, if you want manual control over the
+        asyncio event loop, eg. you want to start the framework as a task, use
+        the :func:`daf.core.initialize` coroutine.
+
+    .. versionchanged:: v2.2
+
+        .. card::
+        
+            - Added ``logger`` parameter
+            - ``user_callback`` can now be a regular function as well as async
+        
+
+    .. deprecated:: v2.2
+
+        .. card::
+
+            These parameters are replaced with ``logger`` parameter.
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+            - sql_manager
+            - server_log_output
+            
 
     Parameters
     ---------------
@@ -337,8 +400,8 @@ def run(token : str,
         Predefined server list (guild list) to shill.
     is_user: Optional[bool]
         Set to True if the token is for an user account.
-    user_callback: Optional[Callable]
-        Users coroutine (task) to run after the framework is run.
+    user_callback: Optional[Union[Callable, Coroutine]]
+        Function or async function to call after the framework has been started.
     server_log_output: Optional[str]
         Path where the server log files will be created.
     sql_manager: Optional[:ref:`LoggerSQL`]
@@ -349,23 +412,25 @@ def run(token : str,
         Print trace message to the console, useful for debugging.
     proxy: Optional[str]
         URL of a proxy you want the framework to use.
+    logger: Optional[loggers.LoggerBASE]
+        The logging class to use.
+        If this is not provided, JSON is automatically used.
 
     Raises
     ---------------
     ModuleNotFoundError
         Missing modules for the wanted functionality, install with ``pip install discord-advert-framework[optional-group]``.
-    
     ValueError
         Invalid proxy url.
     """
     _params = locals().copy()
     loop = asyncio.get_event_loop()
     try:
-        loop.create_task(_initialize(**_params))
+        loop.create_task(initialize(**_params))
         loop.run_forever()
     except asyncio.CancelledError as exc:
         trace(exc, TraceLEVELS.ERROR)
     except KeyboardInterrupt:
         trace("Received a cancellation event. Stopping..", TraceLEVELS.WARNING)
     finally:
-        shutdown(loop)
+        _shutdown_clean(loop)

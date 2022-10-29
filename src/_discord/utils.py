@@ -48,20 +48,15 @@ from typing import (
     Awaitable,
     Callable,
     Coroutine,
-    Dict,
     ForwardRef,
     Generic,
     Iterable,
     Iterator,
-    List,
     Literal,
     Mapping,
     NewType,
-    Optional,
     Protocol,
     Sequence,
-    Tuple,
-    Type,
     TypeVar,
     Union,
     overload,
@@ -88,23 +83,27 @@ __all__ = (
     "remove_markdown",
     "escape_markdown",
     "escape_mentions",
+    "raw_mentions",
+    "raw_channel_mentions",
+    "raw_role_mentions",
     "as_chunks",
     "format_dt",
     "basic_autocomplete",
     "generate_snowflake",
+    "filter_params",
 )
 
 DISCORD_EPOCH = 1420070400000
 
 
 class _MissingSentinel:
-    def __eq__(self, other):
+    def __eq__(self, other) -> bool:
         return False
 
-    def __bool__(self):
+    def __bool__(self) -> bool:
         return False
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "..."
 
 
@@ -127,7 +126,6 @@ class _cached_property:
 
 
 if TYPE_CHECKING:
-
     from typing_extensions import ParamSpec
 
     from .abc import Snowflake
@@ -160,14 +158,14 @@ class CachedSlotProperty(Generic[T, T_co]):
         self.__doc__ = getattr(function, "__doc__")
 
     @overload
-    def __get__(self, instance: None, owner: Type[T]) -> CachedSlotProperty[T, T_co]:
+    def __get__(self, instance: None, owner: type[T]) -> CachedSlotProperty[T, T_co]:
         ...
 
     @overload
-    def __get__(self, instance: T, owner: Type[T]) -> T_co:
+    def __get__(self, instance: T, owner: type[T]) -> T_co:
         ...
 
-    def __get__(self, instance: Optional[T], owner: Type[T]) -> Any:
+    def __get__(self, instance: T | None, owner: type[T]) -> Any:
         if instance is None:
             return self
 
@@ -183,7 +181,7 @@ class classproperty(Generic[T_co]):
     def __init__(self, fget: Callable[[Any], T_co]) -> None:
         self.fget = fget
 
-    def __get__(self, instance: Optional[Any], owner: Type[Any]) -> T_co:
+    def __get__(self, instance: Any | None, owner: type[Any]) -> T_co:
         return self.fget(owner)
 
     def __set__(self, instance, value) -> None:
@@ -249,11 +247,11 @@ def parse_time(timestamp: str) -> datetime.datetime:
 
 
 @overload
-def parse_time(timestamp: Optional[str]) -> Optional[datetime.datetime]:
+def parse_time(timestamp: str | None) -> datetime.datetime | None:
     ...
 
 
-def parse_time(timestamp: Optional[str]) -> Optional[datetime.datetime]:
+def parse_time(timestamp: str | None) -> datetime.datetime | None:
     if timestamp:
         return datetime.datetime.fromisoformat(timestamp)
     return None
@@ -268,20 +266,88 @@ def copy_doc(original: Callable) -> Callable[[T], T]:
     return decorator
 
 
+def warn_deprecated(
+    name: str,
+    instead: str | None = None,
+    since: str | None = None,
+    removed: str | None = None,
+    reference: str | None = None,
+) -> None:
+    """Warn about a deprecated function, with the ability to specify details about the deprecation. Emits a
+    DeprecationWarning.
+
+    Parameters
+    ----------
+    name: str
+        The name of the deprecated function.
+    instead: Optional[:class:`str`]
+        A recommended alternative to the function.
+    since: Optional[:class:`str`]
+        The version in which the function was deprecated. This should be in the format ``major.minor(.patch)``, where
+        the patch version is optional.
+    removed: Optional[:class:`str]
+        The version in which the function is planned to be removed. This should be in the format
+        ``major.minor(.patch)``, where the patch version is optional.
+    reference: Optional[:class:`str`]
+        A reference that explains the deprecation, typically a URL to a page such as a changelog entry or a GitHub
+        issue/PR.
+    """
+    warnings.simplefilter("always", DeprecationWarning)  # turn off filter
+    message = f"{name} is deprecated"
+    if since:
+        message += f" since version {since}"
+    if removed:
+        message += f" and will be removed in version {removed}"
+    if instead:
+        message += f", consider using {instead} instead"
+    message += "."
+    if reference:
+        message += f" See {reference} for more information."
+
+    warnings.warn(message, stacklevel=3, category=DeprecationWarning)
+    warnings.simplefilter("default", DeprecationWarning)  # reset filter
+
+
 def deprecated(
-    instead: Optional[str] = None,
-) -> Callable[[Callable[P, T]], Callable[P, T]]:
-    def actual_decorator(func: Callable[P, T]) -> Callable[P, T]:
+    instead: str | None = None,
+    since: str | None = None,
+    removed: str | None = None,
+    reference: str | None = None,
+    *,
+    use_qualname: bool = True,
+) -> Callable[[Callable[[P], T]], Callable[[P], T]]:
+    """A decorator implementation of :func:`warn_deprecated`. This will automatically call :func:`warn_deprecated` when
+    the decorated function is called.
+
+    Parameters
+    ----------
+    instead: Optional[:class:`str`]
+        A recommended alternative to the function.
+    since: Optional[:class:`str`]
+        The version in which the function was deprecated. This should be in the format ``major.minor(.patch)``, where
+        the patch version is optional.
+    removed: Optional[:class:`str]
+        The version in which the function is planned to be removed. This should be in the format
+        ``major.minor(.patch)``, where the patch version is optional.
+    reference: Optional[:class:`str`]
+        A reference that explains the deprecation, typically a URL to a page such as a changelog entry or a GitHub
+        issue/PR.
+    use_qualname: :class:`bool`
+        Whether to use the qualified name of the function in the deprecation warning. If ``False``, the short name of
+        the function will be used instead. For example, __qualname__ will display as ``Client.login`` while __name__
+        will display as ``login``. Defaults to ``True``.
+    """
+
+    def actual_decorator(func: Callable[[P], T]) -> Callable[[P], T]:
         @functools.wraps(func)
         def decorated(*args: P.args, **kwargs: P.kwargs) -> T:
-            warnings.simplefilter("always", DeprecationWarning)  # turn off filter
-            if instead:
-                fmt = "{0.__name__} is deprecated, use {1} instead."
-            else:
-                fmt = "{0.__name__} is deprecated."
-
-            warnings.warn(fmt.format(func, instead), stacklevel=3, category=DeprecationWarning)
-            warnings.simplefilter("default", DeprecationWarning)  # reset filter
+            warn_deprecated(
+                name=func.__qualname__ if use_qualname else func.__name__,
+                instead=instead,
+                since=since,
+                removed=removed,
+                reference=reference,
+            )
             return func(*args, **kwargs)
 
         return decorated
@@ -290,7 +356,7 @@ def deprecated(
 
 
 def oauth_url(
-    client_id: Union[int, str],
+    client_id: int | str,
     *,
     permissions: Permissions = MISSING,
     guild: Snowflake = MISSING,
@@ -302,7 +368,7 @@ def oauth_url(
     into guilds.
 
     Parameters
-    -----------
+    ----------
     client_id: Union[:class:`int`, :class:`str`]
         The client ID for your bot.
     permissions: :class:`~discord.Permissions`
@@ -322,7 +388,7 @@ def oauth_url(
         .. versionadded:: 2.0
 
     Returns
-    --------
+    -------
     :class:`str`
         The OAuth2 URL for inviting the bot into guilds.
     """
@@ -344,12 +410,12 @@ def oauth_url(
 def snowflake_time(id: int) -> datetime.datetime:
     """
     Parameters
-    -----------
+    ----------
     id: :class:`int`
         The snowflake ID.
 
     Returns
-    --------
+    -------
     :class:`datetime.datetime`
         An aware datetime in UTC representing the creation time of the snowflake.
     """
@@ -367,15 +433,15 @@ def time_snowflake(dt: datetime.datetime, high: bool = False) -> int:
     to be inclusive, ``high=False`` to be exclusive
 
     Parameters
-    -----------
+    ----------
     dt: :class:`datetime.datetime`
         A datetime object to convert to a snowflake.
         If naive, the timezone is assumed to be local time.
     high: :class:`bool`
-        Whether or not to set the lower 22 bit to high or low.
+        Whether to set the lower 22 bit to high or low.
 
     Returns
-    --------
+    -------
     :class:`int`
         The snowflake representing the time given.
     """
@@ -383,7 +449,7 @@ def time_snowflake(dt: datetime.datetime, high: bool = False) -> int:
     return (discord_millis << 22) + (2**22 - 1 if high else 0)
 
 
-def find(predicate: Callable[[T], Any], seq: Iterable[T]) -> Optional[T]:
+def find(predicate: Callable[[T], Any], seq: Iterable[T]) -> T | None:
     """A helper to return the first element found in the sequence
     that meets the predicate. For example: ::
 
@@ -396,7 +462,7 @@ def find(predicate: Callable[[T], Any], seq: Iterable[T]) -> Optional[T]:
     a valid entry.
 
     Parameters
-    -----------
+    ----------
     predicate
         A function that returns a boolean-like result.
     seq: :class:`collections.abc.Iterable`
@@ -409,7 +475,7 @@ def find(predicate: Callable[[T], Any], seq: Iterable[T]) -> Optional[T]:
     return None
 
 
-def get(iterable: Iterable[T], **attrs: Any) -> Optional[T]:
+def get(iterable: Iterable[T], **attrs: Any) -> T | None:
     r"""A helper that returns the first element in the iterable that meets
     all the traits passed in ``attrs``. This is an alternative for
     :func:`~discord.utils.find`.
@@ -466,7 +532,9 @@ def get(iterable: Iterable[T], **attrs: Any) -> Optional[T]:
                 return elem
         return None
 
-    converted = [(attrget(attr.replace("__", ".")), value) for attr, value in attrs.items()]
+    converted = [
+        (attrget(attr.replace("__", ".")), value) for attr, value in attrs.items()
+    ]
 
     for elem in iterable:
         if _all(pred(elem) == value for pred, value in converted):
@@ -492,11 +560,11 @@ async def get_or_fetch(obj, attr: str, id: int, *, default: Any = MISSING):
     return getter
 
 
-def _unique(iterable: Iterable[T]) -> List[T]:
+def _unique(iterable: Iterable[T]) -> list[T]:
     return [x for x in dict.fromkeys(iterable)]
 
 
-def _get_as_snowflake(data: Any, key: str) -> Optional[int]:
+def _get_as_snowflake(data: Any, key: str) -> int | None:
     try:
         value = data[key]
     except KeyError:
@@ -541,12 +609,14 @@ else:
 
 
 def _parse_ratelimit_header(request: Any, *, use_clock: bool = False) -> float:
-    reset_after: Optional[str] = request.headers.get("X-Ratelimit-Reset-After")
+    reset_after: str | None = request.headers.get("X-Ratelimit-Reset-After")
     if not use_clock and reset_after:
         return float(reset_after)
     utc = datetime.timezone.utc
     now = datetime.datetime.now(utc)
-    reset = datetime.datetime.fromtimestamp(float(request.headers["X-Ratelimit-Reset"]), utc)
+    reset = datetime.datetime.fromtimestamp(
+        float(request.headers["X-Ratelimit-Reset"]), utc
+    )
     return (reset - now).total_seconds()
 
 
@@ -569,7 +639,9 @@ async def async_all(gen, *, check=_isawaitable):
 
 async def sane_wait_for(futures, *, timeout):
     ensured = [asyncio.ensure_future(fut) for fut in futures]
-    done, pending = await asyncio.wait(ensured, timeout=timeout, return_when=asyncio.ALL_COMPLETED)
+    done, pending = await asyncio.wait(
+        ensured, timeout=timeout, return_when=asyncio.ALL_COMPLETED
+    )
 
     if len(pending) != 0:
         raise asyncio.TimeoutError()
@@ -577,7 +649,7 @@ async def sane_wait_for(futures, *, timeout):
     return done
 
 
-def get_slots(cls: Type[Any]) -> Iterator[str]:
+def get_slots(cls: type[Any]) -> Iterator[str]:
     for mro in reversed(cls.__mro__):
         try:
             yield from mro.__slots__
@@ -592,7 +664,7 @@ def compute_timedelta(dt: datetime.datetime):
     return max((dt - now).total_seconds(), 0)
 
 
-async def sleep_until(when: datetime.datetime, result: Optional[T] = None) -> Optional[T]:
+async def sleep_until(when: datetime.datetime, result: T | None = None) -> T | None:
     """|coro|
 
     Sleep until a specified time.
@@ -602,7 +674,7 @@ async def sleep_until(when: datetime.datetime, result: Optional[T] = None) -> Op
     .. versionadded:: 1.3
 
     Parameters
-    -----------
+    ----------
     when: :class:`datetime.datetime`
         The timestamp in which to sleep until. If the datetime is naive then
         it is assumed to be local time.
@@ -622,7 +694,7 @@ def utcnow() -> datetime.datetime:
     .. versionadded:: 2.0
 
     Returns
-    --------
+    -------
     :class:`datetime.datetime`
         The current aware datetime in UTC.
     """
@@ -660,7 +732,7 @@ class SnowflakeList(array.array):
         i = bisect_left(self, element)
         self.insert(i, element)
 
-    def get(self, element: int) -> Optional[int]:
+    def get(self, element: int) -> int | None:
         i = bisect_left(self, element)
         return self[i] if i != len(self) and self[i] == element else None
 
@@ -683,17 +755,17 @@ def _string_width(string: str, *, _IS_ASCII=_IS_ASCII) -> int:
     return sum(2 if func(char) in UNICODE_WIDE_CHAR_TYPE else 1 for char in string)
 
 
-def resolve_invite(invite: Union[Invite, str]) -> str:
+def resolve_invite(invite: Invite | str) -> str:
     """
     Resolves an invite from a :class:`~discord.Invite`, URL or code.
 
     Parameters
-    -----------
+    ----------
     invite: Union[:class:`~discord.Invite`, :class:`str`]
         The invite.
 
     Returns
-    --------
+    -------
     :class:`str`
         The invite code.
     """
@@ -708,19 +780,19 @@ def resolve_invite(invite: Union[Invite, str]) -> str:
     return invite
 
 
-def resolve_template(code: Union[Template, str]) -> str:
+def resolve_template(code: Template | str) -> str:
     """
     Resolves a template code from a :class:`~discord.Template`, URL or code.
 
     .. versionadded:: 1.4
 
     Parameters
-    -----------
+    ----------
     code: Union[:class:`~discord.Template`, :class:`str`]
         The code.
 
     Returns
-    --------
+    -------
     :class:`str`
         The template code.
     """
@@ -735,11 +807,13 @@ def resolve_template(code: Union[Template, str]) -> str:
     return code
 
 
-_MARKDOWN_ESCAPE_SUBREGEX = "|".join(r"\{0}(?=([\s\S]*((?<!\{0})\{0})))".format(c) for c in ("*", "`", "_", "~", "|"))
+_MARKDOWN_ESCAPE_SUBREGEX = "|".join(
+    r"\{0}(?=([\s\S]*((?<!\{0})\{0})))".format(c) for c in ("*", "`", "_", "~", "|")
+)
 
 # regular expression for finding and escaping links in markdown
 # note: technically, brackets are allowed in link text.
-# perhaps more concerningly, parentheses are also allowed in link destination.
+# perhaps more concerning, parentheses are also allowed in link destination.
 # this regular expression matches neither of those.
 # this page provides a good reference: http://blog.michaelperrin.fr/2019/02/04/advanced-regular-expressions/
 _MARKDOWN_ESCAPE_LINKS = r"""
@@ -772,7 +846,7 @@ def remove_markdown(text: str, *, ignore_links: bool = True) -> str:
             if the input contains ``10 * 5`` then it will be converted into ``10  5``.
 
     Parameters
-    -----------
+    ----------
     text: :class:`str`
         The text to remove markdown from.
     ignore_links: :class:`bool`
@@ -781,7 +855,7 @@ def remove_markdown(text: str, *, ignore_links: bool = True) -> str:
         be left alone. Defaults to ``True``.
 
     Returns
-    --------
+    -------
     :class:`str`
         The text with the markdown special characters removed.
     """
@@ -796,7 +870,9 @@ def remove_markdown(text: str, *, ignore_links: bool = True) -> str:
     return re.sub(regex, replacement, text, 0, re.MULTILINE)
 
 
-def escape_markdown(text: str, *, as_needed: bool = False, ignore_links: bool = True) -> str:
+def escape_markdown(
+    text: str, *, as_needed: bool = False, ignore_links: bool = True
+) -> str:
     r"""A helper function that escapes Discord's markdown.
 
     Parameters
@@ -853,19 +929,67 @@ def escape_mentions(text: str) -> str:
         class.
 
     Parameters
-    -----------
+    ----------
     text: :class:`str`
         The text to escape mentions from.
 
     Returns
-    --------
+    -------
     :class:`str`
         The text with the mentions removed.
     """
     return re.sub(r"@(everyone|here|[!&]?[0-9]{17,20})", "@\u200b\\1", text)
 
 
-def _chunk(iterator: Iterator[T], max_size: int) -> Iterator[List[T]]:
+def raw_mentions(text: str) -> list[int]:
+    """Returns a list of user IDs matching ``<@user_id>`` in the string.
+
+    Parameters
+    ----------
+    text: :class:`str`
+        The string to get user mentions from.
+
+    Returns
+    -------
+    List[:class:`int`]
+        A list of user IDs found in the string.
+    """
+    return [int(x) for x in re.findall(r"<@!?([0-9]+)>", text)]
+
+
+def raw_channel_mentions(text: str) -> list[int]:
+    """Returns a list of channel IDs matching ``<@#channel_id>`` in the string.
+
+    Parameters
+    ----------
+    text: :class:`str`
+        The string to get channel mentions from.
+
+    Returns
+    -------
+    List[:class:`int`]
+        A list of channel IDs found in the string.
+    """
+    return [int(x) for x in re.findall(r"<#([0-9]+)>", text)]
+
+
+def raw_role_mentions(text: str) -> list[int]:
+    """Returns a list of role IDs matching ``<@&role_id>`` in the string.
+
+    Parameters
+    ----------
+    text: :class:`str`
+        The string to get role mentions from.
+
+    Returns
+    -------
+    List[:class:`int`]
+        A list of role IDs found in the string.
+    """
+    return [int(x) for x in re.findall(r"<@&([0-9]+)>", text)]
+
+
+def _chunk(iterator: Iterator[T], max_size: int) -> Iterator[list[T]]:
     ret = []
     n = 0
     for item in iterator:
@@ -879,7 +1003,7 @@ def _chunk(iterator: Iterator[T], max_size: int) -> Iterator[List[T]]:
         yield ret
 
 
-async def _achunk(iterator: AsyncIterator[T], max_size: int) -> AsyncIterator[List[T]]:
+async def _achunk(iterator: AsyncIterator[T], max_size: int) -> AsyncIterator[list[T]]:
     ret = []
     n = 0
     async for item in iterator:
@@ -894,16 +1018,16 @@ async def _achunk(iterator: AsyncIterator[T], max_size: int) -> AsyncIterator[Li
 
 
 @overload
-def as_chunks(iterator: Iterator[T], max_size: int) -> Iterator[List[T]]:
+def as_chunks(iterator: Iterator[T], max_size: int) -> Iterator[list[T]]:
     ...
 
 
 @overload
-def as_chunks(iterator: AsyncIterator[T], max_size: int) -> AsyncIterator[List[T]]:
+def as_chunks(iterator: AsyncIterator[T], max_size: int) -> AsyncIterator[list[T]]:
     ...
 
 
-def as_chunks(iterator: _Iter[T], max_size: int) -> _Iter[List[T]]:
+def as_chunks(iterator: _Iter[T], max_size: int) -> _Iter[list[T]]:
     """A helper function that collects an iterator into chunks of a given size.
 
     .. versionadded:: 2.0
@@ -915,14 +1039,13 @@ def as_chunks(iterator: _Iter[T], max_size: int) -> _Iter[List[T]]:
     max_size: :class:`int`
         The maximum chunk size.
 
-
     .. warning::
 
         The last chunk collected may not be as large as ``max_size``.
 
     Returns
-    --------
-    Union[:class:`Iterator`, :class:`AsyncIterator`]
+    -------
+    Union[:class:`collections.abc.Iterator`, :class:`collections.abc.AsyncIterator`]
         A new iterator which yields chunks of a given size.
     """
     if max_size <= 0:
@@ -936,7 +1059,7 @@ def as_chunks(iterator: _Iter[T], max_size: int) -> _Iter[List[T]]:
 PY_310 = sys.version_info >= (3, 10)
 
 
-def flatten_literal_params(parameters: Iterable[Any]) -> Tuple[Any, ...]:
+def flatten_literal_params(parameters: Iterable[Any]) -> tuple[Any, ...]:
     params = []
     literal_cls = type(Literal[0])
     for p in parameters:
@@ -947,16 +1070,16 @@ def flatten_literal_params(parameters: Iterable[Any]) -> Tuple[Any, ...]:
     return tuple(params)
 
 
-def normalise_optional_params(parameters: Iterable[Any]) -> Tuple[Any, ...]:
+def normalise_optional_params(parameters: Iterable[Any]) -> tuple[Any, ...]:
     none_cls = type(None)
     return tuple(p for p in parameters if p is not none_cls) + (none_cls,)
 
 
 def evaluate_annotation(
     tp: Any,
-    globals: Dict[str, Any],
-    locals: Dict[str, Any],
-    cache: Dict[str, Any],
+    globals: dict[str, Any],
+    locals: dict[str, Any],
+    cache: dict[str, Any],
     *,
     implicit_str: bool = True,
 ):
@@ -995,11 +1118,16 @@ def evaluate_annotation(
             is_literal = True
 
         evaluated_args = tuple(
-            evaluate_annotation(arg, globals, locals, cache, implicit_str=implicit_str) for arg in args
+            evaluate_annotation(arg, globals, locals, cache, implicit_str=implicit_str)
+            for arg in args
         )
 
-        if is_literal and not all(isinstance(x, (str, int, bool, type(None))) for x in evaluated_args):
-            raise TypeError("Literal arguments must be of type str, int, bool, or NoneType.")
+        if is_literal and not all(
+            isinstance(x, (str, int, bool, type(None))) for x in evaluated_args
+        ):
+            raise TypeError(
+                "Literal arguments must be of type str, int, bool, or NoneType."
+            )
 
         if evaluated_args == args:
             return tp
@@ -1014,9 +1142,9 @@ def evaluate_annotation(
 
 def resolve_annotation(
     annotation: Any,
-    globalns: Dict[str, Any],
-    localns: Optional[Dict[str, Any]],
-    cache: Optional[Dict[str, Any]],
+    globalns: dict[str, Any],
+    localns: dict[str, Any] | None,
+    cache: dict[str, Any] | None,
 ) -> Any:
     if annotation is None:
         return type(None)
@@ -1032,7 +1160,7 @@ def resolve_annotation(
 TimestampStyle = Literal["f", "F", "d", "D", "t", "T", "R"]
 
 
-def format_dt(dt: datetime.datetime, /, style: Optional[TimestampStyle] = None) -> str:
+def format_dt(dt: datetime.datetime, /, style: TimestampStyle | None = None) -> str:
     """A helper function to format a :class:`datetime.datetime` for presentation within Discord.
 
     This allows for a locale-independent way of presenting data using Discord specific Markdown.
@@ -1061,14 +1189,14 @@ def format_dt(dt: datetime.datetime, /, style: Optional[TimestampStyle] = None) 
     .. versionadded:: 2.0
 
     Parameters
-    -----------
+    ----------
     dt: :class:`datetime.datetime`
         The datetime to format.
     style: :class:`str`
         The style to format the datetime with.
 
     Returns
-    --------
+    -------
     :class:`str`
         The formatted string.
     """
@@ -1077,18 +1205,18 @@ def format_dt(dt: datetime.datetime, /, style: Optional[TimestampStyle] = None) 
     return f"<t:{int(dt.timestamp())}:{style}>"
 
 
-def generate_snowflake(dt: Optional[datetime.datetime] = None) -> int:
-    """Returns a numeric snowflake pretending to be created at the given date but more accurate and random than time_snowflake.
-    If dt is not passed, it makes one from the current time using utcnow.
+def generate_snowflake(dt: datetime.datetime | None = None) -> int:
+    """Returns a numeric snowflake pretending to be created at the given date but more accurate and random
+    than :func:`time_snowflake`. If dt is not passed, it makes one from the current time using utcnow.
 
     Parameters
-    -----------
+    ----------
     dt: :class:`datetime.datetime`
         A datetime object to convert to a snowflake.
         If naive, the timezone is assumed to be local time.
 
     Returns
-    --------
+    -------
     :class:`int`
         The snowflake representing the time given.
     """
@@ -1105,17 +1233,28 @@ AutocompleteFunc = Callable[[AutocompleteContext], AV]
 
 def basic_autocomplete(values: Values) -> AutocompleteFunc:
     """A helper function to make a basic autocomplete for slash commands. This is a pretty standard autocomplete and
-    will return any options that start with the value from the user, case insensitive. If the ``values`` parameter is callable,
-    it will be called with the AutocompleteContext.
+    will return any options that start with the value from the user, case-insensitive. If the ``values`` parameter is
+    callable, it will be called with the AutocompleteContext.
 
     This is meant to be passed into the :attr:`discord.Option.autocomplete` attribute.
 
+    Parameters
+    ----------
+    values: Union[Union[Iterable[:class:`.OptionChoice`], Iterable[:class:`str`], Iterable[:class:`int`], Iterable[:class:`float`]], Callable[[:class:`.AutocompleteContext`], Union[Union[Iterable[:class:`str`], Iterable[:class:`int`], Iterable[:class:`float`]], Awaitable[Union[Iterable[:class:`str`], Iterable[:class:`int`], Iterable[:class:`float`]]]]], Awaitable[Union[Iterable[:class:`str`], Iterable[:class:`int`], Iterable[:class:`float`]]]]
+        Possible values for the option. Accepts an iterable of :class:`str`, a callable (sync or async) that takes a
+        single argument of :class:`.AutocompleteContext`, or a coroutine. Must resolve to an iterable of :class:`str`.
+
+    Returns
+    -------
+    Callable[[:class:`.AutocompleteContext`], Awaitable[Union[Iterable[:class:`.OptionChoice`], Iterable[:class:`str`], Iterable[:class:`int`], Iterable[:class:`float`]]]]
+        A wrapped callback for the autocomplete.
+
     Note
-    -----
+    ----
     Autocomplete cannot be used for options that have specified choices.
 
     Example
-    --------
+    -------
 
     .. code-block:: python3
 
@@ -1128,19 +1267,7 @@ def basic_autocomplete(values: Values) -> AutocompleteFunc:
 
         Option(str, "name", autocomplete=basic_autocomplete(autocomplete))
 
-
     .. versionadded:: 2.0
-
-    Parameters
-    -----------
-    values: Union[Union[Iterable[:class:`.OptionChoice`], Iterable[:class:`str`], Iterable[:class:`int`], Iterable[:class:`float`]], Callable[[:class:`.AutocompleteContext`], Union[Union[Iterable[:class:`str`], Iterable[:class:`int`], Iterable[:class:`float`]], Awaitable[Union[Iterable[:class:`str`], Iterable[:class:`int`], Iterable[:class:`float`]]]]], Awaitable[Union[Iterable[:class:`str`], Iterable[:class:`int`], Iterable[:class:`float`]]]]
-        Possible values for the option. Accepts an iterable of :class:`str`, a callable (sync or async) that takes a
-        single argument of :class:`.AutocompleteContext`, or a coroutine. Must resolve to an iterable of :class:`str`.
-
-    Returns
-    --------
-    Callable[[:class:`.AutocompleteContext`], Awaitable[Union[Iterable[:class:`.OptionChoice`], Iterable[:class:`str`], Iterable[:class:`int`], Iterable[:class:`float`]]]]
-        A wrapped callback for the autocomplete.
     """
 
     async def autocomplete_callback(ctx: AutocompleteContext) -> V:
@@ -1159,3 +1286,34 @@ def basic_autocomplete(values: Values) -> AutocompleteFunc:
         return iter(itertools.islice(gen, 25))
 
     return autocomplete_callback
+
+
+def filter_params(params, **kwargs):
+    """A helper function to filter out and replace certain keyword parameters
+
+    Parameters
+    ----------
+    params: Dict[str, Any]
+        The initial parameters to filter.
+    **kwargs: Dict[str, Optional[str]]
+        Key to value pairs where the key's contents would be moved to the
+        value, or if the value is None, remove key's contents (see code example).
+
+    Example
+    -------
+    .. code-block:: python3
+
+        >>> params = {"param1": 12, "param2": 13}
+        >>> filter_params(params, param1="param3", param2=None)
+        {'param3': 12}
+        # values of 'param1' is moved to 'param3'
+        # and values of 'param2' are completely removed.
+    """
+    for old_param, new_param in kwargs.items():
+        if old_param in params:
+            if new_param is None:
+                params.pop(old_param)
+            else:
+                params[new_param] = params.pop(old_param)
+
+    return params

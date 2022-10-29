@@ -22,10 +22,9 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 """
 import io
-import os
 import subprocess
 
-from .core import CREATE_NO_WINDOW, Filters, Sink, default_filters
+from .core import Filters, Sink, default_filters
 from .errors import MKVSinkError
 
 
@@ -56,7 +55,9 @@ class MKVSink(Sink):
             Formatting the audio failed.
         """
         if self.vc.recording:
-            raise MKVSinkError("Audio may only be formatted after recording is finished.")
+            raise MKVSinkError(
+                "Audio may only be formatted after recording is finished."
+            )
         args = [
             "ffmpeg",
             "-f",
@@ -80,7 +81,9 @@ class MKVSink(Sink):
         except FileNotFoundError:
             raise MKVSinkError("ffmpeg was not found.") from None
         except subprocess.SubprocessError as exc:
-            raise MKVSinkError("Popen failed: {0.__class__.__name__}: {0}".format(exc)) from exc
+            raise MKVSinkError(
+                "Popen failed: {0.__class__.__name__}: {0}".format(exc)
+            ) from exc
 
         out = process.communicate(audio.file.read())[0]
         out = io.BytesIO(out)

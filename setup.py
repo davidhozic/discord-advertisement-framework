@@ -1,3 +1,4 @@
+from datetime import datetime
 import os
 import setuptools
 import json
@@ -5,7 +6,7 @@ import json
 
 
 long_description = None
-with open("./README.rst", "r", encoding="utf-8") as fh:
+with open("./README_pypi.rst", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 req = None
@@ -35,8 +36,7 @@ if gh_release is not None:
 elif readthedocs_release is not None:
     version = readthedocs_release
 else:
-    with open("./version.txt", "r", encoding="utf-8") as rf:
-        version = rf.read().strip()
+    version = datetime.now().isoformat(sep=' ') # Use date if building manually
 
 
 __metadata__ = \

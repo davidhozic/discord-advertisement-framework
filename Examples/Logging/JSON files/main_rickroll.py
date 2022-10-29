@@ -1,5 +1,4 @@
 from datetime import timedelta
-from daf import trace
 import daf
 
 rolls = [
@@ -33,5 +32,6 @@ servers = [
 daf.run(
     token="OSDSJ44JNnnJNJ2NJDBWQUGHSHFAJSHDUQHFDBADVAHJVERAHGDVAHJSVDE",   # Example account token
     is_user=False, 
-    server_list=servers
+    server_list=servers,
+    logger=daf.LoggerJSON("History")
 )

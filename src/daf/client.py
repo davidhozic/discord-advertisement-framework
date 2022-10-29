@@ -3,7 +3,10 @@
 """
 
 from typing import Optional
-from .tracing import *
+from .logging.tracing import *
+
+from . import misc
+
 import _discord as discord
 import asyncio
 
@@ -48,16 +51,6 @@ async def _initialize(token: str, *,
         The intents discord object. Intents are settings that
         dictate which dictates the events that the client will listen for.
     """
-    login_event = asyncio.Event()
-
-    async def on_ready():
-        """
-        Coroutine used to set the login event,
-        which notifies the upper layer to continue
-        with it's initialization.
-        """
-        login_event.set()
-
     connector = None
     if proxy is not None:
         if not GLOBALS.proxy_installed:
@@ -70,12 +63,11 @@ async def _initialize(token: str, *,
     if not bot:
         trace("[CLIENT]: Bot is an user account which is against discord's ToS",TraceLEVELS.WARNING)
 
-    _client.event(on_ready)
-    await _client.login(token)
-    asyncio.create_task(_client.connect())
-    await login_event.wait() # Wait for the login to complete and the discord lib to initialize.
+    asyncio.create_task(_client.start(token, bot=bot))
+    await _client.wait_for("ready")
 
 
+@misc.doc_category("Getters")
 def get_client() -> discord.Client:
     """
     Returns the `CLIENT` object used for communicating with Discord.

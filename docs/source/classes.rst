@@ -1,141 +1,80 @@
-=====================
+
+===============================
 Classes
-=====================
-This page contains information about any classes that can be used in the daf.
+===============================
 
------------------------------
-Guilds (Servers)
------------------------------
-
-GUILD
-=====================
-.. autoclass:: daf.guild.GUILD
-   :members:
-   
-   .. autoproperty:: messages
-
-   .. autoproperty:: snowflake
-
-   .. autoproperty:: created_at
-
-USER
-=====================
-.. autoclass:: daf.guild.USER
-   :members:
-
-   .. autoproperty:: messages
-
-   .. autoproperty:: snowflake
-
-   .. autoproperty:: created_at
-
------------------------------
-Messages
------------------------------
-
-TextMESSAGE
-=====================
-.. autoclass:: daf.message.TextMESSAGE
-    :members:
-
-    .. autoproperty:: created_at
-
-VoiceMESSAGE
-=====================
-.. autoclass:: daf.message.VoiceMESSAGE
-    :members:
-
-    .. autoproperty:: created_at
-
-
-DirectMESSAGE
-=====================
-.. autoclass:: daf.message.DirectMESSAGE
-    :members:
-
-    .. autoproperty:: created_at
-
-
------------------------------
-Message data types
------------------------------
-These classes describe data that can be passed to the :ref:`Messages` objects
-
-EMBED
-=====================
-.. autoclass:: daf.dtypes.EMBED
-    :members:
-    :exclude-members: Color, Colour
-
-FILE
-=====================
-.. autoclass:: daf.dtypes.FILE
-    :members:
-
-AUDIO
-=====================
-.. autoclass:: daf.dtypes.AUDIO
-    :members:
-
-
------------------------------
-SQL
------------------------------
-
-LoggerSQL
-=====================
-.. note::
-    See :ref:`relational database log (SQL)` for usage.
-
-.. autoclass:: daf.sql.LoggerSQL
-    :members:
-    :exclude-members: Base
-
-
-
------------------------------
+----------------------------
 Tracing
------------------------------
+----------------------------
 
 TraceLEVELS
-=====================
-.. autoenum:: daf.tracing.TraceLEVELS
+========================
+.. autoenum:: daf.logging.tracing.TraceLEVELS
     :members:
 
 
------------------------------
-Exceptions
------------------------------
+----------------------------
+Logging related
+----------------------------
 
-Types
-=====================
+LoggerBASE
+========================
+.. autoclass:: daf.logging.LoggerBASE
+    :members:
+
+    
+
+
+LoggerCSV
+========================
+.. autoclass:: daf.logging.LoggerCSV
+    :members:
+
+    
+
+
+LoggerJSON
+========================
+.. autoclass:: daf.logging.LoggerJSON
+    :members:
+
+    
+
+
+LoggerSQL
+========================
+.. autoclass:: daf.logging.sql.LoggerSQL
+    :members:
+
+    
+
+
+----------------------------
+Exceptions
+----------------------------
 
 DAFError
-------------------------
-
+========================
 .. autoclass:: daf.exceptions.DAFError
     :members:
 
-DAFSQLError
-------------------------
-
-.. autoclass:: daf.exceptions.DAFSQLError
-    :members:
+    
 
 
 DAFNotFoundError
-------------------------
-
+========================
 .. autoclass:: daf.exceptions.DAFNotFoundError
     :members:
 
+    
 
-Error codes
-=====================
-.. Caution::
-    The error code's number can change when a new version is released.
-    If you want to check if an exception has a certain code, use the constant name instead.
 
+DAFSQLError
+========================
+.. autoclass:: daf.exceptions.DAFSQLError
+    :members:
+
+    
 .. glossary::
 
     DAF_SNOWFLAKE_NOT_FOUND:
@@ -163,11 +102,6 @@ Error codes
 
         Info: Unable to create all the tables.
 
-    DAF_SQL_LOOKUPTABLE_NOT_FOUND:
-        Value: 6
-
-        Info: The lookup table was not found.
-
     DAF_SQL_BEGIN_ENGINE_ERROR:
         Value: 7
 
@@ -178,17 +112,91 @@ Error codes
 
         Info: Unable to create lookuptables' rows.
 
-    DAF_SQL_CREATE_DT_ERROR:
-        Value: 9
+    DAF_SQL_SAVE_LOG_ERROR:
+        Value: 12
 
-        Info: Unable to create SQL data types.
+        Info: Unable to save the log to SQL
 
-    DAF_SQL_CREATE_VPF_ERROR:
-        Value: 10
 
-        Info: Unable to create views, procedures and functions.
+----------------------------
+Message data types
+----------------------------
 
-    DAF_SQL_CURSOR_CONN_ERROR:
-        Value: 11
+EMBED
+========================
+.. autoclass:: daf.dtypes.EMBED
+    :members:
+    :exclude-members: Colour, Color
 
-        Info: Unable to connect the cursor.
+
+FILE
+========================
+.. autoclass:: daf.dtypes.FILE
+    :members:
+
+    
+
+
+AUDIO
+========================
+.. autoclass:: daf.dtypes.AUDIO
+    :members:
+
+    
+
+
+----------------------------
+Messages
+----------------------------
+
+TextMESSAGE
+========================
+.. autoclass:: daf.message.TextMESSAGE
+    :members:
+
+    .. autoproperty:: daf.message.TextMESSAGE.created_at
+
+
+DirectMESSAGE
+========================
+.. autoclass:: daf.message.DirectMESSAGE
+    :members:
+
+    .. autoproperty:: daf.message.DirectMESSAGE.created_at
+
+
+VoiceMESSAGE
+========================
+.. autoclass:: daf.message.VoiceMESSAGE
+    :members:
+
+    .. autoproperty:: daf.message.VoiceMESSAGE.created_at
+
+
+----------------------------
+Guilds
+----------------------------
+
+GUILD
+========================
+.. autoclass:: daf.guild.GUILD
+    :members:
+
+    .. autoproperty:: daf.guild.GUILD.created_at
+
+    .. autoproperty:: daf.guild.GUILD.messages
+
+    .. autoproperty:: daf.guild.GUILD.snowflake
+
+
+USER
+========================
+.. autoclass:: daf.guild.USER
+    :members:
+
+    .. autoproperty:: daf.guild.USER.created_at
+
+    .. autoproperty:: daf.guild.USER.messages
+
+    .. autoproperty:: daf.guild.USER.snowflake
+

@@ -22,7 +22,7 @@ servers = [
     daf.GUILD(
         snowflake=12345,
         messages=[
-            daf.TextMESSAGE(None, timedelta(seconds=10), get(rolls.copy()), [12345], "edit", timedelta(seconds=5))
+            daf.TextMESSAGE(None, timedelta(seconds=5), get(rolls.copy()), [12345], "edit", timedelta(seconds=5))
         ],
         logging=True
     )
@@ -30,9 +30,8 @@ servers = [
 
 
 daf.run(
-    token="OSDSJ44JNnnJNJ2NJDBWQUGHSHFAJSHDUQHFDBADVAHJVERAHGDVAHJSVDE",                # Example account token
+    token="OSDSJ44JNnnJNJ2NJDBWQUGHSHFAJSHDUQHFDBADVAHJVERAHGDVAHJSVDE",   # Example account token
     is_user=False, 
     server_list=servers,
-    sql_manager=daf.LoggerSQL("username", "password", "server address", "database name") # *Note: The database must be created manually,
-                                                                                        #  everything else in the database is then created automatically
+    logger=daf.LoggerCSV("History", ";")
 )

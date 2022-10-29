@@ -24,10 +24,31 @@ Glossary
     |BREAK_CH|
         Means that the change will break functionality from previous version.
 
+    |POTENT_BREAK_CH|
+        The change could break functionality from previous versions but only if it
+        was used in a certain way.
 
 ----------------------
 Releases
 ----------------------
+
+v2.2
+===========
+- ``user_callback`` parameter for function :func:`daf.core.run` can now also be a regular function instead of just ``async``.
+- Deprecated :class:`daf.dtypes.EMBED`, use :class:`discord.Embed` instead.
+- |BREAK_CH| Removed ``get_sql_manager`` function.
+- :func:`daf.core.run`:
+    + Added ``logging`` parameter
+    + Deprecated parameters ``server_log_output`` and ``sql_manager``.
+- Logging manager objects: LoggerJSON, LoggerCSV, LoggerSQL
+- New :func:`daf.logging.get_logger` function for retrieving the logger object used.
+- :func:`daf.core.initialize` for manual control of asyncio (same as :func:`daf.core.run` except it is async)
+- SQL:
+    + SQL logging now supports **Microsoft SQL Server, MySQL, PostgreSQL and SQLite databases**.
+    + |BREAK_CH| :class:`~daf.logging.sql.LoggerSQL`'s parameters are re-arranged, new parameters of which, the ``dialect`` (mssql, sqlite, mysql, postgresql) parameter must be passed.
+- Development:
+    + ``doc_category`` decorator for automatic documentation
+    + Removed ``common`` module and moved constants to appropriate modules
 
 v2.1.4
 ===========
@@ -53,6 +74,7 @@ v2.1.1
 - Fixed ``[Bug]: Predefined servers' errors are not suppressed #189``.
 - Support for readthedocs.
 
+
 v2.1
 ===========
 - Changed the import ``import framework`` to ``import daf``. Using ``import framework`` is now deprecated.
@@ -64,7 +86,7 @@ v2.1
     Added support for using proxies.
     To use a proxy pass the :func:`daf.run` function with a ``proxy`` parameter
 - discord.EmbedField:
-    |BREAK_CH| Replaced daf.EmbedFIELD with discord.EmbedField.
+    |BREAK_CH| Replaced discord.EmbedField with discord.EmbedField.
 - timedelta:
     start_period and end_period now support ``timedelta`` object to specify the send period.
     Use of ``int`` is deprecated
