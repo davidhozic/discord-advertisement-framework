@@ -439,7 +439,7 @@ class TextMESSAGE(BaseMESSAGE):
             kwargs["start_in"] = timedelta(seconds=0)
         
         if not len(_init_options):
-            _init_options = {"guild": self.parent.apiobject}
+            _init_options = {"parent": self.parent}
 
         await misc._update(self, init_options=_init_options, **kwargs) # No additional modifications are required
 
@@ -750,6 +750,6 @@ class DirectMESSAGE(BaseMESSAGE):
             kwargs["start_in"] = timedelta(seconds=0)
 
         if not len(_init_options):
-            _init_options = {"user" : self.parent.apiobject}
+            _init_options = {"parent" : self.parent}
 
         await misc._update(self, init_options=_init_options, **kwargs) # No additional modifications are required
