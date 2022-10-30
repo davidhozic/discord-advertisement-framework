@@ -139,7 +139,7 @@ async def initialize(token : str,
         trace("[CORE]: Starting user callback function", TraceLEVELS.NORMAL)
         user_callback = user_callback()
         if isinstance(user_callback, Coroutine):
-            await user_callback
+            loop.create_task(user_callback)
 
     trace("[CORE]: Initialization complete.", TraceLEVELS.NORMAL)
 
@@ -253,10 +253,9 @@ def remove_object(snowflake: Union[int, dc.Object, dc.Guild, dc.User, dc.Object,
         for _guild in GLOBALS.server_list:
             if snowflake in _guild.messages:
                 _guild.remove_message(snowflake)
-        return
+                break
 
-    if isinstance(snowflake, int):
-        snowflake = dc.Object(snowflake)
+        return
 
     if not isinstance(snowflake, guild._BaseGUILD):
         snowflake = get_guild_user(snowflake)
