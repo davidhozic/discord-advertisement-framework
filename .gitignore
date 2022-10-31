@@ -3,3 +3,4 @@ settings.json
 dist/**
 test**
 build**
+**.egg-info
