@@ -16,12 +16,13 @@ with open("./requirements.txt" , 'r', encoding="utf-8") as rf:
 optional_install = None
 with open("./optional.json", "r", encoding="utf-8") as rf:
     optional_install: dict = json.load(rf)
-    optional_install.pop("testing")
-    optional_install.pop("docs")
+    all_ = optional_install.copy()
+    all_.pop("testing")
+    all_.pop("docs")
     
     # Make a key that will install all requirements
     all_deps = []
-    for key, deps in optional_install.items():       
+    for key, deps in all_.items():       
         all_deps.extend(deps)
     
     optional_install["all"] = all_deps
