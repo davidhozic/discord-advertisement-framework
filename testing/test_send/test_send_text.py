@@ -24,6 +24,7 @@ TEST_CHANNEL_NUM = 5
 @pytest.mark.asyncio
 async def test_text_message_send():
     "This tests if all the text messages succeed in their sends"
+    text_channels = []
     try:
         TEXT_MESSAGE_TEST_MESSAGE = "Hello world", daf.discord.Embed(title="Hello world")
 
@@ -33,7 +34,6 @@ async def test_text_message_send():
         dc_test_cat = client.get_channel(TEST_CAT_CHANNEL_ID)
 
         # Create testing channels
-        text_channels = []
         for i in range(1, TEST_CHANNEL_NUM + 1):
             text_channels.append(await dc_guild.create_text_channel(TEST_CHANNEL_FORMAT.format(i), category=dc_test_cat))
 
@@ -59,8 +59,6 @@ async def test_text_message_send():
         sent_data_result = result["sent_data"]
                 
         # Check results
-        # discord.Embed does not have __eq__ method
-        daf.discord.Embed.__eq__ = lambda a, b: type(a) is str and type(b) is str and a.to_dict() == b.to_dict()
         for message in text_message.sent_messages.values():
             if "text" in sent_data_result:
                 assert sent_data_result["text"] == message.content, "TextMESSAGE text does not match message content"
@@ -75,13 +73,11 @@ async def test_text_message_send():
         sent_data_result = result["sent_data"]
                 
         # Check results
-        # discord.Embed does not have __eq__ method
-        daf.discord.Embed.__eq__ = lambda a, b: type(a) is str and type(b) is str and a.to_dict() == b.to_dict()
-        for message in text_message.sent_messages.values():
-            if "text" in sent_data_result:
-                assert sent_data_result["text"] == message.content, "TextMESSAGE text does not match message content"
-            if "embed" in sent_data_result:
-                assert sent_data_result["embed"] in [e.to_dict() for e in message.embeds], "TextMESSAGE embed not in message embeds"
+        message = direct_message.previous_message
+        if "text" in sent_data_result:
+            assert sent_data_result["text"] == message.content, "DirectMESSAGE text does not match message content"
+        if "embed" in sent_data_result:
+            assert sent_data_result["embed"] in [e.to_dict() for e in message.embeds], "DirectMESSAGE embed not in message embeds"
 
         assert result["success_info"]["success"], "Failed to send to all channels"
 
