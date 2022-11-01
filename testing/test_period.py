@@ -12,7 +12,7 @@ import daf
 
 
 # SIMULATION
-#os.environ["DISCORD_TOKEN"] = "OTM2NzM5NDMxMDczODY1Nzg5.G0f9I1.JxEOmOcDvWdp9zcvG9uV-8fZIKpQ6HqDm_q3Rk"
+
 
 # CONFIGURATION
 TEST_TOKEN = os.environ.get("DISCORD_TOKEN")
