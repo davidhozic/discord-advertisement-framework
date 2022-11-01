@@ -15,9 +15,9 @@ TEST_GUILD_ID = 863071397207212052
 TEST_USER_ID = 145196308985020416
 TEST_CAT_CHANNEL_ID = 1036585192275582997
 TEST_CHANNEL_FORMAT = "pytest-{:02d}"
-TEST_SEND_PERIOD_TEXT = timedelta(seconds=5)
-TEST_SEND_PERIOD_VOICE = timedelta(seconds=7)
-TEST_PERIOD_MAX_VARIATION = 0.10 # Relative variation from period allowed
+TEST_SEND_PERIOD_TEXT = timedelta(seconds=10)
+TEST_SEND_PERIOD_VOICE = timedelta(seconds=10)
+TEST_PERIOD_MAX_VARIATION = 0.12 # Relative variation from period allowed
 TEST_MAX_WAIT_TIME = 15 # Maximum wait for message
 TEST_NUM = 2 # How many times to test
 
@@ -33,7 +33,7 @@ async def test_text_period():
         await daf.add_object(guild)
         await daf.add_object(user)
         TEXT_MESSAGE_TEST_MESSAGE = "Hello world", daf.discord.Embed(title="Hello world")
-        await asyncio.sleep(5) # Clears rate limit
+        await asyncio.sleep(10) # Clears rate limit
         client = daf.get_client()
         dc_guild = client.get_guild(TEST_GUILD_ID)
         dc_test_cat = client.get_channel(TEST_CAT_CHANNEL_ID)
@@ -96,7 +96,7 @@ async def test_voice_period():
         await daf.add_object(user)
         VOICE_MESSAGE_TEST_MESSAGE = daf.AUDIO("https://www.youtube.com/watch?v=IGQBtbKSVhY")
         guild = daf.get_guild_user(TEST_GUILD_ID)
-        await asyncio.sleep(5) # Clears rate limit
+        await asyncio.sleep(10)
         client = daf.get_client()
         dc_guild = client.get_guild(TEST_GUILD_ID)
         dc_test_cat = client.get_channel(TEST_CAT_CHANNEL_ID)
