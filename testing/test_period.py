@@ -4,17 +4,13 @@ from datetime import timedelta
 
 import os
 import time
-
 import pytest
-import pytest_asyncio
-# 
 import daf
 
 
 # SIMULATION
 
 # CONFIGURATION
-TEST_TOKEN = os.environ.get("DISCORD_TOKEN")
 TEST_GUILD_ID = 863071397207212052
 TEST_USER_ID = 145196308985020416
 TEST_CAT_CHANNEL_ID = 1036585192275582997
@@ -31,9 +27,11 @@ TEST_NUM = 2 # How many times to test
 async def test_text_period():
     "This tests if all the text messages succeed in their sends"
     text_channel = None
-    guild = daf.get_guild_user(TEST_GUILD_ID)
-    user = daf.get_guild_user(TEST_USER_ID)
+    guild = daf.GUILD(TEST_GUILD_ID)
+    user = daf.USER(TEST_USER_ID)
     try:
+        await daf.add_object(guild)
+        await daf.add_object(user)
         TEXT_MESSAGE_TEST_MESSAGE = "Hello world", daf.discord.Embed(title="Hello world")
         await asyncio.sleep(5) # Clears rate limit
         client = daf.get_client()
@@ -81,19 +79,21 @@ async def test_text_period():
             with suppress(daf.discord.HTTPException):
                 await text_channel.delete()
         
-        with suppress(ValueError):
-            if text_message is not None:
-                guild.remove_message(text_message)
-        with suppress(ValueError):
-            if direct_message is not None:
-                user.remove_message(direct_message)
+        with suppress(daf.DAFNotFoundError):
+            daf.remove_object(guild)
+        with suppress(daf.DAFNotFoundError):
+            daf.remove_object(user)
         
 
 @pytest.mark.asyncio
 async def test_voice_period():
     "This tests if all the text messages succeed in their sends"
     voice_channel = None
+    guild = daf.GUILD(TEST_GUILD_ID)
+    user = daf.USER(TEST_USER_ID)
     try:
+        await daf.add_object(guild)
+        await daf.add_object(user)
         VOICE_MESSAGE_TEST_MESSAGE = daf.AUDIO("https://www.youtube.com/watch?v=IGQBtbKSVhY")
         guild = daf.get_guild_user(TEST_GUILD_ID)
         await asyncio.sleep(5) # Clears rate limit
@@ -126,3 +126,8 @@ async def test_voice_period():
         if voice_channel is not None:
             with suppress(daf.discord.HTTPException):
                 await voice_channel.delete()
+
+        with suppress(daf.DAFNotFoundError):
+            daf.remove_object(guild)
+        with suppress(daf.DAFNotFoundError):
+            daf.remove_object(user)
