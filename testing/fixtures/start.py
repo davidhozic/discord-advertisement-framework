@@ -13,7 +13,7 @@ def event_loop():
     return asyncio.get_event_loop()
 
 @pytest.fixture(scope="session", autouse=True)
-def start_daf(event_loop: asyncio.ProactorEventLoop):
+def start_daf(event_loop):
     event_loop.run_until_complete(daf.initialize(token=TEST_TOKEN))
     # Create GUILD
     guild = daf.GUILD(TEST_GUILD_ID)
