@@ -19,7 +19,7 @@ TEST_GUILD_ID = 863071397207212052
 TEST_USER_ID = 145196308985020416
 TEST_CAT_CHANNEL_ID = 1036585192275582997
 TEST_CHANNEL_FORMAT = "pytest-{:02d}"
-VOICE_MESSAGE_TEST_LENGTH = 195 # Test if entire message is played
+VOICE_MESSAGE_TEST_LENGTH = 10 # Test if entire message is played
 TEST_CHANNEL_NUM = 2
 
 
@@ -102,7 +102,7 @@ async def test_voice_message_send():
     guild = daf.get_guild_user(TEST_GUILD_ID)
     voice_message = None
     try:
-        VOICE_MESSAGE_TEST_MESSAGE = daf.AUDIO("https://www.youtube.com/watch?v=dZLfasMPOU4") # 195 second countdown
+        VOICE_MESSAGE_TEST_MESSAGE = daf.AUDIO("https://www.youtube.com/watch?v=tCDvOQI3pco") # 10 second countdown
 
         await daf.initialize(token=TEST_TOKEN)
         client = daf.get_client()
