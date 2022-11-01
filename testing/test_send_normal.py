@@ -2,6 +2,7 @@ from contextlib import suppress
 from datetime import timedelta
 
 import os
+import time
 
 import pytest
 # 
@@ -18,13 +19,18 @@ TEST_GUILD_ID = 863071397207212052
 TEST_USER_ID = 145196308985020416
 TEST_CAT_CHANNEL_ID = 1036585192275582997
 TEST_CHANNEL_FORMAT = "pytest-{:02d}"
-TEST_CHANNEL_NUM = 5
+VOICE_MESSAGE_TEST_LENGTH = 195 # Test if entire message is played
+TEST_CHANNEL_NUM = 2
 
 
 @pytest.mark.asyncio
 async def test_text_message_send():
     "This tests if all the text messages succeed in their sends"
     text_channels = []
+    guild = daf.get_guild_user(TEST_GUILD_ID)
+    user = daf.get_guild_user(TEST_USER_ID)
+    text_message = None
+    direct_message = None
     try:
         TEXT_MESSAGE_TEST_MESSAGE = "Hello world", daf.discord.Embed(title="Hello world")
 
@@ -37,9 +43,6 @@ async def test_text_message_send():
         for i in range(1, TEST_CHANNEL_NUM + 1):
             text_channels.append(await dc_guild.create_text_channel(TEST_CHANNEL_FORMAT.format(i), category=dc_test_cat))
 
-        # Create GUILD
-        guild = daf.GUILD(TEST_GUILD_ID)
-        user = daf.USER(TEST_USER_ID)
 
         # Create MESSAGE objects
         text_message = daf.message.TextMESSAGE(None, timedelta(seconds=5), TEXT_MESSAGE_TEST_MESSAGE, text_channels,
@@ -49,8 +52,6 @@ async def test_text_message_send():
                                                    start_in=timedelta(0), remove_after=None)
 
         # Initialize objects
-        await guild.initialize()
-        await user.initialize()
         await guild.add_message(text_message)
         await user.add_message(direct_message)
 
@@ -85,3 +86,56 @@ async def test_text_message_send():
         for channel in text_channels:
             with suppress(daf.discord.HTTPException):
                 await channel.delete()
+
+        with suppress(ValueError):
+            if text_message is not None:
+                guild.remove_message(text_message)
+        with suppress(ValueError):
+            if direct_message is not None:
+                user.remove_message(direct_message)
+
+
+@pytest.mark.asyncio
+async def test_voice_message_send():
+    "This tests if all the voice messages succeed in their sends"
+    voice_channels = []
+    guild = daf.get_guild_user(TEST_GUILD_ID)
+    voice_message = None
+    try:
+        VOICE_MESSAGE_TEST_MESSAGE = daf.AUDIO("https://www.youtube.com/watch?v=dZLfasMPOU4") # 195 second countdown
+
+        await daf.initialize(token=TEST_TOKEN)
+        client = daf.get_client()
+        dc_guild = client.get_guild(TEST_GUILD_ID)
+        dc_test_cat = client.get_channel(TEST_CAT_CHANNEL_ID)
+
+        # Create channels
+        for i in range(1, TEST_CHANNEL_NUM + 1):
+            voice_channels.append(await dc_guild.create_voice_channel(TEST_CHANNEL_FORMAT.format(i), category=dc_test_cat))
+
+        voice_message = daf.message.VoiceMESSAGE(None, timedelta(seconds=20), VOICE_MESSAGE_TEST_MESSAGE, voice_channels,
+                                                volume=50, start_in=timedelta(), remove_after=None)
+        
+        # Initialize objects
+        guild = daf.GUILD(TEST_GUILD_ID)
+        await guild.initialize()
+        await guild.add_message(voice_message)
+
+        # Send
+        start_time = time.time()
+        result = await voice_message._send()
+        end_time = time.time()
+
+        # Check results
+        assert end_time - start_time >= VOICE_MESSAGE_TEST_LENGTH * TEST_CHANNEL_NUM, "Message was not played till the end."
+        assert len(result["channels"]["failed"]) == 0, "Failed to send to all channels"
+
+
+    finally:
+        for channel in voice_channels:
+            with suppress(daf.discord.HTTPException):
+                await channel.delete()
+        
+        with suppress(ValueError):
+            if voice_message is not None:
+                guild.remove_message(voice_message)
