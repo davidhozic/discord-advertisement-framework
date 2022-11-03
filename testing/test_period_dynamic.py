@@ -24,7 +24,6 @@ async def test_text_period(text_channels):
     guild = daf.GUILD(TEST_GUILD_ID)
     user = daf.USER(TEST_USER_ID)
     try:
-        # TODO: REMOVE :::!!!!!:::: await daf.initialize("OTM2NzM5NDMxMDczODY1Nzg5.GwFTtd.oovutNb2x3o45vOxGP4sJBrOZKmfIBMbkyEx5g")
         await daf.add_object(guild)
         await daf.add_object(user)
         
