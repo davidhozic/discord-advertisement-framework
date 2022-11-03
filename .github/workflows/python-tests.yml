@@ -1,0 +1,36 @@
+name: Run auto tests
+
+on:
+  push:
+    branches: [ "master"]
+  pull_request:
+    branches: [ "master" , "develop"]
+  workflow_dispatch:
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    strategy:
+      max-parallel: 1
+      fail-fast: false
+      matrix:
+        python-version: ["3.8", "3.10"]
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v3
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y ffmpeg
+        python -m pip install --upgrade pip
+        python -m pip install .[all]
+        python -m pip install .[testing]
+    - name: Test with pytest
+      env:
+        DISCORD_TOKEN: ${{secrets.DATT}}
+      run: |
+        pytest -v
