@@ -2,7 +2,6 @@
 Contains definitions for message classes that are text based."""
 
 
-from pickle import GLOBAL
 from typing import Any, Dict, List, Iterable, Optional, Union, Literal
 from datetime import datetime, timedelta
 from typeguard import typechecked
