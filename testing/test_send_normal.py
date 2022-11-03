@@ -7,7 +7,7 @@ import daf
 # CONFIGURATION
 TEST_GUILD_ID = 863071397207212052
 TEST_USER_ID = 145196308985020416
-VOICE_MESSAGE_TEST_LENGTH = 10 # Test if entire message is played
+VOICE_MESSAGE_TEST_LENGTH = 3 # Test if entire message is played
 
 
 @pytest.mark.asyncio
@@ -58,7 +58,7 @@ async def test_text_message_send(text_channels):
 @pytest.mark.asyncio
 async def test_voice_message_send(voice_channels):
     "This tests if all the voice messages succeed in their sends"
-    VOICE_MESSAGE_TEST_MESSAGE = daf.AUDIO("https://www.youtube.com/watch?v=tCDvOQI3pco") # 10 second countdown
+    VOICE_MESSAGE_TEST_MESSAGE = daf.AUDIO("https://www.youtube.com/watch?v=1O0yazhqaxs") # 3 second countdown
 
     guild = daf.GUILD(TEST_GUILD_ID)
     voice_message = daf.message.VoiceMESSAGE(None, timedelta(seconds=20), VOICE_MESSAGE_TEST_MESSAGE, voice_channels,

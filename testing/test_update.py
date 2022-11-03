@@ -60,7 +60,7 @@ async def test_text_message_update(text_channels):
 async def test_voice_message_update(voice_channels):
     "This tests if all the voice messages succeed in their sends"
     VOICE_MESSAGE_TEST_MESSAGE = [
-            (30, daf.AUDIO("https://www.youtube.com/watch?v=tWoo8i_VkvI")),
+            (10, daf.AUDIO("https://www.youtube.com/watch?v=4vQ8If7f374")),
             (6, daf.AUDIO(os.path.join(os.path.dirname(os.path.abspath(__file__)), "testing123.mp3")))
         ]
 

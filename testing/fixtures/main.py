@@ -9,7 +9,7 @@ TEST_TOKEN = os.environ.get("DISCORD_TOKEN")
 TEST_GUILD_ID = 863071397207212052
 TEST_CATEGORY_NAME = "RUNNING-TEST"
 TEST_TEXT_CHANNEL_NAME_FORM = "PYTEST"
-TEST_TEXT_CHANNEL_NUM = 10
+TEST_TEXT_CHANNEL_NUM = 5
 TEST_VOICE_CHANNEL_NAME_FORM = "PYTEST_VOICE"
 TEST_VOICE_CHANNEL_NUM = 2
 
@@ -22,6 +22,7 @@ def event_loop():
         loop = asyncio.new_event_loop()
     yield loop
     loop.close()
+
 
 @pytest.fixture(scope="session", autouse=True)
 def start_daf(event_loop: asyncio.AbstractEventLoop):

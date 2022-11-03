@@ -1,9 +1,4 @@
-from typing import Union
 from datetime import timedelta, datetime
-from sqlalchemy import select
-from sqlalchemy.orm import Session
-from sqlalchemy.ext.asyncio import AsyncSession
-from daf.logging.sql import MessageLOG, MessageChannelLOG
 
 import pytest
 import daf
@@ -11,7 +6,6 @@ import shutil
 import os
 import pathlib
 import json
-import sqlalchemy as sqa
 
 TEST_GUILD_ID = 863071397207212052
 TEST_USER_ID = 145196308985020416
