@@ -3,6 +3,7 @@ from datetime import timedelta
 import time
 import pytest
 import daf
+import asyncio
 
 # CONFIGURATION
 TEST_GUILD_ID = 863071397207212052
@@ -58,6 +59,7 @@ async def test_text_message_send(text_channels):
 @pytest.mark.asyncio
 async def test_voice_message_send(voice_channels):
     "This tests if all the voice messages succeed in their sends"
+    await asyncio.sleep(5) # Wait for any messages still playing
     VOICE_MESSAGE_TEST_MESSAGE = daf.AUDIO("https://www.youtube.com/watch?v=1O0yazhqaxs") # 3 second countdown
 
     guild = daf.GUILD(TEST_GUILD_ID)
