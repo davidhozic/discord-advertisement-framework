@@ -362,11 +362,10 @@ class TextMESSAGE(BaseMESSAGE):
                 if (self.mode in {"send" , "clear-send"} or # Mode dictates to send new message or delete previous and then send new message or mode dictates edit but message was  never sent to this channel before
                     self.mode == "edit" and self.sent_messages.get(channel.id, None) is None
                 ):
-                    discord_sent_msg = await channel.send(  text,
+                    self.sent_messages[channel.id] = await channel.send(  text,
                                                             embed=embed,
                                                             # Create discord.File objects here so it is catched by the except block and then logged
                                                             files=[discord.File(fwFILE.filename) for fwFILE in files])
-                    self.sent_messages[channel.id] = discord_sent_msg
                 # Mode is edit and message was already send to this channel
                 elif self.mode == "edit":
                     await self.sent_messages[channel.id].edit ( text,

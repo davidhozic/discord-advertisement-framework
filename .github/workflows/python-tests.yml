@@ -33,4 +33,4 @@ jobs:
       env:
         DISCORD_TOKEN: ${{secrets.DATT}}
       run: |
-        pytest
+        pytest -v
