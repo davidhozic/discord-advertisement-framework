@@ -51,6 +51,14 @@ class TextMESSAGE(BaseMESSAGE):
         - start_now - renamed into ``start_in`` which describes when the message should be first sent.
         - removed ``deleted`` property
 
+    .. versionchanged:: v2.3
+
+        :Slow mode period handling:
+
+            When the period is lower than the remaining time, the framework will start
+            incrementing the original period by original period until it is larger then
+            the slow mode remaining time.
+
     Parameters
     ------------
     start_period: Union[int, timedelta, None]
@@ -62,6 +70,11 @@ class TextMESSAGE(BaseMESSAGE):
     end_period: Union[int, timedelta]
         If ``start_period`` is not None, then this represents the upper limit of randomized time period in which messages will be sent.
         If ``start_period`` is None, then this represents the actual time period between each message send.
+
+        .. CAUTION::
+            When the period is lower than the remaining time, the framework will start
+            incrementing the original period by original period until it is larger then
+            the slow mode remaining time.
 
         .. code-block:: python
             :caption: **Randomized** sending period between **5** seconds and **10** seconds.
@@ -297,6 +310,11 @@ class TextMESSAGE(BaseMESSAGE):
         This method handles the error that occurred during the execution of the function.
         Returns `True` if error was handled.
 
+        Slow mode period handling:
+        When the period is lower than the remaining time, the framework will start
+        incrementing the original period by original period until it is larger then
+        the slow mode remaining time.
+
         Parameters
         -----------
         channel: Union[discord.TextChannel, discord.Thread]
@@ -311,6 +329,12 @@ class TextMESSAGE(BaseMESSAGE):
                 if ex.code == 20016:    # Slow Mode
                     self.next_send_time = datetime.now() + timedelta(seconds=retry_after)
                     trace(f"{channel.name} is in slow mode, retrying in {retry_after} seconds", TraceLEVELS.WARNING)
+                    
+                    # The period is too low which would cause hitting slow mode repeatedly
+                    original_per = self.period
+                    while self.period.total_seconds() < retry_after:
+                        self.period += original_per
+
             elif ex.status == 404:      # Unknown object
                 if ex.code == 10008:    # Unknown message
                     self.sent_messages[channel.id] = None

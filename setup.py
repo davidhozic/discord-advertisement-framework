@@ -37,7 +37,8 @@ if gh_release is not None:
 elif readthedocs_release is not None:
     version = readthedocs_release
 else:
-    version = datetime.now().isoformat(sep=' ') # Use date if building manually
+    with os.popen("git rev-list --count HEAD") as command:
+        version = f"v{command.read()}".strip()
 
 
 __metadata__ = \
