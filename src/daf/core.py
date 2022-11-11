@@ -317,6 +317,7 @@ async def shutdown(loop: Optional[asyncio.AbstractEventLoop]=None) -> None:
     
     loop.stop()
 
+
 def _shutdown_clean(loop: asyncio.AbstractEventLoop) -> None:
     """
     Fully stops all the tasks and then closes the event loop
@@ -336,7 +337,6 @@ def _shutdown_clean(loop: asyncio.AbstractEventLoop) -> None:
 
     loop.run_until_complete(asyncio.gather(*tasks, return_exceptions=True))
     loop.run_until_complete(asyncio.sleep(EVENT_LOOP_CLOSE_DELAY)) # Yield for one second to allow aiohttp cleanup
-    loop.close()
 
 
 @misc.doc_category("Getters")
@@ -433,3 +433,5 @@ def run(token : str,
         trace("Received a cancellation event. Stopping..", TraceLEVELS.WARNING)
     finally:
         _shutdown_clean(loop)
+        asyncio.set_event_loop(None)
+        loop.close()

@@ -1,4 +1,4 @@
-name: Run auto tests
+name: Self-Test
 
 on:
   push:
@@ -15,13 +15,16 @@ jobs:
       fail-fast: false
       matrix:
         python-version: ["3.8", "3.10"]
-
     steps:
     - uses: actions/checkout@v3
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v3
       with:
         python-version: ${{ matrix.python-version }}
+    - name: Disable initramfs update
+      run: sudo sed -i 's/yes/no/g' /etc/initramfs-tools/update-initramfs.conf
+    - name: Disable man-db update
+      run: sudo rm -f /var/lib/man-db/auto-update
     - name: Install dependencies
       run: |
         sudo apt update
@@ -29,8 +32,16 @@ jobs:
         python -m pip install --upgrade pip
         python -m pip install .[all]
         python -m pip install .[testing]
-    - name: Test with pytest
+    - name: Test version compatibility
       env:
         DISCORD_TOKEN: ${{secrets.DATT}}
+      if: ${{ matrix.python-version != 3.8 }}
+      run: |
+        pytest -v testing/test_period_dynamic.py  
+    - name: Test all
+      env:
+        DISCORD_TOKEN: ${{secrets.DATT}}
+      if: ${{ matrix.python-version == 3.8 }}
       run: |
         pytest -v
+      

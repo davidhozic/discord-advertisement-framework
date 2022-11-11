@@ -1,4 +1,3 @@
-from datetime import datetime
 import os
 import setuptools
 import json
@@ -37,7 +36,7 @@ if gh_release is not None:
 elif readthedocs_release is not None:
     version = readthedocs_release
 else:
-    version = datetime.now().isoformat(sep=' ') # Use date if building manually
+    version = "v0.0.1"
 
 
 __metadata__ = \

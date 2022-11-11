@@ -28,8 +28,7 @@ if gh_release is not None:
 elif readthedocs_release is not None:
     version = readthedocs_release
 else:
-    with open("../../version.txt", "r", encoding="utf-8") as rf:
-        version = rf.read().strip()
+    version = "v0.0.1"
 
 
 # -- General configuration ---------------------------------------------------
