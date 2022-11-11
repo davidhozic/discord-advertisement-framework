@@ -1,4 +1,4 @@
-name: Run auto tests
+name: Self-Test
 
 on:
   push:
@@ -32,5 +32,9 @@ jobs:
     - name: Test with pytest
       env:
         DISCORD_TOKEN: ${{secrets.DATT}}
-      run: |
-        pytest -v
+      - if: ${{ matrix.python-version }} == 3.8
+        run: |
+          pytest -v
+      - if: ${{ matrix.python-version }} != 3.8
+        run: |
+          pytest -v testing/test_period_dynamic.py
