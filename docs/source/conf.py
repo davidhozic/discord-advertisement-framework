@@ -28,8 +28,7 @@ if gh_release is not None:
 elif readthedocs_release is not None:
     version = readthedocs_release
 else:
-    with os.popen("git rev-list --count HEAD") as command:
-        version = f"v{command.read()}".strip()
+    version = "v0.0.1"
 
 
 # -- General configuration ---------------------------------------------------
