@@ -32,9 +32,9 @@ jobs:
     - name: Test with PyTest
       env:
         DISCORD_TOKEN: ${{secrets.DATT}}
-        run: |
-          pytest -v
-        if: ${{ matrix.python-version }} == 3.8
-        run: |
-          pytest -v testing/test_period_dynamic.py
-        if: ${{ matrix.python-version }} != 3.8
+      run: |
+        pytest -v
+      if: ${{ matrix.python-version }} == 3.8
+      run: |
+        pytest -v testing/test_period_dynamic.py
+      if: ${{ matrix.python-version }} != 3.8
