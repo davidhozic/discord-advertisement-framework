@@ -97,11 +97,11 @@ class BaseMESSAGE:
 
         # Deprecated int since v2.1
         if isinstance(start_period, int):
-            trace("Using int on start_period is deprecated, use timedelta object instead.", TraceLEVELS.WARNING)
+            trace("Using int on start_period is deprecated, use timedelta object instead.", TraceLEVELS.DEPRECATED)
             start_period = timedelta(seconds=start_period)
 
         if isinstance(end_period, int):
-            trace("Using int on end_period is deprecated, use timedelta object instead.", TraceLEVELS.WARNING)
+            trace("Using int on end_period is deprecated, use timedelta object instead.", TraceLEVELS.DEPRECATED)
             end_period = timedelta(seconds=end_period)
                 
         # Clamp periods to minimum level (prevent infinite loops)
@@ -112,7 +112,7 @@ class BaseMESSAGE:
         # Deprecated bool since v2.1
         if isinstance(start_in, bool): 
             self.next_send_time = datetime.now() if start_in else datetime.now() + self.end_period
-            trace("Using bool value for 'start_in' ('start_now') parameter is deprecated. Use timedelta object instead.", TraceLEVELS.WARNING)
+            trace("Using bool value for 'start_in' ('start_now') parameter is deprecated. Use timedelta object instead.", TraceLEVELS.DEPRECATED)
         else:
             self.next_send_time = datetime.now() + start_in
 
