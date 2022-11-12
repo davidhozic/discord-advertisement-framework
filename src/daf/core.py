@@ -3,6 +3,7 @@
     and functions needed for the framework to run,
     as well as user function to control the framework
 """
+from __future__ import annotations
 from typing import Callable, Coroutine, List, Optional, Union, overload
 from typeguard import typechecked
 
@@ -74,7 +75,7 @@ async def initialize(token : str,
                      server_log_output : Optional[str] =None,
                      sql_manager: Optional[sql.LoggerSQL]=None,
                      intents: Optional[dc.Intents]=None,
-                     debug : Optional[bool]=True,
+                     debug : Optional[ TraceLEVELS | int | str | bool ] = TraceLEVELS.NORMAL,
                      proxy: Optional[str]=None,
                      logger: Optional[logging.LoggerBASE]=None) -> None:
     """
@@ -89,6 +90,11 @@ async def initialize(token : str,
         Parameters are the same as in :func:`daf.core.run`.
     """
     loop = asyncio.get_event_loop()
+    
+    if isinstance(debug, bool):
+        trace("Using bool for debug parameter is DEPRECATED. Use daf.logging.TraceLEVELS", TraceLEVELS.DEPRECATED)
+        debug = TraceLEVELS.NORMAL if debug else TraceLEVELS.DEPRECATED
+    
     tracing.initialize(debug) # Print trace messages to the console for debugging purposes
     
     if intents is None: # Sphinx doesn't like if this is directly in the declaration
@@ -103,7 +109,7 @@ async def initialize(token : str,
     if server_log_output is not None:
         if logger is None:
             trace("DEPRECATED! Using this parameter is deprecated and scheduled for removal\nIt is implicitly converted to logger=LoggerJSON(path=\"History\")",
-                  TraceLEVELS.WARNING)
+                  TraceLEVELS.DEPRECATED)
             logger = logging.LoggerJSON(path=server_log_output)
         else:
             trace("logger parameter was passed, ignoring server_log_output", TraceLEVELS.WARNING)
@@ -111,7 +117,7 @@ async def initialize(token : str,
     if sql_manager is not None:
         if logger is None:
             trace("DEPRECATED! Using this parameter is deprecated and scheduled for removal\nIt is implicitly converted to logger=LoggerSQL(...)",
-                  TraceLEVELS.WARNING)
+                  TraceLEVELS.DEPRECATED)
             logger = sql_manager
         else:
             trace("logger parameter was passed, ignoring sql_manager", TraceLEVELS.WARNING)
@@ -361,7 +367,7 @@ def run(token : str,
         server_log_output : Optional[str] =None,
         sql_manager: Optional[sql.LoggerSQL]=None,
         intents: Optional[dc.Intents]=None,
-        debug : Optional[bool]=True,
+        debug : Optional[ TraceLEVELS | int | str | bool ] = TraceLEVELS.NORMAL,
         proxy: Optional[str]=None,
         logger: Optional[logging.LoggerBASE]=None) -> None:
     """
@@ -407,8 +413,13 @@ def run(token : str,
         SQL manager object that will save logs into the database.
     intents: Optional[discord.Intents]
         Discord Intents object (represents settings to which events it will be listened to).
-    debug: Optional[bool]
-        Print trace message to the console, useful for debugging.
+    debug : Optional[TraceLEVELS | int | str] = TraceLEVELS.NORMAL
+        .. versionchanged:: v2.3
+            Deprecate use of bool (assume TraceLEVELS.NORMAL).
+            Add support for TraceLEVELS or int or str that converts to TraceLEVELS.
+
+        The level of trace for trace function to display.
+        The higher value this option is, the more will be displayed.
     proxy: Optional[str]
         URL of a proxy you want the framework to use.
     logger: Optional[loggers.LoggerBASE]

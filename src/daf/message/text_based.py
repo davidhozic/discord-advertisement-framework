@@ -311,7 +311,7 @@ class TextMESSAGE(BaseMESSAGE):
                 channel = self.channels[ch_i] = cl.get_channel(channel_id)
 
             if channel is None:
-                trace(f"Unable to get channel from ID {channel_id}", TraceLEVELS.ERROR)
+                trace(f"Unable to get channel from ID {channel_id}", TraceLEVELS.WARNING)
                 self.channels.remove(channel)
             elif type(channel) not in {discord.TextChannel, discord.Thread}:
                 raise TypeError(f"TextMESSAGE object received channel type of {type(channel).__name__}, but was expecting discord.TextChannel or discord.Thread")

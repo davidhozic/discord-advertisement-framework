@@ -199,7 +199,7 @@ class EMBED(discord.Embed):
                 timestamp: datetime.datetime = None):
 
         trace("[EMBED:] DEPRECATED! Using EMBED is deprecated since v2.2, please use discord.Embed:\
-            \n\nfrom daf import discord\n\ndiscord.Embed(...)", TraceLEVELS.WARNING, True)
+            \n\nfrom daf import discord\n\ndiscord.Embed(...)", TraceLEVELS.DEPRECATED)
         super().__init__(colour=colour,
                          color=color,
                          title=title,
