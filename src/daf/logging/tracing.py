@@ -7,14 +7,17 @@ from enum import IntEnum, auto
 import time
 from threading import Lock
 from .. import misc
-import enum_tools
+try:
+    from enum_tools.documentation import document_enum
+except ImportError:
+    document_enum = lambda x: x # This is only needed for documentation
 
 __all__ = (
     "TraceLEVELS",
     "trace"
 )
 
-@enum_tools.documentation.document_enum
+@document_enum
 @misc.doc_category("Tracing")
 class TraceLEVELS(IntEnum):
     """
