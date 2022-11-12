@@ -163,6 +163,24 @@ class TextMESSAGE(BaseMESSAGE):
                     reason.code in {50007, 10003}):     # Not Forbidden, but bad error codes
                     self.channels.remove(channel)
 
+    def _check_period(self, slowmode_delay: timedelta):
+        """
+        Helper function used for checking the the period is lower
+        than the slow mode delay.
+
+        .. versionadded:: v2.3
+
+        Parameters
+        --------------
+        slowmode_delay: timedelta
+            The (maximum) slowmode delay.
+        """
+        if self.start_period is not None:
+            if self.start_period < slowmode_delay:
+                    self.start_period, self.end_period = slowmode_delay, slowmode_delay + self.end_period - self.start_period
+        elif self.end_period < slowmode_delay:
+            self.end_period = slowmode_delay
+
     def generate_log_context(self,
                              text: Optional[str],
                              embed: Union[discord.Embed, EMBED],
@@ -305,6 +323,10 @@ class TextMESSAGE(BaseMESSAGE):
         if not len(self.channels):
             raise ValueError(f"No valid channels were passed to {self} object")
 
+        # Increase period to slow mode delay if it is lower
+        slowmode_delay = timedelta(seconds=max(channel.slowmode_delay for channel in self.channels))
+        self._check_period(slowmode_delay)
+    
     async def _handle_error(self, channel: Union[discord.TextChannel, discord.Thread], ex: Exception) -> bool:
         """
         This method handles the error that occurred during the execution of the function.
@@ -329,11 +351,8 @@ class TextMESSAGE(BaseMESSAGE):
                 if ex.code == 20016:    # Slow Mode
                     self.next_send_time = datetime.now() + timedelta(seconds=retry_after)
                     trace(f"{channel.name} is in slow mode, retrying in {retry_after} seconds", TraceLEVELS.WARNING)
-                    
-                    # The period is too low which would cause hitting slow mode repeatedly
-                    original_per = self.period
-                    while self.period.total_seconds() < retry_after:
-                        self.period += original_per
+                    slowmode_delay = timedelta(seconds=channel.slowmode_delay)
+                    self._check_period(slowmode_delay) # Fix the period
 
             elif ex.status == 404:      # Unknown object
                 if ex.code == 10008:    # Unknown message
