@@ -1,7 +1,6 @@
 """
 Contains definitions for message classes that are text based."""
 
-
 from typing import Any, Dict, List, Iterable, Optional, Union, Literal
 from datetime import datetime, timedelta
 from typeguard import typechecked
@@ -28,6 +27,9 @@ __all__ = (
 # ---------------------------
 RLIM_USER_WAIT_TIME = 20
 
+# Type aliases
+# ---------------------------
+TMDataType = Union[str, EMBED, discord.Embed, FILE, Iterable[Union[str, EMBED, discord.Embed, FILE]], _FunctionBaseCLASS]
 
 # Register message modes
 sql.register_type("MessageMODE", "send")(None)
@@ -128,7 +130,7 @@ class TextMESSAGE(BaseMESSAGE):
     def __init__(self, 
                  start_period: Union[int, timedelta, None],
                  end_period: Union[int, timedelta],
-                 data: Union[str, EMBED, discord.Embed, FILE, Iterable[Union[str, EMBED, discord.Embed, FILE]], _FunctionBaseCLASS],
+                 data: TMDataType,
                  channels: Iterable[Union[int, discord.TextChannel, discord.Thread]],
                  mode: Literal["send", "edit", "clear-send"] = "send",
                  start_in: Union[timedelta, bool]=timedelta(seconds=0),
@@ -261,12 +263,15 @@ class TextMESSAGE(BaseMESSAGE):
             "mode" : self.mode,
         }
 
-    def _get_data(self) -> dict:
+    async def _get_data(self) -> dict:
         """"
         Returns a dictionary of keyword arguments that is then expanded
-        into other methods eg. `_send_channel, _generate_log`
+        into other methods eg. `_send_channel, _generate_log`.
+
+        .. versionchanged:: v2.3
+            Turned async.
         """
-        data = self.data.get_data() if isinstance(self.data, _FunctionBaseCLASS) else self.data
+        data = await super()._get_data()
         _data_to_send = {"embed": None, "text": None, "files": []}
         if data is not None:
             if not isinstance(data, (list, tuple, set)):
@@ -433,7 +438,7 @@ class TextMESSAGE(BaseMESSAGE):
             This is then passed to :ref:`GUILD`._generate_log method.
         """
         # Acquire mutex to prevent update method from writing while sending
-        data_to_send = self._get_data()
+        data_to_send = await self._get_data()
         if any(data_to_send.values()):
             errored_channels = []
             succeeded_channels= []
@@ -563,7 +568,7 @@ class DirectMESSAGE(BaseMESSAGE):
     def __init__(self,
                  start_period: Union[int, timedelta, None],
                  end_period: Union[int, timedelta],
-                 data: Union[str, EMBED, discord.Embed, FILE, Iterable[Union[str, EMBED, discord.Embed, FILE]], _FunctionBaseCLASS],
+                 data: TMDataType,
                  mode: Literal["send", "edit", "clear-send"] = "send",
                  start_in: Union[timedelta, bool] = timedelta(seconds=0),
                  remove_after: Optional[Union[int, timedelta, datetime]]=None):
@@ -637,13 +642,28 @@ class DirectMESSAGE(BaseMESSAGE):
             "mode" : self.mode
         }
 
-    def _get_data(self) -> dict:
+    async def _get_data(self) -> dict:
         """
         Returns a dictionary of keyword arguments that is then expanded
         into other functions (_send_channel, _generate_log).
-        This is exactly the same as in :ref:`TextMESSAGE`
+        This is exactly the same as in :ref:`TextMESSAGE`.
+
+        .. versionchanged:: v2.3
+            Turned async.
         """
-        return TextMESSAGE._get_data(self)
+        data = await super()._get_data()
+        _data_to_send = {"embed": None, "text": None, "files": []}
+        if data is not None:
+            if not isinstance(data, (list, tuple, set)):
+                data = (data,)
+            for element in data:
+                if isinstance(element, str):
+                    _data_to_send["text"] = element
+                elif isinstance(element, (EMBED, discord.Embed)):
+                    _data_to_send["embed"] = element
+                elif isinstance(element, FILE):
+                    _data_to_send["files"].append(element)
+        return _data_to_send
 
     async def initialize(self, parent: Any):
         """
@@ -754,7 +774,7 @@ class DirectMESSAGE(BaseMESSAGE):
             This is then passed to :ref:`GUILD`._generate_log method.
         """
         # Parse data from the data parameter
-        data_to_send = self._get_data()
+        data_to_send = await self._get_data()
         if any(data_to_send.values()):            
             context = await self._send_channel(**data_to_send)
             self._update_state()

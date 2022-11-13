@@ -111,7 +111,7 @@ class VoiceMESSAGE(BaseMESSAGE):
     def __init__(self,
                  start_period: Union[int, timedelta, None],
                  end_period: Union[int, timedelta],
-                 data: Union[AUDIO, _FunctionBaseCLASS],
+                 data: Union[AUDIO, Iterable[AUDIO], _FunctionBaseCLASS],
                  channels: Iterable[Union[int, discord.VoiceChannel]],
                  volume: int=50,
                  start_in: Union[timedelta, bool]=timedelta(seconds=0),
@@ -207,14 +207,17 @@ class VoiceMESSAGE(BaseMESSAGE):
             "type" : type(self).__name__
         }
 
-    def _get_data(self) -> dict:
+    async def _get_data(self) -> dict:
         """"
         Returns a dictionary of keyword arguments that is then expanded
         into other methods eg. `_send_channel, _generate_log`
+        
+        .. versionchanged:: v2.3
+            Turned async.
         """
         data = None
         _data_to_send = {}
-        data = self.data.get_data() if isinstance(self.data, _FunctionBaseCLASS) else self.data
+        data = await super()._get_data()
         if data is not None:
             if not isinstance(data, (list, tuple, set)):
                 data = (data,)
@@ -327,7 +330,7 @@ class VoiceMESSAGE(BaseMESSAGE):
 
             This is then passed to :ref:`GUILD`._generate_log method.
         """
-        _data_to_send = self._get_data()
+        _data_to_send = await self._get_data()
         if any(_data_to_send.values()):
             errored_channels = []
             succeeded_channels= []

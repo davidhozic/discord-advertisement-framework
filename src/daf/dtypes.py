@@ -2,7 +2,7 @@
     The module contains definitions regarding the data types
     you can send using the xxxMESSAGE objects.
 """
-from typing import Any, Callable, List, Union, TypeVar
+from typing import Any, Callable, List, Union, TypeVar, Coroutine
 from contextlib import suppress
 from typeguard import typechecked
 from urllib.parse import urlparse
@@ -93,6 +93,7 @@ def data_function(fnc: Callable):
         :language: python
         :emphasize-lines: 11, 24
     """
+
     class FunctionCLASS(_FunctionBaseCLASS):
         """
         Used for creating special classes that are then used to create objects in the daf.MESSAGE
@@ -116,11 +117,14 @@ def data_function(fnc: Callable):
             self.kwargs = kwargs
             self.func_name = fnc.__name__
 
-        def get_data(self):
+        async def retrieve(self):
             """
             Retrieves the data from the user function.
             """
-            return fnc(*self.args, **self.kwargs)
+            _ = fnc(*self.args, **self.kwargs)
+            if isinstance(_, Coroutine):
+                return await _
+            return _
         
         def __str__(self) -> str:
             return self.func_name
