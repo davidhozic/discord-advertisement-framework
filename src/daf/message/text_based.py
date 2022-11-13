@@ -1,7 +1,6 @@
 """
 Contains definitions for message classes that are text based."""
 
-from __future__ import annotations
 from typing import Any, Dict, List, Iterable, Optional, Union, Literal
 from datetime import datetime, timedelta
 from typeguard import typechecked
@@ -30,7 +29,7 @@ RLIM_USER_WAIT_TIME = 20
 
 # Type aliases
 # ---------------------------
-TMDataType = str | EMBED | discord.Embed | FILE | Iterable[str | EMBED | discord.Embed | FILE] | _FunctionBaseCLASS
+TMDataType = Union[str, EMBED, discord.Embed, FILE, Iterable[Union[str, EMBED, discord.Embed, FILE]], _FunctionBaseCLASS]
 
 # Register message modes
 sql.register_type("MessageMODE", "send")(None)
