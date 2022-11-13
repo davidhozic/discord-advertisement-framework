@@ -32,13 +32,19 @@ async def test_text_period(text_channels):
             item = items.pop(0)
             items.append(item)
             return item
+
+        @daf.data_function
+        async def dynamic_getter_async(items: list):
+            item = items.pop(0)
+            items.append(item)
+            return item
             
         data_ = [
             "Hello world", daf.discord.Embed(title="Hello world"),
             "Goodbye world", daf.discord.Embed(title="Goodbye world"),
         ]
         TEXT_MESSAGE_TEST_MESSAGE = dynamic_getter(data_.copy())
-        DIRECT_MESSAGE_TEST_MESSAGE = dynamic_getter(data_.copy())
+        DIRECT_MESSAGE_TEST_MESSAGE = dynamic_getter_async(data_.copy())
 
         await asyncio.sleep(10) # Clears rate limit
         client = daf.get_client()

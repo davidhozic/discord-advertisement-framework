@@ -52,7 +52,7 @@ class TraceLEVELS(IntEnum):
 
 
 class GLOBALS:
-    """Storage class used for storing global varibales of the module."""
+    """Storage class used for storing global variables of the module."""
     set_level = TraceLEVELS.DEPRECATED
     lock = Lock() # For print thread safety
 

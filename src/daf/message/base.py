@@ -66,7 +66,8 @@ class BaseMESSAGE:
         "start_period",
         "end_period",
         "next_send_time",
-        "data",
+        "_data",
+        "_fbcdata",
         "update_semaphore",
         "parent",
         "remove_after",
@@ -119,13 +120,14 @@ class BaseMESSAGE:
         self.parent = None # The xGUILD object this message is in (needed for update method).
         self.remove_after = remove_after # Remove the message from the list after this
         self._created_at = datetime.now()
-        self.data = data
+        self._data = data
+        self._fbcdata = isinstance(data, _FunctionBaseCLASS)
         # Attributes created with this function will not be re-referenced to a different object
         # if the function is called again, ensuring safety (.update_method)
         misc._write_attr_once(self, "update_semaphore", asyncio.Semaphore(1))
 
     def __repr__(self) -> str:
-        return f"{type(self).__name__}(data={self.data})"
+        return f"{type(self).__name__}(data={self._data})"
 
     @property
     def created_at(self) -> datetime:
@@ -194,13 +196,19 @@ class BaseMESSAGE:
         """
         raise NotImplementedError
 
-    def _get_data(self) -> dict:
+    async def _get_data(self) -> dict:
         """
         Returns a dictionary of keyword arguments that is then expanded
         into other functions (_send_channel, _generate_log)
-        This is to be implemented in inherited classes due to different data_types
+        This is to be additionally implemented in inherited classes due to different data_types
+
+        .. versionchanged:: v2.3
+            Turned async.
         """
-        raise NotImplementedError
+        if self._fbcdata:
+            return await self._data.retrieve()
+
+        return self._data
 
     def _handle_error(self) -> bool:
         """
