@@ -32,9 +32,9 @@ RLIM_USER_WAIT_TIME = 20
 TMDataType = Union[str, EMBED, discord.Embed, FILE, Iterable[Union[str, EMBED, discord.Embed, FILE]], _FunctionBaseCLASS]
 
 # Register message modes
-sql.register_type("MessageMODE", "send")(None)
-sql.register_type("MessageMODE", "edit")(None)
-sql.register_type("MessageMODE", "clear-send")(None)
+sql.register_type("MessageMODE", "send")
+sql.register_type("MessageMODE", "edit")
+sql.register_type("MessageMODE", "clear-send")
 
 @misc.doc_category("Messages", path="message")
 @sql.register_type("MessageTYPE")

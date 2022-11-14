@@ -102,6 +102,9 @@ def register_type(lookuptable: Literal["GuildTYPE", "MessageTYPE", "MessageMODE"
         
         return cls
     
+    if name_override is not None:
+        return decorator_register_type(object)
+
     return decorator_register_type
 
 
