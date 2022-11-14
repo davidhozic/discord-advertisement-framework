@@ -124,7 +124,6 @@ class TextMESSAGE(BaseMESSAGE):
         "mode",
         "sent_messages",
     )
-    __logname__: str = "TextMESSAGE"               # Used for registering SQL types and to get the message type for saving the log
 
     @typechecked
     def __init__(self, 
@@ -562,7 +561,6 @@ class DirectMESSAGE(BaseMESSAGE):
         "previous_message",
         "dm_channel",
     )
-    __logname__ = "DirectMESSAGE"               # Used for logging (type key) and sql lookup table type registration
 
     @typechecked
     def __init__(self,

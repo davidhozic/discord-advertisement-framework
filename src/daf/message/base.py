@@ -74,8 +74,6 @@ class BaseMESSAGE:
         "_created_at"
     )
 
-    __logname__: str = "" # Used for registering SQL types and to get the message type for saving the log
-
     @typechecked
     def __init__(self,
                 start_period: Optional[Union[int, timedelta]],

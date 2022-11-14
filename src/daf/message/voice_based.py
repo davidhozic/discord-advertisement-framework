@@ -105,8 +105,6 @@ class VoiceMESSAGE(BaseMESSAGE):
         "channels",
     )
 
-    __logname__ = "VoiceMESSAGE"    # For sql.register_type
-
     @typechecked
     def __init__(self,
                  start_period: Union[int, timedelta, None],
