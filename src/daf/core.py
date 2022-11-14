@@ -15,6 +15,7 @@ from . import guild
 from . import client
 from . import misc
 from . import message
+from . import gen
 
 import asyncio
 import _discord as dc
@@ -44,7 +45,9 @@ class GLOBALS:
     """
     Storage class used for holding global variables.
     """
-    server_list: List[guild._BaseGUILD] = []
+    server_list: List[guild._BaseGUILD, gen.AutoGUILD] = [] # Guild/User objects 
+    awaiting_removal: List[guild._BaseGUILD, gen.AutoGUILD] = [] # Guild/User objects 
+    awaiting_addition: List[guild._BaseGUILD, gen.AutoGUILD] = [] # Guild/User objects 
 
 
 #######################################################################
@@ -63,7 +66,26 @@ async def _advertiser(message_type: guild.AdvertiseTaskType) -> None:
     """
     while True:
         await asyncio.sleep(C_TASK_SLEEP_DELAY)
-        for guild_user in GLOBALS.server_list[:]: # Shallow copy list to allow dynamic removal and addition of objects
+        
+        # TODO: This will not work due to 2 tasks, find a better solution.
+        #       This also doesn't work with AutoGUILD and GUILD added at the same time (__eq__ method).
+
+        # Add new objects that were added
+        GLOBALS.server_list.extend(GLOBALS.awaiting_addition)
+        GLOBALS.awaiting_addition.clear()
+
+        # Remove objects that were removed
+        for o in GLOBALS.awaiting_removal:
+            GLOBALS.server_list.remove(o)
+        
+        GLOBALS.awaiting_removal.clear()
+
+        for guild_user in GLOBALS.server_list:
+            # Remove guild
+            if guild_user._check_state():
+                trace(f"[GUILD:] Removing {guild_user}")
+                remove_object(guild_user)
+
             await guild_user._advertise(message_type)
 
 
@@ -206,6 +228,25 @@ async def add_object(obj: Union[message.DirectMESSAGE, message.TextMESSAGE, mess
         Raised in the obj.add_message() method
     """
     ...
+@overload
+@misc.doc_category("Shilling list modification", True)
+async def add_object(obj: gen.AutoGUILD) -> None:
+    """
+    Adds a AutoGUILD to the shilling list.
+
+    Parameters
+    -----------
+    obj: daf.gen.AutoGUILD
+        AutoGUILD object that automatically finds guilds to shill in.
+
+    Raises
+    ----------
+    TypeError
+        The object provided is not supported for addition.
+    Other
+        From :py:meth`~daf.gen.AutoGUILD.initialize` method.
+    """
+    ...
 
 async def add_object(obj, snowflake=None):
     object_type_name = type(obj).__name__
@@ -217,11 +258,15 @@ async def add_object(obj, snowflake=None):
 
     # Add the object
     if isinstance(obj, guild._BaseGUILD):
-        if obj in GLOBALS.server_list:
+        if obj in GLOBALS.server_list + GLOBALS.awaiting_addition:
             raise ValueError(f"{object_type_name} with snowflake `{obj.snowflake}` is already added to the daf.")
 
         await obj.initialize()
-        GLOBALS.server_list.append(obj)
+        GLOBALS.awaiting_addition.append(obj)
+
+    elif isinstance(obj, gen.AutoGUILD):
+        await obj.initialize()
+        GLOBALS.awaiting_addition.append(obj)
 
     elif isinstance(obj, message.BaseMESSAGE):
         if snowflake is None:
@@ -239,15 +284,15 @@ async def add_object(obj, snowflake=None):
 
 
 @misc.doc_category("Shilling list modification")
-def remove_object(snowflake: Union[int, dc.Object, dc.Guild, dc.User, dc.Object, guild._BaseGUILD, message.BaseMESSAGE]) -> None:
+def remove_object(snowflake: Union[int, dc.Object, dc.Guild, dc.User, dc.Object, guild._BaseGUILD, message.BaseMESSAGE, gen.AutoGUILD]) -> None:
     """
     Removes an object from the daf.
 
     Parameters
     -------------
-    snowflake: Union[int, discord.Object, discord.Guild, discord.User, discord.Object, guild.GUILD, guild.USER , message.TextMESSAGE, message.VoiceMESSAGE, message.DirectMESSAGE]
+    snowflake: Union[int, dc.Object, dc.Guild, dc.User, dc.Object, guild._BaseGUILD, message.BaseMESSAGE, gen.AutoGUILD]
         The GUILD/USER object to remove/snowflake of GUILD/USER
-        or a xMESSAGE object
+        or a xMESSAGE object or AutoGUILD object.
 
     Raises
     --------------
@@ -260,16 +305,16 @@ def remove_object(snowflake: Union[int, dc.Object, dc.Guild, dc.User, dc.Object,
             if snowflake in _guild.messages:
                 _guild.remove_message(snowflake)
                 break
-
-        return
-
-    if not isinstance(snowflake, guild._BaseGUILD):
-        snowflake = get_guild_user(snowflake)
-
-    if snowflake is not None and snowflake in GLOBALS.server_list:
-        GLOBALS.server_list.remove(snowflake)
+    elif isinstance(snowflake, gen.AutoGUILD):
+        GLOBALS.awaiting_removal.append(snowflake)
     else:
-        raise DAFNotFoundError(f"GUILD/USER not in the shilling list.", DAF_SNOWFLAKE_NOT_FOUND)
+        if not isinstance(snowflake, guild._BaseGUILD):
+            snowflake = get_guild_user(snowflake)
+
+        if snowflake is not None and snowflake in GLOBALS.server_list + GLOBALS.awaiting_removal:
+            GLOBALS.awaiting_removal.remove(snowflake)
+        else:
+            raise DAFNotFoundError(f"GUILD/USER not in the shilling list.", DAF_SNOWFLAKE_NOT_FOUND)
 
 
 @misc.doc_category("Getters")

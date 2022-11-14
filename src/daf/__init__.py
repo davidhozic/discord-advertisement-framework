@@ -11,6 +11,7 @@ from .guild import *
 from .message import *
 from .logging import *
 from .exceptions import *
+from .gen import *
 
 from .misc import DOCUMENTATION_MODE
 if DOCUMENTATION_MODE:

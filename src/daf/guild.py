@@ -229,12 +229,6 @@ class _BaseGUILD:
         mode: AdvertiseTaskType
             Tells which task called this method (there is one task for textual messages and one for voice like messages).
         """
-        # Check if the guild has expired and check if the guild is in the list (could not be due to asynchronous operations)
-        if self._check_state() and self in core.get_shill_list():
-            trace(f"[GUILD:] Removing {self}")
-            core.remove_object(self)
-            return
-
         msg_list = self.message_dict[mode]
         for message in msg_list[:]: # Copy the avoid issues with the list being modified while iterating (add_message/remove_message)
             # Message removal             Check due to asynchronous operations
