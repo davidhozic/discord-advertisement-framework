@@ -1,7 +1,8 @@
 """
     Contains base definitions for different message classes."""
 
-from typing import Any, Iterable, Union, TypeVar, Optional
+from contextlib import suppress
+from typing import Any, Set, List, Iterable, Union, TypeVar, Optional
 from datetime import timedelta, datetime
 from typeguard import check_type, typechecked
 
@@ -11,19 +12,21 @@ from ..timing import *
 from .. import misc
 
 import random
+import re
 import asyncio
-
+import _discord as discord
 
 __all__ = (
     "BaseMESSAGE",
+    "AutoCHANNEL",
 )
 
 T = TypeVar("T")
+ChannelType = Union[discord.TextChannel, discord.VoiceChannel]
 
 # Configuration
 # ----------------------
 C_PERIOD_MINIMUM_SEC = 1 # Minimal seconds the period can be
-
 
 class BaseMESSAGE:
     """
@@ -283,3 +286,129 @@ class BaseMESSAGE:
         """
 
         raise NotImplementedError
+
+
+class AutoCHANNEL:
+    """
+    .. versionadded:: v2.3
+
+    TODO: Implement task cleanup mechanism when guild is removed -> messages are _delete -> AutoCHANNEL._delete
+
+    Class for automatic channel loop up,
+    based on the given guild.
+
+    The class to the xMESSAGE objects acts like a normal list.
+
+    Parameters
+    --------------
+    include_pattern: str
+        Regex pattern to match for the channel to be considered.
+    exclude_pattern: str
+        Regex pattern to match for the channel to be excluded
+        from the consideration.
+    interval: Optional[timedelta] = timedelta(minutes=5) 
+        Interval at which to scan for new channels.
+    """
+
+    __slots__ = (
+        "include_pattern",
+        "exclude_pattern",
+        "interval",
+        "running",
+        "parent",
+        "cache",
+        "channel_getter",
+        "_safe_iter_sem"
+    )
+    def __init__(self,
+                 include_pattern: str,
+                 exclude_pattern: Optional[str] = None,
+                 interval: Optional[timedelta] = timedelta(minutes=5)) -> None:
+        self.include_pattern = include_pattern
+        self.exclude_pattern = exclude_pattern
+        self.interval = interval.total_seconds()
+        self.running = False
+        self.parent = None
+        self.channel_getter: property = None
+        self.cache: Set[ChannelType] = set()
+        self._safe_iter_sem = asyncio.Semaphore(1) # For safe iteration without needing to copy cache
+
+    def __del__(self):
+        "Garbage collection"
+        self._delete()
+    
+    def _delete(self):
+        "Sets running flag to False for the task to exit"
+        self.running = False
+
+    def __iter__(self):
+        "Returns the channel iterator."
+        return iter(self.channels)
+    
+    def __len__(self) -> int:
+        "Forwards call to the cache"
+        return len(self.cache)
+
+    def __bool__(self) -> bool:
+        "Forwards call to the cache"
+        return bool(self.cache)
+
+    @property
+    def channels(self) -> List[ChannelType]:
+        """
+        Returns channels inside self.
+        """
+        return list(self.cache)
+
+    async def initialize(self, parent, channel_type: str):
+        """
+        Initializes async parts of the instance.
+        This method should be called by ``parent``.
+
+        Parameters
+        -----------
+        parent: message.BaseMESSAGE
+            The message object this AutoCHANNEL instance is in.
+        channel_type: str
+            The channel type to look for when searching for channels
+        """
+        self.parent = parent
+        self.running = True
+        self.channel_getter = channel_type
+        asyncio.create_task(self._process())
+        await asyncio.sleep(1)
+
+    async def _process(self):
+        """
+        Task that scans and adds new channels to cache.
+        """
+        channel: ChannelType
+        while self.running:
+            await self._safe_iter_sem.acquire()
+            for channel in getattr(self.parent.parent.apiobject, self.channel_getter):
+                if channel not in self.cache:
+                    name = channel.name
+                    if (re.search(self.include_pattern, name) is not None and
+                        (self.exclude_pattern is None or re.search(self.exclude_pattern, name) is None)
+                    ):
+                        self.cache.add(channel)
+            
+            self._safe_iter_sem.release()
+            await asyncio.sleep(self.interval)
+
+    @misc._async_safe("_safe_iter_sem")
+    async def _remove_channel(self, channel: ChannelType):
+        """
+        Removes channel from cache.
+
+        Parameters
+        -----------
+        channel: Union[discord.TextChannel, discord.VoiceChannel]
+            The channel to remove from cache.
+        
+        Raises
+        -----------
+        KeyError
+            The channel is not in cache.
+        """
+        self.cache.remove(channel)

@@ -15,7 +15,6 @@ from . import guild
 from . import client
 from . import misc
 from . import message
-from . import gen
 
 import asyncio
 import _discord as dc
@@ -46,7 +45,7 @@ class GLOBALS:
     Storage class used for holding global variables.
     """
     server_list: List[guild._BaseGUILD] = [] # Guild/User objects 
-    auto_guilds: List[gen.AutoGUILD] = [] # AutoGUILD objects
+    auto_guilds: List[guild.AutoGUILD] = [] # AutoGUILD objects
 
 
 #######################################################################
@@ -217,13 +216,13 @@ async def add_object(obj: Union[message.DirectMESSAGE, message.TextMESSAGE, mess
     ...
 @overload
 @misc.doc_category("Shilling list modification", True)
-async def add_object(obj: gen.AutoGUILD) -> None:
+async def add_object(obj: guild.AutoGUILD) -> None:
     """
     Adds a AutoGUILD to the shilling list.
 
     Parameters
     -----------
-    obj: daf.gen.AutoGUILD
+    obj: daf.guild.AutoGUILD
         AutoGUILD object that automatically finds guilds to shill in.
 
     Raises
@@ -231,7 +230,7 @@ async def add_object(obj: gen.AutoGUILD) -> None:
     TypeError
         The object provided is not supported for addition.
     Other
-        From :py:meth`~daf.gen.AutoGUILD.initialize` method.
+        From :py:meth`~daf.guild.AutoGUILD.initialize` method.
     """
     ...
 
@@ -251,7 +250,7 @@ async def add_object(obj, snowflake=None):
         await obj.initialize()
         GLOBALS.server_list.append(obj)
 
-    elif isinstance(obj, gen.AutoGUILD):
+    elif isinstance(obj, guild.AutoGUILD):
         if obj in GLOBALS.auto_guilds:
             raise ValueError(f"{object_type_name} is already added to the daf.")
 
@@ -274,7 +273,7 @@ async def add_object(obj, snowflake=None):
 
 
 @misc.doc_category("Shilling list modification")
-def remove_object(snowflake: Union[int, dc.Object, dc.Guild, dc.User, dc.Object, guild._BaseGUILD, message.BaseMESSAGE, gen.AutoGUILD]) -> None:
+def remove_object(snowflake: Union[int, dc.Object, dc.Guild, dc.User, dc.Object, guild._BaseGUILD, message.BaseMESSAGE, guild.AutoGUILD]) -> None:
     """
     .. versionchanged:: v2.3
         Instead of raising DAFNotFound, raises ValueError
@@ -283,7 +282,7 @@ def remove_object(snowflake: Union[int, dc.Object, dc.Guild, dc.User, dc.Object,
 
     Parameters
     -------------
-    snowflake: Union[int, dc.Object, dc.Guild, dc.User, dc.Object, guild._BaseGUILD, message.BaseMESSAGE, gen.AutoGUILD]
+    snowflake: Union[int, dc.Object, dc.Guild, dc.User, dc.Object, guild._BaseGUILD, message.BaseMESSAGE, guild.AutoGUILD]
         The GUILD/USER object to remove/snowflake of GUILD/USER
         or a xMESSAGE object or AutoGUILD object.
 
@@ -298,7 +297,7 @@ def remove_object(snowflake: Union[int, dc.Object, dc.Guild, dc.User, dc.Object,
             if snowflake in _guild.messages:
                 _guild.remove_message(snowflake)
                 break
-    elif isinstance(snowflake, gen.AutoGUILD):
+    elif isinstance(snowflake, guild.AutoGUILD):
         GLOBALS.auto_guilds.remove(snowflake)
         snowflake._delete()
     else:

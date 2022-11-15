@@ -129,13 +129,13 @@ class TextMESSAGE(BaseMESSAGE):
                  start_period: Union[int, timedelta, None],
                  end_period: Union[int, timedelta],
                  data: TMDataType,
-                 channels: Iterable[Union[int, discord.TextChannel, discord.Thread]],
+                 channels: Iterable[Union[int, discord.TextChannel, discord.Thread, AutoCHANNEL]],
                  mode: Literal["send", "edit", "clear-send"] = "send",
                  start_in: Union[timedelta, bool]=timedelta(seconds=0),
                  remove_after: Optional[Union[int, timedelta, datetime]]=None):
         super().__init__(start_period, end_period, data, start_in, remove_after)
         self.mode = mode
-        self.channels = list(set(channels)) # Automatically removes duplicates
+        self.channels = channels
         self.sent_messages = {} # Dictionary for storing last sent message for each channel
     
     def _check_state(self) -> bool:
@@ -305,25 +305,31 @@ class TextMESSAGE(BaseMESSAGE):
         cl = client.get_client()
         self.parent = parent
         _guild = self.parent.apiobject
-        while ch_i < len(self.channels):
-            channel = self.channels[ch_i]
-            if isinstance(channel, discord.abc.GuildChannel):
-                channel_id = channel.id
-            else:
-                channel_id = channel
-                channel = self.channels[ch_i] = cl.get_channel(channel_id)
+        to_remove = []
 
-            if channel is None:
-                trace(f"Unable to get channel from ID {channel_id}", TraceLEVELS.WARNING)
+        if isinstance(self.channels, AutoCHANNEL):
+            await self.channels.initialize(self, "text_channels")
+        else:
+            for ch_i, channel in enumerate(self.channels):
+                if isinstance(channel, discord.abc.GuildChannel):
+                    channel_id = channel.id
+                else:
+                    # Snowflake IDs provided
+                    channel_id = channel
+                    channel = self.channels[ch_i] = cl.get_channel(channel_id)
+
+                if channel is None:
+                    trace(f"Unable to get channel from ID {channel_id}", TraceLEVELS.WARNING)
+                    to_remove.append(channel)
+                elif type(channel) not in {discord.TextChannel, discord.Thread}:
+                    raise TypeError(f"TextMESSAGE object received channel type of {type(channel).__name__}, but was expecting discord.TextChannel or discord.Thread")
+                elif channel.guild != _guild:
+                    raise ValueError(f"The channel {channel.name}(ID: {channel_id}) does not belong into {_guild.name}(ID: {_guild.id}) but is part of {channel.guild.name}(ID: {channel.guild.id})")
+            
+            for channel in to_remove:
                 self.channels.remove(channel)
-            elif type(channel) not in {discord.TextChannel, discord.Thread}:
-                raise TypeError(f"TextMESSAGE object received channel type of {type(channel).__name__}, but was expecting discord.TextChannel or discord.Thread")
-            elif channel.guild != _guild:
-                raise ValueError(f"The channel {channel.name}(ID: {channel_id}) does not belong into {_guild.name}(ID: {_guild.id}) but is part of {channel.guild.name}(ID: {channel.guild.id})")
-            else:
-                ch_i += 1
 
-        if not len(self.channels):
+        if not self.channels:
             raise ValueError(f"No valid channels were passed to {self} object")
 
         # Increase period to slow mode delay if it is lower

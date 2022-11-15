@@ -36,7 +36,8 @@ v2.3
 =============
 - |BREAK_CH| Removed ``exceptions`` module, meaning that there are no DAFError derived exceptions from this version on.
 They are replaced with build-in Python exceptions.
-- :class:`daf.gen.AutoGUILD` class for auto-managed GUILD objects.
+- :class:`daf.guild.AutoGUILD` class for auto-managed GUILD objects.
+- :class:`daf.message.AutoCHANNEL` class for auto-managed channels inside message.
 
 v2.2
 ===========
