@@ -98,7 +98,7 @@ class AutoGUILD:
     @property
     def guilds(self) -> List[guild.GUILD]:
         "Returns cached found GUILD objects."
-        return self.cache.copy()
+        return list(self.cache.values())
 
     @property
     def created_at(self) -> datetime:
