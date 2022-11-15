@@ -8,7 +8,6 @@ from typeguard import check_type, typechecked
 from ..dtypes import *
 from ..logging.tracing import *
 from ..timing import *
-from ..exceptions import *
 from .. import misc
 
 import random

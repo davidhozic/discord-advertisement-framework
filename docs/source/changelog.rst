@@ -32,6 +32,12 @@ Glossary
 Releases
 ----------------------
 
+v2.3
+=============
+- |BREAK_CH| Removed ``exceptions`` module, meaning that there are no DAFError derived exceptions from this version on.
+They are replaced with build-in Python exceptions.
+- :class:`daf.gen.AutoGUILD` class for auto-managed GUILD objects.
+
 v2.2
 ===========
 - ``user_callback`` parameter for function :func:`daf.core.run` can now also be a regular function instead of just ``async``.

@@ -107,7 +107,7 @@ add_object
               The object provided is not supported for addition.
         - TypeError
               Missing snowflake parameter.
-        - DAFNotFoundError(code=DAF_SNOWFLAKE_NOT_FOUND)
+        - ValueError
               Could not find guild with that id.
         - Other
               Raised in the obj.add_message() method

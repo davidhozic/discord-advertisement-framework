@@ -8,7 +8,6 @@ from typeguard import typechecked
 from .base import *
 from ..dtypes import *
 from ..logging.tracing import *
-from ..exceptions import *
 
 from .. import client
 from ..logging import sql
@@ -678,7 +677,7 @@ class DirectMESSAGE(BaseMESSAGE):
 
         Raises
         ---------
-        DAFNotFoundError(code=DAF_USER_CREATE_DM)
+        ValueError
             Raised when the direct message channel could not be created
         """
         try:
@@ -687,7 +686,7 @@ class DirectMESSAGE(BaseMESSAGE):
             self.dm_channel = user
             self.parent = parent
         except discord.HTTPException as ex:
-            raise DAFNotFoundError(f"Unable to create DM with user {user.display_name}\nReason: {ex}", DAF_USER_CREATE_DM)
+            raise ValueError(f"Unable to create DM with user {user.display_name}\nReason: {ex}")
 
     async def _handle_error(self, ex: Exception) -> bool:
         """

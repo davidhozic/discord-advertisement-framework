@@ -10,7 +10,6 @@ from typeguard import typechecked
 from .base import *
 from ..dtypes import *
 from ..logging.tracing import *
-from ..exceptions import *
 
 from .. import client
 from ..logging import sql

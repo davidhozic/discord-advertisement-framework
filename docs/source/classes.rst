@@ -41,28 +41,6 @@ LoggerSQL
 
 
 ----------------------------
-Exceptions
-----------------------------
-
-DAFError
-========================
-.. autoclass:: daf.exceptions.DAFError
-    :members:
-
-
-DAFNotFoundError
-========================
-.. autoclass:: daf.exceptions.DAFNotFoundError
-    :members:
-
-
-DAFSQLError
-========================
-.. autoclass:: daf.exceptions.DAFSQLError
-    :members:
-
-
-----------------------------
 Message data types
 ----------------------------
 

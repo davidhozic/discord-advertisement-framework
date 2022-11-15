@@ -6,17 +6,16 @@
 from __future__ import annotations
 import asyncio
 from typing import Any, Coroutine, Union, List, Optional, Dict, Callable
+from contextlib import suppress
 from typeguard import typechecked
 from datetime import timedelta, datetime
 from enum import Enum
 
-from .exceptions import *
 from .logging.tracing import *
 from .message import *
 
 from . import client
 from .logging import sql
-from . import core
 from . import misc
 from .logging import logging
 
@@ -68,7 +67,8 @@ class _BaseGUILD:
         "_messages_uninitialized",
         "message_dict",
         "remove_after",
-        "_created_at"
+        "_created_at",
+        "_deleted"
     )
     
     def __init__(self,
@@ -82,6 +82,7 @@ class _BaseGUILD:
         self._messages_uninitialized: list = messages   # Contains all the different message objects, this gets sorted in `.initialize()` method
         self.message_dict: Dict[str, List[BaseMESSAGE]] = {AdvertiseTaskType.TEXT_ISH: [], AdvertiseTaskType.VOICE: []}  # Dictionary, which's keys hold the discord message type(text, voice) and keys are a list of messages
         self.remove_after = remove_after  # int - after n sends; timedelta - after amount of time; datetime - after that time
+        self._deleted = False
         self._created_at = datetime.now() # The time this object was created
 
     def __repr__(self) -> str:
@@ -135,6 +136,12 @@ class _BaseGUILD:
         """
         return self.snowflake == other.snowflake
 
+    def _delete(self):
+        """
+        Sets the internal _deleted flag to True.
+        """
+        self._deleted = True
+
     async def add_message(self, message: BaseMESSAGE):
         """
         Adds a message to the message list.
@@ -163,7 +170,7 @@ class _BaseGUILD:
 
         Raises
         -----------
-        DAFNotFoundError(code=DAF_SNOWFLAKE_NOT_FOUND)
+        ValueError
             Raised when the guild_id wasn't found.
         Other
             Raised from .add_message(message_object) method.
@@ -178,14 +185,14 @@ class _BaseGUILD:
             for message in self._messages_uninitialized:
                 try:
                     await self.add_message(message)
-                except (TypeError, ValueError, DAFError) as exc:
+                except (TypeError, ValueError) as exc:
                     trace(f"[GUILD:] Unable to initialize message {message}, in {self}\nReason: {exc}", TraceLEVELS.WARNING)
 
 
             self._messages_uninitialized.clear()
             return
 
-        raise DAFNotFoundError(f"Unable to find object with ID: {guild_id}", DAF_SNOWFLAKE_NOT_FOUND)
+        raise ValueError(f"Unable to find object with ID: {guild_id}")
 
     def remove_message(self, message: BaseMESSAGE):
         """
@@ -232,9 +239,10 @@ class _BaseGUILD:
         msg_list = self.message_dict[mode]
         for message in msg_list[:]: # Copy the avoid issues with the list being modified while iterating (add_message/remove_message)
             # Message removal             Check due to asynchronous operations
-            if message._check_state() and message in self.messages:
-                trace(f"[GUILD:] Removing {message} which is part of {self}")
-                self.remove_message(message)
+            if message._check_state():
+                # Suppress since user could of called the remove_object function mid iteration.
+                with suppress(ValueError):
+                    self.remove_message(message)
 
             elif message._is_ready():
                 message._reset_timer()
@@ -348,7 +356,7 @@ class GUILD(_BaseGUILD):
 
         Raises
         -----------
-        DAFNotFoundError(code=DAF_SNOWFLAKE_NOT_FOUND)
+        ValueError
             Raised when the guild_id wasn't found.
 
         Other
@@ -475,7 +483,7 @@ class USER(_BaseGUILD):
 
         Raises
         -----------
-        DAFNotFoundError(code=DAF_SNOWFLAKE_NOT_FOUND)
+        ValueError
             Raised when the DM could not be created.
         Other
             Raised from .add_message(message_object) method.

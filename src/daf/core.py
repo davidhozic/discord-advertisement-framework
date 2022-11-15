@@ -5,9 +5,9 @@
 """
 from __future__ import annotations
 from typing import Callable, Coroutine, List, Optional, Union, overload
+from contextlib import suppress
 from typeguard import typechecked
 
-from .exceptions import *
 from .logging.tracing import *
 from .logging import sql, logging, tracing
 
@@ -45,9 +45,8 @@ class GLOBALS:
     """
     Storage class used for holding global variables.
     """
-    server_list: List[guild._BaseGUILD, gen.AutoGUILD] = [] # Guild/User objects 
-    awaiting_removal: List[guild._BaseGUILD, gen.AutoGUILD] = [] # Guild/User objects 
-    awaiting_addition: List[guild._BaseGUILD, gen.AutoGUILD] = [] # Guild/User objects 
+    server_list: List[guild._BaseGUILD] = [] # Guild/User objects 
+    auto_guilds: List[gen.AutoGUILD] = [] # AutoGUILD objects
 
 
 #######################################################################
@@ -66,27 +65,15 @@ async def _advertiser(message_type: guild.AdvertiseTaskType) -> None:
     """
     while True:
         await asyncio.sleep(C_TASK_SLEEP_DELAY)
-        
-        # TODO: This will not work due to 2 tasks, find a better solution.
-        #       This also doesn't work with AutoGUILD and GUILD added at the same time (__eq__ method).
-
-        # Add new objects that were added
-        GLOBALS.server_list.extend(GLOBALS.awaiting_addition)
-        GLOBALS.awaiting_addition.clear()
-
-        # Remove objects that were removed
-        for o in GLOBALS.awaiting_removal:
-            GLOBALS.server_list.remove(o)
-        
-        GLOBALS.awaiting_removal.clear()
-
-        for guild_user in GLOBALS.server_list:
+        # Sum, creates new list, making modifications on original lists safe
+        for guild_user in GLOBALS.server_list + GLOBALS.auto_guilds: 
             # Remove guild
             if guild_user._check_state():
-                trace(f"[GUILD:] Removing {guild_user}")
-                remove_object(guild_user)
-
-            await guild_user._advertise(message_type)
+                # Suppress since user could of called the remove_object function mid iteration.
+                with suppress(ValueError):
+                    remove_object(guild_user)
+            else:
+                await guild_user._advertise(message_type)
 
 
 @misc.doc_category("Core control")
@@ -154,7 +141,7 @@ async def initialize(token : str,
     for server in server_list:
         try:
             await add_object(server) # Add each guild to the shilling list
-        except (DAFError, ValueError, TypeError) as ex:
+        except (ValueError, TypeError) as ex:
             trace(ex)
     
     # Create advertiser tasks
@@ -222,7 +209,7 @@ async def add_object(obj: Union[message.DirectMESSAGE, message.TextMESSAGE, mess
         The object provided is not supported for addition.
     TypeError
         Missing snowflake parameter.
-    DAFNotFoundError(code=DAF_SNOWFLAKE_NOT_FOUND)
+    ValueError
         Could not find guild with that id.
     Other
         Raised in the obj.add_message() method
@@ -258,15 +245,18 @@ async def add_object(obj, snowflake=None):
 
     # Add the object
     if isinstance(obj, guild._BaseGUILD):
-        if obj in GLOBALS.server_list + GLOBALS.awaiting_addition:
+        if obj in GLOBALS.server_list:
             raise ValueError(f"{object_type_name} with snowflake `{obj.snowflake}` is already added to the daf.")
 
         await obj.initialize()
-        GLOBALS.awaiting_addition.append(obj)
+        GLOBALS.server_list.append(obj)
 
     elif isinstance(obj, gen.AutoGUILD):
+        if obj in GLOBALS.auto_guilds:
+            raise ValueError(f"{object_type_name} is already added to the daf.")
+
         await obj.initialize()
-        GLOBALS.awaiting_addition.append(obj)
+        GLOBALS.auto_guilds.append(obj)
 
     elif isinstance(obj, message.BaseMESSAGE):
         if snowflake is None:
@@ -277,7 +267,7 @@ async def add_object(obj, snowflake=None):
                 await guild_user.add_message(obj)
                 return
 
-        raise DAFNotFoundError(f"Guild or user with snowflake `{snowflake}` was not found in the daf.", DAF_SNOWFLAKE_NOT_FOUND)
+        raise ValueError(f"Guild or user with snowflake `{snowflake}` was not found in the daf.")
 
     else:
         raise TypeError(f"Invalid object type `{object_type_name}`.")
@@ -286,6 +276,9 @@ async def add_object(obj, snowflake=None):
 @misc.doc_category("Shilling list modification")
 def remove_object(snowflake: Union[int, dc.Object, dc.Guild, dc.User, dc.Object, guild._BaseGUILD, message.BaseMESSAGE, gen.AutoGUILD]) -> None:
     """
+    .. versionchanged:: v2.3
+        Instead of raising DAFNotFound, raises ValueError
+
     Removes an object from the daf.
 
     Parameters
@@ -296,8 +289,8 @@ def remove_object(snowflake: Union[int, dc.Object, dc.Guild, dc.User, dc.Object,
 
     Raises
     --------------
-    DAFNotFoundError(code=DAF_SNOWFLAKE_NOT_FOUND)
-         Could not find guild with that id.
+    ValueError
+        Item (with specified snowflake) not in the shilling list.
     TypeError
         Invalid argument."""    
     if isinstance(snowflake, message.BaseMESSAGE):
@@ -306,16 +299,14 @@ def remove_object(snowflake: Union[int, dc.Object, dc.Guild, dc.User, dc.Object,
                 _guild.remove_message(snowflake)
                 break
     elif isinstance(snowflake, gen.AutoGUILD):
-        GLOBALS.awaiting_removal.append(snowflake)
+        GLOBALS.auto_guilds.remove(snowflake)
+        snowflake._delete()
     else:
         if not isinstance(snowflake, guild._BaseGUILD):
             snowflake = get_guild_user(snowflake)
 
-        if snowflake is not None and snowflake in GLOBALS.server_list + GLOBALS.awaiting_removal:
-            GLOBALS.awaiting_removal.remove(snowflake)
-        else:
-            raise DAFNotFoundError(f"GUILD/USER not in the shilling list.", DAF_SNOWFLAKE_NOT_FOUND)
-
+        GLOBALS.server_list.remove(snowflake)
+        snowflake._delete()
 
 @misc.doc_category("Getters")
 def get_guild_user(snowflake: Union[int, dc.Object, dc.Guild, dc.User, dc.Object]) -> Union[guild.GUILD, guild.USER, None]:
