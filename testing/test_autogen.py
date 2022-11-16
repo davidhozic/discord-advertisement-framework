@@ -78,7 +78,7 @@ async def test_autochannel(guilds, channels):
         guild,
         messages=[
             tm := daf.TextMESSAGE(None, timedelta(seconds=1), "Hello World", auto_channel),
-            vc := daf.VoiceMESSAGE(None, timedelta(seconds=1), daf.AUDIO("testing123.mp3"), auto_channel2)
+            vc := daf.VoiceMESSAGE(None, timedelta(seconds=1), daf.AUDIO("https://www.youtube.com/watch?v=IGQBtbKSVhY"), auto_channel2)
         ]
     )
     await daf.add_object(daf_guild)
