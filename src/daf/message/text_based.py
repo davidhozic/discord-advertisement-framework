@@ -129,7 +129,7 @@ class TextMESSAGE(BaseMESSAGE):
                  start_period: Union[int, timedelta, None],
                  end_period: Union[int, timedelta],
                  data: TMDataType,
-                 channels: Iterable[Union[int, discord.TextChannel, discord.Thread, AutoCHANNEL]],
+                 channels: Union[Iterable[Union[int, discord.TextChannel, discord.Thread]], AutoCHANNEL],
                  mode: Literal["send", "edit", "clear-send"] = "send",
                  start_in: Union[timedelta, bool]=timedelta(seconds=0),
                  remove_after: Optional[Union[int, timedelta, datetime]]=None):
@@ -488,6 +488,9 @@ class TextMESSAGE(BaseMESSAGE):
             # This parameter does not appear as attribute, manual setting necessary
             kwargs["start_in"] = timedelta(seconds=0)
         
+        if "data" not in kwargs:
+            kwargs["data"] = self._data
+        
         if not len(_init_options):
             _init_options = {"parent": self.parent}
 
@@ -812,6 +815,9 @@ class DirectMESSAGE(BaseMESSAGE):
         if "start_in" not in kwargs:
             # This parameter does not appear as attribute, manual setting necessary
             kwargs["start_in"] = timedelta(seconds=0)
+
+        if "data" not in kwargs:
+            kwargs["data"] = self._data
 
         if not len(_init_options):
             _init_options = {"parent" : self.parent}

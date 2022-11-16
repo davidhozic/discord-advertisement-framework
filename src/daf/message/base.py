@@ -292,8 +292,6 @@ class AutoCHANNEL:
     """
     .. versionadded:: v2.3
 
-    TODO: Implement task cleanup mechanism when guild is removed -> messages are _delete -> AutoCHANNEL._delete
-
     Class for automatic channel loop up,
     based on the given guild.
 
@@ -314,11 +312,10 @@ class AutoCHANNEL:
         "include_pattern",
         "exclude_pattern",
         "interval",
-        "running",
         "parent",
         "cache",
         "channel_getter",
-        "_safe_iter_sem"
+        "last_scan"
     )
     def __init__(self,
                  include_pattern: str,
@@ -327,19 +324,10 @@ class AutoCHANNEL:
         self.include_pattern = include_pattern
         self.exclude_pattern = exclude_pattern
         self.interval = interval.total_seconds()
-        self.running = False
         self.parent = None
         self.channel_getter: property = None
         self.cache: Set[ChannelType] = set()
-        self._safe_iter_sem = asyncio.Semaphore(1) # For safe iteration without needing to copy cache
-
-    def __del__(self):
-        "Garbage collection"
-        self._delete()
-    
-    def _delete(self):
-        "Sets running flag to False for the task to exit"
-        self.running = False
+        self.last_scan = 0
 
     def __iter__(self):
         "Returns the channel iterator."
@@ -351,13 +339,14 @@ class AutoCHANNEL:
 
     def __bool__(self) -> bool:
         "Forwards call to the cache"
-        return bool(self.cache)
+        return bool(self.channels)
 
     @property
     def channels(self) -> List[ChannelType]:
         """
         Returns channels inside self.
         """
+        self._process()
         return list(self.cache)
 
     async def initialize(self, parent, channel_type: str):
@@ -373,18 +362,16 @@ class AutoCHANNEL:
             The channel type to look for when searching for channels
         """
         self.parent = parent
-        self.running = True
         self.channel_getter = channel_type
-        asyncio.create_task(self._process())
-        await asyncio.sleep(1)
 
-    async def _process(self):
+    def _process(self):
         """
         Task that scans and adds new channels to cache.
         """
         channel: ChannelType
-        while self.running:
-            await self._safe_iter_sem.acquire()
+        stamp = datetime.now().timestamp()
+        if stamp - self.last_scan > self.interval:
+            self.last_scan = stamp
             for channel in getattr(self.parent.parent.apiobject, self.channel_getter):
                 if channel not in self.cache:
                     name = channel.name
@@ -392,12 +379,8 @@ class AutoCHANNEL:
                         (self.exclude_pattern is None or re.search(self.exclude_pattern, name) is None)
                     ):
                         self.cache.add(channel)
-            
-            self._safe_iter_sem.release()
-            await asyncio.sleep(self.interval)
 
-    @misc._async_safe("_safe_iter_sem")
-    async def _remove_channel(self, channel: ChannelType):
+    def remove(self, channel: ChannelType):
         """
         Removes channel from cache.
 
@@ -412,3 +395,25 @@ class AutoCHANNEL:
             The channel is not in cache.
         """
         self.cache.remove(channel)
+
+    async def update(self, **kwargs):
+        """
+        Updates the object with new initialization parameters.
+
+        Parameters
+        ------------
+        kwargs: Any
+            Any number of keyword arguments that appear in the
+            object initialization.
+
+        Raises
+        -----------
+        Any
+            Raised from :py:meth:`~daf.message.AutoCHANNEL.initialize` method.
+        """
+        if "interval" not in kwargs:
+            kwargs["interval"] = timedelta(seconds=self.interval)
+        
+        return await misc._update(self,
+                                  init_options={"parent": self.parent, "channel_type": self.channel_getter},
+                                  **kwargs)

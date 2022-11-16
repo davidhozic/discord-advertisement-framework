@@ -28,7 +28,8 @@ import re
 
 __all__ = (
     "GUILD",
-    "USER"
+    "USER",
+    "AutoGUILD"
 )
 
 class AdvertiseTaskType(Enum):
@@ -397,7 +398,7 @@ class GUILD(_BaseGUILD):
         await misc._update(self, **kwargs)
         # Update messages
         for message in self.messages:
-            await message.update(_init_options={"guild": self.apiobject})
+            await message.update(_init_options={"parent": self})
 
 
 @misc.doc_category("Guilds")
@@ -523,7 +524,7 @@ class USER(_BaseGUILD):
         await misc._update(self, **kwargs)
         # Update messages
         for message in self.messages:
-            await message.update(_init_options={"user" : self.apiobject})
+            await message.update(_init_options={"parent" : self})
 
 @misc.doc_category("Automatic generation")
 class AutoGUILD:
@@ -565,9 +566,10 @@ class AutoGUILD:
         "logging",
         "interval",
         "cache",
-        "running",
+        "last_scan",
         "_created_at",
-        "_deleted"
+        "_deleted",
+        "_safe_sem"
     )
 
     @typechecked
@@ -585,9 +587,10 @@ class AutoGUILD:
         self.logging = logging
         self.interval = interval.total_seconds() # In seconds
         self.cache: Dict[GUILD] = {}
-        self.running = False
+        self.last_scan = 0
         self._deleted = False
         self._created_at = datetime.now()
+        misc._write_attr_once(self, "_safe_sem", asyncio.Semaphore(2))
 
     @property
     def guilds(self) -> List[GUILD]:
@@ -607,7 +610,6 @@ class AutoGUILD:
         and cancels main task.
         """
         self._deleted = True
-        self.running = False
 
     def _check_state(self) -> bool:
         """
@@ -633,8 +635,8 @@ class AutoGUILD:
 
     async def initialize(self):
         "Initializes asynchronous elements."
-        self.running = True
-        asyncio.create_task(self._find_guilds())
+        # Nothing is needed to be done here since everything is obtained from API wrapper cache.
+        pass 
     
     async def add_message(self, message: BaseMESSAGE):
         """
@@ -654,17 +656,19 @@ class AutoGUILD:
         for guild in self.cache.values():
             await guild.add_message(deepcopy(message))
 
-    async def _find_guilds(self):
+    async def _process(self):
         """
         Coroutine that finds new guilds from the
         API wrapper.
         """
         dcl = client.get_client()
-        while self.running:
+        stamp = datetime.now().timestamp()
+        if stamp - self.last_scan > self.interval:
+            self.last_scan = stamp
             for dcgld in dcl.guilds:
                 if (dcgld not in self.cache and 
                     re.search(self.include_pattern, dcgld.name) is not None and
-                    re.search(self.exclude_pattern, dcgld.name) is None
+                    (self.exclude_pattern is None or re.search(self.exclude_pattern, dcgld.name) is None)
                 ):
                     try:
                         new_guild = GUILD(snowflake=dcgld,
@@ -675,8 +679,7 @@ class AutoGUILD:
                     except Exception as exc:
                         trace(f"[AutoGUILD:] Unable to add new object.\nReason: {exc}",TraceLEVELS.WARNING)
 
-            await asyncio.sleep(self.interval)
-
+    @misc._async_safe("_safe_sem", 1)
     async def _advertise(self, type_: AdvertiseTaskType):
         """
         Advertises thru all the GUILDs.
@@ -687,9 +690,11 @@ class AutoGUILD:
             Which task called this method.
             This is just forwarded to GUILDs' _advertise method.
         """
-        for g in self.cache.values():
+        await self._process()
+        for g in self.guilds:
             await g._advertise(type_)
 
+    @misc._async_safe("_safe_sem", 2)
     async def update(self, **kwargs):
         """
         Updates the object with new initialization parameters.

@@ -109,7 +109,7 @@ class VoiceMESSAGE(BaseMESSAGE):
                  start_period: Union[int, timedelta, None],
                  end_period: Union[int, timedelta],
                  data: Union[AUDIO, Iterable[AUDIO], _FunctionBaseCLASS],
-                 channels: Iterable[Union[int, discord.VoiceChannel]],
+                 channels: Union[Iterable[Union[int, discord.VoiceChannel]], AutoCHANNEL],
                  volume: int=50,
                  start_in: Union[timedelta, bool]=timedelta(seconds=0),
                  remove_after: Optional[Union[int, timedelta, datetime]]=None):
@@ -119,7 +119,7 @@ class VoiceMESSAGE(BaseMESSAGE):
 
         super().__init__(start_period, end_period, data, start_in, remove_after)
         self.volume = max(0, min(100, volume)) # Clamp the volume to 0-100 %
-        self.channels = list(set(channels))    # Auto remove duplicates
+        self.channels = channels
 
     def _check_state(self) -> bool:
         """
@@ -228,9 +228,9 @@ class VoiceMESSAGE(BaseMESSAGE):
         This method initializes the implementation specific api objects and checks for the correct channel input context.
 
         Parameters
-        ------------
+        --------------
         parent: daf.guild.GUILD
-            The GUILD this message is in.
+            The GUILD this message is in
 
         Raises
         ------------
@@ -244,26 +244,32 @@ class VoiceMESSAGE(BaseMESSAGE):
         ch_i = 0
         cl = client.get_client()
         self.parent = parent
-        _guild = parent.apiobject
-        while ch_i < len(self.channels):
-            channel = self.channels[ch_i]
-            if isinstance(channel, discord.abc.GuildChannel):
-                channel_id = channel.id
-            else:
-                channel_id = channel
-                channel = self.channels[ch_i] = cl.get_channel(channel_id)
+        _guild = self.parent.apiobject
+        to_remove = []
 
-            if channel is None:
-                trace(f"Unable to get channel from ID {channel_id}", TraceLEVELS.WARNING)
+        if isinstance(self.channels, AutoCHANNEL):
+            await self.channels.initialize(self, "voice_channels")
+        else:
+            for ch_i, channel in enumerate(self.channels):
+                if isinstance(channel, discord.abc.GuildChannel):
+                    channel_id = channel.id
+                else:
+                    # Snowflake IDs provided
+                    channel_id = channel
+                    channel = self.channels[ch_i] = cl.get_channel(channel_id)
+
+                if channel is None:
+                    trace(f"Unable to get channel from ID {channel_id}", TraceLEVELS.WARNING)
+                    to_remove.append(channel)
+                elif type(channel) is not discord.VoiceChannel:
+                    raise TypeError(f"VoiceMESSAGE object received channel type of {type(channel).__name__}, but was expecting discord.VoiceChannel")
+                elif channel.guild != _guild:
+                    raise ValueError(f"The channel {channel.name}(ID: {channel_id}) does not belong into {_guild.name}(ID: {_guild.id}) but is part of {channel.guild.name}(ID: {channel.guild.id})")
+            
+            for channel in to_remove:
                 self.channels.remove(channel)
-            elif type(channel) not in {discord.VoiceChannel}:
-                raise TypeError(f"TextMESSAGE object received channel type of {type(channel).__name__}, but was expecting VoiceChannel")
-            elif channel.guild != _guild:
-                raise ValueError(f"The channel {channel.name}(ID: {channel_id}) does not belong into {_guild.name}(ID: {_guild.id}) but is part of {channel.guild.name}(ID: {channel.guild.id})")
-            else:
-                ch_i += 1
 
-        if not len(self.channels):
+        if not self.channels:
             raise ValueError(f"No valid channels were passed to {self} object")
 
     async def _send_channel(self,
@@ -370,6 +376,9 @@ class VoiceMESSAGE(BaseMESSAGE):
         if "start_in" not in kwargs:
             # This parameter does not appear as attribute, manual setting necessary
             kwargs["start_in"] = timedelta(seconds=0)
+
+        if "data" not in kwargs:
+            kwargs["data"] = self._data
         
         if not len(_init_options):
             _init_options = {"parent": self.parent}
