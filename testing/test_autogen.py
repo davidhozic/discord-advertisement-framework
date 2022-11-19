@@ -87,6 +87,7 @@ async def test_autochannel(guilds, channels):
     )
     await daf.add_object(daf_guild)
     sort_key = lambda x: x.name
+    await asyncio.sleep(1)
     assert sorted(text_channels[:5], key=sort_key) == sorted(auto_channel.channels, key=sort_key), "Correct behavior would be for AutoCHANNEL to only find first 5 text channels"
     await auto_channel.update(exclude_pattern=None)
     assert sorted(text_channels, key=sort_key) == sorted(auto_channel.channels, key=sort_key), "Correct behavior would be for AutoCHANNEL to find all text channels"
