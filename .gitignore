@@ -3,3 +3,4 @@ settings.json
 dist/**
 build**
 **.egg-info
+src/test.py
