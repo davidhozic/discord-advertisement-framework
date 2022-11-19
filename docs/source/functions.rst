@@ -115,19 +115,19 @@ add_object
 
 add_object
 ========================
-.. function:: daf.core.add_object(obj: gen.AutoGUILD) -> None
+.. function:: daf.core.add_object(obj: guild.AutoGUILD) -> None
     
     Adds a AutoGUILD to the shilling list.
     
     :Parameters:
-        - obj: daf.gen.AutoGUILD
+        - obj: daf.guild.AutoGUILD
               AutoGUILD object that automatically finds guilds to shill in.
     
     :Raises:
         - TypeError
               The object provided is not supported for addition.
         - Other
-              From :py:meth`~daf.gen.AutoGUILD.initialize` method.
+              From :py:meth:`~daf.guild.AutoGUILD.initialize` method.
 
 
 remove_object

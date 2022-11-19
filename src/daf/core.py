@@ -77,7 +77,7 @@ async def _advertiser(message_type: guild.AdvertiseTaskType) -> None:
 
 @misc.doc_category("Core control")
 async def initialize(token : str,
-                     server_list : Optional[List[Union[guild.GUILD, guild.USER]]]=[],
+                     server_list : Optional[List[Union[guild.GUILD, guild.USER, guild.AutoGUILD]]]=None,
                      is_user : Optional[bool] =False,
                      user_callback : Optional[Union[Callable, Coroutine]]=None,
                      server_log_output : Optional[str] =None,
@@ -137,6 +137,9 @@ async def initialize(token : str,
 
     # Initialize the servers (and their message objects)
     trace("[CORE]: Initializing servers", TraceLEVELS.NORMAL)
+    if server_list is None:
+        server_list = []
+
     for server in server_list:
         try:
             await add_object(server) # Add each guild to the shilling list
@@ -230,7 +233,7 @@ async def add_object(obj: guild.AutoGUILD) -> None:
     TypeError
         The object provided is not supported for addition.
     Other
-        From :py:meth`~daf.guild.AutoGUILD.initialize` method.
+        From :py:meth:`~daf.guild.AutoGUILD.initialize` method.
     """
     ...
 
@@ -396,7 +399,7 @@ def get_shill_list() -> List[Union[guild.GUILD, guild.USER]]:
 @typechecked
 @misc.doc_category("Core control")
 def run(token : str,
-        server_list : Optional[List[Union[guild.GUILD, guild.USER]]]=[],
+        server_list : Optional[List[Union[guild.GUILD, guild.USER, guild.AutoGUILD]]]=None,
         is_user : Optional[bool] =False,
         user_callback : Optional[Union[Callable, Coroutine]]=None,
         server_log_output : Optional[str] =None,

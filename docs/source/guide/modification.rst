@@ -27,6 +27,9 @@ The function can be used to add the following object types:
 
     :class:`daf.guild.USER`
 
+    :class:`daf.guild.AutoGUILD`
+
+
 .. card::
     
     Messages

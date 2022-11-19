@@ -47,7 +47,6 @@ Message data types
 EMBED
 ========================
 .. autoclass:: daf.dtypes.EMBED
-    :members:
 
 
 FILE
@@ -59,6 +58,22 @@ FILE
 AUDIO
 ========================
 .. autoclass:: daf.dtypes.AUDIO
+    :members:
+
+
+----------------------------
+Automatic generation
+----------------------------
+
+AutoCHANNEL
+========================
+.. autoclass:: daf.message.AutoCHANNEL
+    :members:
+
+
+AutoGUILD
+========================
+.. autoclass:: daf.guild.AutoGUILD
     :members:
 
 
@@ -97,15 +112,5 @@ GUILD
 USER
 ========================
 .. autoclass:: daf.guild.USER
-    :members:
-
-
-----------------------------
-Automatic generation
-----------------------------
-
-AutoGUILD
-========================
-.. autoclass:: daf.gen.AutoGUILD
     :members:
 

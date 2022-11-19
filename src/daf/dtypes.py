@@ -141,6 +141,10 @@ class EMBED(discord.Embed):
 
     .. deprecated:: v2.2
         Use :class:`discord.Embed` instead.
+    
+    .. WARNING::
+        USING this is NOT recommended as it is planned for removal.
+        Use :class:`discord.Embed` instead.
 
     Derived class of :class:`discord.Embed` created to provide additional arguments in the creation.
 

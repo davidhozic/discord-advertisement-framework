@@ -67,7 +67,6 @@ class TextMESSAGE(BaseMESSAGE):
 
         - None - Use this value for a fixed (not randomized) sending period
         - timedelta object - object describing time difference, if this is used, then the parameter represents the bottom limit of the **randomized** sending period.
-
     end_period: Union[int, timedelta]
         If ``start_period`` is not None, then this represents the upper limit of randomized time period in which messages will be sent.
         If ``start_period`` is None, then this represents the actual time period between each message send.
@@ -88,7 +87,6 @@ class TextMESSAGE(BaseMESSAGE):
 
             # Time between each send is exactly 10 seconds.
             daf.TextMESSAGE(start_period=None, end_period=timedelta(seconds=10), data="Second Message", channels=[12345], mode="send", start_in=timedelta(seconds=0))
-
     data: Union[str, EMBED, discord.Embed, FILE, List[Union[str, EMBED, discord.Embed, FILE]], _FunctionBaseCLASS]
         The data parameter is the actual data that will be sent using discord's API. The data types of this parameter can be:
             - str (normal text),
@@ -97,8 +95,10 @@ class TextMESSAGE(BaseMESSAGE):
             - :ref:`FILE`,
             - List/Tuple containing any of the above arguments (There can up to 1 string, up to 1 :ref:`EMBED` / :class:`discord.Embed` and up to 10 :ref:`FILE` objects. If more than 1 string or embeds are sent, the framework will only consider the last found).
             - Function that accepts any amount of parameters and returns any of the above types. To pass a function, YOU MUST USE THE :ref:`data_function` decorator on the function before passing the function to the daf.
+    channels: Union[Iterable[Union[int, discord.TextChannel, discord.Thread]], daf.message.AutoCHANNEL]
+        .. versionchanged:: v2.3
+            Can also be :class:`~daf.message.AutoCHANNEL`
 
-    channels: Iterable[Union[int, discord.TextChannel, discord.Thread]]
         Channels that it will be advertised into (Can be snowflake ID or channel objects from PyCord).
     mode: str
         Parameter that defines how message will be sent to a channel.
@@ -107,7 +107,6 @@ class TextMESSAGE(BaseMESSAGE):
         - "send" -    each period a new message will be sent,
         - "edit" -    each period the previously send message will be edited (if it exists)
         - "clear-send" -    previous message will be deleted and a new one sent.
-
     start_in: timedelta
         When should the message be first sent.
     remove_after: Optional[Union[int, timedelta, datetime]]

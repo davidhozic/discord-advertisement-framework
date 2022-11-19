@@ -534,11 +534,6 @@ class AutoGUILD:
     Used for creating instances that will return
     guild objects.
 
-    .. warning::
-        This will only automatically add new objects to the framework and not
-        automatically remove them. That is up to the user to decide, use
-        :py:func:`~daf.core.get_shill_list` to see added guilds.
-
     Parameters
     --------------
     include_pattern: str
@@ -653,6 +648,7 @@ class AutoGUILD:
         Any
             Any exception raised in :py:meth:`daf.guild.GUILD.add_message`.
         """
+        self.messages.append(message)
         for guild in self.cache.values():
             await guild.add_message(deepcopy(message))
 

@@ -61,12 +61,21 @@ class GLOBALS:
 def trace(message: str,
           level: TraceLEVELS | int = TraceLEVELS.NORMAL):
     """
-    Prints a trace to the console.
-    
-    This is thread safe.
+    | Prints a trace to the console.
+    | This is thread safe.
 
-    .. versionchanged:: v2.1
-        Added ``force`` parameter.
+    .. versionchanged:: v2.3
+        
+        .. card::
+        
+            Will only print if the level is lower than the configured
+            (thru :func:`~daf.core.run`'s debug parameter max level.
+
+            Eg. if the max level is :class:`~daf.logging.tracing.TraceLEVELS.ERROR`, then the 
+            level parameter needs to be either :class:`~daf.logging.tracing.TraceLEVELS.DEPRECATED`
+            or :class:`~daf.logging.tracing.TraceLEVELS.ERROR`, 
+            else nothing will be printed.
+
     
     Parameters
     --------------

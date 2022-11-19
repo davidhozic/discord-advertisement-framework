@@ -35,9 +35,20 @@ Releases
 v2.3
 =============
 - |BREAK_CH| Removed ``exceptions`` module, meaning that there are no DAFError derived exceptions from this version on.
-They are replaced with build-in Python exceptions.
-- :class:`daf.guild.AutoGUILD` class for auto-managed GUILD objects.
-- :class:`daf.message.AutoCHANNEL` class for auto-managed channels inside message.
+  They are replaced with build-in Python exceptions.
+- Automatic scheme generation and management:
+
+  - :class:`daf.guild.AutoGUILD` class for auto-managed GUILD objects.
+  - :class:`daf.message.AutoCHANNEL` class for auto-managed channels inside message.
+
+- Debug levels:
+
+  - Added deprecated to :class:`~daf.logging.tracing.TraceLEVELS`.
+  - Changed the :func:`daf.core.run`'s debug parameter to accept a value from :class:`~daf.logging.tracing.TraceLEVELS`, to dictate
+    what level trace should be displayed.
+
+- :ref:`Messages` objects period automatically increases if it is less than slow-mode timeout.
+- The :ref:`data_function`'s input function can now also be async.
 
 v2.2
 ===========

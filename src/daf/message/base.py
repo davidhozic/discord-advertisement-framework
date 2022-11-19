@@ -287,15 +287,26 @@ class BaseMESSAGE:
 
         raise NotImplementedError
 
-
+@misc.doc_category("Automatic generation", path="message")
 class AutoCHANNEL:
     """
     .. versionadded:: v2.3
 
-    Class for automatic channel loop up,
-    based on the given guild.
+    Used for creating instances of automatically managed channels.
+    The objects created with this will automatically add new channels
+    at creation and dynamically while the framework is already running,
+    if they match the patterns.
 
-    The class to the xMESSAGE objects acts like a normal list.
+    .. code-block:: python
+       :caption: Usage
+       :emphasize-lines: 4
+
+       # TextMESSAGE is used here, but works for others too
+       daf.message.TextMESSAGE(
+            ..., # Other parameters
+            channels=daf.message.AutoCHANNEL(...)
+        )
+
 
     Parameters
     --------------
@@ -304,6 +315,11 @@ class AutoCHANNEL:
     exclude_pattern: str
         Regex pattern to match for the channel to be excluded
         from the consideration.
+
+        .. note::
+            If both include_pattern and exclude_pattern yield a match, the guild will be
+            excluded from match.
+
     interval: Optional[timedelta] = timedelta(minutes=5) 
         Interval at which to scan for new channels.
     """
@@ -344,7 +360,9 @@ class AutoCHANNEL:
     @property
     def channels(self) -> List[ChannelType]:
         """
-        Returns channels inside self.
+        Property that returns a list of :class:`discord.TextChannel` or :class:`discord.VoiceChannel`
+        (depends on the xMESSAGE type this is in) objects in cache.
+
         """
         self._process()
         return list(self.cache)

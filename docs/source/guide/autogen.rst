@@ -1,12 +1,7 @@
 =======================
 Automatic generation
 =======================
-
 This documents describes mechanisms that can be used to automatically generate objects.
-All automatic generation is done in the :mod:`daf.gen` module.
-
-This module allows to automatically generate the shilling scheme (:class:`~daf.guild.GUILD` / :ref:`Messages` objects) as well as advertisement content based on a 
-machine learning model that the user themselves train.
 
 ---------------------------
 Shilling scheme generation
@@ -16,8 +11,45 @@ guilds to shill into and harder to manage, the framework also supports automatic
 
 You can automatically generate the schema 2 different ways:
 
-1. Using `PyCord <https://docs.pycord.dev/en/stable/>`_ (API  wrapper) client,
-2. Using the build-in :class:`daf.gen.AutoGUILD` and :class:`daf.gen.AutoCHANNEL`, (requires **DAF v2.3+**)
+#. Using the build-in :class:`daf.guild.AutoGUILD` and :class:`daf.message.AutoCHANNEL`,
+#. Using `PyCord <https://docs.pycord.dev/en/stable/>`_ (API  wrapper) client,
+
+
+AutoGUILD, AutoCHANNEL method
+================================
+
+.. _regex: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions
+
+Using this method allows you to have a completely automatically managed system of finding guilds and channels that match 
+a specific regex_ pattern. It automatically finds new guilds/channels at initialization and also during normal framework operation.
+This is great because it means you don't have to do much but it gives very little control of into what to shill.
+
+
+Automatic GUILD generation
+---------------------------
+.. |AUTOGUILD| replace:: :class:`~daf.guild.AutoGUILD`
+.. |GUILD| replace:: :class:`~daf.guild.GUILD`
+.. |AUTOCHANNEL| replace:: :class:`~daf.message.AutoCHANNEL`
+
+For a auto-managed GUILD list, use |AUTOGUILD| which internally generates |GUILD| instances.
+Simply create a list of |AUTOGUILD| objects and then pass it to the framework.
+It can be passed to the framework exactly the same way as |GUILD| (see :ref:`quickstart` (``server_list``) and :ref:`Dynamically adding objects`).
+
+.. WARNING::
+
+    Messages that are added to |AUTOGUILD| should have |AUTOCHANNEL| for the ``channels`` parameters,
+    otherwise you will be spammed with warnings and only one guild will be shilled.
+
+.. seealso::
+    :download:`Download example <../../../Examples/Automatic Generation/autoguild.py>`.
+
+
+Automatic channel generation
+-----------------------------------
+For a auto-managed channel list use |AUTOCHANNEL| instances.
+It can be passed to xMESSAGE objects into the ``channels`` parameters instead of a list.
+
+
 
 PyCord scheme generation method
 ================================
@@ -65,10 +97,3 @@ Then we will use the :func:`daf.core.add_object` function to add objects to the 
 
 
     daf.run(token="KDHJSKLJHDKAJDHS", is_user=False, user_callback=main)
-
-
-AutoGUILD, AutoCHANNEL method
-================================
-
-.. warning::
-    This will be added in **v2.3**

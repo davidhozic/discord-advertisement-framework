@@ -74,7 +74,6 @@ developement_build = os.environ.get("DOC_DEVELOPMENT", default="False")
 developement_build = True if developement_build == "True" else False
 
 autodoc_default_options = {
-    'members': True,
     'member-order': 'bysource',
     "private-members": developement_build
 }

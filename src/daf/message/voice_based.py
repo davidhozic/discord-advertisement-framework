@@ -59,7 +59,6 @@ class VoiceMESSAGE(BaseMESSAGE):
 
         - None - Use this value for a fixed (not randomized) sending period
         - timedelta object - object describing time difference, if this is used, then the parameter represents the bottom limit of the **randomized** sending period.
-
     end_period: int
         If ``start_period`` is not None, then this represents the upper limit of randomized time period in which messages will be sent.
         If ``start_period`` is None, then this represents the actual time period between each message send.
@@ -75,12 +74,14 @@ class VoiceMESSAGE(BaseMESSAGE):
 
             # Time between each send is exactly 10 seconds.
             daf.VoiceMESSAGE(start_period=None, end_period=timedelta(seconds=10), data=daf.AUDIO("msg.mp3"), channels=[12345], start_in=timedelta(seconds=0), volume=50)
-
     data: AUDIO
         The data parameter is the actual data that will be sent using discord's API. The data types of this parameter can be:
             - AUDIO object.
             - Function that accepts any amount of parameters and returns an AUDIO object. To pass a function, YOU MUST USE THE :ref:`data_function` decorator on the function before passing the function to the daf.
-    channels: Iterable[Union[int, discord.VoiceChannel]]
+    channels: Union[Iterable[Union[int, discord.VoiceChannel]], daf.message.AutoCHANNEL]
+        .. versionchanged:: v2.3
+            Can also be :class:`~daf.message.AutoCHANNEL`
+
         Channels that it will be advertised into (Can be snowflake ID or channel objects from PyCord).
     volume: int
         The volume (0-100%) at which to play the audio. Defaults to 50%. This was added in v2.0.0
