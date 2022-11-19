@@ -1,6 +1,5 @@
 from datetime import timedelta
 import daf
-import asyncio
 
 
 # STATIC DEFINITION

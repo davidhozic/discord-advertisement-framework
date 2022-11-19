@@ -40,8 +40,10 @@ It can be passed to the framework exactly the same way as |GUILD| (see :ref:`qui
     Messages that are added to |AUTOGUILD| should have |AUTOCHANNEL| for the ``channels`` parameters,
     otherwise you will be spammed with warnings and only one guild will be shilled.
 
-.. seealso::
-    :download:`Download example <../../../Examples/Automatic Generation/autoguild.py>`.
+
+.. literalinclude:: ../../../Examples/Automatic Generation/autoguild.py
+    :lines: 1-4, 20-42, 44
+    :emphasize-lines: 7, 16
 
 
 Automatic channel generation
@@ -49,6 +51,10 @@ Automatic channel generation
 For a auto-managed channel list use |AUTOCHANNEL| instances.
 It can be passed to xMESSAGE objects into the ``channels`` parameters instead of a list.
 
+.. literalinclude:: ../../../Examples/Automatic Generation/autochannel.py
+    :lines: 6-18
+    :caption: AutoCHANNEL example
+    :emphasize-lines: 8
 
 
 PyCord scheme generation method

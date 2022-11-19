@@ -2,6 +2,8 @@
 DAF (|version|)
 =========================================================
 The Discord advertisement framework is a  **shilling tool** that allows easy advertising on Discord.
+It's original purpose is to make it easy to shill your NFT project but it is designed in a way that it can 
+be used to advertise anything as long as it is on Discord.
 
 ---------------------
 Links

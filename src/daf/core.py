@@ -209,7 +209,7 @@ async def add_object(obj: Union[message.DirectMESSAGE, message.TextMESSAGE, mess
         guild_id wasn't provided when adding a message object (to which guild should it add)
     TypeError
         The object provided is not supported for addition.
-    TypeError
+    ValueError
         Missing snowflake parameter.
     ValueError
         Could not find guild with that id.
@@ -239,11 +239,6 @@ async def add_object(obj: guild.AutoGUILD) -> None:
 
 async def add_object(obj, snowflake=None):
     object_type_name = type(obj).__name__
-    # Convert the `snowflake` object into a discord snowflake ID (only if adding a message to guild)
-    if isinstance(snowflake, (dc.Guild, dc.User, dc.Object)):
-        snowflake = snowflake.id
-    elif isinstance(snowflake, guild._BaseGUILD):
-        snowflake = snowflake.snowflake
 
     # Add the object
     if isinstance(obj, guild._BaseGUILD):
@@ -262,14 +257,18 @@ async def add_object(obj, snowflake=None):
 
     elif isinstance(obj, message.BaseMESSAGE):
         if snowflake is None:
-            raise TypeError(f"`snowflake` is required to add a message. Only the {object_type_name} object was provided.")
+            raise ValueError(f"`snowflake` is required to add a message. Only the {object_type_name} object was provided.")
 
-        for guild_user in GLOBALS.server_list:
-            if guild_user.snowflake == snowflake:
-                await guild_user.add_message(obj)
-                return
+        if isinstance(snowflake, (guild.AutoGUILD, guild.GUILD, guild.USER)):
+            await snowflake.add_message(obj)
 
-        raise ValueError(f"Guild or user with snowflake `{snowflake}` was not found in the daf.")
+        elif isinstance(snowflake, (dc.Guild, dc.User, dc.Object, int)):
+            snowflake = get_guild_user(snowflake)
+            if snowflake is None:
+                raise ValueError(f"Guild or user with snowflake `{snowflake}` was not found in the daf.")
+
+        
+
 
     else:
         raise TypeError(f"Invalid object type `{object_type_name}`.")
