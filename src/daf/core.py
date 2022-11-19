@@ -5,9 +5,9 @@
 """
 from __future__ import annotations
 from typing import Callable, Coroutine, List, Optional, Union, overload
+from contextlib import suppress
 from typeguard import typechecked
 
-from .exceptions import *
 from .logging.tracing import *
 from .logging import sql, logging, tracing
 
@@ -44,7 +44,8 @@ class GLOBALS:
     """
     Storage class used for holding global variables.
     """
-    server_list: List[guild._BaseGUILD] = []
+    server_list: List[guild._BaseGUILD] = [] # Guild/User objects 
+    auto_guilds: List[guild.AutoGUILD] = [] # AutoGUILD objects
 
 
 #######################################################################
@@ -63,13 +64,20 @@ async def _advertiser(message_type: guild.AdvertiseTaskType) -> None:
     """
     while True:
         await asyncio.sleep(C_TASK_SLEEP_DELAY)
-        for guild_user in GLOBALS.server_list[:]: # Shallow copy list to allow dynamic removal and addition of objects
-            await guild_user._advertise(message_type)
+        # Sum, creates new list, making modifications on original lists safe
+        for guild_user in GLOBALS.server_list + GLOBALS.auto_guilds: 
+            # Remove guild
+            if guild_user._check_state():
+                # Suppress since user could of called the remove_object function mid iteration.
+                with suppress(ValueError):
+                    remove_object(guild_user)
+            else:
+                await guild_user._advertise(message_type)
 
 
 @misc.doc_category("Core control")
 async def initialize(token : str,
-                     server_list : Optional[List[Union[guild.GUILD, guild.USER]]]=[],
+                     server_list : Optional[List[Union[guild.GUILD, guild.USER, guild.AutoGUILD]]]=None,
                      is_user : Optional[bool] =False,
                      user_callback : Optional[Union[Callable, Coroutine]]=None,
                      server_log_output : Optional[str] =None,
@@ -129,10 +137,13 @@ async def initialize(token : str,
 
     # Initialize the servers (and their message objects)
     trace("[CORE]: Initializing servers", TraceLEVELS.NORMAL)
+    if server_list is None:
+        server_list = []
+
     for server in server_list:
         try:
             await add_object(server) # Add each guild to the shilling list
-        except (DAFError, ValueError, TypeError) as ex:
+        except (ValueError, TypeError) as ex:
             trace(ex)
     
     # Create advertiser tasks
@@ -198,22 +209,36 @@ async def add_object(obj: Union[message.DirectMESSAGE, message.TextMESSAGE, mess
         guild_id wasn't provided when adding a message object (to which guild should it add)
     TypeError
         The object provided is not supported for addition.
-    TypeError
+    ValueError
         Missing snowflake parameter.
-    DAFNotFoundError(code=DAF_SNOWFLAKE_NOT_FOUND)
+    ValueError
         Could not find guild with that id.
     Other
         Raised in the obj.add_message() method
     """
     ...
+@overload
+@misc.doc_category("Shilling list modification", True)
+async def add_object(obj: guild.AutoGUILD) -> None:
+    """
+    Adds a AutoGUILD to the shilling list.
+
+    Parameters
+    -----------
+    obj: daf.guild.AutoGUILD
+        AutoGUILD object that automatically finds guilds to shill in.
+
+    Raises
+    ----------
+    TypeError
+        The object provided is not supported for addition.
+    Other
+        From :py:meth:`~daf.guild.AutoGUILD.initialize` method.
+    """
+    ...
 
 async def add_object(obj, snowflake=None):
     object_type_name = type(obj).__name__
-    # Convert the `snowflake` object into a discord snowflake ID (only if adding a message to guild)
-    if isinstance(snowflake, (dc.Guild, dc.User, dc.Object)):
-        snowflake = snowflake.id
-    elif isinstance(snowflake, guild._BaseGUILD):
-        snowflake = snowflake.snowflake
 
     # Add the object
     if isinstance(obj, guild._BaseGUILD):
@@ -223,36 +248,50 @@ async def add_object(obj, snowflake=None):
         await obj.initialize()
         GLOBALS.server_list.append(obj)
 
+    elif isinstance(obj, guild.AutoGUILD):
+        if obj in GLOBALS.auto_guilds:
+            raise ValueError(f"{object_type_name} is already added to the daf.")
+
+        await obj.initialize()
+        GLOBALS.auto_guilds.append(obj)
+
     elif isinstance(obj, message.BaseMESSAGE):
         if snowflake is None:
-            raise TypeError(f"`snowflake` is required to add a message. Only the {object_type_name} object was provided.")
+            raise ValueError(f"`snowflake` is required to add a message. Only the {object_type_name} object was provided.")
 
-        for guild_user in GLOBALS.server_list:
-            if guild_user.snowflake == snowflake:
-                await guild_user.add_message(obj)
-                return
+        if isinstance(snowflake, (guild.AutoGUILD, guild.GUILD, guild.USER)):
+            await snowflake.add_message(obj)
 
-        raise DAFNotFoundError(f"Guild or user with snowflake `{snowflake}` was not found in the daf.", DAF_SNOWFLAKE_NOT_FOUND)
+        elif isinstance(snowflake, (dc.Guild, dc.User, dc.Object, int)):
+            snowflake = get_guild_user(snowflake)
+            if snowflake is None:
+                raise ValueError(f"Guild or user with snowflake `{snowflake}` was not found in the daf.")
+
+        
+
 
     else:
         raise TypeError(f"Invalid object type `{object_type_name}`.")
 
 
 @misc.doc_category("Shilling list modification")
-def remove_object(snowflake: Union[int, dc.Object, dc.Guild, dc.User, dc.Object, guild._BaseGUILD, message.BaseMESSAGE]) -> None:
+def remove_object(snowflake: Union[int, dc.Object, dc.Guild, dc.User, dc.Object, guild._BaseGUILD, message.BaseMESSAGE, guild.AutoGUILD]) -> None:
     """
+    .. versionchanged:: v2.3
+        Instead of raising DAFNotFound, raises ValueError
+
     Removes an object from the daf.
 
     Parameters
     -------------
-    snowflake: Union[int, discord.Object, discord.Guild, discord.User, discord.Object, guild.GUILD, guild.USER , message.TextMESSAGE, message.VoiceMESSAGE, message.DirectMESSAGE]
+    snowflake: Union[int, dc.Object, dc.Guild, dc.User, dc.Object, guild._BaseGUILD, message.BaseMESSAGE, guild.AutoGUILD]
         The GUILD/USER object to remove/snowflake of GUILD/USER
-        or a xMESSAGE object
+        or a xMESSAGE object or AutoGUILD object.
 
     Raises
     --------------
-    DAFNotFoundError(code=DAF_SNOWFLAKE_NOT_FOUND)
-         Could not find guild with that id.
+    ValueError
+        Item (with specified snowflake) not in the shilling list.
     TypeError
         Invalid argument."""    
     if isinstance(snowflake, message.BaseMESSAGE):
@@ -260,17 +299,15 @@ def remove_object(snowflake: Union[int, dc.Object, dc.Guild, dc.User, dc.Object,
             if snowflake in _guild.messages:
                 _guild.remove_message(snowflake)
                 break
-
-        return
-
-    if not isinstance(snowflake, guild._BaseGUILD):
-        snowflake = get_guild_user(snowflake)
-
-    if snowflake is not None and snowflake in GLOBALS.server_list:
-        GLOBALS.server_list.remove(snowflake)
+    elif isinstance(snowflake, guild.AutoGUILD):
+        GLOBALS.auto_guilds.remove(snowflake)
+        snowflake._delete()
     else:
-        raise DAFNotFoundError(f"GUILD/USER not in the shilling list.", DAF_SNOWFLAKE_NOT_FOUND)
+        if not isinstance(snowflake, guild._BaseGUILD):
+            snowflake = get_guild_user(snowflake)
 
+        GLOBALS.server_list.remove(snowflake)
+        snowflake._delete()
 
 @misc.doc_category("Getters")
 def get_guild_user(snowflake: Union[int, dc.Object, dc.Guild, dc.User, dc.Object]) -> Union[guild.GUILD, guild.USER, None]:
@@ -361,7 +398,7 @@ def get_shill_list() -> List[Union[guild.GUILD, guild.USER]]:
 @typechecked
 @misc.doc_category("Core control")
 def run(token : str,
-        server_list : Optional[List[Union[guild.GUILD, guild.USER]]]=[],
+        server_list : Optional[List[Union[guild.GUILD, guild.USER, guild.AutoGUILD]]]=None,
         is_user : Optional[bool] =False,
         user_callback : Optional[Union[Callable, Coroutine]]=None,
         server_log_output : Optional[str] =None,

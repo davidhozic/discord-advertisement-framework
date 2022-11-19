@@ -1,30 +1,32 @@
 """
     Contains base definitions for different message classes."""
 
-from typing import Any, Iterable, Union, TypeVar, Optional
+from contextlib import suppress
+from typing import Any, Set, List, Iterable, Union, TypeVar, Optional
 from datetime import timedelta, datetime
 from typeguard import check_type, typechecked
 
 from ..dtypes import *
 from ..logging.tracing import *
 from ..timing import *
-from ..exceptions import *
 from .. import misc
 
 import random
+import re
 import asyncio
-
+import _discord as discord
 
 __all__ = (
     "BaseMESSAGE",
+    "AutoCHANNEL",
 )
 
 T = TypeVar("T")
+ChannelType = Union[discord.TextChannel, discord.VoiceChannel]
 
 # Configuration
 # ----------------------
 C_PERIOD_MINIMUM_SEC = 1 # Minimal seconds the period can be
-
 
 class BaseMESSAGE:
     """
@@ -62,6 +64,7 @@ class BaseMESSAGE:
         * datetime - specific date & time
     """
     __slots__ = (
+        "_id",
         "period",
         "start_period",
         "end_period",
@@ -73,8 +76,6 @@ class BaseMESSAGE:
         "remove_after",
         "_created_at"
     )
-
-    __logname__: str = "" # Used for registering SQL types and to get the message type for saving the log
 
     @typechecked
     def __init__(self,
@@ -125,9 +126,31 @@ class BaseMESSAGE:
         # Attributes created with this function will not be re-referenced to a different object
         # if the function is called again, ensuring safety (.update_method)
         misc._write_attr_once(self, "update_semaphore", asyncio.Semaphore(1))
+        # For comparing copies of the object (prevents .update from overwriting)
+        misc._write_attr_once(self, "_id", id(self)) 
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}(data={self._data})"
+
+    def __eq__(self, o: object) -> bool:
+        """
+        Compares two message objects.
+
+        Parameters
+        ------------
+        o: BaseMESSAGE
+            The message to compare this instance with.
+
+        Raises
+        ----------
+        TypeError
+            Parameter of incorrect type.
+        """
+        if isinstance(o, BaseMESSAGE):
+            return o._id == self._id
+        
+        raise TypeError(f"Comparison of {type(self)} not allowed with {type(o)}")
+
 
     @property
     def created_at(self) -> datetime:
@@ -286,3 +309,147 @@ class BaseMESSAGE:
         """
 
         raise NotImplementedError
+
+@misc.doc_category("Automatic generation", path="message")
+class AutoCHANNEL:
+    """
+    .. versionadded:: v2.3
+
+    Used for creating instances of automatically managed channels.
+    The objects created with this will automatically add new channels
+    at creation and dynamically while the framework is already running,
+    if they match the patterns.
+
+    .. code-block:: python
+       :caption: Usage
+       :emphasize-lines: 4
+
+       # TextMESSAGE is used here, but works for others too
+       daf.message.TextMESSAGE(
+            ..., # Other parameters
+            channels=daf.message.AutoCHANNEL(...)
+        )
+
+
+    Parameters
+    --------------
+    include_pattern: str
+        Regex pattern to match for the channel to be considered.
+    exclude_pattern: str
+        Regex pattern to match for the channel to be excluded
+        from the consideration.
+
+        .. note::
+            If both include_pattern and exclude_pattern yield a match, the guild will be
+            excluded from match.
+
+    interval: Optional[timedelta] = timedelta(minutes=5) 
+        Interval at which to scan for new channels.
+    """
+
+    __slots__ = (
+        "include_pattern",
+        "exclude_pattern",
+        "interval",
+        "parent",
+        "cache",
+        "channel_getter",
+        "last_scan"
+    )
+    def __init__(self,
+                 include_pattern: str,
+                 exclude_pattern: Optional[str] = None,
+                 interval: Optional[timedelta] = timedelta(minutes=5)) -> None:
+        self.include_pattern = include_pattern
+        self.exclude_pattern = exclude_pattern
+        self.interval = interval.total_seconds()
+        self.parent = None
+        self.channel_getter: property = None
+        self.cache: Set[ChannelType] = set()
+        self.last_scan = 0
+
+    def __iter__(self):
+        "Returns the channel iterator."
+        self._process()
+        return iter(self.channels)
+
+    def __bool__(self) -> bool:
+        "Prevents removal of xMESSAGE by always returning True"
+        return True
+
+    @property
+    def channels(self) -> List[ChannelType]:
+        """
+        Property that returns a list of :class:`discord.TextChannel` or :class:`discord.VoiceChannel`
+        (depends on the xMESSAGE type this is in) objects in cache.
+        """
+        return list(self.cache)
+
+    async def initialize(self, parent, channel_type: str):
+        """
+        Initializes async parts of the instance.
+        This method should be called by ``parent``.
+
+        Parameters
+        -----------
+        parent: message.BaseMESSAGE
+            The message object this AutoCHANNEL instance is in.
+        channel_type: str
+            The channel type to look for when searching for channels
+        """
+        self.parent = parent
+        self.channel_getter = channel_type
+
+    def _process(self):
+        """
+        Task that scans and adds new channels to cache.
+        """
+        channel: ChannelType
+        stamp = datetime.now().timestamp()
+        if stamp - self.last_scan > self.interval:
+            self.last_scan = stamp
+            for channel in getattr(self.parent.parent.apiobject, self.channel_getter):
+                if channel not in self.cache:
+                    name = channel.name
+                    if (re.search(self.include_pattern, name) is not None and
+                        (self.exclude_pattern is None or re.search(self.exclude_pattern, name) is None)
+                    ):
+                        self.cache.add(channel)
+
+    def remove(self, channel: ChannelType):
+        """
+        Removes channel from cache.
+
+        Parameters
+        -----------
+        channel: Union[discord.TextChannel, discord.VoiceChannel]
+            The channel to remove from cache.
+        
+        Raises
+        -----------
+        KeyError
+            The channel is not in cache.
+        """
+        self.cache.remove(channel)
+
+    async def update(self, **kwargs):
+        """
+        Updates the object with new initialization parameters.
+
+        Parameters
+        ------------
+        kwargs: Any
+            Any number of keyword arguments that appear in the
+            object initialization.
+
+        Raises
+        -----------
+        Any
+            Raised from :py:meth:`~daf.message.AutoCHANNEL.initialize` method.
+        """
+        if "interval" not in kwargs:
+            kwargs["interval"] = timedelta(seconds=self.interval)
+        
+        return await misc._update(self,
+                                  init_options={"parent": self.parent, "channel_type": self.channel_getter},
+                                  **kwargs)

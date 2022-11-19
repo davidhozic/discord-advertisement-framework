@@ -8,7 +8,6 @@ from typeguard import typechecked
 from .base import *
 from ..dtypes import *
 from ..logging.tracing import *
-from ..exceptions import *
 
 from .. import client
 from ..logging import sql
@@ -32,9 +31,9 @@ RLIM_USER_WAIT_TIME = 20
 TMDataType = Union[str, EMBED, discord.Embed, FILE, Iterable[Union[str, EMBED, discord.Embed, FILE]], _FunctionBaseCLASS]
 
 # Register message modes
-sql.register_type("MessageMODE", "send")(None)
-sql.register_type("MessageMODE", "edit")(None)
-sql.register_type("MessageMODE", "clear-send")(None)
+sql.register_type("MessageMODE", "send")
+sql.register_type("MessageMODE", "edit")
+sql.register_type("MessageMODE", "clear-send")
 
 @misc.doc_category("Messages", path="message")
 @sql.register_type("MessageTYPE")
@@ -68,7 +67,6 @@ class TextMESSAGE(BaseMESSAGE):
 
         - None - Use this value for a fixed (not randomized) sending period
         - timedelta object - object describing time difference, if this is used, then the parameter represents the bottom limit of the **randomized** sending period.
-
     end_period: Union[int, timedelta]
         If ``start_period`` is not None, then this represents the upper limit of randomized time period in which messages will be sent.
         If ``start_period`` is None, then this represents the actual time period between each message send.
@@ -89,7 +87,6 @@ class TextMESSAGE(BaseMESSAGE):
 
             # Time between each send is exactly 10 seconds.
             daf.TextMESSAGE(start_period=None, end_period=timedelta(seconds=10), data="Second Message", channels=[12345], mode="send", start_in=timedelta(seconds=0))
-
     data: Union[str, EMBED, discord.Embed, FILE, List[Union[str, EMBED, discord.Embed, FILE]], _FunctionBaseCLASS]
         The data parameter is the actual data that will be sent using discord's API. The data types of this parameter can be:
             - str (normal text),
@@ -98,8 +95,10 @@ class TextMESSAGE(BaseMESSAGE):
             - :ref:`FILE`,
             - List/Tuple containing any of the above arguments (There can up to 1 string, up to 1 :ref:`EMBED` / :class:`discord.Embed` and up to 10 :ref:`FILE` objects. If more than 1 string or embeds are sent, the framework will only consider the last found).
             - Function that accepts any amount of parameters and returns any of the above types. To pass a function, YOU MUST USE THE :ref:`data_function` decorator on the function before passing the function to the daf.
+    channels: Union[Iterable[Union[int, discord.TextChannel, discord.Thread]], daf.message.AutoCHANNEL]
+        .. versionchanged:: v2.3
+            Can also be :class:`~daf.message.AutoCHANNEL`
 
-    channels: Iterable[Union[int, discord.TextChannel, discord.Thread]]
         Channels that it will be advertised into (Can be snowflake ID or channel objects from PyCord).
     mode: str
         Parameter that defines how message will be sent to a channel.
@@ -108,7 +107,6 @@ class TextMESSAGE(BaseMESSAGE):
         - "send" -    each period a new message will be sent,
         - "edit" -    each period the previously send message will be edited (if it exists)
         - "clear-send" -    previous message will be deleted and a new one sent.
-
     start_in: timedelta
         When should the message be first sent.
     remove_after: Optional[Union[int, timedelta, datetime]]
@@ -124,20 +122,19 @@ class TextMESSAGE(BaseMESSAGE):
         "mode",
         "sent_messages",
     )
-    __logname__: str = "TextMESSAGE"               # Used for registering SQL types and to get the message type for saving the log
 
     @typechecked
     def __init__(self, 
                  start_period: Union[int, timedelta, None],
                  end_period: Union[int, timedelta],
                  data: TMDataType,
-                 channels: Iterable[Union[int, discord.TextChannel, discord.Thread]],
+                 channels: Union[Iterable[Union[int, discord.TextChannel, discord.Thread]], AutoCHANNEL],
                  mode: Literal["send", "edit", "clear-send"] = "send",
                  start_in: Union[timedelta, bool]=timedelta(seconds=0),
                  remove_after: Optional[Union[int, timedelta, datetime]]=None):
         super().__init__(start_period, end_period, data, start_in, remove_after)
         self.mode = mode
-        self.channels = list(set(channels)) # Automatically removes duplicates
+        self.channels = channels
         self.sent_messages = {} # Dictionary for storing last sent message for each channel
     
     def _check_state(self) -> bool:
@@ -307,30 +304,36 @@ class TextMESSAGE(BaseMESSAGE):
         cl = client.get_client()
         self.parent = parent
         _guild = self.parent.apiobject
-        while ch_i < len(self.channels):
-            channel = self.channels[ch_i]
-            if isinstance(channel, discord.abc.GuildChannel):
-                channel_id = channel.id
-            else:
-                channel_id = channel
-                channel = self.channels[ch_i] = cl.get_channel(channel_id)
+        to_remove = []
 
-            if channel is None:
-                trace(f"Unable to get channel from ID {channel_id}", TraceLEVELS.WARNING)
+        if isinstance(self.channels, AutoCHANNEL):
+            await self.channels.initialize(self, "text_channels")
+        else:
+            for ch_i, channel in enumerate(self.channels):
+                if isinstance(channel, discord.abc.GuildChannel):
+                    channel_id = channel.id
+                else:
+                    # Snowflake IDs provided
+                    channel_id = channel
+                    channel = self.channels[ch_i] = cl.get_channel(channel_id)
+
+                if channel is None:
+                    trace(f"Unable to get channel from ID {channel_id}", TraceLEVELS.WARNING)
+                    to_remove.append(channel)
+                elif type(channel) not in {discord.TextChannel, discord.Thread}:
+                    raise TypeError(f"TextMESSAGE object received channel type of {type(channel).__name__}, but was expecting discord.TextChannel or discord.Thread")
+                elif channel.guild != _guild:
+                    raise ValueError(f"The channel {channel.name}(ID: {channel_id}) does not belong into {_guild.name}(ID: {_guild.id}) but is part of {channel.guild.name}(ID: {channel.guild.id})")
+            
+            for channel in to_remove:
                 self.channels.remove(channel)
-            elif type(channel) not in {discord.TextChannel, discord.Thread}:
-                raise TypeError(f"TextMESSAGE object received channel type of {type(channel).__name__}, but was expecting discord.TextChannel or discord.Thread")
-            elif channel.guild != _guild:
-                raise ValueError(f"The channel {channel.name}(ID: {channel_id}) does not belong into {_guild.name}(ID: {_guild.id}) but is part of {channel.guild.name}(ID: {channel.guild.id})")
-            else:
-                ch_i += 1
 
-        if not len(self.channels):
-            raise ValueError(f"No valid channels were passed to {self} object")
+            if not self.channels:
+                raise ValueError(f"No valid channels were passed to {self} object")
 
-        # Increase period to slow mode delay if it is lower
-        slowmode_delay = timedelta(seconds=max(channel.slowmode_delay for channel in self.channels))
-        self._check_period(slowmode_delay)
+            # Increase period to slow mode delay if it is lower
+            slowmode_delay = timedelta(seconds=max(channel.slowmode_delay for channel in self.channels))
+            self._check_period(slowmode_delay)
     
     async def _handle_error(self, channel: Union[discord.TextChannel, discord.Thread], ex: Exception) -> bool:
         """
@@ -484,6 +487,9 @@ class TextMESSAGE(BaseMESSAGE):
             # This parameter does not appear as attribute, manual setting necessary
             kwargs["start_in"] = timedelta(seconds=0)
         
+        if "data" not in kwargs:
+            kwargs["data"] = self._data
+        
         if not len(_init_options):
             _init_options = {"parent": self.parent}
 
@@ -562,7 +568,6 @@ class DirectMESSAGE(BaseMESSAGE):
         "previous_message",
         "dm_channel",
     )
-    __logname__ = "DirectMESSAGE"               # Used for logging (type key) and sql lookup table type registration
 
     @typechecked
     def __init__(self,
@@ -680,7 +685,7 @@ class DirectMESSAGE(BaseMESSAGE):
 
         Raises
         ---------
-        DAFNotFoundError(code=DAF_USER_CREATE_DM)
+        ValueError
             Raised when the direct message channel could not be created
         """
         try:
@@ -689,7 +694,7 @@ class DirectMESSAGE(BaseMESSAGE):
             self.dm_channel = user
             self.parent = parent
         except discord.HTTPException as ex:
-            raise DAFNotFoundError(f"Unable to create DM with user {user.display_name}\nReason: {ex}", DAF_USER_CREATE_DM)
+            raise ValueError(f"Unable to create DM with user {user.display_name}\nReason: {ex}")
 
     async def _handle_error(self, ex: Exception) -> bool:
         """
@@ -809,6 +814,9 @@ class DirectMESSAGE(BaseMESSAGE):
         if "start_in" not in kwargs:
             # This parameter does not appear as attribute, manual setting necessary
             kwargs["start_in"] = timedelta(seconds=0)
+
+        if "data" not in kwargs:
+            kwargs["data"] = self._data
 
         if not len(_init_options):
             _init_options = {"parent" : self.parent}

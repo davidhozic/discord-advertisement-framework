@@ -6,7 +6,6 @@ from typing import Any, Callable, List, Union, TypeVar, Coroutine
 from contextlib import suppress
 from typeguard import typechecked
 from urllib.parse import urlparse
-from .exceptions import *
 from .logging.tracing import trace, TraceLEVELS
 
 from . import misc
@@ -142,6 +141,10 @@ class EMBED(discord.Embed):
 
     .. deprecated:: v2.2
         Use :class:`discord.Embed` instead.
+    
+    .. WARNING::
+        USING this is NOT recommended as it is planned for removal.
+        Use :class:`discord.Embed` instead.
 
     Derived class of :class:`discord.Embed` created to provide additional arguments in the creation.
 
@@ -263,7 +266,7 @@ class AUDIO:
 
     Raises
     ----------
-    DAFNotFoundError(code=DAF_FILE_NOT_FOUND/DAF_YOUTUBE_STREAM_ERROR)
+    ValueError
         Raised when the file or youtube url is not found.
     """
 
@@ -299,14 +302,14 @@ class AUDIO:
                 self.title = data["title"]
 
             except yt_dlp.DownloadError:
-                raise DAFNotFoundError(f'The audio from "{self.orig}" could not be streamed', DAF_YOUTUBE_STREAM_ERROR)
+                raise ValueError(f'The audio from "{self.orig}" could not be streamed')
         else:
             self.url = filename
             try:
                 with open(self.url):
                     pass
             except FileNotFoundError:
-                raise DAFNotFoundError(f"The file {self.url} could not be found.", DAF_FILE_NOT_FOUND)
+                raise ValueError(f"The file {self.url} could not be found.")
     
     def __str__(self):
         return f"AUDIO({str(self.to_dict())})"

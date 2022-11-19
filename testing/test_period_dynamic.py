@@ -100,9 +100,9 @@ async def test_text_period(text_channels):
                 assert item.to_dict() in embeds, "DirectMESSAGE embed not in message embeds"
         
     finally:
-        with suppress(daf.DAFNotFoundError):
+        with suppress(ValueError):
             daf.remove_object(guild)
-        with suppress(daf.DAFNotFoundError):
+        with suppress(ValueError):
             daf.remove_object(user)
         
 
@@ -146,7 +146,7 @@ async def test_voice_period(voice_channels):
             assert bottom_secs < (end - start) < upper_secs
 
     finally:
-        with suppress(daf.DAFNotFoundError):
+        with suppress(ValueError):
             daf.remove_object(guild)
-        with suppress(daf.DAFNotFoundError):
+        with suppress(ValueError):
             daf.remove_object(user)
