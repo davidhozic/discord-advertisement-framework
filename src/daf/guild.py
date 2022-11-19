@@ -542,8 +542,8 @@ class AutoGUILD:
             :caption: Illegal use of AutoGUILD
             :emphasize-lines: 6, 7
 
-            auto_ch = AutoCHANNEL(...)
-            tm = TextMESSAGE(..., channels=auto_ch)
+            auto_ch = daf.AutoCHANNEL(...)
+            tm = daf.TextMESSAGE(..., channels=auto_ch)
 
             await daf.add_object(AutoGUILD(..., messages=[tm]))
 
@@ -555,7 +555,7 @@ class AutoGUILD:
         .. code-block::
             :caption: Modifying AutoGUILD messages
 
-            aguild = AutoGUILD(..., messages=[tm])
+            aguild = daf.AutoGUILD(..., messages=[tm])
             await daf.add_object(aguild)
 
             for guild in aguild.guilds:
