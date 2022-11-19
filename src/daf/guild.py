@@ -534,6 +534,34 @@ class AutoGUILD:
     Used for creating instances that will return
     guild objects.
 
+    .. CAUTION::
+        Any objects passed to AutoGUILD get **deep-copied** meaning, those same objects
+        **will not be initialized** and cannot be used to obtain/change information regarding AutoGUILD.
+
+        .. code-block::
+            :caption: Illegal use of AutoGUILD
+            :emphasize-lines: 6, 7
+
+            auto_ch = AutoCHANNEL(...)
+            tm = TextMESSAGE(..., channels=auto_ch)
+
+            await daf.add_object(AutoGUILD(..., messages=[tm]))
+
+            auto_ch.channels # Illegal (does not represent the same object as in AutoGUILD), results in exception
+            await tm.update(...) # Illegal (does not represent the same object as in AutoGUILD), results in exception
+
+        To actually modify message/channel objects inside AutoGUILD, you need to iterate thru each GUILD.
+
+        .. code-block::
+            :caption: Modifying AutoGUILD messages
+
+            aguild = AutoGUILD(..., messages=[tm])
+            await daf.add_object(aguild)
+
+            for guild in aguild.guilds:
+                for message in guild.messages
+                    await message.update(...)
+
     Parameters
     --------------
     include_pattern: str
@@ -651,6 +679,24 @@ class AutoGUILD:
         self.messages.append(message)
         for guild in self.cache.values():
             await guild.add_message(deepcopy(message))
+
+    def remove_message(self, message: BaseMESSAGE):
+        """
+        Removes message from the messages list.
+
+        Parameters
+        ------------
+        message: BaseMESSAGE
+            The message to remove.
+
+        Raises
+        --------
+        ValueError
+            The message is not present in the list.        
+        """
+        self.messages.remove(message)
+        for guild in self.guilds:
+            guild.remove_message(message)
 
     async def _process(self):
         """

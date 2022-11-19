@@ -64,6 +64,7 @@ class BaseMESSAGE:
         * datetime - specific date & time
     """
     __slots__ = (
+        "_id",
         "period",
         "start_period",
         "end_period",
@@ -125,9 +126,31 @@ class BaseMESSAGE:
         # Attributes created with this function will not be re-referenced to a different object
         # if the function is called again, ensuring safety (.update_method)
         misc._write_attr_once(self, "update_semaphore", asyncio.Semaphore(1))
+        # For comparing copies of the object (prevents .update from overwriting)
+        misc._write_attr_once(self, "_id", id(self)) 
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}(data={self._data})"
+
+    def __eq__(self, o: object) -> bool:
+        """
+        Compares two message objects.
+
+        Parameters
+        ------------
+        o: BaseMESSAGE
+            The message to compare this instance with.
+
+        Raises
+        ----------
+        TypeError
+            Parameter of incorrect type.
+        """
+        if isinstance(o, BaseMESSAGE):
+            return o._id == self._id
+        
+        raise TypeError(f"Comparison of {type(self)} not allowed with {type(o)}")
+
 
     @property
     def created_at(self) -> datetime:
@@ -347,24 +370,19 @@ class AutoCHANNEL:
 
     def __iter__(self):
         "Returns the channel iterator."
+        self._process()
         return iter(self.channels)
-    
-    def __len__(self) -> int:
-        "Forwards call to the cache"
-        return len(self.cache)
 
     def __bool__(self) -> bool:
-        "Forwards call to the cache"
-        return bool(self.channels)
+        "Prevents removal of xMESSAGE by always returning True"
+        return True
 
     @property
     def channels(self) -> List[ChannelType]:
         """
         Property that returns a list of :class:`discord.TextChannel` or :class:`discord.VoiceChannel`
         (depends on the xMESSAGE type this is in) objects in cache.
-
         """
-        self._process()
         return list(self.cache)
 
     async def initialize(self, parent, channel_type: str):

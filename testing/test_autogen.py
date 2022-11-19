@@ -23,12 +23,16 @@ async def guilds():
         if guild.name == "magic-123-magic":
             guild_include = guild
             break
+    else:
+        guild_include = await client.create_guild(name="magic-123-magic")
 
     for guild in client.guilds:
         if guild.name == "magic-321-magic":
             guild_exclude = guild
             break
-        
+    else:
+        guild_exclude = await client.create_guild(name="magic-321-magic")
+
     return guild_include, guild_exclude
 
 
