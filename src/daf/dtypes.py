@@ -2,11 +2,10 @@
     The module contains definitions regarding the data types
     you can send using the xxxMESSAGE objects.
 """
-from typing import Any, Callable, List, Union, TypeVar
+from typing import Any, Callable, List, Union, TypeVar, Coroutine
 from contextlib import suppress
 from typeguard import typechecked
 from urllib.parse import urlparse
-from .exceptions import *
 from .logging.tracing import trace, TraceLEVELS
 
 from . import misc
@@ -93,6 +92,7 @@ def data_function(fnc: Callable):
         :language: python
         :emphasize-lines: 11, 24
     """
+
     class FunctionCLASS(_FunctionBaseCLASS):
         """
         Used for creating special classes that are then used to create objects in the daf.MESSAGE
@@ -116,11 +116,14 @@ def data_function(fnc: Callable):
             self.kwargs = kwargs
             self.func_name = fnc.__name__
 
-        def get_data(self):
+        async def retrieve(self):
             """
             Retrieves the data from the user function.
             """
-            return fnc(*self.args, **self.kwargs)
+            _ = fnc(*self.args, **self.kwargs)
+            if isinstance(_, Coroutine):
+                return await _
+            return _
         
         def __str__(self) -> str:
             return self.func_name
@@ -137,6 +140,10 @@ class EMBED(discord.Embed):
     """
 
     .. deprecated:: v2.2
+        Use :class:`discord.Embed` instead.
+    
+    .. WARNING::
+        USING this is NOT recommended as it is planned for removal.
         Use :class:`discord.Embed` instead.
 
     Derived class of :class:`discord.Embed` created to provide additional arguments in the creation.
@@ -199,7 +206,7 @@ class EMBED(discord.Embed):
                 timestamp: datetime.datetime = None):
 
         trace("[EMBED:] DEPRECATED! Using EMBED is deprecated since v2.2, please use discord.Embed:\
-            \n\nfrom daf import discord\n\ndiscord.Embed(...)", TraceLEVELS.WARNING, True)
+            \n\nfrom daf import discord\n\ndiscord.Embed(...)", TraceLEVELS.DEPRECATED)
         super().__init__(colour=colour,
                          color=color,
                          title=title,
@@ -259,7 +266,7 @@ class AUDIO:
 
     Raises
     ----------
-    DAFNotFoundError(code=DAF_FILE_NOT_FOUND/DAF_YOUTUBE_STREAM_ERROR)
+    ValueError
         Raised when the file or youtube url is not found.
     """
 
@@ -295,14 +302,14 @@ class AUDIO:
                 self.title = data["title"]
 
             except yt_dlp.DownloadError:
-                raise DAFNotFoundError(f'The audio from "{self.orig}" could not be streamed', DAF_YOUTUBE_STREAM_ERROR)
+                raise ValueError(f'The audio from "{self.orig}" could not be streamed')
         else:
             self.url = filename
             try:
                 with open(self.url):
                     pass
             except FileNotFoundError:
-                raise DAFNotFoundError(f"The file {self.url} could not be found.", DAF_FILE_NOT_FOUND)
+                raise ValueError(f"The file {self.url} could not be found.")
     
     def __str__(self):
         return f"AUDIO({str(self.to_dict())})"

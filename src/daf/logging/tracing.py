@@ -2,54 +2,89 @@
     This modules contains functions and classes
     related to the console debug long or trace.
 """
-from enum import Enum, auto
+from __future__ import annotations
+from enum import IntEnum, auto
 import time
 from threading import Lock
 from .. import misc
+try:
+    from enum_tools.documentation import document_enum
+except ImportError:
+    document_enum = lambda x: x # This is only needed for documentation
 
 __all__ = (
     "TraceLEVELS",
     "trace"
 )
 
-class GLOBALS:
-    """Storage class used for storing global varibales of the module."""
-    use_debug = None
-    lock = Lock() # For print thread safety
-
+@document_enum
 @misc.doc_category("Tracing")
-class TraceLEVELS(Enum):
+class TraceLEVELS(IntEnum):
     """
     Levels of trace for debug.
 
     .. seealso:: :ref:`trace`
+
+    .. versionchanged:: v2.3
+        Added DEPRECATION
     """
-    NORMAL = 0
-    WARNING = auto()
+    
+    DEPRECATED = 0
+    """
+    Show only deprecation notices.
+    """
     ERROR = auto()
+    """
+    Show deprecations and errors.
+    """
+    WARNING = auto()
+    """
+    Show deprecations, errors, warnings.
+    """
+    NORMAL = auto()
+    """
+    Show deprecations, errors, warnings, info messages.
+    """
+    DEBUG = auto()
+    """
+    Show deprecations, errors, warnings, info messages, debug messages.
+    """
+
+
+class GLOBALS:
+    """Storage class used for storing global variables of the module."""
+    set_level = TraceLEVELS.DEPRECATED
+    lock = Lock() # For print thread safety
+
 
 @misc.doc_category("Tracing")
 def trace(message: str,
-          level: TraceLEVELS = TraceLEVELS.NORMAL,
-          force: bool = False):
+          level: TraceLEVELS | int = TraceLEVELS.NORMAL):
     """
-    Prints a trace to the console.
+    | Prints a trace to the console.
+    | This is thread safe.
+
+    .. versionchanged:: v2.3
+        
+        .. card::
+        
+            Will only print if the level is lower than the configured
+            (thru :func:`~daf.core.run`'s debug parameter max level.
+
+            Eg. if the max level is :class:`~daf.logging.tracing.TraceLEVELS.ERROR`, then the 
+            level parameter needs to be either :class:`~daf.logging.tracing.TraceLEVELS.DEPRECATED`
+            or :class:`~daf.logging.tracing.TraceLEVELS.ERROR`, 
+            else nothing will be printed.
+
     
-    This is thread safe.
-
-    .. versionchanged:: v2.1
-        Added ``force`` parameter.
-
     Parameters
     --------------
     message: str
         Trace message.
-    level: TraceLEVELS
+    level: TraceLEVELS | int
         Level of the trace. Defaults to TraceLEVELS.NORMAL.
-    force: bool
-        Trace even if tracing is disabled.
     """
-    if GLOBALS.use_debug or force:
+    if GLOBALS.set_level >= level: 
         with GLOBALS.lock:
             timestruct = time.localtime()
             timestamp = "Date: {:02d}.{:02d}.{:04d} Time:{:02d}:{:02d}"
@@ -62,13 +97,26 @@ def trace(message: str,
             print(l_trace)
 
 
-def initialize(enable: bool):
+def initialize(level: TraceLEVELS | int | str):
     """
     Initializes the tracing module
 
+    .. versionchanged:: v2.3
+        Changed the parameter from
+        enable: bool to level: TraceLEVELS | int | str.
+
     Parameters
     ------------
-    enable: bool
-        True for tracing module to be enabled.
+    level: TraceLEVELS | int | str
+        The level of tracing to be displayed.
+        The bigger the value, more detailed everything will be.
     """
-    GLOBALS.use_debug = enable
+    if isinstance(level, str):
+        for name, val in vars(TraceLEVELS).items():
+            if name == level:
+                level = val
+                break
+        else:
+            trace("[TRACING:] Could not find the requested trace level by name (string).", TraceLEVELS.WARNING)
+
+    GLOBALS.set_level = level

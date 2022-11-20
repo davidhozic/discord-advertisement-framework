@@ -1,7 +1,6 @@
 """
 Contains definitions for message classes that are text based."""
 
-
 from typing import Any, Dict, List, Iterable, Optional, Union, Literal
 from datetime import datetime, timedelta
 from typeguard import typechecked
@@ -9,7 +8,6 @@ from typeguard import typechecked
 from .base import *
 from ..dtypes import *
 from ..logging.tracing import *
-from ..exceptions import *
 
 from .. import client
 from ..logging import sql
@@ -28,11 +26,14 @@ __all__ = (
 # ---------------------------
 RLIM_USER_WAIT_TIME = 20
 
+# Type aliases
+# ---------------------------
+TMDataType = Union[str, EMBED, discord.Embed, FILE, Iterable[Union[str, EMBED, discord.Embed, FILE]], _FunctionBaseCLASS]
 
 # Register message modes
-sql.register_type("MessageMODE", "send")(None)
-sql.register_type("MessageMODE", "edit")(None)
-sql.register_type("MessageMODE", "clear-send")(None)
+sql.register_type("MessageMODE", "send")
+sql.register_type("MessageMODE", "edit")
+sql.register_type("MessageMODE", "clear-send")
 
 @misc.doc_category("Messages", path="message")
 @sql.register_type("MessageTYPE")
@@ -51,6 +52,14 @@ class TextMESSAGE(BaseMESSAGE):
         - start_now - renamed into ``start_in`` which describes when the message should be first sent.
         - removed ``deleted`` property
 
+    .. versionchanged:: v2.3
+
+        :Slow mode period handling:
+
+            When the period is lower than the remaining time, the framework will start
+            incrementing the original period by original period until it is larger then
+            the slow mode remaining time.
+
     Parameters
     ------------
     start_period: Union[int, timedelta, None]
@@ -58,10 +67,14 @@ class TextMESSAGE(BaseMESSAGE):
 
         - None - Use this value for a fixed (not randomized) sending period
         - timedelta object - object describing time difference, if this is used, then the parameter represents the bottom limit of the **randomized** sending period.
-
     end_period: Union[int, timedelta]
         If ``start_period`` is not None, then this represents the upper limit of randomized time period in which messages will be sent.
         If ``start_period`` is None, then this represents the actual time period between each message send.
+
+        .. CAUTION::
+            When the period is lower than the remaining time, the framework will start
+            incrementing the original period by original period until it is larger then
+            the slow mode remaining time.
 
         .. code-block:: python
             :caption: **Randomized** sending period between **5** seconds and **10** seconds.
@@ -74,7 +87,6 @@ class TextMESSAGE(BaseMESSAGE):
 
             # Time between each send is exactly 10 seconds.
             daf.TextMESSAGE(start_period=None, end_period=timedelta(seconds=10), data="Second Message", channels=[12345], mode="send", start_in=timedelta(seconds=0))
-
     data: Union[str, EMBED, discord.Embed, FILE, List[Union[str, EMBED, discord.Embed, FILE]], _FunctionBaseCLASS]
         The data parameter is the actual data that will be sent using discord's API. The data types of this parameter can be:
             - str (normal text),
@@ -83,8 +95,10 @@ class TextMESSAGE(BaseMESSAGE):
             - :ref:`FILE`,
             - List/Tuple containing any of the above arguments (There can up to 1 string, up to 1 :ref:`EMBED` / :class:`discord.Embed` and up to 10 :ref:`FILE` objects. If more than 1 string or embeds are sent, the framework will only consider the last found).
             - Function that accepts any amount of parameters and returns any of the above types. To pass a function, YOU MUST USE THE :ref:`data_function` decorator on the function before passing the function to the daf.
+    channels: Union[Iterable[Union[int, discord.TextChannel, discord.Thread]], daf.message.AutoCHANNEL]
+        .. versionchanged:: v2.3
+            Can also be :class:`~daf.message.AutoCHANNEL`
 
-    channels: Iterable[Union[int, discord.TextChannel, discord.Thread]]
         Channels that it will be advertised into (Can be snowflake ID or channel objects from PyCord).
     mode: str
         Parameter that defines how message will be sent to a channel.
@@ -93,7 +107,6 @@ class TextMESSAGE(BaseMESSAGE):
         - "send" -    each period a new message will be sent,
         - "edit" -    each period the previously send message will be edited (if it exists)
         - "clear-send" -    previous message will be deleted and a new one sent.
-
     start_in: timedelta
         When should the message be first sent.
     remove_after: Optional[Union[int, timedelta, datetime]]
@@ -109,20 +122,19 @@ class TextMESSAGE(BaseMESSAGE):
         "mode",
         "sent_messages",
     )
-    __logname__: str = "TextMESSAGE"               # Used for registering SQL types and to get the message type for saving the log
 
     @typechecked
     def __init__(self, 
                  start_period: Union[int, timedelta, None],
                  end_period: Union[int, timedelta],
-                 data: Union[str, EMBED, discord.Embed, FILE, Iterable[Union[str, EMBED, discord.Embed, FILE]], _FunctionBaseCLASS],
-                 channels: Iterable[Union[int, discord.TextChannel, discord.Thread]],
+                 data: TMDataType,
+                 channels: Union[Iterable[Union[int, discord.TextChannel, discord.Thread]], AutoCHANNEL],
                  mode: Literal["send", "edit", "clear-send"] = "send",
                  start_in: Union[timedelta, bool]=timedelta(seconds=0),
                  remove_after: Optional[Union[int, timedelta, datetime]]=None):
         super().__init__(start_period, end_period, data, start_in, remove_after)
         self.mode = mode
-        self.channels = list(set(channels)) # Automatically removes duplicates
+        self.channels = channels
         self.sent_messages = {} # Dictionary for storing last sent message for each channel
     
     def _check_state(self) -> bool:
@@ -149,6 +161,24 @@ class TextMESSAGE(BaseMESSAGE):
                 if (reason.status == 403 or                    # Forbidden
                     reason.code in {50007, 10003}):     # Not Forbidden, but bad error codes
                     self.channels.remove(channel)
+
+    def _check_period(self, slowmode_delay: timedelta):
+        """
+        Helper function used for checking the the period is lower
+        than the slow mode delay.
+
+        .. versionadded:: v2.3
+
+        Parameters
+        --------------
+        slowmode_delay: timedelta
+            The (maximum) slowmode delay.
+        """
+        if self.start_period is not None:
+            if self.start_period < slowmode_delay:
+                    self.start_period, self.end_period = slowmode_delay, slowmode_delay + self.end_period - self.start_period
+        elif self.end_period < slowmode_delay:
+            self.end_period = slowmode_delay
 
     def generate_log_context(self,
                              text: Optional[str],
@@ -230,12 +260,15 @@ class TextMESSAGE(BaseMESSAGE):
             "mode" : self.mode,
         }
 
-    def _get_data(self) -> dict:
+    async def _get_data(self) -> dict:
         """"
         Returns a dictionary of keyword arguments that is then expanded
-        into other methods eg. `_send_channel, _generate_log`
+        into other methods eg. `_send_channel, _generate_log`.
+
+        .. versionchanged:: v2.3
+            Turned async.
         """
-        data = self.data.get_data() if isinstance(self.data, _FunctionBaseCLASS) else self.data
+        data = await super()._get_data()
         _data_to_send = {"embed": None, "text": None, "files": []}
         if data is not None:
             if not isinstance(data, (list, tuple, set)):
@@ -271,31 +304,46 @@ class TextMESSAGE(BaseMESSAGE):
         cl = client.get_client()
         self.parent = parent
         _guild = self.parent.apiobject
-        while ch_i < len(self.channels):
-            channel = self.channels[ch_i]
-            if isinstance(channel, discord.abc.GuildChannel):
-                channel_id = channel.id
-            else:
-                channel_id = channel
-                channel = self.channels[ch_i] = cl.get_channel(channel_id)
+        to_remove = []
 
-            if channel is None:
-                trace(f"Unable to get channel from ID {channel_id}", TraceLEVELS.ERROR)
+        if isinstance(self.channels, AutoCHANNEL):
+            await self.channels.initialize(self, "text_channels")
+        else:
+            for ch_i, channel in enumerate(self.channels):
+                if isinstance(channel, discord.abc.GuildChannel):
+                    channel_id = channel.id
+                else:
+                    # Snowflake IDs provided
+                    channel_id = channel
+                    channel = self.channels[ch_i] = cl.get_channel(channel_id)
+
+                if channel is None:
+                    trace(f"Unable to get channel from ID {channel_id}", TraceLEVELS.WARNING)
+                    to_remove.append(channel)
+                elif type(channel) not in {discord.TextChannel, discord.Thread}:
+                    raise TypeError(f"TextMESSAGE object received channel type of {type(channel).__name__}, but was expecting discord.TextChannel or discord.Thread")
+                elif channel.guild != _guild:
+                    raise ValueError(f"The channel {channel.name}(ID: {channel_id}) does not belong into {_guild.name}(ID: {_guild.id}) but is part of {channel.guild.name}(ID: {channel.guild.id})")
+            
+            for channel in to_remove:
                 self.channels.remove(channel)
-            elif type(channel) not in {discord.TextChannel, discord.Thread}:
-                raise TypeError(f"TextMESSAGE object received channel type of {type(channel).__name__}, but was expecting discord.TextChannel or discord.Thread")
-            elif channel.guild != _guild:
-                raise ValueError(f"The channel {channel.name}(ID: {channel_id}) does not belong into {_guild.name}(ID: {_guild.id}) but is part of {channel.guild.name}(ID: {channel.guild.id})")
-            else:
-                ch_i += 1
 
-        if not len(self.channels):
-            raise ValueError(f"No valid channels were passed to {self} object")
+            if not self.channels:
+                raise ValueError(f"No valid channels were passed to {self} object")
 
+            # Increase period to slow mode delay if it is lower
+            slowmode_delay = timedelta(seconds=max(channel.slowmode_delay for channel in self.channels))
+            self._check_period(slowmode_delay)
+    
     async def _handle_error(self, channel: Union[discord.TextChannel, discord.Thread], ex: Exception) -> bool:
         """
         This method handles the error that occurred during the execution of the function.
         Returns `True` if error was handled.
+
+        Slow mode period handling:
+        When the period is lower than the remaining time, the framework will start
+        incrementing the original period by original period until it is larger then
+        the slow mode remaining time.
 
         Parameters
         -----------
@@ -311,6 +359,9 @@ class TextMESSAGE(BaseMESSAGE):
                 if ex.code == 20016:    # Slow Mode
                     self.next_send_time = datetime.now() + timedelta(seconds=retry_after)
                     trace(f"{channel.name} is in slow mode, retrying in {retry_after} seconds", TraceLEVELS.WARNING)
+                    slowmode_delay = timedelta(seconds=channel.slowmode_delay)
+                    self._check_period(slowmode_delay) # Fix the period
+
             elif ex.status == 404:      # Unknown object
                 if ex.code == 10008:    # Unknown message
                     self.sent_messages[channel.id] = None
@@ -390,7 +441,7 @@ class TextMESSAGE(BaseMESSAGE):
             This is then passed to :ref:`GUILD`._generate_log method.
         """
         # Acquire mutex to prevent update method from writing while sending
-        data_to_send = self._get_data()
+        data_to_send = await self._get_data()
         if any(data_to_send.values()):
             errored_channels = []
             succeeded_channels= []
@@ -435,6 +486,9 @@ class TextMESSAGE(BaseMESSAGE):
         if "start_in" not in kwargs:
             # This parameter does not appear as attribute, manual setting necessary
             kwargs["start_in"] = timedelta(seconds=0)
+        
+        if "data" not in kwargs:
+            kwargs["data"] = self._data
         
         if not len(_init_options):
             _init_options = {"parent": self.parent}
@@ -514,13 +568,12 @@ class DirectMESSAGE(BaseMESSAGE):
         "previous_message",
         "dm_channel",
     )
-    __logname__ = "DirectMESSAGE"               # Used for logging (type key) and sql lookup table type registration
 
     @typechecked
     def __init__(self,
                  start_period: Union[int, timedelta, None],
                  end_period: Union[int, timedelta],
-                 data: Union[str, EMBED, discord.Embed, FILE, Iterable[Union[str, EMBED, discord.Embed, FILE]], _FunctionBaseCLASS],
+                 data: TMDataType,
                  mode: Literal["send", "edit", "clear-send"] = "send",
                  start_in: Union[timedelta, bool] = timedelta(seconds=0),
                  remove_after: Optional[Union[int, timedelta, datetime]]=None):
@@ -594,13 +647,28 @@ class DirectMESSAGE(BaseMESSAGE):
             "mode" : self.mode
         }
 
-    def _get_data(self) -> dict:
+    async def _get_data(self) -> dict:
         """
         Returns a dictionary of keyword arguments that is then expanded
         into other functions (_send_channel, _generate_log).
-        This is exactly the same as in :ref:`TextMESSAGE`
+        This is exactly the same as in :ref:`TextMESSAGE`.
+
+        .. versionchanged:: v2.3
+            Turned async.
         """
-        return TextMESSAGE._get_data(self)
+        data = await super()._get_data()
+        _data_to_send = {"embed": None, "text": None, "files": []}
+        if data is not None:
+            if not isinstance(data, (list, tuple, set)):
+                data = (data,)
+            for element in data:
+                if isinstance(element, str):
+                    _data_to_send["text"] = element
+                elif isinstance(element, (EMBED, discord.Embed)):
+                    _data_to_send["embed"] = element
+                elif isinstance(element, FILE):
+                    _data_to_send["files"].append(element)
+        return _data_to_send
 
     async def initialize(self, parent: Any):
         """
@@ -617,7 +685,7 @@ class DirectMESSAGE(BaseMESSAGE):
 
         Raises
         ---------
-        DAFNotFoundError(code=DAF_USER_CREATE_DM)
+        ValueError
             Raised when the direct message channel could not be created
         """
         try:
@@ -626,7 +694,7 @@ class DirectMESSAGE(BaseMESSAGE):
             self.dm_channel = user
             self.parent = parent
         except discord.HTTPException as ex:
-            raise DAFNotFoundError(f"Unable to create DM with user {user.display_name}\nReason: {ex}", DAF_USER_CREATE_DM)
+            raise ValueError(f"Unable to create DM with user {user.display_name}\nReason: {ex}")
 
     async def _handle_error(self, ex: Exception) -> bool:
         """
@@ -711,7 +779,7 @@ class DirectMESSAGE(BaseMESSAGE):
             This is then passed to :ref:`GUILD`._generate_log method.
         """
         # Parse data from the data parameter
-        data_to_send = self._get_data()
+        data_to_send = await self._get_data()
         if any(data_to_send.values()):            
             context = await self._send_channel(**data_to_send)
             self._update_state()
@@ -746,6 +814,9 @@ class DirectMESSAGE(BaseMESSAGE):
         if "start_in" not in kwargs:
             # This parameter does not appear as attribute, manual setting necessary
             kwargs["start_in"] = timedelta(seconds=0)
+
+        if "data" not in kwargs:
+            kwargs["data"] = self._data
 
         if not len(_init_options):
             _init_options = {"parent" : self.parent}

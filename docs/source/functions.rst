@@ -1,4 +1,3 @@
-
 ===============================
 Functions
 ===============================
@@ -70,7 +69,7 @@ Shilling list modification
 
 add_object
 ========================
-.. function:: daf.core.add_object(obj: typing.Union[daf.guild.USER, daf.guild.GUILD]) -> None
+.. function:: daf.core.add_object(obj: Union[guild.USER, guild.GUILD]) -> None
     
     Adds a guild or an user to the daf.
     
@@ -91,14 +90,14 @@ add_object
 
 add_object
 ========================
-.. function:: daf.core.add_object(obj: typing.Union[daf.message.text_based.DirectMESSAGE, daf.message.text_based.TextMESSAGE, daf.message.voice_based.VoiceMESSAGE],snowflake: typing.Union[int, daf.guild.GUILD, daf.guild.USER, _discord.guild.Guild, _discord.user.User, _discord.object.Object]) -> None
+.. function:: daf.core.add_object(obj: Union[message.DirectMESSAGE, message.TextMESSAGE, message.VoiceMESSAGE],snowflake: Union[int, guild.GUILD, guild.USER, dc.Guild, dc.User, dc.Object]) -> None
     
     Adds a message to the daf.
     
     :Parameters:
         - obj: Union[message.DirectMESSAGE, message.TextMESSAGE, message.VoiceMESSAGE]
               The message object to add into the daf.
-        - snowflake: Union[int, guild.GUILD, guild.USER, dc.Guild, dc.User]
+        - snowflake: Union[int, guild.GUILD, guild.USER, discord.Guild, discord.User]
               Which guild/user to add it to (can be snowflake id or a framework _BaseGUILD object or a discord API wrapper object).
     
     :Raises:
@@ -108,10 +107,27 @@ add_object
               The object provided is not supported for addition.
         - TypeError
               Missing snowflake parameter.
-        - DAFNotFoundError(code=DAF_SNOWFLAKE_NOT_FOUND)
+        - ValueError
               Could not find guild with that id.
         - Other
               Raised in the obj.add_message() method
+
+
+add_object
+========================
+.. function:: daf.core.add_object(obj: guild.AutoGUILD) -> None
+    
+    Adds a AutoGUILD to the shilling list.
+    
+    :Parameters:
+        - obj: daf.guild.AutoGUILD
+              AutoGUILD object that automatically finds guilds to shill in.
+    
+    :Raises:
+        - TypeError
+              The object provided is not supported for addition.
+        - Other
+              From :py:meth:`~daf.guild.AutoGUILD.initialize` method.
 
 
 remove_object

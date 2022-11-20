@@ -2,11 +2,12 @@
     This module contains definitions regarding miscellaneous
     items that can appear in multiple modules
 """
-from typing import Coroutine, Callable, Any, Dict, Optional
+from typing import Coroutine, Callable, Any, Dict, Optional, Union
 from asyncio import Semaphore
 from functools import wraps
 from inspect import getfullargspec
 from copy import copy
+from typeguard import typechecked
 
 import signal
 import sys
@@ -123,7 +124,8 @@ def _async_cancellation_safe(func: Callable):
 
     return wrapper
 
-def _async_safe(semaphore: str, amount: Optional[int]=1) -> Callable:
+@typechecked
+def _async_safe(semaphore: Union[str, Semaphore], amount: Optional[int]=1) -> Callable:
     """
     Function that returns a safety decorator, which uses the :strong:`semaphore` parameter
     as a safety mechanism.
@@ -147,29 +149,37 @@ def _async_safe(semaphore: str, amount: Optional[int]=1) -> Callable:
         The ``semaphore`` parameter is not a string describing the semaphore attribute of a table.
     """
 
-    def __safe_access(coroutine: Coroutine) -> Coroutine:
+    def __safe_access(coroutine: Union[Coroutine, Callable]) -> Coroutine:
         """
         Decorator that returns a method wrapper Coroutine that utilizes a
         asyncio semaphore to assure safe asynchronous operations.
         """
-        @wraps(coroutine)
-        async def wrapper(self, *args, **kwargs):
-            sem: Semaphore = getattr(self, semaphore)
-            for i in range(amount):
-                await sem.acquire()
-            try:
-                result = await coroutine(self, *args, **kwargs)
-            finally:
+        if isinstance(semaphore, str):
+            async def wrapper(self, *args, **kwargs):
+                sem: Semaphore = getattr(self, semaphore)
                 for i in range(amount):
-                    sem.release()
+                    await sem.acquire()
+                try:
+                    result = await coroutine(self, *args, **kwargs)
+                finally:
+                    for i in range(amount):
+                        sem.release()
 
-            return result
+                return result
+        else:
+            async def wrapper(*args, **kwargs):
+                for i in range(amount):
+                    await semaphore.acquire()
+                try:
+                    result = await coroutine(*args, **kwargs)
+                finally:
+                    for i in range(amount):
+                        semaphore.release()
 
-        return wrapper
+                return result
 
+        return wraps(coroutine)(wrapper)
 
-    if not isinstance(semaphore, str):
-        raise TypeError("semaphore parameter must be an attribute name of the asyncio semaphore inside the object")
 
     return __safe_access
 

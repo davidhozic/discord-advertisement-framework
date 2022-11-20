@@ -36,8 +36,6 @@ AUTO_CLASS_TEMPLATE =\
 ========================
 .. autoclass:: {object_path}
     :members:
-
-    {properties}
 """
 
 AUTO_ENUM_TEMPLATE =\
@@ -100,13 +98,7 @@ for category, items in titles.items():
             if isinstance(item, EnumMeta):
                 export_c_items += AUTO_ENUM_TEMPLATE.format(object_name=object_name, object_path=object_path) + "\n"
             else:
-                properties = []
-                for name in dir(item):
-                    attr = getattr(item, name)
-                    if isinstance(attr, property):
-                        properties.append(f".. autoproperty:: {object_path}.{name}")
-
-                export_c_items += AUTO_CLASS_TEMPLATE.format(object_name=object_name, object_path=object_path, properties="\n\n    ".join(properties)) + "\n"
+                export_c_items += AUTO_CLASS_TEMPLATE.format(object_name=object_name, object_path=object_path) + "\n"
 
 
     if export_f_items:

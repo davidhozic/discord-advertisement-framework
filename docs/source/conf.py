@@ -28,8 +28,7 @@ if gh_release is not None:
 elif readthedocs_release is not None:
     version = readthedocs_release
 else:
-    with open("../../version.txt", "r", encoding="utf-8") as rf:
-        version = rf.read().strip()
+    version = "v0.0.1"
 
 
 # -- General configuration ---------------------------------------------------
@@ -71,10 +70,14 @@ autodoc_typehints = "signature"
 autodoc_typehints_format = "short"
 
 
+developement_build = os.environ.get("DOC_DEVELOPMENT", default="False")
+developement_build = True if developement_build == "True" else False
+
 autodoc_default_options = {
-    'members': True,
     'member-order': 'bysource',
+    "private-members": developement_build
 }
+
 
 
 # Intersphinx

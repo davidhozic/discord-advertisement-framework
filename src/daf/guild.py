@@ -4,29 +4,32 @@
     _BaseGUILD class.
 """
 from __future__ import annotations
-import asyncio
+
 from typing import Any, Coroutine, Union, List, Optional, Dict, Callable
+from contextlib import suppress
 from typeguard import typechecked
 from datetime import timedelta, datetime
 from enum import Enum
+from copy import deepcopy
 
-from .exceptions import *
 from .logging.tracing import *
 from .message import *
 
 from . import client
 from .logging import sql
-from . import core
 from . import misc
 from .logging import logging
 
 import _discord as discord
 import operator
+import asyncio
+import re
 
 
 __all__ = (
     "GUILD",
-    "USER"
+    "USER",
+    "AutoGUILD"
 )
 
 class AdvertiseTaskType(Enum):
@@ -68,7 +71,8 @@ class _BaseGUILD:
         "_messages_uninitialized",
         "message_dict",
         "remove_after",
-        "_created_at"
+        "_created_at",
+        "_deleted"
     )
     
     def __init__(self,
@@ -82,6 +86,7 @@ class _BaseGUILD:
         self._messages_uninitialized: list = messages   # Contains all the different message objects, this gets sorted in `.initialize()` method
         self.message_dict: Dict[str, List[BaseMESSAGE]] = {AdvertiseTaskType.TEXT_ISH: [], AdvertiseTaskType.VOICE: []}  # Dictionary, which's keys hold the discord message type(text, voice) and keys are a list of messages
         self.remove_after = remove_after  # int - after n sends; timedelta - after amount of time; datetime - after that time
+        self._deleted = False
         self._created_at = datetime.now() # The time this object was created
 
     def __repr__(self) -> str:
@@ -135,6 +140,12 @@ class _BaseGUILD:
         """
         return self.snowflake == other.snowflake
 
+    def _delete(self):
+        """
+        Sets the internal _deleted flag to True.
+        """
+        self._deleted = True
+
     async def add_message(self, message: BaseMESSAGE):
         """
         Adds a message to the message list.
@@ -163,7 +174,7 @@ class _BaseGUILD:
 
         Raises
         -----------
-        DAFNotFoundError(code=DAF_SNOWFLAKE_NOT_FOUND)
+        ValueError
             Raised when the guild_id wasn't found.
         Other
             Raised from .add_message(message_object) method.
@@ -178,14 +189,14 @@ class _BaseGUILD:
             for message in self._messages_uninitialized:
                 try:
                     await self.add_message(message)
-                except (TypeError, ValueError, DAFError) as exc:
+                except (TypeError, ValueError) as exc:
                     trace(f"[GUILD:] Unable to initialize message {message}, in {self}\nReason: {exc}", TraceLEVELS.WARNING)
 
 
             self._messages_uninitialized.clear()
             return
 
-        raise DAFNotFoundError(f"Unable to find object with ID: {guild_id}", DAF_SNOWFLAKE_NOT_FOUND)
+        raise ValueError(f"Unable to find object with ID: {guild_id}")
 
     def remove_message(self, message: BaseMESSAGE):
         """
@@ -229,18 +240,13 @@ class _BaseGUILD:
         mode: AdvertiseTaskType
             Tells which task called this method (there is one task for textual messages and one for voice like messages).
         """
-        # Check if the guild has expired and check if the guild is in the list (could not be due to asynchronous operations)
-        if self._check_state() and self in core.get_shill_list():
-            trace(f"[GUILD:] Removing {self}")
-            core.remove_object(self)
-            return
-
         msg_list = self.message_dict[mode]
         for message in msg_list[:]: # Copy the avoid issues with the list being modified while iterating (add_message/remove_message)
             # Message removal             Check due to asynchronous operations
-            if message._check_state() and message in self.messages:
-                trace(f"[GUILD:] Removing {message} which is part of {self}")
-                self.remove_message(message)
+            if message._check_state():
+                # Suppress since user could of called the remove_object function mid iteration.
+                with suppress(ValueError):
+                    self.remove_message(message)
 
             elif message._is_ready():
                 message._reset_timer()
@@ -354,7 +360,7 @@ class GUILD(_BaseGUILD):
 
         Raises
         -----------
-        DAFNotFoundError(code=DAF_SNOWFLAKE_NOT_FOUND)
+        ValueError
             Raised when the guild_id wasn't found.
 
         Other
@@ -392,7 +398,7 @@ class GUILD(_BaseGUILD):
         await misc._update(self, **kwargs)
         # Update messages
         for message in self.messages:
-            await message.update(_init_options={"guild": self.apiobject})
+            await message.update(_init_options={"parent": self})
 
 
 @misc.doc_category("Guilds")
@@ -481,7 +487,7 @@ class USER(_BaseGUILD):
 
         Raises
         -----------
-        DAFNotFoundError(code=DAF_SNOWFLAKE_NOT_FOUND)
+        ValueError
             Raised when the DM could not be created.
         Other
             Raised from .add_message(message_object) method.
@@ -518,4 +524,227 @@ class USER(_BaseGUILD):
         await misc._update(self, **kwargs)
         # Update messages
         for message in self.messages:
-            await message.update(_init_options={"user" : self.apiobject})
+            await message.update(_init_options={"parent" : self})
+
+@misc.doc_category("Automatic generation")
+class AutoGUILD:
+    """
+    .. versionadded:: v2.3
+
+    Used for creating instances that will return
+    guild objects.
+
+    .. CAUTION::
+        Any objects passed to AutoGUILD get **deep-copied** meaning, those same objects
+        **will not be initialized** and cannot be used to obtain/change information regarding AutoGUILD.
+
+        .. code-block::
+            :caption: Illegal use of AutoGUILD
+            :emphasize-lines: 6, 7
+
+            auto_ch = daf.AutoCHANNEL(...)
+            tm = daf.TextMESSAGE(..., channels=auto_ch)
+
+            await daf.add_object(AutoGUILD(..., messages=[tm]))
+
+            auto_ch.channels # Illegal (does not represent the same object as in AutoGUILD), results in exception
+            await tm.update(...) # Illegal (does not represent the same object as in AutoGUILD), results in exception
+
+        To actually modify message/channel objects inside AutoGUILD, you need to iterate thru each GUILD.
+
+        .. code-block::
+            :caption: Modifying AutoGUILD messages
+
+            aguild = daf.AutoGUILD(..., messages=[tm])
+            await daf.add_object(aguild)
+
+            for guild in aguild.guilds:
+                for message in guild.messages
+                    await message.update(...)
+
+    Parameters
+    --------------
+    include_pattern: str
+        Regex pattern to use when searching guild names that are to be included.
+    exclude_pattern: Optional[str] = None
+        Regex pattern to use when searching guild names that are **NOT** to be excluded.
+
+        .. note::
+            If both include_pattern and exclude_pattern yield a match, the guild will be
+            excluded from match.
+
+    remove_after: Optional[Union[timedelta, datetime]] = None
+        When to remove this object from the shilling list.
+    logging: Optional[bool] = False
+        Set to True if you want the guilds generated to log
+        sent messages.
+    interval: Optional[timedelta] = timedelta(minutes=10)
+        Interval at which to scan for new guilds
+    """
+    __slots__ = (
+        "include_pattern",
+        "exclude_pattern",
+        "remove_after",
+        "messages",
+        "logging",
+        "interval",
+        "cache",
+        "last_scan",
+        "_created_at",
+        "_deleted",
+        "_safe_sem"
+    )
+
+    @typechecked
+    def __init__(self,
+                 include_pattern: str,
+                 exclude_pattern: Optional[str] = None,
+                 remove_after: Optional[Union[timedelta, datetime]] = None,
+                 messages: Optional[List[BaseMESSAGE]] = [],
+                 logging: Optional[bool] = False,
+                 interval: Optional[timedelta] = timedelta(minutes=10)) -> None:
+        self.include_pattern = include_pattern
+        self.exclude_pattern = exclude_pattern
+        self.remove_after = remove_after 
+        self.messages = messages # Uninitialized template messages list that gets copied for each found guild.
+        self.logging = logging
+        self.interval = interval.total_seconds() # In seconds
+        self.cache: Dict[GUILD] = {}
+        self.last_scan = 0
+        self._deleted = False
+        self._created_at = datetime.now()
+        misc._write_attr_once(self, "_safe_sem", asyncio.Semaphore(2))
+
+    @property
+    def guilds(self) -> List[GUILD]:
+        "Returns cached found GUILD objects."
+        return list(self.cache.values())
+
+    @property
+    def created_at(self) -> datetime:
+        """
+        Returns the datetime of when the object has been created.
+        """
+        return self._created_at
+
+    def _delete(self):
+        """
+        Sets the internal _deleted flag to True
+        and cancels main task.
+        """
+        self._deleted = True
+
+    def _check_state(self) -> bool:
+        """
+        Checks if the object is ready to be deleted.
+
+        If the object has already been deleted, return False 
+        to prevent multiple tasks from trying to remove it multiple
+        times which would result in ValueError exceptions.
+
+        Returns
+        ----------
+        True
+            The object should be deleted.
+        False
+            The object is in proper state, do not delete.
+        """
+        if self._deleted:
+            return False
+
+        rm_after_type = type(self.remove_after)
+        return (rm_after_type is timedelta and datetime.now() - self._created_at > self.remove_after or # The difference from creation time is bigger than remove_after
+                rm_after_type is datetime and datetime.now() > self.remove_after) # The current time is larger than remove_after 
+
+    async def initialize(self):
+        "Initializes asynchronous elements."
+        # Nothing is needed to be done here since everything is obtained from API wrapper cache.
+        pass 
+    
+    async def add_message(self, message: BaseMESSAGE):
+        """
+        Adds a copy of the passed message to each
+        guild inside cache.
+
+        Parameters
+        -------------
+        message: message.BaseMESSAGE
+            Message to add.
+
+        Raises
+        ---------
+        Any
+            Any exception raised in :py:meth:`daf.guild.GUILD.add_message`.
+        """
+        self.messages.append(message)
+        for guild in self.cache.values():
+            await guild.add_message(deepcopy(message))
+
+    def remove_message(self, message: BaseMESSAGE):
+        """
+        Removes message from the messages list.
+
+        Parameters
+        ------------
+        message: BaseMESSAGE
+            The message to remove.
+
+        Raises
+        --------
+        ValueError
+            The message is not present in the list.        
+        """
+        self.messages.remove(message)
+        for guild in self.guilds:
+            guild.remove_message(message)
+
+    async def _process(self):
+        """
+        Coroutine that finds new guilds from the
+        API wrapper.
+        """
+        dcl = client.get_client()
+        stamp = datetime.now().timestamp()
+        if stamp - self.last_scan > self.interval:
+            self.last_scan = stamp
+            for dcgld in dcl.guilds:
+                if (dcgld not in self.cache and 
+                    re.search(self.include_pattern, dcgld.name) is not None and
+                    (self.exclude_pattern is None or re.search(self.exclude_pattern, dcgld.name) is None)
+                ):
+                    try:
+                        new_guild = GUILD(snowflake=dcgld,
+                                                messages=deepcopy(self.messages),
+                                                logging=self.logging)
+                        await new_guild.initialize()
+                        self.cache[dcgld] = new_guild
+                    except Exception as exc:
+                        trace(f"[AutoGUILD:] Unable to add new object.\nReason: {exc}",TraceLEVELS.WARNING)
+
+    @misc._async_safe("_safe_sem", 1)
+    async def _advertise(self, type_: AdvertiseTaskType):
+        """
+        Advertises thru all the GUILDs.
+
+        Parameters
+        ----------------
+        type_: guild.AdvertiseTaskType
+            Which task called this method.
+            This is just forwarded to GUILDs' _advertise method.
+        """
+        await self._process()
+        for g in self.guilds:
+            await g._advertise(type_)
+
+    @misc._async_safe("_safe_sem", 2)
+    async def update(self, **kwargs):
+        """
+        Updates the object with new initialization parameters.
+
+        .. WARNING::
+            After calling this method the entire object is reset (this includes it's GUILD objects in cache).
+        """
+        if "interval" not in kwargs:
+            kwargs["interval"] = timedelta(seconds=self.interval)
+
+        return await misc._update(self, **kwargs)
