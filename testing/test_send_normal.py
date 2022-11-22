@@ -6,17 +6,18 @@ import daf
 import asyncio
 
 # CONFIGURATION
-TEST_GUILD_ID = 863071397207212052
 TEST_USER_ID = 145196308985020416
 VOICE_MESSAGE_TEST_LENGTH = 3 # Test if entire message is played
 
 
 @pytest.mark.asyncio
-async def test_text_message_send(text_channels):
+async def test_text_message_send(channels, guilds):
     "This tests if all the text messages succeed in their sends"
+    dc_guild, _ = guilds
+    text_channels, _ = channels
     TEXT_MESSAGE_TEST_MESSAGE = "Hello world", daf.discord.Embed(title="Hello world")
 
-    guild = daf.GUILD(TEST_GUILD_ID)
+    guild = daf.GUILD(dc_guild)
     user = daf.USER(TEST_USER_ID)
     text_message = daf.message.TextMESSAGE(None, timedelta(seconds=5), TEXT_MESSAGE_TEST_MESSAGE, text_channels,
                                         "send", start_in=timedelta(), remove_after=None)
@@ -57,12 +58,14 @@ async def test_text_message_send(text_channels):
 
 
 @pytest.mark.asyncio
-async def test_voice_message_send(voice_channels):
+async def test_voice_message_send(channels, guilds):
     "This tests if all the voice messages succeed in their sends"
+    dc_guild, _ = guilds
+    _, voice_channels = channels
     await asyncio.sleep(5) # Wait for any messages still playing
     VOICE_MESSAGE_TEST_MESSAGE = daf.AUDIO("https://www.youtube.com/watch?v=1O0yazhqaxs") # 3 second countdown
 
-    guild = daf.GUILD(TEST_GUILD_ID)
+    guild = daf.GUILD(dc_guild)
     voice_message = daf.message.VoiceMESSAGE(None, timedelta(seconds=20), VOICE_MESSAGE_TEST_MESSAGE, voice_channels,
                                             volume=50, start_in=timedelta(), remove_after=None)
 

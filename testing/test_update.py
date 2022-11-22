@@ -8,19 +8,20 @@ import asyncio
 
 
 # CONFIGURATION
-TEST_GUILD_ID = 863071397207212052
 TEST_USER_ID = 145196308985020416
 
 
 @pytest.mark.asyncio
-async def test_text_message_update(text_channels):
+async def test_text_message_update(channels, guilds):
     "This tests if all the text messages succeed in their sends"
+    text_channels, _ = channels
+    dc_guild, _ = guilds
     TEXT_MESSAGE_TEST_MESSAGE = [
         ("Hello world", daf.discord.Embed(title="Hello world")),
         ("Goodbye world", daf.discord.Embed(title="Goodbye world"))
     ]
 
-    guild = daf.GUILD(TEST_GUILD_ID)
+    guild = daf.GUILD(dc_guild)
     user = daf.USER(TEST_USER_ID)
     text_message = daf.message.TextMESSAGE(None, timedelta(seconds=5), "START", text_channels,
                                         "send", start_in=timedelta(), remove_after=None)
@@ -58,15 +59,17 @@ async def test_text_message_update(text_channels):
 
 
 @pytest.mark.asyncio
-async def test_voice_message_update(voice_channels):
+async def test_voice_message_update(channels, guilds):
     "This tests if all the voice messages succeed in their sends"
+    _, voice_channels = channels
+    dc_guild, _ = guilds
     await asyncio.sleep(5) # Wait for any messages still playing
     VOICE_MESSAGE_TEST_MESSAGE = [
             (10, daf.AUDIO("https://www.youtube.com/watch?v=4vQ8If7f374")),
             (6, daf.AUDIO(os.path.join(os.path.dirname(os.path.abspath(__file__)), "testing123.mp3")))
         ]
 
-    guild = daf.GUILD(TEST_GUILD_ID)
+    guild = daf.GUILD(dc_guild)
     voice_message = daf.message.VoiceMESSAGE(None, timedelta(seconds=20), daf.AUDIO("https://www.youtube.com/watch?v=dZLfasMPOU4"), voice_channels,
                                             volume=50, start_in=timedelta(), remove_after=None)
     await guild.initialize()

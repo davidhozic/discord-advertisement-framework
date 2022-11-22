@@ -1,3 +1,4 @@
+from contextlib import suppress
 import asyncio
 import pytest
 import pytest_asyncio
@@ -31,31 +32,42 @@ def start_daf(event_loop: asyncio.AbstractEventLoop):
 
 
 @pytest_asyncio.fixture(scope="session")
-async def category():
+async def guilds():
+    """
+    Create tests guilds.
+    """
     client = daf.get_client()
-    guild: daf.discord.Guild = client.get_guild(TEST_GUILD_ID)
-    cat = await guild.create_category(TEST_CATEGORY_NAME)
-    yield cat
-    await cat.delete()
+    guild_include = None
+    guild_exclude = None
+
+    for guild in client.guilds:
+        if guild.name == "magic-123-magic":
+            guild_include = guild
+            break
+    else:
+        guild_include = await client.create_guild(name="magic-123-magic")
+
+    for guild in client.guilds:
+        if guild.name == "magic-321-magic":
+            guild_exclude = guild
+            break
+    else:
+        guild_exclude = await client.create_guild(name="magic-321-magic")
+
+    return guild_include, guild_exclude
 
 
 @pytest_asyncio.fixture(scope="session")
-async def text_channels(category: daf.discord.CategoryChannel):
-    ret = []
-    for i in range(TEST_TEXT_CHANNEL_NUM):
-        ret.append(await category.create_text_channel(TEST_TEXT_CHANNEL_NAME_FORM))
+async def channels(guilds):
+    guild: daf.discord.Guild
+    guild, _ = guilds
+    t_channels = []
+    v_channels = []
+    for i in range(10):
+        t_channels.append(await guild.create_text_channel(f"testpy-{i}"))
+        v_channels.append(await guild.create_voice_channel(f"testpy-{i}"))
 
-    yield ret
-    for c in ret:
-        await c.delete()
-
-
-@pytest_asyncio.fixture(scope="session")
-async def voice_channels(category: daf.discord.CategoryChannel):
-    ret = []
-    for i in range(TEST_VOICE_CHANNEL_NUM):
-        ret.append(await category.create_voice_channel(TEST_VOICE_CHANNEL_NAME_FORM))
-    
-    yield ret
-    for c in ret:
-        await c.delete()
+    yield t_channels, v_channels
+    for channel in t_channels + v_channels:
+        with suppress(daf.discord.HTTPException):
+            await channel.delete()
