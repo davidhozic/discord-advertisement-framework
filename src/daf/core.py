@@ -309,6 +309,7 @@ def remove_object(snowflake: Union[int, dc.Object, dc.Guild, dc.User, dc.Object,
         GLOBALS.server_list.remove(snowflake)
         snowflake._delete()
 
+@typechecked
 @misc.doc_category("Getters")
 def get_guild_user(snowflake: Union[int, dc.Object, dc.Guild, dc.User, dc.Object]) -> Union[guild.GUILD, guild.USER, None]:
     """
