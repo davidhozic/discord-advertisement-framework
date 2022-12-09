@@ -110,6 +110,7 @@ async def initialize(token : str,
 
     # Initialize discord client
     trace("[CORE:] Logging in...")
+    # TODO: Add new multiple accounts functionality
     await client._initialize(token, bot=not is_user, intents=intents, proxy=proxy)
 
     # Initialize logging
