@@ -19,11 +19,6 @@ from . import message
 import asyncio
 import _discord as discord
 
-#######################################################################
-# Configuration
-#######################################################################
-EVENT_LOOP_CLOSE_DELAY = 1
-
 
 __all__ = (
     "run",
