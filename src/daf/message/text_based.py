@@ -301,7 +301,7 @@ class TextMESSAGE(BaseMESSAGE):
             No valid channels were passed to object"
         """
         ch_i = 0
-        cl = client.get_client()
+        cl = parent.parent.client
         self.parent = parent
         _guild = self.parent.apiobject
         to_remove = []
@@ -393,7 +393,7 @@ class TextMESSAGE(BaseMESSAGE):
             List of files to send.
         """
 
-        ch_perms = channel.permissions_for(channel.guild.get_member(client.get_client().user.id))
+        ch_perms = channel.permissions_for(channel.guild.get_member(self.parent.parent.client.user.id))
         for tries in range(3):  # Maximum 3 tries (if rate limit)
             try:
                 # Check if we have permissions
@@ -401,7 +401,7 @@ class TextMESSAGE(BaseMESSAGE):
                     raise self._generate_exception(403, 50013, "You lack permissions to perform that action", discord.Forbidden)
 
                 # Check if channel still exists in cache (has not been deleted)
-                if client.get_client().get_channel(channel.id) is None:
+                if self.parent.parent.client.get_channel(channel.id) is None:
                     raise self._generate_exception(404, 10003, "Channel was deleted", discord.NotFound)
 
                 # Delete previous message if clear-send mode is chosen and message exists

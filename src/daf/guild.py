@@ -15,7 +15,6 @@ from copy import deepcopy
 from .logging.tracing import *
 from .message import *
 
-from . import client
 from .logging import sql
 from . import misc
 from .logging import logging
@@ -72,7 +71,8 @@ class _BaseGUILD:
         "message_dict",
         "remove_after",
         "_created_at",
-        "_deleted"
+        "_deleted",
+        "parent"
     )
     
     def __init__(self,
@@ -88,6 +88,7 @@ class _BaseGUILD:
         self.remove_after = remove_after  # int - after n sends; timedelta - after amount of time; datetime - after that time
         self._deleted = False
         self._created_at = datetime.now() # The time this object was created
+        self.parent = None
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}(discord={self.apiobject})"
@@ -157,18 +158,24 @@ class _BaseGUILD:
         """
         raise NotImplementedError
 
-    async def initialize(self, getter: Callable) -> None:
+    async def initialize(self, parent: Any, getter: Callable) -> None:
         """
         This function initializes the API related objects and then tries to initialize the MESSAGE objects.
 
         .. warning::
             This should NOT be manually called, it is called automatically after adding the message.
 
+        .. versionchanged:: v2.4
+            Added parent parameter to support multiple account
+            structure.
+
         .. versionchanged:: v2.1
             Merged derived classes' methods into base method to reduce code.
 
         Parameters
         ------------
+        parent: Any
+            The parent object. (ACCOUNT)
         getter: Callable
             Callable function or async generator used for retrieving an api object (client.get_*).
 
@@ -179,6 +186,7 @@ class _BaseGUILD:
         Other
             Raised from .add_message(message_object) method.
         """
+        self.parent = parent
         guild_id = self.snowflake
         if isinstance(self.apiobject, int):
             self.apiobject = getter(guild_id)
@@ -230,17 +238,17 @@ class _BaseGUILD:
 
     @misc._async_safe("update_semaphore", 1)
     async def _advertise(self,
-                         mode: AdvertiseTaskType):
+                         type_: AdvertiseTaskType):
         """
         Main coroutine responsible for sending all the messages to this specific guild,
         it is called from the core module's advertiser task.
 
         Parameters
         --------------
-        mode: AdvertiseTaskType
+        type_: AdvertiseTaskType
             Tells which task called this method (there is one task for textual messages and one for voice like messages).
         """
-        msg_list = self.message_dict[mode]
+        msg_list = self.message_dict[type_]
         for message in msg_list[:]: # Copy the avoid issues with the list being modified while iterating (add_message/remove_message)
             # Message removal             Check due to asynchronous operations
             if message._check_state():
@@ -351,7 +359,7 @@ class GUILD(_BaseGUILD):
         """
         self.message_dict[AdvertiseTaskType.TEXT_ISH if isinstance(message, TextMESSAGE) else AdvertiseTaskType.VOICE].remove(message)
 
-    async def initialize(self) -> None:
+    async def initialize(self, parent: Any) -> None:
         """
         This function initializes the API related objects and then tries to initialize the MESSAGE objects.
 
@@ -366,7 +374,7 @@ class GUILD(_BaseGUILD):
         Other
             Raised from .add_message(message_object) method.
         """
-        return await super().initialize(client.get_client().get_guild)
+        return await super().initialize(parent, parent.client.get_guild)
     
     @misc._async_safe("update_semaphore", 2) # Take 2 since 2 tasks share access
     async def update(self, **kwargs):
@@ -481,7 +489,7 @@ class USER(_BaseGUILD):
         """
         self.message_dict[AdvertiseTaskType.TEXT_ISH].remove(message)
 
-    async def initialize(self):
+    async def initialize(self, parent: Any):
         """
         This function initializes the API related objects and then tries to initialize the MESSAGE objects.
 
@@ -492,7 +500,7 @@ class USER(_BaseGUILD):
         Other
             Raised from .add_message(message_object) method.
         """
-        return await super().initialize(client.get_client().get_or_fetch_user)
+        return await super().initialize(parent, parent.client.get_or_fetch_user)
 
     @misc._async_safe("update_semaphore", 2)
     async def update(self, **kwargs):
@@ -592,7 +600,8 @@ class AutoGUILD:
         "last_scan",
         "_created_at",
         "_deleted",
-        "_safe_sem"
+        "_safe_sem",
+        "parent"
     )
 
     @typechecked
@@ -613,6 +622,7 @@ class AutoGUILD:
         self.last_scan = 0
         self._deleted = False
         self._created_at = datetime.now()
+        self.parent = None
         misc._write_attr_once(self, "_safe_sem", asyncio.Semaphore(2))
 
     @property
@@ -656,10 +666,10 @@ class AutoGUILD:
         return (rm_after_type is timedelta and datetime.now() - self._created_at > self.remove_after or # The difference from creation time is bigger than remove_after
                 rm_after_type is datetime and datetime.now() > self.remove_after) # The current time is larger than remove_after 
 
-    async def initialize(self):
+    async def initialize(self, parent: Any):
         "Initializes asynchronous elements."
         # Nothing is needed to be done here since everything is obtained from API wrapper cache.
-        pass 
+        self.parent = parent
     
     async def add_message(self, message: BaseMESSAGE):
         """
@@ -703,7 +713,7 @@ class AutoGUILD:
         Coroutine that finds new guilds from the
         API wrapper.
         """
-        dcl = client.get_client()
+        dcl = self.parent.client
         stamp = datetime.now().timestamp()
         if stamp - self.last_scan > self.interval:
             self.last_scan = stamp

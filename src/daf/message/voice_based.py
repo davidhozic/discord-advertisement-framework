@@ -243,7 +243,7 @@ class VoiceMESSAGE(BaseMESSAGE):
             No valid channels were passed to object"
         """
         ch_i = 0
-        cl = client.get_client()
+        cl = self.parent.parent.client
         self.parent = parent
         _guild = self.parent.apiobject
         to_remove = []
@@ -293,12 +293,12 @@ class VoiceMESSAGE(BaseMESSAGE):
         stream = None
         try:
             # Check if client has permissions before attempting to join
-            ch_perms = channel.permissions_for(channel.guild.get_member(client.get_client().user.id))
+            ch_perms = channel.permissions_for(channel.guild.get_member(self.parent.parent.client.user.id))
             if not all([ch_perms.connect, ch_perms.stream, ch_perms.speak]):
                 raise self._generate_exception(403, 50013, "You lack permissions to perform that action", discord.Forbidden)
             
             # Check if channel still exists in cache (has not been deleted)
-            if client.get_client().get_channel(channel.id) is None:
+            if self.parent.parent.client.get_channel(channel.id) is None:
                 raise self._generate_exception(404, 10003, "Channel was deleted", discord.NotFound)
 
             if GLOBALS.voice_client is None or not GLOBALS.voice_client.is_connected():

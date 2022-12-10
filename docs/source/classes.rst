@@ -47,6 +47,7 @@ Message data types
 EMBED
 ========================
 .. autoclass:: daf.dtypes.EMBED
+    :members:
 
 
 FILE
@@ -112,5 +113,15 @@ GUILD
 USER
 ========================
 .. autoclass:: daf.guild.USER
+    :members:
+
+
+----------------------------
+Clients
+----------------------------
+
+ACCOUNT
+========================
+.. autoclass:: daf.client.ACCOUNT
     :members:
 

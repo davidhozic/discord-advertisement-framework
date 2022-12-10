@@ -20,16 +20,6 @@ get_logger
 .. autofunction:: daf.logging.get_logger
 
 
-get_client
-========================
-.. autofunction:: daf.client.get_client
-
-
-get_guild_user
-========================
-.. autofunction:: daf.core.get_guild_user
-
-
 get_shill_list
 ========================
 .. autofunction:: daf.core.get_shill_list
@@ -69,13 +59,32 @@ Shilling list modification
 
 add_object
 ========================
-.. function:: daf.core.add_object(obj: Union[guild.USER, guild.GUILD]) -> None
+.. function:: daf.core.add_object(obj: client.ACCOUNT) -> None
+    
+    Adds an account to the framework.
+    
+    :Parameters:
+        - obj: client.ACCOUNT
+              The account object to add
+    
+    :Raises:
+        - ValueError
+              The account has already been added to the list.
+        - TypeError
+              ``obj`` is of invalid type.
+
+
+add_object
+========================
+.. function:: daf.core.add_object(obj: guild.USER | guild.GUILD | guild.AutoGUILD,snowflake: client.ACCOUNT) -> None
     
     Adds a guild or an user to the daf.
     
     :Parameters:
-        - obj: Union[guild.USER, guild.GUILD]
-              The guild object to add into the daf.
+        - obj: guild.USER | guild.GUILD | guild.AutoGUILD
+              The guild object to add into the account (``snowflake``).
+        - snowflake: client.ACCOUNT=None
+              The account to add this guild/user to.
     
     :Raises:
         - ValueError
@@ -84,50 +93,36 @@ add_object
               The object provided is not supported for addition.
         - TypeError
               Invalid parameter type.
+        - RuntimeError
+              When using deprecated method of adding items to the shill list,
+        no accounts were available.
         - Other
               Raised in the obj.initialize() method
 
 
 add_object
 ========================
-.. function:: daf.core.add_object(obj: Union[message.DirectMESSAGE, message.TextMESSAGE, message.VoiceMESSAGE],snowflake: Union[int, guild.GUILD, guild.USER, dc.Guild, dc.User, dc.Object]) -> None
+.. function:: daf.core.add_object(obj: message.DirectMESSAGE | message.TextMESSAGE | message.VoiceMESSAGE,snowflake: int | guild.GUILD | guild.USER) -> None
     
     Adds a message to the daf.
     
     :Parameters:
-        - obj: Union[message.DirectMESSAGE, message.TextMESSAGE, message.VoiceMESSAGE]
+        - obj: message.DirectMESSAGE | message.TextMESSAGE | message.VoiceMESSAGE
               The message object to add into the daf.
-        - snowflake: Union[int, guild.GUILD, guild.USER, discord.Guild, discord.User]
+        - snowflake: int | guild.GUILD | guild.USER | discord.Guild | discord.User | discord.Object
               Which guild/user to add it to (can be snowflake id or a framework _BaseGUILD object or a discord API wrapper object).
     
     :Raises:
-        - ValueError
-              guild_id wasn't provided when adding a message object (to which guild should it add)
         - TypeError
               The object provided is not supported for addition.
-        - TypeError
+        - ValueError
+              guild_id wasn't provided when adding a message object (to which guild should it add)
+        - ValueError
               Missing snowflake parameter.
         - ValueError
               Could not find guild with that id.
         - Other
               Raised in the obj.add_message() method
-
-
-add_object
-========================
-.. function:: daf.core.add_object(obj: guild.AutoGUILD) -> None
-    
-    Adds a AutoGUILD to the shilling list.
-    
-    :Parameters:
-        - obj: daf.guild.AutoGUILD
-              AutoGUILD object that automatically finds guilds to shill in.
-    
-    :Raises:
-        - TypeError
-              The object provided is not supported for addition.
-        - Other
-              From :py:meth:`~daf.guild.AutoGUILD.initialize` method.
 
 
 remove_object
