@@ -46,6 +46,8 @@ except ImportError:
 @misc.doc_category("Clients")
 class ACCOUNT:
     """
+    TODO: update method
+
     Represents an individual Discord account.
     
     Each ACCOUNT instance runs it's own shilling task.
@@ -248,3 +250,6 @@ class ACCOUNT:
 
         # Closes the connection here instead in _finish to prevent mid-call cancellations
         await self._client.close()
+    
+    async def update(self, **kwargs):
+        raise NotImplementedError
