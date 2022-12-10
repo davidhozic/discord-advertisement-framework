@@ -79,7 +79,7 @@ class ACCOUNT:
                  is_user : Optional[bool] =False,
                  intents: Optional[discord.Intents]=None,
                  proxy: Optional[str]=None,
-                 servers: Optional[List[guild.GUILD | guild.USER | guild.AutoGUILD]]=[]) -> None:
+                 servers: Optional[List[guild.GUILD | guild.USER | guild.AutoGUILD]]=None) -> None:
         self._token = token
         self.is_user = is_user
         self.proxy = proxy
@@ -92,6 +92,9 @@ class ACCOUNT:
         }
         self._servers: List[guild._BaseGUILD] = []
         self._autoguilds: List[guild.AutoGUILD] = [] # To prevent __eq__ issues, use 2 lists
+        if servers is None:
+            servers = []
+
         self._uiservers = servers
         """Temporary list of uninitialized servers
         servers parameter gets stored into _servers to prevent the
