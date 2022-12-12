@@ -1,4 +1,5 @@
 from contextlib import suppress
+from typing import List
 import asyncio
 import pytest
 import pytest_asyncio
@@ -6,7 +7,7 @@ import os
 import daf
 
 
-TEST_TOKEN = os.environ.get("DISCORD_TOKEN")
+TEST_TOKEN1, TEST_TOKEN2 = os.environ.get("DISCORD_TOKEN", None).split(';')
 TEST_GUILD_ID = 863071397207212052
 TEST_CATEGORY_NAME = "RUNNING-TEST"
 TEST_TEXT_CHANNEL_NAME_FORM = "PYTEST"
@@ -27,16 +28,28 @@ def event_loop():
 
 @pytest.fixture(scope="session", autouse=True)
 def start_daf(event_loop: asyncio.AbstractEventLoop):
-    event_loop.run_until_complete(daf.initialize(TEST_TOKEN))
+    event_loop.run_until_complete(daf.initialize(debug=daf.TraceLEVELS.ERROR))
     return event_loop
 
 
 @pytest_asyncio.fixture(scope="session")
-async def guilds():
+async def accounts():
+    accs = [
+        daf.ACCOUNT(token=TEST_TOKEN1),
+        daf.ACCOUNT(token=TEST_TOKEN2)
+    ]
+    for a in accs:
+        await daf.add_object(a)
+    
+    return accs
+
+
+@pytest_asyncio.fixture(scope="session")
+async def guilds(accounts: List[daf.ACCOUNT]):
     """
     Create tests guilds.
     """
-    client = daf.get_client()
+    client = accounts[0].client
     guild_include = None
     guild_exclude = None
 

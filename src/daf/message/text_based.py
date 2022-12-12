@@ -301,9 +301,9 @@ class TextMESSAGE(BaseMESSAGE):
             No valid channels were passed to object"
         """
         ch_i = 0
-        cl = parent.parent.client
         self.parent = parent
-        _guild = self.parent.apiobject
+        cl = parent.parent.client
+        _guild = parent.apiobject
         to_remove = []
 
         if isinstance(self.channels, AutoCHANNEL):
@@ -689,10 +689,10 @@ class DirectMESSAGE(BaseMESSAGE):
             Raised when the direct message channel could not be created
         """
         try:
+            self.parent = parent
             user = parent.apiobject
             await user.create_dm()
             self.dm_channel = user
-            self.parent = parent
         except discord.HTTPException as ex:
             raise ValueError(f"Unable to create DM with user {user.display_name}\nReason: {ex}")
 

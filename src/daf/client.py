@@ -1,7 +1,6 @@
 """
     This modules contains definitions related to the client (for API)
 """
-from __future__ import annotations
 from typing import Optional, Union, Optional, Callable, Coroutine, List
 
 from . import misc
@@ -79,7 +78,7 @@ class ACCOUNT:
                  is_user : Optional[bool] =False,
                  intents: Optional[discord.Intents]=None,
                  proxy: Optional[str]=None,
-                 servers: Optional[List[guild.GUILD | guild.USER | guild.AutoGUILD]]=None) -> None:
+                 servers: Optional[List[Union[guild.GUILD, guild.USER, guild.AutoGUILD]]]=None) -> None:
         self._token = token
         self.is_user = is_user
         self.proxy = proxy
@@ -110,7 +109,7 @@ class ACCOUNT:
 
         self._client = discord.Client(intents=intents, connector=connector)
 
-    def __eq__(self, other: ACCOUNT):
+    def __eq__(self, other):
         if isinstance(other, ACCOUNT):
             return self._token == other._token
         
@@ -175,7 +174,7 @@ class ACCOUNT:
         self._running = True
 
     @typechecked
-    async def add_server(self, server: guild.GUILD | guild.USER | guild.AutoGUILD):
+    async def add_server(self, server: Union[guild.GUILD, guild.USER, guild.AutoGUILD]):
         """
         Initializes a guild like object and
         adds it to the internal account shill list.
@@ -198,7 +197,7 @@ class ACCOUNT:
             self._autoguilds.append(server)
     
     @typechecked
-    async def remove_server(self, server: guild.GUILD | guild.USER | guild.AutoGUILD):
+    def remove_server(self, server: Union[guild.GUILD, guild.USER, guild.AutoGUILD]):
         """
         Removes a guild like object from the shilling list.
 

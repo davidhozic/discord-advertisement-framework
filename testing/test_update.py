@@ -12,8 +12,9 @@ TEST_USER_ID = 145196308985020416
 
 
 @pytest.mark.asyncio
-async def test_text_message_update(channels, guilds):
+async def test_text_message_update(channels, guilds, accounts):
     "This tests if all the text messages succeed in their sends"
+    account = accounts[0]
     text_channels, _ = channels
     dc_guild, _ = guilds
     TEXT_MESSAGE_TEST_MESSAGE = [
@@ -28,8 +29,8 @@ async def test_text_message_update(channels, guilds):
     direct_message = daf.message.DirectMESSAGE(None, timedelta(seconds=5), "START", "send",
                                                 start_in=timedelta(0), remove_after=None)
     # Initialize objects
-    await guild.initialize()
-    await user.initialize()
+    await guild.initialize(parent=account)
+    await user.initialize(parent=account)
     await guild.add_message(text_message)
     await user.add_message(direct_message)
 
@@ -59,8 +60,9 @@ async def test_text_message_update(channels, guilds):
 
 
 @pytest.mark.asyncio
-async def test_voice_message_update(channels, guilds):
+async def test_voice_message_update(channels, guilds, accounts):
     "This tests if all the voice messages succeed in their sends"
+    account = accounts[0]
     _, voice_channels = channels
     dc_guild, _ = guilds
     await asyncio.sleep(5) # Wait for any messages still playing
@@ -72,7 +74,7 @@ async def test_voice_message_update(channels, guilds):
     guild = daf.GUILD(dc_guild)
     voice_message = daf.message.VoiceMESSAGE(None, timedelta(seconds=20), daf.AUDIO("https://www.youtube.com/watch?v=dZLfasMPOU4"), voice_channels,
                                             volume=50, start_in=timedelta(), remove_after=None)
-    await guild.initialize()
+    await guild.initialize(parent=account)
     await guild.add_message(voice_message)
     # Send
     for duration, audio in VOICE_MESSAGE_TEST_MESSAGE:

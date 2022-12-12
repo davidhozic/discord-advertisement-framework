@@ -243,9 +243,9 @@ class VoiceMESSAGE(BaseMESSAGE):
             No valid channels were passed to object"
         """
         ch_i = 0
-        cl = self.parent.parent.client
         self.parent = parent
-        _guild = self.parent.apiobject
+        cl = parent.parent.client
+        _guild = parent.apiobject
         to_remove = []
 
         if isinstance(self.channels, AutoCHANNEL):

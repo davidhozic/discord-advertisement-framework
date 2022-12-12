@@ -2,7 +2,6 @@
 This module is responsible for the logging in daf.
 It contains all the logging classes.
 """
-from __future__ import annotations
 from contextlib import suppress
 from datetime import datetime
 from typing import Optional
@@ -30,7 +29,7 @@ C_FILE_NAME_FORBIDDEN_CHAR = ('<','>','"','/','\\','|','?','*',":")
 
 class GLOBAL:
     "Singleton for global variables"
-    logger: LoggerBASE = None  
+    logger = None  
 
 
 @misc.doc_category("Logging related", path="logging")
@@ -47,7 +46,7 @@ class LoggerBASE:
     fallback: Optional[LoggerBASE]
         The manager to use, in case saving using this manager fails.
     """
-    def __init__(self, fallback: Optional[LoggerBASE] = None) -> None:
+    def __init__(self, fallback = None) -> None:
         self.fallback = fallback
 
     async def initialize(self) -> None:

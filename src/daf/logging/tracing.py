@@ -2,8 +2,8 @@
     This modules contains functions and classes
     related to the console debug long or trace.
 """
-from __future__ import annotations
 from enum import IntEnum, auto
+from typing import Union
 import time
 from threading import Lock
 from .. import misc
@@ -59,7 +59,7 @@ class GLOBALS:
 
 @misc.doc_category("Tracing")
 def trace(message: str,
-          level: TraceLEVELS | int = TraceLEVELS.NORMAL):
+          level: Union[TraceLEVELS, int] = TraceLEVELS.NORMAL):
     """
     | Prints a trace to the console.
     | This is thread safe.
@@ -97,7 +97,7 @@ def trace(message: str,
             print(l_trace)
 
 
-def initialize(level: TraceLEVELS | int | str):
+def initialize(level: Union[TraceLEVELS, int, str]):
     """
     Initializes the tracing module
 

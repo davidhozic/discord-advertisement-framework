@@ -3,7 +3,6 @@
     and functions needed for the framework to run,
     as well as user function to control the framework
 """
-from __future__ import annotations
 from typing import Callable, Coroutine, List, Optional, Union, overload
 from contextlib import suppress
 from typeguard import typechecked
@@ -43,7 +42,7 @@ async def initialize(token : Optional[str]=None,
                      server_log_output : Optional[str] =None,
                      sql_manager: Optional[sql.LoggerSQL]=None,
                      intents: Optional[discord.Intents]=None,
-                     debug : Optional[ TraceLEVELS | int | str | bool ] = TraceLEVELS.NORMAL,
+                     debug : Optional[ Union[TraceLEVELS, int, str, bool ]] = TraceLEVELS.NORMAL,
                      proxy: Optional[str]=None,
                      logger: Optional[logging.LoggerBASE]=None,
                      accounts: Optional[List[client.ACCOUNT]]=[]) -> None:
@@ -146,7 +145,7 @@ async def add_object(obj: client.ACCOUNT) -> None:
     ...
 @overload
 @misc.doc_category("Shilling list modification", True)
-async def add_object(obj: guild.USER | guild.GUILD | guild.AutoGUILD, snowflake: client.ACCOUNT=None) -> None:
+async def add_object(obj: Union[guild.USER, guild.GUILD, guild.AutoGUILD], snowflake: client.ACCOUNT=None) -> None:
     """
 
     Adds a guild or an user to the daf.
@@ -175,8 +174,8 @@ async def add_object(obj: guild.USER | guild.GUILD | guild.AutoGUILD, snowflake:
     ...
 @overload
 @misc.doc_category("Shilling list modification", True)
-async def add_object(obj: message.DirectMESSAGE | message.TextMESSAGE | message.VoiceMESSAGE,
-                     snowflake: int | guild.GUILD | guild.USER) -> None:
+async def add_object(obj: Union[message.DirectMESSAGE, message.TextMESSAGE, message.VoiceMESSAGE],
+                     snowflake: Union[int, guild.GUILD, guild.USER]) -> None:
     """
     Adds a message to the daf.
 
@@ -242,7 +241,7 @@ async def add_object(obj, snowflake=None):
 
 @typechecked
 @misc.doc_category("Shilling list modification")
-def remove_object(snowflake: guild._BaseGUILD | message.BaseMESSAGE | guild.AutoGUILD | client.ACCOUNT) -> None:
+def remove_object(snowflake: Union[guild._BaseGUILD, message.BaseMESSAGE, guild.AutoGUILD, client.ACCOUNT]) -> None:
     """
     .. versionchanged:: v2.4
         | Now accepts client.ACCOUNT.
@@ -335,7 +334,7 @@ def run(token : Optional[str]=None,
         server_log_output : Optional[str] =None,
         sql_manager: Optional[sql.LoggerSQL]=None,
         intents: Optional[discord.Intents]=None,
-        debug : Optional[ TraceLEVELS | int | str | bool ] = TraceLEVELS.NORMAL,
+        debug : Optional[ Union[TraceLEVELS, int, str, bool] ] = TraceLEVELS.NORMAL,
         proxy: Optional[str]=None,
         logger: Optional[logging.LoggerBASE]=None,
         accounts: Optional[List[client.ACCOUNT]]=[]) -> None:

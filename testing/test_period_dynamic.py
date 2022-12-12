@@ -18,16 +18,18 @@ TEST_MAX_WAIT_TIME = 15 # Maximum wait for message
 
 
 @pytest.mark.asyncio
-async def test_text_period(channels, guilds):
+async def test_text_period(channels, guilds, accounts):
     "Tests if the period and dynamic data works"
+    account = accounts[0]
+    client = account.client
     text_channels, _ = channels
     dc_guild, _ = guilds
     guild = daf.GUILD(dc_guild)
     user = daf.USER(TEST_USER_ID)
     try:
         await asyncio.sleep(5) # Clears rate limit
-        await daf.add_object(guild)
-        await daf.add_object(user)
+        await daf.add_object(guild, account)
+        await daf.add_object(user, account)
 
         @daf.data_function
         def dynamic_getter(items: list):
@@ -47,8 +49,6 @@ async def test_text_period(channels, guilds):
         ]
         TEXT_MESSAGE_TEST_MESSAGE = dynamic_getter(data_.copy())
         DIRECT_MESSAGE_TEST_MESSAGE = dynamic_getter_async(data_.copy())
-
-        client = daf.get_client()
 
         # Preparation
         test_period_secs = TEST_SEND_PERIOD_TEXT.total_seconds()
@@ -108,12 +108,13 @@ async def test_text_period(channels, guilds):
         
 
 @pytest.mark.asyncio
-async def test_voice_period(channels, guilds):
+async def test_voice_period(channels, guilds, accounts):
     "Tests if the period and dynamic data works"
+    account = accounts[0]
+    client = account.client
     _, voice_channels = channels
     dc_guild, _ = guilds
     guild = daf.GUILD(dc_guild)
-    user = daf.USER(TEST_USER_ID)
     try:
         await asyncio.sleep(5)
 
@@ -123,16 +124,13 @@ async def test_voice_period(channels, guilds):
             items.append(item)
             return item[1]
 
-        await daf.add_object(guild)
-        await daf.add_object(user)
+        await daf.add_object(guild, account)
         data_ = [
             (5, daf.AUDIO("https://www.youtube.com/watch?v=IGQBtbKSVhY")),
             (3, daf.AUDIO("https://www.youtube.com/watch?v=1O0yazhqaxs"))
         ]
         VOICE_MESSAGE_TEST_MESSAGE = dynamic_getter(data_.copy())
-        guild = daf.get_guild_user(dc_guild)
-        client = daf.get_client()
-
+    
         test_period_secs = TEST_SEND_PERIOD_VOICE.total_seconds()
         bottom_secs = (test_period_secs * (1 - TEST_PERIOD_MAX_VARIATION))
         upper_secs = (test_period_secs * (1 + TEST_PERIOD_MAX_VARIATION))
@@ -151,5 +149,3 @@ async def test_voice_period(channels, guilds):
     finally:
         with suppress(ValueError):
             daf.remove_object(guild)
-        with suppress(ValueError):
-            daf.remove_object(user)

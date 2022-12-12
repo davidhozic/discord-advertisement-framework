@@ -3,8 +3,6 @@
     regarding the guild and also defines a USER class from the
     _BaseGUILD class.
 """
-from __future__ import annotations
-
 from typing import Any, Coroutine, Union, List, Optional, Dict, Callable
 from contextlib import suppress
 from typeguard import typechecked
@@ -135,7 +133,7 @@ class _BaseGUILD:
         return (rm_after_type is timedelta and datetime.now() - self._created_at > self.remove_after or # The difference from creation time is bigger than remove_after
                 rm_after_type is datetime and datetime.now() > self.remove_after) # The current time is larger than remove_after 
 
-    def __eq__(self, other: _BaseGUILD) -> bool:
+    def __eq__(self, other: Any) -> bool:
         """
         Compares two guild objects if they're equal.
         """
@@ -216,7 +214,7 @@ class _BaseGUILD:
             Message object to remove."""
         raise NotImplementedError
 
-    async def update(self, **kwargs):
+    async def update(self, init_options={}, **kwargs):
         """
         .. versionadded:: v2.0
 
@@ -377,7 +375,7 @@ class GUILD(_BaseGUILD):
         return await super().initialize(parent, parent.client.get_guild)
     
     @misc._async_safe("update_semaphore", 2) # Take 2 since 2 tasks share access
-    async def update(self, **kwargs):
+    async def update(self, init_options={}, **kwargs):
         """
         Used for changing the initialization parameters the object was initialized with.
 
@@ -402,8 +400,11 @@ class GUILD(_BaseGUILD):
         # Update the guild
         if "snowflake" not in kwargs:
             kwargs["snowflake"] = self.snowflake
+        
+        if len(init_options) == 0:
+            init_options = {"parent": self.parent}
 
-        await misc._update(self, **kwargs)
+        await misc._update(self, **kwargs, init_options=init_options)
         # Update messages
         for message in self.messages:
             await message.update(_init_options={"parent": self})
@@ -503,7 +504,7 @@ class USER(_BaseGUILD):
         return await super().initialize(parent, parent.client.get_or_fetch_user)
 
     @misc._async_safe("update_semaphore", 2)
-    async def update(self, **kwargs):
+    async def update(self, init_options={}, **kwargs):
         """
         .. versionadded:: v2.0
 
@@ -529,7 +530,11 @@ class USER(_BaseGUILD):
         if "snowflake" not in kwargs:
             kwargs["snowflake"] = self.snowflake
 
-        await misc._update(self, **kwargs)
+        if len(init_options) == 0:
+            init_options = {"parent": self.parent}
+
+        await misc._update(self, init_options=init_options, **kwargs)
+
         # Update messages
         for message in self.messages:
             await message.update(_init_options={"parent" : self})
@@ -726,7 +731,7 @@ class AutoGUILD:
                         new_guild = GUILD(snowflake=dcgld,
                                                 messages=deepcopy(self.messages),
                                                 logging=self.logging)
-                        await new_guild.initialize()
+                        await new_guild.initialize(parent=self.parent)
                         self.cache[dcgld] = new_guild
                     except Exception as exc:
                         trace(f"[AutoGUILD:] Unable to add new object.\nReason: {exc}",TraceLEVELS.WARNING)
@@ -747,7 +752,7 @@ class AutoGUILD:
             await g._advertise(type_)
 
     @misc._async_safe("_safe_sem", 2)
-    async def update(self, **kwargs):
+    async def update(self, init_options={}, **kwargs):
         """
         Updates the object with new initialization parameters.
 
@@ -757,4 +762,7 @@ class AutoGUILD:
         if "interval" not in kwargs:
             kwargs["interval"] = timedelta(seconds=self.interval)
 
-        return await misc._update(self, **kwargs)
+        if len(init_options) == 0:
+            init_options = {"parent": self.parent}
+
+        return await misc._update(self, init_options=init_options, **kwargs)
