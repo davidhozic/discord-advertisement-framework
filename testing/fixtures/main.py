@@ -35,8 +35,8 @@ def start_daf(event_loop: asyncio.AbstractEventLoop):
 @pytest_asyncio.fixture(scope="session")
 async def accounts():
     accs = [
-        daf.ACCOUNT(token=TEST_TOKEN1),
-        daf.ACCOUNT(token=TEST_TOKEN2)
+        daf.ACCOUNT(token=TEST_TOKEN2),
+        daf.ACCOUNT(token=TEST_TOKEN1)
     ]
     for a in accs:
         await daf.add_object(a)
