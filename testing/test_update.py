@@ -68,7 +68,7 @@ async def test_voice_message_update(channels, guilds, accounts):
     await asyncio.sleep(5) # Wait for any messages still playing
     VOICE_MESSAGE_TEST_MESSAGE = [
             (10, daf.AUDIO("https://www.youtube.com/watch?v=4vQ8If7f374")),
-            (6, daf.AUDIO(os.path.join(os.path.dirname(os.path.abspath(__file__)), "testing123.mp3")))
+            (6, daf.AUDIO("https://www.youtube.com/watch?v=icPHcK_cCF4"))
         ]
 
     guild = daf.GUILD(dc_guild)
