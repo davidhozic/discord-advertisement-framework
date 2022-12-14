@@ -293,12 +293,13 @@ class VoiceMESSAGE(BaseMESSAGE):
         stream = None
         try:
             # Check if client has permissions before attempting to join
-            ch_perms = channel.permissions_for(channel.guild.get_member(self.parent.parent.client.user.id))
+            client_ = self.parent.parent.client
+            ch_perms = channel.permissions_for(client_)
             if not all([ch_perms.connect, ch_perms.stream, ch_perms.speak]):
                 raise self._generate_exception(403, 50013, "You lack permissions to perform that action", discord.Forbidden)
             
             # Check if channel still exists in cache (has not been deleted)
-            if self.parent.parent.client.get_channel(channel.id) is None:
+            if client_.get_channel(channel.id) is None:
                 raise self._generate_exception(404, 10003, "Channel was deleted", discord.NotFound)
 
             if GLOBALS.voice_client is None or not GLOBALS.voice_client.is_connected():
