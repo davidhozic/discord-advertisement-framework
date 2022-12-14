@@ -24,11 +24,6 @@ __all__ = (
     "VoiceMESSAGE",
 )
 
-class GLOBALS:
-    """ ~ class ~
-    - @Info: Contains global variables used in the voice messaging.
-    """
-    voice_client: discord.VoiceClient = None
 
 # Configuration
 # ----------------------#
@@ -291,10 +286,14 @@ class VoiceMESSAGE(BaseMESSAGE):
             the audio to stream.
         """
         stream = None
+        voice_client = None
         try:
             # Check if client has permissions before attempting to join
-            client_ = self.parent.parent.client
-            ch_perms = channel.permissions_for(client_)
+            client_: discord.Client = self.parent.parent.client
+            if (member := channel.guild.get_member(client_.user.id)) is None:
+                raise self._generate_exception(404, -1, "Client user could not be found in guild members", discord.NotFound)
+
+            ch_perms = channel.permissions_for(member)
             if not all([ch_perms.connect, ch_perms.stream, ch_perms.speak]):
                 raise self._generate_exception(403, 50013, "You lack permissions to perform that action", discord.Forbidden)
             
@@ -302,25 +301,19 @@ class VoiceMESSAGE(BaseMESSAGE):
             if client_.get_channel(channel.id) is None:
                 raise self._generate_exception(404, 10003, "Channel was deleted", discord.NotFound)
 
-            if GLOBALS.voice_client is None or not GLOBALS.voice_client.is_connected():
-                GLOBALS.voice_client = await channel.connect(timeout=C_VC_CONNECT_TIMEOUT)
-            else:
-                await GLOBALS.voice_client.move_to(channel)
-
+            voice_client = await channel.connect(timeout=C_VC_CONNECT_TIMEOUT)
             stream = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(audio.url, options="-loglevel fatal"), volume=self.volume/100)
+            voice_client.play(stream)
 
-            GLOBALS.voice_client.play(stream)
-
-            while GLOBALS.voice_client.is_playing():
+            while voice_client.is_playing():
                 await asyncio.sleep(1)
             return {"success": True}
         except Exception as ex:
             return {"success": False, "reason": ex}
         finally:
-            if GLOBALS.voice_client is not None:
+            if voice_client is not None:
                 with suppress(ConnectionResetError):
-                    await GLOBALS.voice_client.disconnect()
-                GLOBALS.voice_client = None
+                    await voice_client.disconnect()
                 await asyncio.sleep(1) # Avoid sudden disconnect and connect to a new channel
 
     @misc._async_safe("update_semaphore")

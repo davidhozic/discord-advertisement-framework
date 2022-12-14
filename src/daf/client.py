@@ -23,6 +23,7 @@ import asyncio
 LOGIN_TIMEOUT_S = 30
 TOKEN_MAX_PRINT_LEN = 5
 TASK_SLEEP_DELAY_S = 0.100
+TASK_STARTUP_DELAY_S = 2
 
 __all__ = (
     "ACCOUNT",
@@ -237,6 +238,7 @@ class ACCOUNT:
         type_:  guild.AdvertiseTaskType
             Task type (for text messages of voice messages)
         """
+        await asyncio.sleep(TASK_STARTUP_DELAY_S) # Allows api wrapper to cache itself
         while self._running:
             await asyncio.sleep(TASK_SLEEP_DELAY_S)
             # Sum, creates new list, making modifications on original lists safe

@@ -392,11 +392,15 @@ class TextMESSAGE(BaseMESSAGE):
         files: List[FILE]
             List of files to send.
         """
-
-        ch_perms = channel.permissions_for(channel.guild.get_member(self.parent.parent.client.user.id))
+        # Check if client has permissions before attempting to join
         for tries in range(3):  # Maximum 3 tries (if rate limit)
             try:
                 # Check if we have permissions
+                client_: discord.Client = self.parent.parent.client
+                if (member := channel.guild.get_member(client_.user.id)) is None:
+                    raise self._generate_exception(404, -1, "Client user could not be found in guild members", discord.NotFound)
+
+                ch_perms = channel.permissions_for(member)
                 if ch_perms.send_messages is False:
                     raise self._generate_exception(403, 50013, "You lack permissions to perform that action", discord.Forbidden)
 
