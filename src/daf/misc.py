@@ -5,7 +5,7 @@
 from typing import Coroutine, Callable, Any, Dict, Optional, Union
 from asyncio import Semaphore
 from functools import wraps
-from inspect import getfullargspec
+from inspect import getfullargspec, isasyncgenfunction
 from copy import copy
 from typeguard import typechecked
 
@@ -154,7 +154,19 @@ def _async_safe(semaphore: Union[str, Semaphore], amount: Optional[int]=1) -> Ca
         Decorator that returns a method wrapper Coroutine that utilizes a
         asyncio semaphore to assure safe asynchronous operations.
         """
-        if isinstance(semaphore, str):
+        if isasyncgenfunction(coroutine):
+            async def wrapper(self, *args, **kwargs):
+                sem: Semaphore = getattr(self, semaphore)
+                for i in range(amount):
+                    await sem.acquire()
+                try:
+                    async for r in coroutine(self, *args, **kwargs):
+                        yield r # yield from not allowed inside async functions
+                finally:
+                    for i in range(amount):
+                        sem.release()
+
+        else:
             async def wrapper(self, *args, **kwargs):
                 sem: Semaphore = getattr(self, semaphore)
                 for i in range(amount):
@@ -164,17 +176,6 @@ def _async_safe(semaphore: Union[str, Semaphore], amount: Optional[int]=1) -> Ca
                 finally:
                     for i in range(amount):
                         sem.release()
-
-                return result
-        else:
-            async def wrapper(*args, **kwargs):
-                for i in range(amount):
-                    await semaphore.acquire()
-                try:
-                    result = await coroutine(*args, **kwargs)
-                finally:
-                    for i in range(amount):
-                        semaphore.release()
 
                 return result
 

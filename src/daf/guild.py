@@ -256,11 +256,12 @@ class _BaseGUILD:
 
             elif message._is_ready():
                 message._reset_timer()
-                message_ret = await message._send()
+                message_ctx = await message._send()
+                # Don't return anything if logging is disabled for the server or no message was sent
+                yield message_ctx if self.logging else None
 
-                # Generate log (JSON or SQL)
-                if self.logging and message_ret is not None:
-                    await logging.save_log(self.generate_log_context(), message_ret)
+            yield None
+                    
 
     def generate_log_context(self) -> Dict[str, Union[str, int]]:
         """

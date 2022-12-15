@@ -20,6 +20,7 @@ __all__ = (
     "LoggerJSON",
     "LoggerCSV",
     "get_logger",
+    "save_log"
 )
 
 # Constants
