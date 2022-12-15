@@ -1,5 +1,6 @@
 from contextlib import suppress
 from datetime import timedelta
+from typing import List, Tuple, Union
 
 import asyncio
 import time
@@ -18,7 +19,9 @@ TEST_MAX_WAIT_TIME = 15 # Maximum wait for message
 
 
 @pytest.mark.asyncio
-async def test_text_period(channels, guilds, accounts):
+async def test_text_period(channels: Tuple[List[Union[daf.discord.TextChannel, daf.discord.VoiceChannel]]],
+                           guilds: Tuple[daf.discord.Guild],
+                           accounts: Tuple[daf.client.ACCOUNT]):
     "Tests if the period and dynamic data works"
     account = accounts[0]
     client = account.client
@@ -108,7 +111,9 @@ async def test_text_period(channels, guilds, accounts):
         
 
 @pytest.mark.asyncio
-async def test_voice_period(channels, guilds, accounts):
+async def test_voice_period(channels: Tuple[List[Union[daf.discord.TextChannel, daf.discord.VoiceChannel]]],
+                            guilds: Tuple[daf.discord.Guild],
+                            accounts: Tuple[daf.client.ACCOUNT]):
     "Tests if the period and dynamic data works"
     account = accounts[0]
     client = account.client
