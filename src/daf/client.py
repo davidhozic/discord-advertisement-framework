@@ -238,7 +238,6 @@ class ACCOUNT:
         type_:  guild.AdvertiseTaskType
             Task type (for text messages of voice messages)
         """
-        await asyncio.sleep(TASK_STARTUP_DELAY_S) # Allows api wrapper to cache itself
         while self._running:
             await asyncio.sleep(TASK_SLEEP_DELAY_S)
             # Sum, creates new list, making modifications on original lists safe
@@ -247,13 +246,12 @@ class ACCOUNT:
                 if server._check_state():
                     self.remove_server(server)
                 else:
-                    # Async generator that returns message_context of sent messages 
+                    # Async generator that returns message context and guild context of sent messages 
                     # to use in logging
-                    server_ctx = server.generate_log_context()
-                    async for message_ctx in server._advertise(type_):
+                    async for guild_ctx, message_ctx in server._advertise(type_):
                         # Logging not disabled for guild and message was sent
                         if message_ctx is not None:
-                            await logging.save_log(server_ctx, message_ctx)
+                            await logging.save_log(guild_ctx, message_ctx)
                 
                 if not self._running:
                     break

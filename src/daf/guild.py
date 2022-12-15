@@ -258,9 +258,10 @@ class _BaseGUILD:
                 message._reset_timer()
                 message_ctx = await message._send()
                 # Don't return anything if logging is disabled for the server or no message was sent
-                yield message_ctx if self.logging else None
+                if self.logging:
+                    yield (self.generate_log_context(), message_ctx)
 
-            yield None
+            yield None, None
                     
 
     def generate_log_context(self) -> Dict[str, Union[str, int]]:
@@ -750,7 +751,8 @@ class AutoGUILD:
         """
         await self._process()
         for g in self.guilds:
-            await g._advertise(type_)
+            async for context in g._advertise(type_):
+                yield context # guild_ctx, message_ctx
 
     @misc._async_safe("_safe_sem", 2)
     async def update(self, init_options={}, **kwargs):
