@@ -58,8 +58,12 @@ MANUAL_FUNCTION_TEMPLATE = \
 
 
 titles = daf.misc.doc_titles
-export_c = "===============================\nClasses\n===============================\n"
-export_f = "===============================\nFunctions\n===============================\n"
+export_c = ".. AUTO-GENERATED ..\n\n\n" \
+           "===============================\nClasses\n===============================\n"
+
+export_f = ".. AUTO-GENERATED ..\n\n\n" \
+           "===============================\nFunctions\n===============================\n"
+
 for category, items in titles.items():
     export_c_items = ""
     export_f_items = ""
@@ -74,18 +78,25 @@ for category, items in titles.items():
                 # Replace titles with list titles
                 doc_str_titles = re.findall(r"[A-z]+\n-+", doc_str)
                 # Replace numpy style lists
-                numpy_list: List[str] = re.findall(r".+\n {2,}.+", doc_str)
-
+                numpy_list = []
+                numpy_found = re.findall(r".+\n {2,}.+", doc_str)
+                for param in numpy_found:
+                    split_ = param.split(':')
+                    if len(split_) == 2: # Parameter
+                        name, type_desc = split_
+                        type_, desc = [x.strip() for x in type_desc.split('\n')]
+                        numpy_list.append(f":param {name}: {desc}\n:type {name}: {type_}")
+                    else:
+                        type_desc = split_[0]
+                        type_, desc = [x.strip() for x in type_desc.split('\n')]
+                        numpy_list.append(f":raises {type_}: {desc}")
+                
                 for title in doc_str_titles:
-                    new_title = f':{re.sub(r"-{2,}", "", title).strip()}:'
-                    doc_str = doc_str.replace(title, new_title)
+                    doc_str = doc_str.replace(title, "")
 
-                for numpy in numpy_list:
-                    title, desc = numpy.split("\n")
-                    title = f"    - {title}"
-                    desc = f"      {desc}"
-                    doc_str = doc_str.replace(numpy, f"{title}\n{desc}")
-
+                for i, numpy in enumerate(numpy_found):
+                    doc_str = doc_str.replace(numpy, numpy_list[i])
+                    
                 export_f_items += MANUAL_FUNCTION_TEMPLATE.format(object_name=object_name,
                                                                   annotations=",".join(f"{k}: {v}" for k, v in annotations.items()),
                                                                   object_path=object_path,
@@ -110,9 +121,9 @@ for category, items in titles.items():
         export_c += export_c_items
 
 
-with open("__autodoc_export_funct.rst", "w") as f:
+with open("../source/functions.rst", "w") as f:
     f.write(export_f)
 
-with open("__autodoc_export_class.rst", "w") as f:
+with open("../source/classes.rst", "w") as f:
     f.write(export_c)
     
