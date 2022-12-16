@@ -91,7 +91,6 @@ class VoiceMESSAGE(BaseMESSAGE):
     """
 
     __slots__ = (
-        "randomized_time",
         "period",
         "start_period",
         "end_period",
