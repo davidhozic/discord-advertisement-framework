@@ -45,7 +45,7 @@ except ImportError:
 @misc.doc_category("Clients")
 class ACCOUNT:
     """
-    TODO: update method
+    .. versionadded:: v2.4
 
     Represents an individual Discord account.
     
