@@ -1,11 +1,10 @@
 """
     This modules contains definitions related to the client (for API)
 """
-from typing import Optional, Union, Optional, Callable, Coroutine, List
+from typing import Optional, Union, Optional, List
 
 from . import misc
 from . import guild
-from . import message
 from . import logging
 from . import misc
 
@@ -83,10 +82,10 @@ class ACCOUNT:
         self._token = token
         self.is_user = is_user
         self.proxy = proxy
+        self.intents = intents
 
         self._running = False
         self.tasks = {
-            "client": None,
             "text": None,
             "voice": None
         }
@@ -109,6 +108,7 @@ class ACCOUNT:
             connector = ProxyConnector.from_url(proxy)
 
         self._client = discord.Client(intents=intents, connector=connector)
+        misc._write_attr_once(self, "_update_sem", asyncio.Semaphore(2))
 
     def __eq__(self, other):
         if isinstance(other, ACCOUNT):
@@ -154,7 +154,7 @@ class ACCOUNT:
         """
         # Login
         trace("[CLIENT:] Logging in...")
-        self.tasks["client"] = asyncio.create_task(self._client.start(self._token, bot=not self.is_user))
+        asyncio.create_task(self._client.start(self._token, bot=not self.is_user))
         try:
             await self._client.wait_for("ready", timeout=LOGIN_TIMEOUT_S)
             trace(f"[CLIENT:] Logged in as {self._client.user.display_name}")
@@ -168,7 +168,7 @@ class ACCOUNT:
             except Exception as exc:
                 trace(exc, TraceLEVELS.WARNING)
 
-        del self._uiservers # Only needed for predefined initialization
+        self._uiservers.clear() # Only needed for predefined initialization
 
         self.tasks["text"] = asyncio.create_task(self._loop(guild.AdvertiseTaskType.TEXT_ISH))
         self.tasks["voice"] = asyncio.create_task(self._loop(guild.AdvertiseTaskType.VOICE))
@@ -222,8 +222,10 @@ class ACCOUNT:
         Signals the tasks of this account to finish and
         waits for them.
         """
+        trace(f"[ACCOUNT:] Logging out of {self.client.user.display_name}...")
         self._running = False
-        await asyncio.gather(*self.tasks.values())
+        await asyncio.gather(*self.tasks.values(), return_exceptions=True)
+        await self._client.close()
 
     async def _loop(self, type_: guild.AdvertiseTaskType):
         """
@@ -239,25 +241,44 @@ class ACCOUNT:
             Task type (for text messages of voice messages)
         """
         while self._running:
-            await asyncio.sleep(TASK_SLEEP_DELAY_S)
-            # Sum, creates new list, making modifications on original lists safe
-            for server in self.servers:
-                # Remove guild
-                if server._check_state():
-                    self.remove_server(server)
-                else:
-                    # Async generator that returns message context and guild context of sent messages 
-                    # to use in logging
-                    async for guild_ctx, message_ctx in server._advertise(type_):
-                        # Logging not disabled for guild and message was sent
-                        if message_ctx is not None:
-                            await logging.save_log(guild_ctx, message_ctx)
-                
-                if not self._running:
-                    break
 
-        # Closes the connection here instead in _finish to prevent mid-call cancellations
-        await self._client.close()
-    
+            @misc._async_safe("_update_sem")
+            async def __loop(self_):
+                await asyncio.sleep(TASK_SLEEP_DELAY_S)
+                # Sum, creates new list, making modifications on original lists safe
+                for server in self.servers:
+                    # Remove guild
+                    if server._check_state():
+                        self.remove_server(server)
+                    else:
+                        # Async generator that returns message context and guild context of sent messages 
+                        # to use in logging
+                        async for guild_ctx, message_ctx in server._advertise(type_):
+                            # Logging not disabled for guild and message was sent
+                            if message_ctx is not None:
+                                await logging.save_log(guild_ctx, message_ctx)
+                    
+                            if not self._running:
+                                return
+            
+            await __loop(self)
+
     async def update(self, **kwargs):
-        raise NotImplementedError
+        """
+        Updates the object with new parameters and afterwards updates all lower layers (GUILD->MESSAGE->CHANNEL).
+
+        .. WARNING::
+            After calling this method the entire object is reset.
+        """
+        @misc._async_safe("_update_sem", 2)
+        async def update_servers(self_):
+            for server in self.servers:
+                await server.update(init_options={"parent": self})
+
+        if "token" not in kwargs:
+            kwargs["token"] = self._token
+
+        await self.close()
+        await misc._update(self, **kwargs)
+
+        await update_servers(self)

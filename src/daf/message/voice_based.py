@@ -314,6 +314,7 @@ class VoiceMESSAGE(BaseMESSAGE):
             if voice_client is not None:
                 with suppress(ConnectionResetError):
                     await voice_client.disconnect()
+
                 await asyncio.sleep(1) # Avoid sudden disconnect and connect to a new channel
 
     @misc._async_safe("update_semaphore")
@@ -374,8 +375,14 @@ class VoiceMESSAGE(BaseMESSAGE):
 
         if "data" not in kwargs:
             kwargs["data"] = self._data
+
+        if "channels" not in kwargs and not isinstance(self.channels, AutoCHANNEL):
+            kwargs["channels"] = [x.id for x in self.channels]
         
         if not len(_init_options):
             _init_options = {"parent": self.parent}
 
         await misc._update(self, init_options=_init_options, **kwargs) # No additional modifications are required
+        if isinstance(self.channels, AutoCHANNEL):
+            await self.channels.update()
+
