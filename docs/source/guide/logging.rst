@@ -19,7 +19,7 @@ Logging is handled thru so called **logging managers**. Currently, 3 different m
 If a logging managers fails saving a log, then it's fallback manager will be used temporarily to store the log.
 It will only use the fallback once and then, at the next message, the original manager will be used.
 
-.. figure:: images/logging_process.png
+.. figure:: images/logging_process.drawio.svg
     
     Logging process with fallback
 
@@ -145,6 +145,10 @@ This type of logging enables saving logs to a remote server inside the database.
 In addition to being smaller in size, database logging takes up less space and it allows easier data analysis.
 
 
+.. figure:: images/sql_logging_process.drawio.svg
+
+    SQL Logging diagram
+
 
 Dialects
 ----------------------
@@ -155,25 +159,6 @@ The following dialects are supported:
 - PostgreSQL
 - SQLite,
 - MySQL
-
-SQL process diagram
----------------------
-
-.. card::
-
-    SQL initialization
-    ^^^^^^^^^^^^^^^^^^^^^
-    .. image:: images/sql_initialization.png
-        :scale: 75%
-
-
-.. card::
-
-    SQL logging process
-    ^^^^^^^^^^^^^^^^^^^^^
-    .. image:: images/sql_logging_diagram.png
-        :scale: 35%
-
 
 
 Usage
@@ -199,7 +184,7 @@ Features
 
 ER diagram
 --------------------------------
-.. image:: images/er_diagram.png
+.. image:: images/sql_er.drawio.svg
 
 Tables
 --------------------------------

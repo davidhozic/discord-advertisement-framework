@@ -84,11 +84,6 @@ Some objects in the framework can be dynamically updated thru the ``.update()`` 
 The principle is the same for all objects that support this and what this method does is it
 updates the original parameters that can be passed during object creation.
 
-.. figure:: images/update_process.png
-    :scale: 35%
-
-    Object update process.
-
 .. warning::
 
     This completely resets the state of the object you are updating, meaning that if you do call the 
