@@ -56,7 +56,8 @@ class LoggerBASE:
             try:
                 await self.fallback.initialize()
             except Exception as exc:
-                trace(f"[Logging:] Could not initialize {type(self).__name__}'s fallback: {type(self.fallback).__name__}.\nReason: {exc}", TraceLEVELS.WARNING)
+                trace(f" Could not initialize {type(self).__name__}'s fallback: {type(self.fallback).__name__}.",
+                      TraceLEVELS.WARNING, exc)
                 self.fallback = None
 
 
@@ -256,10 +257,12 @@ async def initialize(logger: LoggerBASE) -> None:
             await logger.initialize()
             break
         except Exception as exc:
-            trace(f"Could not initialize manager {type(logger).__name__}, falling to {type(logger.fallback).__name__}\nReason: {exc}", TraceLEVELS.WARNING)
+            trace(f"Could not initialize manager {type(logger).__name__}, falling to {type(logger.fallback).__name__}",
+            TraceLEVELS.WARNING, exc)
             logger = logger.fallback # Could not initialize, try fallback
     else:
-        trace("Logging will be disabled as the logging manager and it's fallbacks all failed initialization", TraceLEVELS.ERROR)
+        trace("Logging will be disabled as the logging manager and it's fallbacks all failed initialization",
+              TraceLEVELS.ERROR)
 
     GLOBAL.logger = logger
 
@@ -311,7 +314,8 @@ async def save_log(guild_context: dict, message_context: dict):
             await mgr._save_log(guild_context, message_context)
             break
         except Exception as exc:
-            trace(f"{type(mgr).__name__} failed, falling to {type(mgr.fallback).__name__}\nReason: {exc}", TraceLEVELS.WARNING)
+            trace(f"{type(mgr).__name__} failed, falling to {type(mgr.fallback).__name__}",
+                  TraceLEVELS.WARNING, exc)
             mgr = mgr.fallback # Could not initialize, try fallback
     else:
         trace("Could not save log to the manager or any of it's fallback", TraceLEVELS.ERROR)

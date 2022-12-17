@@ -97,7 +97,7 @@ async def initialize(token : Optional[str]=None,
     # ------------------------------------------------------------
     # ------------- DEPRECATED -----------------
     if token is not None:
-        trace("[CORE:] Passing the token argument directly is deprecated since v2.4 where support\n"
+        trace("Passing the token argument directly is deprecated since v2.4 where support\n"
               "for multiple accounts was added. Please use the ``accounts`` parameter", 
               TraceLEVELS.DEPRECATED)
 
@@ -107,17 +107,17 @@ async def initialize(token : Optional[str]=None,
         try:
             await add_object(account)
         except Exception as exc:
-            trace(f"[CORE:] Unable to add account.\nReason: {exc}", TraceLEVELS.ERROR)    
+            trace(f" Unable to add account.", TraceLEVELS.ERROR, exc)    
 
     # ------------------------------------------
     # Create the user callback task
     if user_callback is not None:
-        trace("[CORE]: Starting user callback function", TraceLEVELS.NORMAL)
+        trace("Starting user callback function", TraceLEVELS.NORMAL)
         user_callback = user_callback()
         if isinstance(user_callback, Coroutine):
             loop.create_task(user_callback)
 
-    trace("[CORE]: Initialization complete.", TraceLEVELS.NORMAL)
+    trace("Initialization complete.", TraceLEVELS.NORMAL)
 
 
 #######################################################################
@@ -214,7 +214,7 @@ async def add_object(obj, snowflake=None):
     elif isinstance(obj, (guild._BaseGUILD , guild.AutoGUILD)):
         if snowflake is None:
             # Compatibility with prior versions of v2.4
-            trace("[CORE:] Directly adding guild like objects to the framework is deprecated since v2.4 (multi-account support)\n"
+            trace("Directly adding guild like objects to the framework is deprecated since v2.4 (multi-account support)\n"
                   "The object will be added to the first account in the list. Update your code to pass ``snowflake`` with :class:`~daf.client.ACCOUNT`",
                   TraceLEVELS.DEPRECATED)
             try:

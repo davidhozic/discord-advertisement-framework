@@ -196,7 +196,7 @@ class _BaseGUILD:
                 try:
                     await self.add_message(message)
                 except (TypeError, ValueError) as exc:
-                    trace(f"[GUILD:] Unable to initialize message {message}, in {self}\nReason: {exc}", TraceLEVELS.WARNING)
+                    trace(f" Unable to initialize message {message}, in {self}", TraceLEVELS.WARNING, exc)
 
 
             self._messages_uninitialized.clear()
@@ -736,7 +736,7 @@ class AutoGUILD:
                         await new_guild.initialize(parent=self.parent)
                         self.cache[dcgld] = new_guild
                     except Exception as exc:
-                        trace(f"[AutoGUILD:] Unable to add new object.\nReason: {exc}",TraceLEVELS.WARNING)
+                        trace(f" Unable to add new object.",TraceLEVELS.WARNING, exc)
 
     @misc._async_safe("_safe_sem", 1)
     async def _advertise(self, type_: AdvertiseTaskType):

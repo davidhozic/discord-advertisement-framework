@@ -153,11 +153,11 @@ class ACCOUNT:
             Unable to login to Discord.
         """
         # Login
-        trace("[CLIENT:] Logging in...")
+        trace("Logging in...")
         asyncio.create_task(self._client.start(self._token, bot=not self.is_user))
         try:
             await self._client.wait_for("ready", timeout=LOGIN_TIMEOUT_S)
-            trace(f"[CLIENT:] Logged in as {self._client.user.display_name}")
+            trace(f"Logged in as {self._client.user.display_name}")
         except asyncio.TimeoutError:
             exc = self.tasks["client"].exception()
             raise RuntimeError(f"Error logging in to Discord. (Token {self._token[:TOKEN_MAX_PRINT_LEN]}...)") from exc
@@ -222,7 +222,7 @@ class ACCOUNT:
         Signals the tasks of this account to finish and
         waits for them.
         """
-        trace(f"[ACCOUNT:] Logging out of {self.client.user.display_name}...")
+        trace(f"Logging out of {self.client.user.display_name}...")
         self._running = False
         await asyncio.gather(*self.tasks.values(), return_exceptions=True)
         await self._client.close()
