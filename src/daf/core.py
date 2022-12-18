@@ -3,7 +3,6 @@
     and functions needed for the framework to run,
     as well as user function to control the framework
 """
-from __future__ import annotations
 from typing import Callable, Coroutine, List, Optional, Union, overload
 from contextlib import suppress
 from typeguard import typechecked
@@ -83,7 +82,7 @@ async def initialize(token : str,
                      server_log_output : Optional[str] =None,
                      sql_manager: Optional[sql.LoggerSQL]=None,
                      intents: Optional[dc.Intents]=None,
-                     debug : Optional[ TraceLEVELS | int | str | bool ] = TraceLEVELS.NORMAL,
+                     debug : Optional[ Union[TraceLEVELS, int, str, bool] ] = TraceLEVELS.NORMAL,
                      proxy: Optional[str]=None,
                      logger: Optional[logging.LoggerBASE]=None) -> None:
     """
@@ -405,7 +404,7 @@ def run(token : str,
         server_log_output : Optional[str] =None,
         sql_manager: Optional[sql.LoggerSQL]=None,
         intents: Optional[dc.Intents]=None,
-        debug : Optional[ TraceLEVELS | int | str | bool ] = TraceLEVELS.NORMAL,
+        debug : Optional[ Union[TraceLEVELS, int, str, bool] ] = TraceLEVELS.NORMAL,
         proxy: Optional[str]=None,
         logger: Optional[logging.LoggerBASE]=None) -> None:
     """
