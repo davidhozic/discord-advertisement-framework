@@ -94,7 +94,6 @@ class VoiceMESSAGE(BaseMESSAGE):
         "period",
         "start_period",
         "end_period",
-        "data",
         "volume",
         "channels",
     )
