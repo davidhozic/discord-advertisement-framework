@@ -20,7 +20,7 @@ async def test_autoguild(guilds, accounts):
     guild_include, guild_exclude = guilds
     auto_guild = None
     try:
-        auto_guild = daf.AutoGUILD("magic-.*-magic", "-321-")
+        auto_guild = daf.AutoGUILD("magic-.*-magic", "-321-", messages=[daf.TextMESSAGE(None, timedelta(seconds=1), "Hello World", daf.message.AutoCHANNEL("testpy-[0-9]", "testpy-[5-9]"))])
         await daf.add_object(auto_guild, snowflake=account)
         await asyncio.sleep(1)
         found = [x.apiobject for x in auto_guild.guilds]
