@@ -10,11 +10,14 @@ from ..dtypes import *
 from ..logging.tracing import *
 from ..timing import *
 from .. import misc
+from .. import client
 
 import random
 import re
+import copy
 import asyncio
 import _discord as discord
+
 
 __all__ = (
     "BaseMESSAGE",
@@ -151,6 +154,20 @@ class BaseMESSAGE:
         
         raise TypeError(f"Comparison of {type(self)} not allowed with {type(o)}")
 
+    def __deepcopy__(self, *args):
+        "Duplicates the object (for use in AutoGUILD)"
+        new = copy.copy(self)
+        for slot in list(self.__slots__) + list(BaseMESSAGE.__slots__):
+            self_val = getattr(self, slot)
+            if isinstance(self_val, (asyncio.Semaphore, asyncio.Lock)):
+                # Hack to copy semaphores since not all of it can be copied directly
+                copied = type(self_val)(self_val._value)
+            else:
+                copied = copy.deepcopy((self_val))
+
+            setattr(new, slot, copied)
+
+        return new
 
     @property
     def created_at(self) -> datetime:
@@ -408,10 +425,18 @@ class AutoCHANNEL:
         stamp = datetime.now().timestamp()
         if stamp - self.last_scan > self.interval:
             self.last_scan = stamp
-            for channel in getattr(self.parent.parent.apiobject, self.channel_getter):
+            guild: discord.Guild = self.parent.parent.apiobject
+            client_: discord.Client = client.get_client()
+            member = guild.get_member(client_.user.id)
+            if member is None:
+                return
+
+            for channel in getattr(guild, self.channel_getter):
                 if channel not in self.cache:
+                    perms = channel.permissions_for(member)
                     name = channel.name
-                    if (re.search(self.include_pattern, name) is not None and
+                    if ((perms.send_messages or (perms.connect and perms.stream and perms.speak)) and
+                        re.search(self.include_pattern, name) is not None and
                         (self.exclude_pattern is None or re.search(self.exclude_pattern, name) is None)
                     ):
                         self.cache.add(channel)

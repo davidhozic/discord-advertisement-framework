@@ -233,6 +233,8 @@ class TextMESSAGE(BaseMESSAGE):
                     mode: str - The mode used to send the message (send, edit, clear-send)
                 }
         """
+        if not (len(succeeded_ch) + len(failed_ch)):
+            return None
 
         succeeded_ch = [{"name": str(channel), "id" : channel.id} for channel in succeeded_ch]
         failed_ch = [{"name": str(entry["channel"]), "id" : entry["channel"].id,
