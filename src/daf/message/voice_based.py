@@ -183,6 +183,8 @@ class VoiceMESSAGE(BaseMESSAGE):
                     type: str - The type of the message, this is always VoiceMESSAGE.
               }
         """
+        if not (len(succeeded_ch) + len(failed_ch)):
+            return None
 
         succeeded_ch = [{"name": str(channel), "id" : channel.id} for channel in succeeded_ch]
         failed_ch = [{"name": str(entry["channel"]), "id" : entry["channel"].id,
@@ -340,6 +342,7 @@ class VoiceMESSAGE(BaseMESSAGE):
                     errored_channels.append({"channel":channel, "reason": context["reason"]})
 
             self._update_state(errored_channels)
+            
             return self.generate_log_context(**_data_to_send, succeeded_ch=succeeded_channels, failed_ch=errored_channels)
 
         return None
