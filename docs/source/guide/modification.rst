@@ -49,7 +49,7 @@ The function can be used to add the following object types:
             The guild must already be added to the framework, otherwise this method will fail.
 
         .. code-block:: python
-            :emphasize-lines: 4
+            
 
             ...
             my_guild = daf.GUILD(guild.id, logging=True)
@@ -61,7 +61,7 @@ The function can be used to add the following object types:
 
     .. literalinclude:: ../../../Examples/Dynamic Modification/main_add_object.py
         :language: python
-        :emphasize-lines: 25-27, 38
+        
 
 
 Dynamically removing objects
@@ -73,7 +73,7 @@ Objects can be removed with the :func:`daf.core.remove_object`.
 
     .. literalinclude:: ../../../Examples/Dynamic Modification/main_remove_object.py
         :language: python
-        :emphasize-lines: 8, 15
+        
 
 
 
@@ -93,7 +93,7 @@ For example if I wanted to change the shilling period of a :class:`daf.message.T
 in the following way:
 
 .. code-block:: python
-    :emphasize-lines: 3, 13
+    
 
     ... # Other code
     # Fixed sending period of 5 seconds
@@ -122,5 +122,5 @@ For a full list of objects that support ``.update`` search ".update" in the sear
     
     .. literalinclude:: ../../../Examples/Dynamic Modification/main_update.py
         :language: python
-        :emphasize-lines: 42
+        
 

@@ -43,7 +43,6 @@ It can be passed to the framework exactly the same way as |GUILD| (see :ref:`qui
 
 .. literalinclude:: ../../../Examples/Automatic Generation/autoguild.py
     :lines: 1-4, 20-42, 44
-    :emphasize-lines: 7, 16
 
 
 Automatic channel generation
@@ -54,7 +53,6 @@ It can be passed to xMESSAGE objects into the ``channels`` parameters instead of
 .. literalinclude:: ../../../Examples/Automatic Generation/autochannel.py
     :lines: 6-18
     :caption: AutoCHANNEL example
-    :emphasize-lines: 8
 
 
 PyCord scheme generation method

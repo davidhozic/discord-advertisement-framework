@@ -41,14 +41,12 @@ To add these messages to the guild, set the |GUILD| / |USER|'s ``messages`` para
 
 .. only:: html
 
-    .. literalinclude:: ../../../Examples/Message Types/TextMESSAGE/main_send_string.py
+    .. literalinclude:: ../../../Examples/Message Types/TextMESSAGE/main_send_multiple.py
         :language: Python
-        :emphasize-lines: 8
         :caption: **TextMESSAGE example - normal text (string)**
 
-    .. literalinclude:: ../../../Examples/Message Types/DirectMESSAGE/main_send_string.py
+    .. literalinclude:: ../../../Examples/Message Types/DirectMESSAGE/main_send_multiple.py
         :language: Python
-        :emphasize-lines: 14
         :caption: **DirectMESSAGE example - normal text (string)**
 
 
@@ -60,6 +58,5 @@ You can either stream a fixed audio file or a youtube video, both thru :class:`d
 
 .. only:: html
 
-    .. literalinclude:: ../../../Examples/Message Types/VoiceMESSAGE/main_stream_audio.py
-        :emphasize-lines: 12
+    .. literalinclude:: ../../../Examples/Message Types/VoiceMESSAGE/main_stream_audio.py        
         :caption: **VoiceMESSAGE example - audio file**

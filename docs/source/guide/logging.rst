@@ -65,7 +65,7 @@ All logs will contain keys:
     .. literalinclude:: ../../../Examples/Logging/JSON files/main_rickroll.py
         :language: python
         :caption: Code to produce JSON logs
-        :emphasize-lines: 27, 36
+        
 
 
 
@@ -112,7 +112,7 @@ The structure contains the following attributes:
     .. literalinclude:: ../../../Examples/Logging/CSV files/main_rickroll.py
         :language: python
         :caption: Code to produce JSON logs
-        :emphasize-lines: 27, 36
+        
 
 
 
@@ -169,7 +169,7 @@ For daf to use SQL logging, you need to pass the :func:`~daf.core.run` function 
 
     .. literalinclude:: ../../../Examples/Logging/SQL Logging/rolls.py
         :language: python
-        :emphasize-lines: 27, 36
+        
 
 Features
 --------------------------------
@@ -359,7 +359,7 @@ The derived logger class can then implement the following methods:
     Example:
     
     .. code-block:: python
-        :emphasize-lines: 3, 10-12
+        
     
         class LoggerCUSTOM(daf.logging.LoggerBASE):
             def __init__(self, name, fallback):
