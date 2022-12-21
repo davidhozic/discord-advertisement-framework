@@ -33,7 +33,7 @@ Automatic GUILD generation
 
 For a auto-managed GUILD list, use |AUTOGUILD| which internally generates |GUILD| instances.
 Simply create a list of |AUTOGUILD| objects and then pass it to the framework.
-It can be passed to the framework exactly the same way as |GUILD| (see :ref:`quickstart` (``server_list``) and :ref:`Dynamically adding objects`).
+It can be passed to the framework exactly the same way as |GUILD| (see :ref:`quickstart` (``accounts``) and :ref:`Dynamically adding objects`).
 
 .. WARNING::
 
