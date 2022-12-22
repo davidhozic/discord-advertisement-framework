@@ -20,6 +20,15 @@ The function can be used to add the following object types:
 
 .. card::
 
+    Accounts
+    ^^^^^^^^^^^
+
+    :class:`daf.client.ACCOUNT`
+
+
+
+.. card::
+
     Guilds
     ^^^^^^^^^^^^
 
@@ -53,7 +62,7 @@ The function can be used to add the following object types:
 
             ...
             my_guild = daf.GUILD(guild.id, logging=True)
-            await daf.add_object(my_guild)
+            await daf.add_object(my_guild, account)
             await my_guild.add_message(daf.TextMESSAGE(...))
             ...
 
@@ -104,7 +113,7 @@ in the following way:
                                         )
 
 
-    await daf.add_object(my_message, 123456789)
+    await daf.add_object(my_message, some_GUILD_object)
     
     # Randomized sending period between 3 and 5 seconds
     await my_message.update(start_period=timedelta(seconds=3)) 

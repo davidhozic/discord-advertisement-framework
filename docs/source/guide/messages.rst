@@ -17,7 +17,7 @@ The |GUILD| objects represents Discord servers with text/voice channels and it c
 and |VoiceMESSAGE| messages, while |USER| represents a single user on Discord and can hold |DirectMESSAGE| messages.
 For more information about how to use |GUILD| / |USER| click on them.
 
-Guilds can be passed to the framework at startup, see :ref:`quickstart` (``server_list``) for more info.
+Guilds can be passed to the framework at startup (see :ref:`Quickstart`) and while the framework is running (see :ref:`Modifying the shilling list`).
 
 
 Message types

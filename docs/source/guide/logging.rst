@@ -163,7 +163,7 @@ The following dialects are supported:
 
 Usage
 --------------------------------
-For daf to use SQL logging, you need to pass the :func:`~daf.core.run` function with the ``logging`` parameter and pass it the :class:`~daf.logging.sql.LoggerSQL` object.
+For daf to use SQL logging, you need to pass the :func:`~daf.core.run` function with the ``logger`` parameter and pass it the :class:`~daf.logging.sql.LoggerSQL` object.
 
 .. only:: html
 
