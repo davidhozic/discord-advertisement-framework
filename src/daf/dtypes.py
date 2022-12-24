@@ -51,6 +51,7 @@ class _FunctionBaseCLASS:
     the object to it's class or to the base class from which the object class is inherited from.
     """
 
+@misc.doc_category("xMESSAGE Data Types")
 @misc.doc_category("Decorators")
 def data_function(fnc: Callable):
     """
@@ -225,7 +226,7 @@ class EMBED(discord.Embed):
             self.set_thumbnail(url=thumbnail)
 
 @typechecked
-@misc.doc_category("Message data types")
+@misc.doc_category("xMESSAGE Data Types")
 class FILE:
     """
     FILE object used as a data parameter to the MESSAGE objects.
@@ -250,7 +251,7 @@ class FILE:
 
 
 @typechecked
-@misc.doc_category("Message data types")
+@misc.doc_category("xMESSAGE Data Types")
 class AUDIO:
     """
     Used for streaming audio from file or YouTube.

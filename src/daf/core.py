@@ -306,19 +306,6 @@ def _shutdown_clean(loop: asyncio.AbstractEventLoop) -> None:
         loop.run_until_complete(account.close())
 
 
-@misc.doc_category("Getters")
-def get_shill_list() -> List[Union[guild.GUILD, guild.USER]]:
-    """
-    .. versionadded:: v2.1
-
-    Returns
-    -----------
-    List[Union[guild.GUILD, guild.USER]]
-        The shilling list.
-    """
-    return GLOBALS.server_list.copy()
-
-
 @typechecked
 @misc.doc_category("Core control")
 def run(token : Optional[str]=None,
