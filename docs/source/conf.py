@@ -16,6 +16,13 @@ import sys
 sys.path.insert(0, os.path.abspath('../../src/'))
 sys.path.insert(0, os.path.abspath('.'))
 
+# Create object reference files
+file_dir = os.path.dirname(__file__)
+file_dir = file_dir.rstrip(os.path.basename(file_dir))
+file_dir = os.path.join(file_dir, "scripts/generate_autodoc.py")
+os.system(f"{sys.executable} {file_dir}")
+
+
 # -- Project information -----------------------------------------------------
 project = 'Discord Advertisement Framework'
 copyright = '2022, David Hozic'
