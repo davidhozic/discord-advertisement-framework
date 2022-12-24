@@ -44,7 +44,8 @@ extensions = [
     "sphinx_copybutton",
     "enum_tools.autoenum",
     "sphinx_design",
-    "sphinx_search.extension"
+    "sphinx_search.extension",
+    "sphinxcontrib.inkscapeconverter"
 ]
 
 master_doc = 'index'

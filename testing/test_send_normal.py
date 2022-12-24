@@ -1,5 +1,5 @@
 from datetime import timedelta
-
+from typing import Tuple, List
 import time
 import pytest
 import daf
@@ -11,12 +11,14 @@ VOICE_MESSAGE_TEST_LENGTH = 3 # Test if entire message is played
 
 
 @pytest.mark.asyncio
-async def test_text_message_send(channels, guilds):
+async def test_text_message_send(channels: Tuple[daf.discord.ChannelType], guilds: Tuple[daf.discord.Guild], accounts: List[daf.ACCOUNT]):
     "This tests if all the text messages succeed in their sends"
+    account = accounts[0]
     dc_guild, _ = guilds
     text_channels, _ = channels
     TEXT_MESSAGE_TEST_MESSAGE = "Hello world", daf.discord.Embed(title="Hello world")
 
+    
     guild = daf.GUILD(dc_guild)
     user = daf.USER(TEST_USER_ID)
     text_message = daf.message.TextMESSAGE(None, timedelta(seconds=5), TEXT_MESSAGE_TEST_MESSAGE, text_channels,
@@ -24,10 +26,11 @@ async def test_text_message_send(channels, guilds):
     direct_message = daf.message.DirectMESSAGE(None, timedelta(seconds=5), TEXT_MESSAGE_TEST_MESSAGE, "send",
                                                 start_in=timedelta(0), remove_after=None)
     # Initialize objects
-    await guild.initialize()
-    await user.initialize()
+    await guild.initialize(account)
+    await user.initialize(account)
     await guild.add_message(text_message)
     await user.add_message(direct_message)
+    
 
     # TextMESSAGE send
     result = await text_message._send()
@@ -58,8 +61,9 @@ async def test_text_message_send(channels, guilds):
 
 
 @pytest.mark.asyncio
-async def test_voice_message_send(channels, guilds):
+async def test_voice_message_send(channels: Tuple[daf.discord.ChannelType], guilds: Tuple[daf.discord.Guild], accounts: List[daf.ACCOUNT]):
     "This tests if all the voice messages succeed in their sends"
+    account = accounts[0]
     dc_guild, _ = guilds
     _, voice_channels = channels
     await asyncio.sleep(5) # Wait for any messages still playing
@@ -70,7 +74,7 @@ async def test_voice_message_send(channels, guilds):
                                             volume=50, start_in=timedelta(), remove_after=None)
 
     # Initialize objects
-    await guild.initialize()
+    await guild.initialize(account)
     await guild.add_message(voice_message)
 
     # Send

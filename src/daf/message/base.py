@@ -327,7 +327,7 @@ class BaseMESSAGE:
 
         raise NotImplementedError
 
-@misc.doc_category("Automatic generation", path="message")
+@misc.doc_category("Auto objects", path="message")
 class AutoCHANNEL:
     """
     .. versionadded:: v2.3
@@ -426,7 +426,7 @@ class AutoCHANNEL:
         if stamp - self.last_scan > self.interval:
             self.last_scan = stamp
             guild: discord.Guild = self.parent.parent.apiobject
-            client_: discord.Client = client.get_client()
+            client_: discord.Client = self.parent.parent.parent.client
             member = guild.get_member(client_.user.id)
             if member is None:
                 return

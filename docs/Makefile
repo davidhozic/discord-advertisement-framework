@@ -17,9 +17,10 @@ help:
 # Catch-all target: route all unknown targets to Sphinx using the new
 # "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).
 
-html: Makefile
-	$(SPHINXBUILD) -b $@ source/ build/html
-
+clean:
+	rm -rf $(SOURCEDIR)/reference
+	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
 %: Makefile
+	python3	scripts/generate_autodoc.py
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)

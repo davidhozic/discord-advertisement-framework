@@ -5,7 +5,7 @@ import json
 
 
 long_description = None
-with open("./README_pypi.rst", "r", encoding="utf-8") as fh:
+with open("./README.rst", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 req = None
@@ -54,7 +54,7 @@ setuptools.setup(
     author_email="davidhozic@gmail.com",
     description="Framework (or bot) that allows you to advertise on discord",
     long_description=long_description,
-    long_description_content_type="text/markdown",
+    long_description_content_type="text/x-rst",
     url="https://daf.davidhozic.top/",
     classifiers=[
         "Programming Language :: Python :: 3",
