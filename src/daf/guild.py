@@ -538,7 +538,7 @@ class USER(_BaseGUILD):
         for message in self.messages:
             await message.update(_init_options={"parent" : self})
 
-@misc.doc_category("Automatic generation")
+@misc.doc_category("Auto objects")
 class AutoGUILD:
     """
     .. versionadded:: v2.3

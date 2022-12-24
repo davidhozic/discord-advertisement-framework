@@ -327,7 +327,7 @@ class BaseMESSAGE:
 
         raise NotImplementedError
 
-@misc.doc_category("Automatic generation", path="message")
+@misc.doc_category("Auto objects", path="message")
 class AutoCHANNEL:
     """
     .. versionadded:: v2.3

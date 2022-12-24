@@ -203,7 +203,7 @@ class TableCache:
         return key in self.data
 
 
-@misc.doc_category("Logging ref", path="logging.sql")
+@misc.doc_category("Logging reference", path="logging.sql")
 class LoggerSQL(logging.LoggerBASE):
     """
     Used for controlling the SQL database used for message logs.

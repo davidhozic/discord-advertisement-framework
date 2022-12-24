@@ -19,38 +19,42 @@ import daf
 
 CATEGORY_TEMPLATE = \
 """
-----------------------------
+============================
 {category_name}
-----------------------------
+============================
 """
 
 AUTO_FUNCTION_TEMPLATE =\
 """
+------------------------
 {object_name}
-========================
+------------------------
 .. autofunction:: {object_path}
 """
 
 AUTO_CLASS_TEMPLATE =\
 """
+------------------------
 {object_name}
-========================
+------------------------
 .. autoclass:: {object_path}
     :members:
 """
 
 AUTO_ENUM_TEMPLATE =\
 """
+------------------------
 {object_name}
-========================
+------------------------
 .. autoenum:: {object_path}
     :members:
 """
 
 MANUAL_FUNCTION_TEMPLATE = \
 """
+------------------------
 {object_name}
-========================
+------------------------
 .. function:: {object_path}({annotations}) -> {return_}
     
     {docstring}
@@ -61,7 +65,7 @@ MANUAL_FUNCTION_TEMPLATE = \
 titles = daf.misc.doc_titles
 output_dir = pathlib.Path(f"../source/reference/")
 output_dir.mkdir(parents=True, exist_ok=True)
-with open("../source/ref.rst", "w", encoding="utf-8") as tocwriter:
+with open("../source/reference/index.rst", "w", encoding="utf-8") as tocwriter:
     tocwriter.write(
         "=======================\n"
         "Programming Reference\n"
@@ -119,8 +123,8 @@ with open("../source/ref.rst", "w", encoding="utf-8") as tocwriter:
 
 
         if export_f_items or export_c_items:
-            toc_entry = f"reference/{category.lower().replace(' ', '_')}"
-            file_name = f"../source/{toc_entry}.rst"
+            toc_entry = f"{category.lower().replace(' ', '_')}"
+            file_name = f"../source/reference/{toc_entry}.rst"
             toc_entry = f"    {toc_entry}\n" 
             with open(file_name, "w", encoding="utf-8") as writer:
                 writer.write(CATEGORY_TEMPLATE.format(category_name=category))

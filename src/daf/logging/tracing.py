@@ -30,7 +30,7 @@ Message: [{module}] {message}
 """
 
 @document_enum
-@misc.doc_category("Logging ref")
+@misc.doc_category("Logging reference")
 class TraceLEVELS(IntEnum):
     """
     Levels of trace for debug.
@@ -69,7 +69,7 @@ class GLOBALS:
     lock = Lock() # For print thread safety
 
 
-@misc.doc_category("Logging ref")
+@misc.doc_category("Logging reference")
 def trace(message: str,
           level: Union[TraceLEVELS, int] = TraceLEVELS.NORMAL,
           reason: Optional[str] = None):

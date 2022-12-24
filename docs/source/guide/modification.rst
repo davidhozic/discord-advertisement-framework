@@ -7,7 +7,7 @@ This document describes how the framework can be modified dynamically.
 ----------------------------
 Modifying the shilling list
 ----------------------------
-See :ref:`Shilling list modification` for more information about the **functions** mentioned below.
+See :ref:`Dynamic mod.` for more information about the **functions** mentioned below.
 
 While the shilling list can be defined statically (pre-defined) by creating a list and using the ``server_list``
 parameter in the :func:`~daf.core.run` function (see :ref:`Quickstart` and :func:`~daf.core.run` (or :func:`~daf.core.initialize`)),

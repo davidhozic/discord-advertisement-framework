@@ -33,7 +33,7 @@ class GLOBAL:
     logger = None  
 
 
-@misc.doc_category("Logging ref", path="logging")
+@misc.doc_category("Logging reference", path="logging")
 class LoggerBASE:
     """
     .. versionadded:: v2.2
@@ -93,7 +93,7 @@ class LoggerBASE:
         await misc._update(self, **kwargs)
 
 
-@misc.doc_category("Logging ref", path="logging")
+@misc.doc_category("Logging reference", path="logging")
 class LoggerCSV(LoggerBASE):
     """
     .. versionadded:: v2.2
@@ -168,7 +168,7 @@ class LoggerCSV(LoggerBASE):
                 raise OSError(*exc.args) from exc # Raise OSError for any type of exceptions
 
 
-@misc.doc_category("Logging ref", path="logging")
+@misc.doc_category("Logging reference", path="logging")
 class LoggerJSON(LoggerBASE):
     """
     .. versionadded:: v2.2
@@ -267,7 +267,7 @@ async def initialize(logger: LoggerBASE) -> None:
     GLOBAL.logger = logger
 
 
-@misc.doc_category("Logging ref", path="logging")
+@misc.doc_category("Logging reference", path="logging")
 def get_logger() -> LoggerBASE:
     """
     Returns

@@ -34,7 +34,7 @@ class GLOBALS:
     """
     accounts: List[client.ACCOUNT] = []
 
-@misc.doc_category("Core control")
+@misc.doc_category("DAF control reference")
 async def initialize(token : Optional[str]=None,
                      server_list : Optional[List[Union[guild.GUILD, guild.USER, guild.AutoGUILD]]]=None,
                      is_user : Optional[bool] =False,
@@ -125,7 +125,7 @@ async def initialize(token : Optional[str]=None,
 #######################################################################
 
 @overload
-@misc.doc_category("Shilling list modification", True)
+@misc.doc_category("Dynamic mod.", True)
 async def add_object(obj: client.ACCOUNT) -> None:
     """
     Adds an account to the framework.
@@ -144,7 +144,7 @@ async def add_object(obj: client.ACCOUNT) -> None:
     """
     ...
 @overload
-@misc.doc_category("Shilling list modification", True)
+@misc.doc_category("Dynamic mod.", True)
 async def add_object(obj: Union[guild.USER, guild.GUILD, guild.AutoGUILD], snowflake: client.ACCOUNT=None) -> None:
     """
 
@@ -173,7 +173,7 @@ async def add_object(obj: Union[guild.USER, guild.GUILD, guild.AutoGUILD], snowf
     """
     ...
 @overload
-@misc.doc_category("Shilling list modification", True)
+@misc.doc_category("Dynamic mod.", True)
 async def add_object(obj: Union[message.DirectMESSAGE, message.TextMESSAGE, message.VoiceMESSAGE],
                      snowflake: Union[int, guild.GUILD, guild.USER]) -> None:
     """
@@ -240,7 +240,7 @@ async def add_object(obj, snowflake=None):
         raise TypeError(f"Invalid object type `{object_type_name}`.")
 
 @typechecked
-@misc.doc_category("Shilling list modification")
+@misc.doc_category("Dynamic mod.")
 def remove_object(snowflake: Union[guild._BaseGUILD, message.BaseMESSAGE, guild.AutoGUILD, client.ACCOUNT]) -> None:
     """
     .. versionchanged:: v2.4
@@ -275,7 +275,7 @@ def remove_object(snowflake: Union[guild._BaseGUILD, message.BaseMESSAGE, guild.
                 account.remove_server(snowflake)
 
 @typechecked
-@misc.doc_category("Core control")
+@misc.doc_category("DAF control reference")
 async def shutdown(loop: Optional[asyncio.AbstractEventLoop]=None) -> None:
     """
     Stops the framework.
@@ -307,7 +307,7 @@ def _shutdown_clean(loop: asyncio.AbstractEventLoop) -> None:
 
 
 @typechecked
-@misc.doc_category("Core control")
+@misc.doc_category("DAF control reference")
 def run(token : Optional[str]=None,
         server_list : Optional[List[Union[guild.GUILD, guild.USER, guild.AutoGUILD]]]=None,
         is_user : Optional[bool] =False,
@@ -349,32 +349,8 @@ def run(token : Optional[str]=None,
 
     Parameters
     ---------------
-    token: Optional[str]
-        .. deprecated:: v2.4
-
-        Discord's access token for account.
-    server_list: Optional[List[Union[:ref:`GUILD`, :ref:`USER`]]
-        .. deprecated:: v2.4
-
-        Predefined server list (guild list) to shill.
-    is_user: Optional[bool]
-        .. deprecated:: v2.4
-
-        Set to True if the token is for an user account.
     user_callback: Optional[Union[Callable, Coroutine]]
         Function or async function to call after the framework has been started.
-    server_log_output: Optional[str]
-        .. deprecated:: v2.2
-
-        Path where the server log files will be created.
-    sql_manager: Optional[:ref:`LoggerSQL`]
-        .. deprecated:: v2.2
-
-        SQL manager object that will save logs into the database.
-    intents: Optional[discord.Intents]
-        .. deprecated:: v2.4
-
-        Discord Intents object (represents settings to which events it will be listened to).
     debug : Optional[TraceLEVELS | int | str] = TraceLEVELS.NORMAL
         .. versionchanged:: v2.3
             Deprecate use of bool (assume TraceLEVELS.NORMAL).
@@ -382,10 +358,6 @@ def run(token : Optional[str]=None,
 
         The level of trace for trace function to display.
         The higher value this option is, the more will be displayed.
-    proxy: Optional[str]
-        .. deprecated:: v2.4
-
-        URL of a proxy you want the framework to use.
     logger: Optional[loggers.LoggerBASE]
         The logging class to use.
         If this is not provided, JSON is automatically used.

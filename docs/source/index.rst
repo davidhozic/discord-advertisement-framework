@@ -104,5 +104,5 @@ Table of contents
     :maxdepth: 2
 
     guide/index
-    ref
+    reference/index
     changelog
