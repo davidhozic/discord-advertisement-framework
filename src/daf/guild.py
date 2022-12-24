@@ -63,13 +63,14 @@ class _BaseGUILD:
     """
 
     __slots__ = (       # Faster attribute access
-        "apiobject",
+        "_apiobject",
         "logging",
         "_messages_uninitialized",
         "message_dict",
         "remove_after",
         "_created_at",
         "_deleted",
+        "_apigetter",
         "parent"
     )
     
@@ -79,17 +80,18 @@ class _BaseGUILD:
                  logging: Optional[bool]=False,
                  remove_after: Optional[Union[timedelta, datetime]]=None) -> None:
 
-        self.apiobject: discord.Object = snowflake
+        self._apiobject: discord.Object = snowflake
         self.logging: bool= logging
         self._messages_uninitialized: list = messages   # Contains all the different message objects, this gets sorted in `.initialize()` method
         self.message_dict: Dict[str, List[BaseMESSAGE]] = {AdvertiseTaskType.TEXT_ISH: [], AdvertiseTaskType.VOICE: []}  # Dictionary, which's keys hold the discord message type(text, voice) and keys are a list of messages
         self.remove_after = remove_after  # int - after n sends; timedelta - after amount of time; datetime - after that time
         self._deleted = False
         self._created_at = datetime.now() # The time this object was created
+        self._apigetter = None # set by initialize() to the API wrapper's getter object
         self.parent = None
 
     def __repr__(self) -> str:
-        return f"{type(self).__name__}(discord={self.apiobject})"
+        return f"{type(self).__name__}(discord={self._apiobject})"
 
     @property
     def messages(self) -> List[BaseMESSAGE]:
@@ -107,8 +109,17 @@ class _BaseGUILD:
 
         Returns the discord's snowflake ID.
         """
-        return self.apiobject if isinstance(self.apiobject, int) else self.apiobject.id
+        return self._apiobject if isinstance(self._apiobject, int) else self._apiobject.id
     
+    @property
+    def apiobject(self) -> discord.Object:
+        """
+        .. versionadded:: v2.4
+
+        Returns the Discord API wrapper's object of self.
+        """
+        return self._apiobject
+
     @property
     def created_at(self) -> datetime:
         """
@@ -129,8 +140,13 @@ class _BaseGUILD:
         False
             The guild is in proper state, do not delete.
         """
+        if self._deleted:
+            # Prevents multiple attempts to delete the guild (multiple tasks iterating through a list copy)
+            return False
+
         rm_after_type = type(self.remove_after)
-        return (rm_after_type is timedelta and datetime.now() - self._created_at > self.remove_after or # The difference from creation time is bigger than remove_after
+        return (self._apigetter(self.snowflake) == None or # Can no longer see the guild
+                rm_after_type is timedelta and datetime.now() - self._created_at > self.remove_after or # The difference from creation time is bigger than remove_after
                 rm_after_type is datetime and datetime.now() > self.remove_after) # The current time is larger than remove_after 
 
     def __eq__(self, other: Any) -> bool:
@@ -181,14 +197,15 @@ class _BaseGUILD:
         Other
             Raised from .add_message(message_object) method.
         """
+        self._apigetter = getter
         self.parent = parent
         guild_id = self.snowflake
-        if isinstance(self.apiobject, int):
-            self.apiobject = getter(guild_id)
-            if isinstance(self.apiobject, Coroutine):
-                self.apiobject = await self.apiobject
+        if isinstance(self._apiobject, int):
+            self._apiobject = getter(guild_id)
+            if isinstance(self._apiobject, Coroutine):
+                self._apiobject = await self._apiobject
 
-        if self.apiobject is not None:
+        if self._apiobject is not None:
             for message in self._messages_uninitialized:
                 try:
                     await self.add_message(message)
@@ -271,8 +288,8 @@ class _BaseGUILD:
         Dict[str, Union[str, int]]
         """
         return {
-            "name": self.apiobject.name,
-            "id": self.apiobject.id,
+            "name": self._apiobject.name,
+            "id": self._apiobject.id,
             "type": type(self).__name__
         }
 
@@ -622,7 +639,7 @@ class AutoGUILD:
         self.messages = messages # Uninitialized template messages list that gets copied for each found guild.
         self.logging = logging
         self.interval = interval.total_seconds() # In seconds
-        self.cache: Dict[GUILD] = {}
+        self.cache: Dict[discord.Guild, GUILD] = {}
         self.last_scan = 0
         self._deleted = False
         self._created_at = datetime.now()
@@ -748,8 +765,11 @@ class AutoGUILD:
         """
         await self._process()
         for g in self.guilds:
-            async for context in g._advertise(type_):
-                yield context # guild_ctx, message_ctx
+            if g._check_state():
+                del self.cache[g.apiobject]
+            else:
+                async for context in g._advertise(type_):
+                    yield context # guild_ctx, message_ctx
 
     @misc._async_safe("_safe_sem", 2)
     async def update(self, init_options={}, **kwargs):

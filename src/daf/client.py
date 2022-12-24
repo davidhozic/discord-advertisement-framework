@@ -166,7 +166,7 @@ class ACCOUNT:
             try:
                 await self.add_server(server)
             except Exception as exc:
-                trace(exc, TraceLEVELS.WARNING)
+                trace("Unable to add server.", TraceLEVELS.WARNING, exc)
 
         self._uiservers.clear() # Only needed for predefined initialization
 

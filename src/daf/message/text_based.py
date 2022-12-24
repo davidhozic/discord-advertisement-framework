@@ -710,7 +710,6 @@ class DirectMESSAGE(BaseMESSAGE):
         if isinstance(ex, discord.HTTPException):
             if ex.status == 429 or ex.code == 40003: # Too Many Requests or opening DMs too fast
                 retry_after = int(ex.response.headers["Retry-After"]) + 1
-                trace(f"Rate limited, sleeping for {retry_after} seconds", TraceLEVELS.WARNING)
                 await asyncio.sleep(retry_after)
                 handled = True
             elif ex.status == 404:      # Unknown object
