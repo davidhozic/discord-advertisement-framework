@@ -52,7 +52,6 @@ class _FunctionBaseCLASS:
     """
 
 @misc.doc_category("xMESSAGE Data Types")
-@misc.doc_category("Decorators")
 def data_function(fnc: Callable):
     """
     Decorator used for wrapping a function that will return data to send when the message is ready.
