@@ -30,7 +30,7 @@ async def test_text_period(channels: Tuple[List[Union[daf.discord.TextChannel, d
     guild = daf.GUILD(dc_guild)
     user = daf.USER(TEST_USER_ID)
     try:
-        await asyncio.sleep(5) # Clears rate limit
+        await asyncio.sleep(10) # Clears rate limit
         await daf.add_object(guild, account)
         await daf.add_object(user, account)
 
@@ -80,7 +80,7 @@ async def test_text_period(channels: Tuple[List[Union[daf.discord.TextChannel, d
                 assert item.to_dict() in embeds, "TextMESSAGE embed not in message embeds"
 
         guild.remove_message(text_message)
-        await asyncio.sleep(5)
+        await asyncio.sleep(10)
         # Test DirectMESSAGE
         direct_message = daf.message.DirectMESSAGE(None, TEST_SEND_PERIOD_TEXT, DIRECT_MESSAGE_TEST_MESSAGE, "send",
                                                    start_in=TEST_SEND_PERIOD_TEXT, remove_after=None)
@@ -121,7 +121,7 @@ async def test_voice_period(channels: Tuple[List[Union[daf.discord.TextChannel, 
     dc_guild, _ = guilds
     guild = daf.GUILD(dc_guild)
     try:
-        await asyncio.sleep(5)
+        await asyncio.sleep(10)
 
         @daf.data_function
         def dynamic_getter(items: list):

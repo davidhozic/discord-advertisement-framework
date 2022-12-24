@@ -29,6 +29,7 @@ def event_loop():
 @pytest.fixture(scope="session", autouse=True)
 def start_daf(event_loop: asyncio.AbstractEventLoop):
     event_loop.run_until_complete(daf.initialize(debug=daf.TraceLEVELS.ERROR))
+    event_loop.call_later(420, lambda: event_loop.stop()) # Auto exit tests if they don't complete in 7 minutes
     return event_loop
 
 
