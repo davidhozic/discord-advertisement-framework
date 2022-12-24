@@ -144,7 +144,7 @@ class _BaseGUILD:
             # Prevents multiple attempts to delete the guild (multiple tasks iterating through a list copy)
             return False
 
-        rm_after_type = type(self.remove_after)
+        rm_after_type = type(self.remove_after) # TODO: FIX FOR USER 
         return (self._apigetter(self.snowflake) == None or # Can no longer see the guild
                 rm_after_type is timedelta and datetime.now() - self._created_at > self.remove_after or # The difference from creation time is bigger than remove_after
                 rm_after_type is datetime and datetime.now() > self.remove_after) # The current time is larger than remove_after 
