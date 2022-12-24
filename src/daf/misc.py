@@ -8,8 +8,7 @@ from functools import wraps
 from inspect import getfullargspec, isasyncgenfunction
 from copy import copy
 from typeguard import typechecked
-
-import sys
+from os import environ
 
 ###############################
 # Safe access functions
@@ -158,7 +157,7 @@ def _async_safe(semaphore: Union[str, Semaphore], amount: Optional[int]=1) -> Ca
 
 
 # Documentation
-DOCUMENTATION_MODE = "DOCUMENTATION" in sys.argv
+DOCUMENTATION_MODE = bool(environ.get("DOCUMENTATION", False))
 if DOCUMENTATION_MODE:
     doc_titles: Dict[str, list] = {}
 

@@ -13,7 +13,7 @@ os.chdir(os.path.dirname(__file__))
 
 
 sys.path.append(os.path.abspath("../../src"))
-sys.argv.append("DOCUMENTATION")
+os.environ["DOCUMENTATION"] = "True"
 import daf
 
 
