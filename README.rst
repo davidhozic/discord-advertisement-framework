@@ -21,14 +21,14 @@ Key features
     I am not responsible if your account get's disabled for using self-bots!
 
 - Periodic advertisement to **Direct (Private) Messages**, **Text channels** and **Voice channels**
-- **Automatic guild/channel discovery** thru :class:`daf.guild.AutoGUILD` / :class:`daf.message.AutoCHANNEL`
+- **Automatic guild/channel discovery**
 - Dynamically obtained shill data
 - Error recovery
-- Logging of sent messages (including SQL) - :ref:`Logging`
+- Logging of sent messages (including SQL)
 - Async framework
 - Easy to setup, with minimal code
 
 --------------------
 Basic example
 --------------------
-For basic example see `main_send_multiple.py <Examples/Message Types/TextMESSAGE/main_send_multiple.py>`_
+For basic example see `main_send_multiple.py <Examples/Message%20Types/TextMESSAGE/main_send_multiple.py>`_
