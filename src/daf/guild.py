@@ -167,9 +167,6 @@ class _BaseGUILD:
             Added parent parameter to support multiple account
             structure.
 
-        .. versionchanged:: v2.1
-            Merged derived classes' methods into base method to reduce code.
-
         Parameters
         ------------
         parent: Any

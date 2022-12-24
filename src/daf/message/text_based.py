@@ -41,17 +41,6 @@ class TextMESSAGE(BaseMESSAGE):
     """
     This class is used for creating objects that represent messages which will be sent to Discord's TEXT CHANNELS.
 
-    .. deprecated:: v2.1
-
-        - start_in (start_now) - Using bool value to dictate whether the message should be sent at framework start.
-        - start_period, end_period - Using int values, use ``timedelta`` object instead.
-    
-    .. versionchanged:: v2.1
-
-        - start_period, end_period Accept timedelta objects.
-        - start_now - renamed into ``start_in`` which describes when the message should be first sent.
-        - removed ``deleted`` property
-
     .. versionchanged:: v2.3
 
         :Slow mode period handling:
@@ -87,27 +76,26 @@ class TextMESSAGE(BaseMESSAGE):
 
             # Time between each send is exactly 10 seconds.
             daf.TextMESSAGE(start_period=None, end_period=timedelta(seconds=10), data="Second Message", channels=[12345], mode="send", start_in=timedelta(seconds=0))
-    data: Union[str, EMBED, discord.Embed, FILE, List[Union[str, EMBED, discord.Embed, FILE]], _FunctionBaseCLASS]
+    data: Union[str, discord.Embed, FILE, List[Union[str, discord.Embed, FILE]], _FunctionBaseCLASS]
         The data parameter is the actual data that will be sent using discord's API. The data types of this parameter can be:
             - str (normal text),
-            - :ref:`EMBED`
             - :class:`discord.Embed`,
             - :ref:`FILE`,
-            - List/Tuple containing any of the above arguments (There can up to 1 string, up to 1 :ref:`EMBED` / :class:`discord.Embed` and up to 10 :ref:`FILE` objects. If more than 1 string or embeds are sent, the framework will only consider the last found).
+            - List/Tuple containing any of the above arguments (There can up to 1 string, up to 1 :class:`discord.Embed` and up to 10 :ref:`FILE` objects. If more than 1 string or embeds are sent, the framework will only consider the last found).
             - Function that accepts any amount of parameters and returns any of the above types. To pass a function, YOU MUST USE THE :ref:`data_function` decorator on the function before passing the function to the daf.
     channels: Union[Iterable[Union[int, discord.TextChannel, discord.Thread]], daf.message.AutoCHANNEL]
         .. versionchanged:: v2.3
             Can also be :class:`~daf.message.AutoCHANNEL`
 
         Channels that it will be advertised into (Can be snowflake ID or channel objects from PyCord).
-    mode: str
+    mode: Optional[str]
         Parameter that defines how message will be sent to a channel.
         It can be:
 
         - "send" -    each period a new message will be sent,
         - "edit" -    each period the previously send message will be edited (if it exists)
         - "clear-send" -    previous message will be deleted and a new one sent.
-    start_in: timedelta
+    start_in: Optional[timedelta]
         When should the message be first sent.
     remove_after: Optional[Union[int, timedelta, datetime]]
         Deletes the message after:
@@ -129,8 +117,8 @@ class TextMESSAGE(BaseMESSAGE):
                  end_period: Union[int, timedelta],
                  data: TMDataType,
                  channels: Union[Iterable[Union[int, discord.TextChannel, discord.Thread]], AutoCHANNEL],
-                 mode: Literal["send", "edit", "clear-send"] = "send",
-                 start_in: Union[timedelta, bool]=timedelta(seconds=0),
+                 mode: Optional[Literal["send", "edit", "clear-send"]] = "send",
+                 start_in: Optional[Union[timedelta, bool]]=timedelta(seconds=0),
                  remove_after: Optional[Union[int, timedelta, datetime]]=None):
         super().__init__(start_period, end_period, data, start_in, remove_after)
         self.mode = mode
@@ -193,7 +181,7 @@ class TextMESSAGE(BaseMESSAGE):
         -----------
         text: str
             The text that was sent.
-        embed: Union[discord.Embed, EMBED]
+        embed: discord.Embed
             The embed that was sent.
         files: List[FILE]
             List of files that were sent.
@@ -389,7 +377,7 @@ class TextMESSAGE(BaseMESSAGE):
             The channel in which to send the data.
         text: str
             The text to send.
-        embed: Union[discord.Embed, EMBED]
+        embed: discord.Embed
             The embedded frame to send.
         files: List[FILE]
             List of files to send.
@@ -549,16 +537,15 @@ class DirectMESSAGE(BaseMESSAGE):
             # Time between each send is exactly 10 seconds.
             daf.DirectMESSAGE(start_period=None, end_period=timedelta(seconds=10), data="Second Message",  mode="send", start_in=timedelta(seconds=0))
 
-    data: Union[str, EMBED, discord.Embed FILE, List[Union[str, EMBED, discord.Embed, FILE]], _FunctionBaseCLASS]
+    data: Union[str, discord.Embed FILE, List[Union[str, discord.Embed, FILE]], _FunctionBaseCLASS]
         The data parameter is the actual data that will be sent using discord's API. The data types of this parameter can be:
             - str (normal text),
-            - :ref:`EMBED`,
             - :class:`discord.Embed`,
             - :ref:`FILE`,
-            - List/Tuple containing any of the above arguments (There can up to 1 string, up to 1 :ref:`EMBED` / :class:`discord.Embed` and up to 10 :ref:`FILE` objects. If more than 1 string or embeds are sent, the framework will only consider the last found).
+            - List/Tuple containing any of the above arguments (There can up to 1 string, up to 1 :class:`discord.Embed` and up to 10 :ref:`FILE` objects. If more than 1 string or embeds are sent, the framework will only consider the last found).
             - Function that accepts any amount of parameters and returns any of the above types. To pass a function, YOU MUST USE THE :ref:`data_function` decorator on the function before passing the function to the daf.
 
-    mode: str
+    mode: Optional[str]
         Parameter that defines how message will be sent to a channel.
         It can be:
 
@@ -566,7 +553,7 @@ class DirectMESSAGE(BaseMESSAGE):
         - "edit" -    each period the previously send message will be edited (if it exists)
         - "clear-send" -    previous message will be deleted and a new one sent.
 
-    start_in: timedelta
+    start_in: Optional[timedelta]
         When should the message be first sent.
     remove_after: Optional[Union[int, timedelta, datetime]]
         Deletes the guild after:
@@ -587,8 +574,8 @@ class DirectMESSAGE(BaseMESSAGE):
                  start_period: Union[int, timedelta, None],
                  end_period: Union[int, timedelta],
                  data: TMDataType,
-                 mode: Literal["send", "edit", "clear-send"] = "send",
-                 start_in: Union[timedelta, bool] = timedelta(seconds=0),
+                 mode: Optional[Literal["send", "edit", "clear-send"]] = "send",
+                 start_in: Optional[Union[timedelta, bool]] = timedelta(seconds=0),
                  remove_after: Optional[Union[int, timedelta, datetime]]=None):
         super().__init__(start_period, end_period, data, start_in, remove_after)
         self.mode = mode
@@ -607,7 +594,7 @@ class DirectMESSAGE(BaseMESSAGE):
         -----------
         text: str
             The text that was sent.
-        embed: Union[discord.Embed, EMBED]
+        embed: discord.Embed
             The embed that was sent.
         files: List[FILE]
             List of files that were sent.

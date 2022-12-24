@@ -247,9 +247,6 @@ def remove_object(snowflake: Union[guild._BaseGUILD, message.BaseMESSAGE, guild.
         | Now accepts client.ACCOUNT.
         | Removed support for ``int`` and for API wrapper (PyCord) objects.
 
-    .. versionchanged:: v2.3
-        Instead of raising DAFNotFound, raises ValueError
-
     Removes an object from the daf.
 
     Parameters
@@ -282,9 +279,6 @@ def remove_object(snowflake: Union[guild._BaseGUILD, message.BaseMESSAGE, guild.
 async def shutdown(loop: Optional[asyncio.AbstractEventLoop]=None) -> None:
     """
     Stops the framework.
-
-    .. versionchanged:: v2.1
-        Made the function non async and shutdown everything.
 
     Parameters
     ----------
@@ -364,22 +358,6 @@ def run(token : Optional[str]=None,
             - proxy
             +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
             The above parameters should be passed to :class:`~daf.client.ACCOUNT`.
-
-    .. versionchanged:: v2.2
-
-        .. card::
-        
-            - Added ``logger`` parameter
-            - ``user_callback`` can now be a regular function as well as async
-
-    .. deprecated:: v2.2
-
-        .. card::
-
-            These parameters are replaced with ``logger`` parameter.
-            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-            - sql_manager
-            - server_log_output
             
 
     Parameters

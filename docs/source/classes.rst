@@ -47,12 +47,6 @@ LoggerSQL
 Message data types
 ----------------------------
 
-EMBED
-========================
-.. autoclass:: daf.dtypes.EMBED
-    :members:
-
-
 FILE
 ========================
 .. autoclass:: daf.dtypes.FILE

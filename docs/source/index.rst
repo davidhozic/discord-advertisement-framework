@@ -27,17 +27,19 @@ Links
 ----------------------
 Key features
 ----------------------
-- Ability to run on **user** accounts or **bot** accounts
+- Ability to run on **multiple** accounts at once, either as a **self-bot** (personal account) or a **normal bot** account.
 
 .. caution::
     While running this on user accounts is possible, it is :strong:`not recommended` since it is against Discord's ToS.
     I am not responsible if your account get's disabled for using self-bots!
 
 - Periodic advertisement to **Direct (Private) Messages**, **Text channels** and **Voice channels**
-- Advertising with either static data (text, embed, files, audio) or **dynamic data** (the data is obtained thru a function dynamically)
-- Logging of sent messages to different outputs (also includes SQL)
-- Ability to add additional application layers with help of asyncio
-- Easy to setup
+- **Automatic guild/channel discovery** thru :class:`daf.guild.AutoGUILD` / :class:`daf.message.AutoCHANNEL`
+- Dynamically obtained shill data
+- Error recovery
+- Logging of sent messages (including SQL) - :ref:`Logging`
+- Async framework
+- Easy to setup, with minimal code
 
 ----------------------
 Installation

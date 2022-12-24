@@ -33,7 +33,19 @@ Releases
 ----------------------
 v2.4
 =============
-- Multiple accounts support
+- Multiple accounts support:
+  
+  - Added :class:`daf.client.ACCOUNT` for running multiple accounts at once. Proxies are strongly recommended!
+  - Deprecated use of:
+    
+    - token,
+    - is_user,
+    - proxy,
+    - server_list,
+    - intents
+    
+    inside the :func:`daf.core.run` function.
+
 - |BREAK_CH| :func:`~daf.core.add_object` and :func:`~daf.core.remove_object` functions no longer accepts API wrapper objects or ``int`` type for the ``snowflake`` parameter.
 - |BREAK_CH| Removed ``daf.core.get_guild_user`` function due to multiple accounts support.
 - |BREAK_CH| Removed ``daf.client.get_client`` function due to multiple accounts support.

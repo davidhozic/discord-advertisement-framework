@@ -94,7 +94,7 @@ Function :func:`~daf.core.run` accepts many parameters but there is only one tha
     The above example shows a bare minimum definition of the accounts list that has a 
     **manually defined** server list.
 
-    There is also a way to automatically define the server list (and channels) based on the guild name.
+    There is also a way to automatically define the server list (and channels) based on the guild name (:ref:`Shilling scheme generation`).
 
 
 After you've successfully defined your accounts list and started the framework with :func:`~daf.core.run`, the framework will run on it's own and there is nothing you need to do

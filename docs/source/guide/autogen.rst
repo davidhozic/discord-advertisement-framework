@@ -33,7 +33,6 @@ It can be passed to the framework exactly the same way as |GUILD| (see :ref:`qui
 
 
 .. literalinclude:: ../../../Examples/Automatic Generation/autoguild.py
-    :lines: 1-4, 20-42, 44
 
 
 Automatic channel generation
@@ -42,5 +41,4 @@ For a auto-managed channel list use |AUTOCHANNEL| instances.
 It can be passed to xMESSAGE objects into the ``channels`` parameters instead of a list.
 
 .. literalinclude:: ../../../Examples/Automatic Generation/autochannel.py
-    :lines: 6-18
     :caption: AutoCHANNEL example

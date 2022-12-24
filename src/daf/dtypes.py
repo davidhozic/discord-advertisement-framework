@@ -135,7 +135,6 @@ def data_function(fnc: Callable):
 # Other
 #######################################################################
 @typechecked
-@misc.doc_category("Message data types")
 class EMBED(discord.Embed):
     """
 

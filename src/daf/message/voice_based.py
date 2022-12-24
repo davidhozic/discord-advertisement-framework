@@ -54,7 +54,7 @@ class VoiceMESSAGE(BaseMESSAGE):
 
         - None - Use this value for a fixed (not randomized) sending period
         - timedelta object - object describing time difference, if this is used, then the parameter represents the bottom limit of the **randomized** sending period.
-    end_period: int
+    end_period: Union[int, timedelta]
         If ``start_period`` is not None, then this represents the upper limit of randomized time period in which messages will be sent.
         If ``start_period`` is None, then this represents the actual time period between each message send.
 
@@ -78,9 +78,9 @@ class VoiceMESSAGE(BaseMESSAGE):
             Can also be :class:`~daf.message.AutoCHANNEL`
 
         Channels that it will be advertised into (Can be snowflake ID or channel objects from PyCord).
-    volume: int
+    volume: Optional[int]
         The volume (0-100%) at which to play the audio. Defaults to 50%. This was added in v2.0.0
-    start_in: timedelta
+    start_in: Optional[timedelta]
         When should the message be first sent.
     remove_after: Optional[Union[int, timedelta, datetime]]
         Deletes the message after:
@@ -104,8 +104,8 @@ class VoiceMESSAGE(BaseMESSAGE):
                  end_period: Union[int, timedelta],
                  data: Union[AUDIO, Iterable[AUDIO], _FunctionBaseCLASS],
                  channels: Union[Iterable[Union[int, discord.VoiceChannel]], AutoCHANNEL],
-                 volume: int=50,
-                 start_in: Union[timedelta, bool]=timedelta(seconds=0),
+                 volume: Optional[int]=50,
+                 start_in: Optional[Union[timedelta, bool]]=timedelta(seconds=0),
                  remove_after: Optional[Union[int, timedelta, datetime]]=None):
 
         if not dtypes.GLOBALS.voice_installed:

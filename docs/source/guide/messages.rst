@@ -29,8 +29,7 @@ These classes accept different parameters but still have some in common:
 - ``start_period`` -  If not None, represents bottom range of randomized period 
 - ``end_period`` - If ``start_period`` is not None, this represents upper range of randomized period, if ``start_period`` is None, represents fixed sending period.
 - ``data`` (varies on message types) - data that is actually send to Discord.
-- ``start_in``  - Defines when the message should be first shilled.
-- ``remove_after`` - Defines when the message should be removed from Discord.
+- ``start_in``  - Defines when the message the shilling of message should stop (object be removed from framework).
 
 For more information about these, see |TextMESSAGE|, |VoiceMESSAGE|, |DirectMESSAGE|.
 
