@@ -2,7 +2,6 @@
 This module is responsible for the logging in daf.
 It contains all the logging classes.
 """
-from contextlib import suppress
 from datetime import datetime
 from typing import Optional
 
@@ -13,7 +12,6 @@ import json
 import csv
 import pathlib
 import shutil
-import asyncio
 
 __all__ = (
     "LoggerBASE",

@@ -89,10 +89,7 @@ class ACCOUNT:
         self.intents = intents
 
         self._running = False
-        self.tasks = {
-            "text": None,
-            "voice": None
-        }
+        self.loop_task = None
         self._servers: List[guild._BaseGUILD] = []
         self._autoguilds: List[guild.AutoGUILD] = [] # To prevent __eq__ issues, use 2 lists
         if servers is None:
@@ -172,10 +169,8 @@ class ACCOUNT:
             except Exception as exc:
                 trace("Unable to add server.", TraceLEVELS.WARNING, exc)
 
-        self._uiservers.clear() # Only needed for predefined initialization
-
-        self.tasks["text"] = asyncio.create_task(self._loop(guild.AdvertiseTaskType.TEXT_ISH))
-        self.tasks["voice"] = asyncio.create_task(self._loop(guild.AdvertiseTaskType.VOICE))
+        del self._uiservers # Only needed for predefined initialization
+        self.loop_task = asyncio.create_task(self._loop())
         self._running = True
 
     @typechecked
@@ -200,7 +195,7 @@ class ACCOUNT:
             self._servers.append(server)
         else:
             self._autoguilds.append(server)
-    
+
     @typechecked
     def remove_server(self, server: Union[guild.GUILD, guild.USER, guild.AutoGUILD]):
         """
@@ -228,21 +223,15 @@ class ACCOUNT:
         """
         trace(f"Logging out of {self.client.user.display_name}...")
         self._running = False
-        await asyncio.gather(*self.tasks.values(), return_exceptions=True)
+        await asyncio.gather(self.loop_task, return_exceptions=True)
         await self._client.close()
 
-    async def _loop(self, type_: guild.AdvertiseTaskType):
+    async def _loop(self):
         """
         Main task loop for advertising thru each guild.
-        2 tasks are running as this method.
 
         Runs while _running is set to True and afterwards
         closes the connection to Discord.
-
-        Parameters
-        -------------
-        type_:  guild.AdvertiseTaskType
-            Task type (for text messages of voice messages)
         """
         while self._running:
 
@@ -257,14 +246,14 @@ class ACCOUNT:
                     else:
                         # Async generator that returns message context and guild context of sent messages 
                         # to use in logging
-                        async for guild_ctx, message_ctx in server._advertise(type_):
+                        async for guild_ctx, message_ctx in server._advertise():
                             # Logging not disabled for guild and message was sent
                             if message_ctx is not None:
                                 await logging.save_log(guild_ctx, message_ctx)
-                    
+
                             if not self._running:
                                 return
-            
+
             await __loop(self)
 
     async def update(self, **kwargs):
