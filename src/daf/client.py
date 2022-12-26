@@ -57,7 +57,7 @@ class ACCOUNT:
         The Discord account's token
     is_user : Optional[bool] =False
         Declares that the ``token`` is a user account token ("self-bot")
-    intents: Optional[discord.Intents]=None
+    intents: Optional[discord.Intents]=discord.Intents.default()
         Discord Intents (settings of events that the client will subscribe to)
     proxy: Optional[str]=None
         The proxy to use when connecting to Discord.
@@ -82,13 +82,14 @@ class ACCOUNT:
         self._token = token
         self.is_user = is_user
         self.proxy = proxy
+        # If intents not passed, enable default
+        if intents == None:
+            intents = discord.Intents.default()
+
         self.intents = intents
 
         self._running = False
-        self.tasks = {
-            "text": None,
-            "voice": None
-        }
+        self.loop_task = None
         self._servers: List[guild._BaseGUILD] = []
         self._autoguilds: List[guild.AutoGUILD] = [] # To prevent __eq__ issues, use 2 lists
         if servers is None:
@@ -154,24 +155,22 @@ class ACCOUNT:
         """
         # Login
         trace("Logging in...")
-        asyncio.create_task(self._client.start(self._token, bot=not self.is_user))
+        _client_task = asyncio.create_task(self._client.start(self._token, bot=not self.is_user))
         try:
             await self._client.wait_for("ready", timeout=LOGIN_TIMEOUT_S)
             trace(f"Logged in as {self._client.user.display_name}")
         except asyncio.TimeoutError:
-            exc = self.tasks["client"].exception()
+            exc = _client_task.exception()
             raise RuntimeError(f"Error logging in to Discord. (Token {self._token[:TOKEN_MAX_PRINT_LEN]}...)") from exc
         
         for server in self._uiservers:
             try:
                 await self.add_server(server)
             except Exception as exc:
-                trace(exc, TraceLEVELS.WARNING)
+                trace("Unable to add server.", TraceLEVELS.WARNING, exc)
 
-        self._uiservers.clear() # Only needed for predefined initialization
-
-        self.tasks["text"] = asyncio.create_task(self._loop(guild.AdvertiseTaskType.TEXT_ISH))
-        self.tasks["voice"] = asyncio.create_task(self._loop(guild.AdvertiseTaskType.VOICE))
+        del self._uiservers # Only needed for predefined initialization
+        self.loop_task = asyncio.create_task(self._loop())
         self._running = True
 
     @typechecked
@@ -196,7 +195,7 @@ class ACCOUNT:
             self._servers.append(server)
         else:
             self._autoguilds.append(server)
-    
+
     @typechecked
     def remove_server(self, server: Union[guild.GUILD, guild.USER, guild.AutoGUILD]):
         """
@@ -224,21 +223,15 @@ class ACCOUNT:
         """
         trace(f"Logging out of {self.client.user.display_name}...")
         self._running = False
-        await asyncio.gather(*self.tasks.values(), return_exceptions=True)
+        await asyncio.gather(self.loop_task, return_exceptions=True)
         await self._client.close()
 
-    async def _loop(self, type_: guild.AdvertiseTaskType):
+    async def _loop(self):
         """
         Main task loop for advertising thru each guild.
-        2 tasks are running as this method.
 
         Runs while _running is set to True and afterwards
         closes the connection to Discord.
-
-        Parameters
-        -------------
-        type_:  guild.AdvertiseTaskType
-            Task type (for text messages of voice messages)
         """
         while self._running:
 
@@ -253,14 +246,14 @@ class ACCOUNT:
                     else:
                         # Async generator that returns message context and guild context of sent messages 
                         # to use in logging
-                        async for guild_ctx, message_ctx in server._advertise(type_):
+                        async for guild_ctx, message_ctx in server._advertise():
                             # Logging not disabled for guild and message was sent
                             if message_ctx is not None:
                                 await logging.save_log(guild_ctx, message_ctx)
-                    
+
                             if not self._running:
                                 return
-            
+
             await __loop(self)
 
     async def update(self, **kwargs):
