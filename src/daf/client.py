@@ -57,7 +57,7 @@ class ACCOUNT:
         The Discord account's token
     is_user : Optional[bool] =False
         Declares that the ``token`` is a user account token ("self-bot")
-    intents: Optional[discord.Intents]=None
+    intents: Optional[discord.Intents]=(discord.Intents.default() + ``members``)
         Discord Intents (settings of events that the client will subscribe to)
     proxy: Optional[str]=None
         The proxy to use when connecting to Discord.
@@ -82,6 +82,11 @@ class ACCOUNT:
         self._token = token
         self.is_user = is_user
         self.proxy = proxy
+        # If intents not passed, enable default + members
+        if intents == None:
+            intents = discord.Intents.default()
+            intents.members = True
+
         self.intents = intents
 
         self._running = False

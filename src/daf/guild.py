@@ -144,7 +144,7 @@ class _BaseGUILD:
             # Prevents multiple attempts to delete the guild (multiple tasks iterating through a list copy)
             return False
 
-        rm_after_type = type(self.remove_after) # TODO: FIX FOR USER 
+        rm_after_type = type(self.remove_after)
         return (self._apigetter(self.snowflake) == None or # Can no longer see the guild
                 rm_after_type is timedelta and datetime.now() - self._created_at > self.remove_after or # The difference from creation time is bigger than remove_after
                 rm_after_type is datetime and datetime.now() > self.remove_after) # The current time is larger than remove_after 
@@ -202,8 +202,6 @@ class _BaseGUILD:
         guild_id = self.snowflake
         if isinstance(self._apiobject, int):
             self._apiobject = getter(guild_id)
-            if isinstance(self._apiobject, Coroutine):
-                self._apiobject = await self._apiobject
 
         if self._apiobject is not None:
             for message in self._messages_uninitialized:
@@ -517,7 +515,7 @@ class USER(_BaseGUILD):
         Other
             Raised from .add_message(message_object) method.
         """
-        return await super().initialize(parent, parent.client.get_or_fetch_user)
+        return await super().initialize(parent, parent.client.get_user)
 
     @misc._async_safe("update_semaphore", 2)
     async def update(self, init_options={}, **kwargs):
