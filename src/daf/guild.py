@@ -70,7 +70,6 @@ class _BaseGUILD:
         "remove_after",
         "_created_at",
         "_deleted",
-        "_apigetter",
         "parent"
     )
     
@@ -87,7 +86,6 @@ class _BaseGUILD:
         self.remove_after = remove_after  # int - after n sends; timedelta - after amount of time; datetime - after that time
         self._deleted = False
         self._created_at = datetime.now() # The time this object was created
-        self._apigetter = None # set by initialize() to the API wrapper's getter object
         self.parent = None
 
     def __repr__(self) -> str:
@@ -140,13 +138,8 @@ class _BaseGUILD:
         False
             The guild is in proper state, do not delete.
         """
-        if self._deleted:
-            # Prevents multiple attempts to delete the guild (multiple tasks iterating through a list copy)
-            return False
-
         rm_after_type = type(self.remove_after)
-        return (self._apigetter(self.snowflake) == None or # Can no longer see the guild
-                rm_after_type is timedelta and datetime.now() - self._created_at > self.remove_after or # The difference from creation time is bigger than remove_after
+        return (rm_after_type is timedelta and datetime.now() - self._created_at > self.remove_after or # The difference from creation time is bigger than remove_after
                 rm_after_type is datetime and datetime.now() > self.remove_after) # The current time is larger than remove_after 
 
     def __eq__(self, other: Any) -> bool:
@@ -197,11 +190,12 @@ class _BaseGUILD:
         Other
             Raised from .add_message(message_object) method.
         """
-        self._apigetter = getter
         self.parent = parent
         guild_id = self.snowflake
         if isinstance(self._apiobject, int):
             self._apiobject = getter(guild_id)
+            if isinstance(self._apiobject, Coroutine):
+                self._apiobject = await self._apiobject
 
         if self._apiobject is not None:
             for message in self._messages_uninitialized:
@@ -274,7 +268,6 @@ class _BaseGUILD:
                     yield (self.generate_log_context(), message_ctx)
 
             yield None, None
-                    
 
     def generate_log_context(self) -> Dict[str, Union[str, int]]:
         """
@@ -370,6 +363,24 @@ class GUILD(_BaseGUILD):
             Raised when the message is not present in the list.
         """
         self.message_dict[AdvertiseTaskType.TEXT_ISH if isinstance(message, TextMESSAGE) else AdvertiseTaskType.VOICE].remove(message)
+    
+    def _check_state(self) -> bool:
+        """
+        Checks if the user is ready to be deleted.
+
+        Returns
+        ----------
+        True
+            The user should be deleted.
+        False
+            The user is in proper state, do not delete.
+        """
+        if self._deleted:
+            # Prevents multiple attempts to delete the guild (multiple tasks iterating through a list copy)
+            return False
+
+        return (self.parent.client.get_guild(self.snowflake) == None or
+                super()._check_state())
 
     async def initialize(self, parent: Any) -> None:
         """
@@ -503,6 +514,23 @@ class USER(_BaseGUILD):
             Raised when the message is not of type DirectMESSAGE.
         """
         self.message_dict[AdvertiseTaskType.TEXT_ISH].remove(message)
+    
+    def _check_state(self) -> bool:
+        """
+        Checks if the user is ready to be deleted.
+
+        Returns
+        ----------
+        True
+            The user should be deleted.
+        False
+            The user is in proper state, do not delete.
+        """
+        if self._deleted:
+            # Prevents multiple attempts to delete the guild (multiple tasks iterating through a list copy)
+            return False
+
+        return super()._check_state()
 
     async def initialize(self, parent: Any):
         """
@@ -515,7 +543,7 @@ class USER(_BaseGUILD):
         Other
             Raised from .add_message(message_object) method.
         """
-        return await super().initialize(parent, parent.client.get_user)
+        return await super().initialize(parent, parent.client.get_or_fetch_user)
 
     @misc._async_safe("update_semaphore", 2)
     async def update(self, init_options={}, **kwargs):
