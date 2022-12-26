@@ -159,12 +159,12 @@ class ACCOUNT:
         """
         # Login
         trace("Logging in...")
-        asyncio.create_task(self._client.start(self._token, bot=not self.is_user))
+        _client_task = asyncio.create_task(self._client.start(self._token, bot=not self.is_user))
         try:
             await self._client.wait_for("ready", timeout=LOGIN_TIMEOUT_S)
             trace(f"Logged in as {self._client.user.display_name}")
         except asyncio.TimeoutError:
-            exc = self.tasks["client"].exception()
+            exc = _client_task.exception()
             raise RuntimeError(f"Error logging in to Discord. (Token {self._token[:TOKEN_MAX_PRINT_LEN]}...)") from exc
         
         for server in self._uiservers:
