@@ -5,7 +5,6 @@ from typing import Optional, Union, Optional, List
 
 from . import misc
 from . import guild
-from . import logging
 from . import misc
 
 from .logging.tracing import *
@@ -26,6 +25,7 @@ TASK_STARTUP_DELAY_S = 2
 
 __all__ = (
     "ACCOUNT",
+    "get_client"
 )
 
 
@@ -216,6 +216,32 @@ class ACCOUNT:
         else:
             self._autoguilds.remove(server)
 
+    @typechecked
+    def get_server(self, snowflake: Union[int, discord.Guild, discord.User, discord.Object]) -> Union[guild.GUILD, guild.USER, None]:
+        """
+        Retrieves the server based on the snowflake id or discord API object.
+
+        Parameters
+        -------------
+        snowflake: Union[int, discord.Guild, discord.User, discord.Object]
+            Snowflake ID or Discord API object.
+        
+        Returns
+        ---------
+        Union[guild.GUILD, guild.USER]
+            The DAF server object.
+        None
+            The object was not found.
+        """
+        if isinstance(snowflake, int):
+            snowflake = discord.Object(snowflake)
+
+        for server in self._servers:
+            if server.snowflake == snowflake.id:
+                return server
+
+        return None
+
     async def close(self):
         """
         Signals the tasks of this account to finish and
@@ -223,7 +249,10 @@ class ACCOUNT:
         """
         trace(f"Logging out of {self.client.user.display_name}...")
         self._running = False
-        await asyncio.gather(self.loop_task, return_exceptions=True)
+        for exc in await asyncio.gather(self.loop_task, return_exceptions=True):
+            if exc is not None:
+                trace(f"Exception occurred in main task for account {self.client.user.display_name} (Token: {self._token[:TOKEN_MAX_PRINT_LEN]})",
+                    TraceLEVELS.ERROR, exc)
         await self._client.close()
 
     async def _loop(self):
@@ -234,27 +263,28 @@ class ACCOUNT:
         closes the connection to Discord.
         """
         while self._running:
-
-            @misc._async_safe("_update_sem")
-            async def __loop(self_):
-                await asyncio.sleep(TASK_SLEEP_DELAY_S)
-                # Sum, creates new list, making modifications on original lists safe
+            ###############################################################
+            @misc._async_safe(self._update_sem)
+            async def __loop():
+                to_remove = []
+                to_await = []
                 for server in self.servers:
-                    # Remove guild
                     if server._check_state():
-                        self.remove_server(server)
+                        to_remove.append(server)
                     else:
-                        # Async generator that returns message context and guild context of sent messages 
-                        # to use in logging
-                        async for guild_ctx, message_ctx in server._advertise():
-                            # Logging not disabled for guild and message was sent
-                            if message_ctx is not None:
-                                await logging.save_log(guild_ctx, message_ctx)
+                        to_await.append( server._advertise() )
 
-                            if not self._running:
-                                return
+                for server in to_remove:
+                    self.remove_server(server)
 
-            await __loop(self)
+                for coro in to_await:
+                    await coro
+                    # If loop stop has been requested, stop asap
+                    if not self._running:
+                        return
+            ###############################################################
+            await __loop()
+            await asyncio.sleep(TASK_SLEEP_DELAY_S)
 
     async def update(self, **kwargs):
         """
@@ -275,3 +305,19 @@ class ACCOUNT:
         await misc._update(self, **kwargs)
 
         await update_servers(self)
+
+
+
+
+def get_client() -> discord.Client:
+    """
+    TODO: remove in v2.5
+
+    .. deprecated:: v2.4
+
+    Returns the `CLIENT` object used for communicating with Discord.
+    """
+    trace("DEPRECATED! Function daf.client.get_client is deprecated since v2.4 and is planned for removal. Please use ACCOUNT.client attribute instead.",
+          TraceLEVELS.DEPRECATED)
+    from . import core
+    return core.GLOBALS.accounts[0].client

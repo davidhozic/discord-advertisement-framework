@@ -89,7 +89,7 @@ with open("../source/reference/index.rst", "w", encoding="utf-8") as tocwriter:
                     doc_str_titles = re.findall(r"[A-z]+\n-+", doc_str)
                     # Replace numpy style lists
                     numpy_list = []
-                    numpy_found = re.findall(r".+\n {2,}.+", doc_str)
+                    numpy_found = re.findall(r"^\w+.*\n {2,}.+", doc_str, re.MULTILINE)
                     for param in numpy_found:
                         split_ = param.split(':')
                         if len(split_) == 2: # Parameter

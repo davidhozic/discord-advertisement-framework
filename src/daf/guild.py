@@ -4,10 +4,8 @@
     _BaseGUILD class.
 """
 from typing import Any, Coroutine, Union, List, Optional, Dict, Callable
-from contextlib import suppress
 from typeguard import typechecked
 from datetime import timedelta, datetime
-from enum import Enum
 from copy import deepcopy
 
 from .logging.tracing import *
@@ -258,21 +256,29 @@ class _BaseGUILD:
         Main coroutine responsible for sending all the messages to this specific guild,
         it is called from the core module's advertiser task.
         """
-        for message in self._messages[:]: # Copy the avoid issues with the list being modified while iterating (add_message/remove_message)
-            # Message removal
+        to_await = []
+        to_remove = []
+        guild_ctx = self.generate_log_context()
+        for message in self._messages:
             if message._check_state():
-                # Suppress since user could of called the remove_object function mid iteration.
-                with suppress(ValueError):
-                    self.remove_message(message)
+                to_remove.append(message)
 
             elif message._is_ready():
                 message._reset_timer()
-                message_ctx = await message._send()
-                # Don't return anything if logging is disabled for the server or no message was sent
-                if self.logging:
-                    yield (self.generate_log_context(), message_ctx)
+                to_await.append(message._send())
 
-            yield None, None
+        # Remove prior to awaits to prevent any user tasks
+        # from removing the message causing ValueErrors
+        for message in to_remove:
+            self.remove_message(message)
+
+        # Await coroutines outside the main loop to prevent list modification (by user)
+        # while iterating, this way even if the user removes the message, it will still be shilled
+        # but no exceptions will be raised when trying to remove the message.
+        for coro in to_await:
+            message_ctx = await coro
+            if self.logging and message_ctx is not None:
+                await logging.save_log(guild_ctx, message_ctx)
 
     def generate_log_context(self) -> Dict[str, Union[str, int]]:
         """
@@ -699,8 +705,7 @@ class AutoGUILD:
             if g._check_state():
                 del self.cache[g.apiobject]
             else:
-                async for context in g._advertise():
-                    yield context # guild_ctx, message_ctx
+                await g._advertise()
 
     @misc._async_safe("_safe_sem", 2)
     async def update(self, init_options={}, **kwargs):

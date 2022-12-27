@@ -24,6 +24,8 @@ __all__ = (
     "shutdown",
     "add_object",
     "remove_object",
+    "get_guild_user",
+    "get_accounts",
     "initialize"
 )
 
@@ -175,15 +177,20 @@ async def add_object(obj: Union[guild.USER, guild.GUILD, guild.AutoGUILD], snowf
 @overload
 @misc.doc_category("Dynamic mod.", True)
 async def add_object(obj: Union[message.DirectMESSAGE, message.TextMESSAGE, message.VoiceMESSAGE],
-                     snowflake: Union[int, guild.GUILD, guild.USER]) -> None:
+                     snowflake: Union[guild.GUILD, guild.USER]) -> None:
     """
+    .. deprecated:: v2.4
+
+        Using int, discord.* objects in the snowflake parameter.
+        This functionality is planned for removal in v2.5.
+
     Adds a message to the daf.
 
     Parameters
     -----------
     obj: message.DirectMESSAGE | message.TextMESSAGE | message.VoiceMESSAGE
         The message object to add into the daf.
-    snowflake: int | guild.GUILD | guild.USER | discord.Guild | discord.User | discord.Object
+    snowflake: guild.GUILD | guild.USER
         Which guild/user to add it to (can be snowflake id or a framework _BaseGUILD object or a discord API wrapper object).
 
     Raises
@@ -230,9 +237,18 @@ async def add_object(obj, snowflake=None):
     elif isinstance(obj, message.BaseMESSAGE):
         if snowflake is None:
             raise ValueError(f"snowflake parameter (guild-like) is required to add a message. Only the {object_type_name} object was provided.")
-
+        
         if not isinstance(snowflake, (guild.AutoGUILD, guild._BaseGUILD)):
-            raise TypeError("snowflake parameter must be one of: guild.AutoGUILD, guild.GUILD, guild.USER")
+            # --------- DEPRECATED ----------- #
+            # TODO: remove in v2.5, uncomment TypError            
+            snowflake = get_guild_user(snowflake)
+            trace("DEPRECATED! Using int or discord.* objects is deprecated for the snowflake parameter of add_object.\n"
+                  "It is planned for removal in version v2.5!",
+                  TraceLEVELS.DEPRECATED)
+            if snowflake is None:
+                raise ValueError("The GUILD/USER with specified snowflake could not be found.")
+            # -------------------------------- #
+            # raise TypeError("snowflake parameter must be one of: guild.AutoGUILD, guild.GUILD, guild.USER")
 
         await snowflake.add_message(obj)
 
@@ -273,6 +289,57 @@ def remove_object(snowflake: Union[guild._BaseGUILD, message.BaseMESSAGE, guild.
         for account in GLOBALS.accounts:
             if snowflake in account.servers:
                 account.remove_server(snowflake)
+
+
+@typechecked
+def get_guild_user(snowflake: Union[int, discord.Object, discord.Guild, discord.User, discord.Object]) -> Union[guild.GUILD, guild.USER, None]:
+    """
+    TODO: Remove in v2.5
+    .. deprecated:: v2.4
+
+    Retrieves the GUILD/USER object that has the ``snowflake`` ID from the shilling list. 
+
+    Parameters
+    -------------
+    snowflake: Union[int, discord.Object, discord.Guild, discord.User, discord.Object]
+        Snowflake ID or discord objects containing snowflake id of the GUILD.
+
+    Raises
+    ---------------
+    TypeError
+        Incorrect snowflake type
+
+    Returns
+    ---------------
+    :class:`daf.guild.GUILD` | :class:`daf.guild.USER`
+        The object requested.
+    None
+        If not guild/user not in the shilling list.
+    """
+
+    trace("This function is planned for removal in the future. Use ACCOUNT.get_server method instead!", TraceLEVELS.DEPRECATED)
+    if isinstance(snowflake, int):
+        snowflake = discord.Object(snowflake)
+
+    for guild in GLOBALS.accounts[0]._servers:
+        if guild.snowflake == snowflake.id:
+            return guild
+
+    return None
+
+
+@misc.doc_category("Clients")
+def get_accounts() -> List[client.ACCOUNT]:
+    """
+    .. versionadded:: v2.4
+
+    Returns
+    ----------
+    List[client.ACCOUNT]
+        List of running accounts.
+    """
+    return GLOBALS.accounts.copy()
+
 
 @typechecked
 @misc.doc_category("DAF control reference")
