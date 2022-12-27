@@ -249,7 +249,10 @@ class ACCOUNT:
         """
         trace(f"Logging out of {self.client.user.display_name}...")
         self._running = False
-        await asyncio.gather(self.loop_task, return_exceptions=True)
+        for exc in await asyncio.gather(self.loop_task, return_exceptions=True):
+            if exc is not None:
+                trace(f"Exception occurred in main task for account {self.client.user.display_name} (Token: {self._token[:TOKEN_MAX_PRINT_LEN]})",
+                    TraceLEVELS.ERROR, exc)
         await self._client.close()
 
     async def _loop(self):
