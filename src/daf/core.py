@@ -180,6 +180,7 @@ async def add_object(obj: Union[message.DirectMESSAGE, message.TextMESSAGE, mess
                      snowflake: Union[guild.GUILD, guild.USER]) -> None:
     """
     .. deprecated:: v2.4
+
         Using int, discord.* objects in the snowflake parameter.
         This functionality is planned for removal in v2.5.
 
