@@ -46,9 +46,11 @@ v2.4
     
     inside the :func:`daf.core.run` function.
 
-- |BREAK_CH| :func:`~daf.core.add_object` and :func:`~daf.core.remove_object` functions no longer accepts API wrapper objects or ``int`` type for the ``snowflake`` parameter.
-- |BREAK_CH| Removed ``daf.core.get_guild_user`` function due to multiple accounts support.
-- |BREAK_CH| Removed ``daf.client.get_client`` function due to multiple accounts support.
+  - New function :func:`daf.core.get_accounts` that returns the list of all running accounts in the framework.
+
+- Deprecated :func:`~daf.core.add_object` and :func:`~daf.core.remove_object` functions accepting API wrapper objects or ``int`` type for the ``snowflake`` parameter.
+- Deprecated ``daf.core.get_guild_user`` function due to multiple accounts support.
+- Deprecated ``daf.client.get_client`` function due to multiple accounts support.
 
 v2.3
 =============

@@ -25,6 +25,7 @@ TASK_STARTUP_DELAY_S = 2
 
 __all__ = (
     "ACCOUNT",
+    "get_client"
 )
 
 
@@ -215,6 +216,32 @@ class ACCOUNT:
         else:
             self._autoguilds.remove(server)
 
+    @typechecked
+    def get_server(self, snowflake: Union[int, discord.Guild, discord.User, discord.Object]) -> Union[guild.GUILD, guild.USER, None]:
+        """
+        Retrieves the server based on the snowflake id or discord API object.
+
+        Parameters
+        -------------
+        snowflake: Union[int, discord.Guild, discord.User, discord.Object]
+            Snowflake ID or Discord API object.
+        
+        Returns
+        ---------
+        Union[guild.GUILD, guild.USER]
+            The DAF server object.
+        None
+            The object was not found.
+        """
+        if isinstance(snowflake, int):
+            snowflake = discord.Object(snowflake)
+
+        for server in self._servers:
+            if server.snowflake == snowflake.id:
+                return server
+
+        return None
+
     async def close(self):
         """
         Signals the tasks of this account to finish and
@@ -275,3 +302,19 @@ class ACCOUNT:
         await misc._update(self, **kwargs)
 
         await update_servers(self)
+
+
+
+
+def get_client() -> discord.Client:
+    """
+    TODO: remove in v2.5
+
+    .. deprecated:: v2.4
+
+    Returns the `CLIENT` object used for communicating with Discord.
+    """
+    trace("DEPRECATED! Function daf.client.get_client is deprecated since v2.4 and is planned for removal. Please use ACCOUNT.client attribute instead.",
+          TraceLEVELS.DEPRECATED)
+    from . import core
+    return core.GLOBALS.accounts[0].client
