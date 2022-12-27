@@ -12,6 +12,8 @@
 #
 import os
 import sys
+import subprocess
+
 
 sys.path.insert(0, os.path.abspath('../../src/'))
 sys.path.insert(0, os.path.abspath('.'))
@@ -23,7 +25,7 @@ def create_reference():
     file_dir = os.path.dirname(__file__)
     file_dir = file_dir.rstrip(os.path.basename(file_dir))
     file_dir = os.path.join(file_dir, "scripts/generate_autodoc.py")
-    os.system(f"{sys.executable} {file_dir}")
+    subprocess.run(f"{sys.executable} {file_dir}", shell=False)
 
 # -- Project information -----------------------------------------------------
 project = 'Discord Advertisement Framework'
