@@ -31,4 +31,4 @@ Key features
 --------------------
 Basic example
 --------------------
-For basic example see `main_send_multiple.py <Examples/Message%20Types/TextMESSAGE/main_send_multiple.py>`_
+For basic example see `main_send_multiple.py <https://github.com/davidhozic/discord-advertisement-framework/blob/master/Examples/Message%20Types/TextMESSAGE/main_send_multiple.py>`_
