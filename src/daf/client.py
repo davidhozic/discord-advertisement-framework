@@ -263,7 +263,6 @@ class ACCOUNT:
             ###############################################################
             @misc._async_safe(self._update_sem)
             async def __loop():
-                await asyncio.sleep(TASK_SLEEP_DELAY_S)
                 to_remove = []
                 to_await = []
                 for server in self.servers:
@@ -282,6 +281,7 @@ class ACCOUNT:
                         return
             ###############################################################
             await __loop()
+            await asyncio.sleep(TASK_SLEEP_DELAY_S)
 
     async def update(self, **kwargs):
         """

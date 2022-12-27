@@ -705,8 +705,7 @@ class AutoGUILD:
             if g._check_state():
                 del self.cache[g.apiobject]
             else:
-                async for context in g._advertise():
-                    yield context # guild_ctx, message_ctx
+                await g._advertise()
 
     @misc._async_safe("_safe_sem", 2)
     async def update(self, init_options={}, **kwargs):
