@@ -5,7 +5,7 @@
 from typing import Coroutine, Callable, Any, Dict, Optional, Union
 from asyncio import Semaphore
 from functools import wraps
-from inspect import getfullargspec, isasyncgenfunction
+from inspect import getfullargspec
 from copy import copy
 from typeguard import typechecked
 from os import environ
@@ -124,34 +124,29 @@ def _async_safe(semaphore: Union[str, Semaphore], amount: Optional[int]=1) -> Ca
         """
         Decorator that returns a method wrapper Coroutine that utilizes a
         asyncio semaphore to assure safe asynchronous operations.
-        """
-        if isasyncgenfunction(coroutine):
-            async def wrapper(self, *args, **kwargs):
-                sem: Semaphore = getattr(self, semaphore)
+        """     
+        async def sub_wrapper(sem: Semaphore, *args, **kwargs):   
+            for i in range(amount):
+                await sem.acquire()
+            try:
+                result = await coroutine(*args, **kwargs)
+            finally:
                 for i in range(amount):
-                    await sem.acquire()
-                try:
-                    async for r in coroutine(self, *args, **kwargs):
-                        yield r # yield from not allowed inside async functions
-                finally:
-                    for i in range(amount):
-                        sem.release()
-
-        else:
-            async def wrapper(self, *args, **kwargs):
-                sem: Semaphore = getattr(self, semaphore)
-                for i in range(amount):
-                    await sem.acquire()
-                try:
-                    result = await coroutine(self, *args, **kwargs)
-                finally:
-                    for i in range(amount):
-                        sem.release()
+                    sem.release()
 
                 return result
 
-        return wraps(coroutine)(wrapper)
+        if isinstance(semaphore, str):
+            # If string, assume that the string is the attribute name of the semaphore
+            async def wrapper(self, *args, **kwargs):
+                sem: Semaphore = getattr(self, semaphore)
+                return await sub_wrapper(sem, self, *args, **kwargs)
+        else:
+            # Semaphore is directly passed. Also works for normal (non-method) coroutines.
+            async def wrapper(*args, **kwargs):
+                return await sub_wrapper(semaphore, *args, **kwargs)
 
+        return wraps(coroutine)(wrapper)
 
     return __safe_access
 

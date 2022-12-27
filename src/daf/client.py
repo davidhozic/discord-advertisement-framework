@@ -5,7 +5,6 @@ from typing import Optional, Union, Optional, List
 
 from . import misc
 from . import guild
-from . import logging
 from . import misc
 
 from .logging.tracing import *
@@ -234,27 +233,28 @@ class ACCOUNT:
         closes the connection to Discord.
         """
         while self._running:
-
-            @misc._async_safe("_update_sem")
-            async def __loop(self_):
+            ###############################################################
+            @misc._async_safe(self._update_sem)
+            async def __loop():
                 await asyncio.sleep(TASK_SLEEP_DELAY_S)
-                # Sum, creates new list, making modifications on original lists safe
+                to_remove = []
+                to_await = []
                 for server in self.servers:
-                    # Remove guild
                     if server._check_state():
-                        self.remove_server(server)
+                        to_remove.append(server)
                     else:
-                        # Async generator that returns message context and guild context of sent messages 
-                        # to use in logging
-                        async for guild_ctx, message_ctx in server._advertise():
-                            # Logging not disabled for guild and message was sent
-                            if message_ctx is not None:
-                                await logging.save_log(guild_ctx, message_ctx)
+                        to_await.append( server._advertise() )
 
-                            if not self._running:
-                                return
+                for server in to_remove:
+                    self.remove_server(server)
 
-            await __loop(self)
+                for coro in to_await:
+                    await coro
+                    # If loop stop has been requested, stop asap
+                    if not self._running:
+                        return
+            ###############################################################
+            await __loop()
 
     async def update(self, **kwargs):
         """
