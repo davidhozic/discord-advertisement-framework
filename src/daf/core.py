@@ -16,75 +16,38 @@ from . import misc
 from . import message
 
 import asyncio
-import _discord as dc
+import _discord as discord
 
-#######################################################################
-# Configuration
-#######################################################################
-C_TASK_SLEEP_DELAY = 0.010 # Advertiser task sleep
-EVENT_LOOP_CLOSE_DELAY = 1
 
-#######################################################################
-# Exports
-#######################################################################
 __all__ = (
     "run",
     "shutdown",
     "add_object",
     "remove_object",
     "get_guild_user",
+    "get_accounts",
     "initialize"
 )
 
-#######################################################################
-# Globals   (These are all set in the daf.run function)
-#######################################################################
+
 class GLOBALS:
     """
     Storage class used for holding global variables.
     """
-    server_list: List[guild._BaseGUILD] = [] # Guild/User objects 
-    auto_guilds: List[guild.AutoGUILD] = [] # AutoGUILD objects
+    accounts: List[client.ACCOUNT] = []
 
-
-#######################################################################
-# Coroutines
-#######################################################################
-async def _advertiser(message_type: guild.AdvertiseTaskType) -> None:
-    """
-    The task that is responsible for shilling to channels.
-    This is the most top level task.
-
-    Parameters
-    ------------
-    message_type: str
-        Two tasks advertising tasks are created, this variable tells the guild objects which
-        task is requesting to shill, so it knows what type of messages to actually send.
-    """
-    while True:
-        await asyncio.sleep(C_TASK_SLEEP_DELAY)
-        # Sum, creates new list, making modifications on original lists safe
-        for guild_user in GLOBALS.server_list + GLOBALS.auto_guilds: 
-            # Remove guild
-            if guild_user._check_state():
-                # Suppress since user could of called the remove_object function mid iteration.
-                with suppress(ValueError):
-                    remove_object(guild_user)
-            else:
-                await guild_user._advertise(message_type)
-
-
-@misc.doc_category("Core control")
-async def initialize(token : str,
+@misc.doc_category("DAF control reference")
+async def initialize(token : Optional[str]=None,
                      server_list : Optional[List[Union[guild.GUILD, guild.USER, guild.AutoGUILD]]]=None,
                      is_user : Optional[bool] =False,
                      user_callback : Optional[Union[Callable, Coroutine]]=None,
                      server_log_output : Optional[str] =None,
                      sql_manager: Optional[sql.LoggerSQL]=None,
-                     intents: Optional[dc.Intents]=None,
-                     debug : Optional[ Union[TraceLEVELS, int, str, bool] ] = TraceLEVELS.NORMAL,
+                     intents: Optional[discord.Intents]=None,
+                     debug : Optional[ Union[TraceLEVELS, int, str, bool ]] = TraceLEVELS.NORMAL,
                      proxy: Optional[str]=None,
-                     logger: Optional[logging.LoggerBASE]=None) -> None:
+                     logger: Optional[logging.LoggerBASE]=None,
+                     accounts: Optional[List[client.ACCOUNT]]=[]) -> None:
     """
     The main initialization function.
     It initializes all the other modules, creates advertising tasks
@@ -97,21 +60,17 @@ async def initialize(token : str,
         Parameters are the same as in :func:`daf.core.run`.
     """
     loop = asyncio.get_event_loop()
-    
+    # ------------------------------------------------------------
+    # Initialize tracing
+    # ------------------------------------------------------------
     if isinstance(debug, bool):
         trace("Using bool for debug parameter is DEPRECATED. Use daf.logging.TraceLEVELS", TraceLEVELS.DEPRECATED)
         debug = TraceLEVELS.NORMAL if debug else TraceLEVELS.DEPRECATED
     
     tracing.initialize(debug) # Print trace messages to the console for debugging purposes
-    
-    if intents is None: # Sphinx doesn't like if this is directly in the declaration
-        intents = dc.Intents.default()
-
-    # Initialize discord client
-    trace("[CORE:] Logging in...")
-    await client._initialize(token, bot=not is_user, intents=intents, proxy=proxy)
-
+    # ------------------------------------------------------------
     # Initialize logging
+    # ------------------------------------------------------------
     # --------------- DEPRECATED -------------------- #
     if server_log_output is not None:
         if logger is None:
@@ -133,31 +92,34 @@ async def initialize(token : str,
         logger = logging.LoggerJSON(path="History")
 
     await logging.initialize(logger)
+    # ------------------------------------------------------------
 
-    # Initialize the servers (and their message objects)
-    trace("[CORE]: Initializing servers", TraceLEVELS.NORMAL)
-    if server_list is None:
-        server_list = []
+    # ------------------------------------------------------------
+    # Initialize accounts
+    # ------------------------------------------------------------
+    # ------------- DEPRECATED -----------------
+    if token is not None:
+        trace("Passing the token argument directly is deprecated since v2.4 where support\n"
+              "for multiple accounts was added. Please use the ``accounts`` parameter", 
+              TraceLEVELS.DEPRECATED)
 
-    for server in server_list:
+        accounts.append(client.ACCOUNT(token=token, is_user=is_user, intents=intents, proxy=proxy, servers=server_list))
+    # ------------------------------------------
+    for account in accounts:
         try:
-            await add_object(server) # Add each guild to the shilling list
-        except (ValueError, TypeError) as ex:
-            trace(ex)
-    
-    # Create advertiser tasks
-    trace("[CORE]: Creating advertiser tasks", TraceLEVELS.NORMAL)
-    loop.create_task(_advertiser(guild.AdvertiseTaskType.TEXT_ISH))
-    loop.create_task(_advertiser(guild.AdvertiseTaskType.VOICE))
+            await add_object(account)
+        except Exception as exc:
+            trace(f" Unable to add account.", TraceLEVELS.ERROR, exc)    
 
+    # ------------------------------------------
     # Create the user callback task
     if user_callback is not None:
-        trace("[CORE]: Starting user callback function", TraceLEVELS.NORMAL)
+        trace("Starting user callback function", TraceLEVELS.NORMAL)
         user_callback = user_callback()
         if isinstance(user_callback, Coroutine):
             loop.create_task(user_callback)
 
-    trace("[CORE]: Initialization complete.", TraceLEVELS.NORMAL)
+    trace("Initialization complete.", TraceLEVELS.NORMAL)
 
 
 #######################################################################
@@ -165,16 +127,37 @@ async def initialize(token : str,
 #######################################################################
 
 @overload
-@misc.doc_category("Shilling list modification", True)
-async def add_object(obj: Union[guild.USER, guild.GUILD]) -> None:
+@misc.doc_category("Dynamic mod.", True)
+async def add_object(obj: client.ACCOUNT) -> None:
+    """
+    Adds an account to the framework.
+
+    Parameters
+    ------------
+    obj: client.ACCOUNT
+        The account object to add
+    
+    Raises
+    ----------
+    ValueError
+        The account has already been added to the list.
+    TypeError
+        ``obj`` is of invalid type.
+    """
+    ...
+@overload
+@misc.doc_category("Dynamic mod.", True)
+async def add_object(obj: Union[guild.USER, guild.GUILD, guild.AutoGUILD], snowflake: client.ACCOUNT=None) -> None:
     """
 
     Adds a guild or an user to the daf.
 
     Parameters
     -----------
-    obj: Union[guild.USER, guild.GUILD]
-        The guild object to add into the daf.
+    obj: guild.USER | guild.GUILD | guild.AutoGUILD
+        The guild object to add into the account (``snowflake``).
+    snowflake: client.ACCOUNT=None
+        The account to add this guild/user to.
 
     Raises
     ----------
@@ -184,30 +167,38 @@ async def add_object(obj: Union[guild.USER, guild.GUILD]) -> None:
         The object provided is not supported for addition.
     TypeError
         Invalid parameter type.
+    RuntimeError
+        When using deprecated method of adding items to the shill list,
+        no accounts were available.
     Other
         Raised in the obj.initialize() method
     """
     ...
 @overload
-@misc.doc_category("Shilling list modification", True)
+@misc.doc_category("Dynamic mod.", True)
 async def add_object(obj: Union[message.DirectMESSAGE, message.TextMESSAGE, message.VoiceMESSAGE],
-                     snowflake: Union[int, guild.GUILD, guild.USER, dc.Guild, dc.User, dc.Object]) -> None:
+                     snowflake: Union[guild.GUILD, guild.USER]) -> None:
     """
+    .. deprecated:: v2.4
+
+        Using int, discord.* objects in the snowflake parameter.
+        This functionality is planned for removal in v2.5.
+
     Adds a message to the daf.
 
     Parameters
     -----------
-    obj: Union[message.DirectMESSAGE, message.TextMESSAGE, message.VoiceMESSAGE]
+    obj: message.DirectMESSAGE | message.TextMESSAGE | message.VoiceMESSAGE
         The message object to add into the daf.
-    snowflake: Union[int, guild.GUILD, guild.USER, discord.Guild, discord.User]
+    snowflake: guild.GUILD | guild.USER
         Which guild/user to add it to (can be snowflake id or a framework _BaseGUILD object or a discord API wrapper object).
 
     Raises
     ----------
-    ValueError
-        guild_id wasn't provided when adding a message object (to which guild should it add)
     TypeError
         The object provided is not supported for addition.
+    ValueError
+        guild_id wasn't provided when adding a message object (to which guild should it add)
     ValueError
         Missing snowflake parameter.
     ValueError
@@ -216,76 +207,68 @@ async def add_object(obj: Union[message.DirectMESSAGE, message.TextMESSAGE, mess
         Raised in the obj.add_message() method
     """
     ...
-@overload
-@misc.doc_category("Shilling list modification", True)
-async def add_object(obj: guild.AutoGUILD) -> None:
-    """
-    Adds a AutoGUILD to the shilling list.
-
-    Parameters
-    -----------
-    obj: daf.guild.AutoGUILD
-        AutoGUILD object that automatically finds guilds to shill in.
-
-    Raises
-    ----------
-    TypeError
-        The object provided is not supported for addition.
-    Other
-        From :py:meth:`~daf.guild.AutoGUILD.initialize` method.
-    """
-    ...
 
 async def add_object(obj, snowflake=None):
     object_type_name = type(obj).__name__
 
     # Add the object
-    if isinstance(obj, guild._BaseGUILD):
-        if obj in GLOBALS.server_list:
-            raise ValueError(f"{object_type_name} with snowflake `{obj.snowflake}` is already added to the daf.")
+    if isinstance(obj, client.ACCOUNT):
+        if obj in GLOBALS.accounts:
+            raise ValueError("Account already added to the list")
 
         await obj.initialize()
-        GLOBALS.server_list.append(obj)
+        GLOBALS.accounts.append(obj)
+    elif isinstance(obj, (guild._BaseGUILD , guild.AutoGUILD)):
+        if snowflake is None:
+            # Compatibility with prior versions of v2.4
+            trace("Directly adding guild like objects to the framework is deprecated since v2.4 (multi-account support)\n"
+                  "The object will be added to the first account in the list. Update your code to pass ``snowflake`` with :class:`~daf.client.ACCOUNT`",
+                  TraceLEVELS.DEPRECATED)
+            try:
+                snowflake = GLOBALS.accounts[0]
+            except IndexError as exc:
+                raise RuntimeError("No accounts are running in the framework") from exc
+        
+        if not isinstance(snowflake, client.ACCOUNT):
+            raise TypeError("snowflake parameter type must be ACCOUNT when the obj parameter type is guild like.")
 
-    elif isinstance(obj, guild.AutoGUILD):
-        if obj in GLOBALS.auto_guilds:
-            raise ValueError(f"{object_type_name} is already added to the daf.")
-
-        await obj.initialize()
-        GLOBALS.auto_guilds.append(obj)
+        await snowflake.add_server(obj)
 
     elif isinstance(obj, message.BaseMESSAGE):
         if snowflake is None:
-            raise ValueError(f"`snowflake` is required to add a message. Only the {object_type_name} object was provided.")
-
-        if isinstance(snowflake, (guild.AutoGUILD, guild.GUILD, guild.USER)):
-            await snowflake.add_message(obj)
-
-        elif isinstance(snowflake, (dc.Guild, dc.User, dc.Object, int)):
-            snowflake = get_guild_user(snowflake)
-            if snowflake is None:
-                raise ValueError(f"Guild or user with snowflake `{snowflake}` was not found in the daf.")
-
+            raise ValueError(f"snowflake parameter (guild-like) is required to add a message. Only the {object_type_name} object was provided.")
         
+        if not isinstance(snowflake, (guild.AutoGUILD, guild._BaseGUILD)):
+            # --------- DEPRECATED ----------- #
+            # TODO: remove in v2.5, uncomment TypError            
+            snowflake = get_guild_user(snowflake)
+            trace("DEPRECATED! Using int or discord.* objects is deprecated for the snowflake parameter of add_object.\n"
+                  "It is planned for removal in version v2.5!",
+                  TraceLEVELS.DEPRECATED)
+            if snowflake is None:
+                raise ValueError("The GUILD/USER with specified snowflake could not be found.")
+            # -------------------------------- #
+            # raise TypeError("snowflake parameter must be one of: guild.AutoGUILD, guild.GUILD, guild.USER")
 
+        await snowflake.add_message(obj)
 
     else:
         raise TypeError(f"Invalid object type `{object_type_name}`.")
 
-
-@misc.doc_category("Shilling list modification")
-def remove_object(snowflake: Union[int, dc.Object, dc.Guild, dc.User, dc.Object, guild._BaseGUILD, message.BaseMESSAGE, guild.AutoGUILD]) -> None:
+@typechecked
+@misc.doc_category("Dynamic mod.")
+def remove_object(snowflake: Union[guild._BaseGUILD, message.BaseMESSAGE, guild.AutoGUILD, client.ACCOUNT]) -> None:
     """
-    .. versionchanged:: v2.3
-        Instead of raising DAFNotFound, raises ValueError
+    .. versionchanged:: v2.4
+        | Now accepts client.ACCOUNT.
+        | Removed support for ``int`` and for API wrapper (PyCord) objects.
 
     Removes an object from the daf.
 
     Parameters
     -------------
-    snowflake: Union[int, dc.Object, dc.Guild, dc.User, dc.Object, guild._BaseGUILD, message.BaseMESSAGE, guild.AutoGUILD]
-        The GUILD/USER object to remove/snowflake of GUILD/USER
-        or a xMESSAGE object or AutoGUILD object.
+    snowflake: guild._BaseGUILD | message.BaseMESSAGE | guild.AutoGUILD | client.ACCOUNT
+        The object to remove from the framework.
 
     Raises
     --------------
@@ -294,31 +277,33 @@ def remove_object(snowflake: Union[int, dc.Object, dc.Guild, dc.User, dc.Object,
     TypeError
         Invalid argument."""    
     if isinstance(snowflake, message.BaseMESSAGE):
-        for _guild in GLOBALS.server_list:
-            if snowflake in _guild.messages:
-                _guild.remove_message(snowflake)
-                break
-    elif isinstance(snowflake, guild.AutoGUILD):
-        GLOBALS.auto_guilds.remove(snowflake)
-        snowflake._delete()
-    else:
-        if not isinstance(snowflake, guild._BaseGUILD):
-            snowflake = get_guild_user(snowflake)
+        for account in GLOBALS.accounts:
+            for guild_ in account.servers:
+                if snowflake in guild_.messages:
+                    guild_.remove_message(snowflake)
+                    break
+        else:
+            raise ValueError("Message is not in any guilds")
 
-        GLOBALS.server_list.remove(snowflake)
-        snowflake._delete()
+    elif isinstance(snowflake, (guild._BaseGUILD, guild.AutoGUILD)):
+        for account in GLOBALS.accounts:
+            if snowflake in account.servers:
+                account.remove_server(snowflake)
+
 
 @typechecked
-@misc.doc_category("Getters")
-def get_guild_user(snowflake: Union[int, dc.Object, dc.Guild, dc.User, dc.Object]) -> Union[guild.GUILD, guild.USER, None]:
+def get_guild_user(snowflake: Union[int, discord.Object, discord.Guild, discord.User, discord.Object]) -> Union[guild.GUILD, guild.USER, None]:
     """
+    TODO: Remove in v2.5
+    .. deprecated:: v2.4
+
     Retrieves the GUILD/USER object that has the ``snowflake`` ID from the shilling list. 
 
     Parameters
     -------------
     snowflake: Union[int, discord.Object, discord.Guild, discord.User, discord.Object]
         Snowflake ID or discord objects containing snowflake id of the GUILD.
-    
+
     Raises
     ---------------
     TypeError
@@ -331,23 +316,36 @@ def get_guild_user(snowflake: Union[int, dc.Object, dc.Guild, dc.User, dc.Object
     None
         If not guild/user not in the shilling list.
     """
-    if isinstance(snowflake, int):
-        snowflake = dc.Object(snowflake)
 
-    for guild in GLOBALS.server_list:
+    trace("This function is planned for removal in the future. Use ACCOUNT.get_server method instead!", TraceLEVELS.DEPRECATED)
+    if isinstance(snowflake, int):
+        snowflake = discord.Object(snowflake)
+
+    for guild in GLOBALS.accounts[0]._servers:
         if guild.snowflake == snowflake.id:
             return guild
 
     return None
 
 
-@misc.doc_category("Core control")
+@misc.doc_category("Clients")
+def get_accounts() -> List[client.ACCOUNT]:
+    """
+    .. versionadded:: v2.4
+
+    Returns
+    ----------
+    List[client.ACCOUNT]
+        List of running accounts.
+    """
+    return GLOBALS.accounts.copy()
+
+
+@typechecked
+@misc.doc_category("DAF control reference")
 async def shutdown(loop: Optional[asyncio.AbstractEventLoop]=None) -> None:
     """
     Stops the framework.
-
-    .. versionchanged:: v2.1
-        Made the function non async and shutdown everything.
 
     Parameters
     ----------
@@ -357,56 +355,37 @@ async def shutdown(loop: Optional[asyncio.AbstractEventLoop]=None) -> None:
     """
     if loop is None:
         loop = asyncio.get_event_loop()
-    
+
     loop.stop()
 
 
 def _shutdown_clean(loop: asyncio.AbstractEventLoop) -> None:
     """
-    Fully stops all the tasks and then closes the event loop
+    Signals all accounts to cleanup and then close
+    connections to Discord.
 
     Parameters
     ---------------
     loop: asyncio.AbstractEventLoop
         The loop to stop.
     """
-    cl = client.get_client()
-    loop.run_until_complete(cl.close())
-    # Cancel all tasks
-    tasks = asyncio.all_tasks(loop)
-    for task in tasks:
-        if not task.done():
-            task.cancel()
-
-    loop.run_until_complete(asyncio.gather(*tasks, return_exceptions=True))
-    loop.run_until_complete(asyncio.sleep(EVENT_LOOP_CLOSE_DELAY)) # Yield for one second to allow aiohttp cleanup
-
-
-@misc.doc_category("Getters")
-def get_shill_list() -> List[Union[guild.GUILD, guild.USER]]:
-    """
-    .. versionadded:: v2.1
-
-    Returns
-    -----------
-    List[Union[guild.GUILD, guild.USER]]
-        The shilling list.
-    """
-    return GLOBALS.server_list.copy()
+    for account in GLOBALS.accounts:
+        loop.run_until_complete(account.close())
 
 
 @typechecked
-@misc.doc_category("Core control")
-def run(token : str,
+@misc.doc_category("DAF control reference")
+def run(token : Optional[str]=None,
         server_list : Optional[List[Union[guild.GUILD, guild.USER, guild.AutoGUILD]]]=None,
         is_user : Optional[bool] =False,
         user_callback : Optional[Union[Callable, Coroutine]]=None,
         server_log_output : Optional[str] =None,
         sql_manager: Optional[sql.LoggerSQL]=None,
-        intents: Optional[dc.Intents]=None,
+        intents: Optional[discord.Intents]=None,
         debug : Optional[ Union[TraceLEVELS, int, str, bool] ] = TraceLEVELS.NORMAL,
         proxy: Optional[str]=None,
-        logger: Optional[logging.LoggerBASE]=None) -> None:
+        logger: Optional[logging.LoggerBASE]=None,
+        accounts: Optional[List[client.ACCOUNT]]=[]) -> None:
     """
     Runs the framework and does not return until the framework is stopped (:func:`daf.core.shutdown`).
     After stopping, it returns None.
@@ -416,40 +395,29 @@ def run(token : str,
         asyncio event loop, eg. you want to start the framework as a task, use
         the :func:`daf.core.initialize` coroutine.
 
-    .. versionchanged:: v2.2
+    
+    .. versionchanged:: v2.4
+        Added ``accounts`` parameter.
 
-        .. card::
-        
-            - Added ``logger`` parameter
-            - ``user_callback`` can now be a regular function as well as async
-        
-
-    .. deprecated:: v2.2
+    .. deprecated:: v2.4
 
         .. card::
 
-            These parameters are replaced with ``logger`` parameter.
-            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-            - sql_manager
-            - server_log_output
+            The following parameters were deprecated in favor of support for multiple accounts
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+            - token
+            - is_user
+            - server_list
+            - intents
+            - proxy
+            +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+            The above parameters should be passed to :class:`~daf.client.ACCOUNT`.
             
 
     Parameters
     ---------------
-    token: str
-        Discord's access token for account.
-    server_list: Optional[List[Union[:ref:`GUILD`, :ref:`USER`]]
-        Predefined server list (guild list) to shill.
-    is_user: Optional[bool]
-        Set to True if the token is for an user account.
     user_callback: Optional[Union[Callable, Coroutine]]
         Function or async function to call after the framework has been started.
-    server_log_output: Optional[str]
-        Path where the server log files will be created.
-    sql_manager: Optional[:ref:`LoggerSQL`]
-        SQL manager object that will save logs into the database.
-    intents: Optional[discord.Intents]
-        Discord Intents object (represents settings to which events it will be listened to).
     debug : Optional[TraceLEVELS | int | str] = TraceLEVELS.NORMAL
         .. versionchanged:: v2.3
             Deprecate use of bool (assume TraceLEVELS.NORMAL).
@@ -457,11 +425,13 @@ def run(token : str,
 
         The level of trace for trace function to display.
         The higher value this option is, the more will be displayed.
-    proxy: Optional[str]
-        URL of a proxy you want the framework to use.
     logger: Optional[loggers.LoggerBASE]
         The logging class to use.
         If this is not provided, JSON is automatically used.
+    accounts: Optional[List[client.ACCOUNT]]
+        .. versionadded:: v2.4
+
+        List of :class:`~daf.client.ACCOUNT` (Discord accounts) to use.
 
     Raises
     ---------------

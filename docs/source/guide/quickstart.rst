@@ -34,66 +34,70 @@ The framework can be started using :func:`daf.core.run` function (and stopped wi
         asyncio.run(some_program())
 
 
-Function :func:`~daf.core.run` accepts many parameters but there are **3 which are most important**:
+Function :func:`~daf.core.run` accepts many parameters but there is only one that is most important:
 
-- ``token``
-    This is the Discord account access token, it can be obtained the following way:
+:``accounts``:
 
-    .. tab-set::
-        
-        .. tab-item:: Bot accounts
+    Accounts parameter is a list of :class:`daf.client.ACCOUNT` objects which represent different Discord accounts
+    you can simultaneously use to shill your content.
 
-            1. Visit the `Developer Portal <https://discord.com/developers/>`_
-            2. Select your application
-            3. Click on the "Bot" tab
-            4. Click "Copy token" - if only "reset" exists, click on "reset" and then "Copy token"
-
-        .. tab-item:: User accounts
-        
-            Follow `instructions <https://www.youtube.com/results?search_query=discord+get+user+token>`_
+    The below example shows a minimum definition of the accounts list. 
+    For information about parameters with specific object, please use the search bar or 
+    refer to the :ref:`Programming Reference`.
 
     .. code-block:: python
-        :emphasize-lines: 5
+        :caption: Example
 
         import daf
 
+        accounts = [
+            daf.client.ACCOUNT( # Account 1
+                token="DJHADJHSKJDHAKHDSKJADHKASJ", # Account token
+                is_user=False,  # Is the token from an user account?
+                servers=[   # List of guilds/users
+                    daf.guild.GUILD(
+                        snowflake=123456789, # Snowflake id of discord
+                        messages=[
+                            daf.message.TextMESSAGE(...),
+                            daf.message.TextMESSAGE(...),
+                            daf.message.VoiceMESSAGE(...)
+                        ],
+                        logging=True, # Log sent messages
+                        remove_after=None # To automatically stop shilling
+                    )
+                ]
+            ),
 
-        daf.run(
-            token="JDJSDJAHDSAHBDJABEJHQGEGSAGEJHSGJGEJSHG", # Some account token
-        )
-        
-- ``is_user``
-    Set this to True if the ``token`` parameter is from an user account or False if it is from a bot account.
-
-    .. code-block:: python
-        :emphasize-lines: 6
-
-        import daf
-
-
-        daf.run(
-            token="JDJSDJAHDSAHBDJABEJHQGEGSAGEJHSGJGEJSHG", # Some account token
-            is_user=True # Set this to True, if the above token is from an user account.
-        )
-
-- ``server_list``
-    This parameter accepts a list of :class:`~daf.guild.GUILD` / :class:`~daf.guild.USER` objects and represents the servers to which the framework will shill.
-    The below block shows a sample definition of the server list, which will send text messages. For full parameters see :class:`~daf.guild.GUILD` / :class:`~daf.guild.USER`
-    and :class:`daf.message.TextMESSAGE` for the TextMESSAGE parameters.
-
-    .. note::
-        Snowflake ID is a unique ID representing resources like guilds and channels. 
-        It can be obtained by enabling developer mode, then right clicking on the resource (eg. guild) and last
-        left clicking ``Copy ID``.
-        
-        `Obtaining snowflake <https://support.discord.com/hc/en-us/articles/206346498-Where-can-I-find-my-User-Server-Message-ID->`_.
-
-    .. only:: html
-        
-        .. literalinclude:: ../../../Examples/Message Types/TextMESSAGE/main_send_string.py
-            :emphasize-lines: 4, 5, 8, 21, 32
+            daf.client.ACCOUNT( # Account 2
+                token="JKDJSKDJALKNDSAKNDASKNDKAJS", # Account token
+                is_user=False,  # Is the token from an user account?
+                servers=[   # List of guilds/users
+                    daf.guild.GUILD(
+                        snowflake=123456789, # Snowflake id of discord
+                        messages=[
+                            daf.message.TextMESSAGE(...),
+                            daf.message.TextMESSAGE(...),
+                            daf.message.VoiceMESSAGE(...)
+                        ],
+                        logging=True, # Log sent messages
+                        remove_after=None # To automatically stop shilling
+                    )
+                ]
+            )
+        ]
 
 
+        daf.run(accounts=accounts)
 
-After you've successfully defined your server list and started the framework with :func:`~daf.core.run`, the framework will run on it's own and there is nothing you need to do
+
+.. note::
+    The above example shows a bare minimum definition of the accounts list that has a 
+    **manually defined** server list.
+
+    There is also a way to automatically define the server list (and channels) based on the guild name (:ref:`Shilling scheme generation`).
+
+
+After you've successfully defined your accounts list and started the framework with :func:`~daf.core.run`, the framework will run on it's own and there is nothing you need to do
 from this point forward if basic periodic shilling with text messages is all you desire.
+
+

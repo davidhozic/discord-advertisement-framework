@@ -17,7 +17,7 @@ The |GUILD| objects represents Discord servers with text/voice channels and it c
 and |VoiceMESSAGE| messages, while |USER| represents a single user on Discord and can hold |DirectMESSAGE| messages.
 For more information about how to use |GUILD| / |USER| click on them.
 
-Guilds can be passed to the framework at startup, see :ref:`quickstart` (``server_list``) for more info.
+Guilds can be passed to the framework at startup (see :ref:`Quickstart`) and while the framework is running (see :ref:`Modifying the shilling list`).
 
 
 Message types
@@ -29,8 +29,7 @@ These classes accept different parameters but still have some in common:
 - ``start_period`` -  If not None, represents bottom range of randomized period 
 - ``end_period`` - If ``start_period`` is not None, this represents upper range of randomized period, if ``start_period`` is None, represents fixed sending period.
 - ``data`` (varies on message types) - data that is actually send to Discord.
-- ``start_in``  - Defines when the message should be first shilled.
-- ``remove_after`` - Defines when the message should be removed from Discord.
+- ``start_in``  - Defines when the message the shilling of message should stop (object be removed from framework).
 
 For more information about these, see |TextMESSAGE|, |VoiceMESSAGE|, |DirectMESSAGE|.
 
@@ -41,14 +40,12 @@ To add these messages to the guild, set the |GUILD| / |USER|'s ``messages`` para
 
 .. only:: html
 
-    .. literalinclude:: ../../../Examples/Message Types/TextMESSAGE/main_send_string.py
+    .. literalinclude:: ../../../Examples/Message Types/TextMESSAGE/main_send_multiple.py
         :language: Python
-        :emphasize-lines: 8
         :caption: **TextMESSAGE example - normal text (string)**
 
-    .. literalinclude:: ../../../Examples/Message Types/DirectMESSAGE/main_send_string.py
+    .. literalinclude:: ../../../Examples/Message Types/DirectMESSAGE/main_send_multiple.py
         :language: Python
-        :emphasize-lines: 14
         :caption: **DirectMESSAGE example - normal text (string)**
 
 
@@ -60,6 +57,5 @@ You can either stream a fixed audio file or a youtube video, both thru :class:`d
 
 .. only:: html
 
-    .. literalinclude:: ../../../Examples/Message Types/VoiceMESSAGE/main_stream_audio.py
-        :emphasize-lines: 12
+    .. literalinclude:: ../../../Examples/Message Types/VoiceMESSAGE/main_stream_audio.py        
         :caption: **VoiceMESSAGE example - audio file**

@@ -24,11 +24,6 @@ __all__ = (
     "VoiceMESSAGE",
 )
 
-class GLOBALS:
-    """ ~ class ~
-    - @Info: Contains global variables used in the voice messaging.
-    """
-    voice_client: discord.VoiceClient = None
 
 # Configuration
 # ----------------------#
@@ -59,7 +54,7 @@ class VoiceMESSAGE(BaseMESSAGE):
 
         - None - Use this value for a fixed (not randomized) sending period
         - timedelta object - object describing time difference, if this is used, then the parameter represents the bottom limit of the **randomized** sending period.
-    end_period: int
+    end_period: Union[int, timedelta]
         If ``start_period`` is not None, then this represents the upper limit of randomized time period in which messages will be sent.
         If ``start_period`` is None, then this represents the actual time period between each message send.
 
@@ -83,9 +78,9 @@ class VoiceMESSAGE(BaseMESSAGE):
             Can also be :class:`~daf.message.AutoCHANNEL`
 
         Channels that it will be advertised into (Can be snowflake ID or channel objects from PyCord).
-    volume: int
+    volume: Optional[int]
         The volume (0-100%) at which to play the audio. Defaults to 50%. This was added in v2.0.0
-    start_in: timedelta
+    start_in: Optional[timedelta]
         When should the message be first sent.
     remove_after: Optional[Union[int, timedelta, datetime]]
         Deletes the message after:
@@ -109,8 +104,8 @@ class VoiceMESSAGE(BaseMESSAGE):
                  end_period: Union[int, timedelta],
                  data: Union[AUDIO, Iterable[AUDIO], _FunctionBaseCLASS],
                  channels: Union[Iterable[Union[int, discord.VoiceChannel]], AutoCHANNEL],
-                 volume: int=50,
-                 start_in: Union[timedelta, bool]=timedelta(seconds=0),
+                 volume: Optional[int]=50,
+                 start_in: Optional[Union[timedelta, bool]]=timedelta(seconds=0),
                  remove_after: Optional[Union[int, timedelta, datetime]]=None):
 
         if not dtypes.GLOBALS.voice_installed:
@@ -243,9 +238,9 @@ class VoiceMESSAGE(BaseMESSAGE):
             No valid channels were passed to object"
         """
         ch_i = 0
-        cl = client.get_client()
         self.parent = parent
-        _guild = self.parent.apiobject
+        cl = parent.parent.client
+        _guild = parent.apiobject
         to_remove = []
 
         if isinstance(self.channels, AutoCHANNEL):
@@ -291,35 +286,35 @@ class VoiceMESSAGE(BaseMESSAGE):
             the audio to stream.
         """
         stream = None
+        voice_client = None
         try:
             # Check if client has permissions before attempting to join
-            ch_perms = channel.permissions_for(channel.guild.get_member(client.get_client().user.id))
+            client_: discord.Client = self.parent.parent.client
+            if (member := channel.guild.get_member(client_.user.id)) is None:
+                raise self._generate_exception(404, -1, "Client user could not be found in guild members", discord.NotFound)
+
+            ch_perms = channel.permissions_for(member)
             if not all([ch_perms.connect, ch_perms.stream, ch_perms.speak]):
                 raise self._generate_exception(403, 50013, "You lack permissions to perform that action", discord.Forbidden)
             
             # Check if channel still exists in cache (has not been deleted)
-            if client.get_client().get_channel(channel.id) is None:
+            if client_.get_channel(channel.id) is None:
                 raise self._generate_exception(404, 10003, "Channel was deleted", discord.NotFound)
 
-            if GLOBALS.voice_client is None or not GLOBALS.voice_client.is_connected():
-                GLOBALS.voice_client = await channel.connect(timeout=C_VC_CONNECT_TIMEOUT)
-            else:
-                await GLOBALS.voice_client.move_to(channel)
-
+            voice_client = await channel.connect(timeout=C_VC_CONNECT_TIMEOUT)
             stream = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(audio.url, options="-loglevel fatal"), volume=self.volume/100)
+            voice_client.play(stream)
 
-            GLOBALS.voice_client.play(stream)
-
-            while GLOBALS.voice_client.is_playing():
+            while voice_client.is_playing():
                 await asyncio.sleep(1)
             return {"success": True}
         except Exception as ex:
             return {"success": False, "reason": ex}
         finally:
-            if GLOBALS.voice_client is not None:
+            if voice_client is not None:
                 with suppress(ConnectionResetError):
-                    await GLOBALS.voice_client.disconnect()
-                GLOBALS.voice_client = None
+                    await voice_client.disconnect()
+
                 await asyncio.sleep(1) # Avoid sudden disconnect and connect to a new channel
 
     @misc._async_safe("update_semaphore")
@@ -381,8 +376,14 @@ class VoiceMESSAGE(BaseMESSAGE):
 
         if "data" not in kwargs:
             kwargs["data"] = self._data
+
+        if "channels" not in kwargs and not isinstance(self.channels, AutoCHANNEL):
+            kwargs["channels"] = [x.id for x in self.channels]
         
         if not len(_init_options):
             _init_options = {"parent": self.parent}
 
         await misc._update(self, init_options=_init_options, **kwargs) # No additional modifications are required
+        if isinstance(self.channels, AutoCHANNEL):
+            await self.channels.update()
+

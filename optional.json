@@ -2,6 +2,9 @@
     "voice" : ["PyNaCl", "yt-dlp"],
     "proxy" : ["aiohttp_socks"],
     "sql"   : ["sqlalchemy[asyncio]", "aiosqlite", "pymssql", "asyncpg", "asyncmy"],
-    "testing" : ["pytest", "pytest-xdist", "pytest-asyncio"],
-    "docs"  : ["sphinx", "sphinx-autobuild", "sphinx-copybutton", "furo", "enum-tools[sphinx]", "sphinx-design[furo]", "readthedocs-sphinx-search"]
+    "testing" : ["pytest", "pytest-asyncio"],
+    "docs"  : [
+        "sphinx", "sphinx-autobuild", "sphinx-copybutton", "furo", "enum-tools[sphinx]",
+        "sphinx-design[furo]", "readthedocs-sphinx-search", "sphinxcontrib-svg2pdfconverter"
+    ]
 }

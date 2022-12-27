@@ -14,19 +14,21 @@ For more information see the project's `Webpage <https://daf.davidhozic.com>`_.
 ----------------------
 Key features
 ----------------------
-- Ability to run on **user** accounts (against discord's ToS) or **bot** accounts
-- Periodic advertisement to **Direct (Private) Messages**, **Text channels** and **Voice channels**
-- Advertising with either static data (text, embed, files, audio) or **dynamic data** (the data is obtained thru a function dynamically)
-- Logging of sent messages to different outputs (also includes SQL)
-- Ability to add additional application layers with help of asyncio
-- Easy to setup
+- Ability to run on **multiple** accounts at once, either as a **self-bot** (personal account) or a **normal bot** account.
 
 .. caution::
-    While running this on user accounts is possible, it is **not recommended** since it is against Discord's ToS.
-    I am not responsible if your account get's disabled for using self-bots, however there are some protections to make
-    it harder for the API to detect a self-bot.
+    While running this on user accounts is possible, it is :strong:`not recommended` since it is against Discord's ToS.
+    I am not responsible if your account get's disabled for using self-bots!
+
+- Periodic advertisement to **Direct (Private) Messages**, **Text channels** and **Voice channels**
+- **Automatic guild/channel discovery**
+- Dynamically obtained shill data
+- Error recovery
+- Logging of sent messages (including SQL)
+- Async framework
+- Easy to setup, with minimal code
 
 --------------------
 Basic example
 --------------------
-For basic example see `main_send_string.py <Examples/Message%20Types/TextMESSAGE/main_send_string.py>`_
+For basic example see `main_send_multiple.py <https://github.com/davidhozic/discord-advertisement-framework/blob/master/Examples/Message%20Types/TextMESSAGE/main_send_multiple.py>`_
