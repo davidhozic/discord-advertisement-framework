@@ -11,19 +11,11 @@ import asyncio
 import daf
 
 
-
 message = daf.TextMESSAGE(None, timedelta(seconds=5), "Hello", [123455, 1425215])
 accounts = [
-    daf.ACCOUNT(
-        token="SKJDSKAJDKSJDKLAJSKJKJKGSAKGJLKSJG",
-        is_user=False,
-        servers=[
-            daf.GUILD(1234567, [
-                    message 
-                ]
-            )
-        ]
-    )
+    daf.ACCOUNT( token="SKJDSKAJDKSJDKLAJSKJKJKGSAKGJLKSJG",
+                 is_user=False,
+                 servers=[daf.GUILD(1234567, [message])] )
 ]
 
 
@@ -33,12 +25,7 @@ async def user_task():
     await message.update(end_period=timedelta(seconds=20), data="World")
     # Will now send "World" every 20 seconds
 
-    #########################################################################
 
-############################################################################################################################################################################
-
-
-############################################################################################
 if __name__ == "__main__":
     daf.run(user_callback=user_task, accounts=accounts)  
     
