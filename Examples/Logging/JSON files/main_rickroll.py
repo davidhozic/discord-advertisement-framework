@@ -19,19 +19,11 @@ def get(st):
     return item
 
 accounts = [
-    daf.ACCOUNT(
-        token="SDASKDKLSADJKLSDJ",
-        is_user=False,
-        servers=[
-            daf.GUILD(
-                snowflake=12345,
-                messages=[
-                    daf.TextMESSAGE(None, timedelta(seconds=5), get(rolls.copy()), [12345], "edit", timedelta(seconds=5))
-                ],
-                logging=True
-            )
-        ]
-    )
+    daf.ACCOUNT( token="SDASKDKLSADJKLSDJ",
+                 is_user=False,
+                 servers=[ 
+                    daf.GUILD(12345, [daf.TextMESSAGE(None, timedelta(seconds=5), get(rolls.copy()), [12345], "edit")], True) 
+                  ] )
 ]
 
 

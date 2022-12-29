@@ -6,19 +6,13 @@ from datetime import timedelta
 import daf
 
 
-# Create a list in which we will automatically add guilds
-allowed_strings = {"shill", "advert", "promo"}
-data_to_shill = (     # Example data set
-                "Hello World", 
-                daf.discord.Embed(title="Example Embed",
-                         color=daf.discord.Color.blue(),
-                         description="This is a test embed")
-                )
-
 async def user_task():
     # Returns the client to send commands to discord, for more info about client see https://docs.pycord.dev/en/master/api.html?highlight=discord%20client#discord.Client
     account = daf.ACCOUNT(token="ASDASJDAKDK", is_user=False)
+    
     guild = daf.GUILD(snowflake=123456)
+    
+    data_to_shill = ( "Hello World", daf.discord.Embed(title="Example Embed", color=daf.discord.Color.blue(), description="This is a test embed") )
     text_msg = daf.TextMESSAGE(None, timedelta(seconds=5), data_to_shill, [12345, 6789], "send", timedelta(seconds=0))
 
     # Dynamically add account
@@ -36,4 +30,3 @@ async def user_task():
 ############################################################################################
 if __name__ == "__main__":
     daf.run(user_callback=user_task)  
-    

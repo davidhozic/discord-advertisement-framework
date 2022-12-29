@@ -28,7 +28,18 @@ fields=\
 )
 
 accounts = [
-    daf.ACCOUNT(
+    daf.ACCOUNT( # ACCOUNT 1
+        "JJJKHSAJDHKJHDKJ",
+        False,
+        [
+            daf.USER(123456789,
+                     [        
+                        daf.DirectMESSAGE(None, timedelta(seconds=15), ["Test", l_file1, l_file2, l_embed]),  
+                     ],
+                     True)
+        ]
+    ),
+    daf.ACCOUNT( # ACCOUNT 2
         token="JJJKHSAJDHKJHDKJ",
         is_user=False,
         servers=[

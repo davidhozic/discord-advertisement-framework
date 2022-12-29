@@ -5,7 +5,7 @@ When the user task is run, it removes the message from the shill list dynamicall
 import daf
 
 accounts = [
-    daf.ACCOUNT(
+    account := daf.ACCOUNT(
         token="SDSADSDA87sd87",
         is_user=False,
         servers=[
@@ -16,7 +16,7 @@ accounts = [
 
 
 async def user_task():
-    guild = accounts[0].servers[0]
+    guild = account.servers[0]
     await daf.remove_object(guild)
 
 
