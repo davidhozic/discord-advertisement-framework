@@ -13,11 +13,22 @@ def get_data(param1, param2):
 
 
 accounts = [
-    daf.ACCOUNT(
+    daf.ACCOUNT( # ACCOUNT 1
+        "JJJKHSAJDHKJHDKJ",
+        False,
+        [
+            daf.GUILD(123456789,
+                     [        
+                        daf.VoiceMESSAGE(None, timedelta(seconds=15), get_data(123), [12345, 6789]),  
+                     ],
+                     True)
+        ]
+    ),
+    daf.ACCOUNT( # ACCOUNT 2
         token="JJJKHSAJDHKJHDKJ",
         is_user=False,
         servers=[
-            daf.USER(
+            daf.GUILD(
                 snowflake=123456789, # ID of server (guild) or a discord.Guild object
                 messages=[         # List MESSAGE objects 
                     daf.VoiceMESSAGE(

@@ -15,7 +15,18 @@ def get_data(parameter):
     return f"Parameter: {parameter}\nTimestamp: {l_time.day}.{l_time.month}.{l_time.year} :: {l_time.hour}:{l_time.minute}:{l_time.second}"
 
 accounts = [
-    daf.ACCOUNT(
+    daf.ACCOUNT( # ACCOUNT 1
+        "JJJKHSAJDHKJHDKJ",
+        False,
+        [
+            daf.USER(123456789,
+                     [        
+                        daf.DirectMESSAGE(None, timedelta(seconds=15), get_data(123)),  
+                     ],
+                     True)
+        ]
+    ),
+    daf.ACCOUNT( # ACCOUNT 2
         token="JJJKHSAJDHKJHDKJ",
         is_user=False,
         servers=[

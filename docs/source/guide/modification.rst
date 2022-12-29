@@ -9,8 +9,8 @@ Modifying the shilling list
 ----------------------------
 See :ref:`Dynamic mod.` for more information about the **functions** mentioned below.
 
-While the shilling list can be defined statically (pre-defined) by creating a list and using the ``server_list``
-parameter in the :func:`~daf.core.run` function (see :ref:`Quickstart` and :func:`~daf.core.run` (or :func:`~daf.core.initialize`)),
+While the shilling list can be defined statically (pre-defined) by creating a list and using the ``servers``
+parameter in the :class:`~daf.client.ACCOUNT` instances (see :ref:`Quickstart`),
 the framework also allows the objects to be added or removed dynamically from the user's program after the framework has already been started and initialized.
 
 Dynamically adding objects
@@ -40,7 +40,7 @@ The function can be used to add the following object types:
 
 
 .. card::
-    
+
     Messages
     ^^^^^^^^^^^^
     :class:`daf.message.TextMESSAGE`
@@ -48,7 +48,7 @@ The function can be used to add the following object types:
     :class:`daf.message.VoiceMESSAGE`
 
     :class:`daf.message.DirectMESSAGE`
-    
+
 
     .. note::   
         Messages can also be added thru the :py:meth:`daf.guild.GUILD.add_message`
@@ -58,7 +58,7 @@ The function can be used to add the following object types:
             The guild must already be added to the framework, otherwise this method will fail.
 
         .. code-block:: python
-            
+
 
             ...
             my_guild = daf.GUILD(guild.id, logging=True)
@@ -70,7 +70,7 @@ The function can be used to add the following object types:
 
     .. literalinclude:: ../../../Examples/Dynamic Modification/main_add_object.py
         :language: python
-        
+
 
 
 Dynamically removing objects
@@ -82,7 +82,7 @@ Objects can be removed with the :func:`daf.core.remove_object`.
 
     .. literalinclude:: ../../../Examples/Dynamic Modification/main_remove_object.py
         :language: python
-        
+
 
 
 
@@ -102,7 +102,7 @@ For example if I wanted to change the shilling period of a :class:`daf.message.T
 in the following way:
 
 .. code-block:: python
-    
+    :emphasize-lines: 13
 
     ... # Other code
     # Fixed sending period of 5 seconds
