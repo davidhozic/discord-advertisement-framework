@@ -12,7 +12,6 @@
 #
 import os
 import sys
-import subprocess
 
 
 sys.path.insert(0, os.path.abspath('../../src/'))
@@ -35,6 +34,12 @@ else:
 
 
 # -- General configuration ---------------------------------------------------
+build_thesis = os.environ.get("DAF_BUILD_THESIS", "0")
+build_thesis = True if build_thesis == "1" else False
+
+root_doc = 'index' if not build_thesis else "thesis"
+
+
 numfig = True
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
@@ -50,8 +55,6 @@ extensions = [
     "sphinx_search.extension",
     "sphinxcontrib.inkscapeconverter"
 ]
-
-master_doc = 'index'
 
 
 source_suffix = {
@@ -112,91 +115,45 @@ html_theme_options = {
 }
 
 # ----------- Latex ----------- #
-latex_elements = {
-    "papersize" : "a4paper",
-    "pointsize" : "12pt",
-    'preamble': r'''
-        %*****************************************************************
-        %   Vzorec za pisanje diplomskega dela,
-        %   ki vsebuje navodila za izdelavo diplomskega dela
-        %
-        %   UNIVERZA V LJUBLJANI
-        %   Fakulteta za računalništvo in informatiko
-        %
-        %   Pripravila: Peter.Peer@fri.uni-lj.si
-        %               Franc.Solina@fri.uni-lj.si
-        %*****************************************************************
-        %Uporabljeni paketi
-        \usepackage[utf8]{inputenc}
-        \usepackage{cmap}
-        \usepackage{type1ec}
-        \usepackage[T1]{fontenc}
-        \usepackage{fancyhdr}
-        \usepackage{graphicx,epsfig}
+if build_thesis:
+    with open("thesis/titlepage.tex", "r", encoding="utf-8") as reader:
+        latex_title_page = reader.read()
 
-        %Velikost strani - dvostransko
-        \oddsidemargin 1.4cm
-        \evensidemargin 0.35cm
-        \textwidth 14cm
-        \topmargin 0.26cm
-        \headheight 0.6cm
-        \headsep 1.5cm
-        \textheight 20cm
+    with open("thesis/abstract.tex", "r", encoding="utf-8") as reader:
+        latex_abstract_page = reader.read()
 
-        %Nastavitev glave in repa strani
-        \pagestyle{fancy}
-        \fancyhead{}
-        \renewcommand{\chaptermark}[1]{\markboth{\textsf{Poglavje \thechapter:\ #1}}{}}
-        \renewcommand{\sectionmark}[1]{\markright{\textsf{\thesection\  #1}}{}}
-        \fancyhead[RE]{\leftmark}
-        \fancyhead[LO]{\rightmark}
-        \fancyhead[LE,RO]{\thepage}
-        \fancyfoot{}
-        \renewcommand{\headrulewidth}{0.0pt}
-        \renewcommand{\footrulewidth}{0.0pt}
+    latex_additional_body_pages = [
+        latex_title_page,
+        latex_abstract_page
+    ]
 
-        \newcommand{\gnuplot}{\textbf{gnuplot}}
-        \newcommand{\pgfname}{\textsc{pgf}}
-        \newcommand{\tikzname}{Ti\emph{k}Z}
-    ''',
-    "maketitle" :
-    r"""
-        % stran 1 med uvodnimi listi
-        \thispagestyle{empty} 
+    latex_engine = 'xelatex'
+    latex_elements = {
+        'fontpkg': r"""
+            \setromanfont{Times New Roman}
+            \setsansfont{Arial}
+            """,
+        "papersize" : "a4paper",
+        "pointsize" : "12pt",
+        'preamble': r'''
+            %Velikost strani - dvostransko
+            \oddsidemargin 1.4cm
+            \evensidemargin 0.35cm
+            \textwidth 14cm
+            \topmargin 0.26cm
+            \headheight 0.6cm
+            \headsep 1.5cm
+            \textheight 20cm
 
-        \begin{center}
-        {\large 
-        UNIVERZA V LJUBLJANI\\
-        FAKULTETA ZA RAČUNALNIŠTVO IN INFORMATIKO\\
-        }
-
-        \vspace{3cm}
-        {\LARGE Ime Priimek}\\
-
-        \vspace{2cm}
-        \textsc{\textbf{\LARGE 
-        Navodila za izdelavo in vzorec za\\ 
-        pisanje diplomskega dela\\ 
-        }}
-
-        \vspace{2cm}
-        { DIPLOMSKO DELO}\\
-        { NA UNIVERZITETNEM ŠTUDIJU\\
-        }
-        { [NA INTERDISCIPLINARNEM UNIVERZITETNEM ŠTUDIJU]\\
-        }
-        { [NA VISOKOŠOLSKEM STROKOVNEM ŠTUDIJU]\\
-        }
-
-        \vspace{2cm} 
-        {\Large Mentor: prof. [doc.] dr. Ime Priimek}
-
-        \vfill
-        {\Large Ljubljana, 2022}
-        \end{center}
-        \ \thispagestyle{empty}
-    """
-}
-
-
-# latex_additional_files = [os.path.join("./latex", x) for x in os.listdir("./latex")]
+            %Nastavitev glave in repa strani
+            \pagestyle{fancy}
+            \fancyhead{}
+            \renewcommand{\chaptermark}[1]{\markboth{\textsf{Poglavje \thechapter:\ #1}}{}}
+            \renewcommand{\sectionmark}[1]{\markright{\textsf{\thesection\  #1}}{}}
+            \fancyhead[RE]{\leftmark}
+            \fancyhead[LO]{\rightmark}
+            \fancyhead[LE,RO]{\thepage}
+            \fancyfoot{}
+        ''',
+        "maketitle": "\n\n".join(latex_additional_body_pages),
+    }

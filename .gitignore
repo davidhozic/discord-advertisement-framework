@@ -7,3 +7,4 @@ src/test.py
 venv/**
 docs/source/ref.rst
 docs/source/reference/
+docs/source/thesis/thesis_lit.rst
