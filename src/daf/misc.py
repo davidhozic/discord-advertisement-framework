@@ -128,6 +128,8 @@ def _async_safe(semaphore: Union[str, Semaphore], amount: Optional[int]=1) -> Ca
         async def sub_wrapper(sem: Semaphore, *args, **kwargs):   
             for i in range(amount):
                 await sem.acquire()
+            
+            result = None
             try:
                 result = await coroutine(*args, **kwargs)
             finally:
