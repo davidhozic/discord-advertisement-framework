@@ -18,14 +18,6 @@ import subprocess
 sys.path.insert(0, os.path.abspath('../../src/'))
 sys.path.insert(0, os.path.abspath('.'))
 
-def create_reference():
-    """
-    Creates .rst files for class/function descriptions.
-    """
-    file_dir = os.path.dirname(__file__)
-    file_dir = file_dir.rstrip(os.path.basename(file_dir))
-    file_dir = os.path.join(file_dir, "scripts/generate_autodoc.py")
-    subprocess.run(f"{sys.executable} {file_dir}", shell=False)
 
 # -- Project information -----------------------------------------------------
 project = 'Discord Advertisement Framework'
@@ -38,7 +30,6 @@ if gh_release is not None:
     version = gh_release
 elif readthedocs_release is not None:
     version = readthedocs_release
-    create_reference() # RTD does not run the makefile so hack is required
 else:
     version = "v0.0.1"
 
