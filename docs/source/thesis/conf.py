@@ -82,6 +82,7 @@ autodoc_default_options = {
 }
 
 
+
 # Intersphinx
 intersphinx_mapping = {
     'PyCord': ("https://docs.pycord.dev/en/stable/", None)
@@ -110,3 +111,36 @@ html_theme_options = {
 }
 
 # ----------- Latex ----------- #
+with open("titlepage.tex", "r", encoding="utf-8") as reader:
+    latex_title_page = reader.read()
+
+latex_engine = 'xelatex'
+latex_elements = {
+    'fncychap': r'',
+    'fontpkg': r"""
+        \setromanfont{Times New Roman}
+        \setsansfont{Arial}
+        """,
+    "papersize" : "a4paper",
+    "pointsize" : "12pt",
+    'preamble': r'''
+        %Velikost strani - dvostransko
+        \oddsidemargin 1.4cm
+        \evensidemargin 0.35cm
+        \textwidth 14cm
+        \topmargin 0.26cm
+        \headheight 0.6cm
+        \headsep 1.5cm
+        \textheight 20cm
+
+        %Nastavitev glave in repa strani
+        \pagestyle{fancy}
+        \fancyhead{}
+        \renewcommand{\sectionmark}[1]{\markright{\textsf{\thesection\  #1}}{}}
+        \fancyhead[RE]{\leftmark}
+        \fancyhead[LO]{\rightmark}
+        \fancyhead[LE,RO]{\thepage}
+        \fancyfoot{}
+    ''',
+    "maketitle": latex_title_page,
+}
