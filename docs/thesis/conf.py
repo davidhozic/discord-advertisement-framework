@@ -85,7 +85,9 @@ autodoc_default_options = {
 
 # Intersphinx
 intersphinx_mapping = {
-    'PyCord': ("https://docs.pycord.dev/en/stable/", None)
+    'PyCord': ("https://docs.pycord.dev/en/stable/", None),
+    "DAF" : ("https://daf.davidhozic.com/en/stable/", None),
+    "Python" : ("https://docs.python.org/3/", None)
 }
 
 # ----------- HTML ----------- #
@@ -114,7 +116,7 @@ html_theme_options = {
 with open("titlepage.tex", "r", encoding="utf-8") as reader:
     latex_title_page = reader.read()
 
-latex_engine = 'xelatex'
+#latex_engine = 'xelatex'
 latex_elements = {
     "tableofcontents": r"""
         \tableofcontents
@@ -123,10 +125,10 @@ latex_elements = {
         \newpage
     """,
     'fncychap': r'',
-    'fontpkg': r"""
-        \setromanfont{Times New Roman}
-        \setsansfont{Arial}
-        """,
+    # 'fontpkg': r"""
+    #     \setromanfont{Times New Roman}
+    #     \setsansfont{Arial}
+    #     """,
     "papersize" : "a4paper",
     "pointsize" : "12pt",
     'preamble': r'''
