@@ -1,9 +1,4 @@
 {
-    "copy": [
-        {
-            "from": "../common/**",
-            "to": "./DEP/"
-        }
-    ],
-    "scripts": []
+    "copy": [],
+    "scripts": ["./scripts/generate_autodoc.py"]
 }
