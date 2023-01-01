@@ -116,6 +116,12 @@ with open("titlepage.tex", "r", encoding="utf-8") as reader:
 
 latex_engine = 'xelatex'
 latex_elements = {
+    "tableofcontents": r"""
+        \tableofcontents
+        \listoffigures
+        \listoftables
+        \newpage
+    """,
     'fncychap': r'',
     'fontpkg': r"""
         \setromanfont{Times New Roman}

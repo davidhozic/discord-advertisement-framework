@@ -8,6 +8,5 @@ Front page of the thesis
     thanknote
     abstract
     introduction
+    discord
     thesis_lit
-
-
