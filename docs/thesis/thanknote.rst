@@ -1,12 +1,10 @@
 
 
-.. only:: html
+==================
+Acknowledgements
+==================
 
-    ================
-    Thanks note
-    ================
-
-.. rubric:: Thanks note
+.. rubric:: Acknowledgements
 
 I would like to thank my mentor for the guidance and support during the completion of my Bachelor thesis. His expertise and enthusiasm for my research helped me to stay focused and motivated throughout the entire process.
 

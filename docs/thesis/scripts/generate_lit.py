@@ -15,39 +15,49 @@ SOURCES_FILE = "../sources.json"
 ## All paths relative to script file location
 os.chdir(os.path.dirname(__file__))
 
+OUTPUT_HEADER = \
+"""
+..
+      AUTOMATICALLY GENERATED 
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!
+    !       DO NOT EDIT       !
+
+==============
+Bibliography
+==============
+"""
+
+OUTPUT_FOOTER = ""
 
 OUTPUT_FORMAT = \
 """
-.. [{ind}] {author}, "{title}" - {source} [Last checked: {updated}]
+:{title}:
+
+    | Author: {author}
+    | Source: {source}
+    | Last checked: {updated}
 """
 
 
 # Main script
 source_data = None
-source_output = ""
+source_output = OUTPUT_HEADER
 with open(SOURCES_FILE, "r", encoding="utf-8") as reader:
     source_data: List[Dict[str, str]] = json.load(reader)
 
-for i, item in enumerate(source_data, 1):
-    ind = str(i)
-    if i % 10 == 1:
-        ind += "st"
-    elif i % 10 == 2:
-        ind += "nd"
-    elif i % 10 == 3:
-        ind += "rd"
-    else:
-        ind += "th"
-    
+for item in source_data:
+    author=item["author"]
+    title=item["title"]
+    source=item["source"]
+    updated=item["updated"]
     source_output += OUTPUT_FORMAT.format(
-        ind=ind,
-        author=item["author"],
-        title=item["title"],
-        source=item["source"],
-        updated=item["updated"]
+        author=author,
+        title=title,
+        source=source,
+        updated=updated,
     )
 
-
+source_output += OUTPUT_FOOTER
 with open(OUTPUT_FILE, "w", encoding="utf-8") as writer:
     writer.write(source_output)
 
