@@ -1,10 +1,10 @@
 **/__pycache__/**
-settings.json
-dist/**
-build**
-**.egg-info
-src/test.py
 venv/**
-docs/source/ref.rst
+
+settings.json
+src/test.py
+
+docs/build
 docs/source/reference/
+docs/source/ref.rst
 docs/source/thesis/thesis_lit.rst
