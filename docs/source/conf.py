@@ -119,16 +119,13 @@ if build_thesis:
     with open("thesis/titlepage.tex", "r", encoding="utf-8") as reader:
         latex_title_page = reader.read()
 
-    with open("thesis/abstract.tex", "r", encoding="utf-8") as reader:
-        latex_abstract_page = reader.read()
-
     latex_additional_body_pages = [
-        latex_title_page,
-        latex_abstract_page
+        latex_title_page
     ]
 
     latex_engine = 'xelatex'
     latex_elements = {
+        'fncychap': r'',
         'fontpkg': r"""
             \setromanfont{Times New Roman}
             \setsansfont{Arial}
@@ -148,7 +145,6 @@ if build_thesis:
             %Nastavitev glave in repa strani
             \pagestyle{fancy}
             \fancyhead{}
-            \renewcommand{\chaptermark}[1]{\markboth{\textsf{Poglavje \thechapter:\ #1}}{}}
             \renewcommand{\sectionmark}[1]{\markright{\textsf{\thesection\  #1}}{}}
             \fancyhead[RE]{\leftmark}
             \fancyhead[LO]{\rightmark}

@@ -1,5 +1,8 @@
+==================
+Thesis
+==================
 
 .. toctree::
 
-    guide/logging
+    thesis/abstract
     thesis/thesis_lit
