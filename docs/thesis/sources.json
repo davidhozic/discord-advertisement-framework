@@ -10,5 +10,23 @@
         "title" : "Automated user accounts (self-bots)",
         "source": "https://support.discord.com/hc/en-us/articles/115002192352-Automated-user-accounts-self-bots-",
         "updated": "jan. 2023"
+    },
+    {
+        "author" : "GPT-3 (Open-AI)",
+        "title" : "Thanks note",
+        "source" : "https://chat.openai.com/chat",
+        "updated" : "jan. 2023"
+    },
+    {
+        "author": "investopedia (RAKESH SHARMA)",
+        "title": "Non-Fungible Token (NFT): What It Means and How It Works",
+        "source": "https://www.investopedia.com/non-fungible-tokens-nft-5115211",
+        "updated": "jan. 2023"
+    },
+    {
+        "author": "rwkgoodman (Jack Pestill)",
+        "title": "What are NFTs? And why are they important?",
+        "source": "https://www.rwkgoodman.com/info-hub/what-are-nfts-and-why-are-they-important/",
+        "updated": "jan. 2023"
     }
 ]
