@@ -56,3 +56,6 @@ even being present.
 
 The thesis' project doesn't focus on NFTs themselves much, but instead focuses on the shilling process, more specifically to
 the social network called **Discord**.
+
+The thesis talks about the project named **Discord Advertisement Framework**, which is a `Python <https://www.python.org>`_ based
+automatic Discord shiller.

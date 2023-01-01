@@ -84,7 +84,8 @@ autodoc_default_options = {
 
 # Intersphinx
 intersphinx_mapping = {
-    'PyCord': ("https://docs.pycord.dev/en/stable/", None)
+    'PyCord': ("https://docs.pycord.dev/en/stable/", None),
+    "Python" : ("https://docs.python.org/3/", None)
 }
 
 # ----------- HTML ----------- #

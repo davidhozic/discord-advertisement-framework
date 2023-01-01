@@ -9,4 +9,5 @@ Front page of the thesis
     abstract
     introduction
     discord
+    discord-advert-framework
     thesis_lit
