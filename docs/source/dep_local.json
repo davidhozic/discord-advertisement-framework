@@ -1,0 +1,9 @@
+{
+    "copy": [
+        {
+            "from": "../common/**",
+            "to": "./DEP/"
+        }
+    ],
+    "scripts": []
+}

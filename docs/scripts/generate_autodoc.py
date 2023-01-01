@@ -8,6 +8,8 @@ import re
 import pathlib
 from typing import List
 
+OUTPUT_PATH = "../common/reference"
+
 # Set current working directory to scripts folder
 os.chdir(os.path.dirname(__file__))
 
@@ -60,12 +62,10 @@ MANUAL_FUNCTION_TEMPLATE = \
     {docstring}
 """
 
-
-
 titles = daf.misc.doc_titles
-output_dir = pathlib.Path(f"../source/reference/")
+output_dir = pathlib.Path(OUTPUT_PATH)
 output_dir.mkdir(parents=True, exist_ok=True)
-with open("../source/reference/index.rst", "w", encoding="utf-8") as tocwriter:
+with open(os.path.join(OUTPUT_PATH, "index.rst"), "w", encoding="utf-8") as tocwriter:
     tocwriter.write(
         "=======================\n"
         "Programming Reference\n"
@@ -124,7 +124,7 @@ with open("../source/reference/index.rst", "w", encoding="utf-8") as tocwriter:
 
         if export_f_items or export_c_items:
             toc_entry = f"{category.lower().replace(' ', '_')}"
-            file_name = f"../source/reference/{toc_entry}.rst"
+            file_name = os.path.join(OUTPUT_PATH, f"{toc_entry}.rst")
             toc_entry = f"    {toc_entry}\n" 
             with open(file_name, "w", encoding="utf-8") as writer:
                 writer.write(CATEGORY_TEMPLATE.format(category_name=category))

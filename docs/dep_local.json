@@ -1,0 +1,4 @@
+{
+    "copy": [],
+    "scripts": ["./scripts/generate_autodoc.py"]
+}

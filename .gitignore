@@ -6,5 +6,9 @@ src/test.py
 
 docs/build
 docs/source/reference/
-docs/source/ref.rst
-docs/source/thesis/thesis_lit.rst
+
+docs/thesis/thesis_lit.rst
+docs/thesis/reference/
+
+docs/common/reference
+**/DEP/**
