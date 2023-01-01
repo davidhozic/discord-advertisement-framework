@@ -1,9 +1,4 @@
 {
-    "copy": [
-        {
-            "from" : "../common/**",
-            "to": "./DEP/"
-        }
-    ],
+    "copy": [],
     "scripts": ["./scripts/generate_lit.py"]
 }

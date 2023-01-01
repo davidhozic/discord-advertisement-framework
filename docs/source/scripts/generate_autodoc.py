@@ -8,13 +8,13 @@ import re
 import pathlib
 from typing import List
 
-OUTPUT_PATH = "../common/reference"
+OUTPUT_PATH = "../reference"
 
 # Set current working directory to scripts folder
 os.chdir(os.path.dirname(__file__))
 
 
-sys.path.append(os.path.abspath("../../src"))
+sys.path.append(os.path.abspath("../../../src"))
 os.environ["DOCUMENTATION"] = "True"
 import daf
 
