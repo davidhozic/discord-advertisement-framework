@@ -14,30 +14,33 @@ SOURCES_FILE = "../source/thesis/sources.json"
 # Setup
 ## All paths relative to script file location
 os.chdir(os.path.dirname(__file__))
-## Format
-OUTPUT_HEADER = \
-"=======================\n"\
-"Literature\n"\
-"=======================\n"
+
 
 OUTPUT_FORMAT = \
 """
-.. _`{title}`:
-
-[{ind}] {author}, "{title}" - {source} [Last checked: {updated}]
+.. [{ind}] {author}, "{title}" - {source} [Last checked: {updated}]
 """
-TITLE_REPLACEMENT_CHARS = {' ', ',', ".", "!", "-"}
 
 
 # Main script
 source_data = None
-source_output = OUTPUT_HEADER
+source_output = ""
 with open(SOURCES_FILE, "r", encoding="utf-8") as reader:
     source_data: List[Dict[str, str]] = json.load(reader)
 
-for i, item in enumerate(source_data):
+for i, item in enumerate(source_data, 1):
+    ind = str(i)
+    if i % 10 == 1:
+        ind += "st"
+    elif i % 10 == 2:
+        ind += "nd"
+    elif i % 10 == 3:
+        ind += "rd"
+    else:
+        ind += "th"
+    
     source_output += OUTPUT_FORMAT.format(
-        ind=i,
+        ind=ind,
         author=item["author"],
         title=item["title"],
         source=item["source"],
