@@ -1,8 +1,8 @@
 {
     "copy": [
         {
-            "from" : "../common/reference/**",
-            "to": "./DEP/reference/"
+            "from" : "../common/**",
+            "to": "./DEP/"
         }
     ],
     "scripts": ["./scripts/generate_lit.py"]
