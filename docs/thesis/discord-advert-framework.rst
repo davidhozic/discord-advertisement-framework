@@ -111,11 +111,11 @@ The above :class:`daf.message.TextMESSAGE` objects accept the most parameters of
 * end_period   - The same as start_period except it represents the upper range of the randomized period. If ``start_period`` is ``None``, the actual period is the same as end_period.
 * data         - The data that is sent to Discord. It can in this case be:
     
-    * :class:`str` - String (text) that is sent to the text channel.
-    * :class:`discord.Embed` - API wrapper's object representing embedded messages. These are fancy formatted boxes with text, image, thumbnail, author, itd.
-    * :class:`daf.dtypes.FILE` - Represents a file that is sent to Discord.
-    * :class:`list` - List of any of the above types.
-    * Special getter function for dynamically obtained (sent is what the function returns at individual call) data, see :func:`daf.dtypes.data_function` .
+  * :class:`str` - String (text) that is sent to the text channel.
+  * :class:`discord.Embed` - API wrapper's object representing embedded messages. These are fancy formatted boxes with text, image, thumbnail, author, itd.
+  * :class:`daf.dtypes.FILE` - Represents a file that is sent to Discord.
+  * :class:`list` - List of any of the above types.
+  * Special getter function for dynamically obtained (sent is what the function returns at individual call) data, see :func:`daf.dtypes.data_function` .
 
 * channels - List of snowflakes which link to Discord channels where the shilling is required.
 
