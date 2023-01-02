@@ -15,6 +15,13 @@ Discord Advertisement Framework
     Any links referencing functions/classes inside the project will open a page to |DAFDOC|_
 
 
+.. figure:: ./DEP/source/images/logo.png
+    :width: 3cm
+
+    Discord Advertisement Framework logo
+    (Made with DALL-E + Adobe Photoshop)
+
+
 DAF Introduction
 ================================
 Discord Advertisement Framework (from this point on, DAF) is a fully automatic shiller made part of the diploma.

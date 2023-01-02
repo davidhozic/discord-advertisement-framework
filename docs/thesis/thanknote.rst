@@ -24,8 +24,4 @@ Nazadnje bi se rad iskreno zahvalil svojim staršem za njihovo neomajno podporo 
 Vsem se zahvaljujem za vaše neprecenljive prispevke k mojemu izobraževanju in strokovnemu razvoju. Resnično sem hvaležen, da sem imel priložnost delati s tako nadarjenimi in predanimi posamezniki.
 
 
-.. raw:: latex
-
-    \clearpage\thispagestyle{empty}\hfill\clearpage
-    
 

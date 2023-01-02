@@ -25,4 +25,3 @@ clean:
 %: Makefile
 	./setup.py
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
-	$(CLEANUP)
