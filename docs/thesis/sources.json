@@ -24,6 +24,12 @@
         "updated": "jan. 2023"
     },
     {
+        "author": "Discord",
+        "title" : "Discord API Reference",
+        "source": "https://discord.com/developers/docs/reference - :ref:`Discord API`",
+        "updated": "jan. 2023"
+    },
+    {
         "author" : "GPT-3 (Open-AI)",
         "title" : "Refactoring",
         "source" : "https://chat.openai.com/chat",
