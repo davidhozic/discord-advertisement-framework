@@ -30,6 +30,12 @@
         "updated": "jan. 2023"
     },
     {
+        "author": "Discord",
+        "title" : "Discord rate limits",
+        "source": "https://discord.com/developers/docs/topics/rate-limits - :ref:`Discord rate limiting`",
+        "updated": "jan. 2023"
+    },
+    {
         "author" : "GPT-3 (Open-AI)",
         "title" : "Refactoring",
         "source" : "https://chat.openai.com/chat",

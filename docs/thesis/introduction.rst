@@ -40,7 +40,7 @@ In the coming years, businesses are expected to make increasing use of NFTs for 
 Shilling
 ===================
 While you may of heard of NFTs before, you might not of heard of the process called *shilling*.
-Shilling is a more fancy (buzz-wordy) term for promotion / advertising NFTs on social media.
+Shilling is term for promotion / advertising NFTs on social media.
 But it isn't just any kind of advertising, like putting some promotional material on a website or having
 a stand on the public for promotion, but instead is a more controversial method of marketing that is 
 more engaged. 
