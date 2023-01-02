@@ -31,7 +31,7 @@ OUTPUT_FOOTER = ""
 
 OUTPUT_FORMAT = \
 """
-:{title}:
+:[{ind}] "{title}":
 
     | Author: {author}
     | Source: {source}
@@ -45,12 +45,13 @@ source_output = OUTPUT_HEADER
 with open(SOURCES_FILE, "r", encoding="utf-8") as reader:
     source_data: List[Dict[str, str]] = json.load(reader)
 
-for item in source_data:
+for i, item in enumerate(source_data, 1):
     author=item["author"]
-    title=item["title"]
+    title=item["title"].replace(":", r"\:")
     source=item["source"]
     updated=item["updated"]
     source_output += OUTPUT_FORMAT.format(
+        ind=i,
         author=author,
         title=title,
         source=source,

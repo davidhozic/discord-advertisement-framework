@@ -1,4 +1,6 @@
 {
-    "copy": [],
+    "copy": [
+        {"from": "../source/images/logo.png", "to": "./DEP/"}
+    ],
     "scripts": ["./scripts/generate_lit.py"]
 }

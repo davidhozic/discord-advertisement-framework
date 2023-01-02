@@ -92,7 +92,7 @@ intersphinx_mapping = {
 
 # ----------- HTML ----------- #
 html_title = project
-html_logo = "images/logo.png"
+html_logo = "./DEP/source/images/logo.png"
 html_favicon = html_logo
 html_theme = 'furo'
 html_static_path = ['_static']
@@ -100,8 +100,8 @@ html_theme_options = {
     "navigation_with_keys": True,
     "top_of_page_button": "edit",
     "source_repository": "https://github.com/davidhozic/discord-advertisement-framework/",
-    "source_branch": "develop",
-    "source_directory": "docs/source",
+    "source_branch": "master",
+    "source_directory": "docs/thesis",
     "footer_icons": [
         {
             "name": "GitHub",
@@ -116,13 +116,12 @@ html_theme_options = {
 with open("titlepage.tex", "r", encoding="utf-8") as reader:
     latex_title_page = reader.read()
 
-#latex_engine = 'xelatex'
+# latex_engine = 'xelatex'
 latex_elements = {
     "tableofcontents": r"""
         \tableofcontents
         \listoffigures
         \listoftables
-        \newpage
     """,
     'fncychap': r'',
     # 'fontpkg': r"""
@@ -132,7 +131,14 @@ latex_elements = {
     "papersize" : "a4paper",
     "pointsize" : "12pt",
     'preamble': r'''
-        %Velikost strani - dvostransko
+        \usepackage{afterpage}
+
+        \newcommand\blankpage{%
+        \null
+        \thispagestyle{empty}%
+        \addtocounter{page}{-1}%
+        \newpage}
+
         \oddsidemargin 1.4cm
         \evensidemargin 0.35cm
         \textwidth 14cm
@@ -140,8 +146,6 @@ latex_elements = {
         \headheight 0.6cm
         \headsep 1.5cm
         \textheight 20cm
-
-        %Nastavitev glave in repa strani
         \pagestyle{fancy}
         \fancyhead{}
         \renewcommand{\sectionmark}[1]{\markright{\textsf{\thesection\  #1}}{}}
