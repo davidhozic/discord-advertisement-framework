@@ -5,7 +5,7 @@ Front page of the thesis
 
 .. toctree::
 
-    thanknote
+    acknowledgements
     abstract
     introduction
     discord
