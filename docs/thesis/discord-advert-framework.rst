@@ -151,3 +151,119 @@ Individual classes and function descriptions can be found on :ref:`Programming R
 
 Additional guide is available on :ref:`Guide` .
 
+
+
+Internals
+=============
+The following content describes how DAF works internally.
+
+For DAF to work, it utilizes a build-in Python_ module called :mod:`asyncio`, which allows the application to asynchronous frameworks 
+that utilize the await / async syntax ( since Python_ 3.5 - `PEP 492 <https://peps.python.org/pep-0492/>`_ ).
+
+DAF can be represented with multiple abstraction layers:
+
+- Selenium layer,
+- Control layer (core),
+- Account layer,
+- Guild layer,
+- Messages layer,
+- Logging layer,
+- API wrapper layer
+
+
+.. figure:: images/daf_abstraction.drawio.svg
+
+    Abstraction
+
+
+Selenium layer
+-----------------
+
+.. error:: **TODO:** NOT YET WRITTEN
+
+Control layer
+----------------
+DAF can be controlled during it's runtime with the *control layer*, also called the core layer.
+
+This layer is used to control the framework startups and shutdowns. It is also responsible for adding or removing objects from layers:
+
+- Account layer,
+- Guild layer,
+- Message layer
+
+
+Framework startup
+^^^^^^^^^^^^^^^^^^
+When the user calls :func:`daf.core.run` function, the first thing that happens is the creation of :mod:`asyncio`'s event loop which is the main mechanism behind switching coroutines.
+After that a task is created for the :func:`daf.core.initialize` coroutine function which:
+
+#. initializes the logging layer,
+#. Initializes the accounts layer,
+#. Calls the user given function passed to :func:`daf.core.run`.
+
+Account layer
+---------------
+The account layer is responsible for managing accounts.
+
+The account layer on each new account first makes a login attempt. 
+If the attempt is successful it signals the guild layer to initialize all the given servers.
+At the end it creates a shilling task for the related account.
+
+Each account runs it's own shilling task to allow parallel shilling of multiple accounts at once. 
+A single shilling task iterates all the servers the :class:`~daf.client.ACCOUNT` object has and signals the guild layer to check for ready
+messages to be shilled. More than one shilling task would be redundant since Discord would simply start returning rate limit errors, thus removing any parallelism in each account.
+Debatably 2 tasks would make sense since audio messages could be streamed while text messages are being sent without causing a rate limit, however having 2 tasks would require
+some extra protection and possibly cause unpredictable code since they would share resources.
+Using :class:`~asyncio.Lock`'s (mutexes) would solve unpredictable behavior, but would remove any parallelism.
+
+
+.. raw:: latex
+
+    \newpage
+
+
+Guild layer
+-------------
+The guild layer is responsible for initializing the message layer and signaling 
+the message layer to send messages to channels, whenever it detects a message is ready to be shilled.
+It is also responsible for removing any messages that should be deleted, either by design or by critical errors
+that require intervention.
+
+The guild layer checks each message if it is to be removed, if not it creates coroutine objects for each message and then awaits
+the coroutines which causes the message layer to shill each message to the belonging channels.
+
+After each message send, the guild layer also signals the logging layer to make a log of the just now sent message.
+
+.. error:: **TODO:** Guild layer diagram.
+
+
+.. raw:: latex
+
+    \newpage
+
+
+Logging layer
+---------------
+The logging layer is responsible for saving message logs after getting data from the :ref:`Guild layer`.
+
+Logging is handled thru logging manager objects and it supports 3 different logging schemes:
+
+1. JSON logging - :class:`daf.logging.LoggerJSON`,
+2. CSV logging (nested fields are JSON) - :class:`daf.logging.LoggerCSV` and
+3. SQL logging (multiple dialects) - :class:`daf.logging.LoggerSQL`
+
+
+.. figure:: ./DEP/source/guide/images/logging_process.drawio.svg
+    :width: 300
+
+    Logging layer flow diagram
+
+
+Upon a logging request from the :ref:`Guild layer`, the logging layer obtains the globally set logging manager and calls
+the method responsible for saving the log. If no exceptions are raised the logging layer stays silent.
+
+In case of any exceptions, the logging layers traces the exception to the console, selects the backup (fallback) logging manager that is 
+set by the manager's ``fallback`` parameter and repeats the process. It repeats this process until it runs out of fallbacks.
+
+If it runs out of fallbacks, then the log will not be saved and an error will traced to the console notifying the user that
+a log will not be saved.

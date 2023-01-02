@@ -6,8 +6,8 @@ Discord
 
 .. _`API Reference`: https://discord.com/developers/docs/topics/opcodes-and-status-codes
 
-This chapter contains some background information on Discord, including how it came to be and some basic information on how it works.
-It should give the reader basic background that is needed to understand the rest of the content of the thesis project.
+The project focuses on Discord shilling and in order to understand the rest of the thesis, 
+this chapter contains some background information on Discord, including how it came to be and some basic information on how it works.
 
 
 What is Discord
@@ -225,11 +225,12 @@ Authentication
 The authentication though the API is performed with the ``Authorization`` header inside
 the HTTP request header in the following ways:
 
-1. User accounts: ``Authorization: TOKEN``
-2. Bots: 
-
-  - ``Authorization: Bot TOKEN``, for fixed bot tokens
-  - ``Authorization: Bearer TOKEN``, for bearer token.
+1. User accounts:
+    ``Authorization: TOKEN``
+2. Bots:
+    ``Authorization: Bot TOKEN``
+3. External applications (OAuth2):
+    ``Authorization: Bearer TOKEN``
 
 .. Caution::
 
@@ -254,3 +255,43 @@ Some codes include:
 - 40001: Unauthorized. Provide a valid token and try again.
 
 Full list of error codes is available on the `API Reference`_ .
+
+
+Discord rate limiting
+----------------------
+
+Rate limiting is a technique used to control the amount of incoming and outgoing traffic to or from a network, server, or application.
+It is used to prevent overloading of resources, protect against denial of service (DoS) attacks,
+and ensure that a system remains available and responsive to legitimate requests.
+
+Discord has implemented rate limits on its APIs to prevent spam, abuse, and server overload.
+These limits apply to both individual users and bots and can be based on a specific route or for all requests made.
+Some routes have specific rate limits that may also vary depending on the HTTP method used (such as GET, POST, PUT, or DELETE).
+In some cases, rate limits for similar routes may be grouped together, as indicated in the X-RateLimit-Bucket response header.
+This header can be used as a unique identifier to group shared limits.
+
+During the calculation of rate limits, some routes take into account the top-level resources within the path, such as the guild_id when calling /guilds/{guild.id}/channels.
+Currently, the top-level resources that are limited include channels (identified by the channel_id), guilds (identified by the guild_id),
+and webhooks (identified by the webhook_id or webhook_id + webhook_token).
+This means that if two different top-level resources are used in the same endpoint, the rate limits for those resources will be calculated separately.
+For example, if a rate limit is reached when calling the endpoint /channels/1234, it would still be possible to call another endpoint such as /channels/9876 without hitting the limit.
+
+In addition to per-route limits, global rate limits also exist and apply to the total number of requests made by a user or bot, regardless of the specific route.
+
+The API also returns an optional header in the response that tells the bot, how many requests can still be be made, without
+triggering the rate limit. The header is called ``X-RateLimit-Remaining``. 
+This header is NOT returned if the authorization token used, belongs to an user account.
+
+If the rate limit is exceeded (from making too many requests), then a HTTP status of 429 is returned in the response.
+The data returned when the response features 429 status is a JSON dictionary:
+
++-------------+---------+-------------------------------------------------------------------+
+|    Field    |  Type   |                            Description                            |
++=============+=========+===================================================================+
+| message     | string  | A message saying you are being rate limited.                      |
++-------------+---------+-------------------------------------------------------------------+
+| retry_after | float   | The number of seconds to wait before submitting another request.  |
++-------------+---------+-------------------------------------------------------------------+
+| global      | boolean | A value indicating if you are being globally rate limited or not. |
++-------------+---------+-------------------------------------------------------------------+
+

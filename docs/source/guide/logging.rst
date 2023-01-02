@@ -19,7 +19,7 @@ Logging is handled thru so called **logging managers**. Currently, 3 different m
 If a logging managers fails saving a log, then it's fallback manager will be used temporarily to store the log.
 It will only use the fallback once and then, at the next message, the original manager will be used.
 
-.. figure:: images/logging_process.drawio.svg
+.. figure:: ./images/logging_process.drawio.svg
     
     Logging process with fallback
 
