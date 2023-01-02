@@ -1,6 +1,6 @@
 {
     "copy": [
-        {"from": "../source/images/logo.png", "to": "./DEP/"}
+        {"from": "../images/logo.png", "to": "./DEP/"}
     ],
     "scripts": ["./scripts/generate_lit.py"]
 }

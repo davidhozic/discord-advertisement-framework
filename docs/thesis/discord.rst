@@ -1,6 +1,11 @@
 ===================
 Discord
 ===================
+
+.. _`Developer mode`: https://support.discord.com/hc/en-us/articles/206346498-Where-can-I-find-my-User-Server-Message-ID-
+
+.. _`API Reference`: https://discord.com/developers/docs/topics/opcodes-and-status-codes
+
 This chapter contains some background information on Discord, including how it came to be and some basic information on how it works.
 It should give the reader basic background that is needed to understand the rest of the content of the thesis project.
 
@@ -131,3 +136,121 @@ They can be accessed from the main menu or from the user's contact list.
 One of the great features of DMs is the ability to create group chats, allowing users to communicate with multiple people at once.
 Discord also offers a "Do Not Disturb" mode, which allows users to silence their DMs while they are away or busy.
 Overall, DMs are a valuable tool for connecting with friends and colleagues on Discord.
+
+
+
+Snowflake ID
+--------------
+A Discord Snowflake is a unique ID assigned to every Discord user, channel, guild and other resources.
+It is a 64-bit integer that is generated when the object is created and cannot be altered or reassigned.
+The term "snowflake" refers to the unique and individual nature of the ID, similar to how no two snowflakes are exactly alike.
+
+The Discord Snowflake ID system was implemented to solve the problem of assigning unique IDs to objects in a distributed system.
+In the past, Discord had used timestamps to generate IDs, but this caused problems when multiple objects were created at the same time, resulting in non-unique IDs.
+The Snowflake ID system avoids this problem by using a combination of a timestamp, a worker ID, and a sequence number to generate a unique ID.
+
+One of the benefits of the Snowflake ID system is that it allows Discord to easily track the creation and deletion of objects.
+The timestamp component of the ID allows Discord to determine when an object was created, and the sequence number allows them to determine the order in which objects were created.
+This can be useful for things like auditing or tracking user activity.
+
+In addition to being unique, Discord Snowflake IDs are also very large.
+With 64 bits of information, there are over 18 quintillion possible Snowflake IDs, meaning it is extremely unlikely that two objects will have the same ID.
+This makes Snowflake IDs a reliable and secure way to identify and track objects within Discord.
+
+While most users will not need to worry about Snowflake IDs, they can be useful for developers who are working with the Discord API.
+The API provides various methods for retrieving and manipulating objects based on their Snowflake ID,
+allowing developers to create custom bots and integrations that can interact with Discord in a variety of ways.
+
+Overall, the Discord Snowflake ID system is an important and integral part of how Discord operates.
+It allows Discord to uniquely identify and track objects within the platform, ensuring that everything runs smoothly and efficiently.
+
+.. raw:: latex
+
+    \newpage
+
+
+**Snowflake structure:**
+
++---------------------+----------+-----------+------------------------------------------------------------------------------------------------+
+|        Field        |   Bits   | Num. bits |                                         Description                                            |
++=====================+==========+===========+================================================================================================+
+| Timestamp           | 63 to 22 | 42 bits   | Milliseconds since Discord Epoch, the first second of 2015 or 1420070400000.                   |
++---------------------+----------+-----------+------------------------------------------------------------------------------------------------+
+| Internal worker ID  | 21 to 17 | 5 bits    |                                                                                                |
++---------------------+----------+-----------+------------------------------------------------------------------------------------------------+
+| Internal process ID | 16 to 12 | 5 bits    |                                                                                                |
++---------------------+----------+-----------+------------------------------------------------------------------------------------------------+
+| Increment           | 11 to 0  | 12 bits   | For every ID that is generated on that process, this number is incremented snowflake & 0xFFF   |
++---------------------+----------+-----------+------------------------------------------------------------------------------------------------+
+
+The snowflake can be obtained for each resource through the Discord client by enabling `Developer mode`_ 
+and then right clicking on wanted resource and left clicking *"Copy ID"*.
+
+.. raw:: latex
+
+    \newpage
+
+
+Discord API
+=================
+The core that the Discord client runs on is the Discord API.
+
+The Discord API allows developers to create applications that interact with the voice and chat platform through two main layers:
+
+- a HTTPS/REST API for general operations such as :
+  
+  - sending messages,
+  - creating channels,
+  - fetching information about a channel,
+  - joining a voice channel,
+  - ...
+
+- and a persistent secure WebSocket connection for real-time events such as:
+  
+  - new user joins the guild,
+  - channel is created / deleted,
+  - a new message is sent to a channel,
+  - reaction was added to a message,
+  - ...
+
+OAuth2 API can also be used to provide access to a platform or service through the Discord API.
+
+.. raw:: latex
+
+    \newpage
+
+
+Authentication
+-----------------
+The authentication though the API is performed with the ``Authorization`` header inside
+the HTTP request header in the following ways:
+
+1. User accounts: ``Authorization: TOKEN``
+2. Bots: 
+
+  - ``Authorization: Bot TOKEN``, for fixed bot tokens
+  - ``Authorization: Bearer TOKEN``, for bearer token.
+
+.. Caution::
+
+    Using the API on **user** accounts outside the Discord client is against ToS.
+
+
+Status codes
+---------------
+When making an API request to Discord, it is important to check the status code of the response to ensure that the request was successful.
+If the status code is in the 2xx range, it indicates that the request was successful.
+If the status code is in the 4xx range, it indicates that there was an error with the request, such as a missing parameter or an unauthorized request.
+If the status code is in the 5xx range, it indicates that there was an error on the server side.
+
+In addition to the standard HTTP error code, the Discord API can also return more detailed error codes through the "code" key in the JSON error response.
+This response will also include a "message" key with a user-friendly error string.
+Some of these errors may include additional details in the form of error messages provided by an "errors" object.
+
+Some codes include:
+
+- 10003: Unknown channel,
+- 30001: Maximum number of guilds reached (100),
+- 40001: Unauthorized. Provide a valid token and try again.
+
+Full list of error codes is available on the `API Reference`_ .
