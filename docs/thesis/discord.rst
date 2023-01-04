@@ -295,3 +295,73 @@ The data returned when the response features 429 status is a JSON dictionary:
 | global      | boolean | A value indicating if you are being globally rate limited or not. |
 +-------------+---------+-------------------------------------------------------------------+
 
+
+
+Shilling to Discord
+==========================
+Like explained in the :ref:`Shilling` chapter, shilling is a type of advertising.
+It can be advertised to Discord either manually or automatically.
+
+
+Manual shilling
+---------------------
+Manual shilling involves writing your advertisement, creating an account / accounts, finding the servers and then simply posting
+into the channels that are meant for it or finding the users to DM about your product.
+
+
+Generating shill content
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+You can generate the advertisement content either manually from the top of your head, or
+use some more sophisticated methods like AI. A great example of AI tools would be GPT-3 (Generative Pre-trained Transformer 3).
+
+GPT-3 (Generative Pre-training Transformer 3) is a state-of-the-art artificial intelligence language model developed by OpenAI.
+It has the ability to generate human-like text and perform a variety of tasks, such as translation, summarization, and question answering.
+GPT-3 is the largest and most powerful language model to date, with a capacity of 175 billion parameters. 
+It has garnered attention from both researchers and industry professionals due to its impressive capabilities and potential applications.
+
+For reference, the above paragraph was written using Chat GPT.
+
+To generate your advertisement content, you would, for example, pass GPT-3 with the following input:
+
+*"Write advertisement for my White Rabbit NFT project which came out in 2023. 
+We have over 9000 different NFT available for purchase. Talk about the limited Gray Rabbit NFT (only 50 available). Get additional information here www.mynft.domain"*
+
+and it would generate: 
+
+*"Attention all NFT collectors and art enthusiasts!
+We are excited to announce the launch of our White Rabbit NFT project, featuring over 9000 unique and one-of-a-kind digital art pieces. But that's not all - we have a special edition of limited Gray Rabbit NFTs available for purchase, with only 50 available worldwide.
+Don't miss out on the opportunity to own a piece of digital art history. These Gray Rabbit NFTs are sure to become highly sought after and increase in value over time.
+But act fast - there are only 50 available, and once they're gone, they're gone for good.
+For more information and to purchase your own Gray Rabbit NFT, visit www.mynft.domain. Don't wait - add one of these rare and valuable NFTs to your collection today!"*
+
+Once you have the advertisement content, you would just copy and paste it to each channel.
+
+.. figure:: images/chatgpt.png
+    :width: 400
+
+    Chat GPT (GPT-3) example
+
+
+Finding guilds to shill into
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Once you have your advertisement content, you need to find your guilds, that you want to shill into.
+A good place to find the servers would be simply searching the web for websites that have a list of different
+servers and allows searching for guilds by name / category.
+
+A good example for finding guilds (servers), would actually be Discord itself, as they hold a list of certain servers, but for a server to be eligible 
+for discovery on Discord, it needs to have at least 1000 members, meaning that the servers you can join directly from Discord's website, 
+probably have some protection against shilling and they probably don't allow it.
+
+Another, probably better, example would be website `Top.GG <https://top.gg>`_, which besides holding a list of servers,
+also holds a list of public Discord bots, but that is not relevant for the purposes of this thesis.
+Top.gg has a search bar with various parameters you can use to find your servers, to find NFT servers, it can be used
+to simply search for "NFT".
+
+After finding all the guilds, you would join all the guilds and find the channels appropriate to shill into
+(without the owners kicking / banning you). These channels are usually named *shill, shilling, advertising, self-promo, ...*.
+
+.. figure:: images/topgg_find_servers.png
+    :width: 400
+
+    Top.GG server discovery
+
