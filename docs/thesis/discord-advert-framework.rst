@@ -28,7 +28,7 @@ Discord Advertisement Framework (from this point on, DAF) is a fully automatic s
 
 It aims to eliminate the need of user presence while shilling is required.
 
-I got the idea to make the project from a friend, who needed a way to automatically shill his NFT project, Ada Dragons.
+I got the idea to make the project from a friend, who needed a way to automatically shill his NFT project.
 The original project was just a simple script which was about 100 lines long, but since then the project has grown into a 
 Python_ library consisting of ~5000 lines of original code.
 
