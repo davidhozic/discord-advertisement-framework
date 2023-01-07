@@ -2,7 +2,7 @@
 Scripts for generating thesis literature.
 (As footnotes)
 """
-from typing import List, Dict
+from typing import List, Dict, Iterable
 import os
 import json
 
@@ -21,37 +21,43 @@ OUTPUT_HEADER = \
       AUTOMATICALLY GENERATED 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!
     !       DO NOT EDIT       !
-
-==============
-Bibliography
-==============
 """
 
 OUTPUT_FOOTER = ""
 
 OUTPUT_FORMAT = \
 """
-:[{ind}] "{title}":
-
-    | Author: {author}
-    | Source: {source}
-    | Last checked: {updated}
+.. [{cit_ref}] "{title}" ({author}) - [{source}] (Last checked: {updated})
 """
 
 
 # Main script
 source_data = None
 source_output = OUTPUT_HEADER
+char_replace_map = {
+    (":", "!", "?", ".", "(", ")", "[", "]"): "",
+    ("-", " "): "_",
+}
+
 with open(SOURCES_FILE, "r", encoding="utf-8") as reader:
     source_data: List[Dict[str, str]] = json.load(reader)
 
 for i, item in enumerate(source_data, 1):
+    cit_ref = item["title"].lower()
     author=item["author"]
     title=item["title"].replace(":", r"\:")
     source=item["source"]
     updated=item["updated"]
+
+    for k, v in char_replace_map.items():
+        if isinstance(k, Iterable):
+            for item in k:            
+                cit_ref = cit_ref.replace(item, v)
+        else:
+            cit_ref = cit_ref.replace(k, v)
+
     source_output += OUTPUT_FORMAT.format(
-        ind=i,
+        cit_ref=cit_ref,
         author=author,
         title=title,
         source=source,
