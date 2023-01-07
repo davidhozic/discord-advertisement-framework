@@ -30,7 +30,7 @@ async def test_autoguild(guilds, accounts):
         assert guild_exclude not in found, "AutoGUILD included the guild that matches exclude pattern."
     finally:
         if auto_guild is not None:
-            daf.remove_object(auto_guild)
+            await daf.remove_object(auto_guild)
 
 @pytest.mark.asyncio
 async def test_autochannel(guilds, channels, accounts):
@@ -77,7 +77,7 @@ async def test_autochannel(guilds, channels, accounts):
         await auto_channel2.update()
     finally:
         if daf_guild is not None:
-            daf.remove_object(daf_guild)
+            await daf.remove_object(daf_guild)
 
     
 

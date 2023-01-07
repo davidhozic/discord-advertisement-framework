@@ -109,6 +109,7 @@ class ACCOUNT:
             connector = ProxyConnector.from_url(proxy)
 
         self._client = discord.Client(intents=intents, connector=connector)
+        self._deleted = False
         misc._write_attr_once(self, "_update_sem", asyncio.Semaphore(2))
 
     def __eq__(self, other):
@@ -132,6 +133,19 @@ class ACCOUNT:
         return self._running
     
     @property
+    def deleted(self) -> bool:
+        """
+        Returns
+        -----------
+        True
+            The object is no longer in the framework and should no longer
+            be used.
+        False
+            Object is in the framework in normal operation.
+        """
+        return self._deleted
+
+    @property
     def servers(self):
         """
         Returns all guild like objects inside the account's s
@@ -143,6 +157,16 @@ class ACCOUNT:
     def client(self) -> discord.Client:
         "Returns the API wrapper client"
         return self._client
+    
+    def _delete(self):
+        """
+        Sets the internal _deleted flag to True,
+        indicating the object should not be used.
+        """
+        self._deleted = True
+        for server in self.servers:
+            server._delete()
+
 
     async def initialize(self):
         """
@@ -212,6 +236,7 @@ class ACCOUNT:
             ``server`` is not in the shilling list.
         """
         if isinstance(server, guild._BaseGUILD):
+            server._delete()
             self._servers.remove(server)
         else:
             self._autoguilds.remove(server)
@@ -242,17 +267,19 @@ class ACCOUNT:
 
         return None
 
-    async def close(self):
+    async def _close(self):
         """
         Signals the tasks of this account to finish and
         waits for them.
         """
         trace(f"Logging out of {self.client.user.display_name}...")
         self._running = False
+        self._delete()
         for exc in await asyncio.gather(self.loop_task, return_exceptions=True):
             if exc is not None:
                 trace(f"Exception occurred in main task for account {self.client.user.display_name} (Token: {self._token[:TOKEN_MAX_PRINT_LEN]})",
                     TraceLEVELS.ERROR, exc)
+
         await self._client.close()
 
     async def _loop(self):
