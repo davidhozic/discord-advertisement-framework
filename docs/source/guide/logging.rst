@@ -19,7 +19,7 @@ Logging is handled thru so called **logging managers**. Currently, 3 different m
 If a logging managers fails saving a log, then it's fallback manager will be used temporarily to store the log.
 It will only use the fallback once and then, at the next message, the original manager will be used.
 
-.. figure:: images/logging_process.drawio.svg
+.. figure:: images/logging_process.png
     
     Logging process with fallback
 
@@ -65,7 +65,7 @@ All logs will contain keys:
     .. literalinclude:: ../../../Examples/Logging/JSON files/main_rickroll.py
         :language: python
         :caption: Code to produce JSON logs
-        
+        :emphasize-lines: 27, 36
 
 
 
@@ -112,7 +112,7 @@ The structure contains the following attributes:
     .. literalinclude:: ../../../Examples/Logging/CSV files/main_rickroll.py
         :language: python
         :caption: Code to produce JSON logs
-        
+        :emphasize-lines: 27, 36
 
 
 
@@ -145,10 +145,6 @@ This type of logging enables saving logs to a remote server inside the database.
 In addition to being smaller in size, database logging takes up less space and it allows easier data analysis.
 
 
-.. figure:: images/sql_logging_process.drawio.svg
-
-    SQL Logging diagram
-
 
 Dialects
 ----------------------
@@ -160,16 +156,35 @@ The following dialects are supported:
 - SQLite,
 - MySQL
 
+SQL process diagram
+---------------------
+
+.. card::
+
+    SQL initialization
+    ^^^^^^^^^^^^^^^^^^^^^
+    .. image:: images/sql_initialization.png
+        :scale: 75%
+
+
+.. card::
+
+    SQL logging process
+    ^^^^^^^^^^^^^^^^^^^^^
+    .. image:: images/sql_logging_diagram.png
+        :scale: 35%
+
+
 
 Usage
 --------------------------------
-For daf to use SQL logging, you need to pass the :func:`~daf.core.run` function with the ``logger`` parameter and pass it the :class:`~daf.logging.sql.LoggerSQL` object.
+For daf to use SQL logging, you need to pass the :func:`~daf.core.run` function with the ``logging`` parameter and pass it the :class:`~daf.logging.sql.LoggerSQL` object.
 
 .. only:: html
 
     .. literalinclude:: ../../../Examples/Logging/SQL Logging/rolls.py
         :language: python
-        
+        :emphasize-lines: 27, 36
 
 Features
 --------------------------------
@@ -184,7 +199,7 @@ Features
 
 ER diagram
 --------------------------------
-.. image:: images/sql_er.drawio.svg
+.. image:: images/er_diagram.png
 
 Tables
 --------------------------------
@@ -359,7 +374,7 @@ The derived logger class can then implement the following methods:
     Example:
     
     .. code-block:: python
-        
+        :emphasize-lines: 3, 10-12
     
         class LoggerCUSTOM(daf.logging.LoggerBASE):
             def __init__(self, name, fallback):

@@ -1,7 +1,7 @@
 """
 Discord Advertisement Framework
 
-Version 2.4
+Version 2.2
 """
 import _discord as discord
 from .client import *

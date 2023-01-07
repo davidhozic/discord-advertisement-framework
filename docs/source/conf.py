@@ -12,12 +12,9 @@
 #
 import os
 import sys
-import subprocess
-
 
 sys.path.insert(0, os.path.abspath('../../src/'))
 sys.path.insert(0, os.path.abspath('.'))
-
 
 # -- Project information -----------------------------------------------------
 project = 'Discord Advertisement Framework'
@@ -47,8 +44,7 @@ extensions = [
     "sphinx_copybutton",
     "enum_tools.autoenum",
     "sphinx_design",
-    "sphinx_search.extension",
-    "sphinxcontrib.inkscapeconverter"
+    "sphinx_search.extension"
 ]
 
 master_doc = 'index'

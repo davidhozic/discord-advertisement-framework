@@ -20,25 +20,19 @@ def get_data(storage: list):
     return text, daf.FILE(image) # Return message to be sent
 
 now = datetime.now()
-accounts = [
-    daf.ACCOUNT(
-        token="YOUR TOKEN",
-        is_user=False,
-        servers=[
-            daf.GUILD(
-                snowflake=123456789,
-                messages=[
+servers = [
+    daf.GUILD(
+        snowflake=123456789,
+        messages=[
 
-                    daf.TextMESSAGE(start_period=None, end_period=timedelta(days=1), data=get_data([]), channels=[123456789], mode="send", start_in=now.replace(second=0, microsecond=0, minute=0, hour=10) + timedelta(days=1) - now)
-                ],
-                logging=True
-            )
-        ]
+            daf.TextMESSAGE(start_period=None, end_period=timedelta(days=1), data=get_data([]), channels=[123456789], mode="send", start_in=now.replace(second=0, microsecond=0, minute=0, hour=10) + timedelta(days=1) - now)
+        ],
+        logging=True
     )
 ]
 
 
 ############################################################################################
-daf.run(accounts=accounts)
+daf.run(  token="YOUR TOKEN", server_list=servers)
                     
     

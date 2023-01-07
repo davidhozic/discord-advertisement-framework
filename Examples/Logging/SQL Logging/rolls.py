@@ -1,6 +1,5 @@
 from datetime import timedelta
 import daf
-
 rolls = [
     "https://i.pinimg.com/originals/b7/fb/80/b7fb80122cf46d0e584f3a0768aef282.gif",
     "https://bit.ly/3sHrjQZ",
@@ -13,25 +12,29 @@ rolls = [
 ]
 
 @daf.data_function
-def get(st):
+def get(st: list):
     item = st.pop(0)
     st.append(item)
     return item
 
-accounts = [
-    daf.ACCOUNT( token="SDASKDKLSADJKLSDJ",
-                 is_user=False,
-                 servers=[ 
-                    daf.GUILD(12345, [daf.TextMESSAGE(None, timedelta(seconds=5), get(rolls.copy()), [12345], "edit")], True) 
-                  ] )
+
+S = [
+daf.GUILD(
+            snowflake=123456789,
+            messages=[
+                daf.TextMESSAGE(None, timedelta(seconds=2), get(rolls), [123456789]),
+            ],
+            logging=True
+        )
 ]
 
 
 
 daf.run(
+    token="SDAJHDASHDJKAHDSKAHDKASHDAHDASJKHDAKJHDAKSHDKASHDKSJHD",
     #logger=daf.LoggerSQL(dialect="mysql", username="user", password="pass", database="TestDB", server="127.0.0.1"),
     logger=daf.LoggerSQL(dialect="postgresql", username="postgres", password="pass", database="TestDB", server="127.0.0.1"),
     #logger=daf.LoggerSQL(dialect="mssql", username="sa", password="pass", database="TestDB", server="127.0.0.1"),
     #logger=daf.LoggerSQL(dialect="sqlite", database="testdb"),
-    accounts=accounts
+    server_list=S
 )
