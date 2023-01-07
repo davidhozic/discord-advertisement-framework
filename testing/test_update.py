@@ -49,7 +49,7 @@ async def test_text_message_update(channels, guilds, accounts):
 
         # DirectMESSAGE send
         await direct_message.update(data=data)
-        result = await direct_message._send()
+        result, _panic = await direct_message._send()
         print(direct_message)
 
         # Check results

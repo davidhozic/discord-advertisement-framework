@@ -127,11 +127,12 @@ class BaseMESSAGE:
         self._created_at = datetime.now()
         self._data = data
         self._fbcdata = isinstance(data, _FunctionBaseCLASS)
+        self._deleted = False
         # Attributes created with this function will not be re-referenced to a different object
         # if the function is called again, ensuring safety (.update_method)
         misc._write_attr_once(self, "update_semaphore", asyncio.Semaphore(1))
         # For comparing copies of the object (prevents .update from overwriting)
-        misc._write_attr_once(self, "_id", id(self)) 
+        misc._write_attr_once(self, "_id", id(self))
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}(data={self._data})"
