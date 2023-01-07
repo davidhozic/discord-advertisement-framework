@@ -105,9 +105,9 @@ async def test_text_period(channels: Tuple[List[Union[daf.discord.TextChannel, d
         
     finally:
         with suppress(ValueError):
-            daf.remove_object(guild)
+            await daf.remove_object(guild)
         with suppress(ValueError):
-            daf.remove_object(user)
+            await daf.remove_object(user)
         
 
 @pytest.mark.asyncio
@@ -153,4 +153,4 @@ async def test_voice_period(channels: Tuple[List[Union[daf.discord.TextChannel, 
 
     finally:
         with suppress(ValueError):
-            daf.remove_object(guild)
+            await daf.remove_object(guild)

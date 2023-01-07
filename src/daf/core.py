@@ -257,8 +257,11 @@ async def add_object(obj, snowflake=None):
 
 @typechecked
 @misc.doc_category("Dynamic mod.")
-def remove_object(snowflake: Union[guild._BaseGUILD, message.BaseMESSAGE, guild.AutoGUILD, client.ACCOUNT]) -> None:
+async def remove_object(snowflake: Union[guild._BaseGUILD, message.BaseMESSAGE, guild.AutoGUILD, client.ACCOUNT]) -> None:
     """
+    .. versionchanged:: v2.4.1
+        Turned async for fix bug of missing functionality
+
     .. versionchanged:: v2.4
         | Now accepts client.ACCOUNT.
         | Removed support for ``int`` and for API wrapper (PyCord) objects.
@@ -289,6 +292,10 @@ def remove_object(snowflake: Union[guild._BaseGUILD, message.BaseMESSAGE, guild.
         for account in GLOBALS.accounts:
             if snowflake in account.servers:
                 account.remove_server(snowflake)
+    
+    elif isinstance(snowflake, client.ACCOUNT):
+        await snowflake._close()
+        GLOBALS.accounts.remove(snowflake)
 
 
 @typechecked
@@ -370,7 +377,7 @@ def _shutdown_clean(loop: asyncio.AbstractEventLoop) -> None:
         The loop to stop.
     """
     for account in GLOBALS.accounts:
-        loop.run_until_complete(account.close())
+        loop.run_until_complete(account._close())
 
 
 @typechecked
