@@ -51,7 +51,7 @@ class _FunctionBaseCLASS:
     the object to it's class or to the base class from which the object class is inherited from.
     """
 
-@misc.doc_category("Message data types")
+@misc.doc_category("Decorators")
 def data_function(fnc: Callable):
     """
     Decorator used for wrapping a function that will return data to send when the message is ready.
@@ -88,7 +88,7 @@ def data_function(fnc: Callable):
         a ``data`` parameter to the :ref:`Messages` objects.
 
 
-    .. literalinclude:: ../../../Examples/Message Types/TextMESSAGE/main_data_function.py
+    .. literalinclude:: ../../Examples/Message Types/TextMESSAGE/main_data_function.py
         :language: python
         :emphasize-lines: 11, 24
     """
@@ -135,6 +135,7 @@ def data_function(fnc: Callable):
 # Other
 #######################################################################
 @typechecked
+@misc.doc_category("Message data types")
 class EMBED(discord.Embed):
     """
 
@@ -204,7 +205,7 @@ class EMBED(discord.Embed):
                 description = EmptyEmbed,
                 timestamp: datetime.datetime = None):
 
-        trace("DEPRECATED! Using EMBED is deprecated since v2.2, please use discord.Embed:\
+        trace("[EMBED:] DEPRECATED! Using EMBED is deprecated since v2.2, please use discord.Embed:\
             \n\nfrom daf import discord\n\ndiscord.Embed(...)", TraceLEVELS.DEPRECATED)
         super().__init__(colour=colour,
                          color=color,

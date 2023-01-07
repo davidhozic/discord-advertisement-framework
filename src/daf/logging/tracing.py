@@ -2,14 +2,11 @@
     This modules contains functions and classes
     related to the console debug long or trace.
 """
-from typing import Union, Optional
+from typing import Union
 from enum import IntEnum, auto
+import time
 from threading import Lock
-from datetime import datetime
-from sys import _getframe
-
 from .. import misc
-
 try:
     from enum_tools.documentation import document_enum
 except ImportError:
@@ -20,17 +17,8 @@ __all__ = (
     "trace"
 )
 
-
-C_TRACE_FORMAT = \
-"""
-Date: {date}
-Level: {level}
-Reason: {reason}
-Message: [{module}] {message}
-"""
-
 @document_enum
-@misc.doc_category("Logging reference")
+@misc.doc_category("Tracing")
 class TraceLEVELS(IntEnum):
     """
     Levels of trace for debug.
@@ -69,10 +57,9 @@ class GLOBALS:
     lock = Lock() # For print thread safety
 
 
-@misc.doc_category("Logging reference")
+@misc.doc_category("Tracing")
 def trace(message: str,
-          level: Union[TraceLEVELS, int] = TraceLEVELS.NORMAL,
-          reason: Optional[str] = None):
+          level: Union[TraceLEVELS, int] = TraceLEVELS.NORMAL):
     """
     | Prints a trace to the console.
     | This is thread safe.
@@ -97,18 +84,17 @@ def trace(message: str,
     level: TraceLEVELS | int
         Level of the trace. Defaults to TraceLEVELS.NORMAL.
     """
-    if GLOBALS.set_level >= level:
-        frame = _getframe(1)
-        module = frame.f_globals["__name__"]
-        msg = C_TRACE_FORMAT.format(
-                date=datetime.now().isoformat(sep=' '),
-                level=level.name,
-                reason=reason,
-                module=module,
-                message=message
-        )
+    if GLOBALS.set_level >= level: 
         with GLOBALS.lock:
-            print(msg)
+            timestruct = time.localtime()
+            timestamp = "Date: {:02d}.{:02d}.{:04d} Time:{:02d}:{:02d}"
+            timestamp = timestamp.format(timestruct.tm_mday,
+                                        timestruct.tm_mon,
+                                        timestruct.tm_year,
+                                        timestruct.tm_hour,
+                                        timestruct.tm_min)
+            l_trace = f"{timestamp}\nTrace level: {level.name}\nMessage: {message}\n"
+            print(l_trace)
 
 
 def initialize(level: Union[TraceLEVELS, int, str]):
@@ -131,6 +117,6 @@ def initialize(level: Union[TraceLEVELS, int, str]):
                 level = val
                 break
         else:
-            trace("Could not find the requested trace level by name (string).", TraceLEVELS.WARNING)
+            trace("[TRACING:] Could not find the requested trace level by name (string).", TraceLEVELS.WARNING)
 
     GLOBALS.set_level = level

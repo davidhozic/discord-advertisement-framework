@@ -12,33 +12,25 @@ import asyncio
 
 
 @pytest.mark.asyncio
-async def test_autoguild(guilds, accounts):
+async def test_autoguild(guilds):
     """
     Test if AutoGUILD works as expected.
     """
-    account = accounts[0]
     guild_include, guild_exclude = guilds
-    auto_guild = None
-    try:
-        auto_guild = daf.AutoGUILD("magic-.*-magic", "-321-", messages=[daf.TextMESSAGE(None, timedelta(seconds=1), "Hello World", daf.message.AutoCHANNEL("testpy-[0-9]", "testpy-[5-9]"))])
-        await daf.add_object(auto_guild, snowflake=account)
-        await asyncio.sleep(1)
-        found = [x.apiobject for x in auto_guild.guilds]
-        print('Found Guilds ', found)
-        print('All Guilds ', account.client.guilds)
-        assert guild_include in found, "AutoGUILD failed to find guild that matches the name."
-        assert guild_exclude not in found, "AutoGUILD included the guild that matches exclude pattern."
-    finally:
-        if auto_guild is not None:
-            await daf.remove_object(auto_guild)
+    auto_guild = daf.AutoGUILD("magic-.*-magic", "-321-")
+    await daf.add_object(auto_guild)
+    await asyncio.sleep(1)
+    found = [x.apiobject for x in auto_guild.guilds]
+    print(found)
+    assert guild_include in found, "AutoGUILD failed to find guild that matches the name."
+    assert guild_exclude not in found, "AutoGUILD included the guild that matches exclude pattern."
 
 @pytest.mark.asyncio
-async def test_autochannel(guilds, channels, accounts):
+async def test_autochannel(guilds, channels):
     """
     Tests if AutoCHANNEL functions properly.
     """
     daf_guild = None
-    account = accounts[0]
     try:
         guild: daf.discord.Guild
         guild, _ = guilds
@@ -55,7 +47,7 @@ async def test_autochannel(guilds, channels, accounts):
                 vc := daf.VoiceMESSAGE(None, timedelta(seconds=1), daf.AUDIO("https://www.youtube.com/watch?v=IGQBtbKSVhY"), auto_channel2)
             ]
         )
-        await daf.add_object(daf_guild, account)
+        await daf.add_object(daf_guild)
         sort_key = lambda x: x.name
         auto_channel._process()
         auto_channel2._process()
@@ -77,7 +69,7 @@ async def test_autochannel(guilds, channels, accounts):
         await auto_channel2.update()
     finally:
         if daf_guild is not None:
-            await daf.remove_object(daf_guild)
+            daf.remove_object(daf_guild)
 
     
 

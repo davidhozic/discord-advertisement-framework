@@ -4,6 +4,3 @@ dist/**
 build**
 **.egg-info
 src/test.py
-venv/**
-docs/source/ref.rst
-docs/source/reference/

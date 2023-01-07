@@ -12,9 +12,8 @@ TEST_USER_ID = 145196308985020416
 
 
 @pytest.mark.asyncio
-async def test_text_message_update(channels, guilds, accounts):
+async def test_text_message_update(channels, guilds):
     "This tests if all the text messages succeed in their sends"
-    account = accounts[0]
     text_channels, _ = channels
     dc_guild, _ = guilds
     TEXT_MESSAGE_TEST_MESSAGE = [
@@ -29,8 +28,8 @@ async def test_text_message_update(channels, guilds, accounts):
     direct_message = daf.message.DirectMESSAGE(None, timedelta(seconds=5), "START", "send",
                                                 start_in=timedelta(0), remove_after=None)
     # Initialize objects
-    await guild.initialize(parent=account)
-    await user.initialize(parent=account)
+    await guild.initialize()
+    await user.initialize()
     await guild.add_message(text_message)
     await user.add_message(direct_message)
 
@@ -39,7 +38,7 @@ async def test_text_message_update(channels, guilds, accounts):
         text, embed = data
         await text_message.update(data=data)
         result = await text_message._send()
-        
+
         # Check results
         for message in text_message.sent_messages.values():
             assert text == message.content, "TextMESSAGE text does not match message content"
@@ -49,8 +48,7 @@ async def test_text_message_update(channels, guilds, accounts):
 
         # DirectMESSAGE send
         await direct_message.update(data=data)
-        result, _panic = await direct_message._send()
-        print(direct_message)
+        result = await direct_message._send()
 
         # Check results
         message = direct_message.previous_message
@@ -61,25 +59,21 @@ async def test_text_message_update(channels, guilds, accounts):
 
 
 @pytest.mark.asyncio
-async def test_voice_message_update(channels, guilds, accounts):
+async def test_voice_message_update(channels, guilds):
     "This tests if all the voice messages succeed in their sends"
-    account = accounts[0]
     _, voice_channels = channels
-    voice_channels = voice_channels[:2]
     dc_guild, _ = guilds
-    
     await asyncio.sleep(5) # Wait for any messages still playing
     VOICE_MESSAGE_TEST_MESSAGE = [
-            (9, daf.AUDIO("https://www.youtube.com/watch?v=4vQ8If7f374")),
-            (5, daf.AUDIO("https://www.youtube.com/watch?v=icPHcK_cCF4"))
+            (10, daf.AUDIO("https://www.youtube.com/watch?v=4vQ8If7f374")),
+            (6, daf.AUDIO(os.path.join(os.path.dirname(os.path.abspath(__file__)), "testing123.mp3")))
         ]
 
     guild = daf.GUILD(dc_guild)
-    voice_message = daf.message.VoiceMESSAGE(None, timedelta(seconds=20), daf.AUDIO(os.path.join(os.path.dirname(__file__), "testing123.mp3")), voice_channels,
+    voice_message = daf.message.VoiceMESSAGE(None, timedelta(seconds=20), daf.AUDIO("https://www.youtube.com/watch?v=dZLfasMPOU4"), voice_channels,
                                             volume=50, start_in=timedelta(), remove_after=None)
-    await guild.initialize(parent=account)
+    await guild.initialize()
     await guild.add_message(voice_message)
-    
     # Send
     for duration, audio in VOICE_MESSAGE_TEST_MESSAGE:
         await voice_message.update(data=audio)
@@ -90,3 +84,4 @@ async def test_voice_message_update(channels, guilds, accounts):
         # Check results
         assert end_time - start_time >= duration * len(voice_channels), "Message was not played till the end."
         assert len(result["channels"]["failed"]) == 0, "Failed to send to all channels"
+
