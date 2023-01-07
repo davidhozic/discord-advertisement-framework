@@ -47,7 +47,7 @@ async def test_text_message_send(channels: Tuple[daf.discord.ChannelType], guild
     assert len(result["channels"]["failed"]) == 0, "Failed to send to all channels"
 
     # DirectMESSAGE send
-    result = await direct_message._send()
+    result, _panic = await direct_message._send()
     sent_data_result = result["sent_data"]
             
     # Check results

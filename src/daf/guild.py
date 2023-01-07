@@ -81,6 +81,19 @@ class _BaseGUILD:
         return f"{type(self).__name__}(discord={self._apiobject})"
 
     @property
+    def deleted(self) -> bool:
+        """
+        Returns
+        -----------
+        True
+            The object is no longer in the framework and should no longer
+            be used.
+        False
+            Object is in the framework in normal operation.
+        """
+        return self._deleted
+
+    @property
     def messages(self) -> List[BaseMESSAGE]:
         """
         Returns all the (initialized) message objects inside the object.
@@ -142,6 +155,8 @@ class _BaseGUILD:
         Sets the internal _deleted flag to True.
         """
         self._deleted = True
+        for message in self._messages:
+            message._delete()
 
     @typechecked
     async def add_message(self, message: BaseMESSAGE):
@@ -183,6 +198,7 @@ class _BaseGUILD:
         ValueError
             Raised when the message is not present in the list.
         """
+        message._delete()
         self._messages.remove(message)
 
     async def initialize(self, parent: Any, getter: Callable) -> None:
@@ -251,14 +267,18 @@ class _BaseGUILD:
         raise NotImplementedError
 
     @misc._async_safe("update_semaphore", 1)
-    async def _advertise(self):
+    async def _advertise(self) -> List[Coroutine]:
         """
-        Main coroutine responsible for sending all the messages to this specific guild,
+        Common to all messages, function responsible for sending all the messages to this specific guild,
         it is called from the core module's advertiser task.
+
+        Returns
+        -----------
+        List[Coroutine]
+            List of coroutines that will call message._send() method.
         """
         to_await = []
         to_remove = []
-        guild_ctx = self.generate_log_context()
         for message in self._messages:
             if message._check_state():
                 to_remove.append(message)
@@ -272,13 +292,7 @@ class _BaseGUILD:
         for message in to_remove:
             self.remove_message(message)
 
-        # Await coroutines outside the main loop to prevent list modification (by user)
-        # while iterating, this way even if the user removes the message, it will still be shilled
-        # but no exceptions will be raised when trying to remove the message.
-        for coro in to_await:
-            message_ctx = await coro
-            if self.logging and message_ctx is not None:
-                await logging.save_log(guild_ctx, message_ctx)
+        return to_await
 
     def generate_log_context(self) -> Dict[str, Union[str, int]]:
         """
@@ -364,6 +378,22 @@ class GUILD(_BaseGUILD):
             Raised from .add_message(message_object) method.
         """
         return await super().initialize(parent, parent.client.get_guild)
+
+    async def _advertise(self) -> None:
+        """
+        Implementation specific _advertise method.
+        Same as super()._advertise(), except it removes other DirectMESSAGE 
+        instances in case of them got a forbidden request.
+        """
+        to_await = await super()._advertise()
+        guild_ctx = self.generate_log_context()
+        # Await coroutines outside the main loop to prevent list modification (by user)
+        # while iterating, this way even if the user removes the message, it will still be shilled
+        # but no exceptions will be raised when trying to remove the message.
+        for coro in to_await:
+            message_ctx = await coro
+            if self.logging and message_ctx is not None:
+                await logging.save_log(guild_ctx, message_ctx)
     
     @misc._async_safe("update_semaphore", 2) # Take 2 since 2 tasks share access
     async def update(self, init_options={}, **kwargs):
@@ -428,6 +458,7 @@ class USER(_BaseGUILD):
     """
     __slots__ = (
         "update_semaphore",
+        "_panic"
     )
 
     @typechecked
@@ -437,6 +468,7 @@ class USER(_BaseGUILD):
                  logging: Optional[bool] = False,
                  remove_after: Optional[Union[timedelta, datetime]]=None) -> None:
         super().__init__(snowflake, messages, logging, remove_after)
+        self._panic = False # Set to True whenever message sends detected insufficient permissions
         misc._write_attr_once(self, "update_semaphore", asyncio.Semaphore(2)) # Only allows re-referencing this attribute once
 
     def _check_state(self) -> bool:
@@ -450,7 +482,7 @@ class USER(_BaseGUILD):
         False
             The user is in proper state, do not delete.
         """
-        return super()._check_state()
+        return self._panic or super()._check_state()
 
     async def initialize(self, parent: Any):
         """
@@ -464,6 +496,29 @@ class USER(_BaseGUILD):
             Raised from .add_message(message_object) method.
         """
         return await super().initialize(parent, parent.client.get_or_fetch_user)
+
+
+    async def _advertise(self) -> None:
+        """
+        Implementation specific _advertise method.
+        Same as super()._advertise(), except it removes other DirectMESSAGE 
+        instances in case of them got a forbidden request.
+        """
+        to_await = await super()._advertise()
+        guild_ctx = self.generate_log_context()
+        # Await coroutines outside the main loop to prevent list modification (by user)
+        # while iterating, this way even if the user removes the message, it will still be shilled
+        # but no exceptions will be raised when trying to remove the message.
+        for coro in to_await:
+            message_ctx, panic = await coro
+            if self.logging and message_ctx is not None:
+                await logging.save_log(guild_ctx, message_ctx)
+
+            # panic means that the message send resulted in a forbidden error
+            # signaling all other messages should be removed without send
+            if panic:
+                self._panic = True
+                break
 
     @misc._async_safe("update_semaphore", 2)
     async def update(self, init_options={}, **kwargs):
@@ -603,6 +658,19 @@ class AutoGUILD:
         Returns the datetime of when the object has been created.
         """
         return self._created_at
+    
+    @property
+    def deleted(self) -> bool:
+        """
+        Returns
+        -----------
+        True
+            The object is no longer in the framework and should no longer
+            be used.
+        False
+            Object is in the framework in normal operation.
+        """
+        return self._deleted
 
     def _delete(self):
         """
