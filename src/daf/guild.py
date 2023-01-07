@@ -3,25 +3,18 @@
     regarding the guild and also defines a USER class from the
     _BaseGUILD class.
 """
-from __future__ import annotations
-
 from typing import Any, Coroutine, Union, List, Optional, Dict, Callable
-from contextlib import suppress
 from typeguard import typechecked
 from datetime import timedelta, datetime
-from enum import Enum
 from copy import deepcopy
 
 from .logging.tracing import *
-from .message import *
+from .message import BaseMESSAGE, TextMESSAGE, VoiceMESSAGE, DirectMESSAGE
 
-from . import client
-from .logging import sql
+from . import logging
 from . import misc
-from .logging import logging
 
 import _discord as discord
-import operator
 import asyncio
 import re
 
@@ -31,13 +24,6 @@ __all__ = (
     "USER",
     "AutoGUILD"
 )
-
-class AdvertiseTaskType(Enum):
-    """
-    Used for identifying advertiser tasks
-    """
-    TEXT_ISH = 0
-    VOICE = 1
 
 
 class _BaseGUILD:
@@ -66,13 +52,14 @@ class _BaseGUILD:
     """
 
     __slots__ = (       # Faster attribute access
-        "apiobject",
+        "_apiobject",
         "logging",
         "_messages_uninitialized",
-        "message_dict",
+        "_messages",
         "remove_after",
         "_created_at",
-        "_deleted"
+        "_deleted",
+        "parent"
     )
     
     def __init__(self,
@@ -81,16 +68,30 @@ class _BaseGUILD:
                  logging: Optional[bool]=False,
                  remove_after: Optional[Union[timedelta, datetime]]=None) -> None:
 
-        self.apiobject: discord.Object = snowflake
+        self._apiobject: discord.Object = snowflake
         self.logging: bool= logging
         self._messages_uninitialized: list = messages   # Contains all the different message objects, this gets sorted in `.initialize()` method
-        self.message_dict: Dict[str, List[BaseMESSAGE]] = {AdvertiseTaskType.TEXT_ISH: [], AdvertiseTaskType.VOICE: []}  # Dictionary, which's keys hold the discord message type(text, voice) and keys are a list of messages
+        self._messages: List[BaseMESSAGE] = []
         self.remove_after = remove_after  # int - after n sends; timedelta - after amount of time; datetime - after that time
         self._deleted = False
         self._created_at = datetime.now() # The time this object was created
+        self.parent = None
 
     def __repr__(self) -> str:
-        return f"{type(self).__name__}(discord={self.apiobject})"
+        return f"{type(self).__name__}(discord={self._apiobject})"
+
+    @property
+    def deleted(self) -> bool:
+        """
+        Returns
+        -----------
+        True
+            The object is no longer in the framework and should no longer
+            be used.
+        False
+            Object is in the framework in normal operation.
+        """
+        return self._deleted
 
     @property
     def messages(self) -> List[BaseMESSAGE]:
@@ -99,7 +100,7 @@ class _BaseGUILD:
 
         .. versionadded:: v2.0
         """
-        return operator.add(*self.message_dict.values()) # Merge lists
+        return self._messages
 
     @property
     def snowflake(self) -> int:
@@ -108,8 +109,17 @@ class _BaseGUILD:
 
         Returns the discord's snowflake ID.
         """
-        return self.apiobject if isinstance(self.apiobject, int) else self.apiobject.id
+        return self._apiobject if isinstance(self._apiobject, int) else self._apiobject.id
     
+    @property
+    def apiobject(self) -> discord.Object:
+        """
+        .. versionadded:: v2.4
+
+        Returns the Discord API wrapper's object of self.
+        """
+        return self._apiobject
+
     @property
     def created_at(self) -> datetime:
         """
@@ -134,7 +144,7 @@ class _BaseGUILD:
         return (rm_after_type is timedelta and datetime.now() - self._created_at > self.remove_after or # The difference from creation time is bigger than remove_after
                 rm_after_type is datetime and datetime.now() > self.remove_after) # The current time is larger than remove_after 
 
-    def __eq__(self, other: _BaseGUILD) -> bool:
+    def __eq__(self, other: Any) -> bool:
         """
         Compares two guild objects if they're equal.
         """
@@ -145,30 +155,67 @@ class _BaseGUILD:
         Sets the internal _deleted flag to True.
         """
         self._deleted = True
+        for message in self._messages:
+            message._delete()
 
+    @typechecked
     async def add_message(self, message: BaseMESSAGE):
         """
         Adds a message to the message list.
 
+        .. warning::
+            To use this method, the guild must already be added to the framework's shilling list (or initialized).
+
         Parameters
-        -----------
+        --------------
         message: BaseMESSAGE
             Message object to add.
-        """
-        raise NotImplementedError
 
-    async def initialize(self, getter: Callable) -> None:
+        Raises
+        --------------
+        TypeError
+            Raised when the message is not of type the guild allows.
+        Other
+            Raised from message.initialize() method.
+        """
+        await message.initialize(parent=self)
+        self._messages.append(message)
+
+    @typechecked
+    def remove_message(self, message: BaseMESSAGE):
+        """
+        Removes a message from the message list.
+
+        Parameters
+        --------------
+        message: BaseMESSAGE
+            Message object to remove.
+
+        Raises
+        --------------
+        TypeError
+            Raised when the message is not of type the guild allows.
+        ValueError
+            Raised when the message is not present in the list.
+        """
+        message._delete()
+        self._messages.remove(message)
+
+    async def initialize(self, parent: Any, getter: Callable) -> None:
         """
         This function initializes the API related objects and then tries to initialize the MESSAGE objects.
 
         .. warning::
             This should NOT be manually called, it is called automatically after adding the message.
 
-        .. versionchanged:: v2.1
-            Merged derived classes' methods into base method to reduce code.
+        .. versionchanged:: v2.4
+            Added parent parameter to support multiple account
+            structure.
 
         Parameters
         ------------
+        parent: Any
+            The parent object. (ACCOUNT)
         getter: Callable
             Callable function or async generator used for retrieving an api object (client.get_*).
 
@@ -179,18 +226,19 @@ class _BaseGUILD:
         Other
             Raised from .add_message(message_object) method.
         """
+        self.parent = parent
         guild_id = self.snowflake
-        if isinstance(self.apiobject, int):
-            self.apiobject = getter(guild_id)
-            if isinstance(self.apiobject, Coroutine):
-                self.apiobject = await self.apiobject
+        if isinstance(self._apiobject, int):
+            self._apiobject = getter(guild_id)
+            if isinstance(self._apiobject, Coroutine):
+                self._apiobject = await self._apiobject
 
-        if self.apiobject is not None:
+        if self._apiobject is not None:
             for message in self._messages_uninitialized:
                 try:
                     await self.add_message(message)
                 except (TypeError, ValueError) as exc:
-                    trace(f"[GUILD:] Unable to initialize message {message}, in {self}\nReason: {exc}", TraceLEVELS.WARNING)
+                    trace(f" Unable to initialize message {message}, in {self}", TraceLEVELS.WARNING, exc)
 
 
             self._messages_uninitialized.clear()
@@ -198,17 +246,7 @@ class _BaseGUILD:
 
         raise ValueError(f"Unable to find object with ID: {guild_id}")
 
-    def remove_message(self, message: BaseMESSAGE):
-        """
-        Removes a message from the message list.
-
-        Parameters
-        --------------
-        message: message.BaseMESSAGE
-            Message object to remove."""
-        raise NotImplementedError
-
-    async def update(self, **kwargs):
+    async def update(self, init_options={}, **kwargs):
         """
         .. versionadded:: v2.0
 
@@ -229,32 +267,32 @@ class _BaseGUILD:
         raise NotImplementedError
 
     @misc._async_safe("update_semaphore", 1)
-    async def _advertise(self,
-                         mode: AdvertiseTaskType):
+    async def _advertise(self) -> List[Coroutine]:
         """
-        Main coroutine responsible for sending all the messages to this specific guild,
+        Common to all messages, function responsible for sending all the messages to this specific guild,
         it is called from the core module's advertiser task.
 
-        Parameters
-        --------------
-        mode: AdvertiseTaskType
-            Tells which task called this method (there is one task for textual messages and one for voice like messages).
+        Returns
+        -----------
+        List[Coroutine]
+            List of coroutines that will call message._send() method.
         """
-        msg_list = self.message_dict[mode]
-        for message in msg_list[:]: # Copy the avoid issues with the list being modified while iterating (add_message/remove_message)
-            # Message removal             Check due to asynchronous operations
+        to_await = []
+        to_remove = []
+        for message in self._messages:
             if message._check_state():
-                # Suppress since user could of called the remove_object function mid iteration.
-                with suppress(ValueError):
-                    self.remove_message(message)
+                to_remove.append(message)
 
             elif message._is_ready():
                 message._reset_timer()
-                message_ret = await message._send()
+                to_await.append(message._send())
 
-                # Generate log (JSON or SQL)
-                if self.logging and message_ret is not None:
-                    await logging.save_log(self.generate_log_context(), message_ret)
+        # Remove prior to awaits to prevent any user tasks
+        # from removing the message causing ValueErrors
+        for message in to_remove:
+            self.remove_message(message)
+
+        return to_await
 
     def generate_log_context(self) -> Dict[str, Union[str, int]]:
         """
@@ -266,13 +304,14 @@ class _BaseGUILD:
         Dict[str, Union[str, int]]
         """
         return {
-            "name": self.apiobject.name,
-            "id": self.apiobject.id,
+            "name": self._apiobject.name,
+            "id": self._apiobject.id,
             "type": type(self).__name__
         }
 
+
 @misc.doc_category("Guilds")
-@sql.register_type("GuildTYPE")
+@logging.sql.register_type("GuildTYPE")
 class GUILD(_BaseGUILD):
     """
     The GUILD object represents a server to which messages will be sent.
@@ -308,50 +347,22 @@ class GUILD(_BaseGUILD):
                  remove_after: Optional[Union[timedelta, datetime]]=None):
         super().__init__(snowflake, messages, logging, remove_after)
         misc._write_attr_once(self, "update_semaphore", asyncio.Semaphore(2))
-
-    @typechecked
-    async def add_message(self, message: Union[TextMESSAGE, VoiceMESSAGE]):
+    
+    def _check_state(self) -> bool:
         """
-        Adds a message to the message list.
+        Checks if the user is ready to be deleted.
 
-        .. warning::
-            To use this method, the guild must already be added to the framework's shilling list (or initialized).
-
-        Parameters
-        --------------
-        message: Union[TextMESSAGE, VoiceMESSAGE]
-            Message object to add.
-
-        Raises
-        --------------
-        TypeError
-            Raised when the message is not of type TextMESSAGE or VoiceMESSAGE.
-        Other
-            Raised from message.initialize() method.
+        Returns
+        ----------
+        True
+            The user should be deleted.
+        False
+            The user is in proper state, do not delete.
         """
-        await message.initialize(parent=self)
-        self.message_dict[AdvertiseTaskType.TEXT_ISH if isinstance(message, TextMESSAGE) else AdvertiseTaskType.VOICE].append(message)
+        return (self.parent.client.get_guild(self.snowflake) == None or
+                super()._check_state())
 
-    @typechecked
-    def remove_message(self, message: Union[TextMESSAGE, VoiceMESSAGE]):
-        """
-        Removes a message from the message list.
-
-        Parameters
-        --------------
-        message: Union[TextMESSAGE, VoiceMESSAGE]
-            Message object to remove.
-
-        Raises
-        --------------
-        TypeError
-            Raised when the message is not of type TextMESSAGE or VoiceMESSAGE.
-        ValueError
-            Raised when the message is not present in the list.
-        """
-        self.message_dict[AdvertiseTaskType.TEXT_ISH if isinstance(message, TextMESSAGE) else AdvertiseTaskType.VOICE].remove(message)
-
-    async def initialize(self) -> None:
+    async def initialize(self, parent: Any) -> None:
         """
         This function initializes the API related objects and then tries to initialize the MESSAGE objects.
 
@@ -366,10 +377,26 @@ class GUILD(_BaseGUILD):
         Other
             Raised from .add_message(message_object) method.
         """
-        return await super().initialize(client.get_client().get_guild)
+        return await super().initialize(parent, parent.client.get_guild)
+
+    async def _advertise(self) -> None:
+        """
+        Implementation specific _advertise method.
+        Same as super()._advertise(), except it removes other DirectMESSAGE 
+        instances in case of them got a forbidden request.
+        """
+        to_await = await super()._advertise()
+        guild_ctx = self.generate_log_context()
+        # Await coroutines outside the main loop to prevent list modification (by user)
+        # while iterating, this way even if the user removes the message, it will still be shilled
+        # but no exceptions will be raised when trying to remove the message.
+        for coro in to_await:
+            message_ctx = await coro
+            if self.logging and message_ctx is not None:
+                await logging.save_log(guild_ctx, message_ctx)
     
     @misc._async_safe("update_semaphore", 2) # Take 2 since 2 tasks share access
-    async def update(self, **kwargs):
+    async def update(self, init_options={}, **kwargs):
         """
         Used for changing the initialization parameters the object was initialized with.
 
@@ -394,15 +421,18 @@ class GUILD(_BaseGUILD):
         # Update the guild
         if "snowflake" not in kwargs:
             kwargs["snowflake"] = self.snowflake
+        
+        if len(init_options) == 0:
+            init_options = {"parent": self.parent}
 
-        await misc._update(self, **kwargs)
+        await misc._update(self, **kwargs, init_options=init_options)
         # Update messages
         for message in self.messages:
             await message.update(_init_options={"parent": self})
 
 
 @misc.doc_category("Guilds")
-@sql.register_type("GuildTYPE")
+@logging.sql.register_type("GuildTYPE")
 class USER(_BaseGUILD):
     """
     The USER object represents a user to whom messages will be sent.
@@ -428,6 +458,7 @@ class USER(_BaseGUILD):
     """
     __slots__ = (
         "update_semaphore",
+        "_panic"
     )
 
     @typechecked
@@ -437,51 +468,23 @@ class USER(_BaseGUILD):
                  logging: Optional[bool] = False,
                  remove_after: Optional[Union[timedelta, datetime]]=None) -> None:
         super().__init__(snowflake, messages, logging, remove_after)
+        self._panic = False # Set to True whenever message sends detected insufficient permissions
         misc._write_attr_once(self, "update_semaphore", asyncio.Semaphore(2)) # Only allows re-referencing this attribute once
 
-    @typechecked
-    async def add_message(self, message: DirectMESSAGE):
+    def _check_state(self) -> bool:
         """
-        Adds a message to the message list.
+        Checks if the user is ready to be deleted.
 
-        .. warning::
-            To use this method, the guild must already be added to the framework's shilling list (or initialized).
-
-        Parameters
-        --------------
-        message: DirectMESSAGE
-            Message object to add.
-
-        Raises
-        --------------
-        TypeError
-            Raised when the message is not of type DirectMESSAGE.
-        Other
-            Raised from message.initialize() method.
+        Returns
+        ----------
+        True
+            The user should be deleted.
+        False
+            The user is in proper state, do not delete.
         """
-        await message.initialize(parent=self)
-        self.message_dict[AdvertiseTaskType.TEXT_ISH].append(message)
+        return self._panic or super()._check_state()
 
-    @typechecked
-    def remove_message(self, message: DirectMESSAGE):
-        """
-        .. versionadded:: v2.0
-
-        Removes a message from the message list.
-
-        Parameters
-        --------------
-        message: DirectMESSAGE
-            Message object to remove.
-
-        Raises
-        --------------
-        TypeError
-            Raised when the message is not of type DirectMESSAGE.
-        """
-        self.message_dict[AdvertiseTaskType.TEXT_ISH].remove(message)
-
-    async def initialize(self):
+    async def initialize(self, parent: Any):
         """
         This function initializes the API related objects and then tries to initialize the MESSAGE objects.
 
@@ -492,10 +495,33 @@ class USER(_BaseGUILD):
         Other
             Raised from .add_message(message_object) method.
         """
-        return await super().initialize(client.get_client().get_or_fetch_user)
+        return await super().initialize(parent, parent.client.get_or_fetch_user)
+
+
+    async def _advertise(self) -> None:
+        """
+        Implementation specific _advertise method.
+        Same as super()._advertise(), except it removes other DirectMESSAGE 
+        instances in case of them got a forbidden request.
+        """
+        to_await = await super()._advertise()
+        guild_ctx = self.generate_log_context()
+        # Await coroutines outside the main loop to prevent list modification (by user)
+        # while iterating, this way even if the user removes the message, it will still be shilled
+        # but no exceptions will be raised when trying to remove the message.
+        for coro in to_await:
+            message_ctx, panic = await coro
+            if self.logging and message_ctx is not None:
+                await logging.save_log(guild_ctx, message_ctx)
+
+            # panic means that the message send resulted in a forbidden error
+            # signaling all other messages should be removed without send
+            if panic:
+                self._panic = True
+                break
 
     @misc._async_safe("update_semaphore", 2)
-    async def update(self, **kwargs):
+    async def update(self, init_options={}, **kwargs):
         """
         .. versionadded:: v2.0
 
@@ -521,12 +547,16 @@ class USER(_BaseGUILD):
         if "snowflake" not in kwargs:
             kwargs["snowflake"] = self.snowflake
 
-        await misc._update(self, **kwargs)
+        if len(init_options) == 0:
+            init_options = {"parent": self.parent}
+
+        await misc._update(self, init_options=init_options, **kwargs)
+
         # Update messages
         for message in self.messages:
             await message.update(_init_options={"parent" : self})
 
-@misc.doc_category("Automatic generation")
+@misc.doc_category("Auto objects")
 class AutoGUILD:
     """
     .. versionadded:: v2.3
@@ -592,7 +622,8 @@ class AutoGUILD:
         "last_scan",
         "_created_at",
         "_deleted",
-        "_safe_sem"
+        "_safe_sem",
+        "parent"
     )
 
     @typechecked
@@ -609,10 +640,11 @@ class AutoGUILD:
         self.messages = messages # Uninitialized template messages list that gets copied for each found guild.
         self.logging = logging
         self.interval = interval.total_seconds() # In seconds
-        self.cache: Dict[GUILD] = {}
+        self.cache: Dict[discord.Guild, GUILD] = {}
         self.last_scan = 0
         self._deleted = False
         self._created_at = datetime.now()
+        self.parent = None
         misc._write_attr_once(self, "_safe_sem", asyncio.Semaphore(2))
 
     @property
@@ -626,6 +658,19 @@ class AutoGUILD:
         Returns the datetime of when the object has been created.
         """
         return self._created_at
+    
+    @property
+    def deleted(self) -> bool:
+        """
+        Returns
+        -----------
+        True
+            The object is no longer in the framework and should no longer
+            be used.
+        False
+            Object is in the framework in normal operation.
+        """
+        return self._deleted
 
     def _delete(self):
         """
@@ -649,17 +694,14 @@ class AutoGUILD:
         False
             The object is in proper state, do not delete.
         """
-        if self._deleted:
-            return False
-
         rm_after_type = type(self.remove_after)
         return (rm_after_type is timedelta and datetime.now() - self._created_at > self.remove_after or # The difference from creation time is bigger than remove_after
                 rm_after_type is datetime and datetime.now() > self.remove_after) # The current time is larger than remove_after 
 
-    async def initialize(self):
+    async def initialize(self, parent: Any):
         "Initializes asynchronous elements."
         # Nothing is needed to be done here since everything is obtained from API wrapper cache.
-        pass 
+        self.parent = parent
     
     async def add_message(self, message: BaseMESSAGE):
         """
@@ -703,7 +745,7 @@ class AutoGUILD:
         Coroutine that finds new guilds from the
         API wrapper.
         """
-        dcl = client.get_client()
+        dcl = self.parent.client
         stamp = datetime.now().timestamp()
         if stamp - self.last_scan > self.interval:
             self.last_scan = stamp
@@ -716,28 +758,25 @@ class AutoGUILD:
                         new_guild = GUILD(snowflake=dcgld,
                                                 messages=deepcopy(self.messages),
                                                 logging=self.logging)
-                        await new_guild.initialize()
+                        await new_guild.initialize(parent=self.parent)
                         self.cache[dcgld] = new_guild
                     except Exception as exc:
-                        trace(f"[AutoGUILD:] Unable to add new object.\nReason: {exc}",TraceLEVELS.WARNING)
+                        trace(f" Unable to add new object.",TraceLEVELS.WARNING, exc)
 
     @misc._async_safe("_safe_sem", 1)
-    async def _advertise(self, type_: AdvertiseTaskType):
+    async def _advertise(self):
         """
         Advertises thru all the GUILDs.
-
-        Parameters
-        ----------------
-        type_: guild.AdvertiseTaskType
-            Which task called this method.
-            This is just forwarded to GUILDs' _advertise method.
         """
         await self._process()
         for g in self.guilds:
-            await g._advertise(type_)
+            if g._check_state():
+                del self.cache[g.apiobject]
+            else:
+                await g._advertise()
 
     @misc._async_safe("_safe_sem", 2)
-    async def update(self, **kwargs):
+    async def update(self, init_options={}, **kwargs):
         """
         Updates the object with new initialization parameters.
 
@@ -747,4 +786,7 @@ class AutoGUILD:
         if "interval" not in kwargs:
             kwargs["interval"] = timedelta(seconds=self.interval)
 
-        return await misc._update(self, **kwargs)
+        if len(init_options) == 0:
+            init_options = {"parent": self.parent}
+
+        return await misc._update(self, init_options=init_options, **kwargs)

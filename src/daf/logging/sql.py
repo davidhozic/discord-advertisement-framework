@@ -203,7 +203,7 @@ class TableCache:
         return key in self.data
 
 
-@misc.doc_category("Logging related", path="logging.sql")
+@misc.doc_category("Logging reference", path="logging.sql")
 class LoggerSQL(logging.LoggerBASE):
     """
     Used for controlling the SQL database used for message logs.
@@ -354,14 +354,14 @@ class LoggerSQL(logging.LoggerBASE):
             session: Union[Session, AsyncSession]
             # Always try to reconnect
             while True: 
-                trace(f"[SQL]: Retrying to connect in {wait} seconds.")
+                trace(f"Retrying to connect in {wait} seconds.")
                 await asyncio.sleep(wait)
-                trace(f"[SQL]: Reconnecting to database {self.database}.")
+                trace(f"Reconnecting to database {self.database}.")
                 with suppress(SQLAlchemyError, ConnectionError):
                     async with self.session_maker() as session:
                         await self._run_async(session.execute, select(text("1"))) # Test with SELECT 1;
 
-                    trace(f"[SQL]: Reconnected to the database {self.database}.")
+                    trace(f"Reconnected to the database {self.database}.")
                     self.reconnecting = False
                     logging._set_logger(self)
                     return
@@ -382,7 +382,7 @@ class LoggerSQL(logging.LoggerBASE):
         """
         session : Union[Session, AsyncSession]
         try:
-            trace("[SQL]: Generating lookuptable values...", TraceLEVELS.NORMAL)
+            trace("Generating lookuptable values...", TraceLEVELS.NORMAL)
             async with self.session_maker() as session:
                 for to_add in copy.deepcopy(GLOBALS.lt_types):  # Deep copied to prevent SQLAlchemy from deleting the data
                     existing = await self._run_async(session.execute, select(type(to_add)).where(type(to_add).name == to_add.name))
@@ -396,7 +396,7 @@ class LoggerSQL(logging.LoggerBASE):
 
                     self._add_to_cache(type(to_add), to_add.name, existing.id)
         except Exception as ex:
-            raise RuntimeError(f"Unable to create lookuptables' rows.\nReason: {ex}")
+            raise RuntimeError(f"Unable to create lookuptables' rows.") from ex
 
 
     async def _create_tables(self) -> None:
@@ -410,7 +410,7 @@ class LoggerSQL(logging.LoggerBASE):
         """
         try:
             session: Union[AsyncSession, Session]
-            trace("[SQL]: Creating tables...", TraceLEVELS.NORMAL)
+            trace("Creating tables...", TraceLEVELS.NORMAL)
             if self.is_async:
                 async with self.engine.begin() as tran:
                     await tran.run_sync(ORMBase.metadata.create_all)
@@ -419,7 +419,7 @@ class LoggerSQL(logging.LoggerBASE):
                     tran.run_callable(ORMBase.metadata.create_all)
             
         except Exception as ex:
-            raise RuntimeError(f"Unable to create all the tables.\nReason: {ex}")
+            raise RuntimeError(f"Unable to create all the tables.") from ex
 
     def _begin_engine(self) -> None:
         """

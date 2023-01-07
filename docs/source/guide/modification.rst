@@ -7,16 +7,25 @@ This document describes how the framework can be modified dynamically.
 ----------------------------
 Modifying the shilling list
 ----------------------------
-See :ref:`Shilling list modification` for more information about the **functions** mentioned below.
+See :ref:`Dynamic mod.` for more information about the **functions** mentioned below.
 
-While the shilling list can be defined statically (pre-defined) by creating a list and using the ``server_list``
-parameter in the :func:`~daf.core.run` function (see :ref:`Quickstart` and :func:`~daf.core.run` (or :func:`~daf.core.initialize`)),
+While the shilling list can be defined statically (pre-defined) by creating a list and using the ``servers``
+parameter in the :class:`~daf.client.ACCOUNT` instances (see :ref:`Quickstart`),
 the framework also allows the objects to be added or removed dynamically from the user's program after the framework has already been started and initialized.
 
 Dynamically adding objects
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Objects can be dynamically added using the :func:`daf.core.add_object` coroutine function.
 The function can be used to add the following object types:
+
+.. card::
+
+    Accounts
+    ^^^^^^^^^^^
+
+    :class:`daf.client.ACCOUNT`
+
+
 
 .. card::
 
@@ -31,7 +40,7 @@ The function can be used to add the following object types:
 
 
 .. card::
-    
+
     Messages
     ^^^^^^^^^^^^
     :class:`daf.message.TextMESSAGE`
@@ -39,7 +48,7 @@ The function can be used to add the following object types:
     :class:`daf.message.VoiceMESSAGE`
 
     :class:`daf.message.DirectMESSAGE`
-    
+
 
     .. note::   
         Messages can also be added thru the :py:meth:`daf.guild.GUILD.add_message`
@@ -49,11 +58,11 @@ The function can be used to add the following object types:
             The guild must already be added to the framework, otherwise this method will fail.
 
         .. code-block:: python
-            :emphasize-lines: 4
+
 
             ...
             my_guild = daf.GUILD(guild.id, logging=True)
-            await daf.add_object(my_guild)
+            await daf.add_object(my_guild, account)
             await my_guild.add_message(daf.TextMESSAGE(...))
             ...
 
@@ -61,7 +70,7 @@ The function can be used to add the following object types:
 
     .. literalinclude:: ../../../Examples/Dynamic Modification/main_add_object.py
         :language: python
-        :emphasize-lines: 25-27, 38
+
 
 
 Dynamically removing objects
@@ -73,7 +82,7 @@ Objects can be removed with the :func:`daf.core.remove_object`.
 
     .. literalinclude:: ../../../Examples/Dynamic Modification/main_remove_object.py
         :language: python
-        :emphasize-lines: 8, 15
+
 
 
 
@@ -84,11 +93,6 @@ Some objects in the framework can be dynamically updated thru the ``.update()`` 
 The principle is the same for all objects that support this and what this method does is it
 updates the original parameters that can be passed during object creation.
 
-.. figure:: images/update_process.png
-    :scale: 35%
-
-    Object update process.
-
 .. warning::
 
     This completely resets the state of the object you are updating, meaning that if you do call the 
@@ -98,7 +102,7 @@ For example if I wanted to change the shilling period of a :class:`daf.message.T
 in the following way:
 
 .. code-block:: python
-    :emphasize-lines: 3, 13
+    :emphasize-lines: 13
 
     ... # Other code
     # Fixed sending period of 5 seconds
@@ -109,7 +113,7 @@ in the following way:
                                         )
 
 
-    await daf.add_object(my_message, 123456789)
+    await daf.add_object(my_message, some_GUILD_object)
     
     # Randomized sending period between 3 and 5 seconds
     await my_message.update(start_period=timedelta(seconds=3)) 
@@ -127,5 +131,5 @@ For a full list of objects that support ``.update`` search ".update" in the sear
     
     .. literalinclude:: ../../../Examples/Dynamic Modification/main_update.py
         :language: python
-        :emphasize-lines: 42
+        
 

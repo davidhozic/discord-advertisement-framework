@@ -2,8 +2,6 @@
 This module is responsible for the logging in daf.
 It contains all the logging classes.
 """
-from __future__ import annotations
-from contextlib import suppress
 from datetime import datetime
 from typing import Optional
 
@@ -14,13 +12,13 @@ import json
 import csv
 import pathlib
 import shutil
-import asyncio
 
 __all__ = (
     "LoggerBASE",
     "LoggerJSON",
     "LoggerCSV",
     "get_logger",
+    "save_log"
 )
 
 # Constants
@@ -30,10 +28,10 @@ C_FILE_NAME_FORBIDDEN_CHAR = ('<','>','"','/','\\','|','?','*',":")
 
 class GLOBAL:
     "Singleton for global variables"
-    logger: LoggerBASE = None  
+    logger = None  
 
 
-@misc.doc_category("Logging related", path="logging")
+@misc.doc_category("Logging reference", path="logging")
 class LoggerBASE:
     """
     .. versionadded:: v2.2
@@ -47,7 +45,7 @@ class LoggerBASE:
     fallback: Optional[LoggerBASE]
         The manager to use, in case saving using this manager fails.
     """
-    def __init__(self, fallback: Optional[LoggerBASE] = None) -> None:
+    def __init__(self, fallback = None) -> None:
         self.fallback = fallback
 
     async def initialize(self) -> None:
@@ -56,7 +54,8 @@ class LoggerBASE:
             try:
                 await self.fallback.initialize()
             except Exception as exc:
-                trace(f"[Logging:] Could not initialize {type(self).__name__}'s fallback: {type(self.fallback).__name__}.\nReason: {exc}", TraceLEVELS.WARNING)
+                trace(f" Could not initialize {type(self).__name__}'s fallback: {type(self.fallback).__name__}.",
+                      TraceLEVELS.WARNING, exc)
                 self.fallback = None
 
 
@@ -92,7 +91,7 @@ class LoggerBASE:
         await misc._update(self, **kwargs)
 
 
-@misc.doc_category("Logging related", path="logging")
+@misc.doc_category("Logging reference", path="logging")
 class LoggerCSV(LoggerBASE):
     """
     .. versionadded:: v2.2
@@ -167,7 +166,7 @@ class LoggerCSV(LoggerBASE):
                 raise OSError(*exc.args) from exc # Raise OSError for any type of exceptions
 
 
-@misc.doc_category("Logging related", path="logging")
+@misc.doc_category("Logging reference", path="logging")
 class LoggerJSON(LoggerBASE):
     """
     .. versionadded:: v2.2
@@ -256,15 +255,17 @@ async def initialize(logger: LoggerBASE) -> None:
             await logger.initialize()
             break
         except Exception as exc:
-            trace(f"Could not initialize manager {type(logger).__name__}, falling to {type(logger.fallback).__name__}\nReason: {exc}", TraceLEVELS.WARNING)
+            trace(f"Could not initialize manager {type(logger).__name__}, falling to {type(logger.fallback).__name__}",
+            TraceLEVELS.WARNING, exc)
             logger = logger.fallback # Could not initialize, try fallback
     else:
-        trace("Logging will be disabled as the logging manager and it's fallbacks all failed initialization", TraceLEVELS.ERROR)
+        trace("Logging will be disabled as the logging manager and it's fallbacks all failed initialization",
+              TraceLEVELS.ERROR)
 
     GLOBAL.logger = logger
 
 
-@misc.doc_category("Getters", path="logging")
+@misc.doc_category("Logging reference", path="logging")
 def get_logger() -> LoggerBASE:
     """
     Returns
@@ -287,7 +288,6 @@ def _set_logger(logger: LoggerBASE):
     GLOBAL.logger = logger
 
 
-@misc._async_cancellation_safe
 async def save_log(guild_context: dict, message_context: dict):
     """
     Saves the log to the selected manager or saves
@@ -311,7 +311,8 @@ async def save_log(guild_context: dict, message_context: dict):
             await mgr._save_log(guild_context, message_context)
             break
         except Exception as exc:
-            trace(f"{type(mgr).__name__} failed, falling to {type(mgr.fallback).__name__}\nReason: {exc}", TraceLEVELS.WARNING)
+            trace(f"{type(mgr).__name__} failed, falling to {type(mgr.fallback).__name__}",
+                  TraceLEVELS.WARNING, exc)
             mgr = mgr.fallback # Could not initialize, try fallback
     else:
         trace("Could not save log to the manager or any of it's fallback", TraceLEVELS.ERROR)
