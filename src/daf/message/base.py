@@ -77,7 +77,8 @@ class BaseMESSAGE:
         "update_semaphore",
         "parent",
         "remove_after",
-        "_created_at"
+        "_created_at",
+        "_deleted"
     )
 
     @typechecked
@@ -173,6 +174,26 @@ class BaseMESSAGE:
     def created_at(self) -> datetime:
         "Returns the datetime of when the object was created"
         return self._created_at
+
+    @property
+    def deleted(self) -> bool:
+        """
+        Returns
+        -----------
+        True
+            The object is no longer in the framework and should no longer
+            be used.
+        False
+            Object is in the framework in normal operation.
+        """
+        return self._deleted
+    
+    def _delete(self):
+        """
+        Sets the internal _deleted flag to True,
+        indicating the object should not be used.
+        """
+        self._deleted = True
 
     def _check_state(self) -> bool:
         """
