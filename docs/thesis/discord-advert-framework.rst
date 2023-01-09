@@ -96,6 +96,7 @@ The above :class:`daf.guild.GUILD` objects among others, accept 2 important para
 * messages  - List of xMESSAGE instances which represent periodic messages that will be shilled into a server.
 
 .. code-block:: python
+    :caption: Example GUILD definition
 
     ...
     GUILD(
@@ -128,6 +129,7 @@ The above :class:`daf.message.TextMESSAGE` objects accept the most parameters of
 
 
 .. code-block:: python
+    :caption: Example TextMESSAGE definition
 
     TextMESSAGE(
         start_period=timedelta(hours=2, minutes=30),

@@ -2,7 +2,7 @@
 Scripts for generating thesis literature.
 (As footnotes)
 """
-from typing import List, Dict, Iterable
+from typing import List, Dict
 import os
 import json
 
@@ -21,13 +21,21 @@ OUTPUT_HEADER = \
       AUTOMATICALLY GENERATED 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!
     !       DO NOT EDIT       !
-"""
 
-OUTPUT_FOOTER = ""
+===============
+Sources
+===============
+"""
+OUTPUT_FOOTER = "\n"
 
 OUTPUT_FORMAT = \
 """
-.. [{id_}] "{title}" ({author}) - [{source}] (Last checked: {updated})
+[{ind}]
+
+    | Title: {title}
+    | Author: {author}
+    | Source: {source}
+    | Last checked: {updated}
 """
 
 
@@ -43,10 +51,9 @@ for i, item in enumerate(source_data, 1):
     title=item["title"].replace(":", r"\:")
     source=item["source"]
     updated=item["updated"]
-    id_=item["id"]
 
     source_output += OUTPUT_FORMAT.format(
-        id_=id_,
+        ind=i,
         author=author,
         title=title,
         source=source,

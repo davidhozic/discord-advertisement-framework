@@ -61,5 +61,19 @@
         "title": "What are NFTs? And why are they important?",
         "source": "https://www.rwkgoodman.com/info-hub/what-are-nfts-and-why-are-they-important/",
         "updated": "jan. 2023"
+    },
+    {
+        "id": "rst_docutils",
+        "author": "Docutils",
+        "title": "Docutils: Documentation Utilities",
+        "source": "https://docutils.sourceforge.io/",
+        "updated": "jan. 2023"
+    },
+    {
+        "id": "rst_docutils_directives",
+        "author": "Docutils",
+        "title": "reStructuredText Directives",
+        "source": "https://docutils.sourceforge.io/docs/ref/rst/directives.html",
+        "updated": "jan. 2023"
     }
 ]

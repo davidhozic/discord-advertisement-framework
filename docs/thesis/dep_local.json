@@ -2,7 +2,8 @@
     "copy": [
         {"from": "../images/logo.png", "to": "./DEP/"},
         {"from": "../source/guide/images/sql*", "to": "./DEP/"},
-        {"from": "../source/guide/images/logging*", "to": "./DEP/"}
+        {"from": "../source/guide/images/logging*", "to": "./DEP/"},
+        {"from": "../source/dep_local.json", "to": "./DEP/"}
     ],
     "scripts": ["./scripts/generate_lit.py"]
 }

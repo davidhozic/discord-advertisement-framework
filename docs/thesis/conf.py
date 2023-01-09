@@ -87,7 +87,8 @@ autodoc_default_options = {
 intersphinx_mapping = {
     'PyCord': ("https://docs.pycord.dev/en/stable/", None),
     "DAF" : ("https://daf.davidhozic.com/en/stable/", None),
-    "Python" : ("https://docs.python.org/3/", None)
+    "Python" : ("https://docs.python.org/3/", None),
+    "Sphinx" : ("https://www.sphinx-doc.org/en/master", None)
 }
 
 # ----------- HTML ----------- #
@@ -121,7 +122,7 @@ latex_elements = {
     "tableofcontents": r"""
         \tableofcontents
         \listoffigures
-        \listoftables
+        \listof{literalblock}{List of literal blocks}
     """,
     'fncychap': r'',
     # 'fontpkg': r"""

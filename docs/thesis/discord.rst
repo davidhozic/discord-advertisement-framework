@@ -145,25 +145,6 @@ A Discord Snowflake is a unique ID assigned to every Discord user, channel, guil
 It is a 64-bit integer that is generated when the object is created and cannot be altered or reassigned.
 The term "snowflake" refers to the unique and individual nature of the ID, similar to how no two snowflakes are exactly alike.
 
-The Discord Snowflake ID system was implemented to solve the problem of assigning unique IDs to objects in a distributed system.
-In the past, Discord had used timestamps to generate IDs, but this caused problems when multiple objects were created at the same time, resulting in non-unique IDs.
-The Snowflake ID system avoids this problem by using a combination of a timestamp, a worker ID, and a sequence number to generate a unique ID.
-
-One of the benefits of the Snowflake ID system is that it allows Discord to easily track the creation and deletion of objects.
-The timestamp component of the ID allows Discord to determine when an object was created, and the sequence number allows them to determine the order in which objects were created.
-This can be useful for things like auditing or tracking user activity.
-
-In addition to being unique, Discord Snowflake IDs are also very large.
-With 64 bits of information, there are over 18 quintillion possible Snowflake IDs, meaning it is extremely unlikely that two objects will have the same ID.
-This makes Snowflake IDs a reliable and secure way to identify and track objects within Discord.
-
-While most users will not need to worry about Snowflake IDs, they can be useful for developers who are working with the Discord API.
-The API provides various methods for retrieving and manipulating objects based on their Snowflake ID,
-allowing developers to create custom bots and integrations that can interact with Discord in a variety of ways.
-
-Overall, the Discord Snowflake ID system is an important and integral part of how Discord operates.
-It allows Discord to uniquely identify and track objects within the platform, ensuring that everything runs smoothly and efficiently.
-
 .. raw:: latex
 
     \newpage
@@ -266,15 +247,6 @@ and ensure that a system remains available and responsive to legitimate requests
 
 Discord has implemented rate limits on its APIs to prevent spam, abuse, and server overload.
 These limits apply to both individual users and bots and can be based on a specific route or for all requests made.
-Some routes have specific rate limits that may also vary depending on the HTTP method used (such as GET, POST, PUT, or DELETE).
-In some cases, rate limits for similar routes may be grouped together, as indicated in the X-RateLimit-Bucket response header.
-This header can be used as a unique identifier to group shared limits.
-
-During the calculation of rate limits, some routes take into account the top-level resources within the path, such as the guild_id when calling /guilds/{guild.id}/channels.
-Currently, the top-level resources that are limited include channels (identified by the channel_id), guilds (identified by the guild_id),
-and webhooks (identified by the webhook_id or webhook_id + webhook_token).
-This means that if two different top-level resources are used in the same endpoint, the rate limits for those resources will be calculated separately.
-For example, if a rate limit is reached when calling the endpoint /channels/1234, it would still be possible to call another endpoint such as /channels/9876 without hitting the limit.
 
 In addition to per-route limits, global rate limits also exist and apply to the total number of requests made by a user or bot, regardless of the specific route.
 
