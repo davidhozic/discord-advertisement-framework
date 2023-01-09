@@ -52,11 +52,20 @@ while still maintaining the simplicity and readability of the reStructuredText s
 
         Rickroll image
 
+    .. math:: 
+        :label: Derivative of an integral with parameter
+        
+        \frac{d}{dy}(F(y))=\int^{g_2(y)}_{g_1(y)}f_y dx +
+        (f(g_2(y), y)\cdot g_2(y)'{dy} - f(g_1(y), y)\cdot g_1(y)')
+   
 
 .. code-block:: reStructuredText
     :caption: reStructuredText role example
 
-    :math:`\int 1 dx = x + C`
+    :math:`\int 1 dx = x + C`.
+    If the above isn't hard enough, the 
+    :eq:`Derivative of an integral with parameter`
+    is a bit harder.
 
 
 Documenting the project
@@ -134,14 +143,9 @@ that have a docstring attached to them.
     ============================
 
     ------------------------
-    get_accounts
-    ------------------------
-    .. autofunction:: daf.core.get_accounts
-
-
-    ------------------------
     ACCOUNT
     ------------------------
+
     .. autoclass:: daf.client.ACCOUNT
         :members:
 
@@ -151,13 +155,93 @@ that have a docstring attached to them.
 
 The above would result in the following:
 
-.. image:: ./images/autodoc_example1.png
-    :width: 400
-    :align: center
-
-.. figure:: ./images/autodoc_example2.png
-    :width: 400
-    :align: center
+.. figure:: ./images/autodoc_example.png
+    :height: 140mm
 
     Automatic documentation output example
+
+.. raw:: latex
+
+    \newpage
+
+From the above image you can see that :class:`~daf.client.ACCOUNT` has additional content generated that was not directly put
+to the ``autoclass`` directive, but instead it was extracted from the class' docstring and copied to the documentation directly from the code.
+:class:`~daf.client.ACCOUNT` has the following docstrings:
+
+.. code-block:: python
+    :caption: :class:`~daf.client.ACCOUNT`'s docstrings
+
+    """
+    .. versionadded:: v2.4
+
+    Represents an individual Discord account.
+    
+    Each ACCOUNT instance runs it's own shilling task.
+
+    Parameters
+    ----------
+    token : str
+        The Discord account's token
+    is_user : Optional[bool] =False
+        Declares that the ``token`` is a user account token ("self-bot")
+    intents: Optional[discord.Intents]=discord.Intents.default()
+        Discord Intents (settings of events that the client will subscribe to)
+    proxy: Optional[str]=None
+        The proxy to use when connecting to Discord.
+
+        .. IMPORTANT::
+            It is **RECOMMENDED** to use a proxy if you are running **MULTIPLE** accounts.
+            Running multiple accounts from the same IP address, can result in Discord
+            detecting self-bots. 
+
+            Running multiple bot accounts on the other hand is perfectly fine without 
+            a proxy.
+    servers: Optional[List[guild.GUILD | guild.USER | guild.AutoGUILD]]=[]
+        Predefined list of servers (guilds, users, auto-guilds).
+    """
+    @typechecked
+    def __init__(...) -> None:
+        ...
+
+    def __eq__(self, other):
+        ...
+
+    @property
+    def running(self) -> bool:
+        """
+        Is the account still running?
+
+        Returns
+        -----------
+        True
+            The account is logged in and shilling is active.
+        False
+            The shilling has ended or not begun.
+        """
+        ...
+    
+    @property
+    def deleted(self) -> bool:
+        """
+        Returns
+        -----------
+        True
+            The object is no longer in the framework and should no longer
+            be used.
+        False
+            Object is in the framework in normal operation.
+        """
+        ...
+
+    @property
+    def servers(self):
+        """
+        Returns all guild like objects inside the account's s
+        shilling list. This also includes :class:`~daf.guild.AutoGUILD`
+        """
+        ...
+
+    ...
+
+
 
