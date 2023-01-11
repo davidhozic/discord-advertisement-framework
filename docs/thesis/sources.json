@@ -75,5 +75,12 @@
         "title": "reStructuredText Directives",
         "source": "https://docutils.sourceforge.io/docs/ref/rst/directives.html",
         "updated": "jan. 2023"
+    },
+    {
+        "id" : "pytest_desc",
+        "author": "Shaheer Shahid Malik",
+        "source" : "https://medium.com/codex/why-use-pytest-to-test-your-software-project-7758ac9970ba",
+        "title": "Why Use Pytest to Test Your Software Project?",
+        "updated": "jan. 2023"
     }
 ]

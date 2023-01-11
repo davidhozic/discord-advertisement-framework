@@ -1,21 +1,17 @@
-==========
-Methods
-==========
-
+======================
+Documentation process
+======================
 .. _DAF_WEB: https://daf.davidhozic.com
 
 .. _sphinx.ext.autodoc: https://www.sphinx-doc.org/en/master/usage/extensions/autodoc.html
 
 .. |DAF_WEB| replace:: DAF's website
 
-
-Documentation
-=====================
 The entire thesis project is well documented.
 The documentation is primary built to HTML and published to |DAF_WEB|_.
 
 Sphinx
-----------
+=====================
 The system used for documenting code is called Sphinx.
 Sphinx is a popular tool among Python developers for generating documentation.
 It is written in Python and can be used in a variety of environments.
@@ -32,7 +28,7 @@ Sphinx primarily uses restructuredText for markup, but it also supports Markdown
 For writing equations you can write in Latex.
 
 reStructuredText
-------------------
+=====================
 reStructuredText is a popular markup language used within the Python programming community for documentation.
 It is designed to be easily readable, with a focus on simplicity and power.
 The syntax allows for the creation of web pages and standalone documents, as well as in-line program documentation such as Python docstrings.
@@ -69,7 +65,7 @@ while still maintaining the simplicity and readability of the reStructuredText s
 
 
 Documenting the project
----------------------------
+========================
 DAF is fully documented using the Sphinx build system. 
 
 The guide for using DAF is written in .rst files located under the ``/project root/docs/source/guide`` folder in the language
