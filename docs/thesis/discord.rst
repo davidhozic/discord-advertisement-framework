@@ -150,19 +150,36 @@ The term "snowflake" refers to the unique and individual nature of the ID, simil
     \newpage
 
 
-**Snowflake structure:**
+.. list-table:: Snowflake structure:
+    :header-rows: 1
 
-+---------------------+----------+-----------+------------------------------------------------------------------------------------------------+
-|        Field        |   Bits   | Num. bits |                                         Description                                            |
-+=====================+==========+===========+================================================================================================+
-| Timestamp           | 63 to 22 | 42 bits   | Milliseconds since Discord Epoch, the first second of 2015 or 1420070400000.                   |
-+---------------------+----------+-----------+------------------------------------------------------------------------------------------------+
-| Internal worker ID  | 21 to 17 | 5 bits    |                                                                                                |
-+---------------------+----------+-----------+------------------------------------------------------------------------------------------------+
-| Internal process ID | 16 to 12 | 5 bits    |                                                                                                |
-+---------------------+----------+-----------+------------------------------------------------------------------------------------------------+
-| Increment           | 11 to 0  | 12 bits   | For every ID that is generated on that process, this number is incremented snowflake & 0xFFF   |
-+---------------------+----------+-----------+------------------------------------------------------------------------------------------------+
+
+    * 
+        - Field
+        - Bits
+        - Num. bits
+        - Description
+    *
+        - Timestamp
+        - 63 to 22
+        - 42
+        - Milliseconds since Discord Epoch, the first second of 2015 or 1420070400000.
+    *
+        - Internal worker ID 
+        - 21 to 17
+        - 5 bits
+        -
+    *
+        - Internal process ID
+        - 16 to 12 bits
+        - 5 bits
+        -
+    *
+        - Increment
+        - 11 to 0
+        - 12 bits
+        - For every ID that is generated on that process, this number is incremented snowflake & 0xFFF
+
 
 The snowflake can be obtained for each resource through the Discord client by enabling `Developer mode`_ 
 and then right clicking on wanted resource and left clicking *"Copy ID"*.

@@ -123,6 +123,7 @@ latex_elements = {
         \tableofcontents
         \listoffigures
         \listof{literalblock}{List of literal blocks}
+        \listoftables
     """,
     'fncychap': r'',
     # 'fontpkg': r"""
