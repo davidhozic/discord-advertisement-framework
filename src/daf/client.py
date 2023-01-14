@@ -2,6 +2,8 @@
     This modules contains definitions related to the client (for API)
 """
 from typing import Optional, Union, Optional, List
+from contextlib import suppress
+from random import random
 
 from . import misc
 from . import guild
@@ -23,6 +25,9 @@ TOKEN_MAX_PRINT_LEN = 5
 TASK_SLEEP_DELAY_S = 0.100
 TASK_STARTUP_DELAY_S = 2
 
+SELENIUM_SLEEP_MIN_S = 1
+SELENIUM_TIMEOUT = 5
+
 __all__ = (
     "ACCOUNT",
     "get_client"
@@ -43,20 +48,113 @@ except ImportError:
     GLOBALS.proxy_installed = False
 
 try:
-    from selenium.webdriver import Chrome
+    from selenium.webdriver import Chrome, DesiredCapabilities
     from selenium.webdriver.common.by import By
-    from selenium.webdriver.common.proxy import Proxy
+    from selenium.webdriver.common.proxy import Proxy, ProxyType
+    from selenium.webdriver.common.log import Log 
     from selenium.webdriver.support.wait import WebDriverWait
     from selenium.webdriver.support.expected_conditions import presence_of_element_located
+    from selenium.common.exceptions import NoSuchElementException, TimeoutException
     GLOBALS.selenium_installed = True
 except:
     GLOBALS.selenium_installed = False
 # -------------------------------------------- #
 
+
+class SeleniumCLIENT:
+    """
+    Client used to control the Discord web client for things such as 
+    logging in, joining guilds, passing "Complete" for guild rules.
+
+    This is created in the ACCOUNT object in case ``web`` parameter inside ACCOUNT is True.
+
+    Parameters
+    -------------
+    username: str
+        The Discord username to login with.
+    password: str
+        The Discord password to login with.
+    proxy: str
+        The proxy url to use when connecting to Chrome.
+    """
+    def __init__(self,
+                 username: str,
+                 password: str,
+                 proxy: str) -> None:
+        self._username = username
+        self._password = password
+        capabilities = DesiredCapabilities.CHROME
+        if proxy is not None:
+            proxy_ = Proxy()
+            proxy_.proxy_type = ProxyType.AUTODETECT
+            proxy_.auto_detect = True
+            proxy_.add_to_capabilities(capabilities)
+
+        self.driver = Chrome(desired_capabilities=capabilities)
+    
+    async def _sleep_rnd(self):
+        """
+        Sleeps randomly to prevent detection.
+        """
+        await asyncio.sleep(SELENIUM_SLEEP_MIN_S + random() * SELENIUM_SLEEP_MIN_S)
+    
+    def _get_token(self):
+        """
+        Get's the token from local storage.
+        First it gets the object descriptor that was deleted from Discord.
+        """
+        driver = self.driver
+        token: str =  driver.execute_script(
+            """
+            const f = document.createElement('iframe');
+            document.head.append(f);
+            const desc = Object.getOwnPropertyDescriptor(f.contentWindow, 'localStorage');
+            f.remove();
+            const localStorage = desc.get.call(window);
+            return localStorage["token"];
+            """
+        )
+        return token.replace('"', "").replace("'", "")
+
+
+    async def _login(self) -> str:
+        """
+        Logins to Discord.
+
+        Returns
+        ----------
+        str
+            The account's token
+        """
+        driver = self.driver
+        driver.get("https://discord.com/login")
+        email_entry = driver.find_element(By.CSS_SELECTOR, "input[name='email']")
+        pass_entry = driver.find_element(By.CSS_SELECTOR, "input[type='password']")
+        login_bnt = driver.find_element(By.CSS_SELECTOR, "button[type='submit']")
+
+        email_entry.send_keys(self._username)
+        await self._sleep_rnd()
+        pass_entry.send_keys(self._password)
+
+        await self._sleep_rnd()
+        login_bnt.click()
+        with suppress(TimeoutError):
+            WebDriverWait(driver, SELENIUM_TIMEOUT).until(
+                presence_of_element_located((By.XPATH, '//*[@id="app-mount"]/div[2]/div/div[1]/div/div[2]/div/div[1]/nav/ul/div[2]'))
+            )
+
+        await self._sleep_rnd()
+        return self._get_token()
+
+
 @misc.doc_category("Clients")
 class ACCOUNT:
     """
     .. versionadded:: v2.4
+
+    .. versionchanged:: v2.5
+        Added ``username`` and ``password`` parameters.
+        For logging in automatically
 
     Represents an individual Discord account.
     
@@ -82,14 +180,45 @@ class ACCOUNT:
             a proxy.
     servers: Optional[List[guild.GUILD | guild.USER | guild.AutoGUILD]]=[]
         Predefined list of servers (guilds, users, auto-guilds).
+    username: Optional[str]
+        The username to login with. 
+    password: Optional[str]
+        The password to login with.
+        
+        .. warning::
+            Do not provide ``token`` parameter if you've provided username and password.
+            An exception will be raised to prevent token being used that does not belong
+            to the provided account.
+
+    Raises
+    ---------------
+    ModuleNotFoundError
+        'proxy' parameter was provided but requirements are not installed.
+    ValueError
+        'token' is not allowed if 'username' is provided and vice versa.
     """
     @typechecked
     def __init__(self,
-                 token : str,
+                 token : Optional[str]=None,
                  is_user : Optional[bool] =False,
                  intents: Optional[discord.Intents]=None,
                  proxy: Optional[str]=None,
-                 servers: Optional[List[Union[guild.GUILD, guild.USER, guild.AutoGUILD]]]=None) -> None:
+                 servers: Optional[List[Union[guild.GUILD, guild.USER, guild.AutoGUILD]]]=None,
+                 username: Optional[str]=None,
+                 password: Optional[str]=None) -> None:
+        connector = None
+        if proxy is not None:
+            if not GLOBALS.proxy_installed:
+                raise ModuleNotFoundError("You need to install extra requirements: pip install discord-advert-framework[proxy]")
+        
+            connector = ProxyConnector.from_url(proxy)
+
+        if token is not None and username is not None: # Only one parameter of these at a time
+            raise ValueError("'token' parameter not allowed if 'username' is given.")
+        
+        if token is None and username is None: # At least one of these
+            raise ValueError("At lest one parameter of these is required: 'token' OR 'username' + 'password'")
+
         self._token = token
         self.is_user = is_user
         self.proxy = proxy
@@ -103,6 +232,10 @@ class ACCOUNT:
         self.loop_task = None
         self._servers: List[guild._BaseGUILD] = []
         self._autoguilds: List[guild.AutoGUILD] = [] # To prevent __eq__ issues, use 2 lists
+        self.selenium_client = None
+        if username is not None:
+            self.selenium_client = SeleniumCLIENT(username, password, proxy)
+
         if servers is None:
             servers = []
 
@@ -111,13 +244,6 @@ class ACCOUNT:
         servers parameter gets stored into _servers to prevent the
         update method from re-initializing initializes objects.
         This gets deleted in the initialize method"""
-
-        connector = None
-        if proxy is not None:
-            if not GLOBALS.proxy_installed:
-                raise ModuleNotFoundError("You need to install extra requirements: pip install discord-advert-framework[proxy]")
-        
-            connector = ProxyConnector.from_url(proxy)
 
         self._client = discord.Client(intents=intents, connector=connector)
         self._deleted = False
@@ -188,6 +314,11 @@ class ACCOUNT:
         RuntimeError
             Unable to login to Discord.
         """
+        # Obtain token if it is not provided
+        if self.selenium_client is not None:
+            self._token = await self.selenium_client._login()
+            self.is_user = True
+        
         # Login
         trace("Logging in...")
         _client_task = asyncio.create_task(self._client.start(self._token, bot=not self.is_user))
@@ -345,8 +476,6 @@ class ACCOUNT:
         await update_servers(self)
 
 
-
-
 def get_client() -> discord.Client:
     """
     TODO: remove in v2.5
@@ -359,25 +488,3 @@ def get_client() -> discord.Client:
           TraceLEVELS.DEPRECATED)
     from . import core
     return core.GLOBALS.accounts[0].client
-
-
-class SeleniumCLIENT:
-    """
-    Client used to control the Discord web client for things such as 
-    logging in, joining guilds, passing "Complete" for guild rules.
-    """
-    def __init__(self) -> None:
-        ...
-
-    def _start(self, proxy: str):
-        """
-        Starts the internal web driver.
-
-        Parameters
-        -------------
-        proxy: str
-            The proxy to use for the browser.
-        """
-        ...
-
-    def _login(self, username, password):
