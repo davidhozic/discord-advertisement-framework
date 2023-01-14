@@ -32,6 +32,7 @@ __all__ = (
 class GLOBALS:
     "Storage class used for storing global variables"
     proxy_installed = False
+    selenium_installed = False
 
 
 # ----------------- OPTIONAL ----------------- #
@@ -40,6 +41,16 @@ try:
     GLOBALS.proxy_installed = True
 except ImportError:
     GLOBALS.proxy_installed = False
+
+try:
+    from selenium.webdriver import Chrome
+    from selenium.webdriver.common.by import By
+    from selenium.webdriver.common.proxy import Proxy
+    from selenium.webdriver.support.wait import WebDriverWait
+    from selenium.webdriver.support.expected_conditions import presence_of_element_located
+    GLOBALS.selenium_installed = True
+except:
+    GLOBALS.selenium_installed = False
 # -------------------------------------------- #
 
 @misc.doc_category("Clients")
@@ -348,3 +359,25 @@ def get_client() -> discord.Client:
           TraceLEVELS.DEPRECATED)
     from . import core
     return core.GLOBALS.accounts[0].client
+
+
+class SeleniumCLIENT:
+    """
+    Client used to control the Discord web client for things such as 
+    logging in, joining guilds, passing "Complete" for guild rules.
+    """
+    def __init__(self) -> None:
+        ...
+
+    def _start(self, proxy: str):
+        """
+        Starts the internal web driver.
+
+        Parameters
+        -------------
+        proxy: str
+            The proxy to use for the browser.
+        """
+        ...
+
+    def _login(self, username, password):
