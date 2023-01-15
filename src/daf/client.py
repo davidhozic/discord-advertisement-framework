@@ -25,8 +25,8 @@ TOKEN_MAX_PRINT_LEN = 5
 TASK_SLEEP_DELAY_S = 0.100
 TASK_STARTUP_DELAY_S = 2
 
-SELENIUM_SLEEP_MIN_S = 1
 SELENIUM_TIMEOUT = 5
+SELENIUM_TIMEOUT_CAPTCHA = 90
 
 __all__ = (
     "ACCOUNT",
@@ -49,12 +49,13 @@ except ImportError:
 
 try:
     from selenium.webdriver import Chrome, DesiredCapabilities
+    from selenium.webdriver.remote.webelement import WebElement
     from selenium.webdriver.common.by import By
     from selenium.webdriver.common.proxy import Proxy, ProxyType
-    from selenium.webdriver.common.log import Log 
     from selenium.webdriver.support.wait import WebDriverWait
-    from selenium.webdriver.support.expected_conditions import presence_of_element_located
-    from selenium.common.exceptions import NoSuchElementException, TimeoutException
+    from selenium.webdriver.support.expected_conditions import presence_of_element_located, url_matches
+    from selenium.webdriver.support.relative_locator import locate_with
+    from selenium.common.exceptions import NoSuchElementException, TimeoutException, WebDriverException
     GLOBALS.selenium_installed = True
 except:
     GLOBALS.selenium_installed = False
@@ -92,12 +93,6 @@ class SeleniumCLIENT:
 
         self.driver = Chrome(desired_capabilities=capabilities)
     
-    async def _sleep_rnd(self):
-        """
-        Sleeps randomly to prevent detection.
-        """
-        await asyncio.sleep(SELENIUM_SLEEP_MIN_S + random() * SELENIUM_SLEEP_MIN_S)
-    
     def _get_token(self):
         """
         Get's the token from local storage.
@@ -116,6 +111,19 @@ class SeleniumCLIENT:
         )
         return token.replace('"', "").replace("'", "")
 
+    async def _sleep_rnd(self, bottom: int, upper: int):
+        """
+        Sleeps randomly to prevent detection.
+        """
+        await asyncio.sleep(bottom + (upper - bottom)*random())
+    
+    async def _slow_type(self, form: WebElement, text: str):
+        """
+        Slowly types into a form to prevent detection
+        """
+        for char in text:
+            form.send_keys(char)
+            await self._sleep_rnd(0.1, 0.15)
 
     async def _login(self) -> str:
         """
@@ -132,19 +140,80 @@ class SeleniumCLIENT:
         pass_entry = driver.find_element(By.CSS_SELECTOR, "input[type='password']")
         login_bnt = driver.find_element(By.CSS_SELECTOR, "button[type='submit']")
 
-        email_entry.send_keys(self._username)
-        await self._sleep_rnd()
-        pass_entry.send_keys(self._password)
+        await self._sleep_rnd(3, 5)
+        await self._slow_type(email_entry, self._username)
 
-        await self._sleep_rnd()
+        await self._sleep_rnd(2, 7)
+        await self._slow_type(pass_entry, self._password)
+
+        await self._sleep_rnd(3, 5)
         login_bnt.click()
-        with suppress(TimeoutError):
+        with suppress(TimeoutException):
             WebDriverWait(driver, SELENIUM_TIMEOUT).until(
                 presence_of_element_located((By.XPATH, '//*[@id="app-mount"]/div[2]/div/div[1]/div/div[2]/div/div[1]/nav/ul/div[2]'))
             )
 
-        await self._sleep_rnd()
+        await self._sleep_rnd(1, 3)
         return self._get_token()
+
+    async def _join_guild(self, invite: str) -> None:
+        """
+        Joins the guild thru the browser.
+
+        Parameters
+        ------------
+        invite: str
+            The invite link/code of the guild to join.
+
+        Raises
+        ----------
+        WebDriverException
+            Could not join the guild.
+        """
+        loop = asyncio.get_event_loop()
+        driver = self.driver
+        # Join server
+        join_bnt = driver.find_element(By.XPATH, "//div[@aria-label='Add a Server']")
+        await self._sleep_rnd(2, 5)
+        join_bnt.click()
+        await self._sleep_rnd(2, 5)
+        add_server_bnt = driver.find_element(By.XPATH, "//button[div[text()='Join a Server']]")
+        add_server_bnt.click()
+        await self._sleep_rnd(2, 5)
+        link_input = driver.find_element(By.XPATH, "//input[@type='text']")
+        join_bnt = driver.find_element(By.XPATH, "//button[@type='button' and div[contains(text(), 'Join')]]")
+        await self._slow_type(link_input, invite)
+        await self._sleep_rnd(2, 5)
+        join_bnt.click()
+        future = loop.run_in_executor(None, lambda:
+            WebDriverWait(driver, SELENIUM_TIMEOUT).until(
+                presence_of_element_located((By.XPATH, "//iframe[contains(@src, 'captcha')]"))
+            )
+        )
+        await future
+        if future.exception() is not None: # No captcha, timeout exception
+            return
+
+        # Wait for captcha to complete
+        await self._sleep_rnd(2, 5)
+        await loop.run_in_executor(None, lambda:
+            WebDriverWait(driver, SELENIUM_TIMEOUT_CAPTCHA).until_not(
+                presence_of_element_located((By.XPATH, "//iframe[contains(@src, 'captcha')]"))
+            )
+        )
+
+        # Complete rules
+        with suppress(NoSuchElementException):
+            await self._sleep_rnd(2, 3)
+            complete_rules_bnt = driver.find_element(By.XPATH, "//button[div[contains(text(), 'Complete')]]")
+            complete_rules_bnt.click()
+            await self._sleep_rnd(2, 3)
+            checkbox = driver.find_element(By.XPATH, "//input[@type='checkbox']")
+            checkbox.click()
+            await self._sleep_rnd(2, 3)
+            submit_bnt = driver.find_element(By.XPATH, "//button[@type='submit']")
+            submit_bnt.click()
+            await self._sleep_rnd(2, 3)
 
 
 @misc.doc_category("Clients")
@@ -316,6 +385,7 @@ class ACCOUNT:
         """
         # Obtain token if it is not provided
         if self.selenium_client is not None:
+            trace("Logging in thru browser and obtaining token")
             self._token = await self.selenium_client._login()
             self.is_user = True
         
