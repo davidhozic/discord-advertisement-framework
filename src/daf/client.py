@@ -25,8 +25,8 @@ TOKEN_MAX_PRINT_LEN = 5
 TASK_SLEEP_DELAY_S = 0.100
 TASK_STARTUP_DELAY_S = 2
 
-SELENIUM_TIMEOUT = 5
-SELENIUM_TIMEOUT_CAPTCHA = 90
+WD_TIMEOUT_SHORT = 5
+WD_TIMEOUT_LONG = 90
 
 __all__ = (
     "ACCOUNT",
@@ -125,6 +125,19 @@ class SeleniumCLIENT:
         for char in text:
             form.send_keys(char)
             await self.random_sleep(0.05, 0.10)
+    
+    async def await_captcha(self):
+        loop = asyncio.get_event_loop()
+        try:
+            # CAPTCHA detected, wait until it is solved by the user 
+            await self.random_sleep(1, 3)
+            await loop.run_in_executor(None, lambda:
+                WebDriverWait(self.driver, WD_TIMEOUT_LONG).until_not(
+                    presence_of_element_located((By.XPATH, "//iframe[contains(@src, 'captcha')]"))
+                )
+            )
+        except TimeoutException as exc:
+            raise RuntimeError(f"CAPTCHA was not solved by the user") from exc
 
     async def login(self) -> str:
         """
@@ -136,6 +149,7 @@ class SeleniumCLIENT:
             The account's token
         """
         driver = self.driver
+        loop = asyncio.get_event_loop()
         driver.get("https://discord.com/login")
         email_entry = driver.find_element(By.XPATH, "//input[@name='email']")
         pass_entry = driver.find_element(By.XPATH, "//input[@type='password']")
@@ -148,11 +162,21 @@ class SeleniumCLIENT:
         await self.random_sleep(1, 3)
         await self.hover_click(login_bnt)
 
-        with suppress(TimeoutException):
-            WebDriverWait(driver, SELENIUM_TIMEOUT).until(
-                presence_of_element_located((By.XPATH, '//*[@id="app-mount"]/div[2]/div/div[1]/div/div[2]/div/div[1]/nav/ul/div[2]'))
-            )
+        await self.await_captcha()
+        await self.random_sleep(1, 3)
 
+        with suppress(TimeoutException):
+            await loop.run_in_executor(None, lambda:
+                WebDriverWait(driver, WD_TIMEOUT_LONG).until_not(
+                    presence_of_element_located((By.XPATH, "//h1[contains(text(), 'Two-factor')]"))
+                )
+        )
+        with suppress(TimeoutException):
+            await loop.run_in_executor(None, lambda:
+                WebDriverWait(driver, WD_TIMEOUT_SHORT).until(
+                    presence_of_element_located((By.XPATH, '//*[@id="app-mount"]/div[2]/div/div[1]/div/div[2]/div/div[1]/nav/ul/div[2]'))
+                )
+        )
         await self.random_sleep(1, 3)
         return self.extract_token()
 
@@ -202,19 +226,11 @@ class SeleniumCLIENT:
         await self.hover_click(join_bnt)
         await self.random_sleep(3, 5) # Wait for any CAPTCHA to appear
 
-        try:
-            # CAPTCHA detected, wait until it is solved by the user 
-            await loop.run_in_executor(None, lambda:
-                WebDriverWait(driver, SELENIUM_TIMEOUT_CAPTCHA).until_not(
-                    presence_of_element_located((By.XPATH, "//iframe[contains(@src, 'captcha')]"))
-                )
-            )
-        except TimeoutException as exc:
-            raise RuntimeError(f"CAPTCHA was not solved by the user, cannot join the guild. Invite: '{invite}'") from exc
+        await self.await_captcha()
 
         with suppress(TimeoutException): 
             await loop.run_in_executor(None, lambda:
-                WebDriverWait(driver, SELENIUM_TIMEOUT).until_not(
+                WebDriverWait(driver, WD_TIMEOUT_SHORT).until_not(
                     presence_of_element_located((By.XPATH, "//button[@type='button' and div[contains(text(), 'Join')]]"))
                 )
             )
