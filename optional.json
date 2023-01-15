@@ -1,5 +1,5 @@
 {
-    "web": ["selenium"],
+    "web": ["selenium", "undetected-chromedriver"],
     "voice" : ["PyNaCl", "yt-dlp"],
     "proxy" : ["aiohttp_socks"],
     "sql"   : ["sqlalchemy[asyncio]", "aiosqlite", "pymssql", "asyncpg", "asyncmy"],
