@@ -101,20 +101,20 @@ async def json_or_text(response: aiohttp.ClientResponse) -> dict[str, Any] | str
 
 
 class UserLimit:
-    def __init__(self) -> None:
+    def __init__(self, loop: asyncio.BaseEventLoop) -> None:
         self.usages = 0
+        self.loop = loop
         self.lock = asyncio.Lock()
 
-    async def __aenter__(self):
-        async with self.lock:
-            if self.usages >= 2:
-                await asyncio.sleep(4.5)
-                self.usages = 0
+    async def ensure(self):
+        await self.lock.acquire()
+        self.usages += 1
+        if self.usages >= 2:
+            self.loop.call_later(4.5, self.lock.release)
+            self.usages = 0
+        else:
+            self.lock.release()
 
-            self.usages += 1
-
-    async def __aexit__(self, *args):
-        pass
 
 class Route:
     def __init__(self, method: str, path: str, **parameters: Any) -> None:
@@ -201,7 +201,7 @@ class HTTPClient:
 
         user_agent = "DiscordBot (https://github.com/Pycord-Development/pycord {0}) Python/{1[0]}.{1[1]} aiohttp/{2}"
         self.user_agent: str = user_agent.format(__version__, sys.version_info, aiohttp.__version__)
-        self.user_limit = UserLimit()
+        self.user_limit = UserLimit(self.loop)
         if not bot:
             self.user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.5005.63 Safari/537.36"
         else:
@@ -300,8 +300,7 @@ class HTTPClient:
                 try:
 
                     if not self.bot_token:
-                        async with self.user_limit:
-                            pass
+                        await self.user_limit.ensure()
 
                     async with self.__session.request(
                         method, url, **kwargs

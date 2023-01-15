@@ -154,9 +154,6 @@ class SeleniumCLIENT:
             )
 
         await self.random_sleep(1, 3)
-        await self.join_guild("https://discord.com/invite/smnPGzrqYc") # TODO: remove as it is for testing
-        await self.join_guild("https://discord.com/invite/6nT6md9fxw") # TODO: remove as it is for testing
-        await self.join_guild("https://discord.com/invite/clashofdragonz") # TODO: remove as it is for testing
         return self.extract_token()
 
     async def hover_click(self, element: WebElement):
