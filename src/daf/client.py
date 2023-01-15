@@ -51,12 +51,12 @@ try:
     from selenium.webdriver import Chrome, DesiredCapabilities
     from selenium.webdriver.remote.webelement import WebElement
     from selenium.webdriver.common.by import By
+    from selenium.webdriver.common.keys import Keys
     from selenium.webdriver.common.action_chains import ActionChains
     from selenium.webdriver.common.proxy import Proxy, ProxyType
     from selenium.webdriver.support.wait import WebDriverWait
-    from selenium.webdriver.support.expected_conditions import presence_of_element_located, url_matches
-    from selenium.webdriver.support.relative_locator import locate_with
-    from selenium.common.exceptions import NoSuchElementException, TimeoutException, WebDriverException
+    from selenium.webdriver.support.expected_conditions import presence_of_element_located
+    from selenium.common.exceptions import NoSuchElementException, TimeoutException
     GLOBALS.selenium_installed = True
 except:
     GLOBALS.selenium_installed = False
@@ -124,7 +124,7 @@ class SeleniumCLIENT:
         """
         for char in text:
             form.send_keys(char)
-            await self.random_sleep(0.1, 0.15)
+            await self.random_sleep(0.05, 0.10)
 
     async def login(self) -> str:
         """
@@ -203,6 +203,8 @@ class SeleniumCLIENT:
 
         join_bnt = driver.find_element(By.XPATH, "//button[@type='button' and div[contains(text(), 'Join')]]")
         await self.hover_click(join_bnt)
+        await self.random_sleep(3, 5) # Wait for any CAPTCHA to appear
+
         try:
             # CAPTCHA detected, wait until it is solved by the user 
             await loop.run_in_executor(None, lambda:
@@ -221,6 +223,7 @@ class SeleniumCLIENT:
             )
 
         # Complete rules
+        ActionChains(driver).send_keys(Keys.ESCAPE).perform() # To ensure there is not already an open menu
         with suppress(NoSuchElementException):
             complete_rules_bnt = driver.find_element(By.XPATH, "//button[div[contains(text(), 'Complete')]]")
             await self.hover_click(complete_rules_bnt)
