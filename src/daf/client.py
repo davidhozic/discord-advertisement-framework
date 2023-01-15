@@ -51,6 +51,7 @@ try:
     from selenium.webdriver import Chrome, DesiredCapabilities
     from selenium.webdriver.remote.webelement import WebElement
     from selenium.webdriver.common.by import By
+    from selenium.webdriver.common.action_chains import ActionChains
     from selenium.webdriver.common.proxy import Proxy, ProxyType
     from selenium.webdriver.support.wait import WebDriverWait
     from selenium.webdriver.support.expected_conditions import presence_of_element_located, url_matches
@@ -93,7 +94,7 @@ class SeleniumCLIENT:
 
         self.driver = Chrome(desired_capabilities=capabilities)
     
-    def _get_token(self):
+    def extract_token(self):
         """
         Get's the token from local storage.
         First it gets the object descriptor that was deleted from Discord.
@@ -111,21 +112,21 @@ class SeleniumCLIENT:
         )
         return token.replace('"', "").replace("'", "")
 
-    async def _sleep_rnd(self, bottom: int, upper: int):
+    async def random_sleep(self, bottom: int, upper: int):
         """
         Sleeps randomly to prevent detection.
         """
         await asyncio.sleep(bottom + (upper - bottom)*random())
     
-    async def _slow_type(self, form: WebElement, text: str):
+    async def slow_type(self, form: WebElement, text: str):
         """
         Slowly types into a form to prevent detection
         """
         for char in text:
             form.send_keys(char)
-            await self._sleep_rnd(0.1, 0.15)
+            await self.random_sleep(0.1, 0.15)
 
-    async def _login(self) -> str:
+    async def login(self) -> str:
         """
         Logins to Discord.
 
@@ -136,27 +137,44 @@ class SeleniumCLIENT:
         """
         driver = self.driver
         driver.get("https://discord.com/login")
-        email_entry = driver.find_element(By.CSS_SELECTOR, "input[name='email']")
-        pass_entry = driver.find_element(By.CSS_SELECTOR, "input[type='password']")
-        login_bnt = driver.find_element(By.CSS_SELECTOR, "button[type='submit']")
+        email_entry = driver.find_element(By.XPATH, "//input[@name='email']")
+        pass_entry = driver.find_element(By.XPATH, "//input[@type='password']")
+        login_bnt = driver.find_element(By.XPATH, "//button[@type='submit']")
 
-        await self._sleep_rnd(3, 5)
-        await self._slow_type(email_entry, self._username)
+        await self.random_sleep(1, 3)
+        await self.slow_type(email_entry, self._username)
+        await self.random_sleep(1, 3)
+        await self.slow_type(pass_entry, self._password)
+        await self.random_sleep(1, 3)
+        await self.hover_click(login_bnt)
 
-        await self._sleep_rnd(2, 7)
-        await self._slow_type(pass_entry, self._password)
-
-        await self._sleep_rnd(3, 5)
-        login_bnt.click()
         with suppress(TimeoutException):
             WebDriverWait(driver, SELENIUM_TIMEOUT).until(
                 presence_of_element_located((By.XPATH, '//*[@id="app-mount"]/div[2]/div/div[1]/div/div[2]/div/div[1]/nav/ul/div[2]'))
             )
 
-        await self._sleep_rnd(1, 3)
-        return self._get_token()
+        await self.random_sleep(1, 3)
+        await self.join_guild("https://discord.com/invite/smnPGzrqYc") # TODO: remove as it is for testing
+        await self.join_guild("https://discord.com/invite/6nT6md9fxw") # TODO: remove as it is for testing
+        await self.join_guild("https://discord.com/invite/clashofdragonz") # TODO: remove as it is for testing
+        return self.extract_token()
 
-    async def _join_guild(self, invite: str) -> None:
+    async def hover_click(self, element: WebElement):
+        """
+        Hovers an element and clicks on it.
+
+        Parameters
+        -------------
+        element: WebElement
+            The element to hover click.
+        """
+        actions = ActionChains(self.driver)
+        actions.move_to_element(element).perform()
+        await self.random_sleep(0.25, 1)
+        actions.click(element).perform()
+        await self.random_sleep(1, 2)
+
+    async def join_guild(self, invite: str) -> None:
         """
         Joins the guild thru the browser.
 
@@ -174,46 +192,46 @@ class SeleniumCLIENT:
         driver = self.driver
         # Join server
         join_bnt = driver.find_element(By.XPATH, "//div[@aria-label='Add a Server']")
-        await self._sleep_rnd(2, 5)
-        join_bnt.click()
-        await self._sleep_rnd(2, 5)
-        add_server_bnt = driver.find_element(By.XPATH, "//button[div[text()='Join a Server']]")
-        add_server_bnt.click()
-        await self._sleep_rnd(2, 5)
-        link_input = driver.find_element(By.XPATH, "//input[@type='text']")
-        join_bnt = driver.find_element(By.XPATH, "//button[@type='button' and div[contains(text(), 'Join')]]")
-        await self._slow_type(link_input, invite)
-        await self._sleep_rnd(2, 5)
-        join_bnt.click()
-        future = loop.run_in_executor(None, lambda:
-            WebDriverWait(driver, SELENIUM_TIMEOUT).until(
-                presence_of_element_located((By.XPATH, "//iframe[contains(@src, 'captcha')]"))
-            )
-        )
-        await future
-        if future.exception() is not None: # No captcha, timeout exception
-            return
+        await self.hover_click(join_bnt)
 
-        # Wait for captcha to complete
-        await self._sleep_rnd(2, 5)
-        await loop.run_in_executor(None, lambda:
-            WebDriverWait(driver, SELENIUM_TIMEOUT_CAPTCHA).until_not(
-                presence_of_element_located((By.XPATH, "//iframe[contains(@src, 'captcha')]"))
+        add_server_bnt = driver.find_element(By.XPATH, "//button[div[text()='Join a Server']]")
+        await self.hover_click(add_server_bnt)
+
+        link_input = driver.find_element(By.XPATH, "//input[@type='text']")
+        await self.slow_type(link_input, invite)
+        await self.random_sleep(2, 5)
+
+        join_bnt = driver.find_element(By.XPATH, "//button[@type='button' and div[contains(text(), 'Join')]]")
+        await self.hover_click(join_bnt)
+        try:
+            # CAPTCHA detected, wait until it is solved by the user 
+            await loop.run_in_executor(None, lambda:
+                WebDriverWait(driver, SELENIUM_TIMEOUT_CAPTCHA).until_not(
+                    presence_of_element_located((By.XPATH, "//iframe[contains(@src, 'captcha')]"))
+                )
             )
-        )
+        except TimeoutException as exc:
+            raise RuntimeError(f"CAPTCHA was not solved by the user, cannot join the guild. Invite: '{invite}'") from exc
+
+        with suppress(TimeoutException): 
+            await loop.run_in_executor(None, lambda:
+                WebDriverWait(driver, SELENIUM_TIMEOUT).until_not(
+                    presence_of_element_located((By.XPATH, "//button[@type='button' and div[contains(text(), 'Join')]]"))
+                )
+            )
 
         # Complete rules
         with suppress(NoSuchElementException):
-            await self._sleep_rnd(2, 3)
             complete_rules_bnt = driver.find_element(By.XPATH, "//button[div[contains(text(), 'Complete')]]")
-            complete_rules_bnt.click()
-            await self._sleep_rnd(2, 3)
+            await self.hover_click(complete_rules_bnt)
+
+        with suppress(NoSuchElementException):
             checkbox = driver.find_element(By.XPATH, "//input[@type='checkbox']")
-            checkbox.click()
-            await self._sleep_rnd(2, 3)
+            await self.hover_click(checkbox)
+
+        with suppress(NoSuchElementException):
             submit_bnt = driver.find_element(By.XPATH, "//button[@type='submit']")
-            submit_bnt.click()
-            await self._sleep_rnd(2, 3)
+            await self.hover_click(submit_bnt)
 
 
 @misc.doc_category("Clients")
@@ -386,7 +404,7 @@ class ACCOUNT:
         # Obtain token if it is not provided
         if self.selenium_client is not None:
             trace("Logging in thru browser and obtaining token")
-            self._token = await self.selenium_client._login()
+            self._token = await self.selenium_client.login()
             self.is_user = True
         
         # Login
