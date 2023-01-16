@@ -80,7 +80,7 @@ class SeleniumCLIENT:
             return localStorage["token"];
             """
         )
-        return token.replace('"', "").replace("'", "")
+        return token.strip('"').strip("'")
 
     async def random_sleep(self, bottom: int, upper: int):
         """
