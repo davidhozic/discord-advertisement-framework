@@ -17,7 +17,6 @@ try:
     from selenium.webdriver.common.by import By
     from selenium.webdriver.common.keys import Keys
     from selenium.webdriver.common.action_chains import ActionChains
-    from selenium.webdriver.common.proxy import Proxy, ProxyType
     from selenium.webdriver.support.wait import WebDriverWait
     from selenium.webdriver.support.expected_conditions import presence_of_element_located
     from selenium.common.exceptions import NoSuchElementException, TimeoutException
@@ -33,6 +32,7 @@ __all__ = (
 
 
 WD_TIMEOUT_SHORT = 5
+WD_TIMEOUT_MED = 30
 WD_TIMEOUT_LONG = 90
 
 
@@ -90,28 +90,97 @@ class SeleniumCLIENT:
     
     async def slow_type(self, form: WebElement, text: str):
         """
-        Slowly types into a form to prevent detection
+        Slowly types into a form to prevent detection.
+        
+        Parameters
+        -------------
+        form: WebElement
+            The form to type ``text`` into.
+        text: str
+            The text to type in the ``form``.
         """
+        await self.await_load()
+        actions = ActionChains(self.driver)
+
+        actions.move_to_element(form).perform()
+        await self.random_sleep(0.25, 1)
+        actions.click(form).perform()
+
         for char in text:
             form.send_keys(char)
             await self.random_sleep(0.05, 0.10)
-    
+
+    async def await_load(self):
+        """
+        Waits for the Discord spinning logo to disappear,
+        which means that the content has finished loading.
+
+        Raises
+        -------------
+        TimeoutError
+            The page loading timed-out.
+        """
+        loop = asyncio.get_event_loop()
+        await self.random_sleep(1, 2)
+        try:
+            await loop.run_in_executor(None,
+                lambda:
+                WebDriverWait(self.driver, WD_TIMEOUT_LONG).until_not(
+                    presence_of_element_located((By.XPATH, "//*[@* = 'app-spinner']"))
+                )
+            )
+        except TimeoutException as exc:
+            raise TimeoutError(f"Page loading took too long.") from exc
+
     async def await_captcha(self):
+        """
+        Waits for CAPTCHA to be completed.
+
+        Raises
+        ------------
+        TimeoutError
+            CAPTCHA was not solved in time.
+        """
         loop = asyncio.get_event_loop()
         try:
-            # CAPTCHA detected, wait until it is solved by the user 
-            await self.random_sleep(1, 3)
+            # CAPTCHA detected, wait until it is solved by the user
+            await asyncio.sleep(WD_TIMEOUT_SHORT)
             await loop.run_in_executor(None, lambda:
                 WebDriverWait(self.driver, WD_TIMEOUT_LONG).until_not(
                     presence_of_element_located((By.XPATH, "//iframe[contains(@src, 'captcha')]"))
                 )
             )
         except TimeoutException as exc:
-            raise RuntimeError(f"CAPTCHA was not solved by the user") from exc
+            raise TimeoutError(f"CAPTCHA was not solved by the user") from exc
+
+    async def await_two_factor(self):
+        """
+        Awaits for user to enter 2-factor authorization key.
+
+        Raises
+        --------------
+        TimeoutError
+            2-Factor authentication timed-out.
+        """
+        loop = asyncio.get_event_loop()
+        await asyncio.sleep(WD_TIMEOUT_SHORT)
+        try:
+            await loop.run_in_executor(None, lambda:
+                WebDriverWait(self.driver, WD_TIMEOUT_LONG).until_not(
+                    presence_of_element_located((By.XPATH, "//h1[contains(text(), 'Two-factor')]"))
+                )
+            )
+        except TimeoutException as exc:
+            raise TimeoutError("2-Factor authentication was not completed in time.") from exc
 
     async def login(self) -> str:
         """
         Logins to Discord.
+
+        Raises
+        ----------
+        TimeoutError
+            Raised when any of the ``await_*`` methods timed-out.
 
         Returns
         ----------
@@ -119,37 +188,17 @@ class SeleniumCLIENT:
             The account's token
         """
         driver = self.driver
-        loop = asyncio.get_event_loop()
         driver.get("https://discord.com/login")
         email_entry = driver.find_element(By.XPATH, "//input[@name='email']")
         pass_entry = driver.find_element(By.XPATH, "//input[@type='password']")
         login_bnt = driver.find_element(By.XPATH, "//button[@type='submit']")
 
-        await self.random_sleep(1, 3)
         await self.slow_type(email_entry, self._username)
-        await self.random_sleep(1, 3)
         await self.slow_type(pass_entry, self._password)
-        await self.random_sleep(1, 3)
         await self.hover_click(login_bnt)
-
         await self.await_captcha()
-        await self.random_sleep(1, 3)
-
-        with suppress(TimeoutException):
-            await loop.run_in_executor(None, lambda:
-                WebDriverWait(driver, WD_TIMEOUT_LONG).until_not(
-                    presence_of_element_located((By.XPATH, "//h1[contains(text(), 'Two-factor')]"))
-                )
-        )
-
-        await self.await_captcha()
-        with suppress(TimeoutException):
-            await loop.run_in_executor(None, lambda:
-                WebDriverWait(driver, WD_TIMEOUT_SHORT).until(
-                    presence_of_element_located((By.XPATH, '//*[@id="app-mount"]/div[2]/div/div[1]/div/div[2]/div/div[1]/nav/ul/div[2]'))
-                )
-        )
-        await self.random_sleep(1, 3)
+        await self.await_two_factor()
+        await self.await_load()
         return self.extract_token()
 
     async def hover_click(self, element: WebElement):
@@ -183,6 +232,8 @@ class SeleniumCLIENT:
         """
         loop = asyncio.get_event_loop()
         driver = self.driver
+        await self.await_load()
+
         # Join server
         join_bnt = driver.find_element(By.XPATH, "//div[@aria-label='Add a Server']")
         await self.hover_click(join_bnt)
