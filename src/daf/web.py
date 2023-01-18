@@ -1,6 +1,8 @@
 from contextlib import suppress
 from random import random
 
+from . import misc
+
 import asyncio
 
 
@@ -19,9 +21,10 @@ try:
     from selenium.webdriver.common.action_chains import ActionChains
     from selenium.webdriver.support.wait import WebDriverWait
     from selenium.webdriver.support.expected_conditions import presence_of_element_located
-    from selenium.common.exceptions import NoSuchElementException, TimeoutException
+    from selenium.common.exceptions import NoSuchElementException, TimeoutException, WebDriverException
     GLOBALS.selenium_installed = True
-except:
+except ImportError:
+    WebElement = object()
     GLOBALS.selenium_installed = False
 # -------------------------------------------- #
 
@@ -35,13 +38,24 @@ WD_TIMEOUT_SHORT = 5
 WD_TIMEOUT_MED = 30
 WD_TIMEOUT_LONG = 90
 
-
+@misc.doc_category("Clients")
 class SeleniumCLIENT:
     """
+    .. versionadded:: v2.5
+
     Client used to control the Discord web client for things such as 
     logging in, joining guilds, passing "Complete" for guild rules.
 
     This is created in the ACCOUNT object in case ``web`` parameter inside ACCOUNT is True.
+
+    .. note::
+
+        This is automatically created in :class:`~daf.client.ACCOUNT`
+        and is also bound to the :class:`~daf.client.ACCOUNT` instance.
+        
+        To retrieve it from :class:`~daf.client.ACCOUNT`, use
+        :py:attr:`~daf.client.ACCOUNT.selenium`.
+        
 
     Parameters
     -------------
@@ -56,13 +70,17 @@ class SeleniumCLIENT:
                  username: str,
                  password: str,
                  proxy: str) -> None:
+
+        if not GLOBALS.selenium_installed:
+            raise ModuleNotFoundError(
+                "This feature requires additional packages to be installed!\n"
+                f"Install them with: pip install discord-advert-framework[web]"
+            )
+
         self._username = username
         self._password = password
-        opts = Options()
-        if proxy is not None:
-            opts.add_argument(f"--proxy-server={proxy}")
-
-        self.driver = Chrome(options=opts)
+        self._proxy = proxy
+        self.driver = None
     
     def extract_token(self):
         """
@@ -142,9 +160,40 @@ class SeleniumCLIENT:
             CAPTCHA was not solved in time.
         """
         loop = asyncio.get_event_loop()
+        driver = self.driver
+        await asyncio.sleep(WD_TIMEOUT_SHORT)
+
+        # Find all CAPTCHA iframes
+        captcha_frames = driver.find_elements(By.XPATH, "//iframe[contains(@src, 'captcha')]")
+        challenge_container = None
+        captcha_button = None
+        captcha_button_frame = None
+        # Go search all captcha frames to find images container and the captcha button
+        for frame in captcha_frames:
+            driver.switch_to.frame(frame)
+            if challenge_container is None:
+                with suppress(NoSuchElementException):
+                    challenge_container = driver.find_element(By.XPATH, "//div[@class='challenge-container']/div[@class='challenge']")
+
+            if captcha_button is None:
+                with suppress(NoSuchElementException):
+                    captcha_button = driver.find_element(By.XPATH, "//div[@id='checkbox']")
+                    captcha_button_frame = frame
+            
+            driver.switch_to.default_content()
+
+        if challenge_container is None and captcha_button is None:
+            return # No CAPTCHA action required
+
+        # Challenge container not found -> click the button to open it
+            # Sometimes CAPTCHA just requires a click on the button and no image selection
+        if challenge_container is None and captcha_button is not None:
+            driver.switch_to.frame(captcha_button_frame)
+            await self.hover_click(captcha_button)
+            driver.switch_to.default_content()
+
         try:
             # CAPTCHA detected, wait until it is solved by the user
-            await asyncio.sleep(WD_TIMEOUT_SHORT)
             await loop.run_in_executor(None, lambda:
                 WebDriverWait(self.driver, WD_TIMEOUT_LONG).until_not(
                     presence_of_element_located((By.XPATH, "//iframe[contains(@src, 'captcha')]"))
@@ -173,33 +222,58 @@ class SeleniumCLIENT:
         except TimeoutException as exc:
             raise TimeoutError("2-Factor authentication was not completed in time.") from exc
 
-    async def login(self) -> str:
+    async def initialize(self) -> None:
         """
-        Logins to Discord.
+        Starts the webdriver whenever the framework is started.
 
         Raises
         ----------
-        TimeoutError
-            Raised when any of the ``await_*`` methods timed-out.
+        Any
+            Raised in :py:meth:`~SeleniumCLIENT.login` method.
+        """
+        opts = Options()
+        if self._proxy is not None:
+            opts.add_argument(f"--proxy-server={self._proxy}")
+
+        self.driver = Chrome(options=opts)
+        await self.login()
+
+    async def login(self) -> str:
+        """
+        Logins to Discord.
 
         Returns
         ----------
         str
             The account's token
+        
+        Raises
+        ----------
+        TimeoutError
+            Raised when any of the ``await_*`` methods timed-out.
+        RuntimeError
+            Unable to login due to internal exception.
         """
-        driver = self.driver
-        driver.get("https://discord.com/login")
-        email_entry = driver.find_element(By.XPATH, "//input[@name='email']")
-        pass_entry = driver.find_element(By.XPATH, "//input[@type='password']")
-        login_bnt = driver.find_element(By.XPATH, "//button[@type='submit']")
+        try:
+            driver = self.driver
+            driver.get("https://discord.com/login")
+            await self.await_load()
+            email_entry = driver.find_element(By.XPATH, "//input[@name='email']")
+            pass_entry = driver.find_element(By.XPATH, "//input[@type='password']")
+            login_bnt = driver.find_element(By.XPATH, "//button[@type='submit']")
 
-        await self.slow_type(email_entry, self._username)
-        await self.slow_type(pass_entry, self._password)
-        await self.hover_click(login_bnt)
-        await self.await_captcha()
-        await self.await_two_factor()
-        await self.await_load()
-        return self.extract_token()
+            await self.slow_type(email_entry, self._username)
+            await self.slow_type(pass_entry, self._password)
+            await self.hover_click(login_bnt)
+            await self.await_captcha()
+            await self.await_two_factor()
+            await self.await_load()
+            return self.extract_token()
+        except WebDriverException as exc:
+            raise RuntimeError("Unable to login due to internal exception.") from exc
+
+    async def logout(self):
+        raise NotImplementedError("TODO: Implement logout!")
 
     async def hover_click(self, element: WebElement):
         """
@@ -227,48 +301,53 @@ class SeleniumCLIENT:
 
         Raises
         ----------
-        WebDriverException
-            Could not join the guild.
+        RuntimeError
+            Internal error ocurred.
+        TimeoutError
+            Timed out while waiting for actions to complete.
         """
         loop = asyncio.get_event_loop()
         driver = self.driver
         await self.await_load()
 
         # Join server
-        join_bnt = driver.find_element(By.XPATH, "//div[@aria-label='Add a Server']")
-        await self.hover_click(join_bnt)
+        try:
+            join_bnt = driver.find_element(By.XPATH, "//div[@aria-label='Add a Server']")
+            await self.hover_click(join_bnt)
 
-        add_server_bnt = driver.find_element(By.XPATH, "//button[div[text()='Join a Server']]")
-        await self.hover_click(add_server_bnt)
+            add_server_bnt = driver.find_element(By.XPATH, "//button[div[text()='Join a Server']]")
+            await self.hover_click(add_server_bnt)
 
-        link_input = driver.find_element(By.XPATH, "//input[@type='text']")
-        await self.slow_type(link_input, invite)
-        await self.random_sleep(2, 5)
+            link_input = driver.find_element(By.XPATH, "//input[@type='text']")
+            await self.slow_type(link_input, invite)
+            await self.random_sleep(2, 5)
 
-        join_bnt = driver.find_element(By.XPATH, "//button[@type='button' and div[contains(text(), 'Join')]]")
-        await self.hover_click(join_bnt)
-        await self.random_sleep(3, 5) # Wait for any CAPTCHA to appear
+            join_bnt = driver.find_element(By.XPATH, "//button[@type='button' and div[contains(text(), 'Join')]]")
+            await self.hover_click(join_bnt)
+            await self.random_sleep(3, 5) # Wait for any CAPTCHA to appear
 
-        await self.await_captcha()
+            await self.await_captcha()
 
-        with suppress(TimeoutException): 
-            await loop.run_in_executor(None, lambda:
-                WebDriverWait(driver, WD_TIMEOUT_SHORT).until_not(
-                    presence_of_element_located((By.XPATH, "//button[@type='button' and div[contains(text(), 'Join')]]"))
+            with suppress(TimeoutException): 
+                await loop.run_in_executor(None, lambda:
+                    WebDriverWait(driver, WD_TIMEOUT_SHORT).until_not(
+                        presence_of_element_located((By.XPATH, "//button[@type='button' and div[contains(text(), 'Join')]]"))
+                    )
                 )
-            )
 
-        # Complete rules
-        ActionChains(driver).send_keys(Keys.ESCAPE).perform() # To ensure there is not already an open menu
-        with suppress(NoSuchElementException):
-            complete_rules_bnt = driver.find_element(By.XPATH, "//button[div[contains(text(), 'Complete')]]")
-            await self.hover_click(complete_rules_bnt)
+            # Complete rules
+            ActionChains(driver).send_keys(Keys.ESCAPE).perform() # To ensure there is not already an open menu
+            with suppress(NoSuchElementException):
+                complete_rules_bnt = driver.find_element(By.XPATH, "//button[div[contains(text(), 'Complete')]]")
+                await self.hover_click(complete_rules_bnt)
 
-        with suppress(NoSuchElementException):
-            checkbox = driver.find_element(By.XPATH, "//input[@type='checkbox']")
-            await self.hover_click(checkbox)
+            with suppress(NoSuchElementException):
+                checkbox = driver.find_element(By.XPATH, "//input[@type='checkbox']")
+                await self.hover_click(checkbox)
 
-        with suppress(NoSuchElementException):
-            submit_bnt = driver.find_element(By.XPATH, "//button[@type='submit']")
-            await self.hover_click(submit_bnt)
+            with suppress(NoSuchElementException):
+                submit_bnt = driver.find_element(By.XPATH, "//button[@type='submit']")
+                await self.hover_click(submit_bnt)
+        except WebDriverException as exc:
+            raise RuntimeError("Unable to join guild due to internal error.") from exc
 

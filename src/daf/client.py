@@ -61,7 +61,7 @@ class ACCOUNT:
     Each ACCOUNT instance runs it's own shilling task.
 
     Parameters
-    ----------
+    -----------
     token : str
         The Discord account's token
     is_user : Optional[bool] =False
@@ -84,11 +84,11 @@ class ACCOUNT:
         The username to login with. 
     password: Optional[str]
         The password to login with.
-        
-        .. warning::
-            Do not provide ``token`` parameter if you've provided username and password.
-            An exception will be raised to prevent token being used that does not belong
-            to the provided account.
+    
+    .. Caution::
+        Do not provide ``token`` parameter if you've provided username and password.
+        An exception will be raised to prevent token being used that does not belong
+        to the provided account.
 
     Raises
     ---------------
@@ -132,9 +132,9 @@ class ACCOUNT:
         self.loop_task = None
         self._servers: List[guild._BaseGUILD] = []
         self._autoguilds: List[guild.AutoGUILD] = [] # To prevent __eq__ issues, use 2 lists
-        self.selenium_client = None
+        self._selenium = None
         if username is not None:
-            self.selenium_client = web.SeleniumCLIENT(username, password, proxy)
+            self._selenium = web.SeleniumCLIENT(username, password, proxy)
 
         if servers is None:
             servers = []
@@ -154,6 +154,15 @@ class ACCOUNT:
             return self._token == other._token
         
         raise NotImplementedError("Only comparison between 2 ACCOUNTs is supported")
+
+    @property
+    def selenium(self) -> web.SeleniumCLIENT:
+        """
+        .. versionadded:: v2.5
+
+        Returns the, bound to account, Selenium client
+        """
+        return self._selenium
 
     @property
     def running(self) -> bool:
@@ -215,9 +224,9 @@ class ACCOUNT:
             Unable to login to Discord.
         """
         # Obtain token if it is not provided
-        if self.selenium_client is not None:
+        if self._selenium is not None:
             trace("Logging in thru browser and obtaining token")
-            self._token = await self.selenium_client.login()
+            self._token = await self._selenium.initialize()
             self.is_user = True
         
         # Login
