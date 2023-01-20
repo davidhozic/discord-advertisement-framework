@@ -1,4 +1,4 @@
-#!python
+#!python3
 """
 Script that setups the environment before build.
 
