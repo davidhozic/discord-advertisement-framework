@@ -226,7 +226,8 @@ class ACCOUNT:
         # Obtain token if it is not provided
         if self._selenium is not None:
             trace("Logging in thru browser and obtaining token")
-            self._token = await self._selenium.initialize()
+            await self._selenium.initialize()
+            self._token = self._selenium.token
             self.is_user = True
         
         # Login

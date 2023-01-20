@@ -37,6 +37,7 @@ __all__ = (
 WD_TIMEOUT_SHORT = 5
 WD_TIMEOUT_MED = 30
 WD_TIMEOUT_LONG = 90
+WD_WINDOW_SIZE = (1280, 720)
 
 @misc.doc_category("Clients")
 class SeleniumCLIENT:
@@ -82,13 +83,19 @@ class SeleniumCLIENT:
         self._proxy = proxy
         self.driver = None
     
-    def extract_token(self):
+    @property
+    def token(self) -> str:
         """
         Get's the token from local storage.
         First it gets the object descriptor that was deleted from Discord.
+
+        Returns
+        ----------
+        str
+            The account token.
         """
         driver = self.driver
-        token: str =  driver.execute_script(
+        _token: str =  driver.execute_script(
             """
             const f = document.createElement('iframe');
             document.head.append(f);
@@ -98,7 +105,7 @@ class SeleniumCLIENT:
             return localStorage["token"];
             """
         )
-        return token.strip('"').strip("'")
+        return _token.strip('"').strip("'")
 
     async def random_sleep(self, bottom: int, upper: int):
         """
@@ -236,17 +243,13 @@ class SeleniumCLIENT:
             opts.add_argument(f"--proxy-server={self._proxy}")
 
         self.driver = Chrome(options=opts)
+        self.driver.set_window_size(*WD_WINDOW_SIZE)
         await self.login()
 
-    async def login(self) -> str:
+    async def login(self) -> None:
         """
         Logins to Discord.
 
-        Returns
-        ----------
-        str
-            The account's token
-        
         Raises
         ----------
         TimeoutError
@@ -267,8 +270,6 @@ class SeleniumCLIENT:
             await self.hover_click(login_bnt)
             await self.await_captcha()
             await self.await_two_factor()
-            await self.await_load()
-            return self.extract_token()
         except WebDriverException as exc:
             raise RuntimeError("Unable to login due to internal exception.") from exc
 
