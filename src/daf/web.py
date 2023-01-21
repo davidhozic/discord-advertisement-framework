@@ -333,7 +333,7 @@ class SeleniumCLIENT:
             add_server_bnt = driver.find_element(By.XPATH, "//button[div[text()='Join a Server']]")
             await self.hover_click(add_server_bnt)
 
-            link_input = driver.find_element(By.XPATH, "//input[@type='text']")
+            link_input = driver.find_element(By.XPATH, "//input[contains(@placeholder, 'discord.gg')]")
             await self.slow_type(link_input, invite)
             await self.random_sleep(2, 5)
 
