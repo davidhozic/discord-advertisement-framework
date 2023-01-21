@@ -4,8 +4,8 @@ from random import random
 from . import misc
 
 import asyncio
-
-
+import pathlib
+import shutil
 
 class GLOBALS:
     "Global variables of the web module"
@@ -38,6 +38,7 @@ WD_TIMEOUT_SHORT = 5
 WD_TIMEOUT_MED = 30
 WD_TIMEOUT_LONG = 90
 WD_WINDOW_SIZE = (1280, 720)
+WD_PROFILES_PATH = "./profiles"
 
 @misc.doc_category("Clients")
 class SeleniumCLIENT:
@@ -114,12 +115,6 @@ class SeleniumCLIENT:
             raise LookupError("Could not extract token from local storage.")
 
         return _token.strip('"').strip("'")
-
-    def close(self) -> None:
-        """
-        Stops and closes the web session.
-        """
-        self.driver.close()
 
     async def random_sleep(self, bottom: int, upper: int):
         """
@@ -243,6 +238,18 @@ class SeleniumCLIENT:
         except TimeoutException as exc:
             raise TimeoutError("2-Factor authentication was not completed in time.") from exc
 
+    @staticmethod
+    def _create_browser(*args) -> Chrome:
+        opts = Options()
+        opts.add_argument(f"--no-sandbox")
+
+        for arg in args:
+            opts.add_argument(arg)
+
+        driver = Chrome(options=opts)
+        driver.set_window_size(*WD_WINDOW_SIZE)
+        return driver
+
     async def initialize(self) -> None:
         """
         Starts the webdriver whenever the framework is started.
@@ -252,12 +259,19 @@ class SeleniumCLIENT:
         Any
             Raised in :py:meth:`~SeleniumCLIENT.login` method.
         """
-        opts = Options()
+        path = pathlib.Path(WD_PROFILES_PATH, self._username.split('@')[0])
+        args = [f"--user-data-dir={path.absolute()}"]
         if self._proxy is not None:
-            opts.add_argument(f"--proxy-server={self._proxy}")
+            args.append(f"--proxy-server={self._proxy}")
 
-        self.driver = Chrome(options=opts)
-        self.driver.set_window_size(*WD_WINDOW_SIZE)
+        if not path.exists():
+            driver = self._create_browser()
+            driver.get("chrome://version")
+            profile_path = driver.find_element(By.ID, "profile_path").text
+            driver.close()
+            shutil.copytree(profile_path, path)
+
+        self.driver = self._create_browser(*args)
         await self.login()
 
     async def login(self) -> None:
