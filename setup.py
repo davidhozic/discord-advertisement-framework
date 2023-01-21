@@ -62,7 +62,6 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     package_dir={"": "src"},
-    packages=setuptools.find_packages(where="src"),
     python_requires=f">={__metadata__['minimum_py_version']}",
     install_requires=__metadata__["requirements"],
     include_package_data=True,

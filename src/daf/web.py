@@ -93,6 +93,11 @@ class SeleniumCLIENT:
         ----------
         str
             The account token.
+
+        Raises
+        ------------
+        LookupError
+            Could not extract token from local storage.
         """
         driver = self.driver
         _token: str =  driver.execute_script(
@@ -105,7 +110,16 @@ class SeleniumCLIENT:
             return localStorage["token"];
             """
         )
+        if _token is None:
+            raise LookupError("Could not extract token from local storage.")
+
         return _token.strip('"').strip("'")
+
+    def close(self) -> None:
+        """
+        Stops and closes the web session.
+        """
+        self.driver.close()
 
     async def random_sleep(self, bottom: int, upper: int):
         """
