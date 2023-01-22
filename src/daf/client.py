@@ -226,10 +226,9 @@ class ACCOUNT:
         # Obtain token if it is not provided
         if self._selenium is not None:
             trace("Logging in thru browser and obtaining token")
-            await self._selenium.initialize()
-            self._token = self._selenium.token
+            self._token = await self._selenium.initialize()
             self.is_user = True
-        
+
         # Login
         trace("Logging in...")
         _client_task = asyncio.create_task(self._client.start(self._token, bot=not self.is_user))
@@ -333,6 +332,10 @@ class ACCOUNT:
                 trace(f"Exception occurred in main task for account {self.client.user.display_name} (Token: {self._token[:TOKEN_MAX_PRINT_LEN]})",
                     TraceLEVELS.ERROR, exc)
 
+        selenium = self.selenium
+        if selenium is not None:
+            selenium._close()
+
         await self._client.close()
 
     async def _loop(self):
@@ -381,7 +384,7 @@ class ACCOUNT:
         if "token" not in kwargs:
             kwargs["token"] = self._token
 
-        await self.close()
+        await self._close()
         await misc._update(self, **kwargs)
 
         await update_servers(self)

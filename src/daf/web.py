@@ -5,7 +5,7 @@ from . import misc
 
 import asyncio
 import pathlib
-import shutil
+import json
 
 class GLOBALS:
     "Global variables of the web module"
@@ -38,7 +38,12 @@ WD_TIMEOUT_SHORT = 5
 WD_TIMEOUT_MED = 30
 WD_TIMEOUT_LONG = 90
 WD_WINDOW_SIZE = (1280, 720)
-WD_PROFILES_PATH = "./profiles"
+
+WD_OUTPUT_PATH = pathlib.Path("./daf_web_data")
+WD_TOKEN_PATH = WD_OUTPUT_PATH.joinpath("tokens.json")
+WD_PROFILES_PATH = WD_OUTPUT_PATH.joinpath("chrome_profiles")
+
+DISCORD_LOGIN_URL = "https://discord.com/login"
 
 @misc.doc_category("Clients")
 class SeleniumCLIENT:
@@ -83,9 +88,9 @@ class SeleniumCLIENT:
         self._password = password
         self._proxy = proxy
         self.driver = None
-    
-    @property
-    def token(self) -> str:
+        self._token = None
+
+    def _parse_token(self) -> str:
         """
         Get's the token from local storage.
         First it gets the object descriptor that was deleted from Discord.
@@ -101,7 +106,7 @@ class SeleniumCLIENT:
             Could not extract token from local storage.
         """
         driver = self.driver
-        _token: str =  driver.execute_script(
+        token: str =  driver.execute_script(
             """
             const f = document.createElement('iframe');
             document.head.append(f);
@@ -111,10 +116,19 @@ class SeleniumCLIENT:
             return localStorage["token"];
             """
         )
-        if _token is None:
+        if token is None:
             raise LookupError("Could not extract token from local storage.")
 
-        return _token.strip('"').strip("'")
+        return token.strip('"').strip("'")
+
+    @property
+    def token(self) -> str:
+        "Returns accounts's token"
+        return self._token
+
+    def _close(self):
+        "Closes the window"
+        self.driver.quit()
 
     async def random_sleep(self, bottom: int, upper: int):
         """
@@ -238,18 +252,6 @@ class SeleniumCLIENT:
         except TimeoutException as exc:
             raise TimeoutError("2-Factor authentication was not completed in time.") from exc
 
-    @staticmethod
-    def _create_browser(*args) -> Chrome:
-        opts = Options()
-        opts.add_argument(f"--no-sandbox")
-
-        for arg in args:
-            opts.add_argument(arg)
-
-        driver = Chrome(options=opts)
-        driver.set_window_size(*WD_WINDOW_SIZE)
-        return driver
-
     async def initialize(self) -> None:
         """
         Starts the webdriver whenever the framework is started.
@@ -259,24 +261,30 @@ class SeleniumCLIENT:
         Any
             Raised in :py:meth:`~SeleniumCLIENT.login` method.
         """
-        path = pathlib.Path(WD_PROFILES_PATH, self._username.split('@')[0])
-        args = [f"--user-data-dir={path.absolute()}"]
+        WD_OUTPUT_PATH.mkdir(exist_ok=True)
+        web_data_path = pathlib.Path(WD_PROFILES_PATH, self._username.split('@')[0])
+
+        opts = Options()
+        opts.add_argument(f"--user-data-dir={web_data_path.absolute()}")
+        opts.add_argument(f"--no-sandbox")
+
         if self._proxy is not None:
-            args.append(f"--proxy-server={self._proxy}")
+            opts.add_argument(f"--proxy-server={self._proxy}")
 
-        if not path.exists():
-            driver = self._create_browser()
-            driver.get("chrome://version")
-            profile_path = driver.find_element(By.ID, "profile_path").text
-            driver.close()
-            shutil.copytree(profile_path, path)
+        driver = Chrome(options=opts)
+        driver.set_window_size(*WD_WINDOW_SIZE)
+        self.driver = driver
+        return await self.login()
 
-        self.driver = self._create_browser(*args)
-        await self.login()
-
-    async def login(self) -> None:
+    async def login(self) -> str:
         """
-        Logins to Discord.
+        Logins to Discord using the webdriver
+        and saves the account token to JSON file.
+
+        Returns
+        ----------
+        str
+            Token belonging to provided username.
 
         Raises
         ----------
@@ -287,18 +295,46 @@ class SeleniumCLIENT:
         """
         try:
             driver = self.driver
-            driver.get("https://discord.com/login")
-            await self.await_load()
-            email_entry = driver.find_element(By.XPATH, "//input[@name='email']")
-            pass_entry = driver.find_element(By.XPATH, "//input[@type='password']")
-            login_bnt = driver.find_element(By.XPATH, "//button[@type='submit']")
+            driver.get(DISCORD_LOGIN_URL)
+            await asyncio.sleep(WD_TIMEOUT_SHORT)
 
-            await self.slow_type(email_entry, self._username)
-            await self.slow_type(pass_entry, self._password)
-            await self.hover_click(login_bnt)
-            await self.await_captcha()
-            await self.await_two_factor()
-        except WebDriverException as exc:
+            # Check if already logged in
+            if driver.current_url == DISCORD_LOGIN_URL:
+                # Check previous accounts
+                with suppress(NoSuchElementException):
+                    login_bnt = driver.find_element(By.XPATH, "//button[@type='button']//div[contains(text(), 'Add an account')]")
+                    await self.hover_click(login_bnt)
+
+                # Not logged in
+                email_entry = driver.find_element(By.XPATH, "//input[@name='email']")
+                pass_entry = driver.find_element(By.XPATH, "//input[@type='password']")
+
+                await self.slow_type(email_entry, self._username)
+                await self.slow_type(pass_entry, self._password)
+
+                await self.random_sleep(1, 2)
+                ActionChains(driver).send_keys(Keys.ENTER).perform()
+
+                await self.await_captcha()
+                await self.await_two_factor()
+
+            # Save token
+            WD_TOKEN_PATH.touch(exist_ok=True)
+            tokens = {}
+            with open(WD_TOKEN_PATH, "r") as token_f:
+                with suppress(json.JSONDecodeError):
+                    tokens = json.load(token_f)
+
+            token = self._parse_token()
+            tokens[self._username] = token
+
+            with open(WD_TOKEN_PATH, "w") as token_f:            
+                json.dump(tokens, token_f, indent=2)
+
+            self._token = token
+            return token
+
+        except (WebDriverException, OSError) as exc:
             raise RuntimeError("Unable to login due to internal exception.") from exc
 
     async def logout(self):
