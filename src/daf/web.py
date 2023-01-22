@@ -262,7 +262,7 @@ class SeleniumCLIENT:
             Raised in :py:meth:`~SeleniumCLIENT.login` method.
         """
         WD_OUTPUT_PATH.mkdir(exist_ok=True)
-        web_data_path = pathlib.Path(WD_PROFILES_PATH, self._username.split('@')[0])
+        web_data_path = pathlib.Path(WD_PROFILES_PATH, self._username)
 
         opts = Options()
         opts.add_argument(f"--user-data-dir={web_data_path.absolute()}")
