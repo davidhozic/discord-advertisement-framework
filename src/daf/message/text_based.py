@@ -299,6 +299,7 @@ class TextMESSAGE(BaseMESSAGE):
         if isinstance(self.channels, AutoCHANNEL):
             await self.channels.initialize(self, "text_channels")
         else:
+            self.channels: List[Union[discord.TextChannel, discord.Thread]]
             for ch_i, channel in enumerate(self.channels):
                 if isinstance(channel, discord.abc.GuildChannel):
                     channel_id = channel.id
@@ -436,7 +437,7 @@ class TextMESSAGE(BaseMESSAGE):
         """
         # Acquire mutex to prevent update method from writing while sending
         data_to_send = await self._get_data()
-        if any(data_to_send.values()):
+        if any(data_to_send.values()): # There is data to be send
             errored_channels = []
             succeeded_channels= []
 
@@ -448,11 +449,19 @@ class TextMESSAGE(BaseMESSAGE):
                     succeeded_channels.append(channel)
                 else:
                     errored_channels.append({"channel":channel, "reason": context["reason"]})
+                    if context["reason"].status == 401: # Token deleted?
+                        return MessageSendResult(
+                            self.generate_log_context(**data_to_send, succeeded_ch=succeeded_channels, failed_ch=errored_channels),
+                            MSG_SEND_STATUS_ERROR_REMOVE_ACCOUNT
+                        )
 
             self._update_state(errored_channels)
-            return self.generate_log_context(**data_to_send, succeeded_ch=succeeded_channels, failed_ch=errored_channels) # Return sent data + failed and successful function for logging purposes
+            return MessageSendResult(
+                self.generate_log_context(**data_to_send, succeeded_ch=succeeded_channels, failed_ch=errored_channels),
+                MSG_SEND_STATUS_SUCCESS
+            )
 
-        return None
+        return MessageSendResult(None, MSG_SEND_STATUS_NO_MESSAGE_SENT)
 
     @typechecked
     @misc._async_safe("update_semaphore")
@@ -626,6 +635,8 @@ class DirectMESSAGE(BaseMESSAGE):
         """
         embed = embed.to_dict() if embed is not None else None
         files = [x.filename for x in files]
+
+        success_context = success_context.copy() # Don't modify outside
         if not success_context["success"]:
             success_context["reason"] = str(success_context["reason"])
 
@@ -771,14 +782,20 @@ class DirectMESSAGE(BaseMESSAGE):
         """
         # Parse data from the data parameter
         data_to_send = await self._get_data()
-        context, panic = None, False
         if any(data_to_send.values()):            
-            context = await self._send_channel(**data_to_send)
+            channel_ctx = await self._send_channel(**data_to_send)
             self._update_state()
-            panic = ("reason" in context and context["reason"].status in {400, 403})
-            context = self.generate_log_context(context, **data_to_send)
+            message_ctx = self.generate_log_context(channel_ctx, **data_to_send)
+            if channel_ctx["success"] is False:
+                reason: discord.HTTPException = channel_ctx["reason"]
+                if reason.status in {400, 403}: # Bad request, forbidden
+                    return MessageSendResult(message_ctx, MSG_SEND_STATUS_ERROR_REMOVE_GUILD)
+                if reason.status == 401: # Unauthorized (invalid token)
+                    return MessageSendResult(message_ctx, MSG_SEND_STATUS_ERROR_REMOVE_ACCOUNT)
+            
+            return MessageSendResult(message_ctx, MSG_SEND_STATUS_SUCCESS)
 
-        return context, panic
+        return MessageSendResult(None, MSG_SEND_STATUS_NO_MESSAGE_SENT)
 
     @typechecked
     @misc._async_safe("update_semaphore")

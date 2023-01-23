@@ -231,12 +231,12 @@ class ACCOUNT:
 
         # Login
         trace("Logging in...")
-        _client_task = asyncio.create_task(self._client.start(self._token, bot=not self.is_user))
+        _client_task: asyncio.Future = asyncio.gather(asyncio.create_task(self._client.start(self._token, bot=not self.is_user)), return_exceptions=True)
         try:
             await self._client.wait_for("ready", timeout=LOGIN_TIMEOUT_S)
             trace(f"Logged in as {self._client.user.display_name}")
-        except asyncio.TimeoutError:
-            exc = _client_task.exception()
+        except asyncio.TimeoutError as exc:
+            exc = _client_task.exception() if _client_task.done() else exc
             raise RuntimeError(f"Error logging in to Discord. (Token {self._token[:TOKEN_MAX_PRINT_LEN]}...)") from exc
         
         for server in self._uiservers:
@@ -361,7 +361,9 @@ class ACCOUNT:
                     self.remove_server(server)
 
                 for coro in to_await:
-                    await coro
+                    status = await coro
+                    if status == guild.GUILD_ADVERT_STATUS_ERROR_REMOVE_ACCOUNT:
+                        self._running = False
                     # If loop stop has been requested, stop asap
                     if not self._running:
                         return

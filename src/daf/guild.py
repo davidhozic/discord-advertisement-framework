@@ -9,7 +9,7 @@ from datetime import timedelta, datetime
 from copy import deepcopy
 
 from .logging.tracing import *
-from .message import BaseMESSAGE, TextMESSAGE, VoiceMESSAGE, DirectMESSAGE
+from .message import *
 
 from . import logging
 from . import misc
@@ -22,8 +22,22 @@ import re
 __all__ = (
     "GUILD",
     "USER",
-    "AutoGUILD"
+    "AutoGUILD",
 )
+
+
+GUILD_ADVERT_STATUS_SUCCESS = 0
+GUILD_ADVERT_STATUS_ERROR_REMOVE_ACCOUNT = None
+
+globals_ = globals()
+prev_val = 0
+for k, v in globals_.copy().items():
+    if k.startswith("GUILD_ADVERT_"):
+        if isinstance(v, int):
+            prev_val = v
+        else:
+            prev_val += 1
+            globals_[k] = prev_val
 
 
 class _BaseGUILD:
@@ -100,7 +114,7 @@ class _BaseGUILD:
 
         .. versionadded:: v2.0
         """
-        return self._messages
+        return self._messages[:]
 
     @property
     def snowflake(self) -> int:
@@ -140,9 +154,12 @@ class _BaseGUILD:
         False
             The guild is in proper state, do not delete.
         """
-        rm_after_type = type(self.remove_after)
-        return (rm_after_type is timedelta and datetime.now() - self._created_at > self.remove_after or # The difference from creation time is bigger than remove_after
-                rm_after_type is datetime and datetime.now() > self.remove_after) # The current time is larger than remove_after 
+        type_ = type(self.remove_after)
+        return (
+            self.remove_after is True or # Force delete
+            type_ is timedelta and datetime.now() - self._created_at > self.remove_after or # The difference from creation time is bigger than remove_after
+            type_ is datetime and datetime.now() > self.remove_after # The current time is larger than remove_after
+        )
 
     def __eq__(self, other: Any) -> bool:
         """
@@ -157,6 +174,13 @@ class _BaseGUILD:
         self._deleted = True
         for message in self._messages:
             message._delete()
+
+    def _schedule_removal(self):
+        """
+        Set's remove after parameter to True,
+        indicating requested removal of object.
+        """
+        self.remove_after = True
 
     @typechecked
     async def add_message(self, message: BaseMESSAGE):
@@ -267,18 +291,20 @@ class _BaseGUILD:
         raise NotImplementedError
 
     @misc._async_safe("update_semaphore", 1)
-    async def _advertise(self) -> List[Coroutine]:
+    async def _advertise(self) -> int:
         """
         Common to all messages, function responsible for sending all the messages to this specific guild,
         it is called from the core module's advertiser task.
 
         Returns
         -----------
-        List[Coroutine]
-            List of coroutines that will call message._send() method.
+        int
+            Enumerated advertisement result.
         """
         to_await = []
         to_remove = []
+        guild_ctx = self.generate_log_context()
+
         for message in self._messages:
             if message._check_state():
                 to_remove.append(message)
@@ -292,7 +318,22 @@ class _BaseGUILD:
         for message in to_remove:
             self.remove_message(message)
 
-        return to_await
+        # Await coroutines outside the main loop to prevent list modification (by user)
+        # while iterating, this way even if the user removes the message, it will still be shilled
+        # but no exceptions will be raised when trying to remove the message.
+        for coro in to_await:
+            result: MessageSendResult = await coro
+            if self.logging and result.result_code != MSG_SEND_STATUS_NO_MESSAGE_SENT:
+                await logging.save_log(guild_ctx, result.message_context)
+            
+            if result.result_code == MSG_SEND_STATUS_ERROR_REMOVE_GUILD:
+                self._schedule_removal() # Guild will be removed by ACCOUNT at next advertisement attempt
+                break
+
+            elif result.result_code == MSG_SEND_STATUS_ERROR_REMOVE_ACCOUNT:
+                return GUILD_ADVERT_STATUS_ERROR_REMOVE_ACCOUNT
+
+        return GUILD_ADVERT_STATUS_SUCCESS
 
     def generate_log_context(self) -> Dict[str, Union[str, int]]:
         """
@@ -379,22 +420,6 @@ class GUILD(_BaseGUILD):
         """
         return await super().initialize(parent, parent.client.get_guild)
 
-    async def _advertise(self) -> None:
-        """
-        Implementation specific _advertise method.
-        Same as super()._advertise(), except it removes other DirectMESSAGE 
-        instances in case of them got a forbidden request.
-        """
-        to_await = await super()._advertise()
-        guild_ctx = self.generate_log_context()
-        # Await coroutines outside the main loop to prevent list modification (by user)
-        # while iterating, this way even if the user removes the message, it will still be shilled
-        # but no exceptions will be raised when trying to remove the message.
-        for coro in to_await:
-            message_ctx = await coro
-            if self.logging and message_ctx is not None:
-                await logging.save_log(guild_ctx, message_ctx)
-    
     @misc._async_safe("update_semaphore", 2) # Take 2 since 2 tasks share access
     async def update(self, init_options={}, **kwargs):
         """
@@ -458,7 +483,6 @@ class USER(_BaseGUILD):
     """
     __slots__ = (
         "update_semaphore",
-        "_panic"
     )
 
     @typechecked
@@ -468,7 +492,6 @@ class USER(_BaseGUILD):
                  logging: Optional[bool] = False,
                  remove_after: Optional[Union[timedelta, datetime]]=None) -> None:
         super().__init__(snowflake, messages, logging, remove_after)
-        self._panic = False # Set to True whenever message sends detected insufficient permissions
         misc._write_attr_once(self, "update_semaphore", asyncio.Semaphore(2)) # Only allows re-referencing this attribute once
 
     def _check_state(self) -> bool:
@@ -482,7 +505,7 @@ class USER(_BaseGUILD):
         False
             The user is in proper state, do not delete.
         """
-        return self._panic or super()._check_state()
+        return super()._check_state()
 
     async def initialize(self, parent: Any):
         """
@@ -496,29 +519,6 @@ class USER(_BaseGUILD):
             Raised from .add_message(message_object) method.
         """
         return await super().initialize(parent, parent.client.get_or_fetch_user)
-
-
-    async def _advertise(self) -> None:
-        """
-        Implementation specific _advertise method.
-        Same as super()._advertise(), except it removes other DirectMESSAGE 
-        instances in case of them got a forbidden request.
-        """
-        to_await = await super()._advertise()
-        guild_ctx = self.generate_log_context()
-        # Await coroutines outside the main loop to prevent list modification (by user)
-        # while iterating, this way even if the user removes the message, it will still be shilled
-        # but no exceptions will be raised when trying to remove the message.
-        for coro in to_await:
-            message_ctx, panic = await coro
-            if self.logging and message_ctx is not None:
-                await logging.save_log(guild_ctx, message_ctx)
-
-            # panic means that the message send resulted in a forbidden error
-            # signaling all other messages should be removed without send
-            if panic:
-                self._panic = True
-                break
 
     @misc._async_safe("update_semaphore", 2)
     async def update(self, init_options={}, **kwargs):
@@ -555,6 +555,7 @@ class USER(_BaseGUILD):
         # Update messages
         for message in self.messages:
             await message.update(_init_options={"parent" : self})
+
 
 @misc.doc_category("Auto objects")
 class AutoGUILD:
@@ -773,7 +774,7 @@ class AutoGUILD:
             if g._check_state():
                 del self.cache[g.apiobject]
             else:
-                await g._advertise()
+                return await g._advertise()
 
     @misc._async_safe("_safe_sem", 2)
     async def update(self, init_options={}, **kwargs):

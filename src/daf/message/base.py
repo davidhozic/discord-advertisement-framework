@@ -2,15 +2,15 @@
     Contains base definitions for different message classes."""
 
 from contextlib import suppress
-from typing import Any, Set, List, Iterable, Union, TypeVar, Optional
+from typing import Any, Set, List, Iterable, Union, TypeVar, Optional, Dict
 from datetime import timedelta, datetime
 from typeguard import check_type, typechecked
+from dataclasses import dataclass
 
 from ..dtypes import *
 from ..logging.tracing import *
 from ..timing import *
 from .. import misc
-from .. import client
 
 import random
 import re
@@ -22,6 +22,11 @@ import _discord as discord
 __all__ = (
     "BaseMESSAGE",
     "AutoCHANNEL",
+    "MessageSendResult",
+    "MSG_SEND_STATUS_SUCCESS",
+    "MSG_SEND_STATUS_NO_MESSAGE_SENT",
+    "MSG_SEND_STATUS_ERROR_REMOVE_GUILD",
+    "MSG_SEND_STATUS_ERROR_REMOVE_ACCOUNT"
 )
 
 T = TypeVar("T")
@@ -30,6 +35,32 @@ ChannelType = Union[discord.TextChannel, discord.VoiceChannel]
 # Configuration
 # ----------------------
 C_PERIOD_MINIMUM_SEC = 1 # Minimal seconds the period can be
+
+
+MSG_SEND_STATUS_SUCCESS = 0
+MSG_SEND_STATUS_NO_MESSAGE_SENT = None
+MSG_SEND_STATUS_ERROR_REMOVE_GUILD = None
+MSG_SEND_STATUS_ERROR_REMOVE_ACCOUNT = None
+
+globals_ = globals()
+prev_val = 0
+for k, v in globals_.copy().items():
+    if k.startswith("MSG_SEND_"):
+        if isinstance(v, int):
+            prev_val = v
+        else:
+            prev_val += 1
+            globals_[k] = prev_val
+
+@dataclass
+class MessageSendResult:
+    """
+    Storage container for message send results,
+    to be used by upper layers.
+    """
+    message_context: Optional[Dict[str, Any]]
+    result_code: int
+
 
 class BaseMESSAGE:
     """
@@ -195,6 +226,12 @@ class BaseMESSAGE:
         indicating the object should not be used.
         """
         self._deleted = True
+    
+    def _schedule_removal(self):
+        """
+        Sets remove after attribute to True,
+        to force remove at next call."""
+        self.remove_after = True
 
     def _check_state(self) -> bool:
         """
@@ -210,9 +247,12 @@ class BaseMESSAGE:
         """
         # Check remove_after
         type_ = type(self.remove_after)
-        return (type_ is int and self.remove_after == 0 or
-                type_ is timedelta and datetime.now() - self._created_at > self.remove_after or # The difference from creation time is bigger than remove_after
-                type_ is datetime and datetime.now() > self.remove_after) # The current time is larger than remove_after
+        return (
+            self.remove_after is True or # Force removal
+            type_ is int and self.remove_after == 0 or
+            type_ is timedelta and datetime.now() - self._created_at > self.remove_after or # The difference from creation time is bigger than remove_after
+            type_ is datetime and datetime.now() > self.remove_after # The current time is larger than remove_after
+        )
     
     def _update_state(self):
         """
@@ -221,6 +261,7 @@ class BaseMESSAGE:
         """
         if type(self.remove_after) is int:
             self.remove_after -= 1
+
 
     def _generate_exception(self,
                            status: int,

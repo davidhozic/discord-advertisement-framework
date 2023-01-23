@@ -130,6 +130,36 @@ class SeleniumCLIENT:
         "Closes the window"
         self.driver.quit()
 
+    def update_token_file(self) -> str:
+        """
+        Updates the tokens JSON file.
+        
+        Raises
+        -----------
+        OSError
+            There was an error saving/reading the file.
+
+        Returns
+        ----------
+        str
+            The token.
+        """
+        # Save token
+        WD_TOKEN_PATH.touch(exist_ok=True)
+        tokens = {}
+        with open(WD_TOKEN_PATH, "r") as token_f:
+            with suppress(json.JSONDecodeError):
+                tokens = json.load(token_f)
+
+        token = self._parse_token()
+        tokens[self._username] = token
+
+        with open(WD_TOKEN_PATH, "w") as token_f:            
+            json.dump(tokens, token_f, indent=2)
+
+        self._token = token
+        return token
+
     async def random_sleep(self, bottom: int, upper: int):
         """
         Sleeps randomly to prevent detection.
@@ -179,6 +209,27 @@ class SeleniumCLIENT:
             )
         except TimeoutException as exc:
             raise TimeoutError(f"Page loading took too long.") from exc
+
+    async def await_login_location(self):
+        """
+        Waits for the user to confirm the login location via email, and
+        then logs in manually.
+
+        Raises
+        ----------
+        TimeoutError
+            User failed to verify new login location.
+        """
+        loop = asyncio.get_event_loop()
+        await self.random_sleep(1, 2)
+        try:
+            await loop.run_in_executor(None, 
+                lambda: WebDriverWait(self.driver, WD_TIMEOUT_LONG).until_not(
+                    presence_of_element_located((By.XPATH, "//*[contains(text(), 'login location')]"))
+                )
+            )    
+        except TimeoutException as exc:
+            raise TimeoutError("New login location not confirmed in time.") from exc
 
     async def await_captcha(self):
         """
@@ -316,24 +367,14 @@ class SeleniumCLIENT:
                 ActionChains(driver).send_keys(Keys.ENTER).perform()
 
                 await self.await_captcha()
+                await self.await_login_location()
                 await self.await_two_factor()
+                await self.await_load()
 
-            # Save token
-            WD_TOKEN_PATH.touch(exist_ok=True)
-            tokens = {}
-            with open(WD_TOKEN_PATH, "r") as token_f:
-                with suppress(json.JSONDecodeError):
-                    tokens = json.load(token_f)
+            return self.update_token_file()
 
-            token = self._parse_token()
-            tokens[self._username] = token
-
-            with open(WD_TOKEN_PATH, "w") as token_f:            
-                json.dump(tokens, token_f, indent=2)
-
-            self._token = token
-            return token
-
+        except TimeoutError:
+            raise
         except (WebDriverException, OSError) as exc:
             raise RuntimeError("Unable to login due to internal exception.") from exc
 

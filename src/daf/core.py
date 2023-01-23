@@ -30,11 +30,31 @@ __all__ = (
 )
 
 
+# -------------- CONSTANTS --------------
+TASK_CLEANUP_SLEEP_SEC = 5
+
+# ---------------------------------------
+
 class GLOBALS:
     """
     Storage class used for holding global variables.
     """
     accounts: List[client.ACCOUNT] = []
+    cleanup_task: asyncio.Task = None
+    running: bool = True
+
+
+async def cleanup_accounts():
+    """
+    Task for cleaning up closed accounts.
+    TODO (in future): Instead of sleeping, subscribe to event.
+    """
+    while GLOBALS.running:
+        for account in get_accounts():
+            if not account.running:
+                await remove_object(account)            
+
+        await asyncio.sleep(TASK_CLEANUP_SLEEP_SEC)
 
 @misc.doc_category("DAF control reference")
 async def initialize(token : Optional[str]=None,
@@ -118,7 +138,9 @@ async def initialize(token : Optional[str]=None,
         user_callback = user_callback()
         if isinstance(user_callback, Coroutine):
             loop.create_task(user_callback)
-
+    
+    # Create account cleanup task (account self-deleted)
+    GLOBALS.cleanup_task = loop.create_task(cleanup_accounts())
     trace("Initialization complete.", TraceLEVELS.NORMAL)
 
 
@@ -376,8 +398,11 @@ def _shutdown_clean(loop: asyncio.AbstractEventLoop) -> None:
     loop: asyncio.AbstractEventLoop
         The loop to stop.
     """
+    GLOBALS.running = False
     for account in GLOBALS.accounts:
         loop.run_until_complete(account._close())
+    
+    loop.run_until_complete(GLOBALS.cleanup_task)
 
 
 @typechecked

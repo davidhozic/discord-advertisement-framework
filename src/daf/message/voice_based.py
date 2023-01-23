@@ -340,12 +340,19 @@ class VoiceMESSAGE(BaseMESSAGE):
                     succeeded_channels.append(channel)
                 else:
                     errored_channels.append({"channel":channel, "reason": context["reason"]})
+                    if context["reason"].status == 401: # Token deleted?
+                        return MessageSendResult(
+                            self.generate_log_context(**_data_to_send, succeeded_ch=succeeded_channels, failed_ch=errored_channels),
+                            MSG_SEND_STATUS_ERROR_REMOVE_ACCOUNT
+                        )
 
             self._update_state(errored_channels)
-            
-            return self.generate_log_context(**_data_to_send, succeeded_ch=succeeded_channels, failed_ch=errored_channels)
+            return MessageSendResult(
+                self.generate_log_context(**_data_to_send, succeeded_ch=succeeded_channels, failed_ch=errored_channels),
+                MSG_SEND_STATUS_SUCCESS
+            )
 
-        return None
+        return MessageSendResult(None, MSG_SEND_STATUS_NO_MESSAGE_SENT)
 
     @typechecked
     @misc._async_safe("update_semaphore")

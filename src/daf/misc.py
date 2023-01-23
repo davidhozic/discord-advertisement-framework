@@ -136,7 +136,7 @@ def _async_safe(semaphore: Union[str, Semaphore], amount: Optional[int]=1) -> Ca
                 for i in range(amount):
                     sem.release()
 
-                return result
+            return result
 
         if isinstance(semaphore, str):
             # If string, assume that the string is the attribute name of the semaphore
