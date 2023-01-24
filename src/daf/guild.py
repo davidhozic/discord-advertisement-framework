@@ -387,7 +387,7 @@ class GUILD(_BaseGUILD):
                  logging: Optional[bool]=False,
                  remove_after: Optional[Union[timedelta, datetime]]=None):
         super().__init__(snowflake, messages, logging, remove_after)
-        misc._write_attr_once(self, "update_semaphore", asyncio.Semaphore(2))
+        misc._write_attr_once(self, "update_semaphore", asyncio.Semaphore(1))
     
     def _check_state(self) -> bool:
         """
@@ -420,7 +420,7 @@ class GUILD(_BaseGUILD):
         """
         return await super().initialize(parent, parent.client.get_guild)
 
-    @misc._async_safe("update_semaphore", 2) # Take 2 since 2 tasks share access
+    @misc._async_safe("update_semaphore", 1) # Take 2 since 2 tasks share access
     async def update(self, init_options={}, **kwargs):
         """
         Used for changing the initialization parameters the object was initialized with.
@@ -492,7 +492,7 @@ class USER(_BaseGUILD):
                  logging: Optional[bool] = False,
                  remove_after: Optional[Union[timedelta, datetime]]=None) -> None:
         super().__init__(snowflake, messages, logging, remove_after)
-        misc._write_attr_once(self, "update_semaphore", asyncio.Semaphore(2)) # Only allows re-referencing this attribute once
+        misc._write_attr_once(self, "update_semaphore", asyncio.Semaphore(1)) # Only allows re-referencing this attribute once
 
     def _check_state(self) -> bool:
         """
@@ -520,7 +520,7 @@ class USER(_BaseGUILD):
         """
         return await super().initialize(parent, parent.client.get_or_fetch_user)
 
-    @misc._async_safe("update_semaphore", 2)
+    @misc._async_safe("update_semaphore", 1)
     async def update(self, init_options={}, **kwargs):
         """
         .. versionadded:: v2.0
