@@ -23,5 +23,5 @@ clean:
 
 
 %: Makefile
-	./setup.py
+	python3 ./setup.py
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)

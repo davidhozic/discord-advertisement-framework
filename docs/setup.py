@@ -1,4 +1,3 @@
-#!python3
 """
 Script that setups the environment before build.
 
@@ -32,8 +31,8 @@ for path, dirs, files in os.walk("./"):
 
             # While copying change to dep-files cwd
             cwd = os.getcwd()
-            os.chdir(os.path.dirname(file))
-
+            os.chdir(os.path.abspath(os.path.dirname(file)))
+            print(f"Current DIR: {os.getcwd()}")
             # [(from, to), (from, to)]
             destinations = setup_file_data["copy"]
             for dest in destinations:
@@ -50,7 +49,9 @@ for path, dirs, files in os.walk("./"):
             # Run scripts
             scripts = setup_file_data["scripts"]
             for script in scripts:
-                subprocess.run(f"{sys.executable} {script} {setup_file}")
+                print(os.path.exists(sys.executable), os.path.exists(script))
+                process = subprocess.Popen([sys.executable, script], shell=True, universal_newlines=True)
+                process.communicate()
 
             # Change cwd back to original
             os.chdir(cwd)
