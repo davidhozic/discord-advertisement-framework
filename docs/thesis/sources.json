@@ -1,0 +1,86 @@
+[
+    {
+        "id": "daf_website",
+        "author": "David Hozic",
+        "title" : "DAF",
+        "source": "https://daf.davidhozic.com",
+        "updated": "dec. 2022"
+    },
+    {
+        "id": "discord_self_bots",
+        "author": "Discord",
+        "title" : "Automated user accounts (self-bots)",
+        "source": "https://support.discord.com/hc/en-us/articles/115002192352-Automated-user-accounts-self-bots-",
+        "updated": "jan. 2023"
+    },
+    {
+        "id": "discord_interface",
+        "author": "Discord",
+        "title" : "Discord Interface",
+        "source": "https://discord.com/safety/360044149331-what-is-discord",
+        "updated": "jan. 2023"
+    },
+    {
+        "id": "discord_what_is",
+        "author": "Discord",
+        "title" : "WHAT IS DISCORD?",
+        "source": "https://support.discord.com/hc/en-us/categories/200404398",
+        "updated": "jan. 2023"
+    },
+    {
+        "id": "discord_api_ref",
+        "author": "Discord",
+        "title" : "Discord API Reference",
+        "source": "https://discord.com/developers/docs/reference - :ref:`Discord API`",
+        "updated": "jan. 2023"
+    },
+    {
+        "id": "discord_api_rl",
+        "author": "Discord",
+        "title" : "Discord rate limits",
+        "source": "https://discord.com/developers/docs/topics/rate-limits - :ref:`Discord rate limiting`",
+        "updated": "jan. 2023"
+    },
+    {
+        "id": "gpt3_refactoring",
+        "author" : "GPT-3 (Open-AI)",
+        "title" : "Refactoring",
+        "source" : "https://chat.openai.com/chat",
+        "updated" : "jan. 2023"
+    },
+    {
+        "id": "nft_working_meaning",
+        "author": "investopedia (RAKESH SHARMA)",
+        "title": "Non-Fungible Token (NFT): What It Means and How It Works",
+        "source": "https://www.investopedia.com/non-fungible-tokens-nft-5115211",
+        "updated": "jan. 2023"
+    },
+    {
+        "id": "what_are_nfts",
+        "author": "rwkgoodman (Jack Pestill)",
+        "title": "What are NFTs? And why are they important?",
+        "source": "https://www.rwkgoodman.com/info-hub/what-are-nfts-and-why-are-they-important/",
+        "updated": "jan. 2023"
+    },
+    {
+        "id": "rst_docutils",
+        "author": "Docutils",
+        "title": "Docutils: Documentation Utilities",
+        "source": "https://docutils.sourceforge.io/",
+        "updated": "jan. 2023"
+    },
+    {
+        "id": "rst_docutils_directives",
+        "author": "Docutils",
+        "title": "reStructuredText Directives",
+        "source": "https://docutils.sourceforge.io/docs/ref/rst/directives.html",
+        "updated": "jan. 2023"
+    },
+    {
+        "id" : "pytest_desc",
+        "author": "Shaheer Shahid Malik",
+        "source" : "https://medium.com/codex/why-use-pytest-to-test-your-software-project-7758ac9970ba",
+        "title": "Why Use Pytest to Test Your Software Project?",
+        "updated": "jan. 2023"
+    }
+]

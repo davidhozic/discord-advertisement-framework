@@ -5,5 +5,15 @@ build**
 **.egg-info
 test.py
 venv/**
-docs/source/ref.rst
+
+settings.json
+src/test.py
+
+docs/build
 docs/source/reference/
+
+docs/thesis/thesis_lit.rst
+docs/thesis/reference/
+
+docs/common/reference
+**/DEP/**
