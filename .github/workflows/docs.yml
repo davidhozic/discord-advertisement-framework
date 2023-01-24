@@ -27,10 +27,8 @@ jobs:
       run: |
         pip install .[docs]
         pip install .[all]
-    - name: Install latex
-      run: sudo apt-get update && sudo apt-get install texlive texlive-publishers texlive-science latexmk cm-super
-    - name: Install inkscape
-      run: sudo apt-get install inkscape -y
+        sudo apt-get update
+        sudo apt-get install texlive latexmk inkscape texlive-publishers -y
     - name: Build html, latex, pdf
       run: cd docs && make html && make latexpdf
       
