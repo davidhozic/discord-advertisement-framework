@@ -50,7 +50,7 @@ for path, dirs, files in os.walk("./"):
             scripts = setup_file_data["scripts"]
             for script in scripts:
                 print(os.path.exists(sys.executable), os.path.exists(script))
-                process = subprocess.Popen([sys.executable, script], shell=True, universal_newlines=True)
+                process = subprocess.Popen([sys.executable, script], universal_newlines=True)
                 process.communicate()
 
             # Change cwd back to original
