@@ -1,11 +1,21 @@
+"""
+Module implements the Web layer of the framework.
+It contains definitions related to the Selenium integration
+and definitions responsible for making HTTP requests to find servers
+the user might want to shill into.
+"""
+from typing import Dict, Tuple, Union
 from contextlib import suppress
+from enum import auto, Enum
 from random import random
+from datetime import datetime, timedelta
 
 from . import misc
 
 import asyncio
 import pathlib
 import json
+import aiohttp as http
 
 class GLOBALS:
     "Global variables of the web module"
@@ -457,3 +467,91 @@ class SeleniumCLIENT:
         except WebDriverException as exc:
             raise RuntimeError("Unable to join guild due to internal error.") from exc
 
+
+
+class ServerDiscoveryClient:
+    """
+    Client used to make requests at top.gg website,
+    to find servers to join into.
+    """
+    TOP_GG_SEARCH_URL = "https://top.gg/api/client/entities/search"
+    ###########################################################################################
+    class SortBy(Enum):
+        TEXT_RELEVANCY = 0
+        TOP = auto()
+        RECENTLY_CREATED = auto()
+        TOP_VOTED = auto()
+        TOTAL_USERS = auto()
+
+
+    class QueryResult:
+        """
+        Contains result of the queries.
+        """
+        def __init__(self, id: int, name: str, invite: str) -> None:
+            self.__dict__.update(locals())
+            self.updated = datetime.now()
+            self.refresh_time: timedelta = None
+        
+        @property
+        def pending_refresh(self):
+            return datetime.now() - self.updated > self.refresh_time
+
+    ###########################################################################################
+    
+    def __init__(self) -> None:
+        self.cache: Dict[Tuple[str, self.SortBy, int], ServerDiscoveryClient.QueryResult] = {}
+        self.session = None
+    
+    async def initialize(self):
+        self.session = http.ClientSession()
+
+    async def _query_request(self,
+                             prompt: str,
+                             sort_by: SortBy,
+                             total_members: Union[int, None],
+                             limit: int):
+        params = {
+            "amount": limit,
+            "nsfwLevel": "1",
+            "platform": "discord",
+            "entityType": "server",
+            "newSortingOrder": sort_by.name,
+            "query": prompt,
+            "isMature": "false"
+        }
+        if total_members is not None:
+            params["minUsers"] = total_members/10 if total_members > 100 else 0
+            params["maxUsers"] = total_members
+
+        async with self.session.get(ServerDiscoveryClient.TOP_GG_SEARCH_URL, params=params) as result:
+            pass
+
+    def query(self, prompt: str, sort_by: SortBy, total_members: int, limit: int):
+        """
+        Generator that yields QueryResult objects.
+
+        Parameters
+        ------------
+        prompt: str
+            Query parameter for server search.
+        sort_by: SortBy
+            Query parameter for sorting method for results.
+        total_members: int
+            Query parameter for member limit.
+        limit: int
+            The maximum amount of servers to query.
+        """
+        cache_key = (prompt, sort_by, total_members)
+        result = self.cache.get(cache_key, None)
+        # List[ { 'id': int, 'name': str, 'invite': str } ]"
+        if result is None or result.pending_refresh:
+            # Update result
+            result = ... # Make a http request
+            self.cache[cache_key] = result
+
+        for i, item in enumerate(result):
+            if i == limit:
+                raise StopIteration
+
+            yield item
