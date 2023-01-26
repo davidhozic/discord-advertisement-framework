@@ -100,22 +100,6 @@ async def json_or_text(response: aiohttp.ClientResponse) -> dict[str, Any] | str
     return text
 
 
-class UserLimit:
-    def __init__(self, loop: asyncio.BaseEventLoop) -> None:
-        self.usages = 0
-        self.loop = loop
-        self.lock = asyncio.Lock()
-
-    async def ensure(self):
-        await self.lock.acquire()
-        self.usages += 1
-        if self.usages >= 2:
-            self.loop.call_later(4.5, self.lock.release)
-            self.usages = 0
-        else:
-            self.lock.release()
-
-
 class Route:
     def __init__(self, method: str, path: str, **parameters: Any) -> None:
         self.path: str = path
@@ -183,7 +167,6 @@ class HTTPClient:
         proxy_auth: aiohttp.BasicAuth | None = None,
         loop: asyncio.AbstractEventLoop | None = None,
         unsync_clock: bool = True,
-        bot = True
     ) -> None:
         self.loop: asyncio.AbstractEventLoop = (
             asyncio.get_event_loop() if loop is None else loop
@@ -194,19 +177,17 @@ class HTTPClient:
         self._global_over: asyncio.Event = asyncio.Event()
         self._global_over.set()
         self.token: str | None = None
-        self.bot_token: bool = bot
+        self.bot_token: bool = False
         self.proxy: str | None = proxy
         self.proxy_auth: aiohttp.BasicAuth | None = proxy_auth
         self.use_clock: bool = not unsync_clock
 
-        user_agent = "DiscordBot (https://github.com/Pycord-Development/pycord {0}) Python/{1[0]}.{1[1]} aiohttp/{2}"
-        self.user_agent: str = user_agent.format(__version__, sys.version_info, aiohttp.__version__)
-        self.user_limit = UserLimit(self.loop)
-        if not bot:
-            self.user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.5005.63 Safari/537.36"
-        else:
-            user_agent = "DiscordBot (https://github.com/Pycord-Development/pycord {0}) Python/{1[0]}.{1[1]} aiohttp/{2}"
-            self.user_agent: str = user_agent.format(__version__, sys.version_info, aiohttp.__version__)
+        user_agent = (
+            "DiscordBot (https://pycord.dev, {0}) Python/{1[0]}.{1[1]} aiohttp/{2}"
+        )
+        self.user_agent: str = user_agent.format(
+            __version__, sys.version_info, aiohttp.__version__
+        )
 
     def recreate(self) -> None:
         if self.__session.closed:
@@ -254,7 +235,7 @@ class HTTPClient:
         }
 
         if self.token is not None:
-            headers["Authorization"] = self.token
+            headers["Authorization"] = f"Bot {self.token}"
         # some checking if it's a JSON request
         if "json" in kwargs:
             headers["Content-Type"] = "application/json"
@@ -298,10 +279,6 @@ class HTTPClient:
                     kwargs["data"] = form_data
 
                 try:
-
-                    if not self.bot_token:
-                        await self.user_limit.ensure()
-
                     async with self.__session.request(
                         method, url, **kwargs
                     ) as response:
@@ -324,7 +301,8 @@ class HTTPClient:
                                 response, use_clock=self.use_clock
                             )
                             _log.debug(
-                                "A rate limit bucket has been exhausted (bucket: %s, retry: %s).",
+                                "A rate limit bucket has been exhausted (bucket: %s,"
+                                " retry: %s).",
                                 bucket,
                                 delta,
                             )
@@ -338,11 +316,14 @@ class HTTPClient:
 
                         # we are being rate limited
                         if response.status == 429:
-                            if not response.headers.get("Via") or isinstance(data, str) or ("code" in data and data["code"] == 20016):
+                            if not response.headers.get("Via") or isinstance(data, str):
                                 # Banned by Cloudflare more than likely.
                                 raise HTTPException(response, data)
 
-                            fmt = 'We are being rate limited. Retrying in %.2f seconds. Handled under the bucket "%s"'
+                            fmt = (
+                                "We are being rate limited. Retrying in %.2f seconds."
+                                ' Handled under the bucket "%s"'
+                            )
 
                             # sleep a bit
                             retry_after: float = data["retry_after"]
@@ -352,7 +333,8 @@ class HTTPClient:
                             is_global = data.get("global", False)
                             if is_global:
                                 _log.warning(
-                                    "Global rate limit has been hit. Retrying in %.2f seconds.",
+                                    "Global rate limit has been hit. Retrying in %.2f"
+                                    " seconds.",
                                     retry_after,
                                 )
                                 self._global_over.clear()
@@ -419,14 +401,13 @@ class HTTPClient:
 
     # login management
 
-    async def static_login(self, token: str, bot: bool) -> user.User:
+    async def static_login(self, token: str) -> user.User:
         # Necessary to get aiohttp to stop complaining about session creation
         self.__session = aiohttp.ClientSession(
             connector=self.connector, ws_response_class=DiscordClientWebSocketResponse
         )
         old_token = self.token
-        self.bot_token = bot
-        self.token = f"Bot {token}" if self.bot_token else token
+        self.token = token
 
         try:
             data = await self.request(Route("GET", "/users/@me"))
@@ -922,7 +903,8 @@ class HTTPClient:
             params["delete_message_seconds"] = delete_message_seconds
         elif delete_message_days:
             warn_deprecated(
-                "delete_message_days" "delete_message_seconds",
+                "delete_message_days",
+                "delete_message_seconds",
                 "2.2",
                 reference="https://github.com/discord/discord-api-docs/pull/5219",
             )
@@ -1061,6 +1043,12 @@ class HTTPClient:
             "locked",
             "invitable",
             "default_auto_archive_duration",
+            "flags",
+            "default_thread_rate_limit_per_user",
+            "default_reaction_emoji",
+            "available_tags",
+            "applied_tags",
+            "default_sort_order",
         )
         payload = {k: v for k, v in options.items() if k in valid_keys}
         return self.request(r, reason=reason, json=payload)
@@ -1175,6 +1163,7 @@ class HTTPClient:
         auto_archive_duration: threads.ThreadArchiveDuration,
         rate_limit_per_user: int,
         invitable: bool = True,
+        applied_tags: SnowflakeList | None = None,
         reason: str | None = None,
         embed: embed.Embed | None = None,
         embeds: list[embed.Embed] | None = None,
@@ -1190,6 +1179,9 @@ class HTTPClient:
         }
         if content:
             payload["content"] = content
+
+        if applied_tags:
+            payload["applied_tags"] = applied_tags
 
         if embed:
             payload["embeds"] = [embed]
@@ -2608,7 +2600,6 @@ class HTTPClient:
         embeds: list[embed.Embed] | None = None,
         allowed_mentions: message.AllowedMentions | None = None,
     ):
-
         payload: dict[str, Any] = {}
         if content:
             payload["content"] = content
@@ -2869,6 +2860,3 @@ class HTTPClient:
 
     def get_user(self, user_id: Snowflake) -> Response[user.User]:
         return self.request(Route("GET", "/users/{user_id}", user_id=user_id))
-
-    def get_relationships(self) -> Response[List[user.User]]:
-        return self.request(Route("GET", "/users/@me/relationships"))
