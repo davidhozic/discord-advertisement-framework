@@ -482,7 +482,7 @@ class Client:
 
     # login state management
 
-    async def login(self, token: str) -> None:
+    async def login(self, token: str, bot: bool) -> None:
         """|coro|
 
         Logs in the client with the specified credentials.
@@ -511,7 +511,7 @@ class Client:
 
         _log.info("logging in using static token")
 
-        data = await self.http.static_login(token.strip())
+        data = await self.http.static_login(token.strip(), bot)
         self._connection.user = ClientUser(state=self._connection, data=data)
 
     async def connect(self, *, reconnect: bool = True) -> None:
@@ -645,7 +645,7 @@ class Client:
         self._connection.clear()
         self.http.recreate()
 
-    async def start(self, token: str, *, reconnect: bool = True) -> None:
+    async def start(self, token: str, *, reconnect: bool = True, bot: bool = True) -> None:
         """|coro|
 
         A shorthand coroutine for :meth:`login` + :meth:`connect`.
@@ -655,7 +655,7 @@ class Client:
         TypeError
             An unexpected keyword argument was received.
         """
-        await self.login(token)
+        await self.login(token, bot=bot)
         await self.connect(reconnect=reconnect)
 
     def run(self, *args: Any, **kwargs: Any) -> None:
