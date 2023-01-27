@@ -402,7 +402,8 @@ def _shutdown_clean(loop: asyncio.AbstractEventLoop) -> None:
     for account in GLOBALS.accounts:
         loop.run_until_complete(account._close())
     
-    loop.run_until_complete(GLOBALS.cleanup_task)
+    if GLOBALS.cleanup_task is not None:
+        loop.run_until_complete(GLOBALS.cleanup_task)
 
 
 @typechecked

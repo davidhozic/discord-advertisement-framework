@@ -703,7 +703,7 @@ class AutoGUILD:
         "Initializes asynchronous elements."
         # Nothing is needed to be done here since everything is obtained from API wrapper cache.
         self.parent = parent
-    
+
     async def add_message(self, message: BaseMESSAGE):
         """
         Adds a copy of the passed message to each
