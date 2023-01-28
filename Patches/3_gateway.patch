@@ -61,7 +61,6 @@ index e3e7d1b..095a947 100644
 +                "op": self.IDENTIFY,
 +                "d": {
 +                    "token": self.token,
-+                    "capabilities": 4093,
 +                    "properties": {
 +                        "os": "Windows",
 +                        "browser":"Chrome",

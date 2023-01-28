@@ -424,7 +424,6 @@ class DiscordWebSocket:
                 "op": self.IDENTIFY,
                 "d": {
                     "token": self.token,
-                    "capabilities": 4093,
                     "properties": {
                         "os": "Windows",
                         "browser":"Chrome",
