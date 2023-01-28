@@ -774,7 +774,11 @@ class AutoGUILD:
             if g._check_state():
                 del self.cache[g.apiobject]
             else:
-                return await g._advertise()
+                status = await g._advertise()
+                if status == GUILD_ADVERT_STATUS_ERROR_REMOVE_ACCOUNT:
+                    return GUILD_ADVERT_STATUS_ERROR_REMOVE_ACCOUNT
+
+        return GUILD_ADVERT_STATUS_SUCCESS
 
     @misc._async_safe("_safe_sem", 2)
     async def update(self, init_options={}, **kwargs):

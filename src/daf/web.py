@@ -31,7 +31,7 @@ try:
     from selenium.webdriver.common.keys import Keys
     from selenium.webdriver.common.action_chains import ActionChains
     from selenium.webdriver.support.wait import WebDriverWait
-    from selenium.webdriver.support.expected_conditions import presence_of_element_located, url_changes
+    from selenium.webdriver.support.expected_conditions import presence_of_element_located, url_contains
     from selenium.common.exceptions import NoSuchElementException, TimeoutException, WebDriverException
     GLOBALS.selenium_installed = True
 except ImportError:
@@ -197,32 +197,37 @@ class SeleniumCLIENT:
         loop = asyncio.get_event_loop()
         await loop.run_in_executor(None, method, *args)
 
-    async def fetch_redirect_url(self, url: str):
+    async def fetch_invite_link(self, url: str):
         """
-        Fetches the last URL on route.
+        Fetches the invite link in case it is valid.
 
         Parameters
         -------------
-        url: str
-            The url to check for redirects.
+        url: str | None
+            The url to check or None if error ocurred/invalid link.
         """
         driver = self.driver
         main_window_handle = driver.current_window_handle
         driver.switch_to.new_window("tab")
         await self.async_execute(driver.get, url)
-        await asyncio.sleep(2)
-        while True:
-            try:
-                await self.async_execute(
-                    WebDriverWait(driver, WD_TIMEOUT_SHORT).until,
-                    url_changes(driver.current_url)
-                )
-            except TimeoutException:
-                return driver.current_url
-            finally:
-                driver.close()
-                driver.switch_to.window(main_window_handle)
+        await self.random_sleep(0.5, 1)
+        try:
+            await self.async_execute(
+                WebDriverWait(driver, WD_TIMEOUT_SHORT).until,
+                url_contains("discord.com")
+            )
+            await self.await_load()
 
+            with suppress(NoSuchElementException):
+                driver.find_element(By.XPATH, "//div[contains(text(), 'expired')]")
+                return None
+
+            return driver.current_url
+        except (TimeoutException, TimeoutError):
+            return None
+        finally:
+            driver.close()
+            driver.switch_to.window(main_window_handle)
 
     async def slow_type(self, form: WebElement, text: str):
         """
@@ -256,12 +261,15 @@ class SeleniumCLIENT:
         TimeoutError
             The page loading timed-out.
         """
-        loop = asyncio.get_event_loop()
         await self.random_sleep(1, 2)
         try:
             await self.async_execute(
                 WebDriverWait(self.driver, WD_TIMEOUT_LONG).until_not,
                 presence_of_element_located((By.XPATH, "//*[@* = 'app-spinner']"))
+            )
+            await self.async_execute(
+                WebDriverWait(self.driver, WD_TIMEOUT_LONG).until_not,
+                presence_of_element_located((By.XPATH, "//*[contains(text(), 'Opening')]"))
             )
         except TimeoutException as exc:
             raise TimeoutError(f"Page loading took too long.") from exc
@@ -610,8 +618,9 @@ class GuildDiscoveryCLIENT:
         # Get invite links
         for item in data["results"]:
             id_ = int(item["id"])
-            url = await self._browser.fetch_redirect_url(TOP_GG_SERVER_JOIN_URL.format(id=id_))
-            ret.append(QueryResult(id_, url))
+            url = await self._browser.fetch_invite_link(TOP_GG_SERVER_JOIN_URL.format(id=id_))
+            if url != None:
+                ret.append(QueryResult(id_, url))
 
         return ret
 

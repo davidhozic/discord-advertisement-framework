@@ -399,6 +399,7 @@ def _shutdown_clean(loop: asyncio.AbstractEventLoop) -> None:
         The loop to stop.
     """
     GLOBALS.running = False
+    loop.run_until_complete(loop.shutdown_default_executor())
     for account in GLOBALS.accounts:
         loop.run_until_complete(account._close())
     

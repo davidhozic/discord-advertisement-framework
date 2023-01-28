@@ -348,7 +348,7 @@ class VoiceMESSAGE(BaseMESSAGE):
             self._update_state(errored_channels)
             return MessageSendResult(
                 self.generate_log_context(**_data_to_send, succeeded_ch=succeeded_channels, failed_ch=errored_channels),
-                MSG_SEND_STATUS_SUCCESS
+                MSG_SEND_STATUS_SUCCESS if succeeded_channels or errored_channels else MSG_SEND_STATUS_NO_MESSAGE_SENT
             )
 
         return MessageSendResult(None, MSG_SEND_STATUS_NO_MESSAGE_SENT)
