@@ -27,6 +27,7 @@ jobs:
       run: |
         pip install .[docs]
         pip install .[all]
+        sudo apt install inkscape -y
     - name: Build html & latex
       run: cd docs && make html && make latex
     - name: Build pdf
