@@ -8,6 +8,7 @@ SPHINXBUILD   ?= sphinx-build
 SOURCEDIR     ?= source
 BUILDDIR      ?= build
 
+
 # Put it first so that "make" without argument is like "make help".
 help:
 	@$(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
@@ -21,6 +22,12 @@ clean:
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
 
+latexpdf: latex
+	docker run --rm -ti \
+	-v miktex:/miktex/.miktex \
+	-v $(CURDIR)/build/latex:/miktex/work \
+	miktex/miktex \
+	pdflatex discordadvertisementframework.tex
 
 %: Makefile
 	python3 ./setup.py
