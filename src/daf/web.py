@@ -265,6 +265,10 @@ class SeleniumCLIENT:
         try:
             await self.async_execute(
                 WebDriverWait(self.driver, WD_TIMEOUT_LONG).until_not,
+                presence_of_element_located((By.XPATH, "//span[contains(@class, 'wanderingCubes')]"))
+            )
+            await self.async_execute(
+                WebDriverWait(self.driver, WD_TIMEOUT_LONG).until_not,
                 presence_of_element_located((By.XPATH, "//*[@* = 'app-spinner']"))
             )
             await self.async_execute(
@@ -622,7 +626,7 @@ class GuildDiscoveryCLIENT:
             if url != None:
                 ret.append(QueryResult(id_, url))
 
-        return ret
+        return ret if ret else None
 
     async def _query(self):
         """
