@@ -32,5 +32,6 @@ jobs:
     - name: Build pdf
       uses: dante-ev/latex-action@edge
       with:
-        root_file: docs/build/latex
+        working_directory: docs/build/latex/
+        root_file: discordadvertisementframework.tex
 
