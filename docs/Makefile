@@ -21,14 +21,6 @@ help:
 clean:
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
-
-latexpdf: latex
-	docker run --rm -ti \
-	-v miktex:/miktex/.miktex \
-	-v $(CURDIR)/build/latex:/miktex/work \
-	miktex/miktex \
-	pdflatex discordadvertisementframework.tex
-
 %: Makefile
 	python3 ./setup.py
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
