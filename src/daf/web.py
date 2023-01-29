@@ -5,18 +5,22 @@ and definitions responsible for making HTTP requests to find servers
 the user might want to shill into.
 """
 from __future__ import annotations
-from typing import Dict, Tuple, Callable, List
+from typing import Dict, Tuple, Callable, List, Optional, Any
 from contextlib import suppress
 from enum import auto, Enum
 from random import random
 from datetime import datetime, timedelta
+from typeguard import typechecked
 
 from . import misc
+from .logging.tracing import trace, TraceLEVELS
 
 import asyncio
 import pathlib
 import json
+import sys
 import aiohttp as http
+import _discord as discord
 
 class GLOBALS:
     "Global variables of the web module"
@@ -31,7 +35,7 @@ try:
     from selenium.webdriver.common.keys import Keys
     from selenium.webdriver.common.action_chains import ActionChains
     from selenium.webdriver.support.wait import WebDriverWait
-    from selenium.webdriver.support.expected_conditions import presence_of_element_located, url_contains
+    from selenium.webdriver.support.expected_conditions import presence_of_element_located, url_contains, url_changes
     from selenium.common.exceptions import NoSuchElementException, TimeoutException, WebDriverException
     GLOBALS.selenium_installed = True
 except ImportError:
@@ -42,15 +46,16 @@ except ImportError:
 
 __all__ = (
     "SeleniumCLIENT",
-    "GuildDiscoveryCLIENT",
-    "SortBy"
+    "GuildDISCOVERY",
+    "QuerySortBy",
+    "QueryMembers"
 )
 
 
 WD_TIMEOUT_SHORT = 5
 WD_TIMEOUT_MED = 30
 WD_TIMEOUT_LONG = 90
-WD_WINDOW_SIZE = (1280, 720)
+WD_WINDOW_SIZE = (1300, 800)
 
 WD_OUTPUT_PATH = pathlib.Path("./daf_web_data")
 WD_TOKEN_PATH = WD_OUTPUT_PATH.joinpath("tokens.json")
@@ -251,6 +256,20 @@ class SeleniumCLIENT:
             form.send_keys(char)
             await self.random_sleep(0.05, 0.10)
 
+    async def await_url_change(self):
+        """
+        Waits for url to change.
+
+        Raises
+        --------
+        TimeoutError
+            Waited for too long.
+        """
+        try:
+            await self.async_execute(WebDriverWait(self.driver, WD_TIMEOUT_LONG).until, url_changes(self.driver.current_url))
+        except TimeoutException:
+            raise TimeoutError("Waiting for url to change took too long.")
+
     async def await_load(self):
         """
         Waits for the Discord spinning logo to disappear,
@@ -277,26 +296,6 @@ class SeleniumCLIENT:
             )
         except TimeoutException as exc:
             raise TimeoutError(f"Page loading took too long.") from exc
-
-    async def await_login_location(self):
-        """
-        Waits for the user to confirm the login location via email, and
-        then logs in manually.
-
-        Raises
-        ----------
-        TimeoutError
-            User failed to verify new login location.
-        """
-        loop = asyncio.get_event_loop()
-        await self.random_sleep(1, 2)
-        try:
-            await self.async_execute(
-                WebDriverWait(self.driver, WD_TIMEOUT_LONG).until_not,
-                presence_of_element_located((By.XPATH, "//*[contains(text(), 'login location')]"))
-            )    
-        except TimeoutException as exc:
-            raise TimeoutError("New login location not confirmed in time.") from exc
 
     async def await_captcha(self):
         """
@@ -349,25 +348,6 @@ class SeleniumCLIENT:
         except TimeoutException as exc:
             raise TimeoutError(f"CAPTCHA was not solved by the user") from exc
 
-    async def await_two_factor(self):
-        """
-        Awaits for user to enter 2-factor authorization key.
-
-        Raises
-        --------------
-        TimeoutError
-            2-Factor authentication timed-out.
-        """
-        loop = asyncio.get_event_loop()
-        await asyncio.sleep(WD_TIMEOUT_SHORT)
-        try:
-            await self.async_execute(
-                WebDriverWait(self.driver, WD_TIMEOUT_LONG).until_not,
-                presence_of_element_located((By.XPATH, "//h1[contains(text(), 'Two-factor')]"))
-            )
-        except TimeoutException as exc:
-            raise TimeoutError("2-Factor authentication was not completed in time.") from exc
-
     async def initialize(self) -> None:
         """
         Starts the webdriver whenever the framework is started.
@@ -412,8 +392,8 @@ class SeleniumCLIENT:
         try:
             driver = self.driver
             driver.get(DISCORD_LOGIN_URL)
-            await asyncio.sleep(WD_TIMEOUT_SHORT)
-
+            await self.await_load()
+            await self.random_sleep(1, 2)
             # Check if already logged in
             if driver.current_url == DISCORD_LOGIN_URL:
                 # Check previous accounts
@@ -431,15 +411,10 @@ class SeleniumCLIENT:
                 await self.random_sleep(1, 2)
                 ActionChains(driver).send_keys(Keys.ENTER).perform()
 
-                await self.await_captcha()
-                await self.await_login_location()
-                await self.await_two_factor()
+                await self.await_url_change()
                 await self.await_load()
 
-            return self.update_token_file()
-
-        except TimeoutError:
-            raise
+            return self.update_token_file()            
         except (WebDriverException, OSError) as exc:
             raise RuntimeError("Unable to login due to internal exception.") from exc
 
@@ -455,7 +430,7 @@ class SeleniumCLIENT:
         element: WebElement
             The element to hover click.
         """
-        actions = ActionChains(self.driver)
+        actions = ActionChains(self.driver, duration=1013)
         actions.move_to_element(element).perform()
         await self.random_sleep(0.25, 1)
         actions.click(element).perform()
@@ -493,7 +468,7 @@ class SeleniumCLIENT:
             await self.slow_type(link_input, invite)
             await self.random_sleep(2, 5)
 
-            join_bnt = driver.find_element(By.XPATH, "//button[@type='button' and div[contains(text(), 'Join')]]")
+            join_bnt = driver.find_element(By.XPATH, "//button[@type='button']/div[contains(text(), 'Join')]")
             await self.hover_click(join_bnt)
             await self.random_sleep(3, 5) # Wait for any CAPTCHA to appear
 
@@ -502,10 +477,11 @@ class SeleniumCLIENT:
             with suppress(TimeoutException): 
                 await self.async_execute(
                     WebDriverWait(driver, WD_TIMEOUT_SHORT).until_not,
-                    presence_of_element_located((By.XPATH, "//button[@type='button' and div[contains(text(), 'Join')]]"))
+                    presence_of_element_located((By.XPATH, "//button[@type='button']/div[contains(text(), 'Join')]"))
                 )
 
             # Complete rules
+            await self.random_sleep(1, 2)
             ActionChains(driver).send_keys(Keys.ESCAPE).perform() # To ensure there is not already an open menu
             with suppress(NoSuchElementException):
                 complete_rules_bnt = driver.find_element(By.XPATH, "//button[div[contains(text(), 'Complete')]]")
@@ -518,16 +494,25 @@ class SeleniumCLIENT:
             with suppress(NoSuchElementException):
                 submit_bnt = driver.find_element(By.XPATH, "//button[@type='submit']")
                 await self.hover_click(submit_bnt)
+            
+            ActionChains(driver).send_keys(Keys.ESCAPE).perform()
         except WebDriverException as exc:
             raise RuntimeError("Unable to join guild due to internal error.") from exc
 
 
-class SortBy(Enum):
+class QuerySortBy(Enum):
     TEXT_RELEVANCY = 0
     TOP = auto()
     RECENTLY_CREATED = auto()
     TOP_VOTED = auto()
     TOTAL_USERS = auto()
+
+class QueryMembers(Enum):
+    ALL = 0
+    SUB_100 = (0, 100)
+    B100_1k = (100, 1000)
+    B1k_10k = (1000, 10000)
+    ABV_10k = 1
 
 class QueryResult:
     """
@@ -535,12 +520,14 @@ class QueryResult:
     """
     __slots__ = (
         "id",
+        "name",
         "invite",
         "updated",
     )
 
-    def __init__(self, id: int, invite: str) -> None:
+    def __init__(self, id: int, name: str, invite: str) -> None:
         self.id = id
+        self.name = name
         self.invite = invite
         self.updated = datetime.now()
 
@@ -550,7 +537,7 @@ class QueryResult:
 
 
 @misc.doc_category("Clients")
-class GuildDiscoveryCLIENT:
+class GuildDISCOVERY:
     """
     Client used for searching servers.
 
@@ -558,14 +545,14 @@ class GuildDiscoveryCLIENT:
     ------------
     prompt: str
         Query parameter for server search.
-    sort_by: SortBy
+    sort_by: Optional[QuerySortBy]
         Query parameter for sorting method for results.
-    total_members: int
+    total_members: Optional[QueryMembers]
         Query parameter for member limit.
-    limit: int
+    limit: Optional[int]
         The maximum amount of servers to query.
     """
-    cache: Dict[Tuple[str, SortBy, int], QueryResult] = {}
+    query_cache: Dict[Tuple[str, QuerySortBy, int], QueryResult] = {}
 
     __slots__ = (
         "prompt",
@@ -573,20 +560,29 @@ class GuildDiscoveryCLIENT:
         "total_members",
         "limit",
         "session",
-        "_browser"
+        "browser",
     )
 
-    def __init__(self, prompt: str, sort_by: SortBy, total_members: int, limit: int) -> None:
+    @typechecked
+    def __init__(self,
+                 prompt: str,
+                 sort_by: Optional[QuerySortBy] = QuerySortBy.TOP,
+                 total_members: Optional[QueryMembers] = QueryMembers.ALL,
+                 limit: Optional[int] = 100) -> None:
         self.prompt = prompt
         self.sort_by = sort_by
         self.total_members = total_members
         self.limit = limit
+        self.session = None
+        self.browser = None
 
-    async def initialize(self, browser: SeleniumCLIENT):
+    async def initialize(self, parent: Any):
         self.session = http.ClientSession()
-        self._browser = browser
+        self.browser: SeleniumCLIENT = parent.parent.selenium
+        if self.browser is None:
+            raise ValueError("To use auto-join functionality, the account must be provided with username and password.")
 
-    async def _query_request(self) -> List[QueryResult]:
+    async def _query_request(self):
         """
         Makes actual HTTP requests.
 
@@ -595,59 +591,56 @@ class GuildDiscoveryCLIENT:
         List[QueryResult]
             List of guilds found.        
         """
+
+        cache_key = (self.prompt, self.sort_by, self.total_members)
+        cache_result: List[QueryResult] = self.query_cache.get(cache_key, None)
+        # List[ { 'id': int, 'name': str, 'invite': str } ]"
+        if not (cache_result is None or cache_result[0].pending_refresh):
+            for cached in cache_result:
+                yield cached
+            
+            return
+
+
+        # Update result
+        result_list = []
+        self.query_cache[cache_key] = result_list
+
         params = {
-            "amount": self.limit,
+            "amount": 10,
             "nsfwLevel": "1",
             "platform": "discord",
             "entityType": "server",
             "newSortingOrder": self.sort_by.name,
             "query": self.prompt,
-            "isMature": "false"
+            "isMature": "false",
+            "skip" : 0
         }
         total_members = self.total_members
-        if total_members is not None:
-            params["minUsers"] = total_members//10 if total_members > 100 else 0
-            params["maxUsers"] = total_members
+        if total_members is not QueryMembers.ALL:
+            if total_members is QueryMembers.ABV_10k:
+                params["minUsers"] = 10000
+            else:
+                min_, max_ = total_members.value
+                params["minUsers"] = min_
+                params["maxUsers"] = max_
 
-        ret = []
-        data = None
-        async with self.session.get(TOP_GG_SEARCH_URL, params=params) as result:
-            if result.status != 200:
-                return ret
+        for i in range(0, 1000, 10):
+            params["skip"] = i
+            async with self.session.get(TOP_GG_SEARCH_URL, params=params) as result:
+                if result.status != 200:
+                    return
 
-            data = await result.json()
-            if data is None or "results" not in data:
-                return ret
+                data = await result.json()
+                if data is None or "results" not in data:
+                    return
 
-        # Get invite links
-        for item in data["results"]:
-            id_ = int(item["id"])
-            url = await self._browser.fetch_invite_link(TOP_GG_SERVER_JOIN_URL.format(id=id_))
-            if url != None:
-                ret.append(QueryResult(id_, url))
-
-        return ret if ret else None
-
-    async def _query(self):
-        """
-        Generator that yields QueryResult objects.
-        
-        Returns
-        -----------
-        List[QueryResult]
-            List of guilds found.  
-        """
-        cache_key = (self.prompt, self.sort_by, self.total_members)
-        result: List[QueryResult] = self.cache.get(cache_key, None)
-        # List[ { 'id': int, 'name': str, 'invite': str } ]"
-        if result is None or result[0].pending_refresh:
-            # Update result
-            result = await self._query_request()
-            self.cache[cache_key] = result
-
-        limit = self.limit
-        for i, item in enumerate(result):
-            if i == limit:
-                raise StopIteration
-
-            yield item
+            # Get invite links
+            for item in data["results"]:
+                id_ = int(item["id"])
+                name = item["name"]
+                url = await self.browser.fetch_invite_link(TOP_GG_SERVER_JOIN_URL.format(id=id_))
+                if url != None:
+                    qr = QueryResult(id_, name, url)
+                    result_list.append(qr)
+                    yield qr

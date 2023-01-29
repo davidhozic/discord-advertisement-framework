@@ -84,14 +84,6 @@ class ACCOUNT:
         The username to login with. 
     password: Optional[str]
         The password to login with.
-    auto_join: Optional[List[web.GuildDiscoveryCLIENT]]
-        List of :class:`~daf.web.GuildDiscoveryCLIENT` though which, the
-        account will auto discover and join new guilds.
-
-    .. Caution::
-        Do not provide ``token`` parameter if you've provided username and password.
-        An exception will be raised to prevent token being used that does not belong
-        to the provided account.
 
     Raises
     ---------------
@@ -99,8 +91,6 @@ class ACCOUNT:
         'proxy' parameter was provided but requirements are not installed.
     ValueError
         'token' is not allowed if 'username' is provided and vice versa.
-    ValueError
-        'username' and 'password' must be set if you want the framework to auto-join the guilds (thru the browser)
     """
     @typechecked
     def __init__(self,
@@ -110,8 +100,7 @@ class ACCOUNT:
                  proxy: Optional[str]=None,
                  servers: Optional[List[Union[guild.GUILD, guild.USER, guild.AutoGUILD]]]=None,
                  username: Optional[str]=None,
-                 password: Optional[str]=None,
-                 auto_join: Optional[List[web.GuildDiscoveryCLIENT]]=None) -> None:
+                 password: Optional[str]=None) -> None:
         connector = None
         if proxy is not None:
             if not GLOBALS.proxy_installed:
@@ -125,9 +114,6 @@ class ACCOUNT:
         if token is None and username is None: # At least one of these
             raise ValueError("At lest one parameter of these is required: 'token' OR 'username' + 'password'")
 
-        if auto_join is not None and (username is None or password is None):
-            raise ValueError("Error with 'auto_join' parameter: 'username' and 'password' must be set"
-                             " if you want the framework to auto-join the guilds (thru the browser).")
 
         self._token = token
         self.is_user = is_user
@@ -153,14 +139,9 @@ class ACCOUNT:
         update method from re-initializing initializes objects.
         This gets deleted in the initialize method"""
 
-        if auto_join is None:
-            auto_join = []
-        
-        self.auto_join = auto_join
-
         self._client = discord.Client(intents=intents, connector=connector)
         self._deleted = False
-        misc._write_attr_once(self, "_update_sem", asyncio.Semaphore(2))
+        misc._write_attr_once(self, "_update_sem", asyncio.Semaphore(1))
 
     def __eq__(self, other):
         if isinstance(other, ACCOUNT):
@@ -226,7 +207,6 @@ class ACCOUNT:
         for server in self.servers:
             server._delete()
 
-
     async def initialize(self):
         """
         Initializes the API wrapper client layer.
@@ -258,12 +238,8 @@ class ACCOUNT:
             except Exception as exc:
                 trace("Unable to add server.", TraceLEVELS.WARNING, exc)
 
-        for discovery_client in self.auto_join:
-            await discovery_client.initialize(self._selenium)
-
         del self._uiservers # Only needed for predefined initialization
         self.tasks.append(asyncio.create_task(self._loop()))
-        self.tasks.append(asyncio.create_task(self._guild_join_loop()))
         self._running = True
 
     @typechecked
@@ -387,28 +363,6 @@ class ACCOUNT:
             ###############################################################
             await __loop()
             await asyncio.sleep(TASK_SLEEP_DELAY_S)
-    
-    async def _guild_join_loop(self):
-        """
-        Task used for joining to new guilds.
-
-        Runs while _running is set to True.
-        """
-        result: web.QueryResult
-        while self._running:
-            for discovery_client in self.auto_join:
-                async for result in discovery_client._query():
-                    if not self._running:
-                        break
-
-                    if (self.client.get_guild(result.id)) is None:
-                        try:
-                            await self._selenium.join_guild(result.invite)
-                            await self._selenium.random_sleep(2, 4)
-                        except Exception as exc:
-                            trace("Could not join a guild.", TraceLEVELS.ERROR, exc)
-
-            await asyncio.sleep(TASK_SLEEP_DELAY_S)
 
     async def update(self, **kwargs):
         """
@@ -417,7 +371,7 @@ class ACCOUNT:
         .. WARNING::
             After calling this method the entire object is reset.
         """
-        @misc._async_safe("_update_sem", 2)
+        @misc._async_safe("_update_sem", 1)
         async def update_servers(self_):
             for server in self.servers:
                 await server.update(init_options={"parent": self})

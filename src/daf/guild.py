@@ -3,7 +3,7 @@
     regarding the guild and also defines a USER class from the
     _BaseGUILD class.
 """
-from typing import Any, Coroutine, Union, List, Optional, Dict, Callable
+from typing import Any, Coroutine, Union, List, Optional, Dict, Callable, Set
 from typeguard import typechecked
 from datetime import timedelta, datetime
 from copy import deepcopy
@@ -13,6 +13,7 @@ from .message import *
 
 from . import logging
 from . import misc
+from . import web
 
 import _discord as discord
 import asyncio
@@ -28,6 +29,7 @@ __all__ = (
 
 GUILD_ADVERT_STATUS_SUCCESS = 0
 GUILD_ADVERT_STATUS_ERROR_REMOVE_ACCOUNT = None
+DISCOVERY_SLEEP_S = 5
 
 globals_ = globals()
 prev_val = 0
@@ -611,6 +613,9 @@ class AutoGUILD:
         sent messages.
     interval: Optional[timedelta] = timedelta(minutes=10)
         Interval at which to scan for new guilds
+    auto_join: Optional[web.GuildDISCOVERY] = None
+        Optional web.GuildDISCOVERY object which will automatically discover and join guilds though
+        the browser. This will open a Google Chrome session.
     """
     __slots__ = (
         "include_pattern",
@@ -624,7 +629,9 @@ class AutoGUILD:
         "_created_at",
         "_deleted",
         "_safe_sem",
-        "parent"
+        "parent",
+        "auto_join",
+        "join_history"
     )
 
     @typechecked
@@ -634,14 +641,17 @@ class AutoGUILD:
                  remove_after: Optional[Union[timedelta, datetime]] = None,
                  messages: Optional[List[BaseMESSAGE]] = [],
                  logging: Optional[bool] = False,
-                 interval: Optional[timedelta] = timedelta(minutes=10)) -> None:
+                 interval: Optional[timedelta] = timedelta(minutes=10),
+                 auto_join: Optional[web.GuildDISCOVERY] = None) -> None:
         self.include_pattern = include_pattern
         self.exclude_pattern = exclude_pattern
         self.remove_after = remove_after 
         self.messages = messages # Uninitialized template messages list that gets copied for each found guild.
         self.logging = logging
         self.interval = interval.total_seconds() # In seconds
+        self.auto_join = auto_join
         self.cache: Dict[discord.Guild, GUILD] = {}
+        self.join_history: Set[int] = set() # History of auto-joined guild ids
         self.last_scan = 0
         self._deleted = False
         self._created_at = datetime.now()
@@ -700,9 +710,18 @@ class AutoGUILD:
                 rm_after_type is datetime and datetime.now() > self.remove_after) # The current time is larger than remove_after 
 
     async def initialize(self, parent: Any):
-        "Initializes asynchronous elements."
+        """
+        Initializes asynchronous elements.
+        
+        Raises
+        --------
+        ValueError
+            Auto-join guild functionality requires the account to be provided with username and password.
+        """
         # Nothing is needed to be done here since everything is obtained from API wrapper cache.
         self.parent = parent
+        if self.auto_join is not None:
+            await self.auto_join.initialize(self)
 
     async def add_message(self, message: BaseMESSAGE):
         """
@@ -746,10 +765,42 @@ class AutoGUILD:
         Coroutine that finds new guilds from the
         API wrapper.
         """
-        dcl = self.parent.client
+        
+        dcl: discord.Client = self.parent.client
+        selenium: web.SeleniumCLIENT = self.parent.selenium
         stamp = datetime.now().timestamp()
         if stamp - self.last_scan > self.interval:
-            self.last_scan = stamp
+            # Join Guilds
+            discovery = self.auto_join
+            i = 0
+            async for x in discovery._query_request(): # TODO: Move this block into web layer
+                try:
+                    if i == discovery.limit:
+                        break
+                    
+                    i += 1
+                    id_ = x.id
+                    invite = x.invite
+                    name = x.name
+                    if (
+                        id_ in self.join_history or # Don't try to rejoin guilds that we were kicked/banned out of
+                        dcl.get_guild(id_) is not None or
+                        re.search(self.include_pattern, x.name) is None or
+                        (self.exclude_pattern is not None and re.search(self.exclude_pattern, name) is not None)
+                    ):
+                        continue
+
+                    await asyncio.sleep(DISCOVERY_SLEEP_S)
+                    await selenium.join_guild(invite)
+                    if dcl.get_guild(id_) is None:
+                        raise RuntimeError("Joining guild yielded no apparent error, but client was not able to join the guild.")
+
+                    self.join_history.add(id_)
+                except Exception as exc:
+                    trace(f"Error joining guild though browser (ID: {id_}).", TraceLEVELS.ERROR, exc)
+
+
+            # Create GUILD instances
             for dcgld in dcl.guilds:
                 if (dcgld not in self.cache and 
                     re.search(self.include_pattern, dcgld.name) is not None and
@@ -763,6 +814,8 @@ class AutoGUILD:
                         self.cache[dcgld] = new_guild
                     except Exception as exc:
                         trace(f" Unable to add new object.",TraceLEVELS.WARNING, exc)
+        
+            self.last_scan = stamp
 
     @misc._async_safe("_safe_sem", 1)
     async def _advertise(self):
