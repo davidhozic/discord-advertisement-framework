@@ -362,6 +362,7 @@ class SeleniumCLIENT:
 
         opts = Options()
         opts.add_argument(f"--user-data-dir={web_data_path.absolute()}")
+        opts.add_argument("--profile-directory=Profile 1")
         opts.add_argument(f"--no-sandbox")
 
         if self._proxy is not None:
