@@ -25,6 +25,8 @@ DEALINGS IN THE SOFTWARE.
 
 from __future__ import annotations
 
+import json
+import base64
 import asyncio
 import logging
 import sys
@@ -182,8 +184,7 @@ class HTTPClient:
         proxy: str | None = None,
         proxy_auth: aiohttp.BasicAuth | None = None,
         loop: asyncio.AbstractEventLoop | None = None,
-        unsync_clock: bool = True,
-        bot: bool = True
+        unsync_clock: bool = True
     ) -> None:
         self.loop: asyncio.AbstractEventLoop = (
             asyncio.get_event_loop() if loop is None else loop
@@ -194,7 +195,7 @@ class HTTPClient:
         self._global_over: asyncio.Event = asyncio.Event()
         self._global_over.set()
         self.token: str | None = None
-        self.bot_token: bool = bot
+        self.bot_token: bool = True
         self.proxy: str | None = proxy
         self.proxy_auth: aiohttp.BasicAuth | None = proxy_auth
         self.use_clock: bool = not unsync_clock
@@ -251,6 +252,21 @@ class HTTPClient:
         headers: dict[str, str] = {
             "User-Agent": self.user_agent,
         }
+
+        # Self-bot modification
+        if not self.bot_token:
+            headers["x-super-properties"] = base64.b64encode(
+                json.dumps(
+                    {
+                        "os": sys.platform,
+                        "browser":"Chrome",
+                        "system_locale":"en-US",
+                        "browser_user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+                        "browser_version":"109.0.0.0",
+                    },
+                ).encode("utf-8")
+            ).decode("utf-8")
+            headers["origin"] = "https://discord.com"
 
         if self.token is not None:
             headers["Authorization"] = self.token

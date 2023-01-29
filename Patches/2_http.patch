@@ -1,8 +1,17 @@
 diff --git a/src/_discord/http.py b/src/_discord/http.py
-index 79455a0..c410755 100644
+index 79455a0..4c16c2b 100644
 --- a/src/_discord/http.py
 +++ b/src/_discord/http.py
-@@ -100,6 +100,22 @@ async def json_or_text(response: aiohttp.ClientResponse) -> dict[str, Any] | str
+@@ -25,6 +25,8 @@ DEALINGS IN THE SOFTWARE.
+ 
+ from __future__ import annotations
+ 
++import json
++import base64
+ import asyncio
+ import logging
+ import sys
+@@ -100,6 +102,22 @@ async def json_or_text(response: aiohttp.ClientResponse) -> dict[str, Any] | str
      return text
  
  
@@ -25,24 +34,25 @@ index 79455a0..c410755 100644
  class Route:
      def __init__(self, method: str, path: str, **parameters: Any) -> None:
          self.path: str = path
-@@ -167,6 +183,7 @@ class HTTPClient:
+@@ -166,7 +184,7 @@ class HTTPClient:
+         proxy: str | None = None,
          proxy_auth: aiohttp.BasicAuth | None = None,
          loop: asyncio.AbstractEventLoop | None = None,
-         unsync_clock: bool = True,
-+        bot: bool = True
+-        unsync_clock: bool = True,
++        unsync_clock: bool = True
      ) -> None:
          self.loop: asyncio.AbstractEventLoop = (
              asyncio.get_event_loop() if loop is None else loop
-@@ -177,7 +194,7 @@ class HTTPClient:
+@@ -177,7 +195,7 @@ class HTTPClient:
          self._global_over: asyncio.Event = asyncio.Event()
          self._global_over.set()
          self.token: str | None = None
 -        self.bot_token: bool = False
-+        self.bot_token: bool = bot
++        self.bot_token: bool = True
          self.proxy: str | None = proxy
          self.proxy_auth: aiohttp.BasicAuth | None = proxy_auth
          self.use_clock: bool = not unsync_clock
-@@ -188,6 +205,7 @@ class HTTPClient:
+@@ -188,6 +206,7 @@ class HTTPClient:
          self.user_agent: str = user_agent.format(
              __version__, sys.version_info, aiohttp.__version__
          )
@@ -50,16 +60,32 @@ index 79455a0..c410755 100644
  
      def recreate(self) -> None:
          if self.__session.closed:
-@@ -235,7 +253,7 @@ class HTTPClient:
+@@ -234,8 +253,23 @@ class HTTPClient:
+             "User-Agent": self.user_agent,
          }
  
++        # Self-bot modification
++        if not self.bot_token:
++            headers["x-super-properties"] = base64.b64encode(
++                json.dumps(
++                    {
++                        "os": sys.platform,
++                        "browser":"Chrome",
++                        "system_locale":"en-US",
++                        "browser_user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
++                        "browser_version":"109.0.0.0",
++                    },
++                ).encode("utf-8")
++            ).decode("utf-8")
++            headers["origin"] = "https://discord.com"
++
          if self.token is not None:
 -            headers["Authorization"] = f"Bot {self.token}"
 +            headers["Authorization"] = self.token
          # some checking if it's a JSON request
          if "json" in kwargs:
              headers["Content-Type"] = "application/json"
-@@ -279,6 +297,11 @@ class HTTPClient:
+@@ -279,6 +313,11 @@ class HTTPClient:
                      kwargs["data"] = form_data
  
                  try:
@@ -71,7 +97,7 @@ index 79455a0..c410755 100644
                      async with self.__session.request(
                          method, url, **kwargs
                      ) as response:
-@@ -316,7 +339,7 @@ class HTTPClient:
+@@ -316,7 +355,7 @@ class HTTPClient:
  
                          # we are being rate limited
                          if response.status == 429:
@@ -80,7 +106,7 @@ index 79455a0..c410755 100644
                                  # Banned by Cloudflare more than likely.
                                  raise HTTPException(response, data)
  
-@@ -401,22 +424,28 @@ class HTTPClient:
+@@ -401,22 +440,28 @@ class HTTPClient:
  
      # login management
  

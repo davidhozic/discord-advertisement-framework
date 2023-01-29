@@ -425,12 +425,11 @@ class DiscordWebSocket:
                 "d": {
                     "token": self.token,
                     "properties": {
-                        "os": "Windows",
+                        "os": sys.platform,
                         "browser":"Chrome",
                         "system_locale":"en-US",
-                        "browser_user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36",
+                        "browser_user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
                         "browser_version":"109.0.0.0",
-                        "os_version":"10",
                     },
                     "presence": {"status":"online","since":0,"activities":[],"afk": False},
                     "compress": True

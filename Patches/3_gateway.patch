@@ -1,5 +1,5 @@
 diff --git a/src/_discord/gateway.py b/src/_discord/gateway.py
-index e3e7d1b..095a947 100644
+index e3e7d1b..e847fc6 100644
 --- a/src/_discord/gateway.py
 +++ b/src/_discord/gateway.py
 @@ -302,6 +302,7 @@ class DiscordWebSocket:
@@ -18,7 +18,7 @@ index e3e7d1b..095a947 100644
          ws._connection = client._connection
          ws._discord_parsers = client._connection.parsers
          ws._dispatch = client.dispatch
-@@ -398,23 +400,43 @@ class DiscordWebSocket:
+@@ -398,23 +400,41 @@ class DiscordWebSocket:
  
      async def identify(self):
          """Sends the IDENTIFY packet."""
@@ -62,12 +62,11 @@ index e3e7d1b..095a947 100644
 +                "d": {
 +                    "token": self.token,
 +                    "properties": {
-+                        "os": "Windows",
++                        "os": sys.platform,
 +                        "browser":"Chrome",
 +                        "system_locale":"en-US",
-+                        "browser_user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36",
++                        "browser_user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
 +                        "browser_version":"109.0.0.0",
-+                        "os_version":"10",
 +                    },
 +                    "presence": {"status":"online","since":0,"activities":[],"afk": False},
 +                    "compress": True
