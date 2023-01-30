@@ -772,35 +772,36 @@ class AutoGUILD:
         if stamp - self.last_scan > self.interval:
             # Join Guilds
             discovery = self.auto_join
-            i = 0
-            async for x in discovery._query_request(): # TODO: Move this block into web layer
-                try:
-                    if i == discovery.limit:
-                        break
+            if discovery is not None:
+                i = 0
+                async for x in discovery._query_request(): # TODO: Move this block into web layer
+                    try:
+                        if i == discovery.limit:
+                            break
 
-                    id_ = x.id
-                    invite = x.invite
-                    name = x.name
+                        id_ = x.id
+                        invite = x.invite
+                        name = x.name
 
-                    if (
-                        re.search(self.include_pattern, x.name) is None or
-                        (self.exclude_pattern is not None and re.search(self.exclude_pattern, name) is not None)
-                    ):
-                        continue
+                        if (
+                            re.search(self.include_pattern, x.name) is None or
+                            (self.exclude_pattern is not None and re.search(self.exclude_pattern, name) is not None)
+                        ):
+                            continue
 
-                    if id_ in self.join_history or dcl.get_guild(id_) is not None:
+                        if id_ in self.join_history or dcl.get_guild(id_) is not None:
+                            i += 1
+                            continue
+                        
                         i += 1
-                        continue
-                    
-                    i += 1
-                    await asyncio.sleep(DISCOVERY_SLEEP_S)
-                    self.join_history.add(id_)
-                    await selenium.join_guild(invite)
-                    if dcl.get_guild(id_) is None:
-                        raise RuntimeError("Joining guild yielded no apparent error, but client was not able to join the guild.")
+                        await asyncio.sleep(DISCOVERY_SLEEP_S)
+                        self.join_history.add(id_)
+                        await selenium.join_guild(invite)
+                        if dcl.get_guild(id_) is None:
+                            raise RuntimeError("Joining guild yielded no apparent error, but client was not able to join the guild.")
 
-                except Exception as exc:
-                    trace(f"Error joining guild though browser (ID: {id_}).", TraceLEVELS.ERROR, exc)
+                    except Exception as exc:
+                        trace(f"Error joining guild though browser (ID: {id_}).", TraceLEVELS.ERROR, exc)
 
 
             # Create GUILD instances
