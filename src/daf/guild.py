@@ -777,25 +777,28 @@ class AutoGUILD:
                 try:
                     if i == discovery.limit:
                         break
-                    
-                    i += 1
+
                     id_ = x.id
                     invite = x.invite
                     name = x.name
+
                     if (
-                        id_ in self.join_history or # Don't try to rejoin guilds that we were kicked/banned out of
-                        dcl.get_guild(id_) is not None or
                         re.search(self.include_pattern, x.name) is None or
                         (self.exclude_pattern is not None and re.search(self.exclude_pattern, name) is not None)
                     ):
                         continue
 
+                    if id_ in self.join_history or dcl.get_guild(id_) is not None:
+                        i += 1
+                        continue
+                    
+                    i += 1
                     await asyncio.sleep(DISCOVERY_SLEEP_S)
+                    self.join_history.add(id_)
                     await selenium.join_guild(invite)
                     if dcl.get_guild(id_) is None:
                         raise RuntimeError("Joining guild yielded no apparent error, but client was not able to join the guild.")
 
-                    self.join_history.add(id_)
                 except Exception as exc:
                     trace(f"Error joining guild though browser (ID: {id_}).", TraceLEVELS.ERROR, exc)
 

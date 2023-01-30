@@ -55,8 +55,6 @@ __all__ = (
 WD_TIMEOUT_SHORT = 5
 WD_TIMEOUT_MED = 30
 WD_TIMEOUT_LONG = 90
-WD_WINDOW_SIZE = (1300, 800)
-
 WD_OUTPUT_PATH = pathlib.Path("./daf_web_data")
 WD_TOKEN_PATH = WD_OUTPUT_PATH.joinpath("tokens.json")
 WD_PROFILES_PATH = WD_OUTPUT_PATH.joinpath("chrome_profiles")
@@ -366,10 +364,15 @@ class SeleniumCLIENT:
         opts.add_argument(f"--no-sandbox")
 
         if self._proxy is not None:
-            opts.add_argument(f"--proxy-server={self._proxy}")
+            proxy = self._proxy.split("://") # protocol, url
+            if '@' in proxy[1]:
+                proxy[1] = proxy[1][proxy[1].find('@') + 1:]
+    
+            proxy = f"{proxy[0]}://{proxy[1]}"
+            opts.add_argument(f"--proxy-server={proxy}")
 
         driver = Chrome(options=opts)
-        driver.set_window_size(*WD_WINDOW_SIZE)
+        driver.maximize_window()
         self.driver = driver
         return await self.login() 
 
@@ -633,7 +636,7 @@ class GuildDISCOVERY:
                     return
 
                 data = await result.json()
-                if data is None or "results" not in data:
+                if data is None or "results" not in data or not data["results"]:
                     return
 
             # Get invite links
