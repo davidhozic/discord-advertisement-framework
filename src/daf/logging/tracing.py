@@ -21,13 +21,7 @@ __all__ = (
 )
 
 
-C_TRACE_FORMAT = \
-"""
-Date: {date}
-Level: {level}
-Reason: {reason}
-Message: [{module}] {message}
-"""
+C_TRACE_FORMAT = "[{date}] ({level}) | {module}: {message} ({reason})"
 
 @document_enum
 @misc.doc_category("Logging reference")
@@ -61,6 +55,15 @@ class TraceLEVELS(IntEnum):
     """
     Show deprecations, errors, warnings, info messages, debug messages.
     """
+
+
+TRACE_COLOR_MAP = {
+    TraceLEVELS.DEPRECATED: "\u001b[30m",
+    TraceLEVELS.ERROR:  "\u001b[31m",
+    TraceLEVELS.WARNING:  "\u001b[33m",
+    TraceLEVELS.NORMAL:  "\u001b[37m",
+    TraceLEVELS.DEBUG:  "\u001b[36m",
+}
 
 
 class GLOBALS:
@@ -107,8 +110,9 @@ def trace(message: str,
                 module=module,
                 message=message
         )
+
         with GLOBALS.lock:
-            print(msg)
+            print(TRACE_COLOR_MAP[level] + msg)
 
 
 def initialize(level: Union[TraceLEVELS, int, str]):

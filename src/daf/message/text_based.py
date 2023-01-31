@@ -323,9 +323,9 @@ class TextMESSAGE(BaseMESSAGE):
             if not self.channels:
                 raise ValueError(f"No valid channels were passed to {self} object")
 
-            # Increase period to slow mode delay if it is lower
-            slowmode_delay = timedelta(seconds=max(channel.slowmode_delay for channel in self.channels))
-            self._check_period(slowmode_delay)
+        # Increase period to slow mode delay if it is lower
+        slowmode_delay = timedelta(seconds=max(*[channel.slowmode_delay for channel in self.channels], 0, 0))
+        self._check_period(slowmode_delay)
     
     async def _handle_error(self, channel: Union[discord.TextChannel, discord.Thread], ex: Exception) -> bool:
         """

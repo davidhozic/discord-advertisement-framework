@@ -31,6 +31,8 @@ GUILD_ADVERT_STATUS_SUCCESS = 0
 GUILD_ADVERT_STATUS_ERROR_REMOVE_ACCOUNT = None
 DISCOVERY_SLEEP_S = 5
 
+GUILD_JOIN_INTERVAL = timedelta(minutes=1, seconds=30)
+
 globals_ = globals()
 prev_val = 0
 for k, v in globals_.copy().items():
@@ -631,7 +633,10 @@ class AutoGUILD:
         "_safe_sem",
         "parent",
         "auto_join",
-        "join_history"
+        "join_history",
+        "guild_query_iter",
+        "last_guild_join",
+        "guild_join_count"
     )
 
     @typechecked
@@ -648,14 +653,17 @@ class AutoGUILD:
         self.remove_after = remove_after 
         self.messages = messages # Uninitialized template messages list that gets copied for each found guild.
         self.logging = logging
-        self.interval = interval.total_seconds() # In seconds
+        self.interval = interval
         self.auto_join = auto_join
         self.cache: Dict[discord.Guild, GUILD] = {}
         self.join_history: Set[int] = set() # History of auto-joined guild ids
-        self.last_scan = 0
+        self.last_scan = datetime.min
         self._deleted = False
         self._created_at = datetime.now()
         self.parent = None
+        self.guild_query_iter = None
+        self.last_guild_join = datetime.min
+        self.guild_join_count = 0
         misc._write_attr_once(self, "_safe_sem", asyncio.Semaphore(2))
 
     @property
@@ -722,6 +730,7 @@ class AutoGUILD:
         self.parent = parent
         if self.auto_join is not None:
             await self.auto_join.initialize(self)
+            self.guild_query_iter = self.auto_join._query_request()
 
     async def add_message(self, message: BaseMESSAGE):
         """
@@ -760,73 +769,81 @@ class AutoGUILD:
         for guild in self.guilds:
             guild.remove_message(message)
 
-    async def _process(self):
+    async def _generate_guilds(self):
         """
-        Coroutine that finds new guilds from the
-        API wrapper.
+        Coroutine generates GUILD object for every joined guild that matches
+        the regex pattern of ``include_pattern`` parameter but does not
         """
-        
-        dcl: discord.Client = self.parent.client
+        stamp = datetime.now()
+        if stamp - self.last_scan < self.interval:
+            return
+
+        # Create GUILD instances
+        client: discord.Client = self.parent.client
+        for discord_guild in client.guilds:
+            if (discord_guild not in self.cache and 
+                re.search(self.include_pattern, discord_guild.name) is not None and
+                (self.exclude_pattern is None or re.search(self.exclude_pattern, discord_guild.name) is None)
+            ):
+                try:
+                    new_guild = GUILD(snowflake=discord_guild,
+                                      messages=deepcopy(self.messages),
+                                      logging=self.logging)
+
+                    await new_guild.initialize(parent=self.parent)
+                    self.cache[discord_guild] = new_guild
+                except Exception as exc:
+                    trace(f" Unable to add new object.",TraceLEVELS.WARNING, exc)
+
+        self.last_scan = stamp
+
+    async def _join_guilds(self):
+        """
+        Coroutine that joins new guilds thru the web layer.
+        """
+        # Join Guilds
+        discovery = self.auto_join
         selenium: web.SeleniumCLIENT = self.parent.selenium
-        stamp = datetime.now().timestamp()
-        if stamp - self.last_scan > self.interval:
-            # Join Guilds
-            discovery = self.auto_join
-            if discovery is not None:
-                i = 0
-                async for x in discovery._query_request(): # TODO: Move this block into web layer
-                    try:
-                        if i == discovery.limit:
-                            break
+        if (
+            discovery is None or # No auto_join provided
+            self.guild_join_count == discovery.limit # Reached the maximum join count requested
+            or datetime.now() - self.last_guild_join < GUILD_JOIN_INTERVAL # Not enough time elapsed
+        ):
+            return
 
-                        id_ = x.id
-                        invite = x.invite
-                        name = x.name
+        client: discord.Client = self.parent.client
+        try:
+            # Get next result from top.gg
+            yielded: web.QueryResult = await anext(self.guild_query_iter)
+            if (
+                client.get_guild(yielded.id) is not None or
+                re.search(self.include_pattern, yielded.name) is None or
+                (self.exclude_pattern is not None and re.search(self.exclude_pattern, yielded.name) is not None)
+            ):
+                return
 
-                        if (
-                            re.search(self.include_pattern, x.name) is None or
-                            (self.exclude_pattern is not None and re.search(self.exclude_pattern, name) is not None)
-                        ):
-                            continue
+            # Join guild thru selenium
+            try:
+                await selenium.random_click()
+                await selenium.join_guild(yielded.invite)
+                await selenium.random_click()
+                if client.get_guild(yielded.id) is None:
+                    raise RuntimeError("No error detected in browser, but the guild can not be seen by the API wrapper.")
+            except Exception as exc:
+                trace("Joining guild raised an error.", TraceLEVELS.ERROR, exc)
 
-                        if id_ in self.join_history or dcl.get_guild(id_) is not None:
-                            i += 1
-                            continue
-                        
-                        i += 1
-                        await asyncio.sleep(DISCOVERY_SLEEP_S)
-                        self.join_history.add(id_)
-                        await selenium.join_guild(invite)
-                        if dcl.get_guild(id_) is None:
-                            raise RuntimeError("Joining guild yielded no apparent error, but client was not able to join the guild.")
-
-                    except Exception as exc:
-                        trace(f"Error joining guild though browser (ID: {id_}).", TraceLEVELS.ERROR, exc)
-
-
-            # Create GUILD instances
-            for dcgld in dcl.guilds:
-                if (dcgld not in self.cache and 
-                    re.search(self.include_pattern, dcgld.name) is not None and
-                    (self.exclude_pattern is None or re.search(self.exclude_pattern, dcgld.name) is None)
-                ):
-                    try:
-                        new_guild = GUILD(snowflake=dcgld,
-                                                messages=deepcopy(self.messages),
-                                                logging=self.logging)
-                        await new_guild.initialize(parent=self.parent)
-                        self.cache[dcgld] = new_guild
-                    except Exception as exc:
-                        trace(f" Unable to add new object.",TraceLEVELS.WARNING, exc)
-        
-            self.last_scan = stamp
+            self.last_guild_join = datetime.now()
+            self.guild_join_count += 1
+        except StopAsyncIteration:
+            self.guild_query_iter = discovery._query_request()
 
     @misc._async_safe("_safe_sem", 1)
     async def _advertise(self):
         """
         Advertises thru all the GUILDs.
         """
-        await self._process()
+        await self._generate_guilds()
+        await self._join_guilds()
         for g in self.guilds:
             if g._check_state():
                 del self.cache[g.apiobject]

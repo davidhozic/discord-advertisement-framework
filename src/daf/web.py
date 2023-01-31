@@ -8,7 +8,7 @@ from __future__ import annotations
 from typing import Dict, Tuple, Callable, List, Optional, Any
 from contextlib import suppress
 from enum import auto, Enum
-from random import random
+
 from datetime import datetime, timedelta
 from typeguard import typechecked
 
@@ -18,9 +18,8 @@ from .logging.tracing import trace, TraceLEVELS
 import asyncio
 import pathlib
 import json
-import sys
+import random as rd
 import aiohttp as http
-import _discord as discord
 
 class GLOBALS:
     "Global variables of the web module"
@@ -39,7 +38,7 @@ try:
     from selenium.common.exceptions import NoSuchElementException, TimeoutException, WebDriverException
     GLOBALS.selenium_installed = True
 except ImportError:
-    WebElement = object()
+    WebElement = object
     GLOBALS.selenium_installed = False
 # -------------------------------------------- #
 
@@ -184,7 +183,7 @@ class SeleniumCLIENT:
         """
         Sleeps randomly to prevent detection.
         """
-        await asyncio.sleep(bottom + (upper - bottom)*random())
+        await asyncio.sleep(bottom + (upper - bottom)*rd.random())
 
     async def async_execute(self, method: Callable, *args):
         """
@@ -198,7 +197,25 @@ class SeleniumCLIENT:
             Variadic arguments passed to ``method``.
         """
         loop = asyncio.get_event_loop()
+        trace(f"Executing async in the executor {method.__name__}{args}", TraceLEVELS.DEBUG)
         await loop.run_in_executor(None, method, *args)
+
+    async def random_click(self):
+        """
+        Randomly clicks on the servers panel to avoid CAPTCHA
+        triggering.        
+        """
+        trace(f"Clicking server list to trick CAPTCHA.", TraceLEVELS.DEBUG)
+        driver = self.driver
+        server_tree = driver.find_element(By.XPATH, "//div[@aria-label = 'Servers']")
+        servers = (server_tree.find_elements(By.XPATH, "//div[@draggable = 'true']"))
+        rd.shuffle(servers)
+        for i, item in enumerate(servers):
+            if i == 3:
+                break
+
+            await self.hover_click(item)
+            await self.random_sleep(0.5, 1.5)
 
     async def fetch_invite_link(self, url: str):
         """
@@ -209,6 +226,7 @@ class SeleniumCLIENT:
         url: str | None
             The url to check or None if error ocurred/invalid link.
         """
+        trace(f"Fetching invite link from {url}", TraceLEVELS.DEBUG)
         driver = self.driver
         main_window_handle = driver.current_window_handle
         driver.switch_to.new_window("tab")
@@ -249,7 +267,7 @@ class SeleniumCLIENT:
         actions.move_to_element(form).perform()
         await self.random_sleep(0.25, 1)
         actions.click(form).perform()
-
+        trace(f"Slow typing into a form.", TraceLEVELS.DEBUG)
         for char in text:
             form.send_keys(char)
             await self.random_sleep(0.05, 0.10)
@@ -279,6 +297,7 @@ class SeleniumCLIENT:
             The page loading timed-out.
         """
         await self.random_sleep(1, 2)
+        trace(f"Awaiting Discord load", TraceLEVELS.DEBUG)
         try:
             await self.async_execute(
                 WebDriverWait(self.driver, WD_TIMEOUT_LONG).until_not,
@@ -304,6 +323,7 @@ class SeleniumCLIENT:
         TimeoutError
             CAPTCHA was not solved in time.
         """
+        trace(f"Awaiting CAPTCHA", TraceLEVELS.DEBUG)
         loop = asyncio.get_event_loop()
         driver = self.driver
         await asyncio.sleep(WD_TIMEOUT_SHORT)
@@ -434,6 +454,7 @@ class SeleniumCLIENT:
         element: WebElement
             The element to hover click.
         """
+        trace(f"Hover clicking element.", TraceLEVELS.DEBUG)
         actions = ActionChains(self.driver, duration=1013)
         actions.move_to_element(element).perform()
         await self.random_sleep(0.25, 1)
@@ -461,6 +482,7 @@ class SeleniumCLIENT:
         await self.await_load()
 
         # Join server
+        trace(f"Joining guild {invite}", TraceLEVELS.DEBUG)
         try:
             join_bnt = driver.find_element(By.XPATH, "//div[@aria-label='Add a Server']")
             await self.hover_click(join_bnt)
