@@ -196,8 +196,13 @@ class SeleniumCLIENT:
         args:
             Variadic arguments passed to ``method``.
         """
+        if hasattr(method, "__self__"):
+            name = "{}.{}".format(type(method.__self__).__name__,  method.__name__)
+        else:
+            name = method.__name__
+
         loop = asyncio.get_event_loop()
-        trace(f"Executing async in the executor {method.__name__}{args}", TraceLEVELS.DEBUG)
+        trace(f"Executing async in the executor {name}{args}", TraceLEVELS.DEBUG)
         await loop.run_in_executor(None, method, *args)
 
     async def random_click(self):
@@ -210,12 +215,20 @@ class SeleniumCLIENT:
         server_tree = driver.find_element(By.XPATH, "//div[@aria-label = 'Servers']")
         servers = (server_tree.find_elements(By.XPATH, "//div[@draggable = 'true']"))
         rd.shuffle(servers)
-        for i, item in enumerate(servers):
-            if i == 3:
-                break
+        for server in servers:           
+            await self.hover_click(server)
+            channel_tree = driver.find_element(By.XPATH, "//ul[@aria-label='Channels']")
+            channels = channel_tree.find_elements(By.XPATH, "//li[@data-dnd-name]")
+            channel = channels[rd.randrange(0, len(channels))]
+            await self.hover_click(channel)
+            try:
+                input_box = driver.find_element(By.XPATH, "//div[@role = 'textbox']")
+            except NoSuchElementException:
+                continue
 
-            await self.hover_click(item)
-            await self.random_sleep(0.5, 1.5)
+            await self.slow_type(input_box, "Hello World")
+            await self.slow_clear(input_box)
+            return
 
     async def fetch_invite_link(self, url: str):
         """
@@ -261,16 +274,27 @@ class SeleniumCLIENT:
         text: str
             The text to type in the ``form``.
         """
-        await self.await_load()
-        actions = ActionChains(self.driver)
-
-        actions.move_to_element(form).perform()
-        await self.random_sleep(0.25, 1)
-        actions.click(form).perform()
+        await self.hover_click(form)
         trace(f"Slow typing into a form.", TraceLEVELS.DEBUG)
         for char in text:
             form.send_keys(char)
             await self.random_sleep(0.05, 0.10)
+
+    async def slow_clear(self, form: WebElement):
+        """
+        Slowly deletes the text from an input
+        
+        Parameters
+        -------------
+        form: WebElement
+            The form to delete ``text`` from.
+        """
+        await self.hover_click(form)
+        form.send_keys(Keys.HOME)
+        await self.random_sleep(0.1, 0.5)
+        while form.text:
+            form.send_keys(Keys.DELETE)
+            await self.random_sleep(0.05, 0.25)
 
     async def await_url_change(self):
         """
@@ -282,7 +306,10 @@ class SeleniumCLIENT:
             Waited for too long.
         """
         try:
-            await self.async_execute(WebDriverWait(self.driver, WD_TIMEOUT_LONG).until, url_changes(self.driver.current_url))
+            await self.async_execute(
+                WebDriverWait(self.driver, WD_TIMEOUT_LONG).until,
+                url_changes(self.driver.current_url)
+            )
         except TimeoutException:
             raise TimeoutError("Waiting for url to change took too long.")
 
@@ -381,7 +408,8 @@ class SeleniumCLIENT:
         opts = Options()
         opts.add_argument(f"--user-data-dir={web_data_path.absolute()}")
         opts.add_argument("--profile-directory=Profile 1")
-        opts.add_argument(f"--no-sandbox")
+        opts.add_argument("--no-sandbox")
+        opts.add_argument("--mute-audio")
 
         if self._proxy is not None:
             proxy = self._proxy.split("://") # protocol, url

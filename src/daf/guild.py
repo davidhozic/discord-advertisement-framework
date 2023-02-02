@@ -31,7 +31,7 @@ GUILD_ADVERT_STATUS_SUCCESS = 0
 GUILD_ADVERT_STATUS_ERROR_REMOVE_ACCOUNT = None
 DISCOVERY_SLEEP_S = 5
 
-GUILD_JOIN_INTERVAL = timedelta(minutes=1, seconds=30)
+GUILD_JOIN_INTERVAL = timedelta(minutes=2, seconds=30)
 
 globals_ = globals()
 prev_val = 0
@@ -826,7 +826,7 @@ class AutoGUILD:
             try:
                 await selenium.random_click()
                 await selenium.join_guild(yielded.invite)
-                await selenium.random_click()
+
                 if client.get_guild(yielded.id) is None:
                     raise RuntimeError("No error detected in browser, but the guild can not be seen by the API wrapper.")
             except Exception as exc:

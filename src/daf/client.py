@@ -236,7 +236,7 @@ class ACCOUNT:
             try:
                 await self.add_server(server)
             except Exception as exc:
-                trace("Unable to add server.", TraceLEVELS.WARNING, exc)
+                trace("Unable to add server.", TraceLEVELS.ERROR, exc)
 
         del self._uiservers # Only needed for predefined initialization
         self.tasks.append(asyncio.create_task(self._loop()))
