@@ -215,7 +215,7 @@ class SeleniumCLIENT:
         server_tree = driver.find_element(By.XPATH, "//div[@aria-label = 'Servers']")
         servers = (server_tree.find_elements(By.XPATH, "//div[@draggable = 'true']"))
         rd.shuffle(servers)
-        for server in servers:           
+        for i, server in enumerate(servers):
             await self.hover_click(server)
             channel_tree = driver.find_element(By.XPATH, "//ul[@aria-label='Channels']")
             channels = channel_tree.find_elements(By.XPATH, "//li[@data-dnd-name]")
@@ -228,7 +228,9 @@ class SeleniumCLIENT:
 
             await self.slow_type(input_box, "Hello World")
             await self.slow_clear(input_box)
-            return
+            
+            if i >= 2:
+                break
 
     async def fetch_invite_link(self, url: str):
         """
