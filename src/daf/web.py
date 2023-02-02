@@ -54,6 +54,7 @@ __all__ = (
 WD_TIMEOUT_SHORT = 5
 WD_TIMEOUT_MED = 30
 WD_TIMEOUT_LONG = 90
+WD_RD_CLICK_N = 4
 WD_OUTPUT_PATH = pathlib.Path("./daf_web_data")
 WD_TOKEN_PATH = WD_OUTPUT_PATH.joinpath("tokens.json")
 WD_PROFILES_PATH = WD_OUTPUT_PATH.joinpath("chrome_profiles")
@@ -215,7 +216,11 @@ class SeleniumCLIENT:
         server_tree = driver.find_element(By.XPATH, "//div[@aria-label = 'Servers']")
         servers = (server_tree.find_elements(By.XPATH, "//div[@draggable = 'true']"))
         rd.shuffle(servers)
+        typed = False
         for i, server in enumerate(servers):
+            if i >= WD_RD_CLICK_N and typed:
+                return
+
             await self.hover_click(server)
             channel_tree = driver.find_element(By.XPATH, "//ul[@aria-label='Channels']")
             channels = channel_tree.find_elements(By.XPATH, "//li[@data-dnd-name]")
@@ -228,9 +233,7 @@ class SeleniumCLIENT:
 
             await self.slow_type(input_box, "Hello World")
             await self.slow_clear(input_box)
-            
-            if i >= 2:
-                break
+            typed = True
 
     async def fetch_invite_link(self, url: str):
         """
