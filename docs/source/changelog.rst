@@ -32,6 +32,13 @@ Glossary
 Releases
 ----------------------
 
+v2.3.4
+=============
+- Fixed channel verification bug:
+
+  - Fixes bug where messages try to be sent into channels that have not passed verification (complete button)
+
+
 v2.3
 =============
 - |BREAK_CH| Removed ``exceptions`` module, meaning that there are no DAFError derived exceptions from this version on.
