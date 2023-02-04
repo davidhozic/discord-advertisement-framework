@@ -293,6 +293,13 @@ class VoiceMESSAGE(BaseMESSAGE):
             if (member := channel.guild.get_member(client_.user.id)) is None:
                 raise self._generate_exception(404, -1, "Client user could not be found in guild members", discord.NotFound)
 
+            if channel.guild.me.pending:
+                raise self._generate_exception(
+                    403, 50009,
+                    "Channel verification level is too high for you to gain access",
+                    discord.Forbidden
+                )
+
             ch_perms = channel.permissions_for(member)
             if not all([ch_perms.connect, ch_perms.stream, ch_perms.speak]):
                 raise self._generate_exception(403, 50013, "You lack permissions to perform that action", discord.Forbidden)

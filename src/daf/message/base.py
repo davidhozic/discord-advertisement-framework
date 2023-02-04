@@ -495,7 +495,13 @@ class AutoCHANNEL:
             guild: discord.Guild = self.parent.parent.apiobject
             client_: discord.Client = self.parent.parent.parent.client
             member = guild.get_member(client_.user.id)
+
+            # Possible intents bug?
             if member is None:
+                return
+            
+            # User has not verified / has not completed rules
+            if guild.me.pending:
                 return
 
             for channel in getattr(guild, self.channel_getter):
