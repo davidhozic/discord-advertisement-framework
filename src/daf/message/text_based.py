@@ -163,6 +163,7 @@ class TextMESSAGE(BaseMESSAGE):
         slowmode_delay: timedelta
             The (maximum) slowmode delay.
         """
+        slowmode_delay += timedelta(seconds=1) 
         if self.start_period is not None:
             if self.start_period < slowmode_delay:
                     self.start_period, self.end_period = slowmode_delay, slowmode_delay + self.end_period - self.start_period

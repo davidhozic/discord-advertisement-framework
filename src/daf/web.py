@@ -497,6 +497,7 @@ class SeleniumCLIENT:
             actions
             .move_to_element(element)
             .click(element)
+            .pause(HOVER_CLICK_ACTION_TIME_MS/1000)
             .perform
         )
 
