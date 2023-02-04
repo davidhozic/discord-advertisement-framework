@@ -8,7 +8,9 @@ from functools import wraps
 from inspect import getfullargspec
 from copy import copy
 from typeguard import typechecked
-from os import environ
+
+import signal
+import sys
 
 ###############################
 # Safe access functions
@@ -95,6 +97,33 @@ async def _update(obj: Any, *, init_options: dict = {}, **kwargs):
 ###########################
 # Decorators
 ###########################
+def sigint_handler(signum, frame):
+    pass
+
+def _async_cancellation_safe(func: Callable):
+    """
+    Decorator that wraps coroutine and prevents the interrupt signal.
+
+    Parameters
+    ------------
+    func: Callable
+        Function which returns a coroutine.
+    """
+    @wraps(func)
+    async def wrapper(*args, **kwargs):
+        old_handler = signal.signal(signal.SIGINT, sigint_handler)
+        return_ = await func(*args, **kwargs)
+        if old_handler != sigint_handler:
+            # This can happen since we have an await statement.
+            # If we create 2 tasks Task1 and Task2 and Task1 finishes before Task2,
+            # then Task2 would eventually set the signal handler back to sigint_handler
+            # instead to the original system handler
+            signal.signal(signal.SIGINT, old_handler)
+        
+        return return_
+
+    return wrapper
+
 @typechecked
 def _async_safe(semaphore: Union[str, Semaphore], amount: Optional[int]=1) -> Callable:
     """
@@ -124,37 +153,39 @@ def _async_safe(semaphore: Union[str, Semaphore], amount: Optional[int]=1) -> Ca
         """
         Decorator that returns a method wrapper Coroutine that utilizes a
         asyncio semaphore to assure safe asynchronous operations.
-        """     
-        async def sub_wrapper(sem: Semaphore, *args, **kwargs):   
-            for i in range(amount):
-                await sem.acquire()
-            
-            result = None
-            try:
-                result = await coroutine(*args, **kwargs)
-            finally:
+        """
+        if isinstance(semaphore, str):
+            async def wrapper(self, *args, **kwargs):
+                sem: Semaphore = getattr(self, semaphore)
                 for i in range(amount):
-                    sem.release()
+                    await sem.acquire()
+                try:
+                    result = await coroutine(self, *args, **kwargs)
+                finally:
+                    for i in range(amount):
+                        sem.release()
+
+                return result
+        else:
+            async def wrapper(*args, **kwargs):
+                for i in range(amount):
+                    await semaphore.acquire()
+                try:
+                    result = await coroutine(*args, **kwargs)
+                finally:
+                    for i in range(amount):
+                        semaphore.release()
 
                 return result
 
-        if isinstance(semaphore, str):
-            # If string, assume that the string is the attribute name of the semaphore
-            async def wrapper(self, *args, **kwargs):
-                sem: Semaphore = getattr(self, semaphore)
-                return await sub_wrapper(sem, self, *args, **kwargs)
-        else:
-            # Semaphore is directly passed. Also works for normal (non-method) coroutines.
-            async def wrapper(*args, **kwargs):
-                return await sub_wrapper(semaphore, *args, **kwargs)
-
         return wraps(coroutine)(wrapper)
+
 
     return __safe_access
 
 
 # Documentation
-DOCUMENTATION_MODE = bool(environ.get("DOCUMENTATION", False))
+DOCUMENTATION_MODE = "DOCUMENTATION" in sys.argv
 if DOCUMENTATION_MODE:
     doc_titles: Dict[str, list] = {}
 

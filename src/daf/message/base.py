@@ -77,8 +77,7 @@ class BaseMESSAGE:
         "update_semaphore",
         "parent",
         "remove_after",
-        "_created_at",
-        "_deleted"
+        "_created_at"
     )
 
     @typechecked
@@ -127,12 +126,11 @@ class BaseMESSAGE:
         self._created_at = datetime.now()
         self._data = data
         self._fbcdata = isinstance(data, _FunctionBaseCLASS)
-        self._deleted = False
         # Attributes created with this function will not be re-referenced to a different object
         # if the function is called again, ensuring safety (.update_method)
         misc._write_attr_once(self, "update_semaphore", asyncio.Semaphore(1))
         # For comparing copies of the object (prevents .update from overwriting)
-        misc._write_attr_once(self, "_id", id(self))
+        misc._write_attr_once(self, "_id", id(self)) 
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}(data={self._data})"
@@ -175,26 +173,6 @@ class BaseMESSAGE:
     def created_at(self) -> datetime:
         "Returns the datetime of when the object was created"
         return self._created_at
-
-    @property
-    def deleted(self) -> bool:
-        """
-        Returns
-        -----------
-        True
-            The object is no longer in the framework and should no longer
-            be used.
-        False
-            Object is in the framework in normal operation.
-        """
-        return self._deleted
-    
-    def _delete(self):
-        """
-        Sets the internal _deleted flag to True,
-        indicating the object should not be used.
-        """
-        self._deleted = True
 
     def _check_state(self) -> bool:
         """
@@ -349,7 +327,7 @@ class BaseMESSAGE:
 
         raise NotImplementedError
 
-@misc.doc_category("Auto objects", path="message")
+@misc.doc_category("Automatic generation", path="message")
 class AutoCHANNEL:
     """
     .. versionadded:: v2.3
@@ -448,7 +426,7 @@ class AutoCHANNEL:
         if stamp - self.last_scan > self.interval:
             self.last_scan = stamp
             guild: discord.Guild = self.parent.parent.apiobject
-            client_: discord.Client = self.parent.parent.parent.client
+            client_: discord.Client = client.get_client()
             member = guild.get_member(client_.user.id)
 
             # Possible intents bug?

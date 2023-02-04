@@ -12,9 +12,8 @@ C_FILE_NAME_FORBIDDEN_CHAR = ('<','>','"','/','\\','|','?','*',":")
 
 
 @pytest.mark.asyncio
-async def test_logging_json(channels, guilds, accounts):
+async def test_logging_json(channels, guilds):
     "Test if json logging works"
-    account = accounts[0]
     dc_guild, _ = guilds
     text_channels, _ = channels
     try:
@@ -23,7 +22,7 @@ async def test_logging_json(channels, guilds, accounts):
         daf.logging._set_logger(json_logger)
 
         guild = daf.GUILD(dc_guild, logging=True)
-        await guild.initialize(parent=account)
+        await guild.initialize()
         guild_context = guild.generate_log_context()
         await guild.add_message(tm := daf.TextMESSAGE(None, timedelta(seconds=5), data="Hello World", channels=text_channels))
 
@@ -67,14 +66,15 @@ async def test_logging_json(channels, guilds, accounts):
         shutil.rmtree("./History", ignore_errors=True)
 
 
+
+
 @pytest.mark.asyncio
-async def test_logging_sql(channels, guilds, accounts):
+async def test_logging_sql(channels, guilds):
     """
     Tests if SQL logging works(only sqlite).
     It does not test any of the results as it assumes the database
     will raise an exception if anything is wrong.
     """
-    account = accounts[0]
     dc_guild, _ = guilds
     text_channels, _ = channels
     try:
@@ -82,7 +82,7 @@ async def test_logging_sql(channels, guilds, accounts):
         await sql_logger.initialize()
         daf.logging._set_logger(sql_logger)
         guild = daf.GUILD(dc_guild, logging=True)
-        await guild.initialize(parent=account)
+        await guild.initialize()
         guild_context = guild.generate_log_context()
         await guild.add_message(tm := daf.TextMESSAGE(None, timedelta(seconds=5), data="Hello World", channels=text_channels))
 
