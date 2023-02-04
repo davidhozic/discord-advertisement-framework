@@ -58,6 +58,7 @@ WD_RD_CLICK_N = 4
 WD_OUTPUT_PATH = pathlib.Path("./daf_web_data")
 WD_TOKEN_PATH = WD_OUTPUT_PATH.joinpath("tokens.json")
 WD_PROFILES_PATH = WD_OUTPUT_PATH.joinpath("chrome_profiles")
+WD_QUERY_SLEEP_S = 5
 
 HOVER_CLICK_ACTION_TIME_MS = 500
 
@@ -712,3 +713,5 @@ class GuildDISCOVERY:
                     qr = QueryResult(id_, name, url)
                     result_list.append(qr)
                     yield qr
+                
+                await asyncio.sleep(WD_QUERY_SLEEP_S)
