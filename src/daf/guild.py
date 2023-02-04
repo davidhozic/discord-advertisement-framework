@@ -29,9 +29,9 @@ __all__ = (
 
 GUILD_ADVERT_STATUS_SUCCESS = 0
 GUILD_ADVERT_STATUS_ERROR_REMOVE_ACCOUNT = None
-DISCOVERY_SLEEP_S = 5
 
-GUILD_JOIN_INTERVAL = timedelta(minutes=2, seconds=30)
+GUILD_JOIN_INTERVAL = timedelta(minutes=5, seconds=10)
+
 
 globals_ = globals()
 prev_val = 0

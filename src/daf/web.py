@@ -59,6 +59,8 @@ WD_OUTPUT_PATH = pathlib.Path("./daf_web_data")
 WD_TOKEN_PATH = WD_OUTPUT_PATH.joinpath("tokens.json")
 WD_PROFILES_PATH = WD_OUTPUT_PATH.joinpath("chrome_profiles")
 
+HOVER_CLICK_ACTION_TIME_MS = 500
+
 DISCORD_LOGIN_URL = "https://discord.com/login"
 
 TOP_GG_SEARCH_URL = "https://top.gg/api/client/entities/search"
@@ -488,11 +490,15 @@ class SeleniumCLIENT:
             The element to hover click.
         """
         trace(f"Hover clicking element.", TraceLEVELS.DEBUG)
-        actions = ActionChains(self.driver, duration=1013)
-        actions.move_to_element(element).perform()
-        await self.random_sleep(0.25, 1)
-        actions.click(element).perform()
-        await self.random_sleep(1, 2)
+        actions = ActionChains(self.driver, HOVER_CLICK_ACTION_TIME_MS)
+        await self.async_execute(actions.scroll_to_element(element).perform)
+        await self.random_sleep(0.5, 1)
+        await self.async_execute(
+            actions
+            .move_to_element(element)
+            .click(element)
+            .perform
+        )
 
     async def join_guild(self, invite: str) -> None:
         """
@@ -555,6 +561,8 @@ class SeleniumCLIENT:
                 await self.hover_click(submit_bnt)
             
             ActionChains(driver).send_keys(Keys.ESCAPE).perform()
+
+            trace(f"Joined guild with invite: {invite}", TraceLEVELS.DEBUG)
         except WebDriverException as exc:
             raise RuntimeError("Unable to join guild due to internal error.") from exc
 
