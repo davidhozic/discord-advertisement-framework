@@ -31,6 +31,13 @@ Glossary
 ----------------------
 Releases
 ----------------------
+
+v2.4.2 (v2.3.4)
+=============
+- Fixed channel verification bug:
+
+  - Fixes bug where messages try to be sent into channels that have not passed verification (complete button)
+
 v2.4
 =============
 - Multiple accounts support:
