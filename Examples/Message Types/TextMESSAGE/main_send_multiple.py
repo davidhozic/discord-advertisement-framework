@@ -43,7 +43,7 @@ accounts = [
         token="JJJKHSAJDHKJHDKJ",
         is_user=False,
         servers=[
-            daf.USER(
+            daf.GUILD(
                 snowflake=123456789, # ID of server (guild) or a discord.Guild object
                 messages=[         # List MESSAGE objects 
                     daf.TextMESSAGE(
