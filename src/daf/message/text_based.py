@@ -399,7 +399,7 @@ class TextMESSAGE(BaseMESSAGE):
         for tries in range(3):  # Maximum 3 tries (if rate limit)
             try:
                 # Check if we have permissions
-                client_: discord.Client = self.parent.parent.client
+                client_: discord.Client = client.get_client()
                 if (member := channel.guild.get_member(client_.user.id)) is None:
                     raise self._generate_exception(404, -1, "Client user could not be found in guild members", discord.NotFound)
 
