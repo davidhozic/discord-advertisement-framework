@@ -22,6 +22,10 @@ clean:
 	python3 ./setup.py --clean
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
+pdf: latex
+    docker run -v miktex:/miktex/.miktex -v `pwd`/build/latex:/miktex/work make all-pdf
+
+
 %: Makefile
 	python3 ./setup.py
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
