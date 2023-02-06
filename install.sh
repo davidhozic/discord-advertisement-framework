@@ -24,6 +24,9 @@ sudo apt-get update
 sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
 sudo apt-get install -y inkscape
 
+
+sudo groupadd docker
+sudo gpasswd -a $USER docker
 sudo service docker start
 sleep 5;
 sudo docker volume create miktex
