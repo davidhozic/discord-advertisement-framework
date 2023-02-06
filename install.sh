@@ -7,6 +7,7 @@ python3 -m pip install --editable .[all]
 python3 -m pip install --editable .[docs]
 python3 -m pip install --editable .[testing]
 
+sudo -s
 apt-get update
 apt-get install -y \
     ca-certificates \
@@ -24,4 +25,6 @@ apt-get update
 apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
 apt-get install -y inkscape
 
+service docker start
+sleep 5;
 docker volume create miktex

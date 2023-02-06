@@ -25,14 +25,12 @@ jobs:
           python-version: '3.8' 
     - name: Install requirements
       run: |
-        pip install .[docs]
-        pip install .[all]
-        sudo apt install inkscape -y
-    - name: Build html & latex
-      run: cd docs && make html && make latex
-    - name: Build pdf
-      uses: dante-ev/latex-action@edge
-      with:
-        working_directory: docs/build/latex/
-        root_file: discordadvertisementframework.tex
+        sudo -s
+        sh install.sh
+    - name: Build html and pdf
+      run: |
+        sudo -s
+        . venv/bin/activate
+        cd docs && make html && make pdf
+
 

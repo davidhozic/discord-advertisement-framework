@@ -1,6 +1,5 @@
-"
-Installs required build packages
-"
+# Installs required build packages
+
 python3 -m pip install virtualenv
 python3 -m virtualenv venv
 .\venv\Scripts\activate
@@ -10,8 +9,9 @@ python3 -m pip install --editable .[docs]
 python3 -m pip install --editable .[testing]
 
 Set-ExecutionPolicy Bypass -Scope Process -Force; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
-choco install docker-cli -y
 choco install inkscape -y
 choco install mingw -y
+choco install docker-desktop -y
 
-docker volume create miktex
+echo "Start Docker Desktop and run 'docker volume create miktex'"
+
