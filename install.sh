@@ -23,3 +23,5 @@ echo \
 apt-get update
 apt-get install docker-ce docker-ce-cli containerd.io docker-compose-plugin
 apt-get install -y inkscape
+
+docker volume create miktex

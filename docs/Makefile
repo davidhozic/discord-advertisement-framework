@@ -23,7 +23,7 @@ clean:
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
 pdf: latex
-    docker run -v miktex:/miktex/.miktex -v `pwd`/build/latex:/miktex/work make all-pdf
+	docker run -v miktex:/miktex/.miktex -v $(CURDIR)/build/latex:/miktex/work miktex/miktex make all-pdf
 
 
 %: Makefile
