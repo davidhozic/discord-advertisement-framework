@@ -1,7 +1,7 @@
 #!bash
 
 python3 -m virtualenv venv
-. \venv\bin\activate
+. ./venv/bin/activate
 python3 -m pip install --editable .[all]
 python3 -m pip install --editable .[docs]
 python3 -m pip install --editable .[testing]
