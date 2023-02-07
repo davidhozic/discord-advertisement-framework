@@ -28,5 +28,3 @@ sudo apt-get install -y inkscape
 sudo groupadd docker
 sudo gpasswd -a $USER docker
 sudo service docker start
-sleep 5;
-sudo docker volume create miktex
