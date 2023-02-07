@@ -11,7 +11,9 @@ python3 -m pip install --editable .[testing]
 Set-ExecutionPolicy Bypass -Scope Process -Force; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
 choco install inkscape -y
 choco install mingw -y
-choco install docker-desktop -y
+
+wget -Uri https://desktop.docker.com/win/main/amd64/Docker%20Desktop%20Installer.exe -OutFile 'Docker Desktop Installer.exe'
+Start-Process 'Docker Desktop Installer.exe' -Wait install
 
 echo "Start Docker Desktop and run 'docker volume create miktex'"
 
