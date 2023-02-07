@@ -492,13 +492,12 @@ class SeleniumCLIENT:
         """
         trace(f"Hover clicking element.", TraceLEVELS.DEBUG)
         actions = ActionChains(self.driver, HOVER_CLICK_ACTION_TIME_MS)
-        await self.async_execute(actions.scroll_to_element(element).perform)
         await self.random_sleep(0.5, 1)
         await self.async_execute(
             actions
             .move_to_element(element)
-            .click(element)
             .pause(HOVER_CLICK_ACTION_TIME_MS/1000)
+            .click(element)
             .perform
         )
 
