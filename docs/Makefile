@@ -23,7 +23,7 @@ clean:
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
 pdf: latex
-	docker run -v $(CURDIR)/build/latex:/home/ -w /home/ texlive/texlive make all-pdf
+	docker run --rm -v $(CURDIR)/build/latex:/home/ -w /home/ texlive/texlive make all-pdf
 
 
 %: Makefile
