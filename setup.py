@@ -30,14 +30,14 @@ with open("./optional.json", "r", encoding="utf-8") as rf:
 gh_release = os.environ.get("GITHUB_REF_NAME", default=None) # Workflow run release
 readthedocs_release = os.environ.get("READTHEDOCS_VERSION", default=None) # Readthe docs version
 
-version = None
+version = "v0.0.1"
 if gh_release is not None:
     version = gh_release
 elif readthedocs_release is not None:
     version = readthedocs_release
-else:
-    version = "v0.0.1"
 
+if not version.startswith("v"):
+    version = "v0.0.1"
 
 __metadata__ = \
 {
