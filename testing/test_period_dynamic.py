@@ -11,7 +11,7 @@ import daf
 
 # CONFIGURATION
 TEST_USER_ID = 145196308985020416
-TEST_SEND_PERIOD_TEXT = timedelta(seconds=6)
+TEST_SEND_PERIOD_TEXT = timedelta(seconds=10)
 TEST_SEND_PERIOD_VOICE = timedelta(seconds=10)
 TEST_PERIOD_MAX_VARIATION = 0.12 # Relative variation from period allowed
 TEST_MAX_WAIT_TIME = 15 # Maximum wait for message
@@ -30,7 +30,6 @@ async def test_text_period(channels: Tuple[List[Union[daf.discord.TextChannel, d
     guild = daf.GUILD(dc_guild)
     user = daf.USER(TEST_USER_ID)
     try:
-        await asyncio.sleep(10) # Clears rate limit
         await daf.add_object(guild, account)
         await daf.add_object(user, account)
 
@@ -63,6 +62,8 @@ async def test_text_period(channels: Tuple[List[Union[daf.discord.TextChannel, d
                                                           and message.channel == text_channels[0],
                                                           timeout=TEST_MAX_WAIT_TIME)
         # Test TextMESSAGE
+        
+        await asyncio.sleep(10)
         text_message = daf.message.TextMESSAGE(None, TEST_SEND_PERIOD_TEXT, TEXT_MESSAGE_TEST_MESSAGE, [text_channels[0]],
                                             "send", start_in=TEST_SEND_PERIOD_TEXT, remove_after=None)
         await guild.add_message(text_message)
@@ -121,8 +122,6 @@ async def test_voice_period(channels: Tuple[List[Union[daf.discord.TextChannel, 
     dc_guild, _ = guilds
     guild = daf.GUILD(dc_guild)
     try:
-        await asyncio.sleep(10)
-
         @daf.data_function
         def dynamic_getter(items: list):
             item = items.pop(0)
@@ -142,6 +141,7 @@ async def test_voice_period(channels: Tuple[List[Union[daf.discord.TextChannel, 
         wait_for_message = lambda: client.wait_for("voice_state_update", check=lambda member, before, after: before.channel is None and member.id == client.user.id and after.channel == voice_channels[0], timeout=TEST_MAX_WAIT_TIME)
 
         # Test VoiceMESSAGE
+        await asyncio.sleep(10)
         voice_message = daf.message.VoiceMESSAGE(None, TEST_SEND_PERIOD_VOICE, VOICE_MESSAGE_TEST_MESSAGE, [voice_channels[0]],
                                                 volume=50, start_in=TEST_SEND_PERIOD_VOICE, remove_after=None)
         await guild.add_message(voice_message)
