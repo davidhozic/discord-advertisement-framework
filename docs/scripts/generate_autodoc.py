@@ -39,6 +39,7 @@ AUTO_CLASS_TEMPLATE =\
 ------------------------
 .. autoclass:: {object_path}
     :members:
+    :inherited-members:
 """
 
 AUTO_ENUM_TEMPLATE =\
