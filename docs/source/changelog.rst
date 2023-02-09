@@ -32,6 +32,11 @@ Glossary
 Releases
 ----------------------
 
+v2.4.3
+=========
+- Fixed missing documentation members
+
+
 v2.4.2 (v2.3.4)
 =============
 - Fixed channel verification bug:
