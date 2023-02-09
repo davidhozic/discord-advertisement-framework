@@ -15,8 +15,9 @@ from os import environ
 ###############################
 def _write_attr_once(obj: Any, name: str, value: Any):
     """
-    Method that assigns an attribute only if it does not already have a reference to an object.
-    This is to prevent any ``.update()`` method calls from resetting critical variables that should not be changed,
+    Method that assigns an attribute only if it does not already exist.
+    This is to prevent any ``.update()`` method calls from resetting critical
+    variables that should not be changed,
     even if the objects goes thru initialization again.
 
     Parameters
@@ -30,7 +31,8 @@ def _write_attr_once(obj: Any, name: str, value: Any):
     value: Any
         The value to change the attribute with.
     """
-    if not hasattr(obj, name): # Write only if forced, or if not forced, then the attribute must not exist
+    # Write only if forced, or if not forced, then the attribute must not exist
+    if not hasattr(obj, name): 
         setattr(obj, name, value)
 
 
@@ -38,23 +40,28 @@ async def _update(obj: Any, *, init_options: dict = {}, **kwargs):
     """
     .. versionadded:: v2.0
 
-    Used for changing the initialization parameters the obj was initialized with.
+    Used for changing the initialization parameters the obj
+    was initialized with.
 
     .. warning::
-        Upon updating, the internal state of objects get's reset, meaning you basically have a brand new created object.
+        Upon updating, the internal state of objects get's reset,
+        meaning you basically have a brand new created object.
 
     .. warning::
-        This is not meant for manual use, but should be used only by the obj's method.
+        This is not meant for manual use,
+        but should be used only by the obj's method.
 
     Parameters
     -------------
     obj: Any
         The object that contains a .update() method.
     init_options: dict
-        Contains the initialization options used in .initialize() method for re-initializing certain objects.
+        Contains the initialization options used in
+        .initialize() method for re-initializing certain objects.
         This is implementation specific and not necessarily available.
     Other:
-        Other allowed parameters are the initialization parameters first used on creation of the object.
+        Other allowed parameters are the initialization parameters,
+        first used on creation of the object.
 
     Raises
     ------------
@@ -63,22 +70,32 @@ async def _update(obj: Any, *, init_options: dict = {}, **kwargs):
     Other
         Raised from .initialize() method.
     """
-    init_keys = getfullargspec(obj.__init__.__wrapped__ if hasattr(obj.__init__, "__wrapped__") else obj.__init__).args # Retrieves list of call args
+    init_keys = getfullargspec(
+        obj.__init__.__wrapped__ 
+        if hasattr(obj.__init__, "__wrapped__") 
+        else obj.__init__
+    ).args # Retrieves list of call args
     init_keys.remove("self")
-    current_state = copy(obj) # Make a copy of the current object for restoration in case of update failure
+    # Make a copy of the current object for restoration in case failure
+    current_state = copy(obj) 
     try:
         for k in kwargs:
             if k not in init_keys:
-                raise TypeError(f"Keyword argument `{k}` was passed which is not allowed. The update method only accepts the following keyword arguments: {init_keys}")
-        # Most of the variables inside the object have the same names as in the __init__ function.
-        # This section stores attributes, that are the same, into the `updated_params` dictionary and
-        # then calls the __init__ method with the same parameters, with the exception of start_period, end_period and start_now parameters
+                raise TypeError(
+                    f"Argument `{k}` not allowed. (Allowed: {init_keys})"
+                )
+        # Most of the variables inside the object 
+        # have the same names as in the __init__ function.
+        # This section stores attributes, that are the same,
+        # into the `updated_params` dictionary and
+        # then calls the __init__ method with the same parameters,
+        # with the exception of start_period, end_period and start_now
         updated_params = {}
         for k in init_keys:
-            # Store the attributes that match the __init__ parameters into `updated_params`
             updated_params[k] = kwargs[k] if k in kwargs else getattr(obj, k)
 
-        # Call the implementation __init__ function and then initialize API related things
+        # Call the implementation __init__ function and 
+        # then initialize API related things
         obj.__init__(**updated_params)
         # Call additional initialization function (if it has one)
         if hasattr(obj, "initialize"):
@@ -96,10 +113,11 @@ async def _update(obj: Any, *, init_options: dict = {}, **kwargs):
 # Decorators
 ###########################
 @typechecked
-def _async_safe(semaphore: Union[str, Semaphore], amount: Optional[int]=1) -> Callable:
+def _async_safe(semaphore: Union[str, Semaphore],
+                amount: Optional[int] = 1) -> Callable:
     """
-    Function that returns a safety decorator, which uses the :strong:`semaphore` parameter
-    as a safety mechanism.
+    Function that returns a safety decorator,
+    which uses the :strong:`semaphore` parameter as a safety mechanism.
 
     This is for usage on :strong:`methods`
 
@@ -117,7 +135,8 @@ def _async_safe(semaphore: Union[str, Semaphore], amount: Optional[int]=1) -> Ca
     Raises
     --------------
     TypeError
-        The ``semaphore`` parameter is not a string describing the semaphore attribute of a table.
+        The ``semaphore`` parameter is not a string describing
+        the semaphore attribute of a table.
     """
 
     def __safe_access(coroutine: Union[Coroutine, Callable]) -> Coroutine:
@@ -139,12 +158,13 @@ def _async_safe(semaphore: Union[str, Semaphore], amount: Optional[int]=1) -> Ca
             return result
 
         if isinstance(semaphore, str):
-            # If string, assume that the string is the attribute name of the semaphore
+            # If string, assume that the string is the attribute name
             async def wrapper(self, *args, **kwargs):
                 sem: Semaphore = getattr(self, semaphore)
                 return await sub_wrapper(sem, self, *args, **kwargs)
         else:
-            # Semaphore is directly passed. Also works for normal (non-method) coroutines.
+            # Semaphore is directly passed.
+            # Also works for normal (non-method) coroutines.
             async def wrapper(*args, **kwargs):
                 return await sub_wrapper(semaphore, *args, **kwargs)
 
@@ -158,7 +178,9 @@ DOCUMENTATION_MODE = bool(environ.get("DOCUMENTATION", False))
 if DOCUMENTATION_MODE:
     doc_titles: Dict[str, list] = {}
 
-def doc_category(cat: str, manual: Optional[bool] = False, path: Optional[str]=None):
+def doc_category(cat: str,
+                 manual: Optional[bool] = False,
+                 path: Optional[str] = None):
     """
     Used for marking under which category this should
     be put when auto generating documentation.
