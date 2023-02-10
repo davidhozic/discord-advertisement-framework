@@ -8,10 +8,11 @@ python3 -m pip install --editable .[all]
 python3 -m pip install --editable .[docs]
 python3 -m pip install --editable .[testing]
 
-echo "Installing chocolatey, inkscape, mingw"
-$env:ChocolateyInstall="$HOME\chocolatey"
-Set-ExecutionPolicy Bypass -Scope Process -Force; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
-choco install mingw inkscape ffmpeg -y
+echo "Installing packages"
+Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
+irm get.scoop.sh | iex
+scoop bucket add extras
+scoop install mingw ffmpeg inkscape
 
 $ProgressPreference = 'SilentlyContinue' # Way faster for some reason
 echo "Downloading Docker"
