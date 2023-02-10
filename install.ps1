@@ -11,9 +11,7 @@ python3 -m pip install --editable .[testing]
 echo "Installing chocolatey, inkscape, mingw"
 $env:ChocolateyInstall="$HOME\chocolatey"
 Set-ExecutionPolicy Bypass -Scope Process -Force; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
-choco install inkscape -y
-choco install mingw -y
-choco install ffmpeg -y
+choco install mingw inkscape ffmpeg -y
 
 $ProgressPreference = 'SilentlyContinue' # Way faster for some reason
 echo "Downloading Docker"
