@@ -13,7 +13,8 @@ from .. import misc
 try:
     from enum_tools.documentation import document_enum
 except ImportError:
-    document_enum = lambda x: x # This is only needed for documentation
+    def x(x): return x  # This is only needed for documentation
+    document_enum = x
 
 __all__ = (
     "TraceLEVELS",
@@ -22,6 +23,7 @@ __all__ = (
 
 
 C_TRACE_FORMAT = "[{date}] ({level}) | {module}: {message} ({reason})"
+
 
 @document_enum
 @misc.doc_category("Logging reference")
@@ -34,7 +36,7 @@ class TraceLEVELS(IntEnum):
     .. versionchanged:: v2.3
         Added DEPRECATION
     """
-    
+
     DEPRECATED = 0
     """
     Show only deprecation notices.
@@ -69,7 +71,7 @@ TRACE_COLOR_MAP = {
 class GLOBALS:
     """Storage class used for storing global variables of the module."""
     set_level = TraceLEVELS.DEPRECATED
-    lock = Lock() # For print thread safety
+    lock = Lock()  # For print thread safety
 
 
 @misc.doc_category("Logging reference")
@@ -81,18 +83,18 @@ def trace(message: str,
     | This is thread safe.
 
     .. versionchanged:: v2.3
-        
+
         .. card::
-        
+
             Will only print if the level is lower than the configured
             (thru :func:`~daf.core.run`'s debug parameter max level.
 
-            Eg. if the max level is :class:`~daf.logging.tracing.TraceLEVELS.ERROR`, then the 
+            Eg. if the max level is :class:`~daf.logging.tracing.TraceLEVELS.ERROR`, then the
             level parameter needs to be either :class:`~daf.logging.tracing.TraceLEVELS.DEPRECATED`
-            or :class:`~daf.logging.tracing.TraceLEVELS.ERROR`, 
+            or :class:`~daf.logging.tracing.TraceLEVELS.ERROR`,
             else nothing will be printed.
 
-    
+
     Parameters
     --------------
     message: str

@@ -1,15 +1,14 @@
 """
-    Contains base definitions for different message classes."""
+    Contains base definitions for different message classes.
+"""
 
-from contextlib import suppress
 from typing import Any, Set, List, Iterable, Union, TypeVar, Optional, Dict
 from datetime import timedelta, datetime
 from typeguard import check_type, typechecked
 from dataclasses import dataclass
 
 from ..dtypes import *
-from ..logging.tracing import *
-from ..timing import *
+from ..logging.tracing import trace, TraceLEVELS
 from .. import misc
 
 import random
@@ -34,7 +33,7 @@ ChannelType = Union[discord.TextChannel, discord.VoiceChannel]
 
 # Configuration
 # ----------------------
-C_PERIOD_MINIMUM_SEC = 1 # Minimal seconds the period can be
+C_PERIOD_MINIMUM_SEC = 1  # Minimal seconds the period can be
 
 
 MSG_SEND_STATUS_SUCCESS = 0
@@ -51,6 +50,7 @@ for k, v in globals_.copy().items():
         else:
             prev_val += 1
             globals_[k] = prev_val
+
 
 @dataclass
 class MessageSendResult:
@@ -71,21 +71,22 @@ class BaseMESSAGE:
 
         - start_in (start_now) - Using bool value to dictate whether the message should be sent at framework start.
         - start_period, end_period - Using int values, use ``timedelta`` object instead.
-    
+
     .. versionchanged:: v2.1
 
         - start_period, end_period Accept timedelta objects.
         - start_now - renamed into ``start_in`` which describes when the message should be first sent.
         - removed ``deleted`` property
-    
+
     Parameters
     -----------------
     start_period: Union[int, timedelta, None]
         If this this is not None, then it dictates the bottom limit for range of the randomized period. Set this to None
                                          for a fixed sending period.
     end_period: Union[int, timedelta],
-        If start_period is not None, this dictates the upper limit for range of the randomized period. If start_period is None, then this
-                            dictates a fixed sending period in SECONDS, eg. if you pass the value `5`, that means the message will be sent every 5 seconds.
+        If start_period is not None, this dictates the upper limit for range of the randomized period.
+        If start_period is None, then this dictates a fixed sending period in SECONDS,
+        eg. if you pass the value `5`, that means the message will be sent every 5 seconds.
     data: inherited class dependant
         The data to be sent to discord.
     start_in: timedelta
@@ -114,21 +115,21 @@ class BaseMESSAGE:
 
     @typechecked
     def __init__(self,
-                start_period: Optional[Union[int, timedelta]],
-                end_period: Union[int, timedelta],
-                data: Any,
-                start_in: Union[timedelta, bool],
-                remove_after: Optional[Union[int, timedelta, datetime]]):
+                 start_period: Optional[Union[int, timedelta]],
+                 end_period: Union[int, timedelta],
+                 data: Any,
+                 start_in: Union[timedelta, bool],
+                 remove_after: Optional[Union[int, timedelta, datetime]]):
         # Data parameter checks
         if isinstance(data, Iterable):
             if not len(data):
                 raise TypeError(f"data parameter cannot be an empty iterable. Got: '{data}.'")
-            
-            annots = self.__init__.__annotations__["data"]  
+
+            annots = self.__init__.__annotations__["data"]
             for element in data:
-                if isinstance(element, _FunctionBaseCLASS): # Check if function is being used standalone
-                    raise TypeError(f"The function can only be used on the data parameter directly, not in a iterable. Function: '{element}).'")
-                
+                if isinstance(element, _FunctionBaseCLASS):  # Check if function is being used standalone
+                    raise TypeError(f"{element} can be only used directly (data={element}()), not in a iterable.")
+
                 # Check if the list elements are of correct type (typeguard does not protect iterable's elements)
                 check_type("data", element, annots)
 
@@ -140,21 +141,25 @@ class BaseMESSAGE:
         if isinstance(end_period, int):
             trace("Using int on end_period is deprecated, use timedelta object instead.", TraceLEVELS.DEPRECATED)
             end_period = timedelta(seconds=end_period)
-                
+
         # Clamp periods to minimum level (prevent infinite loops)
         self.start_period = None if start_period is None else max(start_period, timedelta(seconds=C_PERIOD_MINIMUM_SEC))
         self.end_period = max(end_period, timedelta(seconds=C_PERIOD_MINIMUM_SEC))
-        self.period = self.end_period # This can randomize in _reset_timer
+        self.period = self.end_period  # This can randomize in _reset_timer
 
         # Deprecated bool since v2.1
-        if isinstance(start_in, bool): 
+        if isinstance(start_in, bool):
             self.next_send_time = datetime.now() if start_in else datetime.now() + self.end_period
-            trace("Using bool value for 'start_in' ('start_now') parameter is deprecated. Use timedelta object instead.", TraceLEVELS.DEPRECATED)
+            trace(
+                "Using bool value for 'start_in' ('start_now') parameter is deprecated and planned for removal. "
+                "Use timedelta object instead.",
+                TraceLEVELS.DEPRECATED
+            )
         else:
             self.next_send_time = datetime.now() + start_in
 
-        self.parent = None # The xGUILD object this message is in (needed for update method).
-        self.remove_after = remove_after # Remove the message from the list after this
+        self.parent = None  # The xGUILD object this message is in (needed for update method).
+        self.remove_after = remove_after  # Remove the message from the list after this
         self._created_at = datetime.now()
         self._data = data
         self._fbcdata = isinstance(data, _FunctionBaseCLASS)
@@ -184,7 +189,7 @@ class BaseMESSAGE:
         """
         if isinstance(o, BaseMESSAGE):
             return o._id == self._id
-        
+
         raise TypeError(f"Comparison of {type(self)} not allowed with {type(o)}")
 
     def __deepcopy__(self, *args):
@@ -219,14 +224,14 @@ class BaseMESSAGE:
             Object is in the framework in normal operation.
         """
         return self._deleted
-    
+
     def _delete(self):
         """
         Sets the internal _deleted flag to True,
         indicating the object should not be used.
         """
         self._deleted = True
-    
+
     def _schedule_removal(self):
         """
         Sets remove after attribute to True,
@@ -237,7 +242,7 @@ class BaseMESSAGE:
         """
         Checks if the message is ready to be deleted.
         This is extended in subclasses.
-        
+
         Returns
         ----------
         True
@@ -248,12 +253,12 @@ class BaseMESSAGE:
         # Check remove_after
         type_ = type(self.remove_after)
         return (
-            self.remove_after is True or # Force removal
+            self.remove_after is True or  # Force removal
             type_ is int and self.remove_after == 0 or
-            type_ is timedelta and datetime.now() - self._created_at > self.remove_after or # The difference from creation time is bigger than remove_after
-            type_ is datetime and datetime.now() > self.remove_after # The current time is larger than remove_after
+            type_ is timedelta and datetime.now() - self._created_at > self.remove_after or
+            type_ is datetime and datetime.now() > self.remove_after
         )
-    
+
     def _update_state(self):
         """
         Updates the internal counter for auto-removal
@@ -262,16 +267,16 @@ class BaseMESSAGE:
         if type(self.remove_after) is int:
             self.remove_after -= 1
 
-
     def _generate_exception(self,
-                           status: int,
-                           code: int,
-                           description: str,
-                           cls: T) -> T:
+                            status: int,
+                            code: int,
+                            description: str,
+                            cls: T) -> T:
         """
         Generates a discord.HTTPException inherited class exception object.
         This is used for generating dummy exceptions that are then raised inside the `._send_channel()`
-        method to simulate what would be the result of a API call, without actually having to call the API (reduces the number of bad responses).
+        method to simulate what would be the result of a API call,
+        without actually having to call the API (reduces the number of bad responses).
 
         Parameters
         -------------
@@ -288,7 +293,7 @@ class BaseMESSAGE:
         resp.status = status
         resp.status_code = status
         resp.reason = cls.__name__
-        resp = cls(resp, {"message" : description, "code" : code})
+        resp = cls(resp, {"message": description, "code": code})
         return resp
 
     def generate_log_context(self):
@@ -351,7 +356,7 @@ class BaseMESSAGE:
     async def _send(self) -> MessageSendResult:
         """
         Sends a message to all the channels.
-        
+
         Returns
         ------------
         MessageSendResult
@@ -366,12 +371,13 @@ class BaseMESSAGE:
         """
         raise NotImplementedError
 
-    async def update(self, _init_options: dict={}, **kwargs):
+    async def update(self, _init_options: dict = {}, **kwargs):
         """
         Used for changing the initialization parameters the object was initialized with.
 
         .. warning::
-            Upon updating, the internal state of objects get's reset, meaning you basically have a brand new created object.
+            Upon updating, the internal state of objects get's reset,
+            meaning you basically have a brand new created object.
 
         Parameters
         -------------
@@ -393,6 +399,7 @@ class BaseMESSAGE:
         """
 
         raise NotImplementedError
+
 
 @misc.doc_category("Auto objects", path="message")
 class AutoCHANNEL:
@@ -427,7 +434,7 @@ class AutoCHANNEL:
             If both include_pattern and exclude_pattern yield a match, the guild will be
             excluded from match.
 
-    interval: Optional[timedelta] = timedelta(minutes=5) 
+    interval: Optional[timedelta] = timedelta(minutes=5)
         Interval at which to scan for new channels.
     """
 
@@ -440,6 +447,7 @@ class AutoCHANNEL:
         "channel_getter",
         "last_scan"
     )
+
     def __init__(self,
                  include_pattern: str,
                  exclude_pattern: Optional[str] = None,
@@ -499,7 +507,7 @@ class AutoCHANNEL:
             # Possible intents bug?
             if member is None:
                 return
-            
+
             # User has not verified / has not completed rules
             if guild.me.pending:
                 return
@@ -508,7 +516,8 @@ class AutoCHANNEL:
                 if channel not in self.cache:
                     perms = channel.permissions_for(member)
                     name = channel.name
-                    if ((perms.send_messages or (perms.connect and perms.stream and perms.speak)) and
+                    if (
+                        (perms.send_messages or (perms.connect and perms.stream and perms.speak)) and
                         re.search(self.include_pattern, name) is not None and
                         (self.exclude_pattern is None or re.search(self.exclude_pattern, name) is None)
                     ):
@@ -522,7 +531,7 @@ class AutoCHANNEL:
         -----------
         channel: Union[discord.TextChannel, discord.VoiceChannel]
             The channel to remove from cache.
-        
+
         Raises
         -----------
         KeyError
@@ -547,7 +556,7 @@ class AutoCHANNEL:
         """
         if "interval" not in kwargs:
             kwargs["interval"] = timedelta(seconds=self.interval)
-        
+
         return await misc._update(self,
                                   init_options={"parent": self.parent, "channel_type": self.channel_getter},
                                   **kwargs)

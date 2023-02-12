@@ -31,6 +31,15 @@ Glossary
 ----------------------
 Releases
 ----------------------
+v2.5
+==========
+- |BREAK_CH| Removed ``EMBED`` object, use ``daf.discord.Embed`` instead.
+- |BREAK_CH| Removed ``timing`` module since it only contained deprecated objects.
+- WEB INTEGRATION:
+  
+  - Automatic login and (semi-automatic) guild join though :class:`daf.web.SeleniumCLIENT`.
+  - Automatic server discovery though :class:`daf.web.GuildDISCOVERY`
+
 
 v2.4.3
 =========

@@ -8,7 +8,7 @@ from typeguard import typechecked
 from datetime import timedelta, datetime
 from copy import deepcopy
 
-from .logging.tracing import *
+from .logging.tracing import TraceLEVELS, trace
 from .message import *
 
 from . import logging
@@ -79,7 +79,7 @@ class _BaseGUILD:
         "_deleted",
         "parent"
     )
-    
+
     def __init__(
         self,
         snowflake: Any,
@@ -88,7 +88,7 @@ class _BaseGUILD:
         remove_after: Optional[Union[timedelta, datetime]] = None
     ) -> None:
         self._apiobject: discord.Object = snowflake
-        self.logging: bool= logging
+        self.logging: bool = logging
         # Contains all the different message objects (added in .initialize())
         self._messages_uninitialized: list = messages
         self._messages: List[BaseMESSAGE] = []
@@ -98,7 +98,7 @@ class _BaseGUILD:
         # datetime - after that time
 
         self._deleted = False
-        self._created_at = datetime.now() # The time this object was created
+        self._created_at = datetime.now()  # The time this object was created
         self.parent = None
 
     def __repr__(self) -> str:
@@ -134,7 +134,7 @@ class _BaseGUILD:
         Returns the discord's snowflake ID.
         """
         return (
-            self._apiobject if isinstance(self._apiobject, int) 
+            self._apiobject if isinstance(self._apiobject, int)
             else self._apiobject.id
         )
 
@@ -170,8 +170,8 @@ class _BaseGUILD:
         type_ = type(self.remove_after)
         dt = datetime.now()
         return (
-            self.remove_after is True or # Force delete
-            type_ is timedelta and dt - self._created_at > self.remove_after or 
+            self.remove_after is True or  # Force delete
+            type_ is timedelta and dt - self._created_at > self.remove_after or
             type_ is datetime and dt > self.remove_after
         )
 
@@ -258,7 +258,7 @@ class _BaseGUILD:
         parent: Any
             The parent object. (ACCOUNT)
         getter: Callable
-            Callable function or async generator used for 
+            Callable function or async generator used for
             retrieving an api object (client.get_*).
 
         Raises
@@ -280,11 +280,7 @@ class _BaseGUILD:
                 try:
                     await self.add_message(message)
                 except (TypeError, ValueError) as exc:
-                    trace(
-                        f" Unable to initialize message {message}, in {self}",
-                        TraceLEVELS.WARNING, exc
-                    )
-
+                    trace(f" Unable to initialize message {message}, in {self}", TraceLEVELS.WARNING, exc)
 
             self._messages_uninitialized.clear()
             return
@@ -350,7 +346,7 @@ class _BaseGUILD:
             result: MessageSendResult = await coro
             if self.logging and result.result_code != MSG_SEND_STATUS_NO_MESSAGE_SENT:
                 await logging.save_log(guild_ctx, result.message_context)
-            
+
             if result.result_code == MSG_SEND_STATUS_ERROR_REMOVE_GUILD:
                 # Will be removed by ACCOUNT at next advertisement attempt
                 self._schedule_removal()
@@ -399,7 +395,7 @@ class GUILD(_BaseGUILD):
         sent messages inside this guild.
     remove_after: Optional[Union[timedelta, datetime]]
         Deletes the guild after:
-        
+
         * timedelta - the specified time difference
         * datetime - specific date & time
     """
@@ -410,12 +406,12 @@ class GUILD(_BaseGUILD):
     @typechecked
     def __init__(self,
                  snowflake: Union[int, discord.Guild],
-                 messages: Optional[List[Union[TextMESSAGE, VoiceMESSAGE]]]=[],
-                 logging: Optional[bool]=False,
-                 remove_after: Optional[Union[timedelta, datetime]]=None):
+                 messages: Optional[List[Union[TextMESSAGE, VoiceMESSAGE]]] = [],
+                 logging: Optional[bool] = False,
+                 remove_after: Optional[Union[timedelta, datetime]] = None):
         super().__init__(snowflake, messages, logging, remove_after)
         misc._write_attr_once(self, "update_semaphore", asyncio.Semaphore(1))
-    
+
     def _check_state(self) -> bool:
         """
         Checks if the user is ready to be deleted.
@@ -427,7 +423,7 @@ class GUILD(_BaseGUILD):
         False
             The user is in proper state, do not delete.
         """
-        return (self.parent.client.get_guild(self.snowflake) == None or
+        return (self.parent.client.get_guild(self.snowflake) is None or
                 super()._check_state())
 
     async def initialize(self, parent: Any) -> None:
@@ -478,7 +474,7 @@ class GUILD(_BaseGUILD):
         # Update the guild
         if "snowflake" not in kwargs:
             kwargs["snowflake"] = self.snowflake
-        
+
         if len(init_options) == 0:
             init_options = {"parent": self.parent}
 
@@ -522,9 +518,9 @@ class USER(_BaseGUILD):
     def __init__(
         self,
         snowflake: Union[int, discord.User],
-        messages: Optional[List[DirectMESSAGE]]=[],
+        messages: Optional[List[DirectMESSAGE]] = [],
         logging: Optional[bool] = False,
-        remove_after: Optional[Union[timedelta, datetime]]=None
+        remove_after: Optional[Union[timedelta, datetime]] = None
     ) -> None:
         super().__init__(snowflake, messages, logging, remove_after)
         misc._write_attr_once(self, "update_semaphore", asyncio.Semaphore(1))
@@ -596,7 +592,7 @@ class USER(_BaseGUILD):
 
         # Update messages
         for message in self.messages:
-            await message.update(_init_options={"parent" : self})
+            await message.update(_init_options={"parent": self})
 
 
 @misc.doc_category("Auto objects")
@@ -692,14 +688,14 @@ class AutoGUILD:
                  auto_join: Optional[web.GuildDISCOVERY] = None) -> None:
         self.include_pattern = include_pattern
         self.exclude_pattern = exclude_pattern
-        self.remove_after = remove_after 
+        self.remove_after = remove_after
         # Uninitialized template messages that get copied for each found guild.
         self.messages = messages
         self.logging = logging
         self.interval = interval
         self.auto_join = auto_join
         self.cache: Dict[discord.Guild, GUILD] = {}
-        self.join_history: Set[int] = set() # History of auto-joined guild ids
+        self.join_history: Set[int] = set()  # History of auto-joined guild ids
         self.last_scan = datetime.min
         self._deleted = False
         self._created_at = datetime.now()
@@ -720,7 +716,7 @@ class AutoGUILD:
         Returns the datetime of when the object has been created.
         """
         return self._created_at
-    
+
     @property
     def deleted(self) -> bool:
         """
@@ -745,7 +741,7 @@ class AutoGUILD:
         """
         Checks if the object is ready to be deleted.
 
-        If the object has already been deleted, return False 
+        If the object has already been deleted, return False
         to prevent multiple tasks from trying to remove it multiple
         times which would result in ValueError exceptions.
 
@@ -809,7 +805,7 @@ class AutoGUILD:
         Raises
         --------
         ValueError
-            The message is not present in the list.        
+            The message is not present in the list.
         """
         self.messages.remove(message)
         for guild in self.guilds:
@@ -843,11 +839,7 @@ class AutoGUILD:
                     await new_guild.initialize(parent=self.parent)
                     self.cache[discord_guild] = new_guild
                 except Exception as exc:
-                    trace(
-                        f"Unable to add new object.",
-                        TraceLEVELS.WARNING,
-                        exc
-                    )
+                    trace("Unable to add new object.", TraceLEVELS.WARNING, exc)
 
         self.last_scan = stamp
 
@@ -859,7 +851,7 @@ class AutoGUILD:
         discovery = self.auto_join
         selenium: web.SeleniumCLIENT = self.parent.selenium
         if (
-            discovery is None or # No auto_join provided
+            discovery is None or  # No auto_join provided
             self.guild_join_count == discovery.limit
             or datetime.now() - self.last_guild_join < GUILD_JOIN_INTERVAL
         ):

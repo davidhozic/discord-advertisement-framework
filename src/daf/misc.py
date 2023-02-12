@@ -10,6 +10,7 @@ from copy import copy
 from typeguard import typechecked
 from os import environ
 
+
 ###############################
 # Safe access functions
 ###############################
@@ -32,7 +33,7 @@ def _write_attr_once(obj: Any, name: str, value: Any):
         The value to change the attribute with.
     """
     # Write only if forced, or if not forced, then the attribute must not exist
-    if not hasattr(obj, name): 
+    if not hasattr(obj, name):
         setattr(obj, name, value)
 
 
@@ -70,21 +71,18 @@ async def _update(obj: Any, *, init_options: dict = {}, **kwargs):
     Other
         Raised from .initialize() method.
     """
-    init_keys = getfullargspec(
-        obj.__init__.__wrapped__ 
-        if hasattr(obj.__init__, "__wrapped__") 
-        else obj.__init__
-    ).args # Retrieves list of call args
+    # Retrieves list of call args
+    init_keys = getfullargspec(obj.__init__.__wrapped__ if hasattr(obj.__init__, "__wrapped__") else obj.__init__).args
     init_keys.remove("self")
     # Make a copy of the current object for restoration in case failure
-    current_state = copy(obj) 
+    current_state = copy(obj)
     try:
         for k in kwargs:
             if k not in init_keys:
                 raise TypeError(
                     f"Argument `{k}` not allowed. (Allowed: {init_keys})"
                 )
-        # Most of the variables inside the object 
+        # Most of the variables inside the object
         # have the same names as in the __init__ function.
         # This section stores attributes, that are the same,
         # into the `updated_params` dictionary and
@@ -94,7 +92,7 @@ async def _update(obj: Any, *, init_options: dict = {}, **kwargs):
         for k in init_keys:
             updated_params[k] = kwargs[k] if k in kwargs else getattr(obj, k)
 
-        # Call the implementation __init__ function and 
+        # Call the implementation __init__ function and
         # then initialize API related things
         obj.__init__(**updated_params)
         # Call additional initialization function (if it has one)
@@ -143,11 +141,11 @@ def _async_safe(semaphore: Union[str, Semaphore],
         """
         Decorator that returns a method wrapper Coroutine that utilizes a
         asyncio semaphore to assure safe asynchronous operations.
-        """     
-        async def sub_wrapper(sem: Semaphore, *args, **kwargs):   
+        """
+        async def sub_wrapper(sem: Semaphore, *args, **kwargs):
             for i in range(amount):
                 await sem.acquire()
-            
+
             result = None
             try:
                 result = await coroutine(*args, **kwargs)
@@ -177,6 +175,7 @@ def _async_safe(semaphore: Union[str, Semaphore],
 DOCUMENTATION_MODE = bool(environ.get("DOCUMENTATION", False))
 if DOCUMENTATION_MODE:
     doc_titles: Dict[str, list] = {}
+
 
 def doc_category(cat: str,
                  manual: Optional[bool] = False,
@@ -210,4 +209,3 @@ def doc_category(cat: str,
             doc_titles[cat] = []
 
     return _category
-

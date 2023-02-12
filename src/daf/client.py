@@ -1,16 +1,13 @@
 """
     This modules contains definitions related to the client (for API)
 """
-from typing import Optional, Union, Optional, List
-from contextlib import suppress
-from random import random
+from typing import Optional, Union, List
 
 from . import misc
 from . import guild
-from . import misc
 from . import web
 
-from .logging.tracing import *
+from .logging.tracing import TraceLEVELS, trace
 
 from typeguard import typechecked
 
@@ -57,7 +54,7 @@ class ACCOUNT:
         For logging in automatically
 
     Represents an individual Discord account.
-    
+
     Each ACCOUNT instance runs it's own shilling task.
 
     Parameters
@@ -74,14 +71,14 @@ class ACCOUNT:
         .. IMPORTANT::
             It is **RECOMMENDED** to use a proxy if you are running **MULTIPLE** accounts.
             Running multiple accounts from the same IP address, can result in Discord
-            detecting self-bots. 
+            detecting self-bots.
 
-            Running multiple bot accounts on the other hand is perfectly fine without 
+            Running multiple bot accounts on the other hand is perfectly fine without
             a proxy.
     servers: Optional[List[guild.GUILD | guild.USER | guild.AutoGUILD]]=[]
         Predefined list of servers (guilds, users, auto-guilds).
     username: Optional[str]
-        The username to login with. 
+        The username to login with.
     password: Optional[str]
         The password to login with.
 
@@ -94,40 +91,38 @@ class ACCOUNT:
     """
     @typechecked
     def __init__(self,
-                 token : Optional[str]=None,
-                 is_user : Optional[bool] =False,
-                 intents: Optional[discord.Intents]=None,
-                 proxy: Optional[str]=None,
-                 servers: Optional[List[Union[guild.GUILD, guild.USER, guild.AutoGUILD]]]=None,
-                 username: Optional[str]=None,
-                 password: Optional[str]=None) -> None:
+                 token: Optional[str] = None,
+                 is_user: Optional[bool] = False,
+                 intents: Optional[discord.Intents] = None,
+                 proxy: Optional[str] = None,
+                 servers: Optional[List[Union[guild.GUILD, guild.USER, guild.AutoGUILD]]] = None,
+                 username: Optional[str] = None,
+                 password: Optional[str] = None) -> None:
         connector = None
         if proxy is not None:
             if not GLOBALS.proxy_installed:
-                raise ModuleNotFoundError("You need to install extra requirements: pip install discord-advert-framework[proxy]")
-        
+                raise ModuleNotFoundError("Install extra requirements: pip install discord-advert-framework[proxy]")
+
             connector = ProxyConnector.from_url(proxy)
 
-        if token is not None and username is not None: # Only one parameter of these at a time
+        if token is not None and username is not None:  # Only one parameter of these at a time
             raise ValueError("'token' parameter not allowed if 'username' is given.")
-        
-        if token is None and username is None: # At least one of these
-            raise ValueError("At lest one parameter of these is required: 'token' OR 'username' + 'password'")
 
+        if token is None and username is None:  # At least one of these
+            raise ValueError("At lest one parameter of these is required: 'token' OR 'username' + 'password'")
 
         self._token = token
         self.is_user = is_user
         self.proxy = proxy
         # If intents not passed, enable default
-        if intents == None:
+        if intents is None:
             intents = discord.Intents.default()
 
         self.intents = intents
-
         self._running = False
         self.tasks: List[asyncio.Task] = []
         self._servers: List[guild._BaseGUILD] = []
-        self._autoguilds: List[guild.AutoGUILD] = [] # To prevent __eq__ issues, use 2 lists
+        self._autoguilds: List[guild.AutoGUILD] = []  # To prevent __eq__ issues, use 2 lists
         self._selenium = web.SeleniumCLIENT(username, password, proxy) if username is not None else None
 
         if servers is None:
@@ -171,7 +166,7 @@ class ACCOUNT:
             The shilling has ended or not begun.
         """
         return self._running
-    
+
     @property
     def deleted(self) -> bool:
         """
@@ -192,12 +187,12 @@ class ACCOUNT:
         shilling list. This also includes :class:`~daf.guild.AutoGUILD`
         """
         return self._servers + self._autoguilds
-    
+
     @property
     def client(self) -> discord.Client:
         "Returns the API wrapper client"
         return self._client
-    
+
     def _delete(self):
         """
         Sets the internal _deleted flag to True,
@@ -224,21 +219,21 @@ class ACCOUNT:
 
         # Login
         trace("Logging in...")
-        _client_task: asyncio.Future = asyncio.gather(asyncio.create_task(self._client.start(self._token, bot=not self.is_user)), return_exceptions=True)
+        _client_task = asyncio.create_task(self._client.start(self._token, bot=not self.is_user))
         try:
             await self._client.wait_for("ready", timeout=LOGIN_TIMEOUT_S)
             trace(f"Logged in as {self._client.user.display_name}")
         except asyncio.TimeoutError as exc:
             exc = _client_task.exception() if _client_task.done() else exc
             raise RuntimeError(f"Error logging in to Discord. (Token {self._token[:TOKEN_MAX_PRINT_LEN]}...)") from exc
-        
+
         for server in self._uiservers:
             try:
                 await self.add_server(server)
             except Exception as exc:
                 trace("Unable to add server.", TraceLEVELS.ERROR, exc)
 
-        del self._uiservers # Only needed for predefined initialization
+        del self._uiservers  # Only needed for predefined initialization
         self.tasks.append(asyncio.create_task(self._loop()))
         self._running = True
 
@@ -256,8 +251,10 @@ class ACCOUNT:
         Raises
         --------
         Any
-            Raised in 
-            :py:meth:`daf.guild.GUILD.initialize()` | :py:meth:`daf.guild.USER.initialize()` | :py:meth:`daf.guild.AutoGUILD.initialize()`
+            Raised in
+            :py:meth:`daf.guild.GUILD.initialize()` |
+            :py:meth:`daf.guild.USER.initialize()`  |
+            :py:meth:`daf.guild.AutoGUILD.initialize()`
         """
         await server.initialize(parent=self)
         if isinstance(server, guild._BaseGUILD):
@@ -274,7 +271,7 @@ class ACCOUNT:
         --------------
         server: guild.GUILD | guild.USER | guild.AutoGUILD
             The guild like object to remove
-        
+
         Raises
         -----------
         ValueError
@@ -287,7 +284,10 @@ class ACCOUNT:
             self._autoguilds.remove(server)
 
     @typechecked
-    def get_server(self, snowflake: Union[int, discord.Guild, discord.User, discord.Object]) -> Union[guild.GUILD, guild.USER, None]:
+    def get_server(
+        self,
+        snowflake: Union[int, discord.Guild, discord.User, discord.Object]
+    ) -> Union[guild.GUILD, guild.USER, None]:
         """
         Retrieves the server based on the snowflake id or discord API object.
 
@@ -295,7 +295,7 @@ class ACCOUNT:
         -------------
         snowflake: Union[int, discord.Guild, discord.User, discord.Object]
             Snowflake ID or Discord API object.
-        
+
         Returns
         ---------
         Union[guild.GUILD, guild.USER]
@@ -322,8 +322,11 @@ class ACCOUNT:
         self._delete()
         for exc in await asyncio.gather(*self.tasks, return_exceptions=True):
             if exc is not None:
-                trace(f"Exception occurred in a task for account {self.client.user.display_name} (Token: {self._token[:TOKEN_MAX_PRINT_LEN]})",
-                    TraceLEVELS.ERROR, exc)
+                trace(
+                    f"Error raised in for {self.client.user.display_name} (Token: {self._token[:TOKEN_MAX_PRINT_LEN]})",
+                    TraceLEVELS.ERROR,
+                    exc
+                )
 
         selenium = self.selenium
         if selenium is not None:
@@ -348,7 +351,7 @@ class ACCOUNT:
                     if server._check_state():
                         to_remove.append(server)
                     else:
-                        to_await.append( server._advertise() )
+                        to_await.append(server._advertise())
 
                 for server in to_remove:
                     self.remove_server(server)
@@ -393,7 +396,7 @@ def get_client() -> discord.Client:
 
     Returns the `CLIENT` object used for communicating with Discord.
     """
-    trace("DEPRECATED! Function daf.client.get_client is deprecated since v2.4 and is planned for removal. Please use ACCOUNT.client attribute instead.",
+    trace("get_client is is planned for removal in v2.5. Please use ACCOUNT.client attribute instead.",
           TraceLEVELS.DEPRECATED)
     from . import core
     return core.GLOBALS.accounts[0].client
