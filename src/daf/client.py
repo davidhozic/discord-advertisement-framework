@@ -89,6 +89,22 @@ class ACCOUNT:
     ValueError
         'token' is not allowed if 'username' is provided and vice versa.
     """
+    __slots__ = (
+        "_token",
+        "is_user",
+        "proxy",
+        "intents",
+        "_running",
+        "tasks",
+        "_servers",
+        "_autoguilds",
+        "_selenium",
+        "_uiservers",
+        "_client",
+        "_deleted",
+        "_update_sem",
+    )
+
     @typechecked
     def __init__(self,
                  token: Optional[str] = None,
@@ -233,7 +249,7 @@ class ACCOUNT:
             except Exception as exc:
                 trace("Unable to add server.", TraceLEVELS.ERROR, exc)
 
-        del self._uiservers  # Only needed for predefined initialization
+        self._uiservers.clear()  # Only needed for predefined initialization
         self.tasks.append(asyncio.create_task(self._loop()))
         self._running = True
 
@@ -319,7 +335,6 @@ class ACCOUNT:
         """
         trace(f"Logging out of {self.client.user.display_name}...")
         self._running = False
-        self._delete()
         for exc in await asyncio.gather(*self.tasks, return_exceptions=True):
             if exc is not None:
                 trace(
@@ -332,7 +347,11 @@ class ACCOUNT:
         if selenium is not None:
             selenium._close()
 
+        for guild_ in self._autoguilds:
+            await guild_._close()
+
         await self._client.close()
+        self._delete()
 
     async def _loop(self):
         """
@@ -375,17 +394,27 @@ class ACCOUNT:
             After calling this method the entire object is reset.
         """
         @misc._async_safe("_update_sem", 1)
-        async def update_servers(self_):
+        async def _update(self_):
+            await misc._update(self, **kwargs)
+
             for server in self.servers:
                 await server.update(init_options={"parent": self})
 
-        if "token" not in kwargs:
-            kwargs["token"] = self._token
-
         await self._close()
-        await misc._update(self, **kwargs)
 
-        await update_servers(self)
+        selenium = self._selenium
+        if selenium is not None and "token" not in kwargs:
+            if "username" not in kwargs:
+                kwargs["username"] = selenium._username
+            if "password" not in kwargs:
+                kwargs["password"] = selenium._password
+
+            kwargs["token"] = None
+        else:
+            kwargs["username"] = None
+            kwargs["password"] = None
+
+        await _update(self)
 
 
 def get_client() -> discord.Client:
@@ -400,3 +429,4 @@ def get_client() -> discord.Client:
           TraceLEVELS.DEPRECATED)
     from . import core
     return core.GLOBALS.accounts[0].client
+

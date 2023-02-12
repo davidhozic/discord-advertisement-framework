@@ -51,7 +51,7 @@ async def cleanup_accounts():
     """
     while GLOBALS.running:
         for account in get_accounts():
-            if not account.running:
+            if account.deleted:
                 await remove_object(account)
 
         await asyncio.sleep(TASK_CLEANUP_SLEEP_SEC)

@@ -170,7 +170,7 @@ class _BaseGUILD:
         type_ = type(self.remove_after)
         dt = datetime.now()
         return (
-            self.remove_after is True or  # Force delete
+            self.deleted or  # Force delete
             type_ is timedelta and dt - self._created_at > self.remove_after or
             type_ is datetime and dt > self.remove_after
         )
@@ -188,13 +188,6 @@ class _BaseGUILD:
         self._deleted = True
         for message in self._messages:
             message._delete()
-
-    def _schedule_removal(self):
-        """
-        Set's remove after parameter to True,
-        indicating requested removal of object.
-        """
-        self.remove_after = True
 
     @typechecked
     async def add_message(self, message: BaseMESSAGE):
@@ -349,7 +342,7 @@ class _BaseGUILD:
 
             if result.result_code == MSG_SEND_STATUS_ERROR_REMOVE_GUILD:
                 # Will be removed by ACCOUNT at next advertisement attempt
-                self._schedule_removal()
+                self._delete()
                 break
 
             elif result.result_code == MSG_SEND_STATUS_ERROR_REMOVE_ACCOUNT:
@@ -774,6 +767,13 @@ class AutoGUILD:
             await self.auto_join.initialize(self)
             self.guild_query_iter = self.auto_join._query_request()
 
+    async def _close(self):
+        """
+        Closes any lower-level async objects.
+        """
+        if self.auto_join is not None:
+            await self.auto_join._close()
+
     async def add_message(self, message: BaseMESSAGE):
         """
         Adds a copy of the passed message to each
@@ -910,7 +910,7 @@ class AutoGUILD:
 
         return GUILD_ADVERT_STATUS_SUCCESS
 
-    @misc._async_safe("_safe_sem", 2)
+    @misc._async_safe("_safe_sem", 1)
     async def update(self, init_options={}, **kwargs):
         """
         Updates the object with new initialization parameters.
@@ -919,10 +919,8 @@ class AutoGUILD:
             After calling this method the entire object is reset
             (this includes it's GUILD objects in cache).
         """
-        if "interval" not in kwargs:
-            kwargs["interval"] = timedelta(seconds=self.interval)
-
         if len(init_options) == 0:
             init_options = {"parent": self.parent}
 
+        await self._close()
         return await misc._update(self, init_options=init_options, **kwargs)

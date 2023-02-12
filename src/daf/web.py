@@ -202,7 +202,7 @@ class SeleniumCLIENT:
         """
         Sleeps randomly to prevent detection.
         """
-        await asyncio.sleep(bottom + (upper - bottom)*rd.random())
+        await asyncio.sleep(bottom + (upper - bottom) * rd.random())
 
     async def async_execute(self, method: Callable, *args):
         """
@@ -563,7 +563,7 @@ class SeleniumCLIENT:
         await self.async_execute(
             actions
             .move_to_element(element)
-            .pause(HOVER_CLICK_ACTION_TIME_MS/1000)
+            .pause(HOVER_CLICK_ACTION_TIME_MS / 1000)
             .click(element)
             .perform
         )
@@ -750,6 +750,14 @@ class GuildDISCOVERY:
                 " the account must be provided with username and password."
             )
 
+    async def _close(self):
+        """
+        Closes under-laying async coroutines.
+        """
+        ses = self.session
+        if ses is not None and not ses.closed:
+            await ses.close()
+
     async def _query_request(self):
         """
         Makes actual HTTP requests.
@@ -759,8 +767,7 @@ class GuildDISCOVERY:
         List[QueryResult]
             List of guilds found.
         """
-
-        cache_key = (self.prompt, self.sort_by, self.total_members)
+        cache_key = (self.prompt, self.sort_by, self.total_members, self.limit)
         cache_result: List[QueryResult] = self.query_cache.get(cache_key, None)
         # List[ { 'id': int, 'name': str, 'invite': str } ]"
         if not (cache_result is None or cache_result[0].pending_refresh):
@@ -794,10 +801,7 @@ class GuildDISCOVERY:
 
         for i in range(0, 1000, 10):
             params["skip"] = i
-            async with self.session.get(
-                TOP_GG_SEARCH_URL,
-                params=params
-            ) as result:
+            async with self.session.get(TOP_GG_SEARCH_URL, params=params) as result:
                 if result.status != 200:
                     return
 

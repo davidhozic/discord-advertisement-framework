@@ -232,12 +232,6 @@ class BaseMESSAGE:
         """
         self._deleted = True
 
-    def _schedule_removal(self):
-        """
-        Sets remove after attribute to True,
-        to force remove at next call."""
-        self.remove_after = True
-
     def _check_state(self) -> bool:
         """
         Checks if the message is ready to be deleted.
@@ -253,7 +247,7 @@ class BaseMESSAGE:
         # Check remove_after
         type_ = type(self.remove_after)
         return (
-            self.remove_after is True or  # Force removal
+            self.deleted or
             type_ is int and self.remove_after == 0 or
             type_ is timedelta and datetime.now() - self._created_at > self.remove_after or
             type_ is datetime and datetime.now() > self.remove_after
