@@ -873,9 +873,9 @@ class AutoGUILD:
 
             # Join guild thru selenium
             try:
-                await selenium.random_click()
+                await selenium.random_server_click()
                 await selenium.join_guild(yielded.invite)
-
+                await asyncio.sleep(1)
                 if client.get_guild(yielded.id) is None:
                     raise RuntimeError(
                         "No error detected in browser, "

@@ -43,7 +43,7 @@ __metadata__ = \
 {
     "version" : version,
     "requirements" : req,
-    "minimum_py_version" : "3.8",
+    "minimum_py_version" : "3.10",
 }
 
 

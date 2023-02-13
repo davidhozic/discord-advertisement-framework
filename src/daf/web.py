@@ -64,7 +64,8 @@ __all__ = (
 WD_TIMEOUT_SHORT = 5
 WD_TIMEOUT_MED = 30
 WD_TIMEOUT_LONG = 90
-WD_RD_CLICK_N = 4
+WD_RD_CLICK_UPPER_N = 5
+WD_RD_CLICK_LOWER_N = 2
 WD_OUTPUT_PATH = pathlib.Path("./daf_web_data")
 WD_TOKEN_PATH = WD_OUTPUT_PATH.joinpath("tokens.json")
 WD_PROFILES_PATH = WD_OUTPUT_PATH.joinpath("chrome_profiles")
@@ -230,7 +231,7 @@ class SeleniumCLIENT:
         )
         await loop.run_in_executor(None, method, *args)
 
-    async def random_click(self):
+    async def random_server_click(self):
         """
         Randomly clicks on the servers panel to avoid CAPTCHA
         triggering.
@@ -246,33 +247,13 @@ class SeleniumCLIENT:
             "//div[@draggable = 'true']"
         )
         rd.shuffle(servers)
-        typed = False
+        num_to_click = rd.randrange(WD_RD_CLICK_LOWER_N, WD_RD_CLICK_UPPER_N + 1)
         for i, server in enumerate(servers):
-            if i >= WD_RD_CLICK_N and typed:
+            if i == num_to_click:
                 return
-
+            
             await self.hover_click(server)
-            channel_tree = driver.find_element(
-                By.XPATH,
-                "//ul[@aria-label='Channels']"
-            )
-            channels = channel_tree.find_elements(
-                By.XPATH,
-                "//li[@data-dnd-name]"
-            )
-            channel = channels[rd.randrange(0, len(channels))]
-            await self.hover_click(channel)
-            try:
-                input_box = driver.find_element(
-                    By.XPATH,
-                    "//div[@role = 'textbox']"
-                )
-            except NoSuchElementException:
-                continue
-
-            await self.slow_type(input_box, "Hello World")
-            await self.slow_clear(input_box)
-            typed = True
+            await self.random_sleep(0.25, 1)
 
     async def fetch_invite_link(self, url: str):
         """
@@ -559,7 +540,6 @@ class SeleniumCLIENT:
         """
         trace("Hover clicking element.", TraceLEVELS.DEBUG)
         actions = ActionChains(self.driver, HOVER_CLICK_ACTION_TIME_MS)
-        await self.random_sleep(1.5, 2)
         await self.async_execute(
             actions
             .move_to_element(element)
@@ -596,12 +576,14 @@ class SeleniumCLIENT:
             )
             await self.hover_click(join_bnt)
 
+            await self.random_sleep(1, 2)
             add_server_bnt = driver.find_element(
                 By.XPATH,
                 "//button[div[text()='Join a Server']]"
             )
             await self.hover_click(add_server_bnt)
 
+            await self.random_sleep(1, 2)
             link_input = driver.find_element(
                 By.XPATH,
                 "//input[contains(@placeholder, 'discord.gg')]"
@@ -641,6 +623,7 @@ class SeleniumCLIENT:
                 )
                 await self.hover_click(complete_rules_bnt)
 
+            await self.random_sleep(1, 2)
             with suppress(NoSuchElementException):
                 checkbox = driver.find_element(
                     By.XPATH,
@@ -648,6 +631,7 @@ class SeleniumCLIENT:
                 )
                 await self.hover_click(checkbox)
 
+            await self.random_sleep(1, 2)
             with suppress(NoSuchElementException):
                 submit_bnt = driver.find_element(
                     By.XPATH,
@@ -655,6 +639,7 @@ class SeleniumCLIENT:
                 )
                 await self.hover_click(submit_bnt)
 
+            await self.random_sleep(1, 2)
             ActionChains(driver).send_keys(Keys.ESCAPE).perform()
             trace(f"Joined guild with invite: {invite}", TraceLEVELS.DEBUG)
         except WebDriverException as exc:
