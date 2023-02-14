@@ -154,7 +154,7 @@ class Interaction:
 
     def _from_data(self, data: InteractionPayload):
         self.id: int = int(data["id"])
-        self.type: InteractionType = try_enum(InteractionType, data["type"])
+        self.type: InteractionType = try_enum(InteractionType, data.get("type", None))
         self.data: InteractionData | None = data.get("data")
         self.token: str = data["token"]
         self.version: int = data["version"]
