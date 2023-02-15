@@ -30,7 +30,7 @@ __all__ = (
 GUILD_ADVERT_STATUS_SUCCESS = 0
 GUILD_ADVERT_STATUS_ERROR_REMOVE_ACCOUNT = None
 
-GUILD_JOIN_INTERVAL = timedelta(minutes=1)
+GUILD_JOIN_INTERVAL = timedelta(seconds=10)
 
 
 globals_ = globals()
