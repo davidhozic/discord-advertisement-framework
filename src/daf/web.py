@@ -351,7 +351,7 @@ class SeleniumCLIENT:
         TimeoutError
             The page loading timed-out.
         """
-        await self.random_sleep(1, 2)
+        await self.random_sleep(2, 3)
         trace("Awaiting Discord load", TraceLEVELS.DEBUG)
         try:
             await self.async_execute(
@@ -489,7 +489,7 @@ class SeleniumCLIENT:
             driver = self.driver
             driver.get(DISCORD_LOGIN_URL)
             await self.await_load()
-            await self.random_sleep(1, 2)
+            await self.random_sleep(2, 3)
             # Check if already logged in
             if driver.current_url == DISCORD_LOGIN_URL:
                 # Check previous accounts
@@ -514,7 +514,7 @@ class SeleniumCLIENT:
                 await self.slow_type(email_entry, self._username)
                 await self.slow_type(pass_entry, self._password)
 
-                await self.random_sleep(1, 2)
+                await self.random_sleep(2, 3)
                 ActionChains(driver).send_keys(Keys.ENTER).perform()
 
                 await self.await_url_change()
@@ -576,14 +576,14 @@ class SeleniumCLIENT:
             )
             await self.hover_click(join_bnt)
 
-            await self.random_sleep(1, 2)
+            await self.random_sleep(2, 3)
             add_server_bnt = driver.find_element(
                 By.XPATH,
                 "//button[div[text()='Join a Server']]"
             )
             await self.hover_click(add_server_bnt)
 
-            await self.random_sleep(1, 2)
+            await self.random_sleep(2, 3)
             link_input = driver.find_element(
                 By.XPATH,
                 "//input[contains(@placeholder, 'discord.gg')]"
@@ -600,7 +600,7 @@ class SeleniumCLIENT:
 
             await self.await_captcha()
 
-            await self.random_sleep(1, 2)
+            await self.random_sleep(2, 3)
             with suppress(TimeoutException):
                 await self.async_execute(
                     WebDriverWait(driver, WD_TIMEOUT_SHORT).until_not,
@@ -614,7 +614,7 @@ class SeleniumCLIENT:
                 )
 
             # Complete rules
-            await self.random_sleep(1, 2)
+            await self.random_sleep(2, 3)
             # To ensure there is not already an open menu
             ActionChains(driver).send_keys(Keys.ESCAPE).perform()
             with suppress(NoSuchElementException):
@@ -624,7 +624,7 @@ class SeleniumCLIENT:
                 )
                 await self.hover_click(complete_rules_bnt)
 
-            await self.random_sleep(1, 2)
+            await self.random_sleep(2, 3)
             with suppress(NoSuchElementException):
                 checkbox = driver.find_element(
                     By.XPATH,
@@ -632,7 +632,7 @@ class SeleniumCLIENT:
                 )
                 await self.hover_click(checkbox)
 
-            await self.random_sleep(1, 2)
+            await self.random_sleep(2, 3)
             with suppress(NoSuchElementException):
                 submit_bnt = driver.find_element(
                     By.XPATH,
@@ -640,7 +640,7 @@ class SeleniumCLIENT:
                 )
                 await self.hover_click(submit_bnt)
 
-            await self.random_sleep(1, 2)
+            await self.random_sleep(2, 3)
             ActionChains(driver).send_keys(Keys.ESCAPE).perform()
             trace(f"Joined guild with invite: {invite}", TraceLEVELS.DEBUG)
         except WebDriverException as exc:

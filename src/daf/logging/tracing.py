@@ -114,7 +114,7 @@ def trace(message: str,
         )
 
         with GLOBALS.lock:
-            print(TRACE_COLOR_MAP[level] + msg)
+            print(TRACE_COLOR_MAP[level] + msg + "\033[0m")
 
 
 def initialize(level: Union[TraceLEVELS, int, str]):
