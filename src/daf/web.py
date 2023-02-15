@@ -600,6 +600,7 @@ class SeleniumCLIENT:
 
             await self.await_captcha()
 
+            await self.random_sleep(1, 2)
             with suppress(TimeoutException):
                 await self.async_execute(
                     WebDriverWait(driver, WD_TIMEOUT_SHORT).until_not,
