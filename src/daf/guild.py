@@ -316,8 +316,8 @@ class _BaseGUILD:
         int
             Enumerated advertisement result.
         """
-        to_await = []
-        to_remove = []
+        to_advert: List[BaseMESSAGE] = []
+        to_remove: List[BaseMESSAGE] = []
         guild_ctx = self.generate_log_context()
 
         for message in self._messages:
@@ -325,8 +325,7 @@ class _BaseGUILD:
                 to_remove.append(message)
 
             elif message._is_ready():
-                message._reset_timer()
-                to_await.append(message._send())
+                to_advert.append(message)
 
         # Remove prior to awaits to prevent any user tasks
         # from removing the message causing ValueErrors
@@ -337,8 +336,9 @@ class _BaseGUILD:
         # while iterating, this way even if the user removes the message,
         # it will still be shilled but no exceptions will be raised when
         # trying to remove the message.
-        for coro in to_await:
-            result: MessageSendResult = await coro
+        for message in to_advert:
+            result: MessageSendResult = await message._send()
+            message._reset_timer()
             if self.logging and result.result_code != MSG_SEND_STATUS_NO_MESSAGE_SENT:
                 await logging.save_log(guild_ctx, result.message_context)
 

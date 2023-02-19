@@ -329,7 +329,7 @@ class BaseMESSAGE:
 
     def _reset_timer(self) -> None:
         """
-        Resets internal timer
+        Resets internal timer.
         """
         if self.start_period is not None:
             range = map(int, [self.start_period.total_seconds(), self.end_period.total_seconds()])
