@@ -216,19 +216,7 @@ class SeleniumCLIENT:
         args:
             Variadic arguments passed to ``method``.
         """
-        if hasattr(method, "__self__"):
-            name = "{}.{}".format(
-                type(method.__self__).__name__,
-                method.__name__
-            )
-        else:
-            name = method.__name__
-
         loop = asyncio.get_event_loop()
-        trace(
-            f"Executing async in the executor {name}{args}",
-            TraceLEVELS.DEBUG
-        )
         await loop.run_in_executor(None, method, *args)
 
     async def random_server_click(self):
@@ -251,7 +239,7 @@ class SeleniumCLIENT:
         for i, server in enumerate(servers):
             if i == num_to_click:
                 return
-            
+
             await self.hover_click(server)
             await self.random_sleep(0.25, 1)
 
@@ -561,6 +549,8 @@ class SeleniumCLIENT:
         ----------
         RuntimeError
             Internal error ocurred.
+        RuntimeError
+            The user is banned from the guild.
         TimeoutError
             Timed out while waiting for actions to complete.
         """
@@ -599,6 +589,15 @@ class SeleniumCLIENT:
             await self.random_sleep(3, 5)  # Wait for any CAPTCHA to appear
 
             await self.await_captcha()
+
+            # Check if there is error message printed
+            with suppress(NoSuchElementException):
+                driver.find_element(
+                    By.XPATH,
+                    "//span[contains(text() , 'Unable to accept')]"
+                )
+                # Element found -> join error
+                raise RuntimeError(f"The user appears to be banned from the guild w/ invite {invite}")
 
             await self.random_sleep(2, 3)
             with suppress(TimeoutException):
@@ -643,13 +642,19 @@ class SeleniumCLIENT:
             await self.random_sleep(2, 3)
             ActionChains(driver).send_keys(Keys.ESCAPE).perform()
             trace(f"Joined guild with invite: {invite}", TraceLEVELS.DEBUG)
+
         except WebDriverException as exc:
             raise RuntimeError(
                 "Unable to join guild due to internal error."
             ) from exc
 
 
+@misc.doc_category("Web")
 class QuerySortBy(Enum):
+    """
+    Enumerated options that can be passed to the ``sort_by``
+    parameter of :class:`daf.web.GuildDISCOVERY`.
+    """
     TEXT_RELEVANCY = 0
     TOP = auto()
     RECENTLY_CREATED = auto()
@@ -657,7 +662,12 @@ class QuerySortBy(Enum):
     TOTAL_USERS = auto()
 
 
+@misc.doc_category("Web")
 class QueryMembers(Enum):
+    """
+    Enumerated options that can be passed to the ``total_members``
+    parameter of :class:`daf.web.GuildDISCOVERY`.
+    """
     ALL = 0
     SUB_100 = (0, 100)
     B100_1k = (100, 1000)
@@ -687,10 +697,11 @@ class QueryResult:
         return datetime.now() - self.updated > TOP_GG_REFRESH_TIME
 
 
-@misc.doc_category("Clients")
+@misc.doc_category("Web")
 class GuildDISCOVERY:
     """
     Client used for searching servers.
+    To be used with :class:`daf.guild.AutoGUILD`.
 
     Parameters
     ------------
@@ -702,6 +713,7 @@ class GuildDISCOVERY:
         Query parameter for member limit.
     limit: Optional[int]
         The maximum amount of servers to query.
+        Defaults to 15 servers.
     """
     query_cache: Dict[Tuple[str, QuerySortBy, int], QueryResult] = {}
 
@@ -719,7 +731,7 @@ class GuildDISCOVERY:
                  prompt: str,
                  sort_by: Optional[QuerySortBy] = QuerySortBy.TOP,
                  total_members: Optional[QueryMembers] = QueryMembers.ALL,
-                 limit: Optional[int] = 100) -> None:
+                 limit: Optional[int] = 15) -> None:
         self.prompt = prompt
         self.sort_by = sort_by
         self.total_members = total_members
@@ -809,5 +821,5 @@ class GuildDISCOVERY:
                     qr = QueryResult(id_, name, url)
                     result_list.append(qr)
                     yield qr
-
-                await asyncio.sleep(WD_QUERY_SLEEP_S)
+                else:
+                    await asyncio.sleep(WD_QUERY_SLEEP_S)

@@ -39,17 +39,19 @@ for path, dirs, files in os.walk("./"):
                 cp_from = dest["from"]
                 cp_to = dest["to"]
                 _src = [x for x in glob.glob(cp_from, recursive=True) if not os.path.isdir(x)]
-                _dest = [os.path.join(cp_to, "." + m.lstrip(".")) for m in _src]
+                _dest = [os.path.join(cp_to, "./" + m.lstrip("./").lstrip("../")) for m in _src]
                 srcdest = zip(_src, _dest)
                 for fromf, tof in srcdest:
                     if CLEAN:
                         if os.path.exists(tof):
                             os.remove(tof)
                     else:
-                        tof_dir = pathlib.Path(os.path.dirname(tof))
-                        tof_dir.mkdir(parents=True, exist_ok=True)
+                        tof = pathlib.Path(tof)
+                        if tof.is_dir():
+                            tof.mkdir(parents=True, exist_ok=True)
+
                         shutil.copy2(fromf, tof)
-                    
+
 
             # Run scripts
             scripts = setup_file_data["scripts"]

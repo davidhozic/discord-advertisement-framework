@@ -53,7 +53,7 @@ class VoiceMESSAGE(BaseMESSAGE):
 
         - None - Use this value for a fixed (not randomized) sending period
         - timedelta object - object describing time difference, if this is used,
-        then the parameter represents the bottom limit of the **randomized** sending period.
+          then the parameter represents the bottom limit of the **randomized** sending period.
     end_period: Union[int, timedelta]
         If ``start_period`` is not None,
         then this represents the upper limit of randomized time period in which messages will be sent.

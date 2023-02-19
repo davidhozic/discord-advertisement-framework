@@ -84,7 +84,7 @@ def data_function(fnc: Callable):
         a ``data`` parameter to the :ref:`Messages` objects.
 
 
-    .. literalinclude:: ../../../Examples/Message Types/TextMESSAGE/main_data_function.py
+    .. literalinclude:: ../DEP/Examples/Message Types/TextMESSAGE/main_data_function.py
         :language: python
         :emphasize-lines: 11, 24
     """

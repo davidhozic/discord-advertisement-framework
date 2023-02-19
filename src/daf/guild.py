@@ -30,8 +30,8 @@ __all__ = (
 GUILD_ADVERT_STATUS_SUCCESS = 0
 GUILD_ADVERT_STATUS_ERROR_REMOVE_ACCOUNT = None
 
-GUILD_JOIN_INTERVAL = timedelta(seconds=10)
-
+GUILD_JOIN_INTERVAL = timedelta(seconds=15)
+GUILD_MAX_AMOUNT = 100
 
 globals_ = globals()
 prev_val = 0
@@ -107,6 +107,8 @@ class _BaseGUILD:
     @property
     def deleted(self) -> bool:
         """
+        Indicates the status of deletion.
+
         Returns
         -----------
         True
@@ -432,7 +434,6 @@ class GUILD(_BaseGUILD):
         -----------
         ValueError
             Raised when the guild_id wasn't found.
-
         Other
             Raised from .add_message(message_object) method.
         """
@@ -591,10 +592,11 @@ class USER(_BaseGUILD):
 @misc.doc_category("Auto objects")
 class AutoGUILD:
     """
-    .. versionadded:: v2.3
+    .. versionchanged:: v2.5
+        Added ``auto_join`` parameter.
 
-    Used for creating instances that will return
-    guild objects.
+    Internally automatically creates :class:`daf.guild.GUILD` objects.
+    Can also automatically join new guilds (``auto_join`` parameter)
 
     .. CAUTION::
         Any objects passed to AutoGUILD get **deep-copied** meaning,
@@ -630,6 +632,7 @@ class AutoGUILD:
     --------------
     include_pattern: str
         Regex pattern to use for searching guild names that are to be included.
+        This is also checked before joining a new guild if ``auto_guild`` is given.
     exclude_pattern: Optional[str] = None
         Regex pattern to use for searching guild names that are
         **NOT** to be excluded.
@@ -646,7 +649,9 @@ class AutoGUILD:
     interval: Optional[timedelta] = timedelta(minutes=10)
         Interval at which to scan for new guilds
     auto_join: Optional[web.GuildDISCOVERY] = None
-        Optional web.GuildDISCOVERY object which will automatically discover
+        .. versionadded:: v2.5
+
+        Optional :class:`~daf.web.GuildDISCOVERY` object which will automatically discover
         and join guilds though the browser.
         This will open a Google Chrome session.
     """
@@ -713,6 +718,8 @@ class AutoGUILD:
     @property
     def deleted(self) -> bool:
         """
+        Indicates the status of deletion.
+
         Returns
         -----------
         True
@@ -825,8 +832,8 @@ class AutoGUILD:
         for discord_guild in client.guilds:
             if (
                 discord_guild not in self.cache and
-                re.search(self.include_pattern, discord_guild.name) is not None
-                and (
+                re.search(self.include_pattern, discord_guild.name) is not None and
+                (
                     self.exclude_pattern is None or
                     re.search(self.exclude_pattern, discord_guild.name) is None
                 )
@@ -850,19 +857,19 @@ class AutoGUILD:
         # Join Guilds
         discovery = self.auto_join
         selenium: web.SeleniumCLIENT = self.parent.selenium
+        client: discord.Client = self.parent.client
         if (
             discovery is None or  # No auto_join provided
-            self.guild_join_count == discovery.limit
-            or datetime.now() - self.last_guild_join < GUILD_JOIN_INTERVAL
+            self.guild_join_count == discovery.limit or
+            datetime.now() - self.last_guild_join < GUILD_JOIN_INTERVAL or
+            len(client.guilds) == GUILD_MAX_AMOUNT
         ):
             return
 
-        client: discord.Client = self.parent.client
         try:
             # Get next result from top.gg
             yielded: web.QueryResult = await anext(self.guild_query_iter)
             if (
-                client.get_guild(yielded.id) is not None or
                 re.search(self.include_pattern, yielded.name) is None or
                 (
                     self.exclude_pattern is not None and
@@ -871,25 +878,29 @@ class AutoGUILD:
             ):
                 return
 
-            # Join guild thru selenium
+            # Not already joined in the guild
             try:
-                await selenium.random_server_click()
-                await selenium.join_guild(yielded.invite)
-                await asyncio.sleep(1)
                 if client.get_guild(yielded.id) is None:
-                    raise RuntimeError(
-                        "No error detected in browser, "
-                        "but the guild can not be seen by the API wrapper."
-                    )
+                    await selenium.random_server_click()
+                    await selenium.join_guild(yielded.invite)
+                    await asyncio.sleep(1)
+                    if client.get_guild(yielded.id) is None:
+                        raise RuntimeError(
+                            "No error detected in browser,"
+                            "but the guild can not be seen by the API wrapper."
+                        )
             except Exception as exc:
                 trace(
-                    "Joining guild raised an error.",
+                    f"Joining guild raised an error. (Guild '{yielded.name}')",
                     TraceLEVELS.ERROR,
                     exc
                 )
+            else:
+                # Increase the join count if there was no exception (what 'else' does after a try clause),
+                # regardless if the user was already inside the guild or not.
+                self.guild_join_count += 1
+                self.last_guild_join = datetime.now()
 
-            self.last_guild_join = datetime.now()
-            self.guild_join_count += 1
         except StopAsyncIteration:
             self.guild_query_iter = discovery._query_request()
 

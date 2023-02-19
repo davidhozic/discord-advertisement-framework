@@ -186,6 +186,8 @@ class ACCOUNT:
     @property
     def deleted(self) -> bool:
         """
+        Indicates the status of deletion.
+
         Returns
         -----------
         True

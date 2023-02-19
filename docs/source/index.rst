@@ -1,9 +1,7 @@
 =========================================================
 DAF (|version|)
 =========================================================
-The Discord advertisement framework is a  **shilling tool** that allows easy advertising on Discord.
-It's original purpose is to make it easy to shill your NFT project but it is designed in a way that it can 
-be used to advertise anything as long as it is on Discord.
+The Discord advertisement framework is a Python based **shilling framework** that allows easy advertising on Discord.
 
 ---------------------
 Links
@@ -27,16 +25,15 @@ Links
 ----------------------
 Key features
 ----------------------
-- Ability to run on **multiple** accounts at once, either as a **self-bot** (personal account) or a **normal bot** account.
+- Ability to run on **multiple** accounts at once, either on a personal account or as **normal bot** account.
 
 .. caution::
     While running this on user accounts is possible, it is :strong:`not recommended` since it is against Discord's ToS.
     I am not responsible if your account get's disabled for using self-bots!
 
-- Periodic advertisement to **Direct (Private) Messages**, **Text channels** and **Voice channels**
-- **Automatic guild/channel discovery** thru :class:`daf.guild.AutoGUILD` / :class:`daf.message.AutoCHANNEL`
-- Dynamically obtained shill data
-- Error recovery
+- Periodic advertisement to different channels,
+- Login with username/password - :ref:`Automatic login`,
+- Automatic guild discovery and join - :ref:`Automatic guild discovery and join`,
 - Logging of sent messages (including SQL) - :ref:`Logging`
 - Async framework
 - Easy to setup, with minimal code

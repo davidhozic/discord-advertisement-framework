@@ -53,7 +53,7 @@ class TextMESSAGE(BaseMESSAGE):
 
         - None - Use this value for a fixed (not randomized) sending period
         - timedelta object - object describing time difference,
-        if this is used, then the parameter represents the bottom limit of the **randomized** sending period.
+          if this is used, then the parameter represents the bottom limit of the **randomized** sending period.
     end_period: Union[int, timedelta]
         If ``start_period`` is not None,
         then this represents the upper limit of randomized time period in which messages will be sent.
@@ -385,6 +385,7 @@ class TextMESSAGE(BaseMESSAGE):
         Sends data to specific channel
 
         Returns a dictionary:
+
         - "success" - Returns True if successful, else False
         - "reason"  - Only present if "success" is False, contains the Exception returned by the send attempt
 
@@ -560,7 +561,7 @@ class DirectMESSAGE(BaseMESSAGE):
 
         - None - Use this value for a fixed (not randomized) sending period
         - timedelta object - object describing time difference, if this is used,
-        then the parameter represents the bottom limit of the **randomized** sending period.
+          then the parameter represents the bottom limit of the **randomized** sending period.
 
     end_period: Union[int, timedelta]
         If ``start_period`` is not None, then this represents the upper limit of randomized time period
@@ -589,13 +590,13 @@ class DirectMESSAGE(BaseMESSAGE):
         The data parameter is the actual data that will be sent using discord's API.
         The data types of this parameter can be:
 
-            - str (normal text),
-            - :class:`discord.Embed`,
-            - :ref:`FILE`,
-            - List/Tuple containing any of the above arguments
-              (There can up to 1 string, up to 1 :class:`discord.Embed` and up to 10 :ref:`FILE` objects.
-            - Function that accepts any amount of parameters and returns any of the above types.
-              To pass a function, YOU MUST USE THE :ref:`data_function` decorator on the function.
+        - str (normal text),
+        - :class:`discord.Embed`,
+        - :ref:`FILE`,
+        - List/Tuple containing any of the above arguments
+          (There can up to 1 string, up to 1 :class:`discord.Embed` and up to 10 :ref:`FILE` objects.
+        - Function that accepts any amount of parameters and returns any of the above types.
+          To pass a function, YOU MUST USE THE :ref:`data_function` decorator on the function.
 
     mode: Optional[str]
         Parameter that defines how message will be sent to a channel.
