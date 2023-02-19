@@ -8,11 +8,13 @@ Input
 --scripts-to-run
     The scripts to run.
 """
+from pathlib import Path
+
 import subprocess
+import re
 import os
 import glob
 import shutil
-import pathlib
 import json
 import sys
 
@@ -38,20 +40,22 @@ for path, dirs, files in os.walk("./"):
             for dest in destinations:
                 cp_from = dest["from"]
                 cp_to = dest["to"]
-                _src = [x for x in glob.glob(cp_from, recursive=True) if not os.path.isdir(x)]
-                _dest = [os.path.join(cp_to, "./" + m.lstrip("./").lstrip("../")) for m in _src]
+                if re.search(r"\.[A-z]+$", cp_to) is None:  # The path does not have extension -> assume a dir
+                    _src = [x for x in glob.glob(cp_from, recursive=True) if os.path.isfile(x)]
+                    _dest = [os.path.join(cp_to, m.lstrip("./").lstrip("../")) for m in _src]
+                else:
+                    _src = [cp_from]
+                    _dest = [cp_to]
+
                 srcdest = zip(_src, _dest)
                 for fromf, tof in srcdest:
                     if CLEAN:
                         if os.path.exists(tof):
                             os.remove(tof)
                     else:
-                        tof = pathlib.Path(tof)
-                        if tof.is_dir():
-                            tof.mkdir(parents=True, exist_ok=True)
-
+                        tof_dir = Path(os.path.dirname(tof))
+                        tof_dir.mkdir(parents=True, exist_ok=True)
                         shutil.copy2(fromf, tof)
-
 
             # Run scripts
             scripts = setup_file_data["scripts"]
