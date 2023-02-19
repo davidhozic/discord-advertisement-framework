@@ -1,8 +1,10 @@
 **/__pycache__/**
-venv/**
+dist/**
+build**
+**egg-info**
 
-settings.json
-src/test.py
+.vscode
+.idea
 
 docs/build
 docs/source/reference/
@@ -12,3 +14,6 @@ docs/thesis/reference/
 
 docs/common/reference
 **/DEP/**
+
+daf_web_data
+test.py

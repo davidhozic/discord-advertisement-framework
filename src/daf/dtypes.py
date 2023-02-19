@@ -2,17 +2,11 @@
     The module contains definitions regarding the data types
     you can send using the xxxMESSAGE objects.
 """
-from typing import Any, Callable, List, Union, TypeVar, Coroutine
-from contextlib import suppress
+from typing import Any, Callable, TypeVar, Coroutine
 from typeguard import typechecked
 from urllib.parse import urlparse
-from .logging.tracing import trace, TraceLEVELS
 
 from . import misc
-
-import copy
-import datetime
-import _discord as discord
 
 
 T = TypeVar("T")
@@ -20,19 +14,19 @@ T = TypeVar("T")
 __all__ = (
     "data_function",
     "_FunctionBaseCLASS",
-    "EMBED",
     "FILE",
     "AUDIO"
 )
+
 
 class GLOBALS:
     "Storage class used for storing global variables"
     voice_installed: bool = False
 
+
 # --------------------------------- Optional modules --------------------------------- #
 try:
     import yt_dlp
-    import nacl
     GLOBALS.voice_installed = True
 except ModuleNotFoundError:
     GLOBALS.voice_installed = False
@@ -51,12 +45,13 @@ class _FunctionBaseCLASS:
     the object to it's class or to the base class from which the object class is inherited from.
     """
 
+
 @misc.doc_category("Message data types")
 def data_function(fnc: Callable):
     """
     Decorator used for wrapping a function that will return data to send when the message is ready.
 
-    The ``fnc`` function must return data that is of type that the **x**\ MESSAGE object supports.
+    The ``fnc`` function must return data that is of type that the **x**\\ MESSAGE object supports.
     **If the type returned is not valid, the send attempt will simply be ignored and nothing will be logged at at**,
     this is useful if you want to use the ``fnc`` function to control whenever the message is ready to be sent.
     For example: if we have a function defined like this:
@@ -67,12 +62,13 @@ def data_function(fnc: Callable):
         @daf.data_function
         def get_data():
             return None
-    
+
         ...
         daf.TextMESSAGE(..., data=get_data())
         ...
 
-    then no messages will ever be sent, nor will any logs be made since invalid values are simply ignored by the framework.
+    then no messages will ever be sent,
+    nor will any logs be made since invalid values are simply ignored by the framework.
 
 
 
@@ -88,7 +84,7 @@ def data_function(fnc: Callable):
         a ``data`` parameter to the :ref:`Messages` objects.
 
 
-    .. literalinclude:: ../../../Examples/Message Types/TextMESSAGE/main_data_function.py
+    .. literalinclude:: ../DEP/Examples/Message Types/TextMESSAGE/main_data_function.py
         :language: python
         :emphasize-lines: 11, 24
     """
@@ -124,7 +120,7 @@ def data_function(fnc: Callable):
             if isinstance(_, Coroutine):
                 return await _
             return _
-        
+
         def __str__(self) -> str:
             return self.func_name
 
@@ -134,96 +130,6 @@ def data_function(fnc: Callable):
 #######################################################################
 # Other
 #######################################################################
-@typechecked
-class EMBED(discord.Embed):
-    """
-
-    .. deprecated:: v2.2
-        Use :class:`discord.Embed` instead.
-    
-    .. WARNING::
-        USING this is NOT recommended as it is planned for removal.
-        Use :class:`discord.Embed` instead.
-
-    Derived class of :class:`discord.Embed` created to provide additional arguments in the creation.
-
-    **Original parameters** from **PyCord**: `PyCord docs <https://docs.pycord.dev/en/master/api.html?highlight=discord%20embed#discord.Embed>`_
-
-    Parameters
-    -------------
-    author_name: str
-        Name of embed author
-    author_icon: str
-        Url to author image.
-    image: str
-        Url of image to be placed at the end of the embed.
-    thumbnail: str
-        Url of image that will be placed at the top right of embed.
-    """
-    __slots__ = discord.Embed.__slots__
-    # Static members
-    Color = Colour = discord.Color  # Used for color parameter
-    EmptyEmbed = discord.embeds.EmptyEmbed
-
-    @staticmethod
-    def from_discord_embed(_object : discord.Embed):
-        """
-        Creates an EMBED object from a discord.Embed object
-
-        Parameters
-        ------------
-        _object: discord.Embed
-            The Discord Embed object you want converted into a daf.discord.Embed object.
-        """
-        ret = EMBED()
-        # Copy attributes but not special methods to the new EMBED. "dir" is used instead of "vars" because the object does not support the function.
-        for key in dir(_object):
-            if not key.startswith("__") and not key.endswith("__"):
-                with suppress(AttributeError,TypeError):
-                    if (not callable(getattr(_object, key))
-                        and not isinstance(getattr(_object.__class__, key), property)
-                        and getattr(_object,key) is not discord.embeds.EmptyEmbed
-                    ):
-                        setattr(ret, key, copy.deepcopy(getattr(_object,key)))
-
-        return ret
-
-    def __init__(self, *,
-                # Additional parameters
-                author_name: str=None,
-                author_icon: str=EmptyEmbed,
-                image: str= None,
-                thumbnail : str = None,
-                fields : List[discord.EmbedField] = None,
-                # Base class parameters
-                colour: Union[int, Colour] = EmptyEmbed,
-                color: Union[int, Colour] = EmptyEmbed,
-                title: str = EmptyEmbed,
-                type : str = "rich",
-                url: str= EmptyEmbed,
-                description = EmptyEmbed,
-                timestamp: datetime.datetime = None):
-
-        trace("DEPRECATED! Using EMBED is deprecated since v2.2, please use discord.Embed:\
-            \n\nfrom daf import discord\n\ndiscord.Embed(...)", TraceLEVELS.DEPRECATED)
-        super().__init__(colour=colour,
-                         color=color,
-                         title=title,
-                         type=type,
-                         url=url,
-                         description=description,
-                         timestamp=timestamp,
-                         fields=fields)
-        ## Set author
-        if author_name is not None:
-            self.set_author(name=author_name, icon_url=author_icon)
-        ## Set image
-        if image is not None:
-            self.set_image(url=image)
-        ## Set thumbnail
-        if thumbnail is not None:
-            self.set_thumbnail(url=thumbnail)
-
 @typechecked
 @misc.doc_category("Message data types")
 class FILE:
@@ -241,10 +147,11 @@ class FILE:
          Path to the file you want sent.
     """
     __slots__ = ("filename",)
+
     def __init__(self,
                  filename: str):
         self.filename = filename
-    
+
     def __str__(self) -> str:
         return f"FILE(filename={self.filename})"
 
@@ -281,22 +188,25 @@ class AUDIO:
         "no_warnings": True,
         "default_search": "auto"
     }
+
     def __init__(self, filename: str) -> None:
         self.orig = filename
         self.is_stream = False
 
         if not GLOBALS.voice_installed:
-            raise ModuleNotFoundError("You need to install extra requirements: pip install discord-advert-framework[voice]")
+            raise ModuleNotFoundError(
+                "You need to install extra requirements: pip install discord-advert-framework[voice]"
+            )
 
-        url_info = urlparse(filename) # Check if it's youtube
+        url_info = urlparse(filename)  # Check if it's youtube
         if "www.youtube.com" == url_info.hostname:
             try:
                 self.is_stream = True
                 youtube_dl = yt_dlp.YoutubeDL(params=self.ytdl_options)
                 data = youtube_dl.extract_info(filename, download=False)
                 if "entries" in data:
-                    data = data["entries"][0] # Is a playlist, get the first entry
-        
+                    data = data["entries"][0]  # Is a playlist, get the first entry
+
                 self.url = data["url"]
                 self.title = data["title"]
 
@@ -309,7 +219,7 @@ class AUDIO:
                     pass
             except FileNotFoundError:
                 raise ValueError(f"The file {self.url} could not be found.")
-    
+
     def __str__(self):
         return f"AUDIO({str(self.to_dict())})"
 
@@ -323,11 +233,11 @@ class AUDIO:
         """
         if self.is_stream:
             return {
-                "type:" : "Youtube",
+                "type:": "Youtube",
                 "title": self.title,
                 "url": self.orig
             }
         return {
-            "type:" : "File",
+            "type:": "File",
             "filename": self.orig
         }

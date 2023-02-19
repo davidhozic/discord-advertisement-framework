@@ -4,7 +4,7 @@ DAF
 .. image:: docs/source/images/logo.png
     :width: 100
     
-The Discord advertisement framework is a  **shilling tool** that allows easy advertising on Discord.
+The Discord advertisement framework is a  **shilling framework** that allows easy advertising on Discord.
 
 ----------------------
 Other information

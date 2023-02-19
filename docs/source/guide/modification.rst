@@ -68,7 +68,7 @@ The function can be used to add the following object types:
 
 .. only:: html
 
-    .. literalinclude:: ../../../Examples/Dynamic Modification/main_add_object.py
+    .. literalinclude:: ../DEP/Examples/Dynamic Modification/main_add_object.py
         :language: python
 
 
@@ -80,7 +80,7 @@ Objects can be removed with the :func:`daf.core.remove_object`.
 
 .. only:: html
 
-    .. literalinclude:: ../../../Examples/Dynamic Modification/main_remove_object.py
+    .. literalinclude:: ../DEP/Examples/Dynamic Modification/main_remove_object.py
         :language: python
 
 
@@ -129,7 +129,7 @@ For a full list of objects that support ``.update`` search ".update" in the sear
 
 .. only:: html
     
-    .. literalinclude:: ../../../Examples/Dynamic Modification/main_update.py
+    .. literalinclude:: ../DEP/Examples/Dynamic Modification/main_update.py
         :language: python
         
 

@@ -1,4 +1,5 @@
-**Discord Advertisement Framework Licence:**<br>
+**DAF License**
+
 MIT License
 
 Copyright (c) 2022 David Hozic
@@ -20,14 +21,19 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-***
+
+<br><br><br>
+
+**PyCord (API Wrapper) License:**
+
+*Concerns only src/_discord/ folder*
+<br>
 <br>
 
-**PyCord Licence:**<br>
 The MIT License (MIT)
 
-Copyright (c) 2015-2021 Rapptz <br>
-Copyright (c) 2021-present Pycord Development<br>
+Copyright (c) 2015-2021 Rapptz
+Copyright (c) 2021-present Pycord Development
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -46,3 +52,4 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
+
