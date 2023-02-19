@@ -131,6 +131,18 @@ class TextMESSAGE(BaseMESSAGE):
         # Dictionary for storing last sent message for each channel
         self.sent_messages: Dict[int, discord.Message] = {}
 
+    @property
+    def _slowmode(self) -> timedelta:
+        """
+        The maximum slowmode delay of the message's channels.
+
+        Returns
+        ----------
+        timedelta
+            The maximum slowmode delay of all channels.
+        """
+        return timedelta(seconds=max((c.slowmode_delay for c in self.channels), default=0))
+
     def _check_state(self) -> bool:
         """
         Checks if the message is ready to be deleted.
@@ -158,7 +170,7 @@ class TextMESSAGE(BaseMESSAGE):
                 ):
                     self.channels.remove(channel)
 
-    def _check_period(self, slowmode_delay: timedelta):
+    def _check_period(self):
         """
         Helper function used for checking the the period is lower
         than the slow mode delay.
@@ -170,7 +182,7 @@ class TextMESSAGE(BaseMESSAGE):
         slowmode_delay: timedelta
             The (maximum) slowmode delay.
         """
-        slowmode_delay += timedelta(seconds=1)
+        slowmode_delay = self._slowmode
         if self.start_period is not None:
             if self.start_period < slowmode_delay:
                 self.start_period, self.end_period = (
@@ -179,6 +191,8 @@ class TextMESSAGE(BaseMESSAGE):
                 )
         elif self.end_period < slowmode_delay:
             self.end_period = slowmode_delay
+
+        self.period = self.end_period
 
     def generate_log_context(self,
                              text: Optional[str],
@@ -339,8 +353,7 @@ class TextMESSAGE(BaseMESSAGE):
                 raise ValueError(f"No valid channels were passed to {self} object")
 
         # Increase period to slow mode delay if it is lower
-        slowmode_delay = timedelta(seconds=max(*[channel.slowmode_delay for channel in self.channels], 0, 0))
-        self._check_period(slowmode_delay)
+        self._check_period()
 
     async def _handle_error(self, channel: Union[discord.TextChannel, discord.Thread], ex: Exception) -> bool:
         """
@@ -366,8 +379,7 @@ class TextMESSAGE(BaseMESSAGE):
                 if ex.code == 20016:    # Slow Mode
                     self.next_send_time = datetime.now() + timedelta(seconds=retry_after)
                     trace(f"{channel.name} is in slow mode, retrying in {retry_after} seconds", TraceLEVELS.WARNING)
-                    slowmode_delay = timedelta(seconds=channel.slowmode_delay)
-                    self._check_period(slowmode_delay)  # Fix the period
+                    self._check_period()  # Fix the period
 
             elif ex.status == 404:      # Unknown object
                 if ex.code == 10008:    # Unknown message
@@ -375,6 +387,18 @@ class TextMESSAGE(BaseMESSAGE):
                     handled = True
 
         return handled
+
+    def _reset_timer(self) -> None:
+        """
+        Resets internal timer, adjusts if the slowmode is lesser.
+        """
+        # Reset the timer
+        super()._reset_timer()
+        # Correct for slowmode
+        slowmode_delay = self._slowmode
+        current_time = datetime.now()
+        if self.next_send_time - current_time < slowmode_delay:
+            self.next_send_time = current_time + slowmode_delay
 
     async def _send_channel(self,
                             channel: Union[discord.TextChannel, discord.Thread, None],
@@ -424,7 +448,7 @@ class TextMESSAGE(BaseMESSAGE):
                     )
 
                 # Check if channel still exists in cache (has not been deleted)
-                if self.parent.parent.client.get_channel(channel.id) is None:
+                if client_.get_channel(channel.id) is None:
                     raise self._generate_exception(404, 10003, "Channel was deleted", discord.NotFound)
 
                 # Delete previous message if clear-send mode is chosen and message exists
