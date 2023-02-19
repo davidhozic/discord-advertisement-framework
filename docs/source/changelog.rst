@@ -35,6 +35,7 @@ v2.5
 ==========
 - |BREAK_CH| Removed ``EMBED`` object, use ``daf.discord.Embed`` instead.
 - |BREAK_CH| Removed ``timing`` module since it only contained deprecated objects.
+- |BREAK_CH| Minumum Python version has been bumbed to **Python v3.10**.
 - WEB INTEGRATION:
   
   - Automatic login and (semi-automatic) guild join though :class:`daf.web.SeleniumCLIENT`.
