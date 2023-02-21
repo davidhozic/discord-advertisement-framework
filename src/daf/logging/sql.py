@@ -47,9 +47,9 @@ DIALECT_CONN_MAP = {
 # ------------------------------------ Optional ------------------------------------
 try:
     from sqlalchemy import (
-                            SmallInteger, Integer, BigInteger, DateTime,
-                            Sequence, String, JSON, select, text, ForeignKey, Column
-                        )
+        SmallInteger, Integer, BigInteger, DateTime,
+        Sequence, String, JSON, select, text, ForeignKey
+    )
     from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
     from sqlalchemy.engine import URL as SQLURL, create_engine
     from sqlalchemy.exc import SQLAlchemyError
@@ -148,7 +148,7 @@ class TableCache:
         """
         if len(self.data) == self.limit:
             # Remove 1/4 of the cache
-            for i in range(int(len(self.data)/4)):
+            for i in range(int(len(self.data) / 4)):
                 self.remove()
 
         if key in self.data:
@@ -988,11 +988,15 @@ if SQL_INSTALLED:
 
         __tablename__ = "MessageLOG"
 
-        id = mapped_column(Integer, Sequence("ml_seq", 0, 1, minvalue=0, maxvalue=2147483647, cycle=True), primary_key=True)
+        id = mapped_column(
+            Integer,
+            Sequence("ml_seq", 0, 1, minvalue=0, maxvalue=2147483647, cycle=True),
+            primary_key=True
+        )
         sent_data_id: Mapped[int] = mapped_column(ForeignKey("DataHISTORY.id"))
         message_type_id: Mapped[int] = mapped_column(ForeignKey("MessageTYPE.id"))
         guild_id: Mapped[int] = mapped_column(ForeignKey("GuildUSER.id"))
-        message_mode_id: Mapped[int] = mapped_column(ForeignKey("MessageMODE.id")) # [TextMESSAGE, DirectMESSAGE]
+        message_mode_id: Mapped[int] = mapped_column(ForeignKey("MessageMODE.id"))  # [TextMESSAGE, DirectMESSAGE]
         dm_reason = mapped_column(String(3072))  # [DirectMESSAGE]
         timestamp = mapped_column(DateTime)
 
