@@ -207,13 +207,11 @@ class AUDIO:
                 if "entries" in data:
                     data = data["entries"][0]  # Is a playlist, get the first entry
 
-                self.url = data["url"]
                 self.title = data["title"]
 
             except yt_dlp.DownloadError:
                 raise ValueError(f'The audio from "{self.orig}" could not be streamed')
         else:
-            self.url = filename
             try:
                 with open(self.url):
                     pass
@@ -222,6 +220,23 @@ class AUDIO:
 
     def __str__(self):
         return f"AUDIO({str(self.to_dict())})"
+
+    @property
+    def url(self):
+        if self.is_stream:
+            try:
+                youtube_dl = yt_dlp.YoutubeDL(params=self.ytdl_options)
+                data = youtube_dl.extract_info(self.orig, download=False)
+                if "entries" in data:
+                    data = data["entries"][0]  # Is a playlist, get the first entry
+
+                self.title = data["title"]
+                return data["url"]
+
+            except yt_dlp.DownloadError:
+                raise ValueError(f'The audio from "{self.orig}" could not be streamed')
+        else:
+            return self.orig
 
     def to_dict(self):
         """

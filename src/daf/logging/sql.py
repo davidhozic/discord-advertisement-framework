@@ -996,7 +996,7 @@ if SQL_INSTALLED:
         sent_data_id: Mapped[int] = mapped_column(ForeignKey("DataHISTORY.id"))
         message_type_id: Mapped[int] = mapped_column(ForeignKey("MessageTYPE.id"))
         guild_id: Mapped[int] = mapped_column(ForeignKey("GuildUSER.id"))
-        message_mode_id: Mapped[int] = mapped_column(ForeignKey("MessageMODE.id"))  # [TextMESSAGE, DirectMESSAGE]
+        message_mode_id: Mapped[int] = mapped_column(ForeignKey("MessageMODE.id"), nullable=True)  # [TextMESSAGE, DirectMESSAGE]
         dm_reason = mapped_column(String(3072))  # [DirectMESSAGE]
         timestamp = mapped_column(DateTime)
 
