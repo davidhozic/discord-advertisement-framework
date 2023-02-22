@@ -13,7 +13,8 @@ from .. import misc
 try:
     from enum_tools.documentation import document_enum
 except ImportError:
-    document_enum = lambda x: x # This is only needed for documentation
+    def x(x): return x  # This is only needed for documentation
+    document_enum = x
 
 __all__ = (
     "TraceLEVELS",
@@ -21,13 +22,8 @@ __all__ = (
 )
 
 
-C_TRACE_FORMAT = \
-"""
-Date: {date}
-Level: {level}
-Reason: {reason}
-Message: [{module}] {message}
-"""
+C_TRACE_FORMAT = "[{date}] ({level}) | {module}: {message} ({reason})"
+
 
 @document_enum
 @misc.doc_category("Logging reference")
@@ -40,7 +36,7 @@ class TraceLEVELS(IntEnum):
     .. versionchanged:: v2.3
         Added DEPRECATION
     """
-    
+
     DEPRECATED = 0
     """
     Show only deprecation notices.
@@ -63,39 +59,50 @@ class TraceLEVELS(IntEnum):
     """
 
 
+TRACE_COLOR_MAP = {
+    TraceLEVELS.DEPRECATED: "\u001b[30m",
+    TraceLEVELS.ERROR:  "\u001b[31m",
+    TraceLEVELS.WARNING:  "\u001b[33m",
+    TraceLEVELS.NORMAL:  "\u001b[37m",
+    TraceLEVELS.DEBUG:  "\u001b[36m",
+}
+
+
 class GLOBALS:
     """Storage class used for storing global variables of the module."""
     set_level = TraceLEVELS.DEPRECATED
-    lock = Lock() # For print thread safety
+    lock = Lock()  # For print thread safety
 
 
 @misc.doc_category("Logging reference")
 def trace(message: str,
           level: Union[TraceLEVELS, int] = TraceLEVELS.NORMAL,
-          reason: Optional[str] = None):
+          reason: Optional[Exception] = None):
     """
-    | Prints a trace to the console.
-    | This is thread safe.
+    Prints a trace to the console.
+    This is thread safe.
 
     .. versionchanged:: v2.3
-        
+
         .. card::
-        
+
             Will only print if the level is lower than the configured
             (thru :func:`~daf.core.run`'s debug parameter max level.
 
-            Eg. if the max level is :class:`~daf.logging.tracing.TraceLEVELS.ERROR`, then the 
+            Eg. if the max level is :class:`~daf.logging.tracing.TraceLEVELS.ERROR`, then the
             level parameter needs to be either :class:`~daf.logging.tracing.TraceLEVELS.DEPRECATED`
-            or :class:`~daf.logging.tracing.TraceLEVELS.ERROR`, 
+            or :class:`~daf.logging.tracing.TraceLEVELS.ERROR`,
             else nothing will be printed.
 
-    
+
     Parameters
     --------------
     message: str
         Trace message.
     level: TraceLEVELS | int
         Level of the trace. Defaults to TraceLEVELS.NORMAL.
+    reason: Optional[Exception]
+        Optional exception object, which caused the prinout.
     """
     if GLOBALS.set_level >= level:
         frame = _getframe(1)
@@ -107,8 +114,9 @@ def trace(message: str,
                 module=module,
                 message=message
         )
+
         with GLOBALS.lock:
-            print(msg)
+            print(TRACE_COLOR_MAP[level] + msg + "\033[0m")
 
 
 def initialize(level: Union[TraceLEVELS, int, str]):

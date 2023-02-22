@@ -1,0 +1,46 @@
+diff --git a/src/_discord/interactions.py b/src/_discord/interactions.py
+index 462d613..fcec91a 100644
+--- a/src/_discord/interactions.py
++++ b/src/_discord/interactions.py
+@@ -154,13 +154,14 @@ class Interaction:
+ 
+     def _from_data(self, data: InteractionPayload):
+         self.id: int = int(data["id"])
+-        self.type: InteractionType = try_enum(InteractionType, data["type"])
++        self.type: InteractionType = try_enum(InteractionType, data.get("type"))
+         self.data: InteractionData | None = data.get("data")
+-        self.token: str = data["token"]
+-        self.version: int = data["version"]
++        self.token: str = data.get("token")
++        self.version: int = data.get("version")
+         self.channel_id: int | None = utils._get_as_snowflake(data, "channel_id")
+         self.guild_id: int | None = utils._get_as_snowflake(data, "guild_id")
+-        self.application_id: int = int(data["application_id"])
++        app_id = data.get("application_id")
++        self.application_id: int = int(app_id) if app_id is not None else -1
+         self.locale: str | None = data.get("locale")
+         self.guild_locale: str | None = data.get("guild_locale")
+         self.custom_id: str | None = (
+diff --git a/src/_discord/state.py b/src/_discord/state.py
+index 6cd46ba..d8cb498 100644
+--- a/src/_discord/state.py
++++ b/src/_discord/state.py
+@@ -793,14 +793,14 @@ class ConnectionState:
+ 
+     def parse_interaction_create(self, data) -> None:
+         interaction = Interaction(data=data, state=self)
+-        if data["type"] == 3:  # interaction component
+-            custom_id = interaction.data["custom_id"]  # type: ignore
+-            component_type = interaction.data["component_type"]  # type: ignore
++        if data.get("type") == 3:  # interaction component
++            custom_id = interaction.data.get("custom_id")  # type: ignore
++            component_type = interaction.data.get("component_type")  # type: ignore
+             self._view_store.dispatch(component_type, custom_id, interaction)
+         if interaction.type == InteractionType.modal_submit:
+             user_id, custom_id = (
+                 interaction.user.id,
+-                interaction.data["custom_id"],
++                interaction.data.get("custom_id"),
+             )
+             asyncio.create_task(
+                 self._modal_store.dispatch(user_id, custom_id, interaction)

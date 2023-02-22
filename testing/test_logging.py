@@ -60,9 +60,10 @@ async def test_logging_json(channels, guilds, accounts):
 
         for d in data:
             await tm.update(data=d)
-            message_context = await tm._send() 
-            await daf.logging.save_log(guild_context, message_context)
-            check_json_results(message_context)
+            result = await tm._send() 
+            message_ctx = result.message_context
+            await daf.logging.save_log(guild_context, message_ctx)
+            check_json_results(message_ctx)
     finally:
         shutil.rmtree("./History", ignore_errors=True)
 
@@ -94,7 +95,8 @@ async def test_logging_sql(channels, guilds, accounts):
 
         for d in data:
             await tm.update(data=d)
-            message_context = await tm._send()
-            await daf.logging.save_log(guild_context, message_context)
+            result = await tm._send()
+            message_ctx = result.message_context
+            await daf.logging.save_log(guild_context, message_ctx)
     finally:
         os.remove("./testdb.db")

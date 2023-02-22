@@ -11,3 +11,4 @@ This section contains the guide to using this framework.
     logging
     modification
     autogen
+    web

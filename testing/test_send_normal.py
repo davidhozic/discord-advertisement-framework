@@ -34,7 +34,8 @@ async def test_text_message_send(channels: Tuple[daf.discord.ChannelType], guild
 
     # TextMESSAGE send
     result = await text_message._send()
-    sent_data_result = result["sent_data"]
+    message_ctx = result.message_context
+    sent_data_result = message_ctx["sent_data"]
             
     # Check results
     for message in text_message.sent_messages.values():
@@ -44,11 +45,12 @@ async def test_text_message_send(channels: Tuple[daf.discord.ChannelType], guild
             assert sent_data_result["embed"] in [e.to_dict() for e in message.embeds], "TextMESSAGE embed not in message embeds"
 
 
-    assert len(result["channels"]["failed"]) == 0, "Failed to send to all channels"
+    assert len(message_ctx["channels"]["failed"]) == 0, "Failed to send to all channels"
 
     # DirectMESSAGE send
-    result, _panic = await direct_message._send()
-    sent_data_result = result["sent_data"]
+    result = await direct_message._send()
+    message_ctx = result.message_context
+    sent_data_result = message_ctx["sent_data"]
             
     # Check results
     message = direct_message.previous_message
@@ -57,7 +59,7 @@ async def test_text_message_send(channels: Tuple[daf.discord.ChannelType], guild
     if "embed" in sent_data_result:
         assert sent_data_result["embed"] in [e.to_dict() for e in message.embeds], "DirectMESSAGE embed not in message embeds"
 
-    assert result["success_info"]["success"], "Failed to send to all channels"
+    assert message_ctx["success_info"]["success"], "Failed to send to all channels"
 
 
 @pytest.mark.asyncio
@@ -80,9 +82,10 @@ async def test_voice_message_send(channels: Tuple[daf.discord.ChannelType], guil
     # Send
     start_time = time.time()
     result = await voice_message._send()
+    message_ctx = result.message_context
     end_time = time.time()
 
     # Check results
     assert end_time - start_time >= VOICE_MESSAGE_TEST_LENGTH * len(voice_channels), "Message was not played till the end."
-    assert len(result["channels"]["failed"]) == 0, "Failed to send to all channels"
+    assert len(message_ctx["channels"]["failed"]) == 0, "Failed to send to all channels"
 

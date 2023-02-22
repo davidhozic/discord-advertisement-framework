@@ -31,6 +31,16 @@ Glossary
 ----------------------
 Releases
 ----------------------
+v2.5
+==========
+- |BREAK_CH| Removed ``EMBED`` object, use ``daf.discord.Embed`` instead.
+- |BREAK_CH| Removed ``timing`` module since it only contained deprecated objects.
+- |BREAK_CH| Minumum Python version has been bumbed to **Python v3.10**.
+- WEB INTEGRATION:
+  
+  - Automatic login and (semi-automatic) guild join though :class:`daf.web.SeleniumCLIENT`.
+  - Automatic server discovery though :class:`daf.web.GuildDISCOVERY`
+
 
 v2.4.3
 =========
@@ -38,7 +48,7 @@ v2.4.3
 
 
 v2.4.2 (v2.3.4)
-=============
+=================
 - Fixed channel verification bug:
 
   - Fixes bug where messages try to be sent into channels that have not passed verification (complete button)

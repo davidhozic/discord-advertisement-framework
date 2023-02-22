@@ -5,8 +5,9 @@
 # from the environment for the first two.
 SPHINXOPTS    ?=
 SPHINXBUILD   ?= sphinx-build
-SOURCEDIR     = source
-BUILDDIR      = build
+SOURCEDIR     ?= source
+BUILDDIR      ?= build
+
 
 # Put it first so that "make" without argument is like "make help".
 help:
@@ -18,9 +19,13 @@ help:
 # "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).
 
 clean:
-	rm -rf $(SOURCEDIR)/reference
+	python3 ./setup.py --clean
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
+pdf: latex
+	docker run --rm -v $(CURDIR)/build/latex:/home/ -w /home/ texlive/texlive make all-pdf
+
+
 %: Makefile
-	python3 scripts/generate_autodoc.py
+	python3 ./setup.py
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)

@@ -1,5 +1,7 @@
 version: 2
-formats: []
+formats: [
+  "pdf"
+]
 
 sphinx:
   configuration: docs/source/conf.py
@@ -7,9 +9,11 @@ sphinx:
 
 build:
   os: ubuntu-22.04
+  apt_packages:
+    - inkscape
   tools:
-    python: "3.8"
+    python: "3.10"
   jobs:
     pre_build:
       - pip install .[all] .[docs]
-      - python3 ./docs/scripts/generate_autodoc.py
+      - python3 ./docs/setup.py

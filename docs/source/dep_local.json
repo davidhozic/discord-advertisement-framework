@@ -1,0 +1,7 @@
+{
+    "copy": [
+        {"from": "../images/*", "to": "./DEP/"},
+        {"from": "../../Examples/**", "to":"./DEP/"}
+    ],
+    "scripts": ["./scripts/generate_autodoc.py"]
+}
