@@ -1,0 +1,51 @@
+[build-system]
+requires = [
+    "setuptools>=62.6,<66",
+    "setuptools-scm>=6.2,<8",
+    "wheel",
+]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "discord-advert-framework"
+authors = [
+    {name = "David Hozic"}
+]
+description = "Framework for periodic advertisements on Discord"
+readme = "README.rst"
+requires-python = ">=3.10"
+keywords = ["Discord", "Advertising", "Framework", "NFT", "Shilling"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+dynamic = ["dependencies", "optional-dependencies", "version"]
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.dynamic]
+dependencies = {file = "requirements/mandatory.txt"}
+version = {attr = "daf.VERSION"}
+
+[tool.setuptools.dynamic.optional-dependencies]
+docs = {file = "requirements/docs.txt"}
+voice = {file = "requirements/voice.txt"}
+sql = {file = "requirements/sql.txt"}
+testing = {file = "requirements/testing.txt"}
+web = {file = "requirements/web.txt"}
+[tool.setuptools.dynamic.optional-dependencies.all]
+file = [
+    "requirements/voice.txt",
+    "requirements/sql.txt",
+    "requirements/web.txt"
+]
+
+
+
+[tool.setuptools.packages.find]
+where = [
+    "src"
+]

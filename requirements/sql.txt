@@ -1,0 +1,5 @@
+sqlalchemy[asyncio]>=2.0
+aiosqlite
+pymssql
+asyncpg
+asyncmy

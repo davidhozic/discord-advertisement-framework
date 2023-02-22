@@ -1,0 +1,8 @@
+sphinx
+sphinx-autobuild
+sphinx-copybutton
+furo
+enum-tools[sphinx]
+sphinx-design[furo]
+readthedocs-sphinx-search
+sphinxcontrib-svg2pdfconverter
