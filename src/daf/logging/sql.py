@@ -64,6 +64,7 @@ try:
     import sqlalchemy as sqa
     SQL_INSTALLED = True
 except ImportError:
+    DeclarativeBase = object
     AsyncSession = object
     Session = object
     SQLAlchemyError = Exception
