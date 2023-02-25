@@ -31,6 +31,11 @@ Glossary
 ----------------------
 Releases
 ----------------------
+
+v2.5.1
+==========
+- Fixed failure without SQL
+
 v2.5
 ==========
 - |BREAK_CH| Removed ``EMBED`` object, use ``daf.discord.Embed`` instead.
