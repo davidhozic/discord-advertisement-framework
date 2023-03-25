@@ -25,6 +25,8 @@ DEALINGS IN THE SOFTWARE.
 
 from __future__ import annotations
 
+import json
+import base64
 import asyncio
 import logging
 import sys
@@ -56,6 +58,7 @@ if TYPE_CHECKING:
     from .file import File
     from .types import (
         appinfo,
+        application_role_connection,
         audit_log,
         automod,
         channel,
@@ -101,20 +104,20 @@ async def json_or_text(response: aiohttp.ClientResponse) -> dict[str, Any] | str
 
 
 class UserLimit:
-    def __init__(self) -> None:
+    def __init__(self, loop: asyncio.BaseEventLoop) -> None:
         self.usages = 0
+        self.loop = loop
         self.lock = asyncio.Lock()
 
-    async def __aenter__(self):
-        async with self.lock:
-            if self.usages >= 2:
-                await asyncio.sleep(4.5)
-                self.usages = 0
+    async def ensure(self):
+        await self.lock.acquire()
+        self.usages += 1
+        if self.usages >= 2:
+            self.loop.call_later(4.5, self.lock.release)
+            self.usages = 0
+        else:
+            self.lock.release()
 
-            self.usages += 1
-
-    async def __aexit__(self, *args):
-        pass
 
 class Route:
     def __init__(self, method: str, path: str, **parameters: Any) -> None:
@@ -182,8 +185,7 @@ class HTTPClient:
         proxy: str | None = None,
         proxy_auth: aiohttp.BasicAuth | None = None,
         loop: asyncio.AbstractEventLoop | None = None,
-        unsync_clock: bool = True,
-        bot = True
+        unsync_clock: bool = True
     ) -> None:
         self.loop: asyncio.AbstractEventLoop = (
             asyncio.get_event_loop() if loop is None else loop
@@ -194,19 +196,18 @@ class HTTPClient:
         self._global_over: asyncio.Event = asyncio.Event()
         self._global_over.set()
         self.token: str | None = None
-        self.bot_token: bool = bot
+        self.bot_token: bool = True
         self.proxy: str | None = proxy
         self.proxy_auth: aiohttp.BasicAuth | None = proxy_auth
         self.use_clock: bool = not unsync_clock
 
-        user_agent = "DiscordBot (https://github.com/Pycord-Development/pycord {0}) Python/{1[0]}.{1[1]} aiohttp/{2}"
-        self.user_agent: str = user_agent.format(__version__, sys.version_info, aiohttp.__version__)
-        self.user_limit = UserLimit()
-        if not bot:
-            self.user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.5005.63 Safari/537.36"
-        else:
-            user_agent = "DiscordBot (https://github.com/Pycord-Development/pycord {0}) Python/{1[0]}.{1[1]} aiohttp/{2}"
-            self.user_agent: str = user_agent.format(__version__, sys.version_info, aiohttp.__version__)
+        user_agent = (
+            "DiscordBot (https://pycord.dev, {0}) Python/{1[0]}.{1[1]} aiohttp/{2}"
+        )
+        self.user_agent: str = user_agent.format(
+            __version__, sys.version_info, aiohttp.__version__
+        )
+        self.user_limit = UserLimit(self.loop)
 
     def recreate(self) -> None:
         if self.__session.closed:
@@ -252,6 +253,21 @@ class HTTPClient:
         headers: dict[str, str] = {
             "User-Agent": self.user_agent,
         }
+
+        # Self-bot modification
+        if not self.bot_token:
+            headers["x-super-properties"] = base64.b64encode(
+                json.dumps(
+                    {
+                        "os": sys.platform,
+                        "browser":"Chrome",
+                        "system_locale":"en-US",
+                        "browser_user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+                        "browser_version":"109.0.0.0",
+                    },
+                ).encode("utf-8")
+            ).decode("utf-8")
+            headers["origin"] = "https://discord.com"
 
         if self.token is not None:
             headers["Authorization"] = self.token
@@ -300,8 +316,8 @@ class HTTPClient:
                 try:
 
                     if not self.bot_token:
-                        async with self.user_limit:
-                            pass
+                        await self.user_limit.ensure()
+
 
                     async with self.__session.request(
                         method, url, **kwargs
@@ -325,7 +341,10 @@ class HTTPClient:
                                 response, use_clock=self.use_clock
                             )
                             _log.debug(
-                                "A rate limit bucket has been exhausted (bucket: %s, retry: %s).",
+                                (
+                                    "A rate limit bucket has been exhausted (bucket:"
+                                    " %s, retry: %s)."
+                                ),
                                 bucket,
                                 delta,
                             )
@@ -343,7 +362,10 @@ class HTTPClient:
                                 # Banned by Cloudflare more than likely.
                                 raise HTTPException(response, data)
 
-                            fmt = 'We are being rate limited. Retrying in %.2f seconds. Handled under the bucket "%s"'
+                            fmt = (
+                                "We are being rate limited. Retrying in %.2f seconds."
+                                ' Handled under the bucket "%s"'
+                            )
 
                             # sleep a bit
                             retry_after: float = data["retry_after"]
@@ -353,7 +375,10 @@ class HTTPClient:
                             is_global = data.get("global", False)
                             if is_global:
                                 _log.warning(
-                                    "Global rate limit has been hit. Retrying in %.2f seconds.",
+                                    (
+                                        "Global rate limit has been hit. Retrying in"
+                                        " %.2f seconds."
+                                    ),
                                     retry_after,
                                 )
                                 self._global_over.clear()
@@ -426,16 +451,21 @@ class HTTPClient:
             connector=self.connector, ws_response_class=DiscordClientWebSocketResponse
         )
         old_token = self.token
+        old_bot = self.bot_token
+        self.token = f"Bot {token}" if bot else token
         self.bot_token = bot
-        self.token = f"Bot {token}" if self.bot_token else token
 
         try:
             data = await self.request(Route("GET", "/users/@me"))
         except HTTPException as exc:
             self.token = old_token
+            self.bot_token = old_bot
             if exc.status == 401:
                 raise LoginFailure("Improper token has been passed.") from exc
             raise
+
+        if not bot:
+            self.user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36"
 
         return data
 
@@ -923,7 +953,8 @@ class HTTPClient:
             params["delete_message_seconds"] = delete_message_seconds
         elif delete_message_days:
             warn_deprecated(
-                "delete_message_days" "delete_message_seconds",
+                "delete_message_days",
+                "delete_message_seconds",
                 "2.2",
                 reference="https://github.com/discord/discord-api-docs/pull/5219",
             )
@@ -1062,6 +1093,12 @@ class HTTPClient:
             "locked",
             "invitable",
             "default_auto_archive_duration",
+            "flags",
+            "default_thread_rate_limit_per_user",
+            "default_reaction_emoji",
+            "available_tags",
+            "applied_tags",
+            "default_sort_order",
         )
         payload = {k: v for k, v in options.items() if k in valid_keys}
         return self.request(r, reason=reason, json=payload)
@@ -1176,6 +1213,7 @@ class HTTPClient:
         auto_archive_duration: threads.ThreadArchiveDuration,
         rate_limit_per_user: int,
         invitable: bool = True,
+        applied_tags: SnowflakeList | None = None,
         reason: str | None = None,
         embed: embed.Embed | None = None,
         embeds: list[embed.Embed] | None = None,
@@ -1191,6 +1229,9 @@ class HTTPClient:
         }
         if content:
             payload["content"] = content
+
+        if applied_tags:
+            payload["applied_tags"] = applied_tags
 
         if embed:
             payload["embeds"] = [embed]
@@ -2240,6 +2281,7 @@ class HTTPClient:
             "description",
             "entity_type",
             "entity_metadata",
+            "image",
         )
         payload = {k: v for k, v in payload.items() if k in valid_keys}
 
@@ -2609,7 +2651,6 @@ class HTTPClient:
         embeds: list[embed.Embed] | None = None,
         allowed_mentions: message.AllowedMentions | None = None,
     ):
-
         payload: dict[str, Any] = {}
         if content:
             payload["content"] = content
@@ -2827,6 +2868,31 @@ class HTTPClient:
         )
         return self.request(r, json=payload)
 
+    # Application Role Connections
+
+    def get_application_role_connection_metadata_records(
+        self,
+        application_id: Snowflake,
+    ) -> Response[list[application_role_connection.ApplicationRoleConnectionMetadata]]:
+        r = Route(
+            "GET",
+            "/applications/{application_id}/role-connections/metadata",
+            application_id=application_id,
+        )
+        return self.request(r)
+
+    def update_application_role_connection_metadata_records(
+        self,
+        application_id: Snowflake,
+        payload: list[application_role_connection.ApplicationRoleConnectionMetadata],
+    ) -> Response[list[application_role_connection.ApplicationRoleConnectionMetadata]]:
+        r = Route(
+            "PUT",
+            "/applications/{application_id}/role-connections/metadata",
+            application_id=application_id,
+        )
+        return self.request(r, json=payload)
+
     # Misc
 
     def application_info(self) -> Response[appinfo.AppInfo]:
@@ -2870,6 +2936,3 @@ class HTTPClient:
 
     def get_user(self, user_id: Snowflake) -> Response[user.User]:
         return self.request(Route("GET", "/users/{user_id}", user_id=user_id))
-
-    def get_relationships(self) -> Response[List[user.User]]:
-        return self.request(Route("GET", "/users/@me/relationships"))

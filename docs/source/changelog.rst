@@ -32,6 +32,11 @@ Glossary
 Releases
 ----------------------
 
+v2.3.6
+=============
+- Fixed voice not working due to Discord's API changes.
+
+
 v2.3.5
 =============
 - Fixed ``typechecked`` module error
