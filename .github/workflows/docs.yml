@@ -25,7 +25,7 @@ jobs:
           python-version: '3.10' 
     - name: Install requirements
       run: |
-        sh install.sh
+        sh ./setup_build_env_do_not_run/install.sh
     - name: Build html and pdf
       run: |
         . venv/bin/activate
