@@ -1,18 +1,8 @@
 diff --git a/src/_discord/_version.py b/src/_discord/_version.py
-index 70b66e8..87093fa 100644
+index c58c8ba..3761f0f 100644
 --- a/src/_discord/_version.py
 +++ b/src/_discord/_version.py
-@@ -25,9 +25,7 @@ DEALINGS IN THE SOFTWARE.
- from __future__ import annotations
- 
- import re
--import warnings
- from datetime import date
--from importlib.metadata import PackageNotFoundError, version
- 
- __all__ = ("__version__", "VersionInfo", "version_info")
- 
-@@ -35,23 +33,7 @@ from typing import Literal, NamedTuple
+@@ -37,25 +37,7 @@ from typing import Literal, NamedTuple
  
  from .utils import deprecated
  
@@ -28,12 +18,14 @@ index 70b66e8..87093fa 100644
 -        # setuptools_scm is not installed
 -        __version__ = "0.0.0"
 -        warnings.warn(
--            "Package is not installed, and setuptools_scm is not installed. "
--            f"As a fallback, {__name__}.__version__ will be set to {__version__}",
+-            (
+-                "Package is not installed, and setuptools_scm is not installed. "
+-                f"As a fallback, {__name__}.__version__ will be set to {__version__}"
+-            ),
 -            RuntimeWarning,
 -            stacklevel=2,
 -        )
-+__version__ = "2.3"
++__version__ = "2.4.1"
  
  
- class VersionInfo(NamedTuple):
+ class AdvancedVersionInfo(TypedDict):
