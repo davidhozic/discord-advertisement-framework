@@ -1,2 +1,2 @@
-selenium
-undetected-chromedriver
+selenium==4.8.3
+undetected-chromedriver==3.4.6
