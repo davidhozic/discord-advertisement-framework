@@ -58,6 +58,7 @@ if TYPE_CHECKING:
     from .file import File
     from .types import (
         appinfo,
+        application_role_connection,
         audit_log,
         automod,
         channel,
@@ -340,8 +341,10 @@ class HTTPClient:
                                 response, use_clock=self.use_clock
                             )
                             _log.debug(
-                                "A rate limit bucket has been exhausted (bucket: %s,"
-                                " retry: %s).",
+                                (
+                                    "A rate limit bucket has been exhausted (bucket:"
+                                    " %s, retry: %s)."
+                                ),
                                 bucket,
                                 delta,
                             )
@@ -372,8 +375,10 @@ class HTTPClient:
                             is_global = data.get("global", False)
                             if is_global:
                                 _log.warning(
-                                    "Global rate limit has been hit. Retrying in %.2f"
-                                    " seconds.",
+                                    (
+                                        "Global rate limit has been hit. Retrying in"
+                                        " %.2f seconds."
+                                    ),
                                     retry_after,
                                 )
                                 self._global_over.clear()
@@ -2276,6 +2281,7 @@ class HTTPClient:
             "description",
             "entity_type",
             "entity_metadata",
+            "image",
         )
         payload = {k: v for k, v in payload.items() if k in valid_keys}
 
@@ -2859,6 +2865,31 @@ class HTTPClient:
             "/applications/{application_id}/guilds/{guild_id}/commands/permissions",
             application_id=application_id,
             guild_id=guild_id,
+        )
+        return self.request(r, json=payload)
+
+    # Application Role Connections
+
+    def get_application_role_connection_metadata_records(
+        self,
+        application_id: Snowflake,
+    ) -> Response[list[application_role_connection.ApplicationRoleConnectionMetadata]]:
+        r = Route(
+            "GET",
+            "/applications/{application_id}/role-connections/metadata",
+            application_id=application_id,
+        )
+        return self.request(r)
+
+    def update_application_role_connection_metadata_records(
+        self,
+        application_id: Snowflake,
+        payload: list[application_role_connection.ApplicationRoleConnectionMetadata],
+    ) -> Response[list[application_role_connection.ApplicationRoleConnectionMetadata]]:
+        r = Route(
+            "PUT",
+            "/applications/{application_id}/role-connections/metadata",
+            application_id=application_id,
         )
         return self.request(r, json=payload)
 
