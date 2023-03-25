@@ -30,7 +30,7 @@ __all__ = (
 
 
 # -------------- CONSTANTS --------------
-TASK_CLEANUP_SLEEP_SEC = 5
+TASK_CLEANUP_SLEEP_SEC = 1
 
 # ---------------------------------------
 
@@ -143,6 +143,7 @@ async def initialize(token: Optional[str] = None,
 
     # Create account cleanup task (account self-deleted)
     GLOBALS.cleanup_task = loop.create_task(cleanup_accounts())
+    GLOBALS.running = True
     trace("Initialization complete.", TraceLEVELS.NORMAL)
 
 
@@ -385,7 +386,7 @@ def get_accounts() -> List[client.ACCOUNT]:
 
 @typechecked
 @misc.doc_category("DAF control reference")
-async def shutdown(loop: Optional[asyncio.AbstractEventLoop] = None) -> None:
+async def shutdown(loop: Optional[asyncio.AbstractEventLoop] = None, stop_loop: Optional[bool] = False) -> None:
     """
     Stops the framework.
 
@@ -394,11 +395,22 @@ async def shutdown(loop: Optional[asyncio.AbstractEventLoop] = None) -> None:
     loop: Optional[asyncio.AbstractEventLoop]
         The loop everything is running in.
         Leave empty for default loop.
+        This parameter is only relevant if ``stop_loop`` is set to True.
+    stop_loop: Optional[bool]
+        Default: False; If True, it stops the running event loop.
     """
-    if loop is None:
-        loop = asyncio.get_event_loop()
 
-    loop.stop()
+    trace("Shutting down")
+    GLOBALS.running = False
+    await GLOBALS.cleanup_task
+    for account in GLOBALS.accounts:
+        await account._close()
+
+    if stop_loop:
+        if loop is None:
+            loop = asyncio.get_event_loop()
+
+        loop.stop()
 
 
 def _shutdown_clean(loop: asyncio.AbstractEventLoop) -> None:
