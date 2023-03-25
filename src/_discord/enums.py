@@ -22,20 +22,11 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 """
+from __future__ import annotations
 
 import types
 from collections import namedtuple
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    ClassVar,
-    Dict,
-    List,
-    Optional,
-    Type,
-    TypeVar,
-    Union,
-)
+from typing import TYPE_CHECKING, Any, ClassVar, TypeVar, Union
 
 __all__ = (
     "Enum",
@@ -76,6 +67,7 @@ __all__ = (
     "AutoModEventType",
     "AutoModActionType",
     "AutoModKeywordPresetType",
+    "ApplicationRoleConnectionMetadataType",
 )
 
 
@@ -112,9 +104,9 @@ def _is_descriptor(obj):
 class EnumMeta(type):
     if TYPE_CHECKING:
         __name__: ClassVar[str]
-        _enum_member_names_: ClassVar[List[str]]
-        _enum_member_map_: ClassVar[Dict[str, Any]]
-        _enum_value_map_: ClassVar[Dict[Any, Any]]
+        _enum_member_names_: ClassVar[list[str]]
+        _enum_member_map_: ClassVar[dict[str, Any]]
+        _enum_value_map_: ClassVar[dict[Any, Any]]
 
     def __new__(cls, name, bases, attrs, *, comparable: bool = False):
         value_mapping = {}
@@ -210,6 +202,8 @@ else:
 
 
 class ChannelType(Enum):
+    """Channel type"""
+
     text = 0
     private = 1
     voice = 2
@@ -228,6 +222,8 @@ class ChannelType(Enum):
 
 
 class MessageType(Enum):
+    """Message type"""
+
     default = 0
     recipient_add = 1
     recipient_remove = 2
@@ -253,9 +249,19 @@ class MessageType(Enum):
     guild_invite_reminder = 22
     context_menu_command = 23
     auto_moderation_action = 24
+    role_subscription_purchase = 25
+    interaction_premium_upsell = 26
+    stage_start = 27
+    stage_end = 28
+    stage_speaker = 29
+    stage_raise_hand = 30
+    stage_topic = 31
+    guild_application_premium_subscription = 32
 
 
 class VoiceRegion(Enum):
+    """Voice region"""
+
     us_west = "us-west"
     us_east = "us-east"
     us_south = "us-south"
@@ -285,6 +291,8 @@ class VoiceRegion(Enum):
 
 
 class SpeakingState(Enum):
+    """Speaking state"""
+
     none = 0
     voice = 1
     soundshare = 2
@@ -298,6 +306,8 @@ class SpeakingState(Enum):
 
 
 class VerificationLevel(Enum, comparable=True):
+    """Verification level"""
+
     none = 0
     low = 1
     medium = 2
@@ -308,7 +318,19 @@ class VerificationLevel(Enum, comparable=True):
         return self.name
 
 
+class SortOrder(Enum):
+    """Forum Channel Sort Order"""
+
+    latest_activity = 0
+    creation_date = 1
+
+    def __str__(self):
+        return self.name
+
+
 class ContentFilter(Enum, comparable=True):
+    """Content Filter"""
+
     disabled = 0
     no_role = 1
     all_members = 2
@@ -318,6 +340,8 @@ class ContentFilter(Enum, comparable=True):
 
 
 class Status(Enum):
+    """Status"""
+
     online = "online"
     offline = "offline"
     idle = "idle"
@@ -331,6 +355,8 @@ class Status(Enum):
 
 
 class DefaultAvatar(Enum):
+    """Default avatar"""
+
     blurple = 0
     grey = 1
     gray = 1
@@ -343,17 +369,23 @@ class DefaultAvatar(Enum):
 
 
 class NotificationLevel(Enum, comparable=True):
+    """Notification level"""
+
     all_messages = 0
     only_mentions = 1
 
 
 class AuditLogActionCategory(Enum):
+    """Audit log action category"""
+
     create = 1
     delete = 2
     update = 3
 
 
 class AuditLogAction(Enum):
+    """Audit log action"""
+
     guild_update = 1
     channel_create = 10
     channel_update = 11
@@ -408,8 +440,8 @@ class AuditLogAction(Enum):
     auto_moderation_block_message = 143
 
     @property
-    def category(self) -> Optional[AuditLogActionCategory]:
-        lookup: Dict[AuditLogAction, Optional[AuditLogActionCategory]] = {
+    def category(self) -> AuditLogActionCategory | None:
+        lookup: dict[AuditLogAction, AuditLogActionCategory | None] = {
             AuditLogAction.guild_update: AuditLogActionCategory.update,
             AuditLogAction.channel_create: AuditLogActionCategory.create,
             AuditLogAction.channel_update: AuditLogActionCategory.update,
@@ -457,7 +489,9 @@ class AuditLogAction(Enum):
             AuditLogAction.thread_create: AuditLogActionCategory.create,
             AuditLogAction.thread_update: AuditLogActionCategory.update,
             AuditLogAction.thread_delete: AuditLogActionCategory.delete,
-            AuditLogAction.application_command_permission_update: AuditLogActionCategory.update,
+            AuditLogAction.application_command_permission_update: (
+                AuditLogActionCategory.update
+            ),
             AuditLogAction.auto_moderation_rule_create: AuditLogActionCategory.create,
             AuditLogAction.auto_moderation_rule_update: AuditLogActionCategory.update,
             AuditLogAction.auto_moderation_rule_delete: AuditLogActionCategory.delete,
@@ -466,7 +500,7 @@ class AuditLogAction(Enum):
         return lookup[self]
 
     @property
-    def target_type(self) -> Optional[str]:
+    def target_type(self) -> str | None:
         v = self.value
         if v == -1:
             return "all"
@@ -505,6 +539,8 @@ class AuditLogAction(Enum):
 
 
 class UserFlags(Enum):
+    """User flags"""
+
     staff = 1
     partner = 2
     hypesquad = 4
@@ -526,9 +562,12 @@ class UserFlags(Enum):
     discord_certified_moderator = 262144
     bot_http_interactions = 524288
     spammer = 1048576
+    active_developer = 4194304
 
 
 class ActivityType(Enum):
+    """Activity type"""
+
     unknown = -1
     playing = 0
     streaming = 1
@@ -542,17 +581,23 @@ class ActivityType(Enum):
 
 
 class TeamMembershipState(Enum):
+    """Team membership state"""
+
     invited = 1
     accepted = 2
 
 
 class WebhookType(Enum):
+    """Webhook Type"""
+
     incoming = 1
     channel_follower = 2
     application = 3
 
 
 class ExpireBehaviour(Enum):
+    """Expire Behaviour"""
+
     remove_role = 0
     kick = 1
 
@@ -561,32 +606,43 @@ ExpireBehavior = ExpireBehaviour
 
 
 class StickerType(Enum):
+    """Sticker type"""
+
     standard = 1
     guild = 2
 
 
 class StickerFormatType(Enum):
+    """Sticker format Type"""
+
     png = 1
     apng = 2
     lottie = 3
+    gif = 4
 
     @property
     def file_extension(self) -> str:
-        lookup: Dict[StickerFormatType, str] = {
+        lookup: dict[StickerFormatType, str] = {
             StickerFormatType.png: "png",
             StickerFormatType.apng: "png",
             StickerFormatType.lottie: "json",
+            StickerFormatType.gif: "gif",
         }
-        return lookup[self]
+        # TODO: Improve handling of unknown sticker format types if possible
+        return lookup.get(self, "png")
 
 
 class InviteTarget(Enum):
+    """Invite target"""
+
     unknown = 0
     stream = 1
     embedded_application = 2
 
 
 class InteractionType(Enum):
+    """Interaction type"""
+
     ping = 1
     application_command = 2
     component = 3
@@ -595,6 +651,8 @@ class InteractionType(Enum):
 
 
 class InteractionResponseType(Enum):
+    """Interaction response type"""
+
     pong = 1
     # ack = 2 (deprecated)
     # channel_message = 3 (deprecated)
@@ -607,6 +665,8 @@ class InteractionResponseType(Enum):
 
 
 class VideoQualityMode(Enum):
+    """Video quality mode"""
+
     auto = 1
     full = 2
 
@@ -615,16 +675,25 @@ class VideoQualityMode(Enum):
 
 
 class ComponentType(Enum):
+    """Component type"""
+
     action_row = 1
     button = 2
-    select = 3
+    string_select = 3
+    select = string_select  # (deprecated) alias for string_select
     input_text = 4
+    user_select = 5
+    role_select = 6
+    mentionable_select = 7
+    channel_select = 8
 
     def __int__(self):
         return self.value
 
 
 class ButtonStyle(Enum):
+    """Button style"""
+
     primary = 1
     secondary = 2
     success = 3
@@ -644,6 +713,8 @@ class ButtonStyle(Enum):
 
 
 class InputTextStyle(Enum):
+    """Input text style"""
+
     short = 1
     singleline = 1
     paragraph = 2
@@ -652,6 +723,8 @@ class InputTextStyle(Enum):
 
 
 class ApplicationType(Enum):
+    """Application type"""
+
     game = 1
     music = 2
     ticketed_events = 3
@@ -659,12 +732,16 @@ class ApplicationType(Enum):
 
 
 class StagePrivacyLevel(Enum):
+    """Stage privacy level"""
+
     # public = 1 (deprecated)
     closed = 2
     guild_only = 2
 
 
 class NSFWLevel(Enum, comparable=True):
+    """NSFW level"""
+
     default = 0
     explicit = 1
     safe = 2
@@ -672,6 +749,8 @@ class NSFWLevel(Enum, comparable=True):
 
 
 class SlashCommandOptionType(Enum):
+    """Slash command option type"""
+
     sub_command = 1
     sub_command_group = 2
     string = 3
@@ -714,6 +793,8 @@ class SlashCommandOptionType(Enum):
             "CategoryChannel",
             "ThreadOption",
             "Thread",
+            "ForumChannel",
+            "DMChannel",
         ]:
             return cls.channel
         if datatype.__name__ == "Role":
@@ -743,32 +824,49 @@ class SlashCommandOptionType(Enum):
 
 
 class EmbeddedActivity(Enum):
+    """Embedded activity"""
+
+    ask_away = 976052223358406656
     awkword = 879863881349087252
+    awkword_dev = 879863923543785532
+    bash_out = 1006584476094177371
     betrayal = 773336526917861400
+    blazing_8s = 832025144389533716
+    blazing_8s_dev = 832013108234289153
+    blazing_8s_qa = 832025114077298718
+    blazing_8s_staging = 832025061657280566
+    bobble_league = 947957217959759964
     checkers_in_the_park = 832013003968348200
     checkers_in_the_park_dev = 832012682520428625
-    checkers_in_the_park_staging = 832012938398400562
     checkers_in_the_park_qa = 832012894068801636
+    checkers_in_the_park_staging = 832012938398400562
     chess_in_the_park = 832012774040141894
     chess_in_the_park_dev = 832012586023256104
-    chest_in_the_park_staging = 832012730599735326
-    chest_in_the_park_qa = 832012815819604009
+    chess_in_the_park_qa = 832012815819604009
+    chess_in_the_park_staging = 832012730599735326
     decoders_dev = 891001866073296967
     doodle_crew = 878067389634314250
     doodle_crew_dev = 878067427668275241
     fishington = 814288819477020702
-    letter_tile = 879863686565621790
-    ocho = 832025144389533716
-    ocho_dev = 832013108234289153
-    ocho_staging = 832025061657280566
-    ocho_qa = 832025114077298718
+    know_what_i_meme = 950505761862189096
+    land = 903769130790969345
+    letter_league = 879863686565621790
+    letter_league_dev = 879863753519292467
     poker_night = 755827207812677713
-    poker_night_staging = 763116274876022855
+    poker_night_dev = 763133495793942528
     poker_night_qa = 801133024841957428
+    poker_night_staging = 763116274876022855
+    putt_party = 945737671223947305
+    putt_party_dev = 910224161476083792
+    putt_party_qa = 945748195256979606
+    putt_party_staging = 945732077960188005
     putts = 832012854282158180
+    sketch_heads = 902271654783242291
+    sketch_heads_dev = 902271746701414431
     sketchy_artist = 879864070101172255
     sketchy_artist_dev = 879864104980979792
     spell_cast = 852509694341283871
+    spell_cast_staging = 893449443918086174
     watch_together = 880218394199220334
     watch_together_dev = 880218832743055411
     word_snacks = 879863976006127627
@@ -777,6 +875,8 @@ class EmbeddedActivity(Enum):
 
 
 class ScheduledEventStatus(Enum):
+    """Scheduled event status"""
+
     scheduled = 1
     active = 2
     completed = 3
@@ -788,6 +888,8 @@ class ScheduledEventStatus(Enum):
 
 
 class ScheduledEventPrivacyLevel(Enum):
+    """Scheduled event privacy level"""
+
     guild_only = 2
 
     def __int__(self):
@@ -795,44 +897,68 @@ class ScheduledEventPrivacyLevel(Enum):
 
 
 class ScheduledEventLocationType(Enum):
+    """Scheduled event location type"""
+
     stage_instance = 1
     voice = 2
     external = 3
 
 
 class AutoModTriggerType(Enum):
+    """Automod trigger type"""
+
     keyword = 1
     harmful_link = 2
     spam = 3
     keyword_preset = 4
+    mention_spam = 5
 
 
 class AutoModEventType(Enum):
+    """Automod event type"""
+
     message_send = 1
 
 
 class AutoModActionType(Enum):
+    """Automod action type"""
+
     block_message = 1
     send_alert_message = 2
     timeout = 3
 
 
 class AutoModKeywordPresetType(Enum):
+    """Automod keyword preset type"""
+
     profanity = 1
     sexual_content = 2
     slurs = 3
 
 
+class ApplicationRoleConnectionMetadataType(Enum):
+    """Application role connection metadata type"""
+
+    integer_less_than_or_equal = 1
+    integer_greater_than_or_equal = 2
+    integer_equal = 3
+    integer_not_equal = 4
+    datetime_less_than_or_equal = 5
+    datetime_greater_than_or_equal = 6
+    boolean_equal = 7
+    boolean_not_equal = 8
+
+
 T = TypeVar("T")
 
 
-def create_unknown_value(cls: Type[T], val: Any) -> T:
+def create_unknown_value(cls: type[T], val: Any) -> T:
     value_cls = cls._enum_value_cls_  # type: ignore
     name = f"unknown_{val}"
     return value_cls(name=name, value=val)
 
 
-def try_enum(cls: Type[T], val: Any) -> T:
+def try_enum(cls: type[T], val: Any) -> T:
     """A function that tries to turn the value into enum ``cls``.
 
     If it fails it returns a proxy invalid value instead.

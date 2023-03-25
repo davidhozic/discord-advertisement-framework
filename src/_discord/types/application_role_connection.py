@@ -1,7 +1,6 @@
 """
 The MIT License (MIT)
 
-Copyright (c) 2015-2021 Rapptz
 Copyright (c) 2021-present Pycord Development
 
 Permission is hereby granted, free of charge, to any person obtaining a
@@ -22,74 +21,20 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 """
+
 from __future__ import annotations
 
 from typing import Literal
 
 from .._typed_dict import NotRequired, TypedDict
 
-
-class EmbedFooter(TypedDict):
-    icon_url: NotRequired[str]
-    proxy_icon_url: NotRequired[str]
-    text: str
+ApplicationRoleConnectionMetadataType = Literal[1, 2, 3, 4, 5, 6, 7, 8]
 
 
-class EmbedField(TypedDict):
-    inline: NotRequired[bool]
+class ApplicationRoleConnectionMetadata(TypedDict):
+    type: ApplicationRoleConnectionMetadataType
+    key: str
     name: str
-    value: str
-
-
-class EmbedThumbnail(TypedDict, total=False):
-    url: str
-    proxy_url: str
-    height: int
-    width: int
-
-
-class EmbedVideo(TypedDict, total=False):
-    url: str
-    proxy_url: str
-    height: int
-    width: int
-
-
-class EmbedImage(TypedDict, total=False):
-    url: str
-    proxy_url: str
-    height: int
-    width: int
-
-
-class EmbedProvider(TypedDict, total=False):
-    name: str
-    url: str
-
-
-class EmbedAuthor(TypedDict, total=False):
-    name: str
-    url: str
-    icon_url: str
-    proxy_icon_url: str
-
-
-EmbedType = Literal[
-    "rich", "image", "video", "gifv", "article", "link", "auto_moderation_message"
-]
-
-
-class Embed(TypedDict, total=False):
-    title: str
-    type: EmbedType
+    name_localizations: NotRequired[dict[str, str]]
     description: str
-    url: str
-    timestamp: str
-    color: int
-    footer: EmbedFooter
-    image: EmbedImage
-    thumbnail: EmbedThumbnail
-    video: EmbedVideo
-    provider: EmbedProvider
-    author: EmbedAuthor
-    fields: list[EmbedField]
+    description_localizations: NotRequired[dict[str, str]]

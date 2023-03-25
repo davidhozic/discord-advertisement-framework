@@ -22,6 +22,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 """
+from __future__ import annotations
 
 import asyncio
 import concurrent.futures
@@ -139,7 +140,10 @@ class KeepAliveHandler(threading.Thread):
         while not self._stop_ev.wait(self.interval):
             if self._last_recv + self.heartbeat_timeout < time.perf_counter():
                 _log.warning(
-                    "Shard ID %s has stopped responding to the gateway. Closing and restarting.",
+                    (
+                        "Shard ID %s has stopped responding to the gateway. Closing and"
+                        " restarting."
+                    ),
                     self.shard_id,
                 )
                 coro = self.ws.close(4000)
@@ -174,7 +178,10 @@ class KeepAliveHandler(threading.Thread):
                             msg = self.block_msg
                         else:
                             stack = "".join(traceback.format_stack(frame))
-                            msg = f"{self.block_msg}\nLoop thread traceback (most recent call last):\n{stack}"
+                            msg = (
+                                f"{self.block_msg}\nLoop thread traceback (most recent"
+                                f" call last):\n{stack}"
+                            )
                         _log.warning(msg, self.shard_id, total)
 
             except Exception:
@@ -297,6 +304,7 @@ class DiscordWebSocket:
         self._buffer = bytearray()
         self._close_code = None
         self._rate_limiter = GatewayRatelimiter()
+        self.bot: bool = True
 
     @property
     def open(self):
@@ -333,6 +341,7 @@ class DiscordWebSocket:
 
         # dynamically add attributes needed
         ws.token = client.http.token
+        ws.bot = client.http.bot_token
         ws._connection = client._connection
         ws._discord_parsers = client._connection.parsers
         ws._dispatch = client.dispatch
@@ -393,23 +402,41 @@ class DiscordWebSocket:
 
     async def identify(self):
         """Sends the IDENTIFY packet."""
-        payload = {
-            "op": self.IDENTIFY,
-            "d": {
-                "token": self.token,
-                "properties": {
-                    "os": sys.platform,
-                    "browser": "pycord",
-                    "device": "pycord",
+        if self.bot:
+            payload = {
+                "op": self.IDENTIFY,
+                "d": {
+                    "token": self.token,
+                    "properties": {
+                        "os": sys.platform,
+                        "browser": "pycord",
+                        "device": "pycord",
+                    },
+                    "compress": True,
+                    "large_threshold": 250,
+                    "v": 3,
                 },
-                "compress": True,
-                "large_threshold": 250,
-                "v": 3,
-            },
-        }
+            }
 
-        if self.shard_id is not None and self.shard_count is not None:
-            payload["d"]["shard"] = [self.shard_id, self.shard_count]
+            if self.shard_id is not None and self.shard_count is not None:
+                payload["d"]["shard"] = [self.shard_id, self.shard_count]
+        
+        else:
+            payload = {
+                "op": self.IDENTIFY,
+                "d": {
+                    "token": self.token,
+                    "properties": {
+                        "os": sys.platform,
+                        "browser":"Chrome",
+                        "system_locale":"en-US",
+                        "browser_user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+                        "browser_version":"109.0.0.0",
+                    },
+                    "presence": {"status":"online","since":0,"activities":[],"afk": False},
+                    "compress": True
+                }
+            }
 
         state = self._connection
         if state._activity is not None or state._status is not None:
@@ -572,8 +599,8 @@ class DiscordWebSocket:
             del self._dispatch_listeners[index]
 
     @property
-    def latency(self):
-        """:class:`float`: Measures latency between a HEARTBEAT and a HEARTBEAT_ACK in seconds."""
+    def latency(self) -> float:
+        """Measures latency between a HEARTBEAT and a HEARTBEAT_ACK in seconds."""
         heartbeat = self._keep_alive
         return float("inf") if heartbeat is None else heartbeat.latency
 
@@ -885,16 +912,16 @@ class DiscordVoiceWebSocket:
         state.voice_port = data["port"]
         state.endpoint_ip = data["ip"]
 
-        packet = bytearray(70)
+        packet = bytearray(74)
         struct.pack_into(">H", packet, 0, 1)  # 1 = Send
         struct.pack_into(">H", packet, 2, 70)  # 70 = Length
         struct.pack_into(">I", packet, 4, state.ssrc)
         state.socket.sendto(packet, (state.endpoint_ip, state.voice_port))
-        recv = await self.loop.sock_recv(state.socket, 70)
+        recv = await self.loop.sock_recv(state.socket, 74)
         _log.debug("received packet in initial_connection: %s", recv)
 
-        # the ip is ascii starting at the 4th byte and ending at the first null
-        ip_start = 4
+        # the ip is ascii starting at the 8th byte and ending at the first null
+        ip_start = 8
         ip_end = recv.index(0, ip_start)
         state.ip = recv[ip_start:ip_end].decode("ascii")
 
@@ -912,14 +939,14 @@ class DiscordVoiceWebSocket:
         _log.info("selected the voice protocol for use (%s)", mode)
 
     @property
-    def latency(self):
-        """:class:`float`: Latency between a HEARTBEAT and its HEARTBEAT_ACK in seconds."""
+    def latency(self) -> float:
+        """Latency between a HEARTBEAT and its HEARTBEAT_ACK in seconds."""
         heartbeat = self._keep_alive
         return float("inf") if heartbeat is None else heartbeat.latency
 
     @property
-    def average_latency(self):
-        """:class:`list`: Average of last 20 HEARTBEAT latencies."""
+    def average_latency(self) -> list[float] | float:
+        """Average of last 20 HEARTBEAT latencies."""
         heartbeat = self._keep_alive
         if heartbeat is None or not heartbeat.recent_ack_latencies:
             return float("inf")
