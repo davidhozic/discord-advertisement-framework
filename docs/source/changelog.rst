@@ -32,6 +32,12 @@ Glossary
 Releases
 ----------------------
 
+v2.3.5
+=============
+- Fixed ``typechecked`` module error
+
+
+
 v2.3.4
 =============
 - Fixed channel verification bug:
