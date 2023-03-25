@@ -32,6 +32,11 @@ Glossary
 Releases
 ----------------------
 
+v2.4.4
+=============
+- Fixed ``typechecked`` module error
+
+
 v2.4.3
 =========
 - Fixed missing documentation members
