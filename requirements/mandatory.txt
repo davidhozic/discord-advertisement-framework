@@ -1,4 +1,4 @@
 aiohttp>=3.6.0,<3.9.0
 aiohttp_socks
-typeguard
+typeguard==2.13
 typing_extensions>=4,<5; python_version < "3.11"
