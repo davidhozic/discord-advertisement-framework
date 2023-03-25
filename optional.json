@@ -1,6 +1,6 @@
 {
     "voice" : ["PyNaCl", "yt-dlp"],
-    "proxy" : ["aiohttp_socks"],
+    "proxy" : ["aiohttp_socks==0.8.0"],
     "sql"   : ["sqlalchemy[asyncio]<=1.4.46", "aiosqlite", "pymssql", "asyncpg", "asyncmy"],
     "testing" : ["pytest", "pytest-asyncio"],
     "docs"  : [
