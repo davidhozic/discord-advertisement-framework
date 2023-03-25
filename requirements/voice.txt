@@ -1,2 +1,2 @@
-PyNaCl
-yt-dlp
+PyNaCl==1.5.0
+yt-dlp==2023.3.4
