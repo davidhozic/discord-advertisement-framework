@@ -32,6 +32,11 @@ Glossary
 Releases
 ----------------------
 
+v2.5.2
+=============
+- Fixed ``typechecked`` module error
+
+
 v2.5.1
 ==========
 - Fixed failure without SQL
