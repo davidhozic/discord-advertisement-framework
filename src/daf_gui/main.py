@@ -2,24 +2,58 @@
 Main file of the DAF GUI.
 """
 from contextlib import suppress
+from typing import get_args, Iterable
 from tkinter import ttk
-from ttkwidgets import DebugWindow
+import ttkwidgets as tw
 import tkinter as tk
 import asyncio
 
 import daf
 
-WIN_UPDATE_DELAY = 0.1
 
+WIN_UPDATE_DELAY = 0.01
+CREDITS_TEXT = \
+"""
+Welcome to Discord Advertisement Framework - UI mode.
+The UI runs on top of Discord Advertisement Framework and allows easier usage for those who
+don't want to write Python code to use the software.
+
+Authors: David Hozic - Student at UL FE.
+"""
+
+
+class NewObjectWindow(tk.Toplevel):
+    def __init__(self, class_, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        for i, (k, v) in enumerate(class_.__init__.__annotations__.items()):
+            if k == "return":
+                break
+
+            label = ttk.Label(self, text=k)
+            entry_type = get_args(v)[0]
+
+            if entry_type is bool:
+                entry_type = ttk.Checkbutton, {}
+            elif entry_type in {str, int}:
+                entry_type = ttk.Entry, {}
+            elif isinstance(entry_type, Iterable):
+                entry_type = tk.Listbox, {}
+            else:
+                continue
+
+            entry_type, kwargs = entry_type
+            entry = entry_type(self, **kwargs)
+            label.grid(row=i, column=0)
+            entry.grid(row=i, column=1)
 
 class Application():
     def __init__(self) -> None:
-
         # Window initialization
         win_main = tk.Tk()
         self.win_main = win_main
         screen_res = win_main.winfo_screenwidth() // 2, win_main.winfo_screenheight() // 2
-        win_main.wm_title("Discord Advert Framework")
+        win_main.wm_title(f"Discord Advert Framework {daf.VERSION}")
         win_main.wm_minsize(*screen_res)
         win_main.protocol("WM_DELETE_WINDOW", self.close_window)
 
@@ -39,6 +73,25 @@ class Application():
         # Main Frame
         self.frame_main = ttk.Frame(self.win_main)
         self.frame_main.pack(expand=True, fill=tk.BOTH, side="bottom")
+        self.tabman_mf = ttk.Notebook(self.frame_main)
+        self.tabman_mf.pack(fill=tk.BOTH, expand=True)
+
+        # Credits tab
+        self.tab_info = ttk.Frame(self.tabman_mf)
+        self.tabman_mf.add(self.tab_info, text="Credits")
+        self.labl_credits = tk.Label(self.tab_info, text=CREDITS_TEXT)
+        self.labl_credits.pack()
+
+        # Objects tab
+        self.tab_objects = ttk.Frame(self.tabman_mf)
+        self.tabman_mf.add(self.tab_objects, text="Objects")
+        self.bnt_add_object = ttk.Button(self.tab_objects, text="Add ACCOUNT", command=lambda: NewObjectWindow(daf.ACCOUNT))
+        self.bnt_add_object.pack(anchor=tk.NW, padx=5, pady=5)
+        self.lb_accounts = tw.ScrolledListbox(self.tab_objects)
+        self.lb_accounts.pack(fill=tk.BOTH, expand=True, side="left")
+
+        self.bnt_tw_option = ttk.Button(self.tab_objects, text="Options")
+        self.bnt_tw_option.pack(side="right", fill=tk.Y)
 
         # Status variables
         self._daf_running = False
@@ -53,7 +106,15 @@ class Application():
         return self._window_opened
 
     def open_console(self):
-        return DebugWindow(self.win_main, "Trace", stderr=False)
+        def _():
+            self.win_debug.quit()
+            self.win_debug = None
+
+        if self.win_debug is not None:
+            self.win_debug.quit()
+
+        self.win_debug = tw.DebugWindow(self.win_main, "Trace", stderr=False)
+        self.win_debug.protocol("WM_DELETE_WINDOW", _)
 
     def start_daf(self):
         self.bnt_toolbar_start_daf.configure(state="disabled")
