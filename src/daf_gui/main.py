@@ -4,6 +4,7 @@ Main file of the DAF GUI.
 from copy import deepcopy
 from typing import get_args, get_origin, Iterable, Awaitable, Union, Literal
 from tkinter import ttk
+
 import ttkwidgets as tw
 import tkinter as tk
 import tkinter.messagebox as tkmsg
@@ -39,13 +40,47 @@ class ListBoxObjects(tk.Listbox):
         self._original_items.extend(elements)
         return _ret
 
+    def delete(self, first: str | int, last: str | int | None = None) -> None:
+        super().delete(first, last)
+        if last is None:
+            last = first
+
+        for item in self._original_items[first:last + 1]:
+            self._original_items.remove(item)
+
+
+class ComboBoxObjects(ttk.Combobox):
+    def __init__(self, *args, **kwargs):
+        self._original_items = []
+        super().__init__(*args, **kwargs)
+
+    def get(self, original = True, *args, **kwargs) -> list:
+        if original:
+            index = self.current()
+            if index >= 0:
+                return self._original_items[index]
+
+        return super().get(*args, **kwargs)
+
+    def __setitem__(self, key: str, value) -> None:
+        if key == "values":
+            self._original_items = value
+
+        return super().__setitem__(key, value)
+
+    def __getitem__(self, key: str):
+        if key == "values":
+            return self._original_items
+
+        return super().__getitem__(key)
+
 
 class NewObjectWindow(tk.Toplevel):
     open_widgets = {}
 
-    def __init__(self, class_, return_listbox: tk.Listbox, *args, **kwargs):
+    def __init__(self, class_, return_widget: tk.Listbox, *args, **kwargs):
         self.class_ = class_
-        self.return_listbox = return_listbox
+        self.return_widget = return_widget
         self._map = {}
         opened_widget = type(self).open_widgets.get(class_)
         if opened_widget is not None:
@@ -66,11 +101,37 @@ class NewObjectWindow(tk.Toplevel):
             self.bnt = ttk.Checkbutton(frame_main, variable=w)
             self.bnt.pack()
             self._map[None] = (w, class_)
-        elif class_ in {str, int}:
+        elif class_ is str:
             w = ttk.Entry(frame_main)
             w.pack()
             self._map[None] = (w, class_)
-        else:
+        elif class_ is int:
+            w = ttk.Spinbox(frame_main)
+            w.pack()
+            self._map[None] = (w, class_)
+        elif get_origin(class_) in {list, Iterable} or "Iterable" in str(class_):
+            w = ListBoxObjects(frame_main)
+            frame_edit_remove = ttk.Frame(frame_main)
+            menubtn = ttk.Menubutton(frame_edit_remove, text="Add object")
+            menu = tk.Menu(menubtn)
+            menubtn.configure(menu=menu)
+            menubtn.pack()
+            ttk.Button(frame_edit_remove, text="Remove").pack()
+            ttk.Button(frame_edit_remove, text="Edit").pack()
+
+            w.grid(row=0, column=0)
+            frame_edit_remove.grid(row=0, column=1)
+
+            args = get_args(class_)
+            if get_origin(args[0]) is Union:
+                args = get_args(args[0])
+
+            for arg in args:
+                # ttk.Button(frame, text=f"Add {arg.__name__}", command=_(arg, w)).pack(fill=tk.X)
+                menu.add_radiobutton(label=arg.__name__, command=self.new_object_window(arg, w))
+
+            self._map[None] = (w, list)
+        elif hasattr(class_.__init__, "__annotations__"):
             annotations = class_.__init__.__annotations__
             if annotations is None:
                 annotations = {}
@@ -79,53 +140,32 @@ class NewObjectWindow(tk.Toplevel):
                     break
 
                 widgets = []
-                widgets.append(ttk.Label(frame_main, text=k, padding=(5, 5)))
                 entry_types = v
+                widgets.append(ttk.Label(frame_main, text=k, padding=(5, 5)))
+
                 while get_origin(entry_types) is Union:
                     entry_types = get_args(entry_types)
 
                 if not isinstance(entry_types, tuple):
                     entry_types = (entry_types,)
 
+                bnt_menu = ttk.Menubutton(frame_main)
+                menu = tk.Menu(bnt_menu)
+                bnt_menu.configure(menu=menu)
+                w = combo = ComboBoxObjects(frame_main)
+                widgets.append(combo)
+                widgets.append(bnt_menu)
+
                 for entry_type in entry_types:
                     if get_origin(entry_type) is Literal:
-                        w = tk.StringVar()
-                        opts = get_args(entry_type)
-                        widgets.append(ttk.OptionMenu(frame_main, w, opts[0], *opts))
-                        break
-                    elif isinstance(entry_type, str):
-                        continue
+                        combo["values"] = get_args(entry_type)
                     elif entry_type is bool:
-                        w = tk.BooleanVar(value=False)
-                        widgets.append(ttk.Checkbutton(frame_main, variable=w))
-                        break
-                    elif entry_type in {str, int}:
-                        widgets.append(w := ttk.Entry(frame_main))
-                        break
-
-                    elif isinstance(entry_type, Iterable):
-                        widgets.append(w := ListBoxObjects(frame_main))
-                        frame_edit_remove = ttk.Frame(frame_main)
-                        widgets.append(frame_edit_remove)
-                        menubtn = ttk.Menubutton(frame_edit_remove, text="Add object")
-                        menu = tk.Menu(menubtn)
-                        menubtn.configure(menu=menu)
-                        menubtn.pack()
-                        ttk.Button(frame_edit_remove, text="Remove").pack()
-                        ttk.Button(frame_edit_remove, text="Edit").pack()
-
-                        args = get_args(entry_type)
-                        if get_origin(args[0]) is Union:
-                            args = get_args(args[0])
-
-                        entry_type = list
-                        for arg in args:
-                            # ttk.Button(frame, text=f"Add {arg.__name__}", command=_(arg, w)).pack(fill=tk.X)
-                            menu.add_radiobutton(label=arg.__name__, command=self.new_object_window(arg, w))
-
-                        break
+                        combo["values"] = list(combo["values"]) + [True]
+                        combo["values"] = list(combo["values"]) + [False]
+                    elif entry_type is type(None):
+                        combo["values"] = [None]
                     else:  # Type not supported, try other types
-                        continue
+                        menu.add_radiobutton(label=entry_type.__name__, command=self.new_object_window(entry_type, combo))
 
                 if len(widgets) > 1:  # Additional widgets besides the Label
                     self._map[k] = (w, entry_types)
@@ -151,8 +191,7 @@ class NewObjectWindow(tk.Toplevel):
             map_ = {}
             for attr, (widget, type_) in self._map.items():
                 value = widget.get()
-
-                if isinstance(value, list):
+                if isinstance(value, (list, type(None))):
                     map_[attr] = value
                     continue
 
@@ -165,8 +204,6 @@ class NewObjectWindow(tk.Toplevel):
                         break
                     except Exception:
                         continue
-                else:
-                    tkmsg.showwarning("Invalid value", f"Unable to process attribute\n\n{attr}\n\nwhich is of type\n\n{type_}.\n\nIgnoring the value!")
 
             map_ = {k: v for k, v in map_.items() if type(v) is bool or v}
             single_value = map_.get(None)
@@ -175,10 +212,14 @@ class NewObjectWindow(tk.Toplevel):
             else:
                 object_ = self.class_(**map_)
 
-            self.return_listbox.insert(tk.END, object_)
+            if isinstance(self.return_widget, tk.Listbox):
+                self.return_widget.insert(tk.END, object_)
+            else:
+                self.return_widget["values"] = list(self.return_widget["values"]) + [object_]
+
             self._cleanup()
         except Exception as exc:
-            tkmsg.showerror("Saving error", f"Could not save the object.\n\n{exc}")
+            tkmsg.showerror("Saving error", f"Could not save the object.\n\n{exc}", parent=self)
 
 
 class Application():
@@ -304,7 +345,7 @@ class Application():
             pass
 
 
-if __name__ == "__main__":
+def run():
     win_main = Application()
 
     async def update_task():
@@ -314,3 +355,7 @@ if __name__ == "__main__":
 
     loop = asyncio.new_event_loop()
     loop.run_until_complete(update_task())
+
+
+if __name__ == "__main__":
+    run()
