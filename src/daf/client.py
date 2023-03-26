@@ -13,6 +13,7 @@ from typeguard import typechecked
 
 import _discord as discord
 import asyncio
+import copy
 
 
 #######################################################################
@@ -162,6 +163,23 @@ class ACCOUNT:
             return self._token == other._token
 
         raise NotImplementedError("Only comparison between 2 ACCOUNTs is supported")
+
+    def __deepcopy__(self, *args):
+        "Duplicates the object (for use in AutoGUILD)"
+        new = copy.copy(self)
+        for slot in list(self.__slots__):
+            self_val = getattr(self, slot)
+            if isinstance(self_val, (asyncio.Semaphore, asyncio.Lock)):
+                # Hack to copy semaphores since not all of it can be copied directly
+                copied = type(self_val)(self_val._value)
+            elif isinstance(self_val, discord.Client):
+                copied = discord.Client(intents=self_val.intents, connector=self_val.http.connector)
+            else:
+                copied = copy.deepcopy((self_val))
+
+            setattr(new, slot, copied)
+
+        return new
 
     @property
     def selenium(self) -> web.SeleniumCLIENT:

@@ -1,8 +1,8 @@
 """
 Main file of the DAF GUI.
 """
-from contextlib import suppress
-from typing import get_args, get_origin, Iterable, Awaitable, Union, Literal, Optional
+from copy import deepcopy
+from typing import get_args, get_origin, Iterable, Awaitable, Union, Literal
 from tkinter import ttk
 import ttkwidgets as tw
 import tkinter as tk
@@ -12,7 +12,7 @@ import asyncio
 import daf
 
 
-WIN_UPDATE_DELAY = 0.01
+WIN_UPDATE_DELAY = 0.005
 CREDITS_TEXT = \
 """
 Welcome to Discord Advertisement Framework - UI mode.
@@ -47,7 +47,6 @@ class NewObjectWindow(tk.Toplevel):
         self.class_ = class_
         self.return_listbox = return_listbox
         self._map = {}
-
         opened_widget = type(self).open_widgets.get(class_)
         if opened_widget is not None:
             opened_widget._cleanup()
@@ -72,7 +71,10 @@ class NewObjectWindow(tk.Toplevel):
             w.pack()
             self._map[None] = (w, class_)
         else:
-            for row, (k, v) in enumerate(class_.__init__.__annotations__.items()):
+            annotations = class_.__init__.__annotations__
+            if annotations is None:
+                annotations = {}
+            for row, (k, v) in enumerate(annotations.items()):
                 if k == "return":
                     break
 
@@ -91,7 +93,8 @@ class NewObjectWindow(tk.Toplevel):
                         opts = get_args(entry_type)
                         widgets.append(ttk.OptionMenu(frame_main, w, opts[0], *opts))
                         break
-
+                    elif isinstance(entry_type, str):
+                        continue
                     elif entry_type is bool:
                         w = tk.BooleanVar(value=False)
                         widgets.append(ttk.Checkbutton(frame_main, variable=w))
@@ -102,37 +105,41 @@ class NewObjectWindow(tk.Toplevel):
 
                     elif isinstance(entry_type, Iterable):
                         widgets.append(w := ListBoxObjects(frame_main))
+                        frame_edit_remove = ttk.Frame(frame_main)
+                        widgets.append(frame_edit_remove)
+                        menubtn = ttk.Menubutton(frame_edit_remove, text="Add object")
+                        menu = tk.Menu(menubtn)
+                        menubtn.configure(menu=menu)
+                        menubtn.pack()
+                        ttk.Button(frame_edit_remove, text="Remove").pack()
+                        ttk.Button(frame_edit_remove, text="Edit").pack()
+
                         args = get_args(entry_type)
                         if get_origin(args[0]) is Union:
                             args = get_args(args[0])
 
                         entry_type = list
-
-                        def _(class_, widget):
-                            def __():
-                                return NewObjectWindow(class_, widget)
-
-                            return __
-
                         for arg in args:
-                            if arg.__module__.split(".", 1)[0] != "_discord":
-                                frame = ttk.Frame(frame_main)
-                                b = ttk.Button(frame, text=f"Add {arg.__name__}", command=_(arg, w))
-                                b.pack(fill=tk.X)
-                                b = ttk.Button(frame, text=f"Remove {arg.__name__}")
-                                b.pack(fill=tk.X)
-                                widgets.append(frame)
+                            # ttk.Button(frame, text=f"Add {arg.__name__}", command=_(arg, w)).pack(fill=tk.X)
+                            menu.add_radiobutton(label=arg.__name__, command=self.new_object_window(arg, w))
 
                         break
-                    else:
+                    else:  # Type not supported, try other types
                         continue
 
-                self._map[k] = (w, entry_types)
-                for column, widget in enumerate(widgets):
-                    widget.grid(row=row, column=column)
+                if len(widgets) > 1:  # Additional widgets besides the Label
+                    self._map[k] = (w, entry_types)
+                    for column, widget in enumerate(widgets):
+                        widget.grid(row=row, column=column)
 
         self.protocol("WM_DELETE_WINDOW", self._cleanup)
         self.title(f"New {class_.__name__} object")
+
+    def new_object_window(self, class_, widget):
+        def __():
+            return NewObjectWindow(class_, widget, self)
+
+        return __
 
     def _cleanup(self):
         del type(self).open_widgets[self.class_]
@@ -158,9 +165,10 @@ class NewObjectWindow(tk.Toplevel):
                         break
                     except Exception:
                         continue
+                else:
+                    tkmsg.showwarning("Invalid value", f"Unable to process attribute\n\n{attr}\n\nwhich is of type\n\n{type_}.\n\nIgnoring the value!")
 
-
-            map_ = {k:v for k, v in map_.items() if type(v) is bool or v}
+            map_ = {k: v for k, v in map_.items() if type(v) is bool or v}
             single_value = map_.get(None)
             if single_value is not None:
                 object_ = single_value
@@ -219,11 +227,13 @@ class Application():
         self.tabman_mf.add(self.tab_objects, text="Objects template")
         self.lb_accounts = ListBoxObjects(self.tab_objects)
         self.bnt_add_object = ttk.Button(self.tab_objects, text="Add ACCOUNT", command=lambda: NewObjectWindow(daf.ACCOUNT, self.lb_accounts))
-        self.bnt_add_object.pack(anchor=tk.NW, padx=5, pady=5)
-        self.lb_accounts.pack(fill=tk.BOTH, expand=True, side="left")
-
-        self.bnt_tw_option = ttk.Button(self.tab_objects, text="Options")
-        self.bnt_tw_option.pack(side="right", fill=tk.Y)
+        self.bnt_edit_object = ttk.Button(self.tab_objects, text="Edit")
+        self.bnt_remove_object = ttk.Button(self.tab_objects, text="Remove", command=self.list_del_account)
+        # self.bnt_tw_option.option_add()
+        self.bnt_add_object.pack(anchor=tk.NW, fill=tk.X)
+        self.bnt_edit_object.pack(anchor=tk.NW, fill=tk.X)
+        self.bnt_remove_object.pack(anchor=tk.NW, fill=tk.X)
+        self.lb_accounts.pack(fill=tk.BOTH, expand=True)
 
         # Status variables
         self._daf_running = False
@@ -235,6 +245,13 @@ class Application():
     @property
     def opened(self) -> bool:
         return self._window_opened
+
+    def list_del_account(self):
+        selection = self.lb_accounts.curselection()
+        if len(selection):
+            self.lb_accounts.delete(*selection)
+        else:
+            tkmsg.showerror("Empty list!", "Select atleast one item!")
 
     def open_console(self):
         def _():
@@ -252,7 +269,7 @@ class Application():
         self.bnt_toolbar_stop_daf.configure(state="enabled")
         self._daf_running = True
         self._async_queue.put_nowait(daf.initialize())
-        self._async_queue.put_nowait([daf.add_object(account) for account in self.lb_accounts.get()])
+        self._async_queue.put_nowait([daf.add_object(deepcopy(account)) for account in self.lb_accounts.get()])
 
     def stop_daf(self):
         self.bnt_toolbar_start_daf.configure(state="enabled")
