@@ -154,6 +154,9 @@ class ACCOUNT:
         self._deleted = False
         misc._write_attr_once(self, "_update_sem", asyncio.Semaphore(1))
 
+    def __str__(self) -> str:
+        return f"{type(self).__name__}(token={self._token}, is_user={self.is_user}, selenium={self._selenium})"
+
     def __eq__(self, other):
         if isinstance(other, ACCOUNT):
             return self._token == other._token
