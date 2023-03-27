@@ -3,6 +3,7 @@ Main file of the DAF GUI.
 """
 from copy import deepcopy
 from typing import get_args, get_origin, Iterable, Awaitable, Union, Literal
+from contextlib import suppress
 from tkinter import ttk
 
 import ttkwidgets as tw
@@ -98,8 +99,9 @@ class NewObjectWindow(tk.Toplevel):
         bnt_save.pack(anchor=tk.W)
         frame_toolbar.pack(fill=tk.X)
 
-        frame_main = ttk.Frame(self)
-        frame_main.pack(anchor=tk.CENTER, expand=True)
+        frame_main = ttk.Frame(self, padding=(5, 5))
+        frame_main.pack(expand=True, fill=tk.BOTH)
+
         if class_ is bool:
             w = tk.BooleanVar(value=False)
             self.bnt = ttk.Checkbutton(frame_main, variable=w)
@@ -109,7 +111,7 @@ class NewObjectWindow(tk.Toplevel):
             w = ttk.Entry(frame_main)
             w.pack(fill=tk.X)
             self._map[None] = (w, class_)
-        elif class_ is int:
+        elif class_ in {int, float}:
             w = ttk.Spinbox(frame_main)
             w.pack(fill=tk.X)
             self._map[None] = (w, class_)
@@ -136,6 +138,9 @@ class NewObjectWindow(tk.Toplevel):
 
             self._map[None] = (w, list)
         elif hasattr(class_.__init__, "__annotations__"):
+            # Do not allow Y resize to keep layout clean
+            self.resizable(True, False)
+
             annotations = class_.__init__.__annotations__
             if annotations is None:
                 annotations = {}
@@ -146,9 +151,11 @@ class NewObjectWindow(tk.Toplevel):
                     rows -= 1
                     break
 
-                widgets = []
+                frame_annotated = ttk.Frame(frame_main, padding=(5, 5))
+                frame_annotated.pack(fill=tk.BOTH, expand=True)
+
                 entry_types = v
-                widgets.append(ttk.Label(frame_main, text=k, padding=(5, 5)))
+                ttk.Label(frame_annotated, text=k, width=15).pack(side="left")
 
                 if isinstance(entry_types, str):
                     _ = __builtins__.get(entry_types)
@@ -166,12 +173,12 @@ class NewObjectWindow(tk.Toplevel):
                 if not isinstance(entry_types, tuple):
                     entry_types = (entry_types,)
 
-                bnt_menu = ttk.Menubutton(frame_main)
+                bnt_menu = ttk.Menubutton(frame_annotated)
                 menu = tk.Menu(bnt_menu)
                 bnt_menu.configure(menu=menu)
-                w = combo = ComboBoxObjects(frame_main)
-                widgets.append(combo)
-                widgets.append(bnt_menu)
+                w = combo = ComboBoxObjects(frame_annotated)
+                bnt_menu.pack(side="right")
+                combo.pack(fill=tk.X, side="right", expand=True, padx=5, pady=5)
 
                 for entry_type in entry_types:
                     if get_origin(entry_type) is Literal:
@@ -184,17 +191,10 @@ class NewObjectWindow(tk.Toplevel):
                     else:  # Type not supported, try other types
                         menu.add_radiobutton(label=entry_type.__name__, command=self.new_object_window(entry_type, combo))
 
-                widgets_len = len(widgets)
-                if widgets_len > 1:  # Additional widgets besides the Label
-                    columns = widgets_len
-                    self._map[k] = (w, entry_types)
-                    for column, widget in enumerate(widgets):
-                        widget.grid(row=row, column=column, sticky=tk.NSEW)
+                self._map[k] = (w, entry_types)
 
         self.protocol("WM_DELETE_WINDOW", self._cleanup)
         self.title(f"New {class_.__name__} object")
-        self.rowconfigure(rows, weight=1)
-        self.columnconfigure(columns, weight=10)
 
     def new_object_window(self, class_, widget):
         def __():
@@ -212,20 +212,22 @@ class NewObjectWindow(tk.Toplevel):
             map_ = {}
             for attr, (widget, type_) in self._map.items():
                 value = widget.get()
-                if not isinstance(value, int):
-                    if not isinstance(value, str) or len(value):
-                        map_[attr] = value
-                    continue
 
                 if not isinstance(type_, Iterable):
-                    type_ = [type_]
+                    type_ = (type_, )
 
-                for type__ in type_:
-                    try:
-                        map_[attr] = type__(value)
-                        break
-                    except Exception:
+                if isinstance(value, str):  # Ignore empty values
+                    if not len(value):
                         continue
+
+                    for type__ in type_:
+                        with suppress(Exception):
+                            map_[attr] = type__(value)
+                            break
+                    else:
+                        map_[attr] = value  # Could not cast value, use as it is
+                else:
+                    map_[attr] = value
 
             single_value = map_.get(None)
             if single_value is not None:
