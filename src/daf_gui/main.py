@@ -9,6 +9,8 @@ import ttkwidgets as tw
 import tkinter as tk
 import tkinter.messagebox as tkmsg
 import asyncio
+import inspect
+import types
 
 import daf
 
@@ -148,11 +150,18 @@ class NewObjectWindow(tk.Toplevel):
                 entry_types = v
                 widgets.append(ttk.Label(frame_main, text=k, padding=(5, 5)))
 
-                while get_origin(entry_types) is Union:
-                    entry_types = get_args(entry_types)
-
                 if isinstance(entry_types, str):
-                    entry_types = __builtins__.get(entry_types, type(None))
+                    _ = __builtins__.get(entry_types)
+                    if _ is None:
+                        try:
+                            entry_types = eval(entry_types, inspect.getmodule(class_).__dict__)
+                        except Exception:
+                            entry_types = type(None)
+                    else:
+                        entry_types = _
+
+                while get_origin(entry_types) in {Union, types.UnionType}:
+                    entry_types = get_args(entry_types)
 
                 if not isinstance(entry_types, tuple):
                     entry_types = (entry_types,)
@@ -203,8 +212,9 @@ class NewObjectWindow(tk.Toplevel):
             map_ = {}
             for attr, (widget, type_) in self._map.items():
                 value = widget.get()
-                if not isinstance(value, str | int):
-                    map_[attr] = value
+                if not isinstance(value, int):
+                    if not isinstance(value, str) or len(value):
+                        map_[attr] = value
                     continue
 
                 if not isinstance(type_, Iterable):
@@ -217,7 +227,6 @@ class NewObjectWindow(tk.Toplevel):
                     except Exception:
                         continue
 
-            map_ = {k: v for k, v in map_.items() if type(v) is bool or v}
             single_value = map_.get(None)
             if single_value is not None:
                 object_ = single_value
