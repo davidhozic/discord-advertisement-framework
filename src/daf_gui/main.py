@@ -82,6 +82,8 @@ class NewObjectWindow(tk.Toplevel):
         self.class_ = class_
         self.return_widget = return_widget
         self._map = {}
+        rows = 0
+        columns = 0
         opened_widget = type(self).open_widgets.get(class_)
         if opened_widget is not None:
             opened_widget._cleanup()
@@ -95,19 +97,19 @@ class NewObjectWindow(tk.Toplevel):
         frame_toolbar.pack(fill=tk.X)
 
         frame_main = ttk.Frame(self)
-        frame_main.pack(fill=tk.BOTH, expand=True)
+        frame_main.pack(anchor=tk.CENTER, expand=True)
         if class_ is bool:
             w = tk.BooleanVar(value=False)
             self.bnt = ttk.Checkbutton(frame_main, variable=w)
-            self.bnt.pack()
+            self.bnt.pack(fill=tk.X)
             self._map[None] = (w, class_)
         elif class_ is str:
             w = ttk.Entry(frame_main)
-            w.pack()
+            w.pack(fill=tk.X)
             self._map[None] = (w, class_)
         elif class_ is int:
             w = ttk.Spinbox(frame_main)
-            w.pack()
+            w.pack(fill=tk.X)
             self._map[None] = (w, class_)
         elif get_origin(class_) in {list, Iterable} or "Iterable" in str(class_):
             w = ListBoxObjects(frame_main)
@@ -119,8 +121,8 @@ class NewObjectWindow(tk.Toplevel):
             ttk.Button(frame_edit_remove, text="Remove").pack()
             ttk.Button(frame_edit_remove, text="Edit").pack()
 
-            w.grid(row=0, column=0)
-            frame_edit_remove.grid(row=0, column=1)
+            w.pack(side="left", fill=tk.BOTH, expand=True)
+            frame_edit_remove.pack(side="right")
 
             args = get_args(class_)
             if get_origin(args[0]) is Union:
@@ -135,8 +137,11 @@ class NewObjectWindow(tk.Toplevel):
             annotations = class_.__init__.__annotations__
             if annotations is None:
                 annotations = {}
+
+            rows = len(annotations)
             for row, (k, v) in enumerate(annotations.items()):
                 if k == "return":
+                    rows -= 1
                     break
 
                 widgets = []
@@ -145,6 +150,9 @@ class NewObjectWindow(tk.Toplevel):
 
                 while get_origin(entry_types) is Union:
                     entry_types = get_args(entry_types)
+
+                if isinstance(entry_types, str):
+                    entry_types = __builtins__.get(entry_types, type(None))
 
                 if not isinstance(entry_types, tuple):
                     entry_types = (entry_types,)
@@ -158,7 +166,7 @@ class NewObjectWindow(tk.Toplevel):
 
                 for entry_type in entry_types:
                     if get_origin(entry_type) is Literal:
-                        combo["values"] = list(combo["values"]) + get_args(entry_type)
+                        combo["values"] = get_args(entry_type)
                     elif entry_type is bool:
                         combo["values"] = list(combo["values"]) + [True]
                         combo["values"] = list(combo["values"]) + [False]
@@ -167,13 +175,17 @@ class NewObjectWindow(tk.Toplevel):
                     else:  # Type not supported, try other types
                         menu.add_radiobutton(label=entry_type.__name__, command=self.new_object_window(entry_type, combo))
 
-                if len(widgets) > 1:  # Additional widgets besides the Label
+                widgets_len = len(widgets)
+                if widgets_len > 1:  # Additional widgets besides the Label
+                    columns = widgets_len
                     self._map[k] = (w, entry_types)
                     for column, widget in enumerate(widgets):
-                        widget.grid(row=row, column=column)
+                        widget.grid(row=row, column=column, sticky=tk.NSEW)
 
         self.protocol("WM_DELETE_WINDOW", self._cleanup)
         self.title(f"New {class_.__name__} object")
+        self.rowconfigure(rows, weight=1)
+        self.columnconfigure(columns, weight=10)
 
     def new_object_window(self, class_, widget):
         def __():
@@ -191,7 +203,7 @@ class NewObjectWindow(tk.Toplevel):
             map_ = {}
             for attr, (widget, type_) in self._map.items():
                 value = widget.get()
-                if isinstance(value, (list, type(None))):
+                if not isinstance(value, str | int):
                     map_[attr] = value
                     continue
 
