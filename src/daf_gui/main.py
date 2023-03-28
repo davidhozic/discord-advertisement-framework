@@ -187,7 +187,8 @@ class NewObjectWindow(tk.Toplevel):
                         combo["values"] = list(combo["values"]) + [True]
                         combo["values"] = list(combo["values"]) + [False]
                     elif entry_type is type(None):
-                        combo["values"] = list(combo["values"]) + [None]
+                        if bool not in entry_types:
+                            combo["values"] = list(combo["values"]) + [None]
                     else:  # Type not supported, try other types
                         menu.add_radiobutton(label=entry_type.__name__, command=self.new_object_window(entry_type, combo))
 
