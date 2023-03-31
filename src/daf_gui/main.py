@@ -89,16 +89,20 @@ class Application():
         self.tab_logging = ttk.Frame(self.tabman_mf, padding=(5, 5))
         self.tabman_mf.add(self.tab_logging, text="Logging")
         self.label_logging_mgr = ttk.Label(self.tab_logging, text="Selected logger:")
-        self.combo_logging_mgr = ComboBoxObjects(self.tab_logging)
-
-        self.bnt_edit_logger = ttk.Button(self.tab_logging, text="Edit", command=self.edit_logger)
         self.label_logging_mgr.pack(anchor=tk.N)
-        self.combo_logging_mgr.pack(anchor=tk.N, fill=tk.X)
-        self.bnt_edit_logger.pack(anchor=tk.N)
+
+        frame_logger_select = ttk.Frame(self.tab_logging)
+        frame_logger_select.pack(fill=tk.X)
+        self.combo_logging_mgr = ComboBoxObjects(frame_logger_select)
+        self.bnt_edit_logger = ttk.Button(frame_logger_select, text="Edit", command=self.edit_logger)
+        self.combo_logging_mgr.pack(fill=tk.X, side="left", expand=True)
+        self.bnt_edit_logger.pack(anchor=tk.N, side="right")
+
         self.combo_logging_mgr["values"] = [
             NewObjectWindow.ObjectInfo(daf.LoggerJSON, {}),
             NewObjectWindow.ObjectInfo(daf.LoggerSQL, {}),
             NewObjectWindow.ObjectInfo(daf.LoggerCSV, {}),
+            None,
         ]
 
         # Output tab
@@ -150,7 +154,8 @@ class Application():
         selection = self.combo_logging_mgr.current()
         if selection >= 0:
             object_: NewObjectWindow.ObjectInfo = self.combo_logging_mgr.get()
-            NewObjectWindow(object_.class_, self.combo_logging_mgr, self.win_main, object_)
+            if object_ is not None:
+                NewObjectWindow(object_.class_, self.combo_logging_mgr, self.win_main, object_)
         else:
             tkmsg.showerror("Empty list!", "Select atleast one item!")
 
@@ -185,7 +190,6 @@ class Application():
             json.dump(json_data, file, indent=2)
 
     def load_schema(self):
-        tkmsg.showwarning("Erase warning!", "This will clear curently loaded selection!", parent=self.win_main)
         try:
             file = tkfile.askopenfile(filetypes=[("JSON", "*.json")])
             if file is None:
@@ -210,23 +214,27 @@ class Application():
             tkmsg.showerror("Schema load error!", f"Could not load schema!\n\n{exc}")
 
     def start_daf(self):
-        self.bnt_toolbar_start_daf.configure(state="disabled")
-        self.bnt_toolbar_stop_daf.configure(state="enabled")
-        logger = self.combo_logging_mgr.get()
-        if isinstance(logger, str) and logger == "":
-            logger = None
-        else:
-            logger = NewObjectWindow.convert_to_objects(logger)
+        try:
+            logger = self.combo_logging_mgr.get()
+            if isinstance(logger, str) and logger == "":
+                logger = None
+            elif logger is not None:
+                logger = NewObjectWindow.convert_to_objects(logger)
 
-        self._async_queue.put_nowait(daf.initialize(logger=logger))
-        self._daf_running = True
-        self._async_queue.put_nowait([daf.add_object(NewObjectWindow.convert_to_objects(account)) for account in self.lb_accounts.get()])
+            self._async_queue.put_nowait(daf.initialize(logger=logger))
+            self._async_queue.put_nowait([daf.add_object(NewObjectWindow.convert_to_objects(account)) for account in self.lb_accounts.get()])
+            self.bnt_toolbar_start_daf.configure(state="disabled")
+            self.bnt_toolbar_stop_daf.configure(state="enabled")
+            self._daf_running = True
+        except Exception as exc:
+            print(exc)
+            tkmsg.showerror("Start error!", f"Could not start daf due to exception!\n\n{exc}")
 
     def stop_daf(self):
-        self.bnt_toolbar_start_daf.configure(state="enabled")
-        self.bnt_toolbar_stop_daf.configure(state="disabled")
         self._async_queue.put_nowait(daf.shutdown())
         self._daf_running = False
+        self.bnt_toolbar_start_daf.configure(state="enabled")
+        self.bnt_toolbar_stop_daf.configure(state="disabled")
 
     def close_window(self):
         self._window_opened = False

@@ -2,6 +2,7 @@ from typing import get_args, get_origin, Iterable, Union, Literal, Any
 from contextlib import suppress
 
 from daf import VERSION as DAF_VERSION
+from _discord._version import __version__ as PYCORD_VERSION
 
 import ttkbootstrap as ttk
 import tkinter as tk
@@ -12,7 +13,11 @@ import inspect
 import types
 
 
-HELP_SEARCH_URL = f"https://daf.davidhozic.com/en/{DAF_VERSION}/?rtd_search={{}}"
+HELP_URLS = {
+    "daf": f"https://daf.davidhozic.com/en/{DAF_VERSION}/?rtd_search={{}}",
+    "_discord": f"https://docs.pycord.dev/en/v{PYCORD_VERSION}/search.html?q={{}}",
+    "builtins": "https://docs.python.org/3/search.html?q={}"
+}
 
 __all__ = (
     "Text",
@@ -118,6 +123,15 @@ class NewObjectWindow(tk.Toplevel):
         frame_toolbar = ttk.Frame(self, padding=(5, 5))
         bnt_save = ttk.Button(frame_toolbar, text="Save", command=self.save)
         bnt_save.grid(row=0, column=0)
+
+        package = class_.__module__.split(".", 1)[0]
+        help_url = HELP_URLS.get(package)
+        if help_url is not None:
+            def cmd():
+                webbrowser.open(help_url.format(class_.__name__))
+
+            ttk.Button(frame_toolbar, text="Help", command=cmd).grid(row=0, column=1)
+
         frame_toolbar.pack(fill=tk.X)
 
         frame_main = ttk.Frame(self, padding=(5, 5))
@@ -160,12 +174,6 @@ class NewObjectWindow(tk.Toplevel):
             annotations = class_.__init__.__annotations__
             if annotations is None:
                 annotations = {}
-
-            if class_.__module__.split(".", 1)[0] == "daf":
-                def cmd():
-                    webbrowser.open(HELP_SEARCH_URL.format(class_.__name__))
-
-                ttk.Button(frame_toolbar, text="Help", command=cmd).grid(row=0, column=1)
 
             for row, (k, v) in enumerate(annotations.items()):
                 if k == "return":
