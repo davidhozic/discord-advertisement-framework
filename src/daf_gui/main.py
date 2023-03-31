@@ -6,8 +6,10 @@ import ttkbootstrap as ttk
 
 import tkinter as tk
 import tkinter.messagebox as tkmsg
+import tkinter.filedialog as tkfile
 
 import asyncio
+import json
 
 import daf
 
@@ -50,6 +52,8 @@ class Application():
         self.menubar_file = tk.Menu(self.menubar_main)
         self.menubar_theme = tk.Menu(self.win_main)
         self.menubar_main.add_cascade(label="File", menu=self.menubar_file)
+        self.menubar_file.add_command(label="Save schema", command=self.save_schema)
+        self.menubar_file.add_command(label="Load schema", command=self.load_schema)
         self.win_main.configure(menu=self.menubar_main)
 
         # Toolbar
@@ -123,6 +127,25 @@ class Application():
 
         # self.win_debug = tw.DebugWindow(self.win_main, "Trace", stderr=False)
         # self.win_debug.protocol("WM_DELETE_WINDOW", _)
+
+    def save_schema(self):
+        json_data = [NewObjectWindow.convert_to_json(x) for x in self.lb_accounts.get()]
+        file = tkfile.asksaveasfile(filetypes=[("JSON", "*.json")])
+        if file is None:
+            return
+
+        with file:
+            json.dump(json_data, file, indent=4)
+
+    def load_schema(self):
+        tkmsg.showwarning("Erase warning!", "This will clear curently loaded selection!", parent=self.win_main)
+        file = tkfile.askopenfile(filetypes=[("JSON", "*.json")])
+        if file is None:
+            return
+
+        with file:
+            self.lb_accounts.delete(0, tk.END)
+            self.lb_accounts.insert(tk.END, *NewObjectWindow.convert_from_json(json.load(file)))
 
     def start_daf(self):
         self.bnt_toolbar_start_daf.configure(state="disabled")

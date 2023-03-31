@@ -1,4 +1,4 @@
-from typing import get_args, get_origin, Iterable, Union, Literal
+from typing import get_args, get_origin, Iterable, Union, Literal, Any
 from contextlib import suppress
 
 from daf import VERSION as DAF_VERSION
@@ -47,6 +47,10 @@ class ListBoxObjects(tk.Listbox):
         super().delete(first, last)
         if last is None:
             last = first
+
+        if isinstance(last, str):
+            if last == tk.END:
+                last = len(self._original_items)
 
         for item in self._original_items[first:last + 1]:
             self._original_items.remove(item)
@@ -358,3 +362,51 @@ class NewObjectWindow(tk.Toplevel):
             data_conv[k] = v
 
         return d.class_(**data_conv)
+
+    @classmethod
+    def convert_to_json(cls, d: ObjectInfo):
+        data_conv = {}
+        for k, v in d.data.items():
+            if isinstance(v, NewObjectWindow.ObjectInfo):
+                v = cls.convert_to_json(v)
+
+            elif isinstance(v, list):
+                v = v.copy()
+                for i, subv in enumerate(v):
+                    if isinstance(subv, NewObjectWindow.ObjectInfo):
+                        v[i] = cls.convert_to_json(subv)
+
+            data_conv[k] = v
+
+        return {"type": f"{d.class_.__module__}.{d.class_.__name__}", "data": data_conv}
+
+    @classmethod
+    def convert_from_json(cls, d: dict | list[dict] | Any) -> ObjectInfo:
+        if isinstance(d, list):
+            result = []
+            for item in d:
+                result.append(cls.convert_from_json(item))
+
+            return result
+
+        elif isinstance(d, dict):
+            type_: str = d["type"]
+            data: dict = d["data"]
+            type_split = type_.split('.')
+            module = type_split[:len(type_split) - 1]
+            type_ = type_split[-1]
+            module_ = __import__(module[0])
+            module.pop(0)
+            for i, m in enumerate(module):
+                module_ = getattr(module_, module[i])
+
+            type_ = getattr(module_, type_)
+            for k, v in data.items():
+                if isinstance(v, list) or isinstance(v, dict) and v.get("type") is not None:
+                    v = cls.convert_from_json(v)
+                    data[k] = v
+
+            return NewObjectWindow.ObjectInfo(type_, data)
+
+        else:
+            return d
