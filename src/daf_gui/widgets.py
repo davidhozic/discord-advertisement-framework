@@ -88,7 +88,7 @@ class NewObjectWindow(tk.Toplevel):
             self.class_ = class_
             self.data = data
 
-        def __str__(self) -> str:
+        def __repr__(self) -> str:
             _ret: str = self.class_.__name__ + "("
             for k, v in self.data.items():
                 _ret += f"{k}={str(v)}, "
@@ -97,12 +97,12 @@ class NewObjectWindow(tk.Toplevel):
 
     open_widgets = {}
 
-    def __init__(self, class_, return_widget: ComboBoxObjects | ListBoxObjects, parent = None, object_ = None, *args, **kwargs):
+    def __init__(self, class_, return_widget: ComboBoxObjects | ListBoxObjects, parent = None, old: ObjectInfo = None, *args, **kwargs):
         self.class_ = class_
         self.return_widget = return_widget
         self._map = {}
         self.parent = parent
-        self.old_object_info = object_  # Edit requested
+        self.old_object_info = old  # Edit requested
 
         opened_widget = type(self).open_widgets.get(class_)
         if opened_widget is not None:
@@ -218,12 +218,13 @@ class NewObjectWindow(tk.Toplevel):
             return
 
         self.protocol("WM_DELETE_WINDOW", self._cleanup)
-        self.title(f"{'New' if object_ is None else 'Edit'} {class_.__name__} object")
+        self.title(f"{'New' if old is None else 'Edit'} {class_.__name__} object")
 
-        if object_ is not None:  # Edit
-            self.load(object_)
+        if old is not None:  # Edit
+            self.load(old)
 
-    def load(self, object_):
+    def load(self, object_: ObjectInfo):
+        object_ = object_.data if self._map.get(None) is None else object_
         for attr, (widget, types_) in self._map.items():
             try:
                 val = object_[attr] if attr is not None else object_  # Single value type
@@ -234,7 +235,7 @@ class NewObjectWindow(tk.Toplevel):
                 if val not in widget["values"]:
                     widget["values"] = widget["values"] + [val]
 
-                widget.set(str(val))
+                widget.current(widget["values"].index(val))
 
             elif isinstance(widget, ListBoxObjects):
                 widget.insert(tk.END, *object_)
@@ -266,7 +267,7 @@ class NewObjectWindow(tk.Toplevel):
             selection = lb.curselection()
             if len(selection):
                 object_: NewObjectWindow.ObjectInfo = lb.get()[selection[0]]
-                return NewObjectWindow(object_.class_, lb, self, object_.data)
+                return NewObjectWindow(object_.class_, lb, self, object_)
             else:
                 tkmsg.showerror("Empty list!", "Select atleast one item!", parent=self)
 
@@ -279,7 +280,7 @@ class NewObjectWindow(tk.Toplevel):
             if isinstance(selection, list):
                 return NewObjectWindow(Union[tuple(types)], combo, self, selection)
             elif isinstance(selection, NewObjectWindow.ObjectInfo):
-                return NewObjectWindow(selection.class_, combo, self, selection.data)
+                return NewObjectWindow(selection.class_, combo, self, selection)
             else:
                 if isinstance(selection, str) and not len(selection):
                     selection = None
@@ -294,11 +295,11 @@ class NewObjectWindow(tk.Toplevel):
         if edit:  # Edit was requested, delete old value
             ret_widget = self.return_widget
             if isinstance(ret_widget, ListBoxObjects):
-                ret_widget.delete(*ret_widget.curselection())
+                ind = ret_widget.get().index(self.old_object_info)
             else:
-                selection = ret_widget.current()
-                if selection >= 0:
-                    ret_widget.delete(selection)
+                ind = ret_widget["values"].index(self.old_object_info)
+
+            ret_widget.delete(ind)
 
         self.destroy()
         self.quit()
@@ -349,6 +350,7 @@ class NewObjectWindow(tk.Toplevel):
                 v = cls.convert_to_objects(v)
 
             elif isinstance(v, list):
+                v = v.copy()
                 for i, subv in enumerate(v):
                     if isinstance(subv, NewObjectWindow.ObjectInfo):
                         v[i] = cls.convert_to_objects(subv)

@@ -406,6 +406,8 @@ async def shutdown(loop: Optional[asyncio.AbstractEventLoop] = None, stop_loop: 
     for account in GLOBALS.accounts:
         await account._close()
 
+    GLOBALS.accounts.clear()
+
     if stop_loop:
         if loop is None:
             loop = asyncio.get_event_loop()

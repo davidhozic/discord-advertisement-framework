@@ -2,16 +2,12 @@
 Main file of the DAF GUI.
 """
 from typing import Iterable, Awaitable
-# from tkinter import ttk
 import ttkbootstrap as ttk
 
-import ttkwidgets as tw
 import tkinter as tk
 import tkinter.messagebox as tkmsg
 
 import asyncio
-import os
-
 
 import daf
 
@@ -106,7 +102,7 @@ class Application():
         selection = self.lb_accounts.curselection()
         if len(selection):
             object_: NewObjectWindow.ObjectInfo = self.lb_accounts.get()[selection[0]]
-            NewObjectWindow(object_.class_, self.lb_accounts, self.win_main, object_.data)
+            NewObjectWindow(object_.class_, self.lb_accounts, self.win_main, object_)
         else:
             tkmsg.showerror("Empty list!", "Select atleast one item!")
 
@@ -125,8 +121,8 @@ class Application():
         if self.win_debug is not None:
             self.win_debug.quit()
 
-        self.win_debug = tw.DebugWindow(self.win_main, "Trace", stderr=False)
-        self.win_debug.protocol("WM_DELETE_WINDOW", _)
+        # self.win_debug = tw.DebugWindow(self.win_main, "Trace", stderr=False)
+        # self.win_debug.protocol("WM_DELETE_WINDOW", _)
 
     def start_daf(self):
         self.bnt_toolbar_start_daf.configure(state="disabled")
