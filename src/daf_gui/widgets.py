@@ -278,8 +278,11 @@ class NewObjectWindow(tk.Toplevel):
         def __():
             selection = lb.curselection()
             if len(selection):
-                object_: NewObjectWindow.ObjectInfo = lb.get()[selection[0]]
-                return NewObjectWindow(object_.class_, lb, self, object_)
+                object_: NewObjectWindow.ObjectInfo | Any = lb.get()[selection[0]]
+                if isinstance(object_, NewObjectWindow.ObjectInfo):
+                    return NewObjectWindow(object_.class_, lb, self, object_)
+                else:
+                    return NewObjectWindow(type(object_), lb, self, object_)
             else:
                 tkmsg.showerror("Empty list!", "Select atleast one item!", parent=self)
 
@@ -349,6 +352,7 @@ class NewObjectWindow(tk.Toplevel):
                 self.return_widget.insert(tk.END, object_)
             else:
                 self.return_widget["values"] = list(self.return_widget["values"]) + [object_]
+                self.return_widget.current(self.return_widget["values"].index(object_))
 
             self._cleanup(self.old_object_info is not None)
         except Exception as exc:

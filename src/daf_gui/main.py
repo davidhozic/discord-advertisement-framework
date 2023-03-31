@@ -3,6 +3,7 @@ Main file of the DAF GUI.
 """
 from typing import Iterable, Awaitable
 import ttkbootstrap as ttk
+from PIL import Image, ImageTk
 
 import tkinter as tk
 import tkinter.messagebox as tkmsg
@@ -11,7 +12,8 @@ import tkinter.filedialog as tkfile
 import asyncio
 import json
 import sys
-# import os
+import os
+
 
 import daf
 
@@ -102,7 +104,6 @@ class Application():
             NewObjectWindow.ObjectInfo(daf.LoggerJSON, {}),
             NewObjectWindow.ObjectInfo(daf.LoggerSQL, {}),
             NewObjectWindow.ObjectInfo(daf.LoggerCSV, {}),
-            None,
         ]
 
         # Output tab
@@ -131,10 +132,15 @@ class Application():
         sys.stdout = STDIOOutput()
 
         # Credits tab
+        logo_img = Image.open(f"{os.path.dirname(__file__)}/img/logo.png")
+        logo_img = logo_img.resize((self.win_main.winfo_screenwidth() // 8, self.win_main.winfo_screenwidth() // 8), resample=0)
+        logo = ImageTk.PhotoImage(logo_img)
         self.tab_info = ttk.Frame(self.tabman_mf)
         self.tabman_mf.add(self.tab_info, text="Credits")
-        self.labl_credits = tk.Label(self.tab_info, text=CREDITS_TEXT)
-        self.labl_credits.pack()
+        ttk.Label(self.tab_info, text=CREDITS_TEXT).pack()
+        label_logo = ttk.Label(self.tab_info, image=logo)
+        label_logo.image = logo
+        label_logo.pack()
 
         # Status variables
         self._daf_running = False
@@ -154,8 +160,7 @@ class Application():
         selection = self.combo_logging_mgr.current()
         if selection >= 0:
             object_: NewObjectWindow.ObjectInfo = self.combo_logging_mgr.get()
-            if object_ is not None:
-                NewObjectWindow(object_.class_, self.combo_logging_mgr, self.win_main, object_)
+            NewObjectWindow(object_.class_, self.combo_logging_mgr, self.win_main, object_)
         else:
             tkmsg.showerror("Empty list!", "Select atleast one item!")
 
