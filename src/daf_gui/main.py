@@ -75,7 +75,7 @@ class Application():
 
         # Objects tab
         self.tab_objects = ttk.Frame(self.tabman_mf)
-        self.tabman_mf.add(self.tab_objects, text="Objects template")
+        self.tabman_mf.add(self.tab_objects, text="Objects definition")
         self.lb_accounts = ListBoxObjects(self.tab_objects)
         self.bnt_add_object = ttk.Button(self.tab_objects, text="Add ACCOUNT", command=lambda: NewObjectWindow(daf.ACCOUNT, self.lb_accounts, self.win_main))
         self.bnt_edit_object = ttk.Button(self.tab_objects, text="Edit", command=self.edit_accounts)
@@ -202,7 +202,9 @@ class Application():
                 # Load loggers
                 loggers = [NewObjectWindow.convert_from_json(x) for x in json_data["loggers"]["all"]]
                 self.combo_logging_mgr["values"] = loggers
-                self.combo_logging_mgr.current(json_data["loggers"]["selected_index"])
+                selected_index = json_data["loggers"]["selected_index"]
+                if selected_index >= 0:
+                    self.combo_logging_mgr.current(selected_index)
 
         except Exception as exc:
             tkmsg.showerror("Schema load error!", f"Could not load schema!\n\n{exc}")

@@ -138,8 +138,8 @@ class NewObjectWindow(tk.Toplevel):
             menu = tk.Menu(menubtn)
             menubtn.configure(menu=menu)
             menubtn.pack()
-            ttk.Button(frame_edit_remove, text="Remove", command=self.listbox_delete_selected(w)).pack()
-            ttk.Button(frame_edit_remove, text="Edit", command=self.listbox_edit_selected(w)).pack()
+            ttk.Button(frame_edit_remove, text="Remove", command=self.listbox_delete_selected(w)).pack(fill=tk.X)
+            ttk.Button(frame_edit_remove, text="Edit", command=self.listbox_edit_selected(w)).pack(fill=tk.X)
 
             w.pack(side="left", fill=tk.BOTH, expand=True)
             frame_edit_remove.pack(side="right")
