@@ -14,7 +14,7 @@ from typeguard import typechecked
 
 from .tracing import TraceLEVELS, trace
 
-from . import logging
+from . import _logging as logging
 
 import json
 import copy

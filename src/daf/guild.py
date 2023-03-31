@@ -337,8 +337,9 @@ class _BaseGUILD:
         # it will still be shilled but no exceptions will be raised when
         # trying to remove the message.
         for message in to_advert:
-            result: MessageSendResult = await message._send()
             message._reset_timer()
+            result: MessageSendResult = await message._send()
+
             if self.logging and result.result_code != MSG_SEND_STATUS_NO_MESSAGE_SENT:
                 await logging.save_log(guild_ctx, result.message_context)
 

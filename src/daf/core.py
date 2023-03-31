@@ -7,7 +7,7 @@ from typing import Callable, Coroutine, List, Optional, Union, overload
 from typeguard import typechecked
 
 from .logging.tracing import TraceLEVELS, trace
-from .logging import sql, logging, tracing
+from .logging import sql, _logging as logging, tracing
 
 from . import guild
 from . import client
