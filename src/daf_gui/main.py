@@ -85,7 +85,6 @@ class Application():
         self.bnt_add_object = ttk.Button(self.tab_objects, text="Add ACCOUNT", command=lambda: NewObjectWindow(daf.ACCOUNT, self.lb_accounts, self.win_main))
         self.bnt_edit_object = ttk.Button(self.tab_objects, text="Edit", command=self.edit_accounts)
         self.bnt_remove_object = ttk.Button(self.tab_objects, text="Remove", command=self.list_del_account)
-        # self.bnt_tw_option.option_add()
         self.bnt_add_object.pack(anchor=tk.NW, fill=tk.X)
         self.bnt_edit_object.pack(anchor=tk.NW, fill=tk.X)
         self.bnt_remove_object.pack(anchor=tk.NW, fill=tk.X)
@@ -135,7 +134,7 @@ class Application():
             return
 
         with file:
-            json.dump(json_data, file, indent=4)
+            json.dump(json_data, file, indent=2)
 
     def load_schema(self):
         tkmsg.showwarning("Erase warning!", "This will clear curently loaded selection!", parent=self.win_main)
