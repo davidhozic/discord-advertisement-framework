@@ -452,4 +452,3 @@ def get_client() -> discord.Client:
           TraceLEVELS.DEPRECATED)
     from . import core
     return core.GLOBALS.accounts[0].client
-
