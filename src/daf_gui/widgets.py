@@ -24,7 +24,7 @@ __all__ = (
 
 class Text(tk.Text):
     def get(self) -> str:
-        return super().get("1.0", tk.END)
+        return super().get("1.0", tk.END).removesuffix("\n")
 
 
 class ListBoxObjects(tk.Listbox):
@@ -57,13 +57,17 @@ class ComboBoxObjects(ttk.Combobox):
         self._original_items = []
         super().__init__(*args, **kwargs)
 
-    def get(self, original = True, *args, **kwargs) -> list:
-        if original:
-            index = self.current()
-            if index >= 0:
-                return self._original_items[index]
+    def get(self, *args, **kwargs) -> list:
+        index = self.current()
+        if index >= 0:
+            return self._original_items[index]
 
-        return super().get(*args, **kwargs)
+        return super().get()
+
+    def delete(self, index: int) -> None:
+        vals = self["values"]
+        vals.pop(index)
+        self["values"] = vals
 
     def __setitem__(self, key: str, value) -> None:
         if key == "values":
@@ -93,12 +97,12 @@ class NewObjectWindow(tk.Toplevel):
 
     open_widgets = {}
 
-    def __init__(self, class_, return_widget: tk.Listbox, parent = None, object_ = None, *args, **kwargs):
+    def __init__(self, class_, return_widget: ComboBoxObjects | ListBoxObjects, parent = None, object_ = None, *args, **kwargs):
         self.class_ = class_
         self.return_widget = return_widget
         self._map = {}
         self.parent = parent
-        self.edit = object_ is not None
+        self.old_object_info = object_  # Edit requested
 
         opened_widget = type(self).open_widgets.get(class_)
         if opened_widget is not None:
@@ -214,9 +218,9 @@ class NewObjectWindow(tk.Toplevel):
             return
 
         self.protocol("WM_DELETE_WINDOW", self._cleanup)
-        self.title(f"New {class_.__name__} object")
+        self.title(f"{'New' if object_ is None else 'Edit'} {class_.__name__} object")
 
-        if self.edit:
+        if object_ is not None:  # Edit
             self.load(object_)
 
     def load(self, object_):
@@ -277,12 +281,25 @@ class NewObjectWindow(tk.Toplevel):
             elif isinstance(selection, NewObjectWindow.ObjectInfo):
                 return NewObjectWindow(selection.class_, combo, self, selection.data)
             else:
+                if isinstance(selection, str) and not len(selection):
+                    selection = None
+
                 return NewObjectWindow(type(selection), combo, self, selection)
 
         return __
 
-    def _cleanup(self):
+    def _cleanup(self, edit = False):
         del type(self).open_widgets[self.class_]
+
+        if edit:  # Edit was requested, delete old value
+            ret_widget = self.return_widget
+            if isinstance(ret_widget, ListBoxObjects):
+                ret_widget.delete(*ret_widget.curselection())
+            else:
+                selection = ret_widget.current()
+                if selection >= 0:
+                    ret_widget.delete(selection)
+
         self.destroy()
         self.quit()
 
@@ -320,7 +337,7 @@ class NewObjectWindow(tk.Toplevel):
             else:
                 self.return_widget["values"] = list(self.return_widget["values"]) + [object_]
 
-            self._cleanup()
+            self._cleanup(self.old_object_info is not None)
         except Exception as exc:
             tkmsg.showerror("Saving error", f"Could not save the object.\n\n{exc}", parent=self)
 

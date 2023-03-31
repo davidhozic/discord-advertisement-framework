@@ -37,8 +37,8 @@ class Application():
     def __init__(self) -> None:
         # Window initialization
         win_main = ttk.Window(themename="minty")
-        path = os.path.join(os.path.dirname(__file__), "img/logo.png")
-        win_main.iconphoto(True, tk.PhotoImage(file=path))
+        # path = os.path.join(os.path.dirname(__file__), "img/logo.png")
+        # win_main.iconphoto(True, tk.PhotoImage(file=path))
 
         self.win_main = win_main
         screen_res = win_main.winfo_screenwidth() // 2, win_main.winfo_screenheight() // 2
@@ -82,8 +82,8 @@ class Application():
         self.tab_objects = ttk.Frame(self.tabman_mf)
         self.tabman_mf.add(self.tab_objects, text="Objects template")
         self.lb_accounts = ListBoxObjects(self.tab_objects)
-        self.bnt_add_object = ttk.Button(self.tab_objects, text="Add ACCOUNT", command=lambda: NewObjectWindow(daf.ACCOUNT, self.lb_accounts))
-        self.bnt_edit_object = ttk.Button(self.tab_objects, text="Edit")
+        self.bnt_add_object = ttk.Button(self.tab_objects, text="Add ACCOUNT", command=lambda: NewObjectWindow(daf.ACCOUNT, self.lb_accounts, self.win_main))
+        self.bnt_edit_object = ttk.Button(self.tab_objects, text="Edit", command=self.edit_accounts)
         self.bnt_remove_object = ttk.Button(self.tab_objects, text="Remove", command=self.list_del_account)
         # self.bnt_tw_option.option_add()
         self.bnt_add_object.pack(anchor=tk.NW, fill=tk.X)
@@ -101,6 +101,14 @@ class Application():
     @property
     def opened(self) -> bool:
         return self._window_opened
+
+    def edit_accounts(self):
+        selection = self.lb_accounts.curselection()
+        if len(selection):
+            object_: NewObjectWindow.ObjectInfo = self.lb_accounts.get()[selection[0]]
+            NewObjectWindow(object_.class_, self.lb_accounts, self.win_main, object_.data)
+        else:
+            tkmsg.showerror("Empty list!", "Select atleast one item!")
 
     def list_del_account(self):
         selection = self.lb_accounts.curselection()
