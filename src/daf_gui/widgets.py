@@ -161,6 +161,11 @@ class NewObjectWindow(tk.Toplevel):
             menubtn.pack()
             ttk.Button(frame_edit_remove, text="Remove", command=self.listbox_delete_selected(w)).pack(fill=tk.X)
             ttk.Button(frame_edit_remove, text="Edit", command=self.listbox_edit_selected(w)).pack(fill=tk.X)
+            ttk.Button(frame_edit_remove, text="Copy", command=self.listbox_copy_selected(w)).pack(fill=tk.X)
+
+            w.bind("<Control-c>", lambda e: self.listbox_copy_selected(w)())
+            w.bind("<BackSpace>", lambda e: self.listbox_delete_selected(w)())
+            w.bind("<Delete>", lambda e: self.listbox_delete_selected(w)())
 
             w.pack(side="left", fill=tk.BOTH, expand=True)
             frame_edit_remove.pack(side="right")
@@ -277,6 +282,17 @@ class NewObjectWindow(tk.Toplevel):
             selection = lb.curselection()
             if len(selection):
                 lb.delete(*selection)
+            else:
+                tkmsg.showerror("Empty list!", "Select atleast one item!", parent=self)
+
+        return __
+
+    def listbox_copy_selected(self, lb: ListBoxObjects):
+        def __():
+            selection = lb.curselection()
+            if len(selection):
+                object_: NewObjectWindow.ObjectInfo | Any = lb.get()[selection[0]]
+                lb.insert(tk.END, object_)
             else:
                 tkmsg.showerror("Empty list!", "Select atleast one item!", parent=self)
 
