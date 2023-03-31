@@ -1,4 +1,5 @@
 from typing import get_args, get_origin, Iterable, Union, Literal, Any
+from collections.abc import Iterable as ABCIterable
 from contextlib import suppress
 
 from daf import VERSION as DAF_VERSION
@@ -93,6 +94,8 @@ class ComboBoxObjects(ttk.Combobox):
 
 class NewObjectWindow(tk.Toplevel):
     class ObjectInfo:
+        CHARACTER_LIMIT = 200
+
         def __init__(self, class_, data: dict) -> None:
             self.class_ = class_
             self.data = data
@@ -102,7 +105,11 @@ class NewObjectWindow(tk.Toplevel):
             for k, v in self.data.items():
                 _ret += f"{k}={str(v)}, "
 
-            return _ret.rstrip(", ") + ")"
+            _ret = _ret.rstrip(", ") + ")"
+            if len(_ret) > self.CHARACTER_LIMIT:
+                _ret = _ret[:self.CHARACTER_LIMIT] + "...)"
+
+            return _ret
 
     open_widgets = {}
 
@@ -145,7 +152,7 @@ class NewObjectWindow(tk.Toplevel):
             w = ttk.Spinbox(frame_main, from_=-9999, to=9999)
             w.pack(fill=tk.X)
             self._map[None] = (w, class_)
-        elif get_origin(class_) in {list, Iterable} or "Iterable" in str(class_):
+        elif get_origin(class_) in {list, Iterable, ABCIterable}:
             w = ListBoxObjects(frame_main)
             frame_edit_remove = ttk.Frame(frame_main)
             menubtn = ttk.Menubutton(frame_edit_remove, text="Add object")
@@ -220,7 +227,8 @@ class NewObjectWindow(tk.Toplevel):
                             combo["values"] = list(combo["values"]) + [None]
                     else:  # Type not supported, try other types
                         menu.add_radiobutton(label=f"New {entry_type.__name__}", command=self.new_object_window(entry_type, combo))
-                        editable_types.append(entry_type)
+                        if get_origin(entry_type) in {list, Iterable, ABCIterable}:
+                            editable_types.append(entry_type)
 
                 menu.add_radiobutton(label="Edit selected", command=self.combo_edit_selected(w, editable_types))
                 self._map[k] = (w, entry_types)
@@ -288,12 +296,12 @@ class NewObjectWindow(tk.Toplevel):
 
         return __
 
-    def combo_edit_selected(self, combo: ComboBoxObjects, types: list):
+    def combo_edit_selected(self, combo: ComboBoxObjects, types):
         def __():
             selection = combo.get()
 
             if isinstance(selection, list):
-                return NewObjectWindow(Union[tuple(types)], combo, self, selection)
+                return NewObjectWindow(Union[*types], combo, self, selection)
             elif isinstance(selection, NewObjectWindow.ObjectInfo):
                 return NewObjectWindow(selection.class_, combo, self, selection)
             else:
