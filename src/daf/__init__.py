@@ -2,7 +2,6 @@
 Discord Advertisement Framework
 """
 import _discord as discord
-from . import annotations as _
 from .client import *
 from .core import *
 from .dtypes import *

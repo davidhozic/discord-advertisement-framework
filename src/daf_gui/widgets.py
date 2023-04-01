@@ -3,7 +3,6 @@ from collections.abc import Iterable as ABCIterable
 from contextlib import suppress
 
 from daf import VERSION as DAF_VERSION
-from daf.annotations import ANNOTATIONS as ADDITIONAL_ANNOTATIONS
 from _discord._version import __version__ as PYCORD_VERSION
 
 import ttkbootstrap as ttk
@@ -13,6 +12,7 @@ import tkinter.messagebox as tkmsg
 import webbrowser
 import inspect
 import types
+import datetime as dt
 
 
 HELP_URLS = {
@@ -20,6 +20,30 @@ HELP_URLS = {
     "_discord": f"https://docs.pycord.dev/en/v{PYCORD_VERSION}/search.html?q={{}}",
     "builtins": "https://docs.python.org/3/search.html?q={}"
 }
+
+ADDITIONAL_ANNOTATIONS = {
+    dt.timedelta: {
+        "days": float,
+        "seconds": float,
+        "microseconds": float,
+        "milliseconds": float,
+        "minutes": float,
+        "hours": float,
+        "weeks": float
+    },
+    dt.datetime: {
+        "year": int,
+        "month": int | None,
+        "day": int | None,
+        "hour": int,
+        "minute": int,
+        "second": int,
+        "microsecond": int,
+        "tzinfo": dt.tzinfo | None,
+        "fold": int
+    }
+}
+
 
 __all__ = (
     "Text",
@@ -205,6 +229,34 @@ class NewObjectWindow(ttk.Toplevel):
     open_widgets = {}
 
     def __init__(self, class_, return_widget: ComboBoxObjects | ListBoxObjects, parent = None, old: ObjectInfo = None, *args, **kwargs):
+        def convert_types(types_in):
+            if isinstance(types_in, str):
+                _ = __builtins__.get(types_in)
+                if _ is None:
+                    try:
+                        types_in = types_in(types, inspect.getmodule(class_).__dict__)
+                    except Exception:
+                        types_in = type(None)
+                else:
+                    types_in = _
+
+            while get_origin(types_in) in {Union, types.UnionType}:
+                types_in = get_args(types_in)
+
+            if not isinstance(types_in, list):
+                if isinstance(types_in, tuple):
+                    types_in = list(types_in)
+                else:
+                    types_in = [types_in, ]
+
+            subtypes = []
+            for t in types_in:
+                if hasattr(t, "__subclasses__") and t.__module__.split('.', 1)[0] in {"_discord", "daf"}:
+                    for st in t.__subclasses__():
+                        subtypes.extend(convert_types(st))
+
+            return types_in + subtypes
+
         self.class_ = class_
         self.return_widget = return_widget
         self._map = {}
@@ -279,8 +331,8 @@ class NewObjectWindow(ttk.Toplevel):
 
             w.pack(side="left", fill=tk.BOTH, expand=True)
             frame_edit_remove.pack(side="right")
-
             args = get_args(class_)
+            args = convert_types(args)
             if get_origin(args[0]) is Union:
                 args = get_args(args[0])
 
@@ -304,34 +356,6 @@ class NewObjectWindow(ttk.Toplevel):
 
                 entry_types = v
                 ttk.Label(frame_annotated, text=k, width=15).pack(side="left")
-
-                def convert_types(types_in):
-                    if isinstance(types_in, str):
-                        _ = __builtins__.get(types_in)
-                        if _ is None:
-                            try:
-                                types_in = types_in(types, inspect.getmodule(class_).__dict__)
-                            except Exception:
-                                types_in = type(None)
-                        else:
-                            types_in = _
-
-                    while get_origin(types_in) in {Union, types.UnionType}:
-                        types_in = get_args(types_in)
-
-                    if not isinstance(types_in, list):
-                        if isinstance(types_in, tuple):
-                            types_in = list(types_in)
-                        else:
-                            types_in = [types_in, ]
-
-                    subtypes = []
-                    for t in types_in:
-                        if hasattr(t, "__subclasses__") and t.__module__.split('.', 1)[0] in {"_discord", "daf"}:
-                            for st in t.__subclasses__():
-                                subtypes.extend(convert_types(st))
-
-                    return types_in + subtypes
 
                 entry_types = convert_types(entry_types)
 
