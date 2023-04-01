@@ -185,6 +185,9 @@ class Application():
         """
 
         logger = self.combo_logging_mgr.get()
+        logger_is_present = str(logger) != ""
+        run_logger_str = "\n    logger=logger" if logger_is_present else ""
+
         accounts: list[ObjectInfo] = self.lb_accounts.get()
 
         def convert_objects_to_script(object: ObjectInfo | list | tuple | set):
@@ -219,6 +222,9 @@ class Application():
                 _list_data += "]"
                 object_data.append(_list_data)
 
+            else:
+                object_data.append(str(object))
+
             return ",".join(object_data), import_data
 
         accounts_str, imports = convert_objects_to_script(accounts)
@@ -236,13 +242,13 @@ At the bottom of the file the framework is then started with the run function.
 """
 
 # Import the necessary items
-from {logger.class_.__module__} import {logger.class_.__name__}
+{f"from {logger.class_.__module__} import {logger.class_.__name__}" if logger_is_present else ""}
 {imports}
 
 import daf
 
 # Define the logger
-logger = {logger}
+{f"logger = {logger}" if logger_is_present else ""}
 
 # Defined accounts
 accounts = {accounts_str}
@@ -251,8 +257,7 @@ accounts = {accounts_str}
 # Run the framework (blocking)
 
 daf.run(
-    accounts = accounts,
-    logger = logger
+    accounts=accounts,{run_logger_str}
 )
 '''
         file = tkfile.asksaveasfile(filetypes=[("DAF Python script", "*.py")])
