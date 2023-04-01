@@ -59,6 +59,7 @@ class Application():
         self.menubar_main.add_cascade(label="File", menu=self.menubar_file)
         self.menubar_file.add_command(label="Save schema", command=self.save_schema)
         self.menubar_file.add_command(label="Load schema", command=self.load_schema)
+        self.menubar_file.add_command(label="Generate script", command=self.generate_daf_script)
         self.win_main.configure(menu=self.menubar_main)
 
         # Toolbar
@@ -101,9 +102,9 @@ class Application():
         self.bnt_edit_logger.pack(anchor=tk.N, side="right")
 
         self.combo_logging_mgr["values"] = [
-            NewObjectWindow.ObjectInfo(daf.LoggerJSON, {}),
-            NewObjectWindow.ObjectInfo(daf.LoggerSQL, {}),
-            NewObjectWindow.ObjectInfo(daf.LoggerCSV, {}),
+            ObjectInfo(daf.LoggerJSON, {}),
+            ObjectInfo(daf.LoggerSQL, {}),
+            ObjectInfo(daf.LoggerCSV, {}),
         ]
 
         # Output tab
@@ -159,7 +160,7 @@ class Application():
     def edit_logger(self):
         selection = self.combo_logging_mgr.current()
         if selection >= 0:
-            object_: NewObjectWindow.ObjectInfo = self.combo_logging_mgr.get()
+            object_: ObjectInfo = self.combo_logging_mgr.get()
             NewObjectWindow(object_.class_, self.combo_logging_mgr, self.win_main, object_)
         else:
             tkmsg.showerror("Empty list!", "Select atleast one item!")
@@ -167,7 +168,7 @@ class Application():
     def edit_accounts(self):
         selection = self.lb_accounts.curselection()
         if len(selection):
-            object_: NewObjectWindow.ObjectInfo = self.lb_accounts.get()[selection[0]]
+            object_: ObjectInfo = self.lb_accounts.get()[selection[0]]
             NewObjectWindow(object_.class_, self.lb_accounts, self.win_main, object_)
         else:
             tkmsg.showerror("Empty list!", "Select atleast one item!")
@@ -179,13 +180,93 @@ class Application():
         else:
             tkmsg.showerror("Empty list!", "Select atleast one item!")
 
+    def generate_daf_script(self):
+        """
+        Converts the schema into DAF script
+        """
+
+        logger = self.combo_logging_mgr.get()
+        accounts: list[ObjectInfo] = self.lb_accounts.get()
+
+        def convert_objects_to_script(object: ObjectInfo | list | tuple | set):
+            object_data = []
+            import_data = []
+
+            if isinstance(object, ObjectInfo):
+                object_str = f"{object.class_.__name__}(\n    "
+                attr_str = ""
+                for attr, value in object.data.items():
+                    if isinstance(value, ObjectInfo | list | tuple | set):
+                        value, import_data_ = convert_objects_to_script(value)
+                        import_data.extend(import_data_)
+
+                    elif isinstance(value, str):
+                        value = f'"{value}"'
+
+                    attr_str += f"{attr}={value},\n"
+
+                object_str += "    ".join(attr_str.splitlines(True)) + ")"
+                object_data.append(object_str)
+                import_data.append(f"from {object.class_.__module__} import {object.class_.__name__}")
+
+            elif isinstance(object, list | tuple | set):
+                _list_data = "[\n"
+                for element in object:
+                    object_str, import_data_ = convert_objects_to_script(element)
+                    _list_data += object_str + ",\n"
+                    import_data.extend(import_data_)
+
+                _list_data = "    ".join(_list_data.splitlines(keepends=True))
+                _list_data += "]"
+                object_data.append(_list_data)
+
+            return ",".join(object_data), import_data
+
+        accounts_str, imports = convert_objects_to_script(accounts)
+        imports = "\n".join(set(imports))
+
+        _ret = f'''
+"""
+Automatically generated file for Discord Advertisement Framework {daf.VERSION}.
+This can be run eg. 24/7 on a server without graphical interface.
+
+The file has the required classes and functions imported, then the logger is defined and the
+accounts list is defined.
+
+At the bottom of the file the framework is then started with the run function.
+"""
+
+# Import the necessary items
+from {logger.class_.__module__} import {logger.class_.__name__}
+{imports}
+
+import daf
+
+# Define the logger
+logger = {logger}
+
+# Defined accounts
+accounts = {accounts_str}
+
+
+# Run the framework (blocking)
+
+daf.run(
+    accounts = accounts,
+    logger = logger
+)
+'''
+        file = tkfile.asksaveasfile(filetypes=[("DAF Python script", "*.py")])
+        with file:
+            file.write(_ret)
+
     def save_schema(self):
         json_data = {
             "loggers": {
-                "all": [NewObjectWindow.convert_to_json(x) for x in self.combo_logging_mgr["values"]],
+                "all": [convert_to_json(x) for x in self.combo_logging_mgr["values"]],
                 "selected_index": self.combo_logging_mgr.current(),
             },
-            "accounts": [NewObjectWindow.convert_to_json(x) for x in self.lb_accounts.get()],
+            "accounts": [convert_to_json(x) for x in self.lb_accounts.get()],
         }
         file = tkfile.asksaveasfile(filetypes=[("JSON", "*.json")])
         if file is None:
@@ -204,12 +285,12 @@ class Application():
                 json_data = json.load(file)
 
                 # Load accounts
-                accounts = NewObjectWindow.convert_from_json(json_data["accounts"])
+                accounts = convert_from_json(json_data["accounts"])
                 self.lb_accounts.delete(0, tk.END)
                 self.lb_accounts.insert(tk.END, *accounts)
 
                 # Load loggers
-                loggers = [NewObjectWindow.convert_from_json(x) for x in json_data["loggers"]["all"]]
+                loggers = [convert_from_json(x) for x in json_data["loggers"]["all"]]
                 self.combo_logging_mgr["values"] = loggers
                 selected_index = json_data["loggers"]["selected_index"]
                 if selected_index >= 0:
@@ -224,10 +305,10 @@ class Application():
             if isinstance(logger, str) and logger == "":
                 logger = None
             elif logger is not None:
-                logger = NewObjectWindow.convert_to_objects(logger)
+                logger = convert_to_objects(logger)
 
             self._async_queue.put_nowait(daf.initialize(logger=logger))
-            self._async_queue.put_nowait([daf.add_object(NewObjectWindow.convert_to_objects(account)) for account in self.lb_accounts.get()])
+            self._async_queue.put_nowait([daf.add_object(convert_to_objects(account)) for account in self.lb_accounts.get()])
             self.bnt_toolbar_start_daf.configure(state="disabled")
             self.bnt_toolbar_stop_daf.configure(state="enabled")
             self._daf_running = True

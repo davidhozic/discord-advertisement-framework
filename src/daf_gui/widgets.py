@@ -26,6 +26,10 @@ __all__ = (
     "ListBoxObjects",
     "ComboBoxObjects",
     "NewObjectWindow",
+    "ObjectInfo",
+    "convert_to_objects",
+    "convert_to_json",
+    "convert_from_json",
 )
 
 
@@ -34,10 +38,107 @@ class Text(tk.Text):
         return super().get("1.0", tk.END).removesuffix("\n")
 
 
+class ObjectInfo:
+    """
+    Describes Python objects' parameters.
+    """
+    CHARACTER_LIMIT = 200
+
+    def __init__(self, class_, data: dict) -> None:
+        self.class_ = class_
+        self.data = data
+
+    def __repr__(self) -> str:
+        _ret: str = self.class_.__name__ + "("
+        for k, v in self.data.items():
+            v = f'"{v}"' if isinstance(v, str) else str(v)
+            _ret += f"{k}={v}, "
+
+        _ret = _ret.rstrip(", ") + ")"
+        if len(_ret) > self.CHARACTER_LIMIT:
+            _ret = _ret[:self.CHARACTER_LIMIT] + "...)"
+
+        return _ret
+
+    @classmethod
+    def disable_limit(cls):
+        cls.CHARACTER_LIMIT = 99999999999999999
+
+    @classmethod
+    def enable_limit(cls):
+        cls.CHARACTER_LIMIT = 200
+
+
+def convert_to_objects(d: ObjectInfo):
+    data_conv = {}
+    for k, v in d.data.items():
+        if isinstance(v, ObjectInfo):
+            v = convert_to_objects(v)
+
+        elif isinstance(v, list):
+            v = v.copy()
+            for i, subv in enumerate(v):
+                if isinstance(subv, ObjectInfo):
+                    v[i] = convert_to_objects(subv)
+
+        data_conv[k] = v
+
+    return d.class_(**data_conv)
+
+
+def convert_to_json(d: ObjectInfo):
+    data_conv = {}
+    for k, v in d.data.items():
+        if isinstance(v, ObjectInfo):
+            v = convert_to_json(v)
+
+        elif isinstance(v, list):
+            v = v.copy()
+            for i, subv in enumerate(v):
+                if isinstance(subv, ObjectInfo):
+                    v[i] = convert_to_json(subv)
+
+        data_conv[k] = v
+
+    return {"type": f"{d.class_.__module__}.{d.class_.__name__}", "data": data_conv}
+
+
+def convert_from_json(d: dict | list[dict] | Any) -> ObjectInfo:
+    if isinstance(d, list):
+        result = []
+        for item in d:
+            result.append(convert_from_json(item))
+
+        return result
+
+    elif isinstance(d, dict):
+        type_: str = d["type"]
+        data: dict = d["data"]
+        type_split = type_.split('.')
+        module = type_split[:len(type_split) - 1]
+        type_ = type_split[-1]
+        module_ = __import__(module[0])
+        module.pop(0)
+        for i, m in enumerate(module):
+            module_ = getattr(module_, module[i])
+
+        type_ = getattr(module_, type_)
+        for k, v in data.items():
+            if isinstance(v, list) or isinstance(v, dict) and v.get("type") is not None:
+                v = convert_from_json(v)
+                data[k] = v
+
+        return ObjectInfo(type_, data)
+
+    else:
+        return d
+
+
 class ListBoxObjects(tk.Listbox):
     def __init__(self, *args, **kwargs):
         self._original_items = []
         super().__init__(*args, **kwargs)
+        self.configure(selectmode=tk.EXTENDED)
 
     def get(self, original = True, *args, **kwargs) -> list:
         if original:
@@ -50,17 +151,14 @@ class ListBoxObjects(tk.Listbox):
         self._original_items.extend(elements)
         return _ret
 
-    def delete(self, first: str | int, last: str | int | None = None) -> None:
-        super().delete(first, last)
-        if last is None:
-            last = first
+    def delete(self, *indexes: int) -> None:
+        if indexes[-1] == "end":
+            indexes = range(indexes[0], len(self._original_items))
 
-        if isinstance(last, str):
-            if last == tk.END:
-                last = len(self._original_items)
-
-        for item in self._original_items[first:last + 1]:
-            self._original_items.remove(item)
+        indexes = sorted(indexes, reverse=True)
+        for index in indexes:
+            super().delete(index)
+            del self._original_items[index]
 
 
 class ComboBoxObjects(ttk.Combobox):
@@ -70,19 +168,31 @@ class ComboBoxObjects(ttk.Combobox):
 
     def get(self, *args, **kwargs) -> list:
         index = self.current()
-        if index >= 0:
+        if isinstance(index, int) and index >= 0:
             return self._original_items[index]
 
-        return super().get()
+        return super().get(*args, **kwargs)
 
     def delete(self, index: int) -> None:
-        vals = self["values"]
-        vals.pop(index)
-        self["values"] = vals
+        self["values"].pop(index)
+        super().delete(index)
+        self["values"] = self["values"]  # Update the text list, NOT a code mistake
+
+    def insert(self, index: int | str, element: Any) -> None:
+        if index == tk.END:
+            self._original_items.append(element)
+            index = len(self._original_items)
+        else:
+            self._original_items.insert(index, element)
+
+        self["values"] = self._original_items
 
     def __setitem__(self, key: str, value) -> None:
         if key == "values":
             self._original_items = value
+
+        if isinstance(value, list):
+            value = [str(x)[:200] for x in value]
 
         return super().__setitem__(key, value)
 
@@ -94,24 +204,6 @@ class ComboBoxObjects(ttk.Combobox):
 
 
 class NewObjectWindow(ttk.Toplevel):
-    class ObjectInfo:
-        CHARACTER_LIMIT = 200
-
-        def __init__(self, class_, data: dict) -> None:
-            self.class_ = class_
-            self.data = data
-
-        def __repr__(self) -> str:
-            _ret: str = self.class_.__name__ + "("
-            for k, v in self.data.items():
-                _ret += f"{k}={str(v)}, "
-
-            _ret = _ret.rstrip(", ") + ")"
-            if len(_ret) > self.CHARACTER_LIMIT:
-                _ret = _ret[:self.CHARACTER_LIMIT] + "...)"
-
-            return _ret
-
     open_widgets = {}
 
     def __init__(self, class_, return_widget: ComboBoxObjects | ListBoxObjects, parent = None, old: ObjectInfo = None, *args, **kwargs):
@@ -263,11 +355,11 @@ class NewObjectWindow(ttk.Toplevel):
                     if get_origin(entry_type) is Literal:
                         combo["values"] = get_args(entry_type)
                     elif entry_type is bool:
-                        combo["values"] = list(combo["values"]) + [True]
-                        combo["values"] = list(combo["values"]) + [False]
+                        combo.insert(tk.END, True)
+                        combo.insert(tk.END, False)
                     elif entry_type is type(None):
                         if bool not in entry_types:
-                            combo["values"] = list(combo["values"]) + [None]
+                            combo.insert(tk.END, None)
                     else:  # Type not supported, try other types
                         menu.add_radiobutton(label=f"New {entry_type.__name__}", command=self.new_object_window(entry_type, combo))
                         if get_origin(entry_type) in {list, Iterable, ABCIterable}:
@@ -290,6 +382,8 @@ class NewObjectWindow(ttk.Toplevel):
         new_window = ttk.Toplevel(master=self, title="Save?", padx=10, pady=10)
         new_window.resizable(False, False)
         new_window.attributes("-topmost", True)
+        new_window.bind("<Return>", lambda e: self.save())
+        new_window.focus()
         ttk.Label(new_window, text="Do you want to save modifications?").pack(fill=tk.X, expand=True)
         yes_no_frame = ttk.Frame(new_window)
         ttk.Button(yes_no_frame, text="Yes", command=self.save).pack(side="left")
@@ -306,7 +400,7 @@ class NewObjectWindow(ttk.Toplevel):
 
             if isinstance(widget, ComboBoxObjects):
                 if val not in widget["values"]:
-                    widget["values"] = widget["values"] + [val]
+                    widget.insert(tk.END, val)
 
                 widget.current(widget["values"].index(val))
 
@@ -339,7 +433,7 @@ class NewObjectWindow(ttk.Toplevel):
         def __():
             selection = lb.curselection()
             if len(selection):
-                object_: NewObjectWindow.ObjectInfo | Any = lb.get()[selection[0]]
+                object_: ObjectInfo | Any = lb.get()[selection[0]]
                 lb.insert(tk.END, object_)
             else:
                 tkmsg.showerror("Empty list!", "Select atleast one item!", parent=self)
@@ -349,14 +443,14 @@ class NewObjectWindow(ttk.Toplevel):
     def listbox_edit_selected(self, lb: ListBoxObjects):
         def __():
             selection = lb.curselection()
-            if len(selection):
-                object_: NewObjectWindow.ObjectInfo | Any = lb.get()[selection[0]]
-                if isinstance(object_, NewObjectWindow.ObjectInfo):
-                    return NewObjectWindow(object_.class_, lb, self, object_)
+            if len(selection) == 1:
+                object_ = lb.get()[selection[0]]
+                if isinstance(object_, ObjectInfo):
+                    NewObjectWindow(object_.class_, lb, self, object_)
                 else:
-                    return NewObjectWindow(type(object_), lb, self, object_)
+                    NewObjectWindow(type(object_), lb, self, object_)
             else:
-                tkmsg.showerror("Empty list!", "Select atleast one item!", parent=self)
+                tkmsg.showerror("Selection error", "Select ONE item!", parent=self)
 
         return __
 
@@ -366,7 +460,7 @@ class NewObjectWindow(ttk.Toplevel):
 
             if isinstance(selection, list):
                 return NewObjectWindow(Union[tuple(types)], combo, self, selection)
-            elif isinstance(selection, NewObjectWindow.ObjectInfo):
+            elif isinstance(selection, ObjectInfo):
                 return NewObjectWindow(selection.class_, combo, self, selection)
             else:
                 if isinstance(selection, str) and not len(selection):
@@ -376,18 +470,8 @@ class NewObjectWindow(ttk.Toplevel):
 
         return __
 
-    def _cleanup(self, edit = False):
+    def _cleanup(self):
         type(self).open_widgets[self.class_].pop()
-
-        if edit:  # Edit was requested, delete old value
-            ret_widget = self.return_widget
-            if isinstance(ret_widget, ListBoxObjects):
-                ind = ret_widget.get().index(self.old_object_info)
-            else:
-                ind = ret_widget["values"].index(self.old_object_info)
-
-            ret_widget.delete(ind)
-
         self.destroy()
         self.quit()
 
@@ -417,80 +501,23 @@ class NewObjectWindow(ttk.Toplevel):
             if single_value is not None:
                 object_ = single_value
             else:
-                object_ = NewObjectWindow.ObjectInfo(self.class_, map_)
-                self.convert_to_objects(object_)  # Tries to create instances to check for errors
+                object_ = ObjectInfo(self.class_, map_)
+                convert_to_objects(object_)  # Tries to create instances to check for errors
 
-            if isinstance(self.return_widget, tk.Listbox):
-                self.return_widget.insert(tk.END, object_)
-            else:
-                self.return_widget["values"] = list(self.return_widget["values"]) + [object_]
+            # Edit was requested, delete old value
+            if self.old_object_info is not None:
+                ret_widget = self.return_widget
+                if isinstance(ret_widget, ListBoxObjects):
+                    ind = ret_widget.get().index(self.old_object_info)
+                else:
+                    ind = ret_widget["values"].index(self.old_object_info)
+
+                ret_widget.delete(ind)
+
+            self.return_widget.insert(tk.END, object_)
+            if isinstance(self.return_widget, ComboBoxObjects):
                 self.return_widget.current(self.return_widget["values"].index(object_))
 
-            self._cleanup(self.old_object_info is not None)
+            self._cleanup()
         except Exception as exc:
             tkmsg.showerror("Saving error", f"Could not save the object.\n\n{exc}", parent=self)
-
-    @classmethod
-    def convert_to_objects(cls, d: ObjectInfo):
-        data_conv = {}
-        for k, v in d.data.items():
-            if isinstance(v, NewObjectWindow.ObjectInfo):
-                v = cls.convert_to_objects(v)
-
-            elif isinstance(v, list):
-                v = v.copy()
-                for i, subv in enumerate(v):
-                    if isinstance(subv, NewObjectWindow.ObjectInfo):
-                        v[i] = cls.convert_to_objects(subv)
-
-            data_conv[k] = v
-
-        return d.class_(**data_conv)
-
-    @classmethod
-    def convert_to_json(cls, d: ObjectInfo):
-        data_conv = {}
-        for k, v in d.data.items():
-            if isinstance(v, NewObjectWindow.ObjectInfo):
-                v = cls.convert_to_json(v)
-
-            elif isinstance(v, list):
-                v = v.copy()
-                for i, subv in enumerate(v):
-                    if isinstance(subv, NewObjectWindow.ObjectInfo):
-                        v[i] = cls.convert_to_json(subv)
-
-            data_conv[k] = v
-
-        return {"type": f"{d.class_.__module__}.{d.class_.__name__}", "data": data_conv}
-
-    @classmethod
-    def convert_from_json(cls, d: dict | list[dict] | Any) -> ObjectInfo:
-        if isinstance(d, list):
-            result = []
-            for item in d:
-                result.append(cls.convert_from_json(item))
-
-            return result
-
-        elif isinstance(d, dict):
-            type_: str = d["type"]
-            data: dict = d["data"]
-            type_split = type_.split('.')
-            module = type_split[:len(type_split) - 1]
-            type_ = type_split[-1]
-            module_ = __import__(module[0])
-            module.pop(0)
-            for i, m in enumerate(module):
-                module_ = getattr(module_, module[i])
-
-            type_ = getattr(module_, type_)
-            for k, v in data.items():
-                if isinstance(v, list) or isinstance(v, dict) and v.get("type") is not None:
-                    v = cls.convert_from_json(v)
-                    data[k] = v
-
-            return NewObjectWindow.ObjectInfo(type_, data)
-
-        else:
-            return d
