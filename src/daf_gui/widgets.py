@@ -3,6 +3,7 @@ from collections.abc import Iterable as ABCIterable
 from contextlib import suppress
 
 from daf import VERSION as DAF_VERSION
+from daf.annotations import ANNOTATIONS as ADDITIONAL_ANNOTATIONS
 from _discord._version import __version__ as PYCORD_VERSION
 
 import ttkbootstrap as ttk
@@ -92,7 +93,7 @@ class ComboBoxObjects(ttk.Combobox):
         return super().__getitem__(key)
 
 
-class NewObjectWindow(tk.Toplevel):
+class NewObjectWindow(ttk.Toplevel):
     class ObjectInfo:
         CHARACTER_LIMIT = 200
 
@@ -121,15 +122,28 @@ class NewObjectWindow(tk.Toplevel):
         self.old_object_info = old  # Edit requested
 
         opened_widget = type(self).open_widgets.get(class_)
-        if opened_widget is not None:
-            opened_widget._cleanup()
+        if opened_widget is not None and len(opened_widget):
+            opened_widget = opened_widget[-1]
+            if opened_widget is not parent:
+                opened_widget._cleanup()
 
-        super().__init__(parent, *args, **kwargs)
-        type(self).open_widgets[class_] = self
+        super().__init__(
+            master=parent,
+            title=f"{'New' if old is None else 'Edit'} {class_.__name__} object",
+            *args,
+            **kwargs
+        )
+
+        if opened_widget is None:
+            type(self).open_widgets[class_] = [self]
+        else:
+            type(self).open_widgets[class_].append(self)
 
         frame_toolbar = ttk.Frame(self, padding=(5, 5))
+        ttk.Button(frame_toolbar, text="Close", command=self.close_window).pack(side="left")
+
         bnt_save = ttk.Button(frame_toolbar, text="Save", command=self.save)
-        bnt_save.grid(row=0, column=0)
+        bnt_save.pack(side="left")
 
         package = class_.__module__.split(".", 1)[0]
         help_url = HELP_URLS.get(package)
@@ -137,12 +151,23 @@ class NewObjectWindow(tk.Toplevel):
             def cmd():
                 webbrowser.open(help_url.format(class_.__name__))
 
-            ttk.Button(frame_toolbar, text="Help", command=cmd).grid(row=0, column=1)
+            ttk.Button(frame_toolbar, text="Help", command=cmd).pack(side="left")
 
+        cb_var = ttk.BooleanVar(value=True)
+        ttk.Checkbutton(
+            frame_toolbar, text="Keep on top", style='Roundtoggle.Toolbutton',
+            onvalue=True, offvalue=False,
+            command=lambda: self.attributes("-topmost", cb_var.get()), variable=cb_var,
+        ).pack(side="right", padx=10)
         frame_toolbar.pack(fill=tk.X)
+        self.attributes("-topmost", cb_var.get())
 
         frame_main = ttk.Frame(self, padding=(5, 5))
         frame_main.pack(expand=True, fill=tk.BOTH)
+
+        # Additional annotations defined in daf to support more types
+        annotations = getattr(class_.__init__, "__annotations__", None)
+        additional_annotations = ADDITIONAL_ANNOTATIONS.get(class_)
 
         if class_ is str:
             w = Text(frame_main)
@@ -152,6 +177,7 @@ class NewObjectWindow(tk.Toplevel):
             w = ttk.Spinbox(frame_main, from_=-9999, to=9999)
             w.pack(fill=tk.X)
             self._map[None] = (w, class_)
+            self.resizable(True, False)
         elif get_origin(class_) in {list, Iterable, ABCIterable}:
             w = ListBoxObjects(frame_main)
             frame_edit_remove = ttk.Frame(frame_main)
@@ -179,39 +205,51 @@ class NewObjectWindow(tk.Toplevel):
                 menu.add_radiobutton(label=arg.__name__, command=self.new_object_window(arg, w))
 
             self._map[None] = (w, list)
-        elif hasattr(class_.__init__, "__annotations__"):
-            # Do not allow Y resize to keep layout clean
-            self.resizable(True, False)
-
-            annotations = class_.__init__.__annotations__
+        elif annotations is not None or additional_annotations is not None:
             if annotations is None:
                 annotations = {}
 
-            for row, (k, v) in enumerate(annotations.items()):
-                if k == "return":
-                    break
+            # Additional annotations
+            if additional_annotations is not None:
+                annotations = {**additional_annotations, **annotations}
 
+            annotations.pop("return", None)
+            for (k, v) in annotations.items():
                 frame_annotated = ttk.Frame(frame_main, padding=(5, 5))
                 frame_annotated.pack(fill=tk.BOTH, expand=True)
 
                 entry_types = v
                 ttk.Label(frame_annotated, text=k, width=15).pack(side="left")
 
-                if isinstance(entry_types, str):
-                    _ = __builtins__.get(entry_types)
-                    if _ is None:
-                        try:
-                            entry_types = eval(entry_types, inspect.getmodule(class_).__dict__)
-                        except Exception:
-                            entry_types = type(None)
-                    else:
-                        entry_types = _
+                def convert_types(types_in):
+                    if isinstance(types_in, str):
+                        _ = __builtins__.get(types_in)
+                        if _ is None:
+                            try:
+                                types_in = types_in(types, inspect.getmodule(class_).__dict__)
+                            except Exception:
+                                types_in = type(None)
+                        else:
+                            types_in = _
 
-                while get_origin(entry_types) in {Union, types.UnionType}:
-                    entry_types = get_args(entry_types)
+                    while get_origin(types_in) in {Union, types.UnionType}:
+                        types_in = get_args(types_in)
 
-                if not isinstance(entry_types, tuple):
-                    entry_types = (entry_types,)
+                    if not isinstance(types_in, list):
+                        if isinstance(types_in, tuple):
+                            types_in = list(types_in)
+                        else:
+                            types_in = [types_in, ]
+
+                    subtypes = []
+                    for t in types_in:
+                        if hasattr(t, "__subclasses__") and t.__module__.split('.', 1)[0] in {"_discord", "daf"}:
+                            for st in t.__subclasses__():
+                                subtypes.extend(convert_types(st))
+
+                    return types_in + subtypes
+
+                entry_types = convert_types(entry_types)
 
                 bnt_menu = ttk.Menubutton(frame_annotated)
                 menu = tk.Menu(bnt_menu)
@@ -242,11 +280,21 @@ class NewObjectWindow(tk.Toplevel):
             self._cleanup()
             return
 
-        self.protocol("WM_DELETE_WINDOW", self._cleanup)
-        self.title(f"{'New' if old is None else 'Edit'} {class_.__name__} object")
-
+        self.protocol("WM_DELETE_WINDOW", self.close_window)
+        self.update()
+        self.minsize(self.winfo_width(), self.winfo_height())
         if old is not None:  # Edit
             self.load(old)
+
+    def close_window(self):
+        new_window = ttk.Toplevel(master=self, title="Save?", padx=10, pady=10)
+        new_window.resizable(False, False)
+        new_window.attributes("-topmost", True)
+        ttk.Label(new_window, text="Do you want to save modifications?").pack(fill=tk.X, expand=True)
+        yes_no_frame = ttk.Frame(new_window)
+        ttk.Button(yes_no_frame, text="Yes", command=self.save).pack(side="left")
+        ttk.Button(yes_no_frame, text="No", command=self._cleanup).pack(side="right")
+        yes_no_frame.pack()
 
     def load(self, object_: ObjectInfo):
         object_ = object_.data if self._map.get(None) is None else object_
@@ -329,7 +377,7 @@ class NewObjectWindow(tk.Toplevel):
         return __
 
     def _cleanup(self, edit = False):
-        del type(self).open_widgets[self.class_]
+        type(self).open_widgets[self.class_].pop()
 
         if edit:  # Edit was requested, delete old value
             ret_widget = self.return_widget

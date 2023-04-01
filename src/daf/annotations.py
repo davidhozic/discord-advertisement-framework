@@ -4,19 +4,25 @@ Module is responsible to adding additional annotations to some objects (for bett
 import datetime as dt
 
 
-class timedelta(dt.timedelta):
-    __module__ = dt.__name__
-
-    def __init__(cls, days: float = 0, seconds: float = 0, microseconds: float = 0, milliseconds: float = 0, minutes: float = 0, hours: float = 0, weeks: float = 0):
-        return super().__init__()
-
-
-class datetime(dt.datetime):
-    __module__ = dt.__name__
-
-    def __init__(cls, year: int, month: int | None=None, day: int | None=None, hour: int=0, minute: int=0, second: int=0, microsecond: int=0, tzinfo: dt.tzinfo | None = None, *, fold: int=0):
-        return super().__init__()
-
-
-dt.timedelta = timedelta
-dt.datetime = datetime
+ANNOTATIONS = {
+    dt.timedelta: {
+        "days": float,
+        "seconds": float,
+        "microseconds": float,
+        "milliseconds": float,
+        "minutes": float,
+        "hours": float,
+        "weeks": float
+    },
+    dt.datetime: {
+        "year": int,
+        "month": int | None,
+        "day": int | None,
+        "hour": int,
+        "minute": int,
+        "second": int,
+        "microsecond": int,
+        "tzinfo": dt.tzinfo | None,
+        "fold": int
+    }
+}

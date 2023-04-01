@@ -250,7 +250,7 @@ class LoggerSQL(logging.LoggerBASE):
                  server: Optional[str] = None,
                  port: Optional[int] = None,
                  database: Optional[str] = None,
-                 dialect: Optional[str] = None,
+                 dialect: Literal[*tuple(DIALECT_CONN_MAP.keys())] = None,
                  fallback: Optional[logging.LoggerBASE] = ...):
 
         if not SQL_INSTALLED:
