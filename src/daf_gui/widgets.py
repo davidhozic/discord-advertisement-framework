@@ -365,7 +365,7 @@ class NewObjectWindow(ttk.Toplevel):
             selection = combo.get()
 
             if isinstance(selection, list):
-                return NewObjectWindow(Union[*types], combo, self, selection)
+                return NewObjectWindow(Union[tuple(types)], combo, self, selection)
             elif isinstance(selection, NewObjectWindow.ObjectInfo):
                 return NewObjectWindow(selection.class_, combo, self, selection)
             else:
