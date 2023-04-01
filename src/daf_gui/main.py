@@ -183,6 +183,9 @@ class Application():
         """
         Converts the schema into DAF script
         """
+        file = tkfile.asksaveasfile(filetypes=[("DAF Python script", "*.py")])
+        if file is None:
+            return
 
         logger = self.combo_logging_mgr.get()
         logger_is_present = str(logger) != ""
@@ -260,11 +263,17 @@ daf.run(
     accounts=accounts,{run_logger_str}
 )
 '''
-        file = tkfile.asksaveasfile(filetypes=[("DAF Python script", "*.py")])
         with file:
             file.write(_ret)
 
+        if not file.name.endswith(".py"):
+            os.rename(file.name, file.name + ".py")
+
     def save_schema(self):
+        file = tkfile.asksaveasfile(filetypes=[("JSON", "*.json")])
+        if file is None:
+            return
+
         json_data = {
             "loggers": {
                 "all": [convert_to_json(x) for x in self.combo_logging_mgr["values"]],
@@ -272,12 +281,12 @@ daf.run(
             },
             "accounts": [convert_to_json(x) for x in self.lb_accounts.get()],
         }
-        file = tkfile.asksaveasfile(filetypes=[("JSON", "*.json")])
-        if file is None:
-            return
 
         with file:
             json.dump(json_data, file, indent=2)
+
+        if not file.name.endswith(".json"):
+            os.rename(file.name, file.name + ".json")
 
     def load_schema(self):
         try:
