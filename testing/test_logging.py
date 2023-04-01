@@ -20,7 +20,7 @@ async def test_logging_json(channels, guilds, accounts):
     try:
         json_logger = daf.LoggerJSON("./History")
         await json_logger.initialize()
-        daf.logging._set_logger(json_logger)
+        daf.logging._logging._set_logger(json_logger)
 
         guild = daf.GUILD(dc_guild, logging=True)
         await guild.initialize(parent=account)
@@ -81,7 +81,7 @@ async def test_logging_sql(channels, guilds, accounts):
     try:
         sql_logger = daf.LoggerSQL(database="testdb")
         await sql_logger.initialize()
-        daf.logging._set_logger(sql_logger)
+        daf.logging._logging._set_logger(sql_logger)
         guild = daf.GUILD(dc_guild, logging=True)
         await guild.initialize(parent=account)
         guild_context = guild.generate_log_context()
