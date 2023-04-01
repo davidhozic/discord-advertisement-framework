@@ -189,9 +189,7 @@ class ComboBoxObjects(ttk.Combobox):
 
     def __setitem__(self, key: str, value) -> None:
         if key == "values":
-            self._original_items = value
-
-        if isinstance(value, list):
+            self._original_items = list(value)
             value = [str(x)[:200] for x in value]
 
         return super().__setitem__(key, value)
@@ -213,23 +211,17 @@ class NewObjectWindow(ttk.Toplevel):
         self.parent = parent
         self.old_object_info = old  # Edit requested
 
-        opened_widget = type(self).open_widgets.get(class_)
-        if opened_widget is not None and len(opened_widget):
-            opened_widget = opened_widget[-1]
-            if opened_widget is not parent:
-                opened_widget._cleanup()
+        opened_widget = type(self).open_widgets.get(self.parent)
+        if opened_widget is not None:
+            opened_widget._cleanup()
 
+        type(self).open_widgets[self.parent] = self
         super().__init__(
             master=parent,
             title=f"{'New' if old is None else 'Edit'} {class_.__name__} object",
             *args,
             **kwargs
         )
-
-        if opened_widget is None:
-            type(self).open_widgets[class_] = [self]
-        else:
-            type(self).open_widgets[class_].append(self)
 
         frame_toolbar = ttk.Frame(self, padding=(5, 5))
         ttk.Button(frame_toolbar, text="Close", command=self.close_window).pack(side="left")
@@ -471,7 +463,7 @@ class NewObjectWindow(ttk.Toplevel):
         return __
 
     def _cleanup(self):
-        type(self).open_widgets[self.class_].pop()
+        type(self).open_widgets[self.parent] = None
         self.destroy()
         self.quit()
 

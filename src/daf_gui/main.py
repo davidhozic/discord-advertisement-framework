@@ -52,16 +52,6 @@ class Application():
         # Console initialization
         self.win_debug = None
 
-        # Menubar
-        self.menubar_main = tk.Menu(self.win_main)
-        self.menubar_file = tk.Menu(self.menubar_main)
-        self.menubar_theme = tk.Menu(self.win_main)
-        self.menubar_main.add_cascade(label="File", menu=self.menubar_file)
-        self.menubar_file.add_command(label="Save schema", command=self.save_schema)
-        self.menubar_file.add_command(label="Load schema", command=self.load_schema)
-        self.menubar_file.add_command(label="Generate script", command=self.generate_daf_script)
-        self.win_main.configure(menu=self.menubar_main)
-
         # Toolbar
         self.frame_toolbar = ttk.Frame(self.win_main)
         self.frame_toolbar.pack(fill=tk.X, side="top", padx=5, pady=5)
@@ -142,6 +132,15 @@ class Application():
         label_logo = ttk.Label(self.tab_info, image=logo)
         label_logo.image = logo
         label_logo.pack()
+
+        # File menu
+        self.bnt_file_menu = ttk.Menubutton(self.frame_main, text="Load/Save/Generate")
+        self.menubar_file = ttk.Menu(self.bnt_file_menu)
+        self.menubar_file.add_command(label="Save schema", command=self.save_schema)
+        self.menubar_file.add_command(label="Load schema", command=self.load_schema)
+        self.menubar_file.add_command(label="Generate script", command=self.generate_daf_script)
+        self.bnt_file_menu.configure(menu=self.menubar_file)
+        self.bnt_file_menu.pack()
 
         # Status variables
         self._daf_running = False
