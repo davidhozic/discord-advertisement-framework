@@ -1,9 +1,12 @@
-from typing import get_args, get_origin, Iterable, Union, Literal, Any
+from __future__ import annotations
+from typing import get_args, get_origin, get_type_hints, Iterable, Union, Literal, Any
 from collections.abc import Iterable as ABCIterable
 from contextlib import suppress
+from enum import Enum
 
 from daf import VERSION as DAF_VERSION
 from _discord._version import __version__ as PYCORD_VERSION
+from _discord import Embed as DiscordEmbed, Colour as DiscordColor
 
 import ttkbootstrap as ttk
 import tkinter as tk
@@ -11,7 +14,6 @@ import tkinter.messagebox as tkmsg
 import ttkbootstrap.dialogs.dialogs as tkdiag
 
 import webbrowser
-import inspect
 import types
 import datetime as dt
 
@@ -54,7 +56,12 @@ ADDITIONAL_ANNOTATIONS = {
         "microsecond": int,
         "tzinfo": dt.tzinfo | None,
         "fold": int
-    }
+    },
+    DiscordEmbed: {
+        "title": str,
+        "url": str,
+        "description": str
+    },
 }
 
 
@@ -87,9 +94,11 @@ ADDITIONAL_WIDGETS = {
 }
 
 
-class Text(tk.Text):
-    def get(self) -> str:
-        return super().get("1.0", tk.END).removesuffix("\n")
+def issubclass_noexcept(*args):
+    try:
+        return issubclass(*args)
+    except Exception:
+        return False
 
 
 class ObjectInfo:
@@ -188,6 +197,11 @@ def convert_from_json(d: dict | list[dict] | Any) -> ObjectInfo:
         return d
 
 
+class Text(tk.Text):
+    def get(self) -> str:
+        return super().get("1.0", tk.END).removesuffix("\n")
+
+
 class ListBoxObjects(tk.Listbox):
     def __init__(self, *args, **kwargs):
         self._original_items = []
@@ -260,16 +274,6 @@ class NewObjectWindow(ttk.Toplevel):
 
     def __init__(self, class_, return_widget: ComboBoxObjects | ListBoxObjects, parent = None, old: ObjectInfo = None, *args, **kwargs):
         def convert_types(types_in):
-            if isinstance(types_in, str):
-                _ = __builtins__.get(types_in)
-                if _ is None:
-                    try:
-                        types_in = types_in(types, inspect.getmodule(class_).__dict__)
-                    except Exception:
-                        types_in = type(None)
-                else:
-                    types_in = _
-
             while get_origin(types_in) in {Union, types.UnionType}:
                 types_in = get_args(types_in)
 
@@ -339,7 +343,7 @@ class NewObjectWindow(ttk.Toplevel):
         frame_main.pack(expand=True, fill=tk.BOTH)
 
         # Additional annotations defined in daf to support more types
-        annotations = getattr(class_.__init__, "__annotations__", None)
+        annotations = get_type_hints(class_.__init__, include_extras=True)
         additional_annotations = ADDITIONAL_ANNOTATIONS.get(class_)
 
         if class_ is str:
@@ -384,7 +388,7 @@ class NewObjectWindow(ttk.Toplevel):
 
             # Additional annotations
             if additional_annotations is not None:
-                annotations = {**additional_annotations, **annotations}
+                annotations = {**annotations, **additional_annotations}
 
             annotations.pop("return", None)
 
@@ -412,6 +416,8 @@ class NewObjectWindow(ttk.Toplevel):
                     elif entry_type is bool:
                         combo.insert(tk.END, True)
                         combo.insert(tk.END, False)
+                    elif issubclass_noexcept(entry_type, Enum):
+                        combo["values"] = [en for en in entry_type]
                     elif entry_type is type(None):
                         if bool not in entry_types:
                             combo.insert(tk.END, None)

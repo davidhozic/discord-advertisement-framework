@@ -88,6 +88,9 @@ async def initialize(token: Optional[str] = None,
         trace("Using bool for debug parameter is DEPRECATED. Use daf.logging.TraceLEVELS", TraceLEVELS.DEPRECATED)
         debug = TraceLEVELS.NORMAL if debug else TraceLEVELS.DEPRECATED
 
+    if debug is None:
+        debug = TraceLEVELS.NORMAL
+
     tracing.initialize(debug)  # Print trace messages to the console for debugging purposes
     # ------------------------------------------------------------
     # Initialize logging

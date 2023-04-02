@@ -2,19 +2,18 @@
 Main file of the DAF GUI.
 """
 from typing import Iterable, Awaitable
-import ttkbootstrap as ttk
+from enum import Enum
 from PIL import Image, ImageTk
 
 import tkinter as tk
 import tkinter.messagebox as tkmsg
 import tkinter.filedialog as tkfile
+import ttkbootstrap as ttk
 
 import asyncio
 import json
 import sys
 import os
-
-
 import daf
 
 try:
@@ -91,11 +90,20 @@ class Application():
         self.combo_logging_mgr.pack(fill=tk.X, side="left", expand=True)
         self.bnt_edit_logger.pack(anchor=tk.N, side="right")
 
+        self.label_tracing = ttk.Label(self.tab_logging, text="Selected trace level:")
+        self.label_tracing.pack(anchor=tk.N)
+        frame_tracer_select = ttk.Frame(self.tab_logging)
+        frame_tracer_select.pack(fill=tk.X)
+        self.combo_tracing = ComboBoxObjects(frame_tracer_select)
+        self.combo_tracing.pack(fill=tk.X, side="left", expand=True)
+
         self.combo_logging_mgr["values"] = [
             ObjectInfo(daf.LoggerJSON, {}),
             ObjectInfo(daf.LoggerSQL, {}),
             ObjectInfo(daf.LoggerCSV, {}),
         ]
+
+        self.combo_tracing["values"] = [en for en in daf.TraceLEVELS]
 
         # Output tab
         self.tab_output = ttk.Frame(self.tabman_mf)
@@ -188,8 +196,11 @@ class Application():
             return
 
         logger = self.combo_logging_mgr.get()
+        tracing = self.combo_tracing.get()
         logger_is_present = str(logger) != ""
-        run_logger_str = "\n    logger=logger" if logger_is_present else ""
+        tracing_is_present = str(tracing) != ""
+        run_logger_str = "\n    logger=logger," if logger_is_present else ""
+        run_tracing_str = f"\n    debug={tracing}" if tracing_is_present else ""
 
         accounts: list[ObjectInfo] = self.lb_accounts.get()
 
@@ -206,9 +217,12 @@ class Application():
                         import_data.extend(import_data_)
 
                     elif isinstance(value, str):
+                        value = value.replace("\n", "\\n")
                         value = f'"{value}"'
 
                     attr_str += f"{attr}={value},\n"
+                    if issubclass(type(value), Enum):
+                        import_data.append(f"from {type(value).__module__} import {type(value).__name__}")
 
                 object_str += "    ".join(attr_str.splitlines(True)) + ")"
                 object_data.append(object_str)
@@ -226,7 +240,11 @@ class Application():
                 object_data.append(_list_data)
 
             else:
-                object_data.append(str(object))
+                if isinstance(object, str):
+                    object = object.replace("\n", "\\n")
+                    object_data.append(f'"{object}"')
+                else:
+                    object_data.append(str(object))
 
             return ",".join(object_data), import_data
 
@@ -246,6 +264,7 @@ At the bottom of the file the framework is then started with the run function.
 
 # Import the necessary items
 {f"from {logger.class_.__module__} import {logger.class_.__name__}" if logger_is_present else ""}
+{f"from {tracing.__module__} import {tracing.__class__.__name__}" if tracing_is_present else ""}
 {imports}
 
 import daf
@@ -258,9 +277,8 @@ accounts = {accounts_str}
 
 
 # Run the framework (blocking)
-
 daf.run(
-    accounts=accounts,{run_logger_str}
+    accounts=accounts,{run_logger_str}{run_tracing_str}
 )
 '''
         with file:
@@ -279,6 +297,7 @@ daf.run(
                 "all": [convert_to_json(x) for x in self.combo_logging_mgr["values"]],
                 "selected_index": self.combo_logging_mgr.current(),
             },
+            "tracing": self.combo_tracing.current(),
             "accounts": [convert_to_json(x) for x in self.lb_accounts.get()],
         }
 
@@ -309,6 +328,11 @@ daf.run(
                 if selected_index >= 0:
                     self.combo_logging_mgr.current(selected_index)
 
+                # Tracing
+                tracing_index = json_data["tracing"]
+                if tracing_index >= 0:
+                    self.combo_tracing.current(json_data["tracing"])
+
         except Exception as exc:
             tkmsg.showerror("Schema load error!", f"Could not load schema!\n\n{exc}")
 
@@ -320,7 +344,11 @@ daf.run(
             elif logger is not None:
                 logger = convert_to_objects(logger)
 
-            self._async_queue.put_nowait(daf.initialize(logger=logger))
+            tracing = self.combo_tracing.get()
+            if isinstance(tracing, str) and tracing == "":
+                tracing = None
+
+            self._async_queue.put_nowait(daf.initialize(logger=logger, debug=tracing))
             self._async_queue.put_nowait([daf.add_object(convert_to_objects(account)) for account in self.lb_accounts.get()])
             self.bnt_toolbar_start_daf.configure(state="disabled")
             self.bnt_toolbar_stop_daf.configure(state="enabled")
