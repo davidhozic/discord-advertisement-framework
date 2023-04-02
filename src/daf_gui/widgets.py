@@ -73,20 +73,18 @@ class AdditionalWidget:
         self.setup_cmd = setup_cmd
 
 
-def setup_additional_widget_datetime(w: ttk.DateEntry, window: "NewObjectWindow"):
+def setup_additional_widget_datetime(w: ttk.Button, window: "NewObjectWindow"):
     def _callback(*args):
-        date = w.entry.get()
-        if date != "":
-            date_time = [int(x, base=10) for x in reversed(date.split("/"))]
-            for i, attr in enumerate(("year", "month", "day")):
-                widget, types_ = window._map.get(attr)
-                value = date_time[i]
+        date = tkdiag.Querybox.get_date(window, title="Select the date")
+        for attr in {"year", "month", "day"}:
+            widget, types_ = window._map.get(attr)
+            value = getattr(date, attr)
+            if value not in widget["values"]:
                 widget.insert(tk.END, value)
-                widget.set(value)
 
-        window.after_idle(lambda: w.entry.configure(validate="focus", validatecommand=_callback))
+            widget.set(value)
 
-    w.entry.configure(validate="focus", validatecommand=_callback)
+    w.configure(command=_callback)
 
 
 def setup_additional_widget_color_picker(w: ttk.Button, window: "NewObjectWindow"):
@@ -98,14 +96,16 @@ def setup_additional_widget_color_picker(w: ttk.Button, window: "NewObjectWindow
 
         rgb, hsl, hex_ = _
         color = int(hex_.removeprefix("#"), base=16)
-        widget.insert(tk.END, color)
+        if color not in widget["values"]:
+            widget.insert(tk.END, color)
+
         widget.set(color)
 
     w.configure(command=_callback)
 
 
 ADDITIONAL_WIDGETS = {
-    dt.datetime: [AdditionalWidget(ttk.DateEntry, setup_additional_widget_datetime)],
+    dt.datetime: [AdditionalWidget(ttk.Button, setup_additional_widget_datetime, text="Select date")],
     DiscordColor: [AdditionalWidget(ttk.Button, setup_additional_widget_color_picker, text="Color picker")]
 }
 
