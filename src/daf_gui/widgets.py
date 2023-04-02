@@ -8,11 +8,24 @@ from _discord._version import __version__ as PYCORD_VERSION
 import ttkbootstrap as ttk
 import tkinter as tk
 import tkinter.messagebox as tkmsg
+import ttkbootstrap.dialogs.dialogs as tkdiag
 
 import webbrowser
 import inspect
 import types
 import datetime as dt
+
+
+__all__ = (
+    "Text",
+    "ListBoxObjects",
+    "ComboBoxObjects",
+    "NewObjectWindow",
+    "ObjectInfo",
+    "convert_to_objects",
+    "convert_to_json",
+    "convert_from_json",
+)
 
 
 HELP_URLS = {
@@ -45,16 +58,33 @@ ADDITIONAL_ANNOTATIONS = {
 }
 
 
-__all__ = (
-    "Text",
-    "ListBoxObjects",
-    "ComboBoxObjects",
-    "NewObjectWindow",
-    "ObjectInfo",
-    "convert_to_objects",
-    "convert_to_json",
-    "convert_from_json",
-)
+class AdditionalWidget:
+    def __init__(self, widget_class, setup_cmd, *args, **kwargs) -> None:
+        self.widget_class = widget_class
+        self.args = args
+        self.kwargs = kwargs
+        self.setup_cmd = setup_cmd
+
+
+def setup_additional_widget_datetime(w: ttk.DateEntry, window: "NewObjectWindow"):
+    def _callback(*args):
+        date = w.entry.get()
+        if date != "":
+            date_time = [int(x, base=10) for x in reversed(date.split("/"))]
+            for i, attr in enumerate(("year", "month", "day")):
+                widget, types_ = window._map.get(attr)
+                value = date_time[i]
+                widget.insert(tk.END, value)
+                widget.set(value)
+
+        window.after_idle(lambda: w.entry.configure(validate="focus", validatecommand=_callback))
+
+    w.entry.configure(validate="focus", validatecommand=_callback)
+
+
+ADDITIONAL_WIDGETS = {
+    dt.datetime: AdditionalWidget(ttk.DateEntry, setup_additional_widget_datetime)
+}
 
 
 class Text(tk.Text):
@@ -289,6 +319,13 @@ class NewObjectWindow(ttk.Toplevel):
 
             ttk.Button(frame_toolbar, text="Help", command=cmd).pack(side="left")
 
+        add_widg = ADDITIONAL_WIDGETS.get(class_)
+        if add_widg is not None:
+            setup_cmd = add_widg.setup_cmd
+            add_widg = add_widg.widget_class(frame_toolbar, *add_widg.args, **add_widg.kwargs)
+            add_widg.pack(side="left")
+            setup_cmd(add_widg, self)
+
         cb_var = ttk.BooleanVar(value=True)
         ttk.Checkbutton(
             frame_toolbar, text="Keep on top", style='Roundtoggle.Toolbutton',
@@ -350,6 +387,7 @@ class NewObjectWindow(ttk.Toplevel):
                 annotations = {**additional_annotations, **annotations}
 
             annotations.pop("return", None)
+
             for (k, v) in annotations.items():
                 frame_annotated = ttk.Frame(frame_main, padding=(5, 5))
                 frame_annotated.pack(fill=tk.BOTH, expand=True)
@@ -362,6 +400,7 @@ class NewObjectWindow(ttk.Toplevel):
                 bnt_menu = ttk.Menubutton(frame_annotated)
                 menu = tk.Menu(bnt_menu)
                 bnt_menu.configure(menu=menu)
+
                 w = combo = ComboBoxObjects(frame_annotated)
                 bnt_menu.pack(side="right")
                 combo.pack(fill=tk.X, side="right", expand=True, padx=5, pady=5)
@@ -395,16 +434,12 @@ class NewObjectWindow(ttk.Toplevel):
             self.load(old)
 
     def close_window(self):
-        new_window = ttk.Toplevel(master=self, title="Save?", padx=10, pady=10)
-        new_window.resizable(False, False)
-        new_window.attributes("-topmost", True)
-        new_window.bind("<Return>", lambda e: self.save())
-        new_window.focus()
-        ttk.Label(new_window, text="Do you want to save modifications?").pack(fill=tk.X, expand=True)
-        yes_no_frame = ttk.Frame(new_window)
-        ttk.Button(yes_no_frame, text="Yes", command=self.save).pack(side="left")
-        ttk.Button(yes_no_frame, text="No", command=self._cleanup).pack(side="right")
-        yes_no_frame.pack()
+        resp = tkdiag.Messagebox.yesnocancel("Do you wish to save?", "Save?", alert=True, parent=self)
+        if resp is not None:
+            if resp == "Yes":
+                self.save()
+            elif resp == "No":
+                self._cleanup()
 
     def load(self, object_: ObjectInfo):
         object_ = object_.data if self._map.get(None) is None else object_
