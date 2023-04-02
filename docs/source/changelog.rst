@@ -32,6 +32,18 @@ Glossary
 Releases
 ----------------------
 
+
+v2.6.0
+==========
+- Graphical User Inferface - **GUI** for controlling the framework,
+  defining the schema (with backup and restore) and script generation!
+
+.. image:: ./DEP/images/daf-gui-front.png
+    :align: center
+    :scale: 70%
+
+
+
 v2.5.1
 ==========
 - Fixed failure without SQL
