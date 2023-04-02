@@ -89,8 +89,24 @@ def setup_additional_widget_datetime(w: ttk.DateEntry, window: "NewObjectWindow"
     w.entry.configure(validate="focus", validatecommand=_callback)
 
 
+def setup_additional_widget_color_picker(w: ttk.Button, window: "NewObjectWindow"):
+    def _callback(*args):
+        widget, types = window._map.get("value")
+        _ = tkdiag.Querybox.get_color(window, "Choose color")
+        if _ is None:
+            return
+
+        rgb, hsl, hex_ = _
+        color = int(hex_.removeprefix("#"), base=16)
+        widget.insert(tk.END, color)
+        widget.set(color)
+
+    w.configure(command=_callback)
+
+
 ADDITIONAL_WIDGETS = {
-    dt.datetime: AdditionalWidget(ttk.DateEntry, setup_additional_widget_datetime)
+    dt.datetime: [AdditionalWidget(ttk.DateEntry, setup_additional_widget_datetime)],
+    DiscordColor: [AdditionalWidget(ttk.Button, setup_additional_widget_color_picker, text="Color picker")]
 }
 
 
@@ -323,12 +339,13 @@ class NewObjectWindow(ttk.Toplevel):
 
             ttk.Button(frame_toolbar, text="Help", command=cmd).pack(side="left")
 
-        add_widg = ADDITIONAL_WIDGETS.get(class_)
-        if add_widg is not None:
-            setup_cmd = add_widg.setup_cmd
-            add_widg = add_widg.widget_class(frame_toolbar, *add_widg.args, **add_widg.kwargs)
-            add_widg.pack(side="left")
-            setup_cmd(add_widg, self)
+        add_widgets = ADDITIONAL_WIDGETS.get(class_)
+        if add_widgets is not None:
+            for add_widg in add_widgets:
+                setup_cmd = add_widg.setup_cmd
+                add_widg = add_widg.widget_class(frame_toolbar, *add_widg.args, **add_widg.kwargs)
+                add_widg.pack(side="left")
+                setup_cmd(add_widg, self)
 
         cb_var = ttk.BooleanVar(value=True)
         ttk.Checkbutton(
@@ -343,7 +360,10 @@ class NewObjectWindow(ttk.Toplevel):
         frame_main.pack(expand=True, fill=tk.BOTH)
 
         # Additional annotations defined in daf to support more types
-        annotations = get_type_hints(class_.__init__, include_extras=True)
+        try:
+            annotations = get_type_hints(class_.__init__, include_extras=True)
+        except NameError:
+            annotations = {}
         additional_annotations = ADDITIONAL_ANNOTATIONS.get(class_)
 
         if class_ is str:
