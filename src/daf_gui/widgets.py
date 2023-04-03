@@ -315,7 +315,7 @@ class NewObjectWindow(ttk.Toplevel):
 
         opened_widget = type(self).open_widgets.get(self.parent)
         if opened_widget is not None:
-            opened_widget._cleanup()
+            opened_widget.close_window()
 
         type(self).open_widgets[self.parent] = self
         super().__init__(
