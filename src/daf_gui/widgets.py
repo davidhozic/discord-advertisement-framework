@@ -347,7 +347,7 @@ class NewObjectWindow(ttk.Toplevel):
                 add_widg.pack(side="left")
                 setup_cmd(add_widg, self)
 
-        cb_var = ttk.BooleanVar(value=True)
+        cb_var = ttk.BooleanVar(value=False)
         ttk.Checkbutton(
             frame_toolbar, text="Keep on top", style='Roundtoggle.Toolbutton',
             onvalue=True, offvalue=False,
