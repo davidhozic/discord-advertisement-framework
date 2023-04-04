@@ -4,7 +4,7 @@ from collections.abc import Iterable as ABCIterable
 from contextlib import suppress
 from enum import Enum
 
-from daf import VERSION as DAF_VERSION
+from daf import VERSION as DAF_VERSION, FILE as DAFFile
 from _discord._version import __version__ as PYCORD_VERSION
 from _discord import Embed as DiscordEmbed, Colour as DiscordColor
 
@@ -12,6 +12,7 @@ import ttkbootstrap as ttk
 import tkinter as tk
 import tkinter.messagebox as tkmsg
 import ttkbootstrap.dialogs.dialogs as tkdiag
+import tkinter.filedialog as tkfile
 
 import webbrowser
 import types
@@ -104,9 +105,27 @@ def setup_additional_widget_color_picker(w: ttk.Button, window: "NewObjectWindow
     w.configure(command=_callback)
 
 
+def setup_additional_widget_file_chooser(w: ttk.Button, window: "NewObjectWindow"):
+    def _callback(*args):
+        file = tkfile.askopenfile(parent=window)
+        if file is None:  # File not opened
+            return
+
+        filename = None
+        with file:
+            filename = file.name
+
+        filename_combo = window._map.get("filename")[0]
+        filename_combo.insert(tk.END, filename)
+        filename_combo.set(filename)
+
+    w.configure(command=_callback)
+
+
 ADDITIONAL_WIDGETS = {
     dt.datetime: [AdditionalWidget(ttk.Button, setup_additional_widget_datetime, text="Select date")],
-    DiscordColor: [AdditionalWidget(ttk.Button, setup_additional_widget_color_picker, text="Color picker")]
+    DiscordColor: [AdditionalWidget(ttk.Button, setup_additional_widget_color_picker, text="Color picker")],
+    DAFFile: [AdditionalWidget(ttk.Button, setup_additional_widget_file_chooser, text="File browse")]
 }
 
 
