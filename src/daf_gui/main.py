@@ -33,6 +33,7 @@ don't want to write Python code to use the software.
 Authors: David Hozic - Student at UL FE.
 """
 
+
 class Application():
     def __init__(self) -> None:
         # Window initialization
@@ -63,38 +64,56 @@ class Application():
         # Main Frame
         self.frame_main = ttk.Frame(self.win_main)
         self.frame_main.pack(expand=True, fill=tk.BOTH, side="bottom")
-        self.tabman_mf = ttk.Notebook(self.frame_main)
-        self.tabman_mf.pack(fill=tk.BOTH, expand=True)
+        tabman_mf = ttk.Notebook(self.frame_main)
+        tabman_mf.pack(fill=tk.BOTH, expand=True)
 
         # Objects tab
         self.objects_edit_window = None
-        self.tab_objects = ttk.Frame(self.tabman_mf)
-        self.tabman_mf.add(self.tab_objects, text="Objects definition")
-        self.lb_accounts = ListBoxObjects(self.tab_objects)
-        self.bnt_add_object = ttk.Button(self.tab_objects, text="Add ACCOUNT", command=self.open_object_edit)
-        self.bnt_edit_object = ttk.Button(self.tab_objects, text="Edit", command=self.edit_accounts)
-        self.bnt_remove_object = ttk.Button(self.tab_objects, text="Remove", command=self.list_del_account)
-        self.bnt_add_object.pack(anchor=tk.NW, fill=tk.X)
-        self.bnt_edit_object.pack(anchor=tk.NW, fill=tk.X)
-        self.bnt_remove_object.pack(anchor=tk.NW, fill=tk.X)
+
+        tab_schema = ttk.Frame(tabman_mf, padding=(10, 10))
+        tabman_mf.add(tab_schema, text="Schema definition")
+
+        # Object tab file menu
+        bnt_file_menu = ttk.Menubutton(tab_schema, text="Load/Save/Generate")
+        menubar_file = ttk.Menu(bnt_file_menu)
+        menubar_file.add_command(label="Save schema", command=self.save_schema)
+        menubar_file.add_command(label="Load schema", command=self.load_schema)
+        menubar_file.add_command(label="Generate script", command=self.generate_daf_script)
+        bnt_file_menu.configure(menu=menubar_file)
+        bnt_file_menu.pack(anchor=tk.W)
+
+        # Object tab account tab
+        frame_tab_account = ttk.Labelframe(tab_schema, text="Accounts", padding=(10, 10), bootstyle="primary")
+        frame_tab_account.pack(side="left", fill=tk.BOTH, expand=True, pady=10, padx=5)
+
+        frame_account_bnts = ttk.Frame(frame_tab_account, padding=(0, 10))
+        frame_account_bnts.pack(fill=tk.X)
+        self.bnt_add_object = ttk.Button(frame_account_bnts, text="Add ACCOUNT", command=lambda: self.open_object_edit_window(daf.ACCOUNT, self.lb_accounts))
+        self.bnt_edit_object = ttk.Button(frame_account_bnts, text="Edit", command=self.edit_accounts)
+        self.bnt_remove_object = ttk.Button(frame_account_bnts, text="Remove", command=self.list_del_account)
+        self.bnt_add_object.pack(side="left")
+        self.bnt_edit_object.pack(side="left")
+        self.bnt_remove_object.pack(side="left")
+
+        self.lb_accounts = ListBoxObjects(frame_tab_account, background="#000")
         self.lb_accounts.pack(fill=tk.BOTH, expand=True)
 
-        # Logging tab
-        self.tab_logging = ttk.Frame(self.tabman_mf, padding=(5, 5))
-        self.tabman_mf.add(self.tab_logging, text="Logging")
-        self.label_logging_mgr = ttk.Label(self.tab_logging, text="Selected logger:")
-        self.label_logging_mgr.pack(anchor=tk.N)
+        # Object tab account tab logging tab
+        frame_logging = ttk.Labelframe(tab_schema, padding=(10, 10), text="Logging", bootstyle="primary")
+        label_logging_mgr = ttk.Label(frame_logging, text="Selected logger:")
+        label_logging_mgr.pack(anchor=tk.N)
+        frame_logging.pack(side="left", fill=tk.BOTH, expand=True, pady=10, padx=5)
 
-        frame_logger_select = ttk.Frame(self.tab_logging)
+        frame_logger_select = ttk.Frame(frame_logging)
         frame_logger_select.pack(fill=tk.X)
         self.combo_logging_mgr = ComboBoxObjects(frame_logger_select)
         self.bnt_edit_logger = ttk.Button(frame_logger_select, text="Edit", command=self.edit_logger)
         self.combo_logging_mgr.pack(fill=tk.X, side="left", expand=True)
         self.bnt_edit_logger.pack(anchor=tk.N, side="right")
 
-        self.label_tracing = ttk.Label(self.tab_logging, text="Selected trace level:")
+        self.label_tracing = ttk.Label(frame_logging, text="Selected trace level:")
         self.label_tracing.pack(anchor=tk.N)
-        frame_tracer_select = ttk.Frame(self.tab_logging)
+        frame_tracer_select = ttk.Frame(frame_logging)
         frame_tracer_select.pack(fill=tk.X)
         self.combo_tracing = ComboBoxObjects(frame_tracer_select)
         self.combo_tracing.pack(fill=tk.X, side="left", expand=True)
@@ -108,8 +127,8 @@ class Application():
         self.combo_tracing["values"] = [en for en in daf.TraceLEVELS]
 
         # Output tab
-        self.tab_output = ttk.Frame(self.tabman_mf)
-        self.tabman_mf.add(self.tab_output, text="Output")
+        self.tab_output = ttk.Frame(tabman_mf)
+        tabman_mf.add(self.tab_output, text="Output")
         text_output = ttk.ScrolledText(self.tab_output, state="disabled")
         text_output.pack(fill=tk.BOTH, expand=True)
 
@@ -136,21 +155,12 @@ class Application():
         logo_img = Image.open(f"{os.path.dirname(__file__)}/img/logo.png")
         logo_img = logo_img.resize((self.win_main.winfo_screenwidth() // 8, self.win_main.winfo_screenwidth() // 8), resample=0)
         logo = ImageTk.PhotoImage(logo_img)
-        self.tab_info = ttk.Frame(self.tabman_mf)
-        self.tabman_mf.add(self.tab_info, text="Credits")
+        self.tab_info = ttk.Frame(tabman_mf)
+        tabman_mf.add(self.tab_info, text="Credits")
         ttk.Label(self.tab_info, text=CREDITS_TEXT).pack()
         label_logo = ttk.Label(self.tab_info, image=logo)
         label_logo.image = logo
         label_logo.pack()
-
-        # File menu
-        self.bnt_file_menu = ttk.Menubutton(self.frame_main, text="Load/Save/Generate")
-        self.menubar_file = ttk.Menu(self.bnt_file_menu)
-        self.menubar_file.add_command(label="Save schema", command=self.save_schema)
-        self.menubar_file.add_command(label="Load schema", command=self.load_schema)
-        self.menubar_file.add_command(label="Generate script", command=self.generate_daf_script)
-        self.bnt_file_menu.configure(menu=self.menubar_file)
-        self.bnt_file_menu.pack()
 
         # Status variables
         self._daf_running = False
@@ -166,16 +176,16 @@ class Application():
     def opened(self) -> bool:
         return self._window_opened
 
-    def open_object_edit(self, edit_object: object = None):
-        self.objects_edit_window = ObjectEditWindow()
-        self.objects_edit_window.open_object_edit_frame(daf.ACCOUNT, self.lb_accounts, old=edit_object)
+    def open_object_edit_window(self, *args, **kwargs):
+        if self.objects_edit_window is None or self.objects_edit_window.closed:
+            self.objects_edit_window = ObjectEditWindow()
+            self.objects_edit_window.open_object_edit_frame(*args, **kwargs)
 
     def edit_logger(self):
         selection = self.combo_logging_mgr.current()
         if selection >= 0:
             object_: ObjectInfo = self.combo_logging_mgr.get()
-            self.objects_edit_window = ObjectEditWindow()
-            self.objects_edit_window.open_object_edit_frame(object_.class_, self.combo_logging_mgr, old=object_)
+            self.open_object_edit_window(object_.class_, self.combo_logging_mgr, old=object_)
         else:
             tkdiag.Messagebox.show_error("Select atleast one item!", "Empty list!")
 
@@ -183,7 +193,7 @@ class Application():
         selection = self.lb_accounts.curselection()
         if len(selection):
             object_: ObjectInfo = self.lb_accounts.get()[selection[0]]
-            self.open_object_edit(object_)
+            self.open_object_edit_window(daf.ACCOUNT, self.lb_accounts, old=object_)
         else:
             tkdiag.Messagebox.show_error("Select atleast one item!", "Empty list!")
 

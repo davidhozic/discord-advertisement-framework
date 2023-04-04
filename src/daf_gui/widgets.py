@@ -307,6 +307,8 @@ class ComboBoxObjects(ttk.Combobox):
 class ObjectEditWindow(ttk.Toplevel):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self._closed = False
+
         # Elements
         self.opened_frames = []
         self.frame_main = ttk.Frame(self, padding=(5, 5))
@@ -332,6 +334,10 @@ class ObjectEditWindow(ttk.Toplevel):
         NewObjectFrame.set_origin_window(self)
         self.protocol("WM_DELETE_WINDOW", self.close_object_edit_frame)
 
+    @property
+    def closed(self) -> bool:
+        return self._closed
+
     def open_object_edit_frame(self, *args, **kwargs):
         prev_frame = None
         if len(self.opened_frames):
@@ -345,7 +351,7 @@ class ObjectEditWindow(ttk.Toplevel):
 
     def close_object_edit_frame(self):
         self.opened_frames[-1].close_frame()
-    
+
     def save_object_edit_frame(self):
         self.opened_frames[-1].save()
 
@@ -358,6 +364,7 @@ class ObjectEditWindow(ttk.Toplevel):
             frame.pack(fill=tk.BOTH, expand=True)  # (row=0, column=0)
             frame.update_window_title()
         else:
+            self._closed = True
             self.destroy()
 
 
