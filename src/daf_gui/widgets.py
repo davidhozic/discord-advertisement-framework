@@ -10,7 +10,6 @@ from _discord import Embed as DiscordEmbed, Colour as DiscordColor
 
 import ttkbootstrap as ttk
 import tkinter as tk
-import tkinter.messagebox as tkmsg
 import ttkbootstrap.dialogs.dialogs as tkdiag
 import tkinter.filedialog as tkfile
 
@@ -308,12 +307,30 @@ class ComboBoxObjects(ttk.Combobox):
 class ObjectEditWindow(ttk.Toplevel):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        # Elements
         self.opened_frames = []
-        self.frame_main = ttk.Frame(self)
+        self.frame_main = ttk.Frame(self, padding=(5, 5))
+        self.frame_toolbar = ttk.Frame(self, padding=(5, 5))
+        ttk.Button(self.frame_toolbar, text="Close", command=self.close_object_edit_frame).pack(side="left")
+        ttk.Button(self.frame_toolbar, text="Save", command=self.save_object_edit_frame).pack(side="left")
+
+        self.frame_toolbar.pack(expand=True, fill=tk.X)
         self.frame_main.pack(expand=True, fill=tk.BOTH)
         self.frame_main.rowconfigure(0, weight=1)
         self.frame_main.columnconfigure(0, weight=1)
+
+        var = ttk.BooleanVar(value=False)
+        ttk.Checkbutton(
+            self.frame_toolbar,
+            text="Keep on top",
+            variable=var,
+            command=lambda: self.attributes("-topmost", var.get())
+        ).pack(anchor=tk.W)
+        self.attributes("-topmost", var.get())
+
+        # Window initialization
         NewObjectFrame.set_origin_window(self)
+        self.protocol("WM_DELETE_WINDOW", self.close_object_edit_frame)
 
     def open_object_edit_frame(self, *args, **kwargs):
         prev_frame = None
@@ -321,16 +338,25 @@ class ObjectEditWindow(ttk.Toplevel):
             prev_frame = self.opened_frames[-1]
 
         self.opened_frames.append(frame := NewObjectFrame(parent=self.frame_main, *args, **kwargs))
-        frame.pack(fill=tk.BOTH, expand=True)  # (row=0, column=0)
+        frame.pack(fill=tk.BOTH, expand=True)
+        frame.update_window_title()
         if prev_frame is not None:
             prev_frame.pack_forget()
 
     def close_object_edit_frame(self):
+        self.opened_frames[-1].close_frame()
+    
+    def save_object_edit_frame(self):
+        self.opened_frames[-1].save()
+
+    def clean_object_edit_frame(self):
         self.opened_frames.pop().destroy()
         opened_frames_len = len(self.opened_frames)
 
         if opened_frames_len:
-            self.opened_frames[-1].pack(fill=tk.BOTH, expand=True)  # (row=0, column=0)
+            frame = self.opened_frames[-1]
+            frame.pack(fill=tk.BOTH, expand=True)  # (row=0, column=0)
+            frame.update_window_title()
         else:
             self.destroy()
 
@@ -369,13 +395,8 @@ class NewObjectFrame(ttk.Frame):
             **kwargs
         )
 
-        self.origin_window.title(f"{'New' if old is None else 'Edit'} {class_.__name__} object")
-
-        frame_toolbar = ttk.Frame(self, padding=(5, 5))
-        ttk.Button(frame_toolbar, text="Close", command=self.close_window).pack(side="left")
-
-        bnt_save = ttk.Button(frame_toolbar, text="Save", command=self.save)
-        bnt_save.pack(side="left")
+        frame_toolbar = ttk.Frame(self)
+        
 
         package = class_.__module__.split(".", 1)[0]
         help_url = HELP_URLS.get(package)
@@ -394,7 +415,7 @@ class NewObjectFrame(ttk.Frame):
                 setup_cmd(add_widg, self)
 
         frame_toolbar.pack(fill=tk.X)
-        frame_main = ttk.Frame(self, padding=(5, 5))
+        frame_main = ttk.Frame(self)
         frame_main.pack(expand=True, fill=tk.BOTH)
 
         # Additional annotations defined in daf to support more types
@@ -450,7 +471,7 @@ class NewObjectFrame(ttk.Frame):
             annotations.pop("return", None)
 
             for (k, v) in annotations.items():
-                frame_annotated = ttk.Frame(frame_main, padding=(5, 5))
+                frame_annotated = ttk.Frame(frame_main)
                 frame_annotated.pack(fill=tk.BOTH, expand=True)
 
                 entry_types = v
@@ -486,7 +507,7 @@ class NewObjectFrame(ttk.Frame):
                 menu.add_radiobutton(label="Edit selected", command=self.combo_edit_selected(w, editable_types))
                 self._map[k] = (w, entry_types)
         else:
-            tkmsg.showerror("Load error", "This object cannot be edited.", parent=self.origin_window)
+            tkdiag.Messagebox.show_error("This object cannot be edited.", "Load error", parent=self.origin_window)
             self.origin_window.after_idle(self._cleanup)  # Can not clean the object before it has been added to list
 
         if old is not None:  # Edit
@@ -496,7 +517,10 @@ class NewObjectFrame(ttk.Frame):
     def set_origin_window(cls, window: ObjectEditWindow):
         cls.origin_window = window
 
-    def close_window(self):
+    def update_window_title(self):
+        self.origin_window.title(f"{'New' if self.old_object_info is None else 'Edit'} {self.class_.__name__} object")
+
+    def close_frame(self):
         resp = tkdiag.Messagebox.yesnocancel("Do you wish to save?", "Save?", alert=True, parent=self)
         if resp is not None:
             if resp == "Yes":
@@ -539,7 +563,7 @@ class NewObjectFrame(ttk.Frame):
             if len(selection):
                 lb.delete(*selection)
             else:
-                tkmsg.showerror("Empty list!", "Select atleast one item!", parent=self.origin_window)
+                tkdiag.Messagebox.show_error("Select atleast one item!", "Empty list!", parent=self.origin_window)
 
         return __
 
@@ -550,7 +574,7 @@ class NewObjectFrame(ttk.Frame):
                 object_: ObjectInfo | Any = lb.get()[selection[0]]
                 lb.insert(tk.END, object_)
             else:
-                tkmsg.showerror("Empty list!", "Select atleast one item!", parent=self.origin_window)
+                tkdiag.Messagebox.show_error("Select atleast one item!", "Empty list!", parent=self.origin_window)
 
         return __
 
@@ -564,7 +588,7 @@ class NewObjectFrame(ttk.Frame):
                 else:
                     self.origin_window.open_object_edit_frame(type(object_), lb, old=object_)
             else:
-                tkmsg.showerror("Selection error", "Select ONE item!", parent=self.origin_window)
+                tkdiag.Messagebox.show_error("Select ONE item!", "Selection error", parent=self.origin_window)
 
         return __
 
@@ -585,7 +609,7 @@ class NewObjectFrame(ttk.Frame):
         return __
 
     def _cleanup(self):
-        self.origin_window.close_object_edit_frame()
+        self.origin_window.clean_object_edit_frame()
 
     def save(self):
         try:
@@ -632,4 +656,4 @@ class NewObjectFrame(ttk.Frame):
 
             self._cleanup()
         except Exception as exc:
-            tkmsg.showerror("Saving error", f"Could not save the object.\n\n{exc}", parent=self.origin_window)
+            tkdiag.Messagebox.show_error(f"Could not save the object.\n\n{exc}", "Saving error", parent=self.origin_window)

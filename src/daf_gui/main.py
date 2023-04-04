@@ -6,8 +6,8 @@ from enum import Enum
 from PIL import Image, ImageTk
 
 import tkinter as tk
-import tkinter.messagebox as tkmsg
 import tkinter.filedialog as tkfile
+import ttkbootstrap.dialogs.dialogs as tkdiag
 import ttkbootstrap as ttk
 
 import asyncio
@@ -36,7 +36,7 @@ Authors: David Hozic - Student at UL FE.
 class Application():
     def __init__(self) -> None:
         # Window initialization
-        win_main = ttk.Window(themename="minty")
+        win_main = ttk.Window(themename="cosmo")
         # path = os.path.join(os.path.dirname(__file__), "img/logo.png")
         # photo = tk.PhotoImage(file=path)
         # win_main.iconphoto(True, photo)
@@ -100,9 +100,9 @@ class Application():
         self.combo_tracing.pack(fill=tk.X, side="left", expand=True)
 
         self.combo_logging_mgr["values"] = [
-            ObjectInfo(daf.LoggerJSON, {}),
+            ObjectInfo(daf.LoggerJSON, {"path": "History"}),
             ObjectInfo(daf.LoggerSQL, {}),
-            ObjectInfo(daf.LoggerCSV, {}),
+            ObjectInfo(daf.LoggerCSV, {"path": "History"}),
         ]
 
         self.combo_tracing["values"] = [en for en in daf.TraceLEVELS]
@@ -177,7 +177,7 @@ class Application():
             self.objects_edit_window = ObjectEditWindow()
             self.objects_edit_window.open_object_edit_frame(object_.class_, self.combo_logging_mgr, old=object_)
         else:
-            tkmsg.showerror("Empty list!", "Select atleast one item!")
+            tkdiag.Messagebox.show_error("Select atleast one item!", "Empty list!")
 
     def edit_accounts(self):
         selection = self.lb_accounts.curselection()
@@ -185,14 +185,14 @@ class Application():
             object_: ObjectInfo = self.lb_accounts.get()[selection[0]]
             self.open_object_edit(object_)
         else:
-            tkmsg.showerror("Empty list!", "Select atleast one item!")
+            tkdiag.Messagebox.show_error("Select atleast one item!", "Empty list!")
 
     def list_del_account(self):
         selection = self.lb_accounts.curselection()
         if len(selection):
             self.lb_accounts.delete(*selection)
         else:
-            tkmsg.showerror("Empty list!", "Select atleast one item!")
+            tkdiag.Messagebox.show_error("Select atleast one item!", "Empty list!")
 
     def generate_daf_script(self):
         """
@@ -294,10 +294,10 @@ daf.run(
         if not file.name.endswith(".py"):
             os.rename(file.name, file.name + ".py")
 
-    def save_schema(self):
+    def save_schema(self) -> bool:
         file = tkfile.asksaveasfile(filetypes=[("JSON", "*.json")])
         if file is None:
-            return
+            return False
 
         json_data = {
             "loggers": {
@@ -313,6 +313,8 @@ daf.run(
 
         if not file.name.endswith(".json"):
             os.rename(file.name, file.name + ".json")
+
+        return True
 
     def load_schema(self):
         try:
@@ -341,7 +343,7 @@ daf.run(
                     self.combo_tracing.current(json_data["tracing"])
 
         except Exception as exc:
-            tkmsg.showerror("Schema load error!", f"Could not load schema!\n\n{exc}")
+            tkdiag.Messagebox.show_error(f"Could not load schema!\n\n{exc}", "Schema load error!")
 
     def start_daf(self):
         try:
@@ -362,7 +364,7 @@ daf.run(
             self._daf_running = True
         except Exception as exc:
             print(exc)
-            tkmsg.showerror("Start error!", f"Could not start daf due to exception!\n\n{exc}")
+            tkdiag.Messagebox.show_error(f"Could not start daf due to exception!\n\n{exc}", "Start error!")
 
     def stop_daf(self):
         self._async_queue.put_nowait(daf.shutdown())
@@ -371,6 +373,10 @@ daf.run(
         self.bnt_toolbar_stop_daf.configure(state="disabled")
 
     def close_window(self):
+        resp = tkdiag.Messagebox.yesnocancel("Do you wish to save?", "Save?", alert=True, parent=self.win_main)
+        if resp is None or resp == "Cancel" or resp == "Yes" and not self.save_schema():
+            return
+
         self._window_opened = False
         if self._daf_running:
             self.stop_daf()
@@ -388,7 +394,7 @@ daf.run(
         except asyncio.QueueEmpty:
             raise
         except Exception as exc:
-            tkmsg.showerror("Coroutine error", str(exc))
+            tkdiag.Messagebox.show_error(str(exc), "Coroutine error")
 
     async def _process(self):
         self.win_main.update()
