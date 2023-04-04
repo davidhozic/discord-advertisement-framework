@@ -23,7 +23,8 @@ __all__ = (
     "Text",
     "ListBoxObjects",
     "ComboBoxObjects",
-    "NewObjectWindow",
+    "ObjectEditWindow",
+    "NewObjectFrame",
     "ObjectInfo",
     "convert_to_objects",
     "convert_to_json",
@@ -74,7 +75,7 @@ class AdditionalWidget:
         self.setup_cmd = setup_cmd
 
 
-def setup_additional_widget_datetime(w: ttk.Button, window: "NewObjectWindow"):
+def setup_additional_widget_datetime(w: ttk.Button, window: "NewObjectFrame"):
     def _callback(*args):
         date = tkdiag.Querybox.get_date(window, title="Select the date")
         for attr in {"year", "month", "day"}:
@@ -88,7 +89,7 @@ def setup_additional_widget_datetime(w: ttk.Button, window: "NewObjectWindow"):
     w.configure(command=_callback)
 
 
-def setup_additional_widget_color_picker(w: ttk.Button, window: "NewObjectWindow"):
+def setup_additional_widget_color_picker(w: ttk.Button, window: "NewObjectFrame"):
     def _callback(*args):
         widget, types = window._map.get("value")
         _ = tkdiag.Querybox.get_color(window, "Choose color")
@@ -105,7 +106,7 @@ def setup_additional_widget_color_picker(w: ttk.Button, window: "NewObjectWindow
     w.configure(command=_callback)
 
 
-def setup_additional_widget_file_chooser(w: ttk.Button, window: "NewObjectWindow"):
+def setup_additional_widget_file_chooser(w: ttk.Button, window: "NewObjectFrame"):
     def _callback(*args):
         file = tkfile.askopenfile(parent=window)
         if file is None:  # File not opened
@@ -304,8 +305,38 @@ class ComboBoxObjects(ttk.Combobox):
         return super().__getitem__(key)
 
 
-class NewObjectWindow(ttk.Toplevel):
-    open_widgets = {}
+class ObjectEditWindow(ttk.Toplevel):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.opened_frames = []
+        self.frame_main = ttk.Frame(self)
+        self.frame_main.pack(expand=True, fill=tk.BOTH)
+        self.frame_main.rowconfigure(0, weight=1)
+        self.frame_main.columnconfigure(0, weight=1)
+        NewObjectFrame.set_origin_window(self)
+
+    def open_object_edit_frame(self, *args, **kwargs):
+        prev_frame = None
+        if len(self.opened_frames):
+            prev_frame = self.opened_frames[-1]
+
+        self.opened_frames.append(frame := NewObjectFrame(parent=self.frame_main, *args, **kwargs))
+        frame.pack(fill=tk.BOTH, expand=True)  # (row=0, column=0)
+        if prev_frame is not None:
+            prev_frame.pack_forget()
+
+    def close_object_edit_frame(self):
+        self.opened_frames.pop().destroy()
+        opened_frames_len = len(self.opened_frames)
+
+        if opened_frames_len:
+            self.opened_frames[-1].pack(fill=tk.BOTH, expand=True)  # (row=0, column=0)
+        else:
+            self.destroy()
+
+
+class NewObjectFrame(ttk.Frame):
+    origin_window: ObjectEditWindow = None
 
     def __init__(self, class_, return_widget: ComboBoxObjects | ListBoxObjects, parent = None, old: ObjectInfo = None, *args, **kwargs):
         def convert_types(types_in):
@@ -332,17 +363,13 @@ class NewObjectWindow(ttk.Toplevel):
         self.parent = parent
         self.old_object_info = old  # Edit requested
 
-        opened_widget = type(self).open_widgets.get(self.parent)
-        if opened_widget is not None:
-            opened_widget.close_window()
-
-        type(self).open_widgets[self.parent] = self
         super().__init__(
             master=parent,
-            title=f"{'New' if old is None else 'Edit'} {class_.__name__} object",
             *args,
             **kwargs
         )
+
+        self.origin_window.title(f"{'New' if old is None else 'Edit'} {class_.__name__} object")
 
         frame_toolbar = ttk.Frame(self, padding=(5, 5))
         ttk.Button(frame_toolbar, text="Close", command=self.close_window).pack(side="left")
@@ -366,15 +393,7 @@ class NewObjectWindow(ttk.Toplevel):
                 add_widg.pack(side="left")
                 setup_cmd(add_widg, self)
 
-        cb_var = ttk.BooleanVar(value=False)
-        ttk.Checkbutton(
-            frame_toolbar, text="Keep on top", style='Roundtoggle.Toolbutton',
-            onvalue=True, offvalue=False,
-            command=lambda: self.attributes("-topmost", cb_var.get()), variable=cb_var,
-        ).pack(side="right", padx=10)
         frame_toolbar.pack(fill=tk.X)
-        self.attributes("-topmost", cb_var.get())
-
         frame_main = ttk.Frame(self, padding=(5, 5))
         frame_main.pack(expand=True, fill=tk.BOTH)
 
@@ -393,7 +412,6 @@ class NewObjectWindow(ttk.Toplevel):
             w = ttk.Spinbox(frame_main, from_=-9999, to=9999)
             w.pack(fill=tk.X)
             self._map[None] = (w, class_)
-            self.resizable(True, False)
         elif get_origin(class_) in {list, Iterable, ABCIterable}:
             w = ListBoxObjects(frame_main)
             frame_edit_remove = ttk.Frame(frame_main)
@@ -421,7 +439,7 @@ class NewObjectWindow(ttk.Toplevel):
                 menu.add_radiobutton(label=arg.__name__, command=self.new_object_window(arg, w))
 
             self._map[None] = (w, list)
-        elif annotations is not None or additional_annotations is not None:
+        elif annotations or additional_annotations is not None:
             if annotations is None:
                 annotations = {}
 
@@ -468,15 +486,15 @@ class NewObjectWindow(ttk.Toplevel):
                 menu.add_radiobutton(label="Edit selected", command=self.combo_edit_selected(w, editable_types))
                 self._map[k] = (w, entry_types)
         else:
-            tkmsg.showerror("Load error", "This object cannot be edited.", parent=self)
-            self._cleanup()
-            return
+            tkmsg.showerror("Load error", "This object cannot be edited.", parent=self.origin_window)
+            self.origin_window.after_idle(self._cleanup)  # Can not clean the object before it has been added to list
 
-        self.protocol("WM_DELETE_WINDOW", self.close_window)
-        self.update()
-        self.minsize(self.winfo_width(), self.winfo_height())
         if old is not None:  # Edit
             self.load(old)
+
+    @classmethod
+    def set_origin_window(cls, window: ObjectEditWindow):
+        cls.origin_window = window
 
     def close_window(self):
         resp = tkdiag.Messagebox.yesnocancel("Do you wish to save?", "Save?", alert=True, parent=self)
@@ -511,7 +529,7 @@ class NewObjectWindow(ttk.Toplevel):
 
     def new_object_window(self, class_, widget):
         def __():
-            return NewObjectWindow(class_, widget, self)
+            return self.origin_window.open_object_edit_frame(class_, widget)
 
         return __
 
@@ -521,7 +539,7 @@ class NewObjectWindow(ttk.Toplevel):
             if len(selection):
                 lb.delete(*selection)
             else:
-                tkmsg.showerror("Empty list!", "Select atleast one item!", parent=self)
+                tkmsg.showerror("Empty list!", "Select atleast one item!", parent=self.origin_window)
 
         return __
 
@@ -532,7 +550,7 @@ class NewObjectWindow(ttk.Toplevel):
                 object_: ObjectInfo | Any = lb.get()[selection[0]]
                 lb.insert(tk.END, object_)
             else:
-                tkmsg.showerror("Empty list!", "Select atleast one item!", parent=self)
+                tkmsg.showerror("Empty list!", "Select atleast one item!", parent=self.origin_window)
 
         return __
 
@@ -542,11 +560,11 @@ class NewObjectWindow(ttk.Toplevel):
             if len(selection) == 1:
                 object_ = lb.get()[selection[0]]
                 if isinstance(object_, ObjectInfo):
-                    NewObjectWindow(object_.class_, lb, self, object_)
+                    self.origin_window.open_object_edit_frame(object_.class_, lb, old=object_)
                 else:
-                    NewObjectWindow(type(object_), lb, self, object_)
+                    self.origin_window.open_object_edit_frame(type(object_), lb, old=object_)
             else:
-                tkmsg.showerror("Selection error", "Select ONE item!", parent=self)
+                tkmsg.showerror("Selection error", "Select ONE item!", parent=self.origin_window)
 
         return __
 
@@ -555,21 +573,19 @@ class NewObjectWindow(ttk.Toplevel):
             selection = combo.get()
 
             if isinstance(selection, list):
-                return NewObjectWindow(Union[tuple(types)], combo, self, selection)
+                return self.origin_window.open_object_edit_frame(Union[tuple(types)], combo, old=selection)
             elif isinstance(selection, ObjectInfo):
-                return NewObjectWindow(selection.class_, combo, self, selection)
+                return self.origin_window.open_object_edit_frame(selection.class_, combo, old=selection)
             else:
                 if isinstance(selection, str) and not len(selection):
                     selection = None
 
-                return NewObjectWindow(type(selection), combo, self, selection)
+                return self.origin_window.open_object_edit_frame(type(selection), combo, old=selection)
 
         return __
 
     def _cleanup(self):
-        type(self).open_widgets[self.parent] = None
-        self.destroy()
-        self.quit()
+        self.origin_window.close_object_edit_frame()
 
     def save(self):
         try:
@@ -616,4 +632,4 @@ class NewObjectWindow(ttk.Toplevel):
 
             self._cleanup()
         except Exception as exc:
-            tkmsg.showerror("Saving error", f"Could not save the object.\n\n{exc}", parent=self)
+            tkmsg.showerror("Saving error", f"Could not save the object.\n\n{exc}", parent=self.origin_window)

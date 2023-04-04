@@ -33,7 +33,6 @@ don't want to write Python code to use the software.
 Authors: David Hozic - Student at UL FE.
 """
 
-
 class Application():
     def __init__(self) -> None:
         # Window initialization
@@ -47,6 +46,8 @@ class Application():
         win_main.wm_title(f"Discord Advert Framework {daf.VERSION}")
         win_main.wm_minsize(*screen_res)
         win_main.protocol("WM_DELETE_WINDOW", self.close_window)
+        self.win_main.rowconfigure(0, weight=1)
+        self.win_main.columnconfigure(0, weight=1)
 
         # Console initialization
         self.win_debug = None
@@ -66,10 +67,11 @@ class Application():
         self.tabman_mf.pack(fill=tk.BOTH, expand=True)
 
         # Objects tab
+        self.objects_edit_window = None
         self.tab_objects = ttk.Frame(self.tabman_mf)
         self.tabman_mf.add(self.tab_objects, text="Objects definition")
         self.lb_accounts = ListBoxObjects(self.tab_objects)
-        self.bnt_add_object = ttk.Button(self.tab_objects, text="Add ACCOUNT", command=lambda: NewObjectWindow(daf.ACCOUNT, self.lb_accounts, self.win_main))
+        self.bnt_add_object = ttk.Button(self.tab_objects, text="Add ACCOUNT", command=self.open_object_edit)
         self.bnt_edit_object = ttk.Button(self.tab_objects, text="Edit", command=self.edit_accounts)
         self.bnt_remove_object = ttk.Button(self.tab_objects, text="Remove", command=self.list_del_account)
         self.bnt_add_object.pack(anchor=tk.NW, fill=tk.X)
@@ -164,11 +166,16 @@ class Application():
     def opened(self) -> bool:
         return self._window_opened
 
+    def open_object_edit(self, edit_object: object = None):
+        self.objects_edit_window = ObjectEditWindow()
+        self.objects_edit_window.open_object_edit_frame(daf.ACCOUNT, self.lb_accounts, old=edit_object)
+
     def edit_logger(self):
         selection = self.combo_logging_mgr.current()
         if selection >= 0:
             object_: ObjectInfo = self.combo_logging_mgr.get()
-            NewObjectWindow(object_.class_, self.combo_logging_mgr, self.win_main, object_)
+            self.objects_edit_window = ObjectEditWindow()
+            self.objects_edit_window.open_object_edit_frame(object_.class_, self.combo_logging_mgr, old=object_)
         else:
             tkmsg.showerror("Empty list!", "Select atleast one item!")
 
@@ -176,7 +183,7 @@ class Application():
         selection = self.lb_accounts.curselection()
         if len(selection):
             object_: ObjectInfo = self.lb_accounts.get()[selection[0]]
-            NewObjectWindow(object_.class_, self.lb_accounts, self.win_main, object_)
+            self.open_object_edit(object_)
         else:
             tkmsg.showerror("Empty list!", "Select atleast one item!")
 
