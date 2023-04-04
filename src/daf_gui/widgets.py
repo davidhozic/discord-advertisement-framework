@@ -4,7 +4,7 @@ from collections.abc import Iterable as ABCIterable
 from contextlib import suppress
 from enum import Enum
 
-from daf import VERSION as DAF_VERSION, FILE as DAFFile
+from daf import VERSION as DAF_VERSION, FILE as DAFFile, LoggerJSON, LoggerCSV
 from _discord._version import __version__ as PYCORD_VERSION
 from _discord import Embed as DiscordEmbed, Colour as DiscordColor
 
@@ -122,10 +122,25 @@ def setup_additional_widget_file_chooser(w: ttk.Button, window: "NewObjectFrame"
     w.configure(command=_callback)
 
 
+def setup_additional_widget_file_chooser_logger(w: ttk.Button, window: "NewObjectFrame"):
+    def _callback(*args):
+        path = tkfile.askdirectory(parent=window)
+        if path == "":
+            return
+
+        filename_combo = window._map.get("path")[0]
+        filename_combo.insert(tk.END, path)
+        filename_combo.set(path)
+
+    w.configure(command=_callback)
+
+
 ADDITIONAL_WIDGETS = {
     dt.datetime: [AdditionalWidget(ttk.Button, setup_additional_widget_datetime, text="Select date")],
     DiscordColor: [AdditionalWidget(ttk.Button, setup_additional_widget_color_picker, text="Color picker")],
-    DAFFile: [AdditionalWidget(ttk.Button, setup_additional_widget_file_chooser, text="File browse")]
+    DAFFile: [AdditionalWidget(ttk.Button, setup_additional_widget_file_chooser, text="File browse")],
+    LoggerJSON: [AdditionalWidget(ttk.Button, setup_additional_widget_file_chooser_logger, text="File browse")],
+    LoggerCSV: [AdditionalWidget(ttk.Button, setup_additional_widget_file_chooser_logger, text="File browse")],
 }
 
 
@@ -321,13 +336,14 @@ class ObjectEditWindow(ttk.Toplevel):
         self.frame_main.rowconfigure(0, weight=1)
         self.frame_main.columnconfigure(0, weight=1)
 
-        var = ttk.BooleanVar(value=False)
+        var = ttk.BooleanVar(value=True)
         ttk.Checkbutton(
             self.frame_toolbar,
             text="Keep on top",
             variable=var,
-            command=lambda: self.attributes("-topmost", var.get())
-        ).pack(anchor=tk.W)
+            command=lambda: self.attributes("-topmost", var.get()),
+            bootstyle="round-toggle"
+        ).pack(side="right")
         self.attributes("-topmost", var.get())
 
         # Window initialization
@@ -403,7 +419,7 @@ class NewObjectFrame(ttk.Frame):
         )
 
         frame_toolbar = ttk.Frame(self)
-        
+
 
         package = class_.__module__.split(".", 1)[0]
         help_url = HELP_URLS.get(package)
@@ -418,7 +434,7 @@ class NewObjectFrame(ttk.Frame):
             for add_widg in add_widgets:
                 setup_cmd = add_widg.setup_cmd
                 add_widg = add_widg.widget_class(frame_toolbar, *add_widg.args, **add_widg.kwargs)
-                add_widg.pack(side="left")
+                add_widg.pack(side="right")
                 setup_cmd(add_widg, self)
 
         frame_toolbar.pack(fill=tk.X)
