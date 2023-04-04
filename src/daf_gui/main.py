@@ -208,8 +208,8 @@ class Application():
         """
         Converts the schema into DAF script
         """
-        file = tkfile.asksaveasfile(filetypes=[("DAF Python script", "*.py")])
-        if file is None:
+        filename = tkfile.asksaveasfilename(filetypes=[("DAF Python script", "*.py")], )
+        if filename == "":
             return
 
         logger = self.combo_logging_mgr.get()
@@ -298,15 +298,15 @@ daf.run(
     accounts=accounts,{run_logger_str}{run_tracing_str}
 )
 '''
-        with file:
+        with open(filename, "w", encoding="utf-8") as file:
             file.write(_ret)
 
         if not file.name.endswith(".py"):
             os.rename(file.name, file.name + ".py")
 
     def save_schema(self) -> bool:
-        file = tkfile.asksaveasfile(filetypes=[("JSON", "*.json")])
-        if file is None:
+        filename = tkfile.asksaveasfilename(filetypes=[("JSON", "*.json")])
+        if filename == "":
             return False
 
         json_data = {
@@ -318,21 +318,21 @@ daf.run(
             "accounts": [convert_to_json(x) for x in self.lb_accounts.get()],
         }
 
-        with file:
+        with open(filename, "w", encoding="utf-8") as file:
             json.dump(json_data, file, indent=2)
 
-        if not file.name.endswith(".json"):
-            os.rename(file.name, file.name + ".json")
+        if not filename.endswith(".json"):
+            os.rename(filename, filename + ".json")
 
         return True
 
     def load_schema(self):
         try:
-            file = tkfile.askopenfile(filetypes=[("JSON", "*.json")])
-            if file is None:
+            filename = tkfile.askopenfilename(filetypes=[("JSON", "*.json")])
+            if filename == "":
                 return
 
-            with file:
+            with open(filename, "r", encoding="utf-8") as file:
                 json_data = json.load(file)
 
                 # Load accounts
