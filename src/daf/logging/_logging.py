@@ -72,6 +72,23 @@ class LoggerBASE:
         """
         raise NotImplementedError
     
+    async def analytic_get_num_messages(
+            self,
+            guild: int,
+            before: datetime | None = None,
+            after: datetime | None = None
+    ) -> tuple[int]:
+        raise NotImplementedError
+    
+    async def analytic_get_message_log(
+            self,
+            guild: int,
+            before: datetime | None = None,
+            after: datetime | None = None,
+            success_rate: float = 100
+    ) -> list:
+        raise NotImplementedError
+    
     async def update(self, **kwargs):
         """
         Used to update the original parameters.

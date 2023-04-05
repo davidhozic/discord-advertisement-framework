@@ -47,7 +47,7 @@ DIALECT_CONN_MAP = {
 try:
     from sqlalchemy import (
         SmallInteger, Integer, BigInteger, DateTime,
-        Sequence, String, JSON, select, text, ForeignKey
+        Sequence, String, JSON, select, text, ForeignKey, func, any_, all_, between
     )
     from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
     from sqlalchemy.engine import URL as SQLURL, create_engine
@@ -775,6 +775,135 @@ class LoggerSQL(logging.LoggerBASE):
         else:
             raise RuntimeError(f"Unable to save log within {SQL_MAX_SAVE_ATTEMPTS} tries")
 
+    async def analytic_get_num_messages(
+            self,
+            guild: int,
+            before: datetime | None = None,
+            after: datetime | None = None,
+            region: Literal["year", "month", "day", "hour"] = "day"
+    ) -> tuple[int]:
+        """
+        Returns number of messages sent to specific after and before specific date and time.
+
+        Parameters
+        -----------
+        guild: int
+            The snowflake id of the guild.
+        before: datetime | None
+            Only count messages sent before the datetime.
+        after: datetime | None = None
+            Only count messages sent after the datetime.
+
+        Returns
+        --------
+        tuple[int]
+            Two element tuple containing number of successul messages and number of failed messages.
+            A failed message is a message that didn't succeed in ALL the channels.
+        """
+        if after is None:
+            after = datetime.min
+        
+        if before is None:
+            before = datetime.max
+
+        # Obtain internal guild id
+        guilduser: GuildUSER = self.guild_user_cache.get(guild)
+        async with self.session_maker() as session:
+            if guilduser is None:
+                try:        
+                    guilduser = (await self._run_async(
+                                    session.execute,
+                                    select(GuildUSER)
+                                    .where(GuildUSER.snowflake_id == guild))
+                                ).first()[0]
+                except Exception as exc:
+                    return ([], [])  # Guild doesn't exist in database, return empty
+                
+            success = (await self._run_async(
+                session.execute,
+                select(func.extract(region, MessageLOG.timestamp), func.count())
+                .where(
+                    MessageLOG.guild_id == guilduser.id,
+                    MessageLOG.channels.any(MessageChannelLOG.reason == None),
+                    MessageLOG.timestamp.between(after, before)
+                ).group_by(func.extract(region, MessageLOG.timestamp))
+            )).all()
+
+            failed = (await self._run_async(
+                session.execute,
+                select(func.extract(region, MessageLOG.timestamp), func.count(MessageLOG.id))
+                .where(
+                    MessageLOG.guild_id == guilduser.id,
+                    select(func.count()).select_from(MessageChannelLOG)
+                        .where(MessageChannelLOG.log_id == MessageLOG.id, MessageChannelLOG.reason == None).scalar_subquery()
+                    == 0,
+                    MessageLOG.timestamp.between(after, before)
+                ).group_by(func.extract(region, MessageLOG.timestamp))
+            )).all()
+
+            return success, failed
+
+    async def analytic_get_message_log(
+            self,
+            guild: int,
+            before: datetime | None = None,
+            after: datetime | None = None,
+            success_rate: tuple[float, float] = (0, 100)
+    ) -> list["MessageLOG"]:
+        """
+        Returns a list of all the sent messages that were send between
+        ``after`` and ``before`` timestamps and have their success rate
+        equals to ``success_rate`` when rounded.
+
+        Parameters
+        --------------
+        guild: int
+            The snowflake id where to find messages.
+        before: datetime | None
+            Include only messages sent before this datetime.
+        after: datetime | None
+            Include only messages sent after this datetime.
+        success_rate: tuple[int, int]
+            Success rate tuple containing minimum success rate and maximum success
+            rate the message log can have for it to be included.
+            Success rate is meassured in % and it is defined by:
+
+            Successuly sent channels / all channels.
+        """
+        if after is None:
+            after = datetime.min
+        
+        if before is None:
+            before = datetime.max
+
+        # Obtain internal guild id
+        guilduser: GuildUSER = self.guild_user_cache.get(guild)
+        async with self.session_maker() as session:
+            if guilduser is None:
+                try:        
+                    guilduser = (await self._run_async(
+                                    session.execute,
+                                    select(GuildUSER)
+                                    .where(GuildUSER.snowflake_id == guild))
+                                ).first()[0]
+                except Exception as exc:
+                    return []  # Guild doesn't exist in database, return empty
+
+            messages = await self._run_async(
+                session.execute,
+                select(MessageLOG)
+                .where(
+                    (
+                        select(func.count()).where(MessageChannelLOG.reason.is_(None), MessageChannelLOG.log_id == MessageLOG.id).scalar_subquery()
+                        /
+                        select(func.count()).where(MessageChannelLOG.log_id == MessageLOG.id).scalar_subquery()
+                    ).between(*success_rate),
+                    MessageLOG.timestamp.between(after, before)
+                )
+            )
+
+            return list(*zip(*messages.all()))
+        
     @misc._async_safe("safe_sem", 1)
     async def update(self, **kwargs):
         """
@@ -899,7 +1028,7 @@ if SQL_INSTALLED:
         snowflake_id = mapped_column(BigInteger)
         name = mapped_column(String(3072))
         guild_type_id: Mapped[int] = mapped_column(ForeignKey("GuildTYPE.id"))
-        guild_type: Mapped["GuildTYPE"] = relationship(primaryjoin="GuildTYPE.id == GuildUSER.guild_type_id")
+        guild_type: Mapped["GuildTYPE"] = relationship(lazy="subquery")
 
         def __init__(self,
                      guild_type: GuildTYPE,
@@ -931,7 +1060,7 @@ if SQL_INSTALLED:
         snowflake_id = mapped_column(BigInteger)
         name = mapped_column(String(3072))
         guild_id: Mapped[int] = mapped_column(ForeignKey("GuildUSER.id"))
-        guild: Mapped["GuildUSER"] = relationship()
+        guild: Mapped["GuildUSER"] = relationship(lazy="subquery")
 
         def __init__(self,
                      snowflake: int,
@@ -1000,11 +1129,11 @@ if SQL_INSTALLED:
         dm_reason = mapped_column(String(3072))  # [DirectMESSAGE]
         timestamp = mapped_column(DateTime)
 
-        sent_data: Mapped["DataHISTORY"] = relationship()
-        message_type: Mapped["MessageTYPE"] = relationship()
-        guild: Mapped["GuildUSER"] = relationship()
-        message_mode: Mapped["MessageMODE"] = relationship()
-        channels: Mapped[List["MessageChannelLOG"]] = relationship(back_populates="log")
+        sent_data: Mapped["DataHISTORY"] = relationship(lazy="subquery")
+        message_type: Mapped["MessageTYPE"] = relationship(lazy="subquery")
+        guild: Mapped["GuildUSER"] = relationship(lazy="subquery")
+        message_mode: Mapped["MessageMODE"] = relationship(lazy="subquery")
+        channels: Mapped[List["MessageChannelLOG"]] = relationship(back_populates="log",  lazy="subquery")
 
         def __init__(self,
                      sent_data: DataHISTORY = None,
@@ -1041,8 +1170,8 @@ if SQL_INSTALLED:
         channel_id: Mapped[int] = mapped_column(Integer, ForeignKey("CHANNEL.id"), primary_key=True)
         reason = mapped_column(String(3072))
 
-        log: Mapped["MessageLOG"] = relationship(back_populates="channels", uselist=False)
-        channel: Mapped["CHANNEL"] = relationship()
+        log: Mapped["MessageLOG"] = relationship(back_populates="channels", uselist=False, lazy="subquery")
+        channel: Mapped["CHANNEL"] = relationship(lazy="subquery")
 
         def __init__(self,
                      channel: CHANNEL,
