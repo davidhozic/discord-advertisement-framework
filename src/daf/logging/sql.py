@@ -14,7 +14,7 @@ from typeguard import typechecked
 
 from .tracing import TraceLEVELS, trace
 
-from . import logging
+from . import _logging as logging
 
 import json
 import copy
@@ -43,7 +43,6 @@ DIALECT_CONN_MAP = {
     "postgresql": "asyncpg",
     "mysql": "asyncmy"
 }
-
 # ------------------------------------ Optional ------------------------------------
 try:
     from sqlalchemy import (
@@ -250,7 +249,7 @@ class LoggerSQL(logging.LoggerBASE):
                  server: Optional[str] = None,
                  port: Optional[int] = None,
                  database: Optional[str] = None,
-                 dialect: Optional[str] = None,
+                 dialect: Literal["sqlite", "mssql", "postgresql", "mysql"] = None,
                  fallback: Optional[logging.LoggerBASE] = ...):
 
         if not SQL_INSTALLED:

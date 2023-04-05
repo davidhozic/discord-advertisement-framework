@@ -1,8 +1,8 @@
 
 ======================
-Quickstart
+Quickstart (core)
 ======================
-This page contains information to quickly getting started.
+This page contains information to quickly getting started with the core.
 
 The first thing you need is the library installed, see :ref:`Installation`.
 

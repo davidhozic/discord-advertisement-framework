@@ -118,9 +118,9 @@ class TextMESSAGE(BaseMESSAGE):
 
     @typechecked
     def __init__(self,
-                 start_period: Union[int, timedelta, None],
+                 start_period: Union[timedelta, int, None],
                  end_period: Union[int, timedelta],
-                 data: Union[str, discord.Embed, FILE, Iterable[Union[str, discord.Embed, FILE]], _FunctionBaseCLASS],
+                 data: Union[Iterable[Union[str, discord.Embed, FILE]], _FunctionBaseCLASS, str, discord.Embed, FILE],
                  channels: Union[Iterable[Union[int, discord.TextChannel, discord.Thread]], AutoCHANNEL],
                  mode: Optional[Literal["send", "edit", "clear-send"]] = "send",
                  start_in: Optional[Union[timedelta, bool]] = timedelta(seconds=0),

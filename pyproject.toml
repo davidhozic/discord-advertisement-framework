@@ -21,7 +21,11 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 
+
 dynamic = ["dependencies", "optional-dependencies", "version"]
+
+[project.gui-scripts]
+daf-gui="daf_gui:main.run"
 
 [tool.setuptools]
 include-package-data = true

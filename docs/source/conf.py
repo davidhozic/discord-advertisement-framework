@@ -20,7 +20,7 @@ sys.path.insert(0, os.path.abspath('.'))
 
 # -- Project information -----------------------------------------------------
 project = 'Discord Advertisement Framework'
-copyright = '2022, David Hozic'
+copyright = '2023, David Hozic'
 author = 'David Hozic'
 version = None
 gh_release = os.environ.get("GITHUB_REF_NAME", default=None) # Workflow run release

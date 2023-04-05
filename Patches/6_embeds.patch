@@ -1,0 +1,29 @@
+diff --git a/src/_discord/embeds.py b/src/_discord/embeds.py
+index 39dc855..83c986b 100644
+--- a/src/_discord/embeds.py
++++ b/src/_discord/embeds.py
+@@ -28,6 +28,8 @@ from __future__ import annotations
+ import datetime
+ from typing import TYPE_CHECKING, Any, Final, Mapping, Protocol, TypeVar, Union
+ 
++from _discord.types.embed import EmbedType
++
+ from . import utils
+ from .colour import Colour
+ 
+@@ -69,13 +71,11 @@ class EmbedProxy:
+ 
+ 
+ E = TypeVar("E", bound="Embed")
++T = TypeVar("T")
++MaybeEmpty = Union[T, _EmptyEmbed]
+ 
+ if TYPE_CHECKING:
+     from _discord.types.embed import Embed as EmbedData
+-    from _discord.types.embed import EmbedType
+-
+-    T = TypeVar("T")
+-    MaybeEmpty = Union[T, _EmptyEmbed]
+ 
+     class _EmbedFooterProxy(Protocol):
+         text: MaybeEmpty[str]

@@ -34,7 +34,7 @@ Key features
 - Periodic advertisement to different channels,
 - Login with username/password - :ref:`Automatic login`,
 - Automatic guild discovery and join - :ref:`Automatic guild discovery and join`,
-- Logging of sent messages (including SQL) - :ref:`Logging`
+- Logging of sent messages (including SQL) - :ref:`Logging (core)`
 - Async framework
 - Easy to setup, with minimal code
 

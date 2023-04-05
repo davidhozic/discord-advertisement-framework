@@ -1,5 +1,5 @@
 ====================
-Logging
+Logging (core)
 ====================
 
 .. |PK| replace:: **[Primary Key]**
@@ -19,7 +19,7 @@ Logging is handled thru so called **logging managers**. Currently, 3 different m
 If a logging managers fails saving a log, then it's fallback manager will be used temporarily to store the log.
 It will only use the fallback once and then, at the next message, the original manager will be used.
 
-.. figure:: ./images/logging_process.drawio.svg
+.. figure:: ./DEP/images/logging_process.drawio.svg
     
     Logging process with fallback
 
@@ -55,14 +55,14 @@ All logs will contain keys:
   + :py:meth:`daf.message.DirectMESSAGE.generate_log_context`
 
 .. seealso:: 
-    :download:`Example structure <../DEP/Examples/Logging/JSON files/History/2022/05/23/#David's dungeon.json>`
+    :download:`Example structure <./DEP/Examples/Logging/JSON files/History/2022/05/23/#David's dungeon.json>`
 
 
 .. only:: html
 
     JSON code example
     -----------------
-    .. literalinclude:: ../DEP/Examples/Logging/JSON files/main_rickroll.py
+    .. literalinclude:: ./DEP/Examples/Logging/JSON files/main_rickroll.py
         :language: python
         :caption: Code to produce JSON logs
         
@@ -102,14 +102,14 @@ The structure contains the following attributes:
     Attributes marked with ``(json)`` are the same as in :ref:`JSON Logging (file)`
 
 .. seealso::
-    :download:`Structure example <../DEP/Examples/Logging/CSV files/History/2022/09/22/David's py dungeon.csv>`
+    :download:`Structure example <./DEP/Examples/Logging/CSV files/History/2022/09/22/David's py dungeon.csv>`
 
 
 .. only:: html
 
     CSV code example
     -----------------
-    .. literalinclude:: ../DEP/Examples/Logging/CSV files/main_rickroll.py
+    .. literalinclude:: ./DEP/Examples/Logging/CSV files/main_rickroll.py
         :language: python
         :caption: Code to produce JSON logs
         
@@ -145,7 +145,7 @@ This type of logging enables saving logs to a remote server inside the database.
 In addition to being smaller in size, database logging takes up less space and it allows easier data analysis.
 
 
-.. figure:: images/sql_logging_process.drawio.svg
+.. figure:: ./DEP/images/sql_logging_process.drawio.svg
 
     SQL Logging diagram
 
@@ -167,7 +167,7 @@ For daf to use SQL logging, you need to pass the :func:`~daf.core.run` function 
 
 .. only:: html
 
-    .. literalinclude:: ../DEP/Examples/Logging/SQL Logging/rolls.py
+    .. literalinclude:: ./DEP/Examples/Logging/SQL Logging/rolls.py
         :language: python
         
 
@@ -184,7 +184,7 @@ Features
 
 ER diagram
 --------------------------------
-.. image:: images/sql_er.drawio.svg
+.. image:: ./DEP/images/sql_er.drawio.svg
 
 Tables
 --------------------------------
