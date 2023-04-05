@@ -139,8 +139,8 @@ ADDITIONAL_WIDGETS = {
     dt.datetime: [AdditionalWidget(ttk.Button, setup_additional_widget_datetime, text="Select date")],
     DiscordColor: [AdditionalWidget(ttk.Button, setup_additional_widget_color_picker, text="Color picker")],
     DAFFile: [AdditionalWidget(ttk.Button, setup_additional_widget_file_chooser, text="File browse")],
-    LoggerJSON: [AdditionalWidget(ttk.Button, setup_additional_widget_file_chooser_logger, text="File browse")],
-    LoggerCSV: [AdditionalWidget(ttk.Button, setup_additional_widget_file_chooser_logger, text="File browse")],
+    LoggerJSON: [AdditionalWidget(ttk.Button, setup_additional_widget_file_chooser_logger, text="Select folder")],
+    LoggerCSV: [AdditionalWidget(ttk.Button, setup_additional_widget_file_chooser_logger, text="Select folder")],
 }
 
 
@@ -532,6 +532,7 @@ class NewObjectFrame(ttk.Frame):
         else:
             tkdiag.Messagebox.show_error("This object cannot be edited.", "Load error", parent=self.origin_window)
             self.origin_window.after_idle(self._cleanup)  # Can not clean the object before it has been added to list
+            return
 
         if old is not None:  # Edit
             self.load(old)

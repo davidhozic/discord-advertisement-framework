@@ -15,6 +15,7 @@ import json
 import sys
 import os
 import daf
+import webbrowser
 
 try:
     from .widgets import *
@@ -32,6 +33,9 @@ don't want to write Python code to use the software.
 
 Authors: David Hozic - Student at UL FE.
 """
+
+GITHUB_URL = "https://github.com/davidhozic/discord-advertisement-framework"
+DOC_URL = f"https://daf.davidhozic.com/en/{daf.VERSION}"
 
 
 class Application():
@@ -156,7 +160,11 @@ class Application():
         logo_img = logo_img.resize((self.win_main.winfo_screenwidth() // 8, self.win_main.winfo_screenwidth() // 8), resample=0)
         logo = ImageTk.PhotoImage(logo_img)
         self.tab_info = ttk.Frame(tabman_mf)
-        tabman_mf.add(self.tab_info, text="Credits")
+        tabman_mf.add(self.tab_info, text="About")
+        info_bnts_frame = ttk.Frame(self.tab_info)
+        info_bnts_frame.pack(pady=30)
+        ttk.Button(info_bnts_frame, text="Github", command=lambda: webbrowser.open(GITHUB_URL)).grid(row=0, column=0)
+        ttk.Button(info_bnts_frame, text="Documentation", command=lambda: webbrowser.open(DOC_URL)).grid(row=0, column=1)
         ttk.Label(self.tab_info, text=CREDITS_TEXT).pack()
         label_logo = ttk.Label(self.tab_info, image=logo)
         label_logo.image = logo
