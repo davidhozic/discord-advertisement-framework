@@ -16,10 +16,6 @@ core mode, since GUI is only an extension of the DAF running directly on top of 
 
 You can tell the framework is running when the buttons change colors:
 
-.. image:: images/gui-stop-bnt-active.png
-    :align: center
-
-
 Additionaly you can see the framework reporting successful initialization inside the ``Output`` tab.
 
 .. image:: images/gui-started-output-defined-accounts.png

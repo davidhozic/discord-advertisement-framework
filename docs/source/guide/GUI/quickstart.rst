@@ -23,9 +23,13 @@ GUI structure
 The GUI consists of:
 
 - START / STOP buttons for starting and stopping the framework,
-- 2 tabs for defining objects - "Objects definition" for defining the accounts, guilds and messages & 
-  "Logging" for defining the type of logging used when logging sent messages and also the debug (trace) level,
+- Schema definition tab - Where you can define accounts, guilds, messages & type of logging:
+  
+  - Accounts - Section for defining your accoungs (and guilds and messages).
+  - Logging - Section for defining the logging manager used and the detail of the trace (printouts).
+  - "Load/Save/Generate" menu button - Allows you to save or load the GUI state & to generate a Python script that
+    will shill the configured items without the graphical interface.
+
+
 - Output tab for displaying stdout (console) - this is useful for debugging purposes,
 - "Credits" tab - shows the credits,
-- "Load/Save/Generate" menu button - Allows you to save or load the GUI state & to generate a Python script that
-  will shill the configured items without the graphical interface.

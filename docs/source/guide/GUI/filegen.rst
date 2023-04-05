@@ -21,8 +21,8 @@ Schema backup
 .. seealso::
     :download:`Download example schema backup (schema.json) <./images/schema.json>`
 
-To save a schema after it has been defined, we can click on the *Load/Save/Generate* button, located on bottom of the GUI and
-then click the **Save schema** option.
+To save a schema after it has been defined, we can click on the *Load/Save/Generate* button, located in the top left
+corner of the *Schema definition* tab and then click the **Save schema** option.
 
 We will be asked for a file location of the schema backup, where the GUI will save backup our schema.
 
@@ -37,8 +37,8 @@ We will be asked for a file location of the schema backup, where the GUI will sa
 
 Schema restore
 ---------------
-In case we want to restore a backed-up schema, we can click on the *Load/Save/Generate* button, located on bottom of the GUI and
-then click the **Load schema** option.
+In case we want to restore a backed-up schema, we can click on the *Load/Save/Generate* button, located in the top left
+corner of the *Schema definition* tab and then click the **Load schema** option.
 
 We will be asked for a file location of the schema backup, from which the GUI will load our schema. 
 
@@ -56,9 +56,11 @@ a computer capable of displaying image.
 
 Luckily DAF-GUI allows use to create a (Python) shilling script in the event that we want to run DAF on a server 24/7.
 
-To generate a shilling script , we can click on the *Load/Save/Generate* button, located on bottom of the GUI and
-then click the **Generate script** option. This will open up a file dialog asking us where to save the shilling script.
-After we save the location our shilling script will be generated and we can run it by using the command ``python <out script here>``.
+To generate a shilling script , we can click on the *Load/Save/Generate* button, located in the top left
+corner of the *Schema definition* tab and then click the **Generate script** option.
+This will open up a file dialog asking us where to save the shilling script.
+After we save the location our shilling script will be generated and we
+can run it by using the command ``python <out script here>``.
 
 .. image:: images/gui-shill-script-gen-bnt.png
     :align: center

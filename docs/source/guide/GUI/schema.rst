@@ -3,11 +3,15 @@ Schema definition (GUI)
 =========================
 
 We can define the schema (accounts, guilds, messages) inside the *Schema definition* tab.
-Here we can see 3 buttons:
+Here we can 2 different subsections:
 
-1. Add ACCOUNT - Opens a window to define the account.
-2. Edit - Opens a window to re-define the account.
-3. Remove - Removes the account from accounts list.
+1. Account definition
+2. Logging definition
+
+
+.. image:: ./DEP/images/daf-gui-front.png
+    :scale: 40%
+    :align: center
 
 
 Defining ACCOUNT objects
@@ -21,7 +25,7 @@ We can define :class:`~daf.client.ACCOUNT` objects by clicking on ``Add ACCOUNT`
     :align: center
     :scale: 40%
 
-The window is automaticaly generated based on the :class:`~daf.client.ACCOUNT` definition and contains exactly the same
+The window is automaticaly generated based on the :class:`~daf.client.ACCOUNT`'s parameter annotations and contains exactly the same
 parameters like the core object :class:`~daf.client.ACCOUNT`.
 
 In the toolbar (top) we can observe 3 buttons and one toggle. The **Close** button closes the window and asks the user
@@ -35,6 +39,8 @@ and which **types it accepts**.
 .. image:: images/gui-help-search.png
     :align: center
 
+
+.. note:: Some datatypes will have additional widgets, such as Color Picker or Datetime select.
 
 In the main frame (below the toolbar) we can see different labels and dropdown menus with one button on the right side.
 These represent the **parameters** of the coresponding objects. These are exactly the same as in the DAF's core library
@@ -80,7 +86,7 @@ Depending on the datatype each parameter accepts, we can either:
     Example edit (string) definition window
 
 
-After we are satisfied with our definition, we can click *Save* to save the changes into the parent (previous) window.
+After we are satisfied with our definition, we can click *Save* to save the changes into the parent (previous) object.
 
 
 Account definition
@@ -155,7 +161,7 @@ to the defined guilds and channels.
 Logging definition (GUI)
 -------------------------
 We can also define what type of logging DAF will use to log sent messages and the detail of prints inside the
-*Output* section of the *Schema definition* tab
+*Logging* section of the *Schema definition* tab
 
 To select a logger we can select the wanted logger and then click on the *Edit* button,
 located on the right side of the 1st dropdown menu.
