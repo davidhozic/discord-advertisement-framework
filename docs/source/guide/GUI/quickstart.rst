@@ -14,7 +14,7 @@ After successful installation, DAF can be run in graphical mode by executing the
 This will open up (after a few seconds) a graphical display you can use to control the framework.
 
 .. image:: ./DEP/images/daf-gui-front.png
-    :scale: 70%
+    :scale: 40%
     :align: center
 
 

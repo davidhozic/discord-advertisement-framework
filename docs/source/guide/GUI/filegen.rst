@@ -28,11 +28,11 @@ We will be asked for a file location of the schema backup, where the GUI will sa
 
 .. image:: images/gui-schema-backup-bnt.png
     :align: center
-    :scale: 70%
+    :scale: 40%
 
 .. image:: images/gui-schema-backup-file-save.png
     :align: center
-    :scale: 70%
+    :scale: 40%
 
 
 Schema restore
@@ -44,7 +44,7 @@ We will be asked for a file location of the schema backup, from which the GUI wi
 
 .. image:: images/gui-schema-restore-bnt.png
     :align: center
-    :scale: 70%
+    :scale: 40%
 
 
 
@@ -62,7 +62,7 @@ After we save the location our shilling script will be generated and we can run 
 
 .. image:: images/gui-shill-script-gen-bnt.png
     :align: center
-    :scale: 70%
+    :scale: 40%
 
 
 Here is an example of the shilling script generated from the above option.

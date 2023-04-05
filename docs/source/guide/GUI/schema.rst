@@ -2,7 +2,7 @@
 Schema definition (GUI)
 =========================
 
-We can define the schema (accounts, guilds, messages) inside the ``Objects definition tab``.
+We can define the schema (accounts, guilds, messages) inside the *Schema definition* tab.
 Here we can see 3 buttons:
 
 1. Add ACCOUNT - Opens a window to define the account.
@@ -19,6 +19,7 @@ We can define :class:`~daf.client.ACCOUNT` objects by clicking on ``Add ACCOUNT`
 
 .. image:: images/gui-new-account-window.png
     :align: center
+    :scale: 40%
 
 The window is automaticaly generated based on the :class:`~daf.client.ACCOUNT` definition and contains exactly the same
 parameters like the core object :class:`~daf.client.ACCOUNT`.
@@ -48,15 +49,18 @@ Depending on the datatype each parameter accepts, we can either:
 
 .. image:: images/gui-predefined-value-select.png
     :align: center
+    :scale: 40%
 
 2. Create new value by clicking on the button on the right side of the dropdown and clicking *New <datatype>*,
    which will open another definition window.
 
 .. image:: images/gui-new-item-define.png
     :align: center
+    :scale: 40%
 
 .. figure:: images/gui-new-item-define-string-window.png
     :align: center
+    :scale: 40%
 
     Example new (string) definition window
 
@@ -66,10 +70,12 @@ Depending on the datatype each parameter accepts, we can either:
 
 .. image:: images/gui-new-item-edit.png
     :align: center
+    :scale: 40%
 
 
 .. figure:: images/gui-new-item-edit-string-window.png
     :align: center
+    :scale: 40%
 
     Example edit (string) definition window
 
@@ -111,6 +117,7 @@ definition window which allows you to define multiple GUILD objects.
 
 
 .. figure:: images/gui-new-server-list.png
+    :scale: 40%
 
     New server definition window.
 
@@ -124,12 +131,13 @@ Defining everything else is pretty much the same, for help click the *Help* butt
 
 
 Successful account definition
--------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 After successful definition, we can observe a new account added to our accounts list.
 
 .. image:: images/gui-defined-accounts-list.png
     :align: center
+    :scale: 40%
 
 
 If we click the *Start* (on top of the main window), we can observe our account being logged-in and messages being sent
@@ -137,6 +145,7 @@ to the defined guilds and channels.
 
 .. image:: images/gui-started-output-defined-accounts.png
     :align: center
+    :scale: 40%
 
 .. image:: images/gui-messages-sent-post-acc-definition.png
     :align: center
@@ -144,18 +153,16 @@ to the defined guilds and channels.
 
 
 Logging definition (GUI)
-==============================
+-------------------------
 We can also define what type of logging DAF will use to log sent messages and the detail of prints inside the
-*Output* tab of the GUI.
+*Output* section of the *Schema definition* tab
 
-To select a logger we can click on the *Logging tab*, select the wanted logger and then click on the *Edit* button,
+To select a logger we can select the wanted logger and then click on the *Edit* button,
 located on the right side of the 1st dropdown menu.
-
-.. image:: images/gui-logger-definition-tab.png
-    :align: center
 
 .. image:: images/gui-logger-definition-edit-json.png
     :align: center
+    :scale: 40%
 
 
 After clicking on *Save*, our logging manager is now defined and will be responsible for logging the data.
@@ -166,6 +173,7 @@ it is considered the most detailed trace configuration.
 
 .. image:: images/gui-logger-definition-tracing.png
     :align: center
+    :scale: 40%
 
 
 *NORMAL* trace is recommened for most users.

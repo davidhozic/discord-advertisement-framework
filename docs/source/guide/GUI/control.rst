@@ -22,6 +22,6 @@ You can tell the framework is running when the buttons change colors:
 
 Additionaly you can see the framework reporting successful initialization inside the ``Output`` tab.
 
-.. image:: images/gui-started-output.png
+.. image:: images/gui-started-output-defined-accounts.png
     :align: center
 

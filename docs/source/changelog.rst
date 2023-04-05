@@ -40,7 +40,7 @@ v2.6.0
 
 .. image:: ./DEP/images/daf-gui-front.png
     :align: center
-    :scale: 70%
+    :scale: 40%
 
 
 
