@@ -165,6 +165,7 @@ class Application():
         info_bnts_frame.pack(pady=30)
         ttk.Button(info_bnts_frame, text="Github", command=lambda: webbrowser.open(GITHUB_URL)).grid(row=0, column=0)
         ttk.Button(info_bnts_frame, text="Documentation", command=lambda: webbrowser.open(DOC_URL)).grid(row=0, column=1)
+        ttk.Label(self.tab_info, text="Like the app? Give it a star :) on GitHub (^)").pack(pady=10)
         ttk.Label(self.tab_info, text=CREDITS_TEXT).pack()
         label_logo = ttk.Label(self.tab_info, image=logo)
         label_logo.image = logo

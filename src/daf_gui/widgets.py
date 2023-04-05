@@ -447,7 +447,9 @@ class NewObjectFrame(ttk.Frame):
         except NameError:
             annotations = {}
         additional_annotations = ADDITIONAL_ANNOTATIONS.get(class_)
-        
+        if additional_annotations is not None:
+            annotations = {**annotations, **additional_annotations}
+
         def init_frame_str():
             w = Text(frame_main)
             w.pack(fill=tk.BOTH, expand=True)
@@ -487,13 +489,6 @@ class NewObjectFrame(ttk.Frame):
             self._map[None] = (w, list)
 
         def init_frame_annotated_object():
-            if annotations is None:
-                annotations = {}
-
-            # Additional annotations
-            if additional_annotations is not None:
-                annotations = {**annotations, **additional_annotations}
-
             annotations.pop("return", None)
 
             for (k, v) in annotations.items():
