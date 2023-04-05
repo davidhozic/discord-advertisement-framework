@@ -555,10 +555,13 @@ class NewObjectFrame(ttk.Frame):
     def load(self, object_: ObjectInfo):
         object_ = object_.data if self._map.get(None) is None else object_
         for attr, (widget, types_) in self._map.items():
-            try:
-                val = object_[attr] if attr is not None else object_  # Single value type
-            except Exception:
-                continue
+            if attr is not None:
+                if attr not in object_:
+                    continue
+
+                val = object_[attr] 
+            else:
+                val = object_  # Single value type
 
             if isinstance(widget, ComboBoxObjects):
                 if val not in widget["values"]:
