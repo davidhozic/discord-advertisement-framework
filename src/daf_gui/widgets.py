@@ -447,16 +447,18 @@ class NewObjectFrame(ttk.Frame):
         except NameError:
             annotations = {}
         additional_annotations = ADDITIONAL_ANNOTATIONS.get(class_)
-
-        if class_ is str:
+        
+        def init_frame_str():
             w = Text(frame_main)
             w.pack(fill=tk.BOTH, expand=True)
             self._map[None] = (w, class_)
-        elif class_ in {int, float}:
+
+        def init_frame_num():
             w = ttk.Spinbox(frame_main, from_=-9999, to=9999)
             w.pack(fill=tk.X)
             self._map[None] = (w, class_)
-        elif get_origin(class_) in {list, Iterable, ABCIterable}:
+
+        def init_frame_list():
             w = ListBoxObjects(frame_main)
             frame_edit_remove = ttk.Frame(frame_main)
             menubtn = ttk.Menubutton(frame_edit_remove, text="Add object")
@@ -483,7 +485,8 @@ class NewObjectFrame(ttk.Frame):
                 menu.add_radiobutton(label=arg.__name__, command=self.new_object_window(arg, w))
 
             self._map[None] = (w, list)
-        elif annotations or additional_annotations is not None:
+
+        def init_frame_annotated_object():
             if annotations is None:
                 annotations = {}
 
@@ -529,6 +532,15 @@ class NewObjectFrame(ttk.Frame):
 
                 menu.add_radiobutton(label="Edit selected", command=self.combo_edit_selected(w, editable_types))
                 self._map[k] = (w, entry_types)
+
+        if class_ is str:
+            init_frame_str()
+        elif class_ in {int, float}:
+            init_frame_num()
+        elif get_origin(class_) in {list, Iterable, ABCIterable}:
+            init_frame_list()
+        elif annotations or additional_annotations is not None:
+            init_frame_annotated_object()
         else:
             tkdiag.Messagebox.show_error("This object cannot be edited.", "Load error", parent=self.origin_window)
             self.origin_window.after_idle(self._cleanup)  # Can not clean the object before it has been added to list
