@@ -7,7 +7,7 @@
     .. versionchanged:: v2.1
         Made SQL an optional functionality
 """
-from datetime import datetime
+from datetime import datetime, date
 from typing import Callable, Dict, List, Literal, Any, Union, Optional
 from contextlib import suppress
 from typeguard import typechecked
@@ -57,6 +57,7 @@ try:
         Session,
         DeclarativeBase,
         mapped_column,
+        column_property,
         relationship,
         Mapped,
     )
@@ -781,7 +782,7 @@ class LoggerSQL(logging.LoggerBASE):
             before: datetime | None = None,
             after: datetime | None = None,
             region: Literal["year", "month", "day", "hour"] = "day"
-    ) -> tuple[int]:
+    ) -> tuple[list[tuple[date, int]]]:
         """
         Returns number of messages sent to specific after and before specific date and time.
 
@@ -793,18 +794,28 @@ class LoggerSQL(logging.LoggerBASE):
             Only count messages sent before the datetime.
         after: datetime | None = None
             Only count messages sent after the datetime.
+        region: Literal["year", "month", "day"]
+            Results returned calculated over selected region.
 
         Returns
         --------
-        tuple[int]
-            Two element tuple containing number of successul messages and number of failed messages.
-            A failed message is a message that didn't succeed in ALL the channels.
+        tuple[list[tuple[date, int]]]
+            Tuple containing 2 lists - successful and failed send attempts.
+            Each element of the 2 lists is a tuple containing 2 elements -
+            One is the date sent (dates changes by ``region``) and the second is
+            a integer saying how many of the messages were sent.
         """
         if after is None:
             after = datetime.min
         
         if before is None:
             before = datetime.max
+        
+        regions = ["day", "month", "year"]
+        regions = reversed(regions[regions.index(region):])
+        extract_stms = []
+        for region_ in regions:
+            extract_stms.append(func.extract(region_, MessageLOG.timestamp))
 
         # Obtain internal guild id
         guilduser: GuildUSER = self.guild_user_cache.get(guild)
@@ -821,26 +832,27 @@ class LoggerSQL(logging.LoggerBASE):
                 
             success = (await self._run_async(
                 session.execute,
-                select(func.extract(region, MessageLOG.timestamp), func.count())
+                select(*extract_stms, func.count())
                 .where(
                     MessageLOG.guild_id == guilduser.id,
-                    MessageLOG.channels.any(MessageChannelLOG.reason == None),
+                    MessageLOG.success_rate > 0,
                     MessageLOG.timestamp.between(after, before)
-                ).group_by(func.extract(region, MessageLOG.timestamp))
+                ).group_by(*extract_stms)
             )).all()
 
             failed = (await self._run_async(
                 session.execute,
-                select(func.extract(region, MessageLOG.timestamp), func.count(MessageLOG.id))
+                select(*extract_stms, func.count(MessageLOG.id))
                 .where(
                     MessageLOG.guild_id == guilduser.id,
-                    select(func.count()).select_from(MessageChannelLOG)
-                        .where(MessageChannelLOG.log_id == MessageLOG.id, MessageChannelLOG.reason == None).scalar_subquery()
-                    == 0,
+                    MessageLOG.success_rate == 0,
                     MessageLOG.timestamp.between(after, before)
-                ).group_by(func.extract(region, MessageLOG.timestamp))
+                ).group_by(*extract_stms)
             )).all()
 
+            extract_stm_len = len(extract_stms)
+            success = [ (date(*s[:extract_stm_len]), s[extract_stm_len]) for s in success ]
+            failed = [ (date(*f[:extract_stm_len]), f[extract_stm_len]) for f in failed ]
             return success, failed
 
     async def analytic_get_message_log(
@@ -893,11 +905,7 @@ class LoggerSQL(logging.LoggerBASE):
                 session.execute,
                 select(MessageLOG)
                 .where(
-                    (
-                        select(func.count()).where(MessageChannelLOG.reason.is_(None), MessageChannelLOG.log_id == MessageLOG.id).scalar_subquery()
-                        /
-                        select(func.count()).where(MessageChannelLOG.log_id == MessageLOG.id).scalar_subquery()
-                    ).between(*success_rate),
+                    MessageLOG.success_rate.between(*success_rate),
                     MessageLOG.timestamp.between(after, before)
                 )
             )
@@ -1028,7 +1036,7 @@ if SQL_INSTALLED:
         snowflake_id = mapped_column(BigInteger)
         name = mapped_column(String(3072))
         guild_type_id: Mapped[int] = mapped_column(ForeignKey("GuildTYPE.id"))
-        guild_type: Mapped["GuildTYPE"] = relationship(lazy="subquery")
+        guild_type: Mapped["GuildTYPE"] = relationship()
 
         def __init__(self,
                      guild_type: GuildTYPE,
@@ -1060,7 +1068,7 @@ if SQL_INSTALLED:
         snowflake_id = mapped_column(BigInteger)
         name = mapped_column(String(3072))
         guild_id: Mapped[int] = mapped_column(ForeignKey("GuildUSER.id"))
-        guild: Mapped["GuildUSER"] = relationship(lazy="subquery")
+        guild: Mapped["GuildUSER"] = relationship()
 
         def __init__(self,
                      snowflake: int,
@@ -1093,6 +1101,36 @@ if SQL_INSTALLED:
         def __init__(self,
                      content: dict):
             self.content = content
+
+    class MessageChannelLOG(ORMBase):
+        """
+        This is a table that contains a log of channels that are linked to a certain message log.
+
+        Parameters
+        ------------
+        message_log: MessageLOG
+            Foreign key pointing to MessageLOG.id.
+        channel: CHANNEL
+            Foreign key pointing to CHANNEL.id.
+        reason: str
+            Stringified description of Exception that caused the send attempt to be successful for a certain channel.
+        """
+
+        __tablename__ = "MessageChannelLOG"
+
+        log_id: Mapped[int] = mapped_column(Integer, ForeignKey("MessageLOG.id"), primary_key=True)
+        channel_id: Mapped[int] = mapped_column(Integer, ForeignKey("CHANNEL.id"), primary_key=True)
+        reason = mapped_column(String(3072))
+
+        log: Mapped["MessageLOG"] = relationship(back_populates="channels", uselist=False, )
+        channel: Mapped["CHANNEL"] = relationship()
+
+        def __init__(self,
+                     channel: CHANNEL,
+                     reason: str = None):
+            self.channel = channel
+            self.reason = reason
+
 
     class MessageLOG(ORMBase):
         """
@@ -1129,11 +1167,16 @@ if SQL_INSTALLED:
         dm_reason = mapped_column(String(3072))  # [DirectMESSAGE]
         timestamp = mapped_column(DateTime)
 
-        sent_data: Mapped["DataHISTORY"] = relationship(lazy="subquery")
-        message_type: Mapped["MessageTYPE"] = relationship(lazy="subquery")
-        guild: Mapped["GuildUSER"] = relationship(lazy="subquery")
-        message_mode: Mapped["MessageMODE"] = relationship(lazy="subquery")
-        channels: Mapped[List["MessageChannelLOG"]] = relationship(back_populates="log",  lazy="subquery")
+        sent_data: Mapped["DataHISTORY"] = relationship()
+        message_type: Mapped["MessageTYPE"] = relationship()
+        guild: Mapped["GuildUSER"] = relationship()
+        message_mode: Mapped["MessageMODE"] = relationship()
+        channels: Mapped[List["MessageChannelLOG"]] = relationship(back_populates="log")
+        success_rate = column_property(
+            100* select(func.count()).where(MessageChannelLOG.reason.is_(None), MessageChannelLOG.log_id == id).scalar_subquery()
+            /
+            select(func.count()).where(MessageChannelLOG.log_id == id).scalar_subquery()
+        )
 
         def __init__(self,
                      sent_data: DataHISTORY = None,
@@ -1150,31 +1193,3 @@ if SQL_INSTALLED:
             self.timestamp = datetime.now().replace(microsecond=0)
             self.channels = channels
 
-    class MessageChannelLOG(ORMBase):
-        """
-        This is a table that contains a log of channels that are linked to a certain message log.
-
-        Parameters
-        ------------
-        message_log: MessageLOG
-            Foreign key pointing to MessageLOG.id.
-        channel: CHANNEL
-            Foreign key pointing to CHANNEL.id.
-        reason: str
-            Stringified description of Exception that caused the send attempt to be successful for a certain channel.
-        """
-
-        __tablename__ = "MessageChannelLOG"
-
-        log_id: Mapped[int] = mapped_column(Integer, ForeignKey("MessageLOG.id"), primary_key=True)
-        channel_id: Mapped[int] = mapped_column(Integer, ForeignKey("CHANNEL.id"), primary_key=True)
-        reason = mapped_column(String(3072))
-
-        log: Mapped["MessageLOG"] = relationship(back_populates="channels", uselist=False, lazy="subquery")
-        channel: Mapped["CHANNEL"] = relationship(lazy="subquery")
-
-        def __init__(self,
-                     channel: CHANNEL,
-                     reason: str = None):
-            self.channel = channel
-            self.reason = reason
