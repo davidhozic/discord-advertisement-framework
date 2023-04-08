@@ -51,8 +51,6 @@ class Application():
         win_main.wm_title(f"Discord Advert Framework {daf.VERSION}")
         win_main.wm_minsize(*screen_res)
         win_main.protocol("WM_DELETE_WINDOW", self.close_window)
-        self.win_main.rowconfigure(0, weight=1)
-        self.win_main.columnconfigure(0, weight=1)
 
         # Console initialization
         self.win_debug = None
