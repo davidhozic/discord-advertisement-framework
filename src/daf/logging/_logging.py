@@ -75,20 +75,20 @@ class LoggerBASE:
 
     async def analytic_get_num_messages(
             self,
-            guild: int,
-            author: int,
+            guild: int | None,
+            author: int | None,
             before: datetime | None = None,
             after: datetime | None = None,
-            region: Literal["year", "month", "day"] = "day"
+            group_by: Literal["year", "month", "day"] = "day"
     ) -> tuple[int]:
         raise NotImplementedError
 
     async def analytic_get_message_log(
             self,
             guild: int,
-            before: datetime | None = None,
             after: datetime | None = None,
-            success_rate: float = 100
+            before: datetime | None = None,
+            success_rate: tuple[float, float] = (0, 100)
     ) -> list:
         raise NotImplementedError
 

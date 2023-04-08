@@ -16,6 +16,7 @@ import tkinter.filedialog as tkfile
 import webbrowser
 import types
 import datetime as dt
+import inspect
 
 
 __all__ = (
@@ -26,6 +27,7 @@ __all__ = (
     "NewObjectFrame",
     "SpinBoxText",
     "ComboBoxText",
+    "ComboEditFrame",
     "ObjectInfo",
     "convert_to_objects",
     "convert_to_json",
@@ -337,6 +339,18 @@ class ComboBoxObjects(ttk.Combobox):
         return super().__getitem__(key)
 
 
+class ComboEditFrame(ttk.Frame):
+    def __init__(self, command, value: ObjectInfo, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        combo = ComboBoxObjects(self)
+        ttk.Button(self, text="Edit", command=command).pack(side="right")
+        combo.pack(side="left", fill=tk.X, expand=True)
+
+        combo.insert(tk.END, value)
+        combo.current(0)
+        self.combo = combo
+
+
 class ObjectEditWindow(ttk.Toplevel):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -406,24 +420,6 @@ class NewObjectFrame(ttk.Frame):
     origin_window: ObjectEditWindow = None
 
     def __init__(self, class_, return_widget: ComboBoxObjects | ListBoxObjects, parent = None, old: ObjectInfo = None, *args, **kwargs):
-        def convert_types(types_in):
-            while get_origin(types_in) in {Union, types.UnionType}:
-                types_in = get_args(types_in)
-
-            if not isinstance(types_in, list):
-                if isinstance(types_in, tuple):
-                    types_in = list(types_in)
-                else:
-                    types_in = [types_in, ]
-
-            subtypes = []
-            for t in types_in:
-                if hasattr(t, "__subclasses__") and t.__module__.split('.', 1)[0] in {"_discord", "daf"}:
-                    for st in t.__subclasses__():
-                        subtypes.extend(convert_types(st))
-
-            return types_in + subtypes
-
         self.class_ = class_
         self.return_widget = return_widget
         self._map = {}
@@ -461,7 +457,12 @@ class NewObjectFrame(ttk.Frame):
 
         # Additional annotations defined in daf to support more types
         try:
-            annotations = get_type_hints(class_.__init__, include_extras=True)
+            if inspect.isclass(class_):
+                annot_object = class_.__init__
+            else:
+                annot_object = class_
+
+            annotations = get_type_hints(annot_object, include_extras=True)
         except NameError:
             annotations = {}
         additional_annotations = ADDITIONAL_ANNOTATIONS.get(class_)
@@ -496,7 +497,7 @@ class NewObjectFrame(ttk.Frame):
             w.pack(side="left", fill=tk.BOTH, expand=True)
             frame_edit_remove.pack(side="right")
             args = get_args(class_)
-            args = convert_types(args)
+            args = self.convert_types(args)
             if get_origin(args[0]) is Union:
                 args = get_args(args[0])
 
@@ -516,7 +517,7 @@ class NewObjectFrame(ttk.Frame):
                 entry_types = v
                 ttk.Label(frame_annotated, text=k, width=15).pack(side="left")
 
-                entry_types = convert_types(entry_types)
+                entry_types = self.convert_types(entry_types)
 
                 bnt_menu = ttk.Menubutton(frame_annotated)
                 menu = tk.Menu(bnt_menu)
@@ -565,6 +566,25 @@ class NewObjectFrame(ttk.Frame):
     @classmethod
     def set_origin_window(cls, window: ObjectEditWindow):
         cls.origin_window = window
+
+    @classmethod
+    def convert_types(cls, types_in):
+        while get_origin(types_in) in {Union, types.UnionType}:
+            types_in = get_args(types_in)
+
+        if not isinstance(types_in, list):
+            if isinstance(types_in, tuple):
+                types_in = list(types_in)
+            else:
+                types_in = [types_in, ]
+
+        subtypes = []
+        for t in types_in:
+            if hasattr(t, "__subclasses__") and t.__module__.split('.', 1)[0] in {"_discord", "daf"}:
+                for st in t.__subclasses__():
+                    subtypes.extend(cls.convert_types(st))
+
+        return types_in + subtypes
 
     def update_window_title(self):
         self.origin_window.title(f"{'New' if self.old_object_info is None else 'Edit'} {self.class_.__name__} object")
@@ -690,7 +710,9 @@ class NewObjectFrame(ttk.Frame):
                 object_ = single_value
             else:
                 object_ = ObjectInfo(self.class_, map_)
-                convert_to_objects(object_)  # Tries to create instances to check for errors
+                # Only check class instances, functions / methods get checked on parent frame
+                if inspect.isclass(self.class_):
+                    convert_to_objects(object_)  # Tries to create instances to check for errors
 
             # Edit was requested, delete old value
             if self.old_object_info is not None:

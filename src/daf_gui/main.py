@@ -1,7 +1,8 @@
 """
 Main file of the DAF GUI.
 """
-from typing import Iterable, Awaitable, get_args, get_type_hints
+from typing import Iterable, Awaitable
+from contextlib import suppress
 from enum import Enum
 from PIL import Image, ImageTk
 
@@ -9,6 +10,7 @@ import tkinter as tk
 import tkinter.filedialog as tkfile
 import ttkbootstrap.dialogs.dialogs as tkdiag
 import ttkbootstrap as ttk
+import ttkbootstrap.tableview as tktw
 
 import asyncio
 import json
@@ -157,57 +159,51 @@ class Application():
         tab_analytics = ttk.Frame(tabman_mf, padding=(10, 10))
         tabman_mf.add(tab_analytics, text="Analytics")
         ttk.Label(tab_analytics, text="NOTE!\nAnalytics are only available using LoggerSQL as the logging manager!").pack()
-        try:
-            from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-            from matplotlib import pyplot as plt
 
-            frame_analytics_num_msg = ttk.Frame(tab_analytics)
+        frame_num_msg = ttk.Labelframe(tab_analytics, padding=(10, 10), text="Number of messages", bootstyle="primary")
+        frame_combo_num_messages = ComboEditFrame(
+            self.edit_analytics_num_msg,
+            ObjectInfo(daf.logging.LoggerBASE.analytic_get_num_messages, {}),
+            frame_num_msg
+        )
 
-            figure, axes = plt.subplots(2, 1)
-            figure.set_tight_layout(True)
-            axes[0].set_title("Num. success sends")
-            axes[1].set_title("Num. failed sends")
+        coldata = [
+            "Date",
+            {"text": "Number of successful", "stretch": True},
+            {"text": "Number of failed", "stretch": True},
+            {"text": "Guild snowflake", "stretch": True},
+            {"text": "Author snowflake", "stretch": True},
+        ]
+        tw_num_msg = tktw.Tableview(frame_num_msg, bootstyle="primary", coldata=coldata)
+        ttk.Button(
+            frame_num_msg,
+            text="Calculate",
+            command=lambda: self._async_queue.put_nowait(self.analytics_load_num_msg())
+        ).pack(fill=tk.X, pady=5)
 
-            async def plot_num_messages():
-                logger = daf.get_logger()
-                if not isinstance(logger, daf.LoggerSQL):
-                    raise ValueError("Analytics only allowed when using LoggerSQL")
+        frame_combo_num_messages.pack(fill=tk.X, expand=True)
+        frame_num_msg.pack(fill=tk.BOTH, expand=True)
+        tw_num_msg.pack(expand=True, fill=tk.BOTH)
 
-                region = combo_region.combo.get()
-                success, failed = await logger.analytic_get_num_messages(
-                    int(spinbox_guild.spinbox.get()),
-                    int(spinbox_acc.spinbox.get()),
-                    region=region
-                )
+        self.tw_num_msg = tw_num_msg
+        self.frame_combo_num_messages = frame_combo_num_messages
 
-                if len(success):
-                    axes[0].clear()
-                    axes[0].stem(*zip(*success))
-
-                if len(failed):
-                    axes[1].clear()
-                    axes[1].clear()
-                    axes[1].stem(*zip(*failed))
-
-                plt.show()
-
-            spinbox_guild = SpinBoxText("Guild snowlake", frame_analytics_num_msg)
-            spinbox_guild.pack(fill=tk.X)
-
-            spinbox_acc = SpinBoxText("Author (account) snowlake", frame_analytics_num_msg)
-            spinbox_acc.pack(fill=tk.X)
-
-            combo_region = ComboBoxText("Region", frame_analytics_num_msg)
-            type_hints = get_type_hints(daf.logging.LoggerBASE.analytic_get_num_messages)
-            combo_region.combo["values"] = get_args(type_hints["region"])
-            combo_region.pack(fill=tk.X)
-
-            cmd = lambda: self._async_queue.put_nowait(plot_num_messages())
-            ttk.Button(frame_analytics_num_msg, text="Plot", command=cmd).pack(fill=tk.X, pady=5)
-            frame_analytics_num_msg.pack(fill=tk.BOTH, expand=True)
-
-        except ImportError:
-            self.cavas_analytics = None
+        frame_msg_history = ttk.Labelframe(tab_analytics, padding=(10, 10), text="Messages", bootstyle="primary")
+        frame_msg_history.pack(fill=tk.BOTH, expand=True)
+        ttk.Button(
+            frame_msg_history,
+            text="Get messages",
+            command=lambda: self._async_queue.put_nowait(self.analytics_load_msg())
+        ).pack(fill=tk.X, pady=5)
+        frame_combo_messages = ComboEditFrame(
+            self.edit_analytics_num_msg,
+            ObjectInfo(daf.logging.LoggerBASE.analytic_get_message_log, {}),
+            frame_msg_history
+        )
+        frame_combo_messages.pack(expand=True, fill=tk.X)
+        self.frame_combo_messages = frame_combo_messages
+        lst_messages = ListBoxObjects(frame_msg_history)
+        lst_messages.pack(expand=True, fill=tk.BOTH)
 
         # Credits tab
         logo_img = Image.open(f"{os.path.dirname(__file__)}/img/logo.png")
@@ -243,6 +239,52 @@ class Application():
         if self.objects_edit_window is None or self.objects_edit_window.closed:
             self.objects_edit_window = ObjectEditWindow()
             self.objects_edit_window.open_object_edit_frame(*args, **kwargs)
+
+    async def analytics_load_msg(self):
+        logger = daf.get_logger()
+        if not isinstance(logger, daf.LoggerSQL):
+            raise ValueError("Analytics only allowed when using LoggerSQL")
+
+        param_object = self.frame_combo_messages.combo.get()
+        data = param_object.data.copy()
+        for k, v in data.items():
+            if isinstance(v, ObjectInfo):
+                data[k] = convert_to_objects(v)
+
+        messages = await logger.analytic_get_message_log(
+            **data
+        )
+
+    async def analytics_load_num_msg(self):
+        logger = daf.get_logger()
+        if not isinstance(logger, daf.LoggerSQL):
+            raise ValueError("Analytics only allowed when using LoggerSQL")
+
+        param_object = self.frame_combo_num_messages.combo.get()
+        data = param_object.data.copy()
+        for k, v in data.items():
+            if isinstance(v, ObjectInfo):
+                data[k] = convert_to_objects(v)
+
+        count = await logger.analytic_get_num_messages(
+            **data
+        )
+
+        self.tw_num_msg.delete_rows()
+        self.tw_num_msg.insert_rows(tk.END, count)
+        self.tw_num_msg.goto_first_page()
+
+    def edit_analytics_num_msg(self):
+        selection = self.frame_combo_num_messages.combo.current()
+        if selection >= 0:
+            object_: ObjectInfo = self.frame_combo_num_messages.combo.get()
+            self.open_object_edit_window(
+                daf.logging.LoggerBASE.analytic_get_num_messages,
+                self.frame_combo_num_messages.combo,
+                old=object_
+            )
+        else:
+            tkdiag.Messagebox.show_error("Select atleast one item!", "Empty list!")
 
     def edit_logger(self):
         selection = self.combo_logging_mgr.current()

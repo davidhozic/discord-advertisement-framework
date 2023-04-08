@@ -47,7 +47,7 @@ DIALECT_CONN_MAP = {
 try:
     from sqlalchemy import (
         SmallInteger, Integer, BigInteger, DateTime,
-        Sequence, String, JSON, select, text, ForeignKey, func, any_, all_, between
+        Sequence, String, JSON, select, text, ForeignKey, func, case
     )
     from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
     from sqlalchemy.engine import URL as SQLURL, create_engine
@@ -788,14 +788,29 @@ class LoggerSQL(logging.LoggerBASE):
         else:
             raise RuntimeError(f"Unable to save log within {SQL_MAX_SAVE_ATTEMPTS} tries")
 
+    async def _get_guild(self, id_: int, session: AsyncSession | Session):
+        guilduser: GuildUSER = self.guild_user_cache.get(id_)
+        if guilduser is not None:
+            return guilduser
+
+        try:
+            _ret = (await self._run_async(
+                session.execute,
+                select(GuildUSER)
+                .where(GuildUSER.snowflake_id == id_))
+            ).first()
+            return _ret[0] if _ret is not None else None
+        except SQLAlchemyError:
+            return None
+
     async def analytic_get_num_messages(
             self,
-            guild: int,
-            author: int,
-            before: datetime | None = None,
+            guild: int | None = None,
+            author: int | None = None,
             after: datetime | None = None,
-            region: Literal["year", "month", "day"] = "day"
-    ) -> tuple[list[tuple[date, int]]]:
+            before: datetime | None = None,
+            group_by: Literal["year", "month", "day"] = "day"
+    ) -> list[tuple[date, int, int]]:
         """
         Returns number of messages sent to specific after and before specific date and time.
 
@@ -805,20 +820,17 @@ class LoggerSQL(logging.LoggerBASE):
             The snowflake id of the guild.
         author: int
             The snowflake id of the author.
-        before: datetime | None
-            Only count messages sent before the datetime.
         after: datetime | None = None
             Only count messages sent after the datetime.
-        region: Literal["year", "month", "day"]
-            Results returned calculated over selected region.
+        before: datetime | None
+            Only count messages sent before the datetime.
+        group_by: Literal["year", "month", "day"]
+            Results returned are grouped by ``group_by``
 
         Returns
         --------
-        tuple[list[tuple[date, int]]]
-            Tuple containing 2 lists - successful and failed send attempts.
-            Each element of the 2 lists is a tuple containing 2 elements -
-            One is the date sent (dates changes by ``region``) and the second is
-            a integer saying how many of the messages were sent.
+        list[tuple[date, int, int]]
+            List of tuples containing the date, number of successful, number of failed messages.
 
         Raises
         ------------
@@ -833,66 +845,54 @@ class LoggerSQL(logging.LoggerBASE):
             before = datetime.max
 
         regions = ["day", "month", "year"]
-        regions = reversed(regions[regions.index(region):])
+        regions = reversed(regions[regions.index(group_by):])
         extract_stms = []
         for region_ in regions:
             extract_stms.append(func.extract(region_, MessageLOG.timestamp))
 
-        async def get_guild(id_: int, session: AsyncSession | Session):
-            guilduser: GuildUSER = self.guild_user_cache.get(id_)
-            if guilduser is not None:
-                return guilduser
-
-            try:
-                return (await self._run_async(
-                    session.execute,
-                    select(GuildUSER)
-                    .where(GuildUSER.snowflake_id == id_))
-                ).first()[0]
-            except SQLAlchemyError:
-                return None
-
         async with self.session_maker() as session:
             # Obtain internal guild id
-            guilduser: GuildUSER = await get_guild(guild, session)
-            if guilduser is None:
-                return _dummy_ret
+            conditions = []
+            if guild is not None:
+                guilduser: GuildUSER = await self._get_guild(guild, session)
+                if guilduser is None:
+                    return _dummy_ret
 
-            author: GuildUSER = await get_guild(author, session)
-            if author is None:
-                return _dummy_ret
+                conditions.append(guilduser.id == MessageLOG.guild_id)
 
-            success = (await self._run_async(
+            if author is not None:
+                author: GuildUSER = await self._get_guild(author, session)
+                if author is None:
+                    return _dummy_ret
+
+                conditions.append(author.id == MessageLOG.author_id)
+
+            count = (await self._run_async(
                 session.execute,
-                select(*extract_stms, func.count())
+                select(
+                    *extract_stms,
+                    func.sum(case((MessageLOG.success_rate > 0, 1), else_=0)),
+                    func.sum(case((MessageLOG.success_rate == 0, 1), else_=0)),
+                    select(GuildUSER.snowflake_id).where(GuildUSER.id == MessageLOG.guild_id) .scalar_subquery(),
+                    select(GuildUSER.snowflake_id).where(GuildUSER.id == MessageLOG.author_id).scalar_subquery()
+                )
                 .where(
-                    MessageLOG.guild_id == guilduser.id,
-                    MessageLOG.success_rate > 0,
-                    MessageLOG.timestamp.between(after, before)
-                ).group_by(*extract_stms)
-            )).all()
-
-            failed = (await self._run_async(
-                session.execute,
-                select(*extract_stms, func.count(MessageLOG.id))
-                .where(
-                    MessageLOG.guild_id == guilduser.id,
-                    MessageLOG.success_rate == 0,
-                    MessageLOG.timestamp.between(after, before)
+                    MessageLOG.timestamp.between(after, before),
+                    *conditions
                 ).group_by(*extract_stms)
             )).all()
 
             extract_stm_len = len(extract_stms)
-            success = [(date(*s[:extract_stm_len], *([1] * (3 - extract_stm_len))), s[extract_stm_len]) for s in success]
-            failed = [(date(*f[:extract_stm_len]), *([1] * (3 - extract_stm_len)), f[extract_stm_len]) for f in failed]
+            count = [(date(*s[:extract_stm_len], *([1] * (3 - extract_stm_len))), *s[extract_stm_len:]) for s in count]
 
-            return success, failed
+            return count
 
     async def analytic_get_message_log(
             self,
-            guild: int,
-            before: datetime | None = None,
+            guild: int | None = None,
+            author: int | None = None,
             after: datetime | None = None,
+            before: datetime | None = None,
             success_rate: tuple[float, float] = (0, 100)
     ) -> list["MessageLOG"]:
         """
@@ -902,12 +902,14 @@ class LoggerSQL(logging.LoggerBASE):
 
         Parameters
         --------------
-        guild: int
-            The snowflake id where to find messages.
-        before: datetime | None
-            Include only messages sent before this datetime.
+        guild: int | None
+            The snowflake id of the guild.
+        author: int | None
+            The snowflake id of the author.
         after: datetime | None
             Include only messages sent after this datetime.
+        before: datetime | None
+            Include only messages sent before this datetime.
         success_rate: tuple[int, int]
             Success rate tuple containing minimum success rate and maximum success
             rate the message log can have for it to be included.
@@ -915,36 +917,43 @@ class LoggerSQL(logging.LoggerBASE):
 
             Successuly sent channels / all channels.
         """
+        _dummy_ret = []
+
         if after is None:
             after = datetime.min
-        
+
         if before is None:
             before = datetime.max
 
         # Obtain internal guild id
-        guilduser: GuildUSER = self.guild_user_cache.get(guild)
         async with self.session_maker() as session:
-            if guilduser is None:
-                try:        
-                    guilduser = (await self._run_async(
-                                    session.execute,
-                                    select(GuildUSER)
-                                    .where(GuildUSER.snowflake_id == guild))
-                                ).first()[0]
-                except Exception as exc:
-                    return []  # Guild doesn't exist in database, return empty
+            conditions = []
+            if guild is not None:
+                guilduser: GuildUSER = await self._get_guild(guild, session)
+                if guilduser is None:
+                    return _dummy_ret
+
+                conditions.append(guilduser.id == MessageLOG.guild_id)
+
+            if author is not None:
+                author: GuildUSER = await self._get_guild(author, session)
+                if author is None:
+                    return _dummy_ret
+
+                conditions.append(author.id == MessageLOG.author_id)
 
             messages = await self._run_async(
                 session.execute,
                 select(MessageLOG)
                 .where(
                     MessageLOG.success_rate.between(*success_rate),
-                    MessageLOG.timestamp.between(after, before)
+                    MessageLOG.timestamp.between(after, before),
+                    *conditions
                 )
             )
 
             return list(*zip(*messages.all()))
-        
+
     @misc._async_safe("safe_sem", 1)
     async def update(self, **kwargs):
         """
@@ -1208,9 +1217,12 @@ if SQL_INSTALLED:
         message_mode: Mapped["MessageMODE"] = relationship()
         channels: Mapped[List["MessageChannelLOG"]] = relationship(back_populates="log")
         success_rate = column_property(
-            100* select(func.count()).where(MessageChannelLOG.reason.is_(None), MessageChannelLOG.log_id == id).scalar_subquery()
-            /
-            select(func.count()).where(MessageChannelLOG.log_id == id).scalar_subquery()
+            100 * select(func.count()).where(MessageChannelLOG.reason.is_(None), MessageChannelLOG.log_id == id)
+            .select_from(MessageChannelLOG)
+            .scalar_subquery() /
+            select(func.count()).where(MessageChannelLOG.log_id == id)
+            .select_from(MessageChannelLOG)
+            .scalar_subquery()
         )
 
         def __init__(self,
