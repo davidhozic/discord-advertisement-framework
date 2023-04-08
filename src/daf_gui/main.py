@@ -155,6 +155,11 @@ class Application():
         self._oldstdout = sys.stdout
         sys.stdout = STDIOOutput()
 
+
+        # Analytics
+        tab_analytics = ttk.Frame(tabman_mf, padding=(10, 10))
+        tabman_mf.add(tab_analytics, text="Analytics")
+
         # Credits tab
         logo_img = Image.open(f"{os.path.dirname(__file__)}/img/logo.png")
         logo_img = logo_img.resize((self.win_main.winfo_screenwidth() // 8, self.win_main.winfo_screenwidth() // 8), resample=0)
