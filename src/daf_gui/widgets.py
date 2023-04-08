@@ -13,6 +13,9 @@ import tkinter as tk
 import ttkbootstrap.dialogs.dialogs as tkdiag
 import tkinter.filedialog as tkfile
 
+import decimal
+import daf
+
 import webbrowser
 import types
 import datetime as dt
@@ -22,6 +25,7 @@ import inspect
 __all__ = (
     "Text",
     "ListBoxObjects",
+    "ListBoxScrolled",
     "ComboBoxObjects",
     "ObjectEditWindow",
     "NewObjectFrame",
@@ -30,6 +34,7 @@ __all__ = (
     "ComboEditFrame",
     "ObjectInfo",
     "convert_to_objects",
+    "convert_to_object_info",
     "convert_to_json",
     "convert_from_json",
 )
@@ -186,6 +191,65 @@ class ObjectInfo:
         cls.CHARACTER_LIMIT = 200
 
 
+convert_to_object_info_object_to_object_info = {}
+convert_to_object_info_conversion_cache = {}
+convert_to_object_info_common_type_conditions = []
+
+if daf.sql.SQL_INSTALLED:
+    ia = daf.sql.InstrumentedAttribute
+    rs = daf.sql.Relationship
+    convert_to_object_info_common_type_conditions.append(
+        lambda object_type, attr: isinstance(getattr(object_type, attr), (ia, rs))
+    )
+
+
+def convert_to_object_info(object_: object):
+    with suppress(TypeError):
+        if object_ in convert_to_object_info_conversion_cache:
+            return convert_to_object_info_conversion_cache.get(object_)
+
+    object_type = type(object_)
+
+    if object_type in {int, float, str, bool, decimal.Decimal, type(None)}:
+        return object_
+
+    if isinstance(object_, Iterable):
+        if type(object_) not in {set, list, tuple}:
+            object_ = list(object_)
+
+        for i, value in enumerate(object_):
+            object_[i] = convert_to_object_info(value)
+            pass
+
+        return object_
+
+    data_conv = {}
+    attrs = convert_to_object_info_object_to_object_info.get(object_type)
+    # Can't convert further
+    if attrs is None:
+        attrs = []
+        for x in dir(object_):
+            with suppress(AttributeError):
+                if (
+                    (inspect.isgetsetdescriptor(getattr(object_type, x)) and not x.startswith("__")) or
+                    any(check(object_type, x) for check in convert_to_object_info_common_type_conditions)
+                ):
+                    attrs.append(x)
+
+    for attr in attrs:
+        with suppress(Exception):
+            value = getattr(object_, attr)
+            if value is object_:
+                data_conv[attr] = value
+            else:
+                data_conv[attr] = convert_to_object_info(value)
+                pass
+
+    ret = ObjectInfo(object_type, data_conv)
+    convert_to_object_info_conversion_cache[object_] = ret
+    return ret
+
+
 def convert_to_objects(d: ObjectInfo):
     data_conv = {}
     for k, v in d.data.items():
@@ -292,11 +356,64 @@ class ListBoxObjects(tk.Listbox):
     def delete(self, *indexes: int) -> None:
         if indexes[-1] == "end":
             indexes = range(indexes[0], len(self._original_items))
+            if indexes:
+                super().delete(indexes[0], indexes[-1])
+                del self._original_items[indexes[0]:indexes[-1]]
 
-        indexes = sorted(indexes, reverse=True)
-        for index in indexes:
-            super().delete(index)
-            del self._original_items[index]
+        else:
+            indexes = sorted(indexes, reverse=True)
+            for index in indexes:
+                super().delete(index)
+                del self._original_items[index]
+
+
+class ListBoxScrolled(ttk.Frame):
+    def __init__(self, parent, *args, **kwargs):
+        super().__init__(parent)
+        listbox = ListBoxObjects(self, *args, **kwargs)
+
+        listbox.pack(side="left", fill=tk.BOTH, expand=True)
+
+        scrollbar = ttk.Scrollbar(self)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.BOTH)
+        scrollbar.config(command=listbox.yview)
+
+        listbox.config(yscrollcommand=scrollbar.set)
+
+        listbox.bind("<Control-c>", lambda e: self.listbox_copy_selected())
+        listbox.bind("<BackSpace>", lambda e: self.listbox_delete_selected())
+        listbox.bind("<Delete>", lambda e: self.listbox_delete_selected())
+
+        self.listbox = listbox
+
+    def get(self, *args, **kwargs):
+        return self.listbox.get(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        return self.listbox.delete(*args, **kwargs)
+
+    def curselection(self, *args, **kwargs):
+        return self.listbox.curselection(*args, **kwargs)
+
+    def insert(self, *args, **kwargs):
+        return self.listbox.insert(*args, **kwargs)
+
+    def listbox_delete_selected(self):
+        listbox = self.listbox
+        selection = listbox.curselection()
+        if len(selection):
+            listbox.delete(*selection)
+        else:
+            tkdiag.Messagebox.show_error("Select atleast one item!", "Empty list!", parent=self)
+
+    def listbox_copy_selected(self):
+        listbox = self.listbox
+        selection = self.listbox.curselection()
+        if len(selection):
+            object_: ObjectInfo | Any = listbox.get()[selection[0]]
+            listbox.insert(tk.END, object_)
+        else:
+            tkdiag.Messagebox.show_error("Select atleast one item!", "Empty list!", parent=self)
 
 
 class ComboBoxObjects(ttk.Combobox):
@@ -390,6 +507,9 @@ class ObjectEditWindow(ttk.Toplevel):
         prev_frame = None
         if len(self.opened_frames):
             prev_frame = self.opened_frames[-1]
+            kwargs["check_parameters"] = prev_frame.check_parameters
+            kwargs["annotate_from_old"] = prev_frame.annotate_from_old
+            kwargs["allow_save"] = prev_frame.allow_save
 
         self.opened_frames.append(frame := NewObjectFrame(parent=self.frame_main, *args, **kwargs))
         frame.pack(fill=tk.BOTH, expand=True)
@@ -419,12 +539,26 @@ class ObjectEditWindow(ttk.Toplevel):
 class NewObjectFrame(ttk.Frame):
     origin_window: ObjectEditWindow = None
 
-    def __init__(self, class_, return_widget: ComboBoxObjects | ListBoxObjects, parent = None, old: ObjectInfo = None, *args, **kwargs):
+    def __init__(
+        self,
+        class_,
+        return_widget: ComboBoxObjects | ListBoxScrolled,
+        parent = None,
+        old: ObjectInfo = None,
+        check_parameters = True,
+        annotate_from_old = False,
+        allow_save = True,
+        *args,
+        **kwargs
+    ):
         self.class_ = class_
         self.return_widget = return_widget
         self._map = {}
         self.parent = parent
         self.old_object_info = old  # Edit requested
+        self.check_parameters = check_parameters  # At save time
+        self.annotate_from_old = annotate_from_old
+        self.allow_save = allow_save  # Allow save or not allow (eg. viewing SQL data)
 
         super().__init__(
             master=parent,
@@ -433,7 +567,6 @@ class NewObjectFrame(ttk.Frame):
         )
 
         frame_toolbar = ttk.Frame(self)
-
 
         package = class_.__module__.split(".", 1)[0]
         help_url = HELP_URLS.get(package)
@@ -463,11 +596,23 @@ class NewObjectFrame(ttk.Frame):
                 annot_object = class_
 
             annotations = get_type_hints(annot_object, include_extras=True)
-        except NameError:
+        except (NameError, TypeError):
             annotations = {}
+
         additional_annotations = ADDITIONAL_ANNOTATIONS.get(class_)
         if additional_annotations is not None:
             annotations = {**annotations, **additional_annotations}
+
+        if annotate_from_old:
+            old_data_annot = {}
+            if isinstance(old, ObjectInfo):
+                old_data_annot = {
+                    k: list[Union[tuple(x.class_  if isinstance(x, ObjectInfo) else type(x) for x in v)]] if isinstance(v, Iterable) and not isinstance(v, str)
+                    else v.class_  if isinstance(v, ObjectInfo) else type(v)
+                    for k, v in old.data.items()
+                }
+
+            annotations = {**annotations, **old_data_annot}
 
         def init_frame_str():
             w = Text(frame_main)
@@ -480,19 +625,15 @@ class NewObjectFrame(ttk.Frame):
             self._map[None] = (w, class_)
 
         def init_frame_list():
-            w = ListBoxObjects(frame_main)
+            w = ListBoxScrolled(frame_main)
             frame_edit_remove = ttk.Frame(frame_main)
             menubtn = ttk.Menubutton(frame_edit_remove, text="Add object")
             menu = tk.Menu(menubtn)
             menubtn.configure(menu=menu)
             menubtn.pack()
-            ttk.Button(frame_edit_remove, text="Remove", command=self.listbox_delete_selected(w)).pack(fill=tk.X)
+            ttk.Button(frame_edit_remove, text="Remove", command=w.listbox_delete_selected).pack(fill=tk.X)
             ttk.Button(frame_edit_remove, text="Edit", command=self.listbox_edit_selected(w)).pack(fill=tk.X)
-            ttk.Button(frame_edit_remove, text="Copy", command=self.listbox_copy_selected(w)).pack(fill=tk.X)
-
-            w.bind("<Control-c>", lambda e: self.listbox_copy_selected(w)())
-            w.bind("<BackSpace>", lambda e: self.listbox_delete_selected(w)())
-            w.bind("<Delete>", lambda e: self.listbox_delete_selected(w)())
+            ttk.Button(frame_edit_remove, text="Copy", command=w.listbox_copy_selected).pack(fill=tk.X)
 
             w.pack(side="left", fill=tk.BOTH, expand=True)
             frame_edit_remove.pack(side="right")
@@ -502,7 +643,6 @@ class NewObjectFrame(ttk.Frame):
                 args = get_args(args[0])
 
             for arg in args:
-                # ttk.Button(frame, text=f"Add {arg.__name__}", command=_(arg, w)).pack(fill=tk.X)
                 menu.add_radiobutton(label=arg.__name__, command=self.new_object_window(arg, w))
 
             self._map[None] = (w, list)
@@ -551,7 +691,7 @@ class NewObjectFrame(ttk.Frame):
             init_frame_str()
         elif class_ in {int, float}:
             init_frame_num()
-        elif get_origin(class_) in {list, Iterable, ABCIterable}:
+        elif get_origin(class_) in {list, Iterable, ABCIterable, tuple}:
             init_frame_list()
         elif annotations or additional_annotations is not None:
             init_frame_annotated_object()
@@ -590,12 +730,15 @@ class NewObjectFrame(ttk.Frame):
         self.origin_window.title(f"{'New' if self.old_object_info is None else 'Edit'} {self.class_.__name__} object")
 
     def close_frame(self):
-        resp = tkdiag.Messagebox.yesnocancel("Do you wish to save?", "Save?", alert=True, parent=self)
-        if resp is not None:
-            if resp == "Yes":
-                self.save()
-            elif resp == "No":
-                self._cleanup()
+        if self.allow_save:
+            resp = tkdiag.Messagebox.yesnocancel("Do you wish to save?", "Save?", alert=True, parent=self)
+            if resp is not None:
+                if resp == "Yes":
+                    self.save()
+                elif resp == "No":
+                    self._cleanup()
+        else:
+            self._cleanup()
 
     def load(self, object_: ObjectInfo):
         object_ = object_.data if self._map.get(None) is None else object_
@@ -614,7 +757,7 @@ class NewObjectFrame(ttk.Frame):
 
                 widget.current(widget["values"].index(val))
 
-            elif isinstance(widget, ListBoxObjects):
+            elif isinstance(widget, ListBoxScrolled):
                 widget.insert(tk.END, *object_)
 
             elif isinstance(widget, tk.Text):
@@ -629,28 +772,7 @@ class NewObjectFrame(ttk.Frame):
 
         return __
 
-    def listbox_delete_selected(self, lb: ListBoxObjects):
-        def __():
-            selection = lb.curselection()
-            if len(selection):
-                lb.delete(*selection)
-            else:
-                tkdiag.Messagebox.show_error("Select atleast one item!", "Empty list!", parent=self.origin_window)
-
-        return __
-
-    def listbox_copy_selected(self, lb: ListBoxObjects):
-        def __():
-            selection = lb.curselection()
-            if len(selection):
-                object_: ObjectInfo | Any = lb.get()[selection[0]]
-                lb.insert(tk.END, object_)
-            else:
-                tkdiag.Messagebox.show_error("Select atleast one item!", "Empty list!", parent=self.origin_window)
-
-        return __
-
-    def listbox_edit_selected(self, lb: ListBoxObjects):
+    def listbox_edit_selected(self, lb: ListBoxScrolled):
         def __():
             selection = lb.curselection()
             if len(selection) == 1:
@@ -685,6 +807,9 @@ class NewObjectFrame(ttk.Frame):
 
     def save(self):
         try:
+            if not self.allow_save:
+                raise TypeError("Saving is not allowed in this context!")
+
             map_ = {}
             for attr, (widget, type_) in self._map.items():
                 value = widget.get()
@@ -710,14 +835,13 @@ class NewObjectFrame(ttk.Frame):
                 object_ = single_value
             else:
                 object_ = ObjectInfo(self.class_, map_)
-                # Only check class instances, functions / methods get checked on parent frame
-                if inspect.isclass(self.class_):
+                if self.check_parameters:
                     convert_to_objects(object_)  # Tries to create instances to check for errors
 
             # Edit was requested, delete old value
             if self.old_object_info is not None:
                 ret_widget = self.return_widget
-                if isinstance(ret_widget, ListBoxObjects):
+                if isinstance(ret_widget, ListBoxScrolled):
                     ind = ret_widget.get().index(self.old_object_info)
                 else:
                     ind = ret_widget["values"].index(self.old_object_info)

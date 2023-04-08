@@ -99,7 +99,7 @@ class Application():
         self.bnt_edit_object.pack(side="left")
         self.bnt_remove_object.pack(side="left")
 
-        self.lb_accounts = ListBoxObjects(frame_tab_account, background="#000")
+        self.lb_accounts = ListBoxScrolled(frame_tab_account, background="#000")
         self.lb_accounts.pack(fill=tk.BOTH, expand=True)
 
         # Object tab account tab logging tab
@@ -196,14 +196,17 @@ class Application():
             command=lambda: self._async_queue.put_nowait(self.analytics_load_msg())
         ).pack(fill=tk.X, pady=5)
         frame_combo_messages = ComboEditFrame(
-            self.edit_analytics_num_msg,
+            self.edit_analytics_messages,
             ObjectInfo(daf.logging.LoggerBASE.analytic_get_message_log, {}),
             frame_msg_history
         )
         frame_combo_messages.pack(expand=True, fill=tk.X)
         self.frame_combo_messages = frame_combo_messages
-        lst_messages = ListBoxObjects(frame_msg_history)
+        lst_messages = ListBoxScrolled(frame_msg_history)
         lst_messages.pack(expand=True, fill=tk.BOTH)
+        ttk.Button(frame_msg_history, command=self.show_message_log, text="Show").pack(fill=tk.X)
+
+        self.lst_message_log = lst_messages
 
         # Credits tab
         logo_img = Image.open(f"{os.path.dirname(__file__)}/img/logo.png")
@@ -254,6 +257,9 @@ class Application():
         messages = await logger.analytic_get_message_log(
             **data
         )
+        messages = convert_to_object_info(messages)
+        self.lst_message_log.delete(0, tk.END)
+        self.lst_message_log.insert(tk.END, *messages)
 
     async def analytics_load_num_msg(self):
         logger = daf.get_logger()
@@ -274,6 +280,34 @@ class Application():
         self.tw_num_msg.insert_rows(tk.END, count)
         self.tw_num_msg.goto_first_page()
 
+    def show_message_log(self):
+        selection = self.lst_message_log.curselection()
+        if len(selection) == 1:
+            object_: ObjectInfo = self.lst_message_log.get()[selection[0]]
+            self.open_object_edit_window(
+                daf.sql.MessageLOG,
+                self.lst_message_log,
+                old=object_,
+                check_parameters=False,
+                annotate_from_old=True,
+                allow_save=False
+            )
+        else:
+            tkdiag.Messagebox.show_error("Select ONE item!", "Empty list!")
+
+    def edit_analytics_messages(self):
+        selection = self.frame_combo_messages.combo.current()
+        if selection >= 0:
+            object_: ObjectInfo = self.frame_combo_messages.combo.get()
+            self.open_object_edit_window(
+                daf.logging.LoggerBASE.analytic_get_message_log,
+                self.frame_combo_messages.combo,
+                old=object_,
+                check_parameters=False
+            )
+        else:
+            tkdiag.Messagebox.show_error("Select atleast one item!", "Empty list!")
+
     def edit_analytics_num_msg(self):
         selection = self.frame_combo_num_messages.combo.current()
         if selection >= 0:
@@ -281,7 +315,8 @@ class Application():
             self.open_object_edit_window(
                 daf.logging.LoggerBASE.analytic_get_num_messages,
                 self.frame_combo_num_messages.combo,
-                old=object_
+                old=object_,
+                check_parameters=False
             )
         else:
             tkdiag.Messagebox.show_error("Select atleast one item!", "Empty list!")
@@ -443,7 +478,7 @@ daf.run(
                 # Load accounts
                 accounts = convert_from_json(json_data["accounts"])
                 self.lb_accounts.delete(0, tk.END)
-                self.lb_accounts.insert(tk.END, *accounts)
+                self.lb_accounts.listbox.insert(tk.END, *accounts)
 
                 # Load loggers
                 loggers = [convert_from_json(x) for x in json_data["loggers"]["all"]]

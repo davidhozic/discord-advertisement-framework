@@ -53,6 +53,9 @@ try:
     from sqlalchemy.engine import URL as SQLURL, create_engine
     from sqlalchemy.exc import SQLAlchemyError
     from sqlalchemy.orm import (
+        InstrumentedAttribute,
+        Relationship,
+        joinedload,
         sessionmaker,
         Session,
         DeclarativeBase,
@@ -852,20 +855,15 @@ class LoggerSQL(logging.LoggerBASE):
 
         async with self.session_maker() as session:
             # Obtain internal guild id
-            conditions = []
             if guild is not None:
                 guilduser: GuildUSER = await self._get_guild(guild, session)
                 if guilduser is None:
                     return _dummy_ret
 
-                conditions.append(guilduser.id == MessageLOG.guild_id)
-
             if author is not None:
                 author: GuildUSER = await self._get_guild(author, session)
                 if author is None:
                     return _dummy_ret
-
-                conditions.append(author.id == MessageLOG.author_id)
 
             count = (await self._run_async(
                 session.execute,
@@ -878,7 +876,8 @@ class LoggerSQL(logging.LoggerBASE):
                 )
                 .where(
                     MessageLOG.timestamp.between(after, before),
-                    *conditions
+                    MessageLOG.guild_id,
+                    MessageLOG.author_id
                 ).group_by(*extract_stms)
             )).all()
 
@@ -952,7 +951,7 @@ class LoggerSQL(logging.LoggerBASE):
                 )
             )
 
-            return list(*zip(*messages.all()))
+            return list(*zip(*messages.unique().all()))
 
     @misc._async_safe("safe_sem", 1)
     async def update(self, **kwargs):
@@ -1078,7 +1077,7 @@ if SQL_INSTALLED:
         snowflake_id = mapped_column(BigInteger)
         name = mapped_column(String(3072))
         guild_type_id: Mapped[int] = mapped_column(ForeignKey("GuildTYPE.id"))
-        guild_type: Mapped["GuildTYPE"] = relationship()
+        guild_type: Mapped["GuildTYPE"] = relationship(lazy="joined")
 
         def __init__(self,
                      guild_type: GuildTYPE,
@@ -1110,7 +1109,7 @@ if SQL_INSTALLED:
         snowflake_id = mapped_column(BigInteger)
         name = mapped_column(String(3072))
         guild_id: Mapped[int] = mapped_column(ForeignKey("GuildUSER.id"))
-        guild: Mapped["GuildUSER"] = relationship()
+        guild: Mapped["GuildUSER"] = relationship(lazy="joined")
 
         def __init__(self,
                      snowflake: int,
@@ -1164,8 +1163,8 @@ if SQL_INSTALLED:
         channel_id: Mapped[int] = mapped_column(Integer, ForeignKey("CHANNEL.id"), primary_key=True)
         reason = mapped_column(String(3072))
 
-        log: Mapped["MessageLOG"] = relationship(back_populates="channels", uselist=False, )
-        channel: Mapped["CHANNEL"] = relationship()
+        log: Mapped["MessageLOG"] = relationship(back_populates="channels", uselist=False, lazy="joined")
+        channel: Mapped["CHANNEL"] = relationship(lazy="joined")
 
         def __init__(self,
                      channel: CHANNEL,
@@ -1210,12 +1209,12 @@ if SQL_INSTALLED:
         dm_reason = mapped_column(String(3072))  # [DirectMESSAGE]
         timestamp = mapped_column(DateTime)
 
-        sent_data: Mapped["DataHISTORY"] = relationship()
-        message_type: Mapped["MessageTYPE"] = relationship()
-        guild: Mapped["GuildUSER"] = relationship(foreign_keys=[guild_id])
-        author: Mapped["GuildUSER"] = relationship(foreign_keys=[author_id])
-        message_mode: Mapped["MessageMODE"] = relationship()
-        channels: Mapped[List["MessageChannelLOG"]] = relationship(back_populates="log")
+        sent_data: Mapped["DataHISTORY"] = relationship(lazy="joined")
+        message_type: Mapped["MessageTYPE"] = relationship(lazy="joined")
+        guild: Mapped["GuildUSER"] = relationship(foreign_keys=[guild_id], lazy="joined")
+        author: Mapped["GuildUSER"] = relationship(foreign_keys=[author_id], lazy="joined")
+        message_mode: Mapped["MessageMODE"] = relationship(lazy="joined")
+        channels: Mapped[List["MessageChannelLOG"]] = relationship(back_populates="log", lazy="joined")
         success_rate = column_property(
             100 * select(func.count()).where(MessageChannelLOG.reason.is_(None), MessageChannelLOG.log_id == id)
             .select_from(MessageChannelLOG)
