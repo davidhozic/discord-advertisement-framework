@@ -1,7 +1,7 @@
 """
 Main file of the DAF GUI.
 """
-from typing import Iterable, Awaitable
+from typing import Iterable, Awaitable, get_args, get_type_hints
 from enum import Enum
 from PIL import Image, ImageTk
 
@@ -123,7 +123,7 @@ class Application():
         self.combo_logging_mgr["values"] = [
             ObjectInfo(daf.LoggerJSON, {"path": "History"}),
             ObjectInfo(daf.LoggerSQL, {}),
-            ObjectInfo(daf.LoggerCSV, {"path": "History"}),
+            ObjectInfo(daf.LoggerCSV, {"path": "History", "delimiter": ";"}),
         ]
 
         self.combo_tracing["values"] = [en for en in daf.TraceLEVELS]
@@ -153,10 +153,61 @@ class Application():
         self._oldstdout = sys.stdout
         sys.stdout = STDIOOutput()
 
-
         # Analytics
         tab_analytics = ttk.Frame(tabman_mf, padding=(10, 10))
         tabman_mf.add(tab_analytics, text="Analytics")
+        ttk.Label(tab_analytics, text="NOTE!\nAnalytics are only available using LoggerSQL as the logging manager!").pack()
+        try:
+            from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+            from matplotlib import pyplot as plt
+
+            frame_analytics_num_msg = ttk.Frame(tab_analytics)
+
+            figure, axes = plt.subplots(2, 1)
+            figure.set_tight_layout(True)
+            axes[0].set_title("Num. success sends")
+            axes[1].set_title("Num. failed sends")
+
+            async def plot_num_messages():
+                logger = daf.get_logger()
+                if not isinstance(logger, daf.LoggerSQL):
+                    raise ValueError("Analytics only allowed when using LoggerSQL")
+
+                region = combo_region.combo.get()
+                success, failed = await logger.analytic_get_num_messages(
+                    int(spinbox_guild.spinbox.get()),
+                    int(spinbox_acc.spinbox.get()),
+                    region=region
+                )
+
+                if len(success):
+                    axes[0].clear()
+                    axes[0].stem(*zip(*success))
+
+                if len(failed):
+                    axes[1].clear()
+                    axes[1].clear()
+                    axes[1].stem(*zip(*failed))
+
+                plt.show()
+
+            spinbox_guild = SpinBoxText("Guild snowlake", frame_analytics_num_msg)
+            spinbox_guild.pack(fill=tk.X)
+
+            spinbox_acc = SpinBoxText("Author (account) snowlake", frame_analytics_num_msg)
+            spinbox_acc.pack(fill=tk.X)
+
+            combo_region = ComboBoxText("Region", frame_analytics_num_msg)
+            type_hints = get_type_hints(daf.logging.LoggerBASE.analytic_get_num_messages)
+            combo_region.combo["values"] = get_args(type_hints["region"])
+            combo_region.pack(fill=tk.X)
+
+            cmd = lambda: self._async_queue.put_nowait(plot_num_messages())
+            ttk.Button(frame_analytics_num_msg, text="Plot", command=cmd).pack(fill=tk.X, pady=5)
+            frame_analytics_num_msg.pack(fill=tk.BOTH, expand=True)
+
+        except ImportError:
+            self.cavas_analytics = None
 
         # Credits tab
         logo_img = Image.open(f"{os.path.dirname(__file__)}/img/logo.png")

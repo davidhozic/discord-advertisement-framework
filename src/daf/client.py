@@ -276,6 +276,20 @@ class ACCOUNT:
         self.tasks.append(asyncio.create_task(self._loop()))
         self._running = True
 
+    def generate_log_context(self) -> dict[str, Union[str, int]]:
+        """
+        Generates a dictionary of the user's context,
+        which is then used for logging.
+
+        Returns
+        ---------
+        Dict[str, Union[str, int]]
+        """
+        return {
+            "name": self._client.user.name,
+            "id": self._client.user.id,
+        }
+
     @typechecked
     async def add_server(self, server: Union[guild.GUILD, guild.USER, guild.AutoGUILD]):
         """

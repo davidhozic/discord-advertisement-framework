@@ -24,6 +24,8 @@ __all__ = (
     "ComboBoxObjects",
     "ObjectEditWindow",
     "NewObjectFrame",
+    "SpinBoxText",
+    "ComboBoxText",
     "ObjectInfo",
     "convert_to_objects",
     "convert_to_json",
@@ -250,6 +252,22 @@ def convert_from_json(d: dict | list[dict] | Any) -> ObjectInfo:
 class Text(tk.Text):
     def get(self) -> str:
         return super().get("1.0", tk.END).removesuffix("\n")
+
+
+class SpinBoxText(ttk.Frame):
+    def __init__(self, text: str, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        ttk.Label(self, text=text).pack(fill=tk.X, expand=True)
+        self.spinbox = ttk.Spinbox(self)
+        self.spinbox.pack(fill=tk.X, expand=True)
+
+
+class ComboBoxText(ttk.Frame):
+    def __init__(self, text: str, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        ttk.Label(self, text=text).pack(fill=tk.X, expand=True)
+        self.combo = ComboBoxObjects(self)
+        self.combo.pack(fill=tk.X, expand=True)
 
 
 class ListBoxObjects(tk.Listbox):

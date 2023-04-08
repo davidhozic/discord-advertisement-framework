@@ -42,6 +42,10 @@ v2.6.0
     :align: center
     :scale: 40%
 
+- Logging:
+  
+  - Added ``author`` field to all logging managers (tells us which account sent the message).
+
 
 
 v2.5.1

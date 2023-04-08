@@ -319,6 +319,7 @@ class _BaseGUILD:
         to_advert: List[BaseMESSAGE] = []
         to_remove: List[BaseMESSAGE] = []
         guild_ctx = self.generate_log_context()
+        author_ctx = self.parent.generate_log_context()
 
         for message in self._messages:
             if message._check_state():
@@ -341,7 +342,7 @@ class _BaseGUILD:
             result: MessageSendResult = await message._send()
 
             if self.logging and result.result_code != MSG_SEND_STATUS_NO_MESSAGE_SENT:
-                await logging.save_log(guild_ctx, result.message_context)
+                await logging.save_log(guild_ctx, result.message_context, author_ctx)
 
             if result.result_code == MSG_SEND_STATUS_ERROR_REMOVE_GUILD:
                 # Will be removed by ACCOUNT at next advertisement attempt
