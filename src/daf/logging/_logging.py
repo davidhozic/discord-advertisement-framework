@@ -88,7 +88,9 @@ class LoggerBASE:
             guild: int,
             after: datetime | None = None,
             before: datetime | None = None,
-            success_rate: tuple[float, float] = (0, 100)
+            success_rate: tuple[float, float] = (0, 100),
+            sort_by: Literal["timestamp", "success_rate"] = "timestamp",
+            sort_by_direction: Literal["asc", "desc"] = "desc"
     ) -> list:
         raise NotImplementedError
 

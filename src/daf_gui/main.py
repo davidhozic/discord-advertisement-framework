@@ -281,7 +281,7 @@ class Application():
             **data
         )
         messages = convert_to_object_info(messages)
-        self.lst_message_log.delete(0, tk.END)
+        self.lst_message_log.clear()
         self.lst_message_log.insert(tk.END, *messages)
 
     async def analytics_load_num_msg(self):
@@ -499,7 +499,7 @@ daf.run(
 
                 # Load accounts
                 accounts = convert_from_json(json_data["accounts"])
-                self.lb_accounts.delete(0, tk.END)
+                self.lb_accounts.clear()
                 self.lb_accounts.listbox.insert(tk.END, *accounts)
 
                 # Load loggers

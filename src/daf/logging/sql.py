@@ -889,7 +889,9 @@ class LoggerSQL(logging.LoggerBASE):
             author: int | None = None,
             after: datetime | None = None,
             before: datetime | None = None,
-            success_rate: tuple[float, float] = (0, 100)
+            success_rate: tuple[float, float] = (0, 100),
+            sort_by: Literal["timestamp", "success_rate"] = "timestamp",
+            sort_by_direction: Literal["asc", "desc"] = "desc"
     ) -> list["MessageLOG"]:
         """
         Returns a list of all the sent messages that were send between
@@ -912,6 +914,10 @@ class LoggerSQL(logging.LoggerBASE):
             Success rate is meassured in % and it is defined by:
 
             Successuly sent channels / all channels.
+        sort_by: Literal["timestamp", "success_rate", "data"],
+            Sort items by selected.
+        sort_by_direction: Literal["asc", "desc"] = "desc"
+            Sort items by ``sort_by`` in selected direction (asc = ascending, desc = descending).
         """
         _dummy_ret = []
 
@@ -945,7 +951,7 @@ class LoggerSQL(logging.LoggerBASE):
                     MessageLOG.success_rate.between(*success_rate),
                     MessageLOG.timestamp.between(after, before),
                     *conditions
-                )
+                ).order_by(getattr(getattr(MessageLOG, sort_by), sort_by_direction)())
             )
 
             return list(*zip(*messages.unique().all()))

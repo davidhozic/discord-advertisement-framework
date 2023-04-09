@@ -171,16 +171,15 @@ class ListBoxObjects(tk.Listbox):
     def delete(self, *indexes: int) -> None:
         if indexes[-1] == "end":
             indexes = range(indexes[0], len(self._original_items))
-            if indexes:
-                super().delete(indexes[0], indexes[-1])
-                del self._original_items[indexes[0]:indexes[-1]]
 
-        else:
-            indexes = sorted(indexes, reverse=True)
-            for index in indexes:
-                super().delete(index)
-                del self._original_items[index]
+        indexes = sorted(indexes, reverse=True)
+        for index in indexes:
+            super().delete(index)
+            del self._original_items[index]
 
+    def clear(self) -> None:
+        super().delete(0, tk.END)
+        self._original_items.clear()
 
 class ListBoxScrolled(ttk.Frame):
     def __init__(self, parent, *args, **kwargs):
@@ -206,6 +205,9 @@ class ListBoxScrolled(ttk.Frame):
 
     def delete(self, *args, **kwargs):
         return self.listbox.delete(*args, **kwargs)
+
+    def clear(self, *args, **kwargs):
+        return self.listbox.clear(*args, **kwargs)
 
     def curselection(self, *args, **kwargs):
         return self.listbox.curselection(*args, **kwargs)
@@ -481,10 +483,12 @@ class NewObjectFrame(ttk.Frame):
                         if bool not in entry_types:
                             combo.insert(tk.END, None)
                     else:  # Type not supported, try other types
-                        menu.add_radiobutton(
-                            label=f"New {entry_type.__name__}",
-                            command=self.new_object_window(entry_type, combo)
-                        )
+                        if self.allow_save:
+                            menu.add_radiobutton(
+                                label=f"New {entry_type.__name__}",
+                                command=self.new_object_window(entry_type, combo)
+                            )
+
                         if get_origin(entry_type) in {list, Iterable, ABCIterable}:
                             editable_types.append(entry_type)
 
