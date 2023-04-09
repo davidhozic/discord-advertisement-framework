@@ -74,6 +74,13 @@ ADDITIONAL_ANNOTATIONS = {
     },
 }
 
+if daf.sql.SQL_INSTALLED:
+    sql_ = daf.sql
+    for item in sql_.ORMBase.__subclasses__():
+        ADDITIONAL_ANNOTATIONS[item] = get_type_hints(item.__init__._sa_original_init)
+
+    ADDITIONAL_ANNOTATIONS[sql_.MessageLOG]["timestamp"] = dt.datetime
+
 
 class AdditionalWidget:
     def __init__(self, widget_class, setup_cmd, *args, **kwargs) -> None:
@@ -182,31 +189,27 @@ class ObjectInfo:
 
         return _ret
 
-    @classmethod
-    def disable_limit(cls):
-        cls.CHARACTER_LIMIT = 99999999999999999
 
-    @classmethod
-    def enable_limit(cls):
-        cls.CHARACTER_LIMIT = 200
+CONVERSION_ATTR_TO_PARAM = {}
+OBJECT_CONV_CACHE = {}
 
-
-convert_to_object_info_object_to_object_info = {}
-convert_to_object_info_conversion_cache = {}
-convert_to_object_info_common_type_conditions = []
 
 if daf.sql.SQL_INSTALLED:
-    ia = daf.sql.InstrumentedAttribute
-    rs = daf.sql.Relationship
-    convert_to_object_info_common_type_conditions.append(
-        lambda object_type, attr: isinstance(getattr(object_type, attr), (ia, rs))
-    )
+    sql_ = daf.sql
+
+    for subcls in sql_.ORMBase.__subclasses__():
+        hints = get_type_hints(subcls.__init__._sa_original_init)
+        CONVERSION_ATTR_TO_PARAM[subcls] = {key: key for key in hints.keys()}
+
+    CONVERSION_ATTR_TO_PARAM[sql_.MessageLOG]["timestamp"] = "timestamp"
+    CONVERSION_ATTR_TO_PARAM[sql_.GuildUSER]["snowflake_id"] = "snowflake"
+    CONVERSION_ATTR_TO_PARAM[sql_.CHANNEL]["snowflake_id"] = "snowflake"
 
 
 def convert_to_object_info(object_: object):
     with suppress(TypeError):
-        if object_ in convert_to_object_info_conversion_cache:
-            return convert_to_object_info_conversion_cache.get(object_)
+        if object_ in OBJECT_CONV_CACHE:
+            return OBJECT_CONV_CACHE.get(object_)
 
     object_type = type(object_)
 
@@ -224,29 +227,23 @@ def convert_to_object_info(object_: object):
         return object_
 
     data_conv = {}
-    attrs = convert_to_object_info_object_to_object_info.get(object_type)
-    # Can't convert further
+    attrs = CONVERSION_ATTR_TO_PARAM.get(object_type)
     if attrs is None:
-        attrs = []
-        for x in dir(object_):
-            with suppress(AttributeError):
-                if (
-                    (inspect.isgetsetdescriptor(getattr(object_type, x)) and not x.startswith("__")) or
-                    any(check(object_type, x) for check in convert_to_object_info_common_type_conditions)
-                ):
-                    attrs.append(x)
+        additional_annots = {key: key for key in ADDITIONAL_ANNOTATIONS.get(object_type, {})}
+        attrs = {key: key for key in get_type_hints(object_type.__init__).keys()}
+        attrs.update(**additional_annots)
 
-    for attr in attrs:
+    for k, v in attrs.items():
         with suppress(Exception):
-            value = getattr(object_, attr)
+            value = getattr(object_, k)
             if value is object_:
-                data_conv[attr] = value
+                data_conv[v] = value
             else:
-                data_conv[attr] = convert_to_object_info(value)
+                data_conv[v] = convert_to_object_info(value)
                 pass
 
     ret = ObjectInfo(object_type, data_conv)
-    convert_to_object_info_conversion_cache[object_] = ret
+    OBJECT_CONV_CACHE[object_] = ret
     return ret
 
 
@@ -508,7 +505,6 @@ class ObjectEditWindow(ttk.Toplevel):
         if len(self.opened_frames):
             prev_frame = self.opened_frames[-1]
             kwargs["check_parameters"] = prev_frame.check_parameters
-            kwargs["annotate_from_old"] = prev_frame.annotate_from_old
             kwargs["allow_save"] = prev_frame.allow_save
 
         self.opened_frames.append(frame := NewObjectFrame(parent=self.frame_main, *args, **kwargs))
@@ -546,7 +542,6 @@ class NewObjectFrame(ttk.Frame):
         parent = None,
         old: ObjectInfo = None,
         check_parameters = True,
-        annotate_from_old = False,
         allow_save = True,
         *args,
         **kwargs
@@ -557,7 +552,6 @@ class NewObjectFrame(ttk.Frame):
         self.parent = parent
         self.old_object_info = old  # Edit requested
         self.check_parameters = check_parameters  # At save time
-        self.annotate_from_old = annotate_from_old
         self.allow_save = allow_save  # Allow save or not allow (eg. viewing SQL data)
 
         super().__init__(
@@ -602,17 +596,6 @@ class NewObjectFrame(ttk.Frame):
         additional_annotations = ADDITIONAL_ANNOTATIONS.get(class_)
         if additional_annotations is not None:
             annotations = {**annotations, **additional_annotations}
-
-        if annotate_from_old:
-            old_data_annot = {}
-            if isinstance(old, ObjectInfo):
-                old_data_annot = {
-                    k: list[Union[tuple(x.class_  if isinstance(x, ObjectInfo) else type(x) for x in v)]] if isinstance(v, Iterable) and not isinstance(v, str)
-                    else v.class_  if isinstance(v, ObjectInfo) else type(v)
-                    for k, v in old.data.items()
-                }
-
-            annotations = {**annotations, **old_data_annot}
 
         def init_frame_str():
             w = Text(frame_main)

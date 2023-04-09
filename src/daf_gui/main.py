@@ -70,12 +70,35 @@ class Application():
         self.frame_main.pack(expand=True, fill=tk.BOTH, side="bottom")
         tabman_mf = ttk.Notebook(self.frame_main)
         tabman_mf.pack(fill=tk.BOTH, expand=True)
+        self.tabman_mf = tabman_mf
 
         # Objects tab
+        self.init_schema_tab()
+
+        # Output tab
+        self.init_output_tab()
+
+        # Analytics
+        self.init_analytics_tab()
+
+        # Credits tab
+        self.init_credits_tab()
+
+        # Status variables
+        self._daf_running = False
+        self._window_opened = True
+
+        # Tasks
+        self._async_queue = asyncio.Queue()
+
+        # On close configuration
+        self.win_main.protocol("WM_DELETE_WINDOW", self.close_window)
+
+    def init_schema_tab(self):
         self.objects_edit_window = None
 
-        tab_schema = ttk.Frame(tabman_mf, padding=(10, 10))
-        tabman_mf.add(tab_schema, text="Schema definition")
+        tab_schema = ttk.Frame(self.tabman_mf, padding=(10, 10))
+        self.tabman_mf.add(tab_schema, text="Schema definition")
 
         # Object tab file menu
         bnt_file_menu = ttk.Menubutton(tab_schema, text="Load/Save/Generate")
@@ -130,9 +153,9 @@ class Application():
 
         self.combo_tracing["values"] = [en for en in daf.TraceLEVELS]
 
-        # Output tab
-        self.tab_output = ttk.Frame(tabman_mf)
-        tabman_mf.add(self.tab_output, text="Output")
+    def init_output_tab(self):
+        self.tab_output = ttk.Frame(self.tabman_mf)
+        self.tabman_mf.add(self.tab_output, text="Output")
         text_output = ttk.ScrolledText(self.tab_output, state="disabled")
         text_output.pack(fill=tk.BOTH, expand=True)
 
@@ -155,10 +178,25 @@ class Application():
         self._oldstdout = sys.stdout
         sys.stdout = STDIOOutput()
 
-        # Analytics
-        tab_analytics = ttk.Frame(tabman_mf, padding=(10, 10))
-        tabman_mf.add(tab_analytics, text="Analytics")
-        ttk.Label(tab_analytics, text="NOTE!\nAnalytics are only available using LoggerSQL as the logging manager!").pack()
+    def init_credits_tab(self):
+        logo_img = Image.open(f"{os.path.dirname(__file__)}/img/logo.png")
+        logo_img = logo_img.resize((self.win_main.winfo_screenwidth() // 8, self.win_main.winfo_screenwidth() // 8), resample=0)
+        logo = ImageTk.PhotoImage(logo_img)
+        self.tab_info = ttk.Frame(self.tabman_mf)
+        self.tabman_mf.add(self.tab_info, text="About")
+        info_bnts_frame = ttk.Frame(self.tab_info)
+        info_bnts_frame.pack(pady=30)
+        ttk.Button(info_bnts_frame, text="Github", command=lambda: webbrowser.open(GITHUB_URL)).grid(row=0, column=0)
+        ttk.Button(info_bnts_frame, text="Documentation", command=lambda: webbrowser.open(DOC_URL)).grid(row=0, column=1)
+        ttk.Label(self.tab_info, text="Like the app? Give it a star :) on GitHub (^)").pack(pady=10)
+        ttk.Label(self.tab_info, text=CREDITS_TEXT).pack()
+        label_logo = ttk.Label(self.tab_info, image=logo)
+        label_logo.image = logo
+        label_logo.pack()
+
+    def init_analytics_tab(self):
+        tab_analytics = ttk.Frame(self.tabman_mf, padding=(10, 10))
+        self.tabman_mf.add(tab_analytics, text="Analytics")
 
         frame_num_msg = ttk.Labelframe(tab_analytics, padding=(10, 10), text="Number of messages", bootstyle="primary")
         frame_combo_num_messages = ComboEditFrame(
@@ -207,32 +245,6 @@ class Application():
         ttk.Button(frame_msg_history, command=self.show_message_log, text="Show").pack(fill=tk.X)
 
         self.lst_message_log = lst_messages
-
-        # Credits tab
-        logo_img = Image.open(f"{os.path.dirname(__file__)}/img/logo.png")
-        logo_img = logo_img.resize((self.win_main.winfo_screenwidth() // 8, self.win_main.winfo_screenwidth() // 8), resample=0)
-        logo = ImageTk.PhotoImage(logo_img)
-        self.tab_info = ttk.Frame(tabman_mf)
-        tabman_mf.add(self.tab_info, text="About")
-        info_bnts_frame = ttk.Frame(self.tab_info)
-        info_bnts_frame.pack(pady=30)
-        ttk.Button(info_bnts_frame, text="Github", command=lambda: webbrowser.open(GITHUB_URL)).grid(row=0, column=0)
-        ttk.Button(info_bnts_frame, text="Documentation", command=lambda: webbrowser.open(DOC_URL)).grid(row=0, column=1)
-        ttk.Label(self.tab_info, text="Like the app? Give it a star :) on GitHub (^)").pack(pady=10)
-        ttk.Label(self.tab_info, text=CREDITS_TEXT).pack()
-        label_logo = ttk.Label(self.tab_info, image=logo)
-        label_logo.image = logo
-        label_logo.pack()
-
-        # Status variables
-        self._daf_running = False
-        self._window_opened = True
-
-        # Tasks
-        self._async_queue = asyncio.Queue()
-
-        # On close configuration
-        self.win_main.protocol("WM_DELETE_WINDOW", self.close_window)
 
     @property
     def opened(self) -> bool:
