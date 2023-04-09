@@ -117,6 +117,19 @@ def register_type(lookuptable: Literal["GuildTYPE", "MessageTYPE", "MessageMODE"
 class ORMBase(DeclarativeBase):
     "Base for all of ORM classes"
 
+    def __eq__(self, value: object) -> bool:
+        try:
+            return self.id == value.id and type(self) is type(value)
+        except AttributeError:
+            return super().__eq__(value)
+
+    def __hash__(self):
+        try:
+            return self.id << 4 | id(type(self)) >> 8
+        except AttributeError:
+            return super().__hash__()
+
+
 
 class TableCache:
     """
@@ -1235,5 +1248,5 @@ if SQL_INSTALLED:
             self.dm_reason = dm_reason
             self.guild = guild
             self.author = author
-            self.timestamp = datetime.now().replace(microsecond=0)
+            self.timestamp = datetime.now()
             self.channels = channels

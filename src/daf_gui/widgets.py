@@ -9,7 +9,14 @@ try:
 except ImportError:
     from convert import *
 
-from daf import VERSION as DAF_VERSION, FILE as DAFFile, LoggerJSON, LoggerCSV
+from daf import (
+    VERSION as DAF_VERSION,
+    FILE as DAFFile,
+    LoggerJSON,
+    LoggerCSV,
+    AUDIO as DAFAudio,
+)
+
 from _discord._version import __version__ as PYCORD_VERSION
 from _discord import Colour as DiscordColor
 
@@ -23,6 +30,7 @@ import webbrowser
 import types
 import datetime as dt
 import inspect
+import os
 
 
 __all__ = (
@@ -120,14 +128,8 @@ ADDITIONAL_WIDGETS = {
     DAFFile: [AdditionalWidget(ttk.Button, setup_additional_widget_file_chooser, text="File browse")],
     LoggerJSON: [AdditionalWidget(ttk.Button, setup_additional_widget_file_chooser_logger, text="Select folder")],
     LoggerCSV: [AdditionalWidget(ttk.Button, setup_additional_widget_file_chooser_logger, text="Select folder")],
+    DAFAudio: [AdditionalWidget(ttk.Button, setup_additional_widget_file_chooser, text="File browse")],
 }
-
-
-def issubclass_noexcept(*args):
-    try:
-        return issubclass(*args)
-    except Exception:
-        return False
 
 
 class Text(tk.Text):

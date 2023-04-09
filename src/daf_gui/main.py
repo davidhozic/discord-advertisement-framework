@@ -424,52 +424,10 @@ class Application():
 
         accounts: list[ObjectInfo] = self.lb_accounts.get()
 
-        def convert_objects_to_script(object: ObjectInfo | list | tuple | set):
-            object_data = []
-            import_data = []
-
-            if isinstance(object, ObjectInfo):
-                object_str = f"{object.class_.__name__}(\n    "
-                attr_str = ""
-                for attr, value in object.data.items():
-                    if isinstance(value, ObjectInfo | list | tuple | set):
-                        value, import_data_ = convert_objects_to_script(value)
-                        import_data.extend(import_data_)
-
-                    elif isinstance(value, str):
-                        value = value.replace("\n", "\\n")
-                        value = f'"{value}"'
-
-                    attr_str += f"{attr}={value},\n"
-                    if issubclass(type(value), Enum):
-                        import_data.append(f"from {type(value).__module__} import {type(value).__name__}")
-
-                object_str += "    ".join(attr_str.splitlines(True)) + ")"
-                object_data.append(object_str)
-                import_data.append(f"from {object.class_.__module__} import {object.class_.__name__}")
-
-            elif isinstance(object, list | tuple | set):
-                _list_data = "[\n"
-                for element in object:
-                    object_str, import_data_ = convert_objects_to_script(element)
-                    _list_data += object_str + ",\n"
-                    import_data.extend(import_data_)
-
-                _list_data = "    ".join(_list_data.splitlines(keepends=True))
-                _list_data += "]"
-                object_data.append(_list_data)
-
-            else:
-                if isinstance(object, str):
-                    object = object.replace("\n", "\\n")
-                    object_data.append(f'"{object}"')
-                else:
-                    object_data.append(str(object))
-
-            return ",".join(object_data), import_data
-
-        accounts_str, imports = convert_objects_to_script(accounts)
+        accounts_str, imports, other_str = convert_objects_to_script(accounts)
         imports = "\n".join(set(imports))
+        if other_str != "":
+            other_str = "\n" + other_str
 
         _ret = f'''
 """
@@ -487,7 +445,7 @@ At the bottom of the file the framework is then started with the run function.
 {f"from {tracing.__module__} import {tracing.__class__.__name__}" if tracing_is_present else ""}
 {imports}
 
-import daf
+import daf{other_str}
 
 # Define the logger
 {f"logger = {logger}" if logger_is_present else ""}
