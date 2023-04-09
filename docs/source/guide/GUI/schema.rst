@@ -10,7 +10,7 @@ Here we can 2 different subsections:
 
 
 .. image:: ./DEP/images/daf-gui-front.png
-    :scale: 40%
+    :scale: 70%
     :align: center
 
 
@@ -23,7 +23,7 @@ We can define :class:`~daf.client.ACCOUNT` objects by clicking on ``Add ACCOUNT`
 
 .. image:: images/gui-new-account-window.png
     :align: center
-    :scale: 40%
+    :scale: 70%
 
 The window is automaticaly generated based on the :class:`~daf.client.ACCOUNT`'s parameter annotations and contains exactly the same
 parameters like the core object :class:`~daf.client.ACCOUNT`.
@@ -143,7 +143,7 @@ After successful definition, we can observe a new account added to our accounts 
 
 .. image:: images/gui-defined-accounts-list.png
     :align: center
-    :scale: 40%
+    :scale: 70%
 
 
 If we click the *Start* (on top of the main window), we can observe our account being logged-in and messages being sent
@@ -151,7 +151,7 @@ to the defined guilds and channels.
 
 .. image:: images/gui-started-output-defined-accounts.png
     :align: center
-    :scale: 40%
+    :scale: 70%
 
 .. image:: images/gui-messages-sent-post-acc-definition.png
     :align: center
@@ -168,7 +168,7 @@ located on the right side of the 1st dropdown menu.
 
 .. image:: images/gui-logger-definition-edit-json.png
     :align: center
-    :scale: 40%
+    :scale: 70%
 
 
 After clicking on *Save*, our logging manager is now defined and will be responsible for logging the data.
@@ -179,7 +179,7 @@ it is considered the most detailed trace configuration.
 
 .. image:: images/gui-logger-definition-tracing.png
     :align: center
-    :scale: 40%
+    :scale: 70%
 
 
 *NORMAL* trace is recommened for most users.
