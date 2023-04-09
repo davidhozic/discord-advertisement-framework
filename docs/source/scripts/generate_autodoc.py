@@ -70,7 +70,7 @@ output_dir.mkdir(parents=True, exist_ok=True)
 with open(os.path.join(OUTPUT_PATH, "index.rst"), "w", encoding="utf-8") as tocwriter:
     tocwriter.write(
         "=======================\n"
-        "Programming Reference\n"
+        "API reference\n"
         "=======================\n"
         "Contain classes and functions description.\n"
         "\n"

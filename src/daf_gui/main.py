@@ -49,7 +49,7 @@ class Application():
         # win_main.iconphoto(True, photo)
 
         self.win_main = win_main
-        screen_res = win_main.winfo_screenwidth() // 2, win_main.winfo_screenheight() // 2
+        screen_res = int(win_main.winfo_screenwidth() / 1.25), int(win_main.winfo_screenheight() / 1.5)
         win_main.wm_title(f"Discord Advert Framework {daf.VERSION}")
         win_main.wm_minsize(*screen_res)
         win_main.protocol("WM_DELETE_WINDOW", self.close_window)
@@ -160,7 +160,10 @@ class Application():
     def init_output_tab(self):
         self.tab_output = ttk.Frame(self.tabman_mf)
         self.tabman_mf.add(self.tab_output, text="Output")
-        text_output = ttk.ScrolledText(self.tab_output, state="disabled")
+        text_output = ListBoxScrolled(self.tab_output)
+        text_output.listbox.unbind("<Control-c>")
+        text_output.listbox.unbind("<BackSpace>")
+        text_output.listbox.unbind("<Delete>")
         text_output.pack(fill=tk.BOTH, expand=True)
 
         class STDIOOutput:
@@ -168,16 +171,17 @@ class Application():
                 pass
 
             def write(self_, data: str):
-                text_output.configure(state="normal")
+                if data == '\n':
+                    return
+
                 for r in daf.tracing.TRACE_COLOR_MAP.values():
                     data = data.replace(r, "")
 
                 text_output.insert(tk.END, data.replace("\033[0m", ""))
-                if text_output.count("1.0", tk.END, "lines")[0] > 1000:
-                    text_output.delete("1.0", "500.0")
+                if len(text_output.get()) > 1000:
+                    text_output.delete(0, 500)
 
                 text_output.see(tk.END)
-                text_output.configure(state="disabled")
 
         self._oldstdout = sys.stdout
         sys.stdout = STDIOOutput()
@@ -209,6 +213,38 @@ class Application():
         tab_analytics = ttk.Frame(self.tabman_mf, padding=(10, 10))
         self.tabman_mf.add(tab_analytics, text="Analytics")
 
+        # Message log
+        frame_msg_history = ttk.Labelframe(tab_analytics, padding=(10, 10), text="Messages", bootstyle="primary")
+        frame_msg_history.pack(fill=tk.BOTH, expand=True)
+
+        frame_combo_messages = ComboEditFrame(
+            self.edit_analytics_messages,
+            ObjectInfo(daf.logging.LoggerBASE.analytic_get_message_log, {}),
+            frame_msg_history
+        )
+        frame_combo_messages.pack(fill=tk.X)
+        self.frame_combo_messages = frame_combo_messages
+
+        frame_msg_history_bnts = ttk.Frame(frame_msg_history)
+        frame_msg_history_bnts.pack(fill=tk.X, pady=10)
+        ttk.Button(
+            frame_msg_history_bnts,
+            text="Get logs",
+            command=lambda: self._async_queue.put_nowait(self.analytics_load_msg())
+        ).pack(side="left", fill=tk.X)
+        ttk.Button(frame_msg_history_bnts, command=self.show_message_log, text="View log").pack(side="left", fill=tk.X)
+        ttk.Button(
+            frame_msg_history_bnts,
+            command=self.export_message_log_json,
+            text="Save selected as JSON"
+        ).pack(side="left", fill=tk.X)
+
+        lst_messages = ListBoxScrolled(frame_msg_history)
+        lst_messages.pack(expand=True, fill=tk.BOTH)
+
+        self.lst_message_log = lst_messages
+
+        # Number of messages
         frame_num_msg = ttk.Labelframe(tab_analytics, padding=(10, 10), text="Number of messages", bootstyle="primary")
         frame_combo_num_messages = ComboEditFrame(
             self.edit_analytics_num_msg,
@@ -217,45 +253,34 @@ class Application():
         )
 
         coldata = [
-            "Date",
+            {"text": "Date", "stretch": True},
             {"text": "Number of successful", "stretch": True},
             {"text": "Number of failed", "stretch": True},
             {"text": "Guild snowflake", "stretch": True},
+            {"text": "Guild name", "stretch": True},
             {"text": "Author snowflake", "stretch": True},
+            {"text": "Author name", "stretch": True},
         ]
-        tw_num_msg = tktw.Tableview(frame_num_msg, bootstyle="primary", coldata=coldata)
+        tw_num_msg = tktw.Tableview(
+            frame_num_msg,
+            bootstyle="primary",
+            coldata=coldata,
+            searchable=True,
+            paginated=True,
+            autofit=True)
+        frame_combo_num_messages.pack(fill=tk.X)
+
         ttk.Button(
             frame_num_msg,
             text="Calculate",
             command=lambda: self._async_queue.put_nowait(self.analytics_load_num_msg())
-        ).pack(fill=tk.X, pady=5)
+        ).pack(anchor=tk.W, pady=10)
 
-        frame_combo_num_messages.pack(fill=tk.X, expand=True)
-        frame_num_msg.pack(fill=tk.BOTH, expand=True)
+        frame_num_msg.pack(fill=tk.BOTH, expand=True, pady=5)
         tw_num_msg.pack(expand=True, fill=tk.BOTH)
 
         self.tw_num_msg = tw_num_msg
         self.frame_combo_num_messages = frame_combo_num_messages
-
-        frame_msg_history = ttk.Labelframe(tab_analytics, padding=(10, 10), text="Messages", bootstyle="primary")
-        frame_msg_history.pack(fill=tk.BOTH, expand=True)
-        ttk.Button(
-            frame_msg_history,
-            text="Get messages",
-            command=lambda: self._async_queue.put_nowait(self.analytics_load_msg())
-        ).pack(fill=tk.X, pady=5)
-        frame_combo_messages = ComboEditFrame(
-            self.edit_analytics_messages,
-            ObjectInfo(daf.logging.LoggerBASE.analytic_get_message_log, {}),
-            frame_msg_history
-        )
-        frame_combo_messages.pack(expand=True, fill=tk.X)
-        self.frame_combo_messages = frame_combo_messages
-        lst_messages = ListBoxScrolled(frame_msg_history)
-        lst_messages.pack(expand=True, fill=tk.BOTH)
-        ttk.Button(frame_msg_history, command=self.show_message_log, text="Show").pack(fill=tk.X)
-
-        self.lst_message_log = lst_messages
 
     @property
     def opened(self) -> bool:
@@ -302,6 +327,22 @@ class Application():
         self.tw_num_msg.delete_rows()
         self.tw_num_msg.insert_rows(tk.END, count)
         self.tw_num_msg.goto_first_page()
+
+    def export_message_log_json(self):
+        selection = self.lst_message_log.curselection()
+        if len(selection):
+            object_: list[ObjectInfo] = [convert_to_json(l) for i, l in enumerate(self.lst_message_log.get()) if i in selection]
+            filename = tkfile.asksaveasfilename(filetypes=[("SQL data", "*.json")])
+            if filename == "":
+                return
+
+            if not filename.endswith(".json"):
+                filename += ".json"
+
+            with open(filename, "w", encoding="utf-8") as writer:
+                json.dump(object_, writer, indent=4)
+        else:
+            tkdiag.Messagebox.show_error("Select atleast one item!", "Empty list!")
 
     def show_message_log(self):
         selection = self.lst_message_log.curselection()

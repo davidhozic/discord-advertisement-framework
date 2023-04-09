@@ -52,6 +52,7 @@ if daf.sql.SQL_INSTALLED:
     for item in sql_.ORMBase.__subclasses__():
         ADDITIONAL_ANNOTATIONS[item] = get_type_hints(item.__init__._sa_original_init)
 
+    ADDITIONAL_ANNOTATIONS[sql_.MessageLOG] = {"id": int, **ADDITIONAL_ANNOTATIONS[sql_.MessageLOG]}
     ADDITIONAL_ANNOTATIONS[sql_.MessageLOG]["success_rate"] = decimal.Decimal
     ADDITIONAL_ANNOTATIONS[sql_.MessageLOG]["timestamp"] = dt.datetime
 
@@ -64,11 +65,10 @@ if daf.sql.SQL_INSTALLED:
     sql_ = daf.sql
 
     for subcls in sql_.ORMBase.__subclasses__():
-        hints = get_type_hints(subcls.__init__._sa_original_init)
+        hints = {**get_type_hints(subcls.__init__._sa_original_init), **ADDITIONAL_ANNOTATIONS.get(subcls, {})}
         CONVERSION_ATTR_TO_PARAM[subcls] = {key: key for key in hints.keys()}
 
-    CONVERSION_ATTR_TO_PARAM[sql_.MessageLOG]["timestamp"] = "timestamp"
-    CONVERSION_ATTR_TO_PARAM[sql_.MessageLOG]["success_rate"] = "success_rate"
+    CONVERSION_ATTR_TO_PARAM[sql_.MessageLOG] = {"id": int, **CONVERSION_ATTR_TO_PARAM[sql_.MessageLOG]}
     CONVERSION_ATTR_TO_PARAM[sql_.GuildUSER]["snowflake_id"] = "snowflake"
     CONVERSION_ATTR_TO_PARAM[sql_.CHANNEL]["snowflake_id"] = "snowflake"
 
@@ -104,6 +104,9 @@ def convert_to_object_info(object_: object):
     object_type = type(object_)
 
     if object_type in {int, float, str, bool, decimal.Decimal, type(None)}:
+        if object_type is decimal.Decimal:
+            object_ = float(object_)
+
         return object_
 
     if isinstance(object_, Iterable):

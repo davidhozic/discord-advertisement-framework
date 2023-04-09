@@ -181,6 +181,7 @@ class ListBoxObjects(tk.Listbox):
         super().delete(0, tk.END)
         self._original_items.clear()
 
+
 class ListBoxScrolled(ttk.Frame):
     def __init__(self, parent, *args, **kwargs):
         super().__init__(parent)
@@ -199,6 +200,9 @@ class ListBoxScrolled(ttk.Frame):
         listbox.bind("<Delete>", lambda e: self.listbox_delete_selected())
 
         self.listbox = listbox
+
+    def see(self, *args, **kwargs):
+        return self.listbox.see(*args, **kwargs)
 
     def get(self, *args, **kwargs):
         return self.listbox.get(*args, **kwargs)
@@ -380,6 +384,49 @@ class NewObjectFrame(ttk.Frame):
             **kwargs
         )
 
+        self.init_toolbar_frame(class_)
+        if not self.init_main_frame(class_):
+            return
+
+        if old is not None:  # Edit
+            self.load(old)
+
+    def init_main_frame(self, class_) -> bool:
+        frame_main = ttk.Frame(self)
+        frame_main.pack(expand=True, fill=tk.BOTH)
+        self.frame_main = frame_main
+
+        # Additional annotations defined in daf to support more types
+        try:
+            if inspect.isclass(class_):
+                annot_object = class_.__init__
+            else:
+                annot_object = class_
+
+            annotations = get_type_hints(annot_object, include_extras=True)
+        except (NameError, TypeError):
+            annotations = {}
+
+        additional_annotations = ADDITIONAL_ANNOTATIONS.get(class_)
+        if additional_annotations is not None:
+            annotations = {**annotations, **additional_annotations}                                
+
+        if class_ is str:
+            self.init_str()
+        elif class_ in {int, float}:
+            self.init_int_float(class_)
+        elif get_origin(class_) in {list, Iterable, ABCIterable, tuple}:
+            self.init_iterable(class_)
+        elif annotations or additional_annotations is not None:
+            self.init_structured(annotations)
+        else:
+            tkdiag.Messagebox.show_error("This object cannot be edited.", "Load error", parent=self.origin_window)
+            self.origin_window.after_idle(self._cleanup)  # Can not clean the object before it has been added to list
+            return False
+
+        return True
+
+    def init_toolbar_frame(self, class_):
         frame_toolbar = ttk.Frame(self)
 
         package = class_.__module__.split(".", 1)[0]
@@ -399,117 +446,84 @@ class NewObjectFrame(ttk.Frame):
                 setup_cmd(add_widg, self)
 
         frame_toolbar.pack(fill=tk.X)
-        frame_main = ttk.Frame(self)
-        frame_main.pack(expand=True, fill=tk.BOTH)
 
-        # Additional annotations defined in daf to support more types
-        try:
-            if inspect.isclass(class_):
-                annot_object = class_.__init__
-            else:
-                annot_object = class_
+    def init_structured(self, annotations: dict):
+        annotations.pop("return", None)
 
-            annotations = get_type_hints(annot_object, include_extras=True)
-        except (NameError, TypeError):
-            annotations = {}
+        for (k, v) in annotations.items():
+            frame_annotated = ttk.Frame(self.frame_main)
+            frame_annotated.pack(fill=tk.BOTH, expand=True)
 
-        additional_annotations = ADDITIONAL_ANNOTATIONS.get(class_)
-        if additional_annotations is not None:
-            annotations = {**annotations, **additional_annotations}
+            entry_types = v
+            ttk.Label(frame_annotated, text=k, width=15).pack(side="left")
 
-        def init_frame_str():
-            w = Text(frame_main)
-            w.pack(fill=tk.BOTH, expand=True)
-            self._map[None] = (w, class_)
+            entry_types = self.convert_types(entry_types)
 
-        def init_frame_num():
-            w = ttk.Spinbox(frame_main, from_=-9999, to=9999)
-            w.pack(fill=tk.X)
-            self._map[None] = (w, class_)
+            bnt_menu = ttk.Menubutton(frame_annotated)
+            menu = tk.Menu(bnt_menu)
+            bnt_menu.configure(menu=menu)
 
-        def init_frame_list():
-            w = ListBoxScrolled(frame_main)
-            frame_edit_remove = ttk.Frame(frame_main)
-            menubtn = ttk.Menubutton(frame_edit_remove, text="Add object")
-            menu = tk.Menu(menubtn)
-            menubtn.configure(menu=menu)
-            menubtn.pack()
-            ttk.Button(frame_edit_remove, text="Remove", command=w.listbox_delete_selected).pack(fill=tk.X)
-            ttk.Button(frame_edit_remove, text="Edit", command=self.listbox_edit_selected(w)).pack(fill=tk.X)
-            ttk.Button(frame_edit_remove, text="Copy", command=w.listbox_copy_selected).pack(fill=tk.X)
+            w = combo = ComboBoxObjects(frame_annotated)
+            bnt_menu.pack(side="right")
+            combo.pack(fill=tk.X, side="right", expand=True, padx=5, pady=5)
 
-            w.pack(side="left", fill=tk.BOTH, expand=True)
-            frame_edit_remove.pack(side="right")
-            args = get_args(class_)
-            args = self.convert_types(args)
-            if get_origin(args[0]) is Union:
-                args = get_args(args[0])
-
-            for arg in args:
-                menu.add_radiobutton(label=arg.__name__, command=self.new_object_window(arg, w))
-
-            self._map[None] = (w, list)
-
-        def init_frame_annotated_object():
-            annotations.pop("return", None)
-
-            for (k, v) in annotations.items():
-                frame_annotated = ttk.Frame(frame_main)
-                frame_annotated.pack(fill=tk.BOTH, expand=True)
-
-                entry_types = v
-                ttk.Label(frame_annotated, text=k, width=15).pack(side="left")
-
-                entry_types = self.convert_types(entry_types)
-
-                bnt_menu = ttk.Menubutton(frame_annotated)
-                menu = tk.Menu(bnt_menu)
-                bnt_menu.configure(menu=menu)
-
-                w = combo = ComboBoxObjects(frame_annotated)
-                bnt_menu.pack(side="right")
-                combo.pack(fill=tk.X, side="right", expand=True, padx=5, pady=5)
-
-                editable_types = []
-                for entry_type in entry_types:
-                    if get_origin(entry_type) is Literal:
-                        combo["values"] = get_args(entry_type)
-                    elif entry_type is bool:
-                        combo.insert(tk.END, True)
-                        combo.insert(tk.END, False)
-                    elif issubclass_noexcept(entry_type, Enum):
-                        combo["values"] = [en for en in entry_type]
-                    elif entry_type is type(None):
-                        if bool not in entry_types:
-                            combo.insert(tk.END, None)
-                    else:  # Type not supported, try other types
-                        if self.allow_save:
-                            menu.add_radiobutton(
+            editable_types = []
+            for entry_type in entry_types:
+                if get_origin(entry_type) is Literal:
+                    combo["values"] = get_args(entry_type)
+                elif entry_type is bool:
+                    combo.insert(tk.END, True)
+                    combo.insert(tk.END, False)
+                elif issubclass_noexcept(entry_type, Enum):
+                    combo["values"] = [en for en in entry_type]
+                elif entry_type is type(None):
+                    if bool not in entry_types:
+                        combo.insert(tk.END, None)
+                else:  # Type not supported, try other types
+                    if self.allow_save:
+                        menu.add_radiobutton(
                                 label=f"New {entry_type.__name__}",
                                 command=self.new_object_window(entry_type, combo)
                             )
 
-                        if get_origin(entry_type) in {list, Iterable, ABCIterable}:
-                            editable_types.append(entry_type)
+                    if get_origin(entry_type) in {list, Iterable, ABCIterable}:
+                        editable_types.append(entry_type)
 
-                menu.add_radiobutton(label="Edit selected", command=self.combo_edit_selected(w, editable_types))
-                self._map[k] = (w, entry_types)
+            menu.add_radiobutton(label="Edit selected", command=self.combo_edit_selected(w, editable_types))
+            self._map[k] = (w, entry_types)
 
-        if class_ is str:
-            init_frame_str()
-        elif class_ in {int, float}:
-            init_frame_num()
-        elif get_origin(class_) in {list, Iterable, ABCIterable, tuple}:
-            init_frame_list()
-        elif annotations or additional_annotations is not None:
-            init_frame_annotated_object()
-        else:
-            tkdiag.Messagebox.show_error("This object cannot be edited.", "Load error", parent=self.origin_window)
-            self.origin_window.after_idle(self._cleanup)  # Can not clean the object before it has been added to list
-            return
+    def init_iterable(self, class_):
+        w = ListBoxScrolled(self.frame_main)
+        frame_edit_remove = ttk.Frame(self.frame_main)
+        menubtn = ttk.Menubutton(frame_edit_remove, text="Add object")
+        menu = tk.Menu(menubtn)
+        menubtn.configure(menu=menu)
+        menubtn.pack()
+        ttk.Button(frame_edit_remove, text="Remove", command=w.listbox_delete_selected).pack(fill=tk.X)
+        ttk.Button(frame_edit_remove, text="Edit", command=self.listbox_edit_selected(w)).pack(fill=tk.X)
+        ttk.Button(frame_edit_remove, text="Copy", command=w.listbox_copy_selected).pack(fill=tk.X)
 
-        if old is not None:  # Edit
-            self.load(old)
+        w.pack(side="left", fill=tk.BOTH, expand=True)
+        frame_edit_remove.pack(side="right")
+        args = get_args(class_)
+        args = self.convert_types(args)
+        if get_origin(args[0]) is Union:
+            args = get_args(args[0])
+
+        for arg in args:
+            menu.add_radiobutton(label=arg.__name__, command=self.new_object_window(arg, w))
+
+        self._map[None] = (w, list)
+
+    def init_int_float(self, class_):
+        w = ttk.Spinbox(self.frame_main, from_=-9999, to=9999)
+        w.pack(fill=tk.X)
+        self._map[None] = (w, class_)
+
+    def init_str(self):
+        w = Text(self.frame_main)
+        w.pack(fill=tk.BOTH, expand=True)
+        self._map[None] = (w, str)
 
     @classmethod
     def set_origin_window(cls, window: ObjectEditWindow):

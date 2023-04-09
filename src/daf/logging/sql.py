@@ -837,7 +837,6 @@ class LoggerSQL(logging.LoggerBASE):
         SQLAlchemyError
             There was a problem with the database.
         """
-        _dummy_ret = ([], [])
         if after is None:
             after = datetime.min
 
@@ -848,19 +847,19 @@ class LoggerSQL(logging.LoggerBASE):
         regions = reversed(regions[regions.index(group_by):])
         extract_stms = []
         for region_ in regions:
-            extract_stms.append(func.extract(region_, MessageLOG.timestamp))
+            extract_stms.append(func.extract(region_, MessageLOG.timestamp).cast(Integer))
 
         async with self.session_maker() as session:
+            conditions = []
+
             # Obtain internal guild id
+            guild_snow = select(GuildUSER.snowflake_id).where(GuildUSER.id == MessageLOG.guild_id).scalar_subquery()
+            author_snow = select(GuildUSER.snowflake_id).where(GuildUSER.id == MessageLOG.author_id).scalar_subquery()
             if guild is not None:
-                guilduser: GuildUSER = await self._get_guild(guild, session)
-                if guilduser is None:
-                    return _dummy_ret
+                conditions.append(guild_snow == guild)
 
             if author is not None:
-                author: GuildUSER = await self._get_guild(author, session)
-                if author is None:
-                    return _dummy_ret
+                conditions.append(author_snow == author)
 
             count = (await self._run_async(
                 session.execute,
@@ -868,14 +867,16 @@ class LoggerSQL(logging.LoggerBASE):
                     *extract_stms,
                     func.sum(case((MessageLOG.success_rate > 0, 1), else_=0)),
                     func.sum(case((MessageLOG.success_rate == 0, 1), else_=0)),
-                    select(GuildUSER.snowflake_id).where(GuildUSER.id == MessageLOG.guild_id) .scalar_subquery(),
-                    select(GuildUSER.snowflake_id).where(GuildUSER.id == MessageLOG.author_id).scalar_subquery()
+                    guild_snow,
+                    select(GuildUSER.name).where(GuildUSER.id == MessageLOG.guild_id).scalar_subquery(),
+                    author_snow,
+                    select(GuildUSER.name).where(GuildUSER.id == MessageLOG.author_id).scalar_subquery()
                 )
                 .where(
                     MessageLOG.timestamp.between(after, before),
-                    MessageLOG.guild_id,
-                    MessageLOG.author_id
-                ).group_by(*extract_stms)
+                    *conditions
+                )
+                .group_by(*extract_stms, MessageLOG.guild_id, MessageLOG.author_id)
             )).all()
 
             extract_stm_len = len(extract_stms)
@@ -919,8 +920,6 @@ class LoggerSQL(logging.LoggerBASE):
         sort_by_direction: Literal["asc", "desc"] = "desc"
             Sort items by ``sort_by`` in selected direction (asc = ascending, desc = descending).
         """
-        _dummy_ret = []
-
         if after is None:
             after = datetime.min
 
@@ -928,21 +927,16 @@ class LoggerSQL(logging.LoggerBASE):
             before = datetime.max
 
         # Obtain internal guild id
+
         async with self.session_maker() as session:
             conditions = []
             if guild is not None:
-                guilduser: GuildUSER = await self._get_guild(guild, session)
-                if guilduser is None:
-                    return _dummy_ret
-
-                conditions.append(guilduser.id == MessageLOG.guild_id)
+                snow = select(GuildUSER.snowflake_id).where(GuildUSER.id == MessageLOG.guild_id).scalar_subquery()
+                conditions.append(guild == snow)
 
             if author is not None:
-                author: GuildUSER = await self._get_guild(author, session)
-                if author is None:
-                    return _dummy_ret
-
-                conditions.append(author.id == MessageLOG.author_id)
+                snow = select(GuildUSER.snowflake_id).where(GuildUSER.id == MessageLOG.author_id).scalar_subquery()
+                conditions.append(author == snow)
 
             messages = await self._run_async(
                 session.execute,
@@ -1077,7 +1071,7 @@ if SQL_INSTALLED:
             Sequence("guild_user_seq", 0, 1, minvalue=0, maxvalue=2147483647, cycle=True),
             primary_key=True
         )
-        snowflake_id = mapped_column(BigInteger)
+        snowflake_id = mapped_column(BigInteger, index=True)
         name = mapped_column(String(3072))
         guild_type_id: Mapped[int] = mapped_column(ForeignKey("GuildTYPE.id"))
         guild_type: Mapped["GuildTYPE"] = relationship(lazy="joined")
