@@ -282,12 +282,16 @@ def convert_from_json(d: dict | list[dict] | Any) -> ObjectInfo:
         type_split = type_.split('.')
         module = type_split[:len(type_split) - 1]
         type_ = type_split[-1]
-        module_ = __import__(module[0])
-        module.pop(0)
-        for i, m in enumerate(module):
-            module_ = getattr(module_, module[i])
+        if module[0] == __name__.split(".")[-1]:
+            type_ = globals()[type_]
+        else:
+            module_ = __import__(module[0])
+            module.pop(0)
+            for i, m in enumerate(module):
+                module_ = getattr(module_, module[i])
 
-        type_ = getattr(module_, type_)
+            type_ = getattr(module_, type_)
+
         for k, v in data.items():
             if isinstance(v, list) or isinstance(v, dict) and v.get("type") is not None:
                 v = convert_from_json(v)
