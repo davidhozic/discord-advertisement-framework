@@ -2,7 +2,6 @@
 Main file of the DAF GUI.
 """
 from typing import Iterable, Awaitable
-from contextlib import suppress
 from enum import Enum
 from PIL import Image, ImageTk
 
@@ -21,9 +20,10 @@ import webbrowser
 
 try:
     from .widgets import *
+    from .convert import *
 except ImportError:
     from widgets import *
-
+    from convert import *
 
 
 WIN_UPDATE_DELAY = 0.005
@@ -115,7 +115,11 @@ class Application():
 
         frame_account_bnts = ttk.Frame(frame_tab_account, padding=(0, 10))
         frame_account_bnts.pack(fill=tk.X)
-        self.bnt_add_object = ttk.Button(frame_account_bnts, text="Add ACCOUNT", command=lambda: self.open_object_edit_window(daf.ACCOUNT, self.lb_accounts))
+        self.bnt_add_object = ttk.Button(
+            frame_account_bnts,
+            text="Add ACCOUNT",
+            command=lambda: self.open_object_edit_window(daf.ACCOUNT, self.lb_accounts)
+        )
         self.bnt_edit_object = ttk.Button(frame_account_bnts, text="Edit", command=self.edit_accounts)
         self.bnt_remove_object = ttk.Button(frame_account_bnts, text="Remove", command=self.list_del_account)
         self.bnt_add_object.pack(side="left")
@@ -180,14 +184,21 @@ class Application():
 
     def init_credits_tab(self):
         logo_img = Image.open(f"{os.path.dirname(__file__)}/img/logo.png")
-        logo_img = logo_img.resize((self.win_main.winfo_screenwidth() // 8, self.win_main.winfo_screenwidth() // 8), resample=0)
+        logo_img = logo_img.resize(
+            (self.win_main.winfo_screenwidth() // 8, self.win_main.winfo_screenwidth() // 8),
+            resample=0
+        )
         logo = ImageTk.PhotoImage(logo_img)
         self.tab_info = ttk.Frame(self.tabman_mf)
         self.tabman_mf.add(self.tab_info, text="About")
         info_bnts_frame = ttk.Frame(self.tab_info)
         info_bnts_frame.pack(pady=30)
         ttk.Button(info_bnts_frame, text="Github", command=lambda: webbrowser.open(GITHUB_URL)).grid(row=0, column=0)
-        ttk.Button(info_bnts_frame, text="Documentation", command=lambda: webbrowser.open(DOC_URL)).grid(row=0, column=1)
+        ttk.Button(
+            info_bnts_frame,
+            text="Documentation",
+            command=lambda: webbrowser.open(DOC_URL)
+        ).grid(row=0, column=1)
         ttk.Label(self.tab_info, text="Like the app? Give it a star :) on GitHub (^)").pack(pady=10)
         ttk.Label(self.tab_info, text=CREDITS_TEXT).pack()
         label_logo = ttk.Label(self.tab_info, image=logo)
@@ -301,7 +312,6 @@ class Application():
                 self.lst_message_log,
                 old=object_,
                 check_parameters=False,
-                annotate_from_old=True,
                 allow_save=False
             )
         else:
@@ -520,7 +530,9 @@ daf.run(
                 tracing = None
 
             self._async_queue.put_nowait(daf.initialize(logger=logger, debug=tracing))
-            self._async_queue.put_nowait([daf.add_object(convert_to_objects(account)) for account in self.lb_accounts.get()])
+            self._async_queue.put_nowait(
+                [daf.add_object(convert_to_objects(account)) for account in self.lb_accounts.get()]
+            )
             self.bnt_toolbar_start_daf.configure(state="disabled")
             self.bnt_toolbar_stop_daf.configure(state="enabled")
             self._daf_running = True

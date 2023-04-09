@@ -53,9 +53,6 @@ try:
     from sqlalchemy.engine import URL as SQLURL, create_engine
     from sqlalchemy.exc import SQLAlchemyError
     from sqlalchemy.orm import (
-        InstrumentedAttribute,
-        Relationship,
-        joinedload,
         sessionmaker,
         Session,
         DeclarativeBase,
@@ -1172,7 +1169,6 @@ if SQL_INSTALLED:
             self.channel = channel
             self.reason = reason
 
-
     class MessageLOG(ORMBase):
         """
         Table containing information for each message send attempt.
@@ -1205,7 +1201,8 @@ if SQL_INSTALLED:
         message_type_id: Mapped[int] = mapped_column(ForeignKey("MessageTYPE.id"))
         guild_id: Mapped[int] = mapped_column(ForeignKey("GuildUSER.id"))
         author_id: Mapped[int] = mapped_column(ForeignKey("GuildUSER.id"))
-        message_mode_id: Mapped[int] = mapped_column(ForeignKey("MessageMODE.id"), nullable=True)  # [TextMESSAGE, DirectMESSAGE]
+        # [TextMESSAGE, DirectMESSAGE]
+        message_mode_id: Mapped[int] = mapped_column(ForeignKey("MessageMODE.id"), nullable=True)
         dm_reason = mapped_column(String(3072))  # [DirectMESSAGE]
         timestamp = mapped_column(DateTime)
 
