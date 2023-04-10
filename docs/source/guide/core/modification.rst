@@ -123,7 +123,7 @@ in the following way:
 For a full list of objects that support ``.update`` search ".update" in the search bar 
 **or click on the image below**.
 
-.. image:: ./DEP/images/search_update_method.png
+.. image:: ./images/search_update_method.png
     :target: ../search.html?q=.update&check_keywords=yes&area=default 
 
 

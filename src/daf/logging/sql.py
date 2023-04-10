@@ -822,10 +822,14 @@ class LoggerSQL(logging.LoggerBASE):
             author: int | None = None,
             after: datetime | None = None,
             before: datetime | None = None,
+            guild_type: Literal["USER", "GUILD"] | None = None,
+            message_type: Literal["TextMESSAGE", "VoiceMESSAGE", "DirectMESSAGE"] | None = None,
+            sort_by: Literal["successful", "failed", "guild_snow", "guild_name", "author_snow", "author_name"] = "successful",
+            sort_by_direction: Literal["asc", "desc"] = "desc",
+            limit: int = 500,
             group_by: Literal["year", "month", "day"] = "day"
-    ) -> list[tuple[date, int, int]]:
+    ) -> list[tuple[date, int, int, int, str, int, str]]:
         """
-        Returns number of messages sent to specific after and before specific date and time.
 
         Parameters
         -----------
@@ -837,13 +841,35 @@ class LoggerSQL(logging.LoggerBASE):
             Only count messages sent after the datetime.
         before: datetime | None
             Only count messages sent before the datetime.
+        guild_type: Literal["USER", "GUILD"] | None,
+            Type of guild.
+        message_type: Literal["TextMESSAGE", "VoiceMESSAGE", "DirectMESSAGE"] | None,
+            Type of message.
+        sort_by: Literal["successful", "failed", "guild_snow", "guild_name", "author_snow", "author_name"],
+            Sort items by selected.
+            Defaults to "successful"
+        sort_by_direction: Literal["asc", "desc"]
+            Sort items by ``sort_by`` in selected direction (asc = ascending, desc = descending).
+            Defaults to "desc"
+        limit: int = 500
+            Limit of the rows to return. Defaults to 500.
         group_by: Literal["year", "month", "day"]
             Results returned are grouped by ``group_by``
 
         Returns
         --------
-        list[tuple[date, int, int]]
-            List of tuples containing the date, number of successful, number of failed messages.
+        list[tuple[date, int, int, int, str, int, str]]
+            List of tuples.
+
+            Each tuple contains:
+
+            - Date
+            - Successfule sends
+            - Failed sends
+            - Guild snowflake id,
+            - Guild name
+            - Author snowflake id,
+            - Author name
 
         Raises
         ------------
@@ -864,36 +890,53 @@ class LoggerSQL(logging.LoggerBASE):
 
         async with self.session_maker() as session:
             conditions = []
-
-            # Obtain internal guild id
-            guild_snow = select(GuildUSER.snowflake_id).where(GuildUSER.id == MessageLOG.guild_id).scalar_subquery()
-            author_snow = select(GuildUSER.snowflake_id).where(GuildUSER.id == MessageLOG.author_id).scalar_subquery()
             if guild is not None:
-                conditions.append(guild_snow == guild)
+                conditions.append(
+                    MessageLOG.guild.has(GuildUSER.snowflake_id == guild)
+                )
 
             if author is not None:
-                conditions.append(author_snow == author)
+                conditions.append(
+                    MessageLOG.author.has(GuildUSER.snowflake_id == author)
+                )
+
+            if guild_type is not None:
+                conditions.append(
+                    MessageLOG.guild.has(
+                        GuildUSER.guild_type.has(GuildTYPE.name == guild_type)
+                    )
+                )
+
+            if message_type is not None:
+                conditions.append(
+                    MessageLOG.message_type.has(MessageTYPE.name == message_type)
+                )
 
             count = (await self._run_async(
                 session.execute,
                 select(
                     *extract_stms,
-                    func.sum(case((MessageLOG.success_rate > 0, 1), else_=0)),
-                    func.sum(case((MessageLOG.success_rate == 0, 1), else_=0)),
-                    guild_snow,
-                    select(GuildUSER.name).where(GuildUSER.id == MessageLOG.guild_id).scalar_subquery(),
-                    author_snow,
-                    select(GuildUSER.name).where(GuildUSER.id == MessageLOG.author_id).scalar_subquery()
+                    func.sum(case((MessageLOG.success_rate > 0, 1), else_=0)).label("successful"),
+                    func.sum(case((MessageLOG.success_rate == 0, 1), else_=0)).label("failed"),
+                    select(GuildUSER.snowflake_id).where(GuildUSER.id == MessageLOG.guild_id).scalar_subquery().label("guild_snow"),
+                    select(GuildUSER.name).where(GuildUSER.id == MessageLOG.guild_id).scalar_subquery().label("guild_name"),
+                    select(GuildUSER.snowflake_id).where(GuildUSER.id == MessageLOG.author_id).scalar_subquery().label("author_snow"),
+                    select(GuildUSER.name).where(GuildUSER.id == MessageLOG.author_id).scalar_subquery().label("author_name")
                 )
                 .where(
                     MessageLOG.timestamp.between(after, before),
                     *conditions
                 )
                 .group_by(*extract_stms, MessageLOG.guild_id, MessageLOG.author_id)
+                .limit(limit)
+                .order_by(text(f"{sort_by} {sort_by_direction}"))
             )).all()
 
             extract_stm_len = len(extract_stms)
-            count = [(date(*s[:extract_stm_len], *([1] * (3 - extract_stm_len))), *s[extract_stm_len:]) for s in count]
+            count = [
+                (date(*s[:extract_stm_len], *([1] * (3 - extract_stm_len))), *s[extract_stm_len:])
+                for s in count
+            ]
 
             return count
 
@@ -904,14 +947,14 @@ class LoggerSQL(logging.LoggerBASE):
             after: datetime | None = None,
             before: datetime | None = None,
             success_rate: tuple[float, float] = (0, 100),
+            guild_type: Literal["USER", "GUILD"] | None = None,
+            message_type: Literal["TextMESSAGE", "VoiceMESSAGE", "DirectMESSAGE"] | None = None,
             sort_by: Literal["timestamp", "success_rate"] = "timestamp",
             sort_by_direction: Literal["asc", "desc"] = "desc",
             limit: int = 500,
     ) -> list["MessageLOG"]:
         """
-        Returns a list of all the sent messages that were send between
-        ``after`` and ``before`` timestamps and have their success rate
-        equals to ``success_rate`` when rounded.
+        Returns a list MessageLOG objects (message logs) that match the parameters.
 
         Parameters
         --------------
@@ -929,6 +972,10 @@ class LoggerSQL(logging.LoggerBASE):
             Success rate is meassured in % and it is defined by:
 
             Successuly sent channels / all channels.
+        guild_type: Literal["USER", "GUILD"] | None,
+            Type of guild.
+        message_type: Literal["TextMESSAGE", "VoiceMESSAGE", "DirectMESSAGE"] | None,
+            Type of message.
         sort_by: Literal["timestamp", "success_rate", "data"],
             Sort items by selected.
             Defaults to "timestamp"
@@ -937,6 +984,11 @@ class LoggerSQL(logging.LoggerBASE):
             Defaults to "desc"
         limit: int = 500
             Limit of the message logs to return. Defaults to 500.
+
+        Return
+        ---------
+        list[MessageLOG]
+            List of the message logs.
         """
         if after is None:
             after = datetime.min
@@ -949,12 +1001,26 @@ class LoggerSQL(logging.LoggerBASE):
         async with self.session_maker() as session:
             conditions = []
             if guild is not None:
-                snow = select(GuildUSER.snowflake_id).where(GuildUSER.id == MessageLOG.guild_id).scalar_subquery()
-                conditions.append(guild == snow)
+                conditions.append(
+                    MessageLOG.guild.has(GuildUSER.snowflake_id == guild)
+                )
 
             if author is not None:
-                snow = select(GuildUSER.snowflake_id).where(GuildUSER.id == MessageLOG.author_id).scalar_subquery()
-                conditions.append(author == snow)
+                conditions.append(
+                    MessageLOG.author.has(GuildUSER.snowflake_id == author)
+                )
+
+            if guild_type is not None:
+                conditions.append(
+                    MessageLOG.guild.has(
+                        GuildUSER.guild_type.has(GuildTYPE.name == guild_type)
+                    )
+                )
+
+            if message_type is not None:
+                conditions.append(
+                    MessageLOG.message_type.has(MessageTYPE.name == message_type)
+                )
 
             messages = await self._run_async(
                 session.execute,
@@ -1196,16 +1262,20 @@ if SQL_INSTALLED:
 
         Parameters
         ------------
-        sent_data: str
-            JSONized data that was sent by the xMESSAGE object.
-        message_type: int
-            Foreign key  pointing to a row inside the MessageTYPE lookup table.
-        message_mode: int
-            Foreign key pointing to a row inside the MessageMODE lookup table.
-        dm_reason: str
-            If DM sent succeeded, it is null, if it failed it contains a string description of the error.
-        guild_id: int
-            Foreign key pointing the guild this message was advertised to.
+        sent_data: DataHISTORY
+            DataHISTORY object containing JSON data.
+        message_type: MessageTYPE
+            MessageTYPE object representing type of the message.
+        message_mode: MessageMODE | None
+            MessageMODE object representing mode of the message. (TextMESSAGE and DirectMESSAGE only)
+        dm_reason: str | None
+            The reason why sending to the USER failed. (DirectMESSAGE only)
+        guild: GuildUSER
+            The guild / user message was sent to.
+        author: GuildUSER
+            The author of the message.
+        channels: List["MessageChannelLOG"]
+            List of MessageChannelLOG representing channel the message was sent into and the fail reason.
         """
 
         __tablename__ = "MessageLOG"
@@ -1231,12 +1301,17 @@ if SQL_INSTALLED:
         message_mode: Mapped["MessageMODE"] = relationship(lazy="joined")
         channels: Mapped[List["MessageChannelLOG"]] = relationship(back_populates="log", lazy="joined")
         success_rate = column_property(
-            100 * select(func.count()).where(MessageChannelLOG.reason.is_(None), MessageChannelLOG.log_id == id)
-            .select_from(MessageChannelLOG)
-            .scalar_subquery() /
-            select(func.count()).where(MessageChannelLOG.log_id == id)
-            .select_from(MessageChannelLOG)
-            .scalar_subquery()
+            case(
+                (
+                    select(1).where(MessageChannelLOG.log_id == id).limit(1).exists(),
+                    100 * select(func.count()).where(MessageChannelLOG.reason.is_(None), MessageChannelLOG.log_id == id)
+                    .select_from(MessageChannelLOG)
+                    .scalar_subquery() /
+                    select(func.count()).where(MessageChannelLOG.log_id == id).select_from(MessageChannelLOG)
+                    .scalar_subquery(),
+                ),
+                else_=case((dm_reason.is_(None), 100), else_=0)
+            )
         )
 
         def __init__(self,
@@ -1246,7 +1321,7 @@ if SQL_INSTALLED:
                      dm_reason: str = None,
                      guild: GuildUSER = None,
                      author: GuildUSER = None,
-                     channels: List["MessageChannelLOG"] = []):
+                     channels: List["MessageChannelLOG"] = None):
             self.sent_data = sent_data
             self.message_type = message_type
             self.message_mode = message_mode

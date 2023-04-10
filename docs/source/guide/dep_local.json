@@ -1,7 +1,5 @@
 {
     "copy": [
-        {"from": "./images/*", "to":"./core/DEP/"},
-        {"from": "./images/*", "to":"./GUI/DEP/"},
         {"from": "../../../Examples/**", "to":"./core/DEP/"},
         {"from": "../../../Examples/**", "to":"./GUI/DEP/"},
         {"from": "../../images/*", "to":"./GUI/DEP/"}

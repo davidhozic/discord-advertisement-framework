@@ -10,3 +10,4 @@ This section contains the guide to using the Discord Advertisement Framework ins
     control
     schema
     filegen
+    analytics

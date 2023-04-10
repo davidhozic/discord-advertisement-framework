@@ -79,6 +79,11 @@ class LoggerBASE:
             author: int | None = None,
             after: datetime | None = None,
             before: datetime | None = None,
+            guild_type: Literal["USER", "GUILD"] | None = None,
+            message_type: Literal["TextMESSAGE", "VoiceMESSAGE", "DirectMESSAGE"] | None = None,
+            sort_by: Literal["successful", "failed", "guild_snow", "guild_name", "author_snow", "author_name"] = "successful",
+            sort_by_direction: Literal["asc", "desc"] = "desc",
+            limit: int = 500,
             group_by: Literal["year", "month", "day"] = "day"
     ) -> tuple[int]:
         raise NotImplementedError
@@ -90,6 +95,8 @@ class LoggerBASE:
             after: datetime | None = None,
             before: datetime | None = None,
             success_rate: tuple[float, float] = (0, 100),
+            guild_type: Literal["USER", "GUILD"] | None = None,
+            message_type: Literal["TextMESSAGE", "VoiceMESSAGE", "DirectMESSAGE"] | None = None,
             sort_by: Literal["timestamp", "success_rate"] = "timestamp",
             sort_by_direction: Literal["asc", "desc"] = "desc",
             limit: int = 500,

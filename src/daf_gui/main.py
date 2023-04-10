@@ -324,7 +324,7 @@ class Application():
         )
 
         self.tw_num_msg.delete_rows()
-        self.tw_num_msg.insert_rows(tk.END, count)
+        self.tw_num_msg.insert_rows(0, count)
         self.tw_num_msg.goto_first_page()
 
     def export_message_log_json(self):

@@ -19,7 +19,7 @@ Logging is handled thru so called **logging managers**. Currently, 3 different m
 If a logging managers fails saving a log, then it's fallback manager will be used temporarily to store the log.
 It will only use the fallback once and then, at the next message, the original manager will be used.
 
-.. figure:: ./DEP/images/logging_process.drawio.svg
+.. figure:: ./images/logging_process.drawio.svg
     
     Logging process with fallback
 
@@ -120,32 +120,16 @@ The structure contains the following attributes:
 
 Relational Database Log (SQL)
 ================================
-.. versionadded:: v1.9
+.. versionchanged:: v2.6
 
-.. versionchanged:: v2.1
-    
-    .. card::
-        
-        Turned into an optional feature.
-        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-        .. code-block:: bash
-            
-            pip install discord-advert-framework[sql]
-
-.. versionchanged:: v2.2
-
-    .. card::
-
-        :Additional dialect support: Microsoft SQL Server, PostgreSQL, MariaDB/MySQL, SQLite
-        :Better Caching: Improved caching to significantly increase logging speed
-        :asynchronous: All of the SQL connectors except MS SQL Server are asynchronous.
+    Added author parameter to :ref:`MessageLOG`
 
 
 This type of logging enables saving logs to a remote server inside the database.
 In addition to being smaller in size, database logging takes up less space and it allows easier data analysis.
 
 
-.. figure:: ./DEP/images/sql_logging_process.drawio.svg
+.. figure:: ./images/sql_logging_process.drawio.svg
 
     SQL Logging diagram
 
@@ -184,7 +168,18 @@ Features
 
 ER diagram
 --------------------------------
-.. image:: ./DEP/images/sql_er.drawio.svg
+.. image:: ./images/sql_er.drawio.svg
+    :width: 1440
+
+
+
+Analysis
+-------------------------------
+The :class:`~daf.logging.sql.LoggerSQL` provides some methods for data analysis:
+
+- :py:meth:`~daf.logging.sql.LoggerSQL.analytic_get_num_messages`
+- :py:meth:`~daf.logging.sql.LoggerSQL.analytic_get_message_log`
+
 
 Tables
 --------------------------------
@@ -199,13 +194,12 @@ MessageLOG
   - |PK| id: Integer  - This is an internal ID of the log inside the database.
   - sent_data: Integer - Foreign key pointing to a row inside the :ref:`DataHISTORY` table.
   - message_type: SmallInteger - Foreign key ID pointing to a entry inside the :ref:`MessageTYPE` table.
-  - guild_id: Integer -  Foreign key pointing to :ref:`GuildUSER` table.
+  - guild_id: Integer -  Foreign key pointing to :ref:`GuildUSER` table, represents guild id of guild the message was sent into.
+  - author_id: Integer -  Foreign key pointing to :ref:`GuildUSER` table, represents the author account of the message.
   - message_mode: SmallInteger - Foreign key pointing to :ref:`MessageMODE` table. This is non-null only for :ref:`DirectMESSAGE`.
   - dm_reason: String -  If MessageTYPE is not DirectMESSAGE or the send attempt was successful, this is NULL, otherwise it contains the string representation of the error that caused the message send attempt to be unsuccessful.
   - timestamp: DateTime - The timestamp of the message send attempt.
   
-
-
 
 DataHISTORY
 ~~~~~~~~~~~~~~~~~~~~
@@ -232,7 +226,7 @@ MessageTYPE
 GuildUSER
 ~~~~~~~~~~~~~~~~~~~~
 :Description:
-    The table contains all the guilds/users the framework ever generated a log for.
+    The table contains all the guilds/users the framework ever generated a log for and all the authors.
 
 :Attributes:
   - |PK| id: Integer - Internal ID of the Guild/User inside the database.

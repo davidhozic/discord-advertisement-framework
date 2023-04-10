@@ -75,7 +75,7 @@ search for new guilds.
     In the case of this event, the browser will wait 90 seconds for the user to complete the CAPTCHA,
     if they don't it will consider the join to be a failure.
     
-    .. image:: ./DEP/images/captcha.png
+    .. image:: ./images/captcha.png
         :width: 200
 
 

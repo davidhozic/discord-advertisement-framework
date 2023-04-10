@@ -89,9 +89,8 @@ if daf.sql.SQL_INSTALLED:
     for item in sql_.ORMBase.__subclasses__():
         ADDITIONAL_ANNOTATIONS[item] = get_type_hints(item.__init__._sa_original_init)
 
-    ADDITIONAL_ANNOTATIONS[sql_.MessageLOG] = {"id": int, **ADDITIONAL_ANNOTATIONS[sql_.MessageLOG]}
+    ADDITIONAL_ANNOTATIONS[sql_.MessageLOG] = {"id": int, "timestamp": dt.datetime, **ADDITIONAL_ANNOTATIONS[sql_.MessageLOG]}
     ADDITIONAL_ANNOTATIONS[sql_.MessageLOG]["success_rate"] = decimal.Decimal
-    ADDITIONAL_ANNOTATIONS[sql_.MessageLOG]["timestamp"] = dt.datetime
 
 
 CONVERSION_ATTR_TO_PARAM = {}
@@ -101,7 +100,7 @@ OBJECT_CONV_CACHE = {}
 if daf.sql.SQL_INSTALLED:
     sql_ = daf.sql
 
-    for subcls in sql_.ORMBase.__subclasses__():
+    for subcls in [sql_.GuildUSER, sql_.CHANNEL]:
         hints = {**ADDITIONAL_ANNOTATIONS.get(subcls, {}), **get_type_hints(subcls.__init__._sa_original_init)}
         CONVERSION_ATTR_TO_PARAM[subcls] = {key: key for key in hints.keys()}
 
