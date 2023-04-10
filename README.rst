@@ -6,15 +6,11 @@ The Discord advertisement framework is a Python based **shilling framework** tha
 **Documentation** can be found `here <https://daf.davidhozic.com>`_.
 
 
-.. figure:: ./docs/images/daf-gui-front.png
+.. image:: ./docs/images/daf-gui-front.png
     :width: 15cm
 
-    Graphical interface (GUI)
-
-.. figure:: ./docs/images/daf-console-run.png
+.. image:: ./docs/images/daf-console-run.png
     :width: 15cm
-
-    Script (for running in console)
 
 
 ----------------------
@@ -40,27 +36,25 @@ Pre-requirement: `Python (minimum v3.10) <https://www.python.org/downloads/>`_.
 
 **Main package**
 
-.. code-block:: bash
+::
 
     pip install discord-advert-framework
 
-**Voice**
-            
-.. code-block:: bash
-    :caption: Voice Messaging / AUDIO
+**Voice Messaging / AUDIO**
+
+::
 
     pip install discord-advert-framework[voice]
 
+**Proxies**
 
-.. code-block:: bash
-    :caption: Proxy support
+::
 
     pip install discord-advert-framework[proxy]
 
-**SQL**
+**SQL logging**
             
-.. code-block:: bash
-    :caption: SQL logging
+::
 
     pip install discord-advert-framework[sql]
 
@@ -68,7 +62,6 @@ Pre-requirement: `Python (minimum v3.10) <https://www.python.org/downloads/>`_.
             
 Install all of the (left) optional dependencies
 
-.. code-block:: bash
-    :caption: All
+::
 
     pip install discord-advert-framework[all]
