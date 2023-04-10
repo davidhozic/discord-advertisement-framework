@@ -19,7 +19,7 @@ Key features
 - Graphical Interface (GUI) / Console (script)
 - Multi-account support
 - Periodic and scheduled advertisements,
-- Logging and analytics of sent messages (including SQL) - :ref:`Logging (core)`
+- Logging and analytics of sent messages (including SQL)
 - Easy to setup
 - Asynchronous
 
@@ -60,7 +60,7 @@ Pre-requirement: `Python (minimum v3.10) <https://www.python.org/downloads/>`_.
 
 
             
-Install all of the (left) optional dependencies
+**All of the above (full package)**
 
 ::
 
