@@ -9,16 +9,9 @@ try:
 except ImportError:
     from convert import *
 
-from daf import (
-    VERSION as DAF_VERSION,
-    FILE as DAFFile,
-    LoggerJSON,
-    LoggerCSV,
-    AUDIO as DAFAudio,
-)
 
-from _discord._version import __version__ as PYCORD_VERSION
-from _discord import Colour as DiscordColor
+import _discord as discord
+import daf
 
 import ttkbootstrap as ttk
 import tkinter as tk
@@ -30,7 +23,6 @@ import webbrowser
 import types
 import datetime as dt
 import inspect
-import os
 
 
 __all__ = (
@@ -40,17 +32,9 @@ __all__ = (
     "ComboBoxObjects",
     "ObjectEditWindow",
     "NewObjectFrame",
-    "SpinBoxText",
     "ComboBoxText",
     "ComboEditFrame",
 )
-
-
-HELP_URLS = {
-    "daf": f"https://daf.davidhozic.com/en/{DAF_VERSION}/?rtd_search={{}}",
-    "_discord": f"https://docs.pycord.dev/en/v{PYCORD_VERSION}/search.html?q={{}}",
-    "builtins": "https://docs.python.org/3/search.html?q={}"
-}
 
 
 class AdditionalWidget:
@@ -122,27 +106,26 @@ def setup_additional_widget_file_chooser_logger(w: ttk.Button, window: "NewObjec
     w.configure(command=_callback)
 
 
+HELP_URLS = {
+    "daf": f"https://daf.davidhozic.com/en/{daf.VERSION}/?rtd_search={{}}",
+    "_discord": f"https://docs.pycord.dev/en/v{discord._version.__version__}/search.html?q={{}}",
+    "builtins": "https://docs.python.org/3/search.html?q={}"
+}
+
+
 ADDITIONAL_WIDGETS = {
     dt.datetime: [AdditionalWidget(ttk.Button, setup_additional_widget_datetime, text="Select date")],
-    DiscordColor: [AdditionalWidget(ttk.Button, setup_additional_widget_color_picker, text="Color picker")],
-    DAFFile: [AdditionalWidget(ttk.Button, setup_additional_widget_file_chooser, text="File browse")],
-    LoggerJSON: [AdditionalWidget(ttk.Button, setup_additional_widget_file_chooser_logger, text="Select folder")],
-    LoggerCSV: [AdditionalWidget(ttk.Button, setup_additional_widget_file_chooser_logger, text="Select folder")],
-    DAFAudio: [AdditionalWidget(ttk.Button, setup_additional_widget_file_chooser, text="File browse")],
+    discord.Colour: [AdditionalWidget(ttk.Button, setup_additional_widget_color_picker, text="Color picker")],
+    daf.FILE: [AdditionalWidget(ttk.Button, setup_additional_widget_file_chooser, text="File browse")],
+    daf.LoggerJSON: [AdditionalWidget(ttk.Button, setup_additional_widget_file_chooser_logger, text="Select folder")],
+    daf.LoggerCSV: [AdditionalWidget(ttk.Button, setup_additional_widget_file_chooser_logger, text="Select folder")],
+    daf.AUDIO: [AdditionalWidget(ttk.Button, setup_additional_widget_file_chooser, text="File browse")],
 }
 
 
 class Text(tk.Text):
     def get(self) -> str:
         return super().get("1.0", tk.END).removesuffix("\n")
-
-
-class SpinBoxText(ttk.Frame):
-    def __init__(self, text: str, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        ttk.Label(self, text=text).pack(fill=tk.X, expand=True)
-        self.spinbox = ttk.Spinbox(self)
-        self.spinbox.pack(fill=tk.X, expand=True)
 
 
 class ComboBoxText(ttk.Frame):
@@ -411,7 +394,7 @@ class NewObjectFrame(ttk.Frame):
 
         additional_annotations = ADDITIONAL_ANNOTATIONS.get(class_)
         if additional_annotations is not None:
-            annotations = {**annotations, **additional_annotations}                                
+            annotations = {**annotations, **additional_annotations}
 
         if class_ is str:
             self.init_str()
@@ -469,7 +452,7 @@ class NewObjectFrame(ttk.Frame):
             bnt_menu.pack(side="right")
             combo.pack(fill=tk.X, side="right", expand=True, padx=5, pady=5)
 
-            editable_types = []
+            last_list_type = None
             for entry_type in entry_types:
                 if get_origin(entry_type) is Literal:
                     combo["values"] = get_args(entry_type)
@@ -482,16 +465,16 @@ class NewObjectFrame(ttk.Frame):
                     if bool not in entry_types:
                         combo.insert(tk.END, None)
                 else:  # Type not supported, try other types
+                    if get_origin(entry_type) in {list, tuple, set, Iterable, ABCIterable}:
+                        last_list_type = entry_type
+
                     if self.allow_save:
                         menu.add_radiobutton(
-                                label=f"New {entry_type.__name__}",
-                                command=self.new_object_window(entry_type, combo)
-                            )
+                            label=f"New {entry_type.__name__}",
+                            command=self.new_object_window(entry_type, combo)
+                        )
 
-                    if get_origin(entry_type) in {list, Iterable, ABCIterable}:
-                        editable_types.append(entry_type)
-
-            menu.add_radiobutton(label="Edit selected", command=self.combo_edit_selected(w, editable_types))
+            menu.add_radiobutton(label="Edit selected", command=self.combo_edit_selected(w, last_list_type))
             self._map[k] = (w, entry_types)
 
     def init_iterable(self, class_):
@@ -610,13 +593,13 @@ class NewObjectFrame(ttk.Frame):
 
         return __
 
-    def combo_edit_selected(self, combo: ComboBoxObjects, types):
+    def combo_edit_selected(self, combo: ComboBoxObjects, original_type = None):
         def __():
             selection = combo.get()
 
             if isinstance(selection, list):
-                return self.origin_window.open_object_edit_frame(Union[tuple(types)], combo, old=selection)
-            elif isinstance(selection, ObjectInfo):
+                return self.origin_window.open_object_edit_frame(original_type, combo, old=selection)
+            if isinstance(selection, ObjectInfo):
                 return self.origin_window.open_object_edit_frame(selection.class_, combo, old=selection)
             else:
                 if isinstance(selection, str) and not len(selection):

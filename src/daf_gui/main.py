@@ -2,7 +2,6 @@
 Main file of the DAF GUI.
 """
 from typing import Iterable, Awaitable
-from enum import Enum
 from PIL import Image, ImageTk
 
 import tkinter as tk

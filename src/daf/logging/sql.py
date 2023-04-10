@@ -905,7 +905,8 @@ class LoggerSQL(logging.LoggerBASE):
             before: datetime | None = None,
             success_rate: tuple[float, float] = (0, 100),
             sort_by: Literal["timestamp", "success_rate"] = "timestamp",
-            sort_by_direction: Literal["asc", "desc"] = "desc"
+            sort_by_direction: Literal["asc", "desc"] = "desc",
+            limit: int = 500,
     ) -> list["MessageLOG"]:
         """
         Returns a list of all the sent messages that were send between
@@ -930,8 +931,12 @@ class LoggerSQL(logging.LoggerBASE):
             Successuly sent channels / all channels.
         sort_by: Literal["timestamp", "success_rate", "data"],
             Sort items by selected.
+            Defaults to "timestamp"
         sort_by_direction: Literal["asc", "desc"] = "desc"
             Sort items by ``sort_by`` in selected direction (asc = ascending, desc = descending).
+            Defaults to "desc"
+        limit: int = 500
+            Limit of the message logs to return. Defaults to 500.
         """
         if after is None:
             after = datetime.min
@@ -958,7 +963,7 @@ class LoggerSQL(logging.LoggerBASE):
                     MessageLOG.success_rate.between(*success_rate),
                     MessageLOG.timestamp.between(after, before),
                     *conditions
-                ).order_by(getattr(getattr(MessageLOG, sort_by), sort_by_direction)())
+                ).order_by(getattr(getattr(MessageLOG, sort_by), sort_by_direction)()).limit(limit)
             )
 
             return list(*zip(*messages.unique().all()))
