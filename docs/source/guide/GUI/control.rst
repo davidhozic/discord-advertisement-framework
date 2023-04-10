@@ -2,7 +2,7 @@
 Framework control (GUI)
 =======================
 
-The framework can be from the GUI controlled with the 2 buttons located on the to left corner of the GUI.
+The framework can be from the GUI controlled with the 2 buttons located on the top left corner of the GUI.
 
 These buttons are called **START** and **STOP** respectively.
 
@@ -16,7 +16,7 @@ core mode, since GUI is only an extension of the DAF running directly on top of 
 
 You can tell the framework is running when the buttons change colors:
 
-Additionaly you can see the framework reporting successful initialization inside the ``Output`` tab.
+Additionally you can see the framework reporting successful initialization inside the ``Output`` tab.
 
 .. image:: images/gui-started-output-defined-accounts.png
     :align: center

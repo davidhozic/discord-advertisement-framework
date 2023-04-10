@@ -2,13 +2,13 @@
 Main file of the DAF GUI.
 """
 from typing import Iterable, Awaitable
-from enum import Enum
 from PIL import Image, ImageTk
 
 import tkinter as tk
 import tkinter.filedialog as tkfile
 import ttkbootstrap.dialogs.dialogs as tkdiag
 import ttkbootstrap as ttk
+import ttkbootstrap.tableview as tktw
 
 import asyncio
 import json
@@ -19,9 +19,10 @@ import webbrowser
 
 try:
     from .widgets import *
+    from .convert import *
 except ImportError:
     from widgets import *
-
+    from convert import *
 
 
 WIN_UPDATE_DELAY = 0.005
@@ -47,12 +48,10 @@ class Application():
         # win_main.iconphoto(True, photo)
 
         self.win_main = win_main
-        screen_res = win_main.winfo_screenwidth() // 2, win_main.winfo_screenheight() // 2
+        screen_res = int(win_main.winfo_screenwidth() / 1.25), int(win_main.winfo_screenheight() / 1.5)
         win_main.wm_title(f"Discord Advert Framework {daf.VERSION}")
         win_main.wm_minsize(*screen_res)
         win_main.protocol("WM_DELETE_WINDOW", self.close_window)
-        self.win_main.rowconfigure(0, weight=1)
-        self.win_main.columnconfigure(0, weight=1)
 
         # Console initialization
         self.win_debug = None
@@ -70,12 +69,35 @@ class Application():
         self.frame_main.pack(expand=True, fill=tk.BOTH, side="bottom")
         tabman_mf = ttk.Notebook(self.frame_main)
         tabman_mf.pack(fill=tk.BOTH, expand=True)
+        self.tabman_mf = tabman_mf
 
         # Objects tab
+        self.init_schema_tab()
+
+        # Output tab
+        self.init_output_tab()
+
+        # Analytics
+        self.init_analytics_tab()
+
+        # Credits tab
+        self.init_credits_tab()
+
+        # Status variables
+        self._daf_running = False
+        self._window_opened = True
+
+        # Tasks
+        self._async_queue = asyncio.Queue()
+
+        # On close configuration
+        self.win_main.protocol("WM_DELETE_WINDOW", self.close_window)
+
+    def init_schema_tab(self):
         self.objects_edit_window = None
 
-        tab_schema = ttk.Frame(tabman_mf, padding=(10, 10))
-        tabman_mf.add(tab_schema, text="Schema definition")
+        tab_schema = ttk.Frame(self.tabman_mf, padding=(10, 10))
+        self.tabman_mf.add(tab_schema, text="Schema definition")
 
         # Object tab file menu
         bnt_file_menu = ttk.Menubutton(tab_schema, text="Load/Save/Generate")
@@ -92,14 +114,18 @@ class Application():
 
         frame_account_bnts = ttk.Frame(frame_tab_account, padding=(0, 10))
         frame_account_bnts.pack(fill=tk.X)
-        self.bnt_add_object = ttk.Button(frame_account_bnts, text="Add ACCOUNT", command=lambda: self.open_object_edit_window(daf.ACCOUNT, self.lb_accounts))
+        self.bnt_add_object = ttk.Button(
+            frame_account_bnts,
+            text="Add ACCOUNT",
+            command=lambda: self.open_object_edit_window(daf.ACCOUNT, self.lb_accounts)
+        )
         self.bnt_edit_object = ttk.Button(frame_account_bnts, text="Edit", command=self.edit_accounts)
         self.bnt_remove_object = ttk.Button(frame_account_bnts, text="Remove", command=self.list_del_account)
         self.bnt_add_object.pack(side="left")
         self.bnt_edit_object.pack(side="left")
         self.bnt_remove_object.pack(side="left")
 
-        self.lb_accounts = ListBoxObjects(frame_tab_account, background="#000")
+        self.lb_accounts = ListBoxScrolled(frame_tab_account, background="#000")
         self.lb_accounts.pack(fill=tk.BOTH, expand=True)
 
         # Object tab account tab logging tab
@@ -125,15 +151,18 @@ class Application():
         self.combo_logging_mgr["values"] = [
             ObjectInfo(daf.LoggerJSON, {"path": "History"}),
             ObjectInfo(daf.LoggerSQL, {}),
-            ObjectInfo(daf.LoggerCSV, {"path": "History"}),
+            ObjectInfo(daf.LoggerCSV, {"path": "History", "delimiter": ";"}),
         ]
 
         self.combo_tracing["values"] = [en for en in daf.TraceLEVELS]
 
-        # Output tab
-        self.tab_output = ttk.Frame(tabman_mf)
-        tabman_mf.add(self.tab_output, text="Output")
-        text_output = ttk.ScrolledText(self.tab_output, state="disabled")
+    def init_output_tab(self):
+        self.tab_output = ttk.Frame(self.tabman_mf)
+        self.tabman_mf.add(self.tab_output, text="Output")
+        text_output = ListBoxScrolled(self.tab_output)
+        text_output.listbox.unbind("<Control-c>")
+        text_output.listbox.unbind("<BackSpace>")
+        text_output.listbox.unbind("<Delete>")
         text_output.pack(fill=tk.BOTH, expand=True)
 
         class STDIOOutput:
@@ -141,45 +170,116 @@ class Application():
                 pass
 
             def write(self_, data: str):
-                text_output.configure(state="normal")
+                if data == '\n':
+                    return
+
                 for r in daf.tracing.TRACE_COLOR_MAP.values():
                     data = data.replace(r, "")
 
                 text_output.insert(tk.END, data.replace("\033[0m", ""))
-                if text_output.count("1.0", tk.END, "lines")[0] > 1000:
-                    text_output.delete("1.0", "500.0")
+                if len(text_output.get()) > 1000:
+                    text_output.delete(0, 500)
 
                 text_output.see(tk.END)
-                text_output.configure(state="disabled")
 
         self._oldstdout = sys.stdout
         sys.stdout = STDIOOutput()
 
-        # Credits tab
+    def init_credits_tab(self):
         logo_img = Image.open(f"{os.path.dirname(__file__)}/img/logo.png")
-        logo_img = logo_img.resize((self.win_main.winfo_screenwidth() // 8, self.win_main.winfo_screenwidth() // 8), resample=0)
+        logo_img = logo_img.resize(
+            (self.win_main.winfo_screenwidth() // 8, self.win_main.winfo_screenwidth() // 8),
+            resample=0
+        )
         logo = ImageTk.PhotoImage(logo_img)
-        self.tab_info = ttk.Frame(tabman_mf)
-        tabman_mf.add(self.tab_info, text="About")
+        self.tab_info = ttk.Frame(self.tabman_mf)
+        self.tabman_mf.add(self.tab_info, text="About")
         info_bnts_frame = ttk.Frame(self.tab_info)
         info_bnts_frame.pack(pady=30)
         ttk.Button(info_bnts_frame, text="Github", command=lambda: webbrowser.open(GITHUB_URL)).grid(row=0, column=0)
-        ttk.Button(info_bnts_frame, text="Documentation", command=lambda: webbrowser.open(DOC_URL)).grid(row=0, column=1)
+        ttk.Button(
+            info_bnts_frame,
+            text="Documentation",
+            command=lambda: webbrowser.open(DOC_URL)
+        ).grid(row=0, column=1)
         ttk.Label(self.tab_info, text="Like the app? Give it a star :) on GitHub (^)").pack(pady=10)
         ttk.Label(self.tab_info, text=CREDITS_TEXT).pack()
         label_logo = ttk.Label(self.tab_info, image=logo)
         label_logo.image = logo
         label_logo.pack()
 
-        # Status variables
-        self._daf_running = False
-        self._window_opened = True
+    def init_analytics_tab(self):
+        tab_analytics = ttk.Frame(self.tabman_mf, padding=(10, 10))
+        self.tabman_mf.add(tab_analytics, text="Analytics")
 
-        # Tasks
-        self._async_queue = asyncio.Queue()
+        # Message log
+        frame_msg_history = ttk.Labelframe(tab_analytics, padding=(10, 10), text="Messages", bootstyle="primary")
+        frame_msg_history.pack(fill=tk.BOTH, expand=True)
 
-        # On close configuration
-        self.win_main.protocol("WM_DELETE_WINDOW", self.close_window)
+        frame_combo_messages = ComboEditFrame(
+            self.edit_analytics_messages,
+            ObjectInfo(daf.logging.LoggerBASE.analytic_get_message_log, {}),
+            frame_msg_history
+        )
+        frame_combo_messages.pack(fill=tk.X)
+        self.frame_combo_messages = frame_combo_messages
+
+        frame_msg_history_bnts = ttk.Frame(frame_msg_history)
+        frame_msg_history_bnts.pack(fill=tk.X, pady=10)
+        ttk.Button(
+            frame_msg_history_bnts,
+            text="Get logs",
+            command=lambda: self._async_queue.put_nowait(self.analytics_load_msg())
+        ).pack(side="left", fill=tk.X)
+        ttk.Button(frame_msg_history_bnts, command=self.show_message_log, text="View log").pack(side="left", fill=tk.X)
+        ttk.Button(
+            frame_msg_history_bnts,
+            command=self.export_message_log_json,
+            text="Save selected as JSON"
+        ).pack(side="left", fill=tk.X)
+
+        lst_messages = ListBoxScrolled(frame_msg_history)
+        lst_messages.pack(expand=True, fill=tk.BOTH)
+
+        self.lst_message_log = lst_messages
+
+        # Number of messages
+        frame_num_msg = ttk.Labelframe(tab_analytics, padding=(10, 10), text="Number of messages", bootstyle="primary")
+        frame_combo_num_messages = ComboEditFrame(
+            self.edit_analytics_num_msg,
+            ObjectInfo(daf.logging.LoggerBASE.analytic_get_num_messages, {}),
+            frame_num_msg
+        )
+
+        coldata = [
+            {"text": "Date", "stretch": True},
+            {"text": "Number of successful", "stretch": True},
+            {"text": "Number of failed", "stretch": True},
+            {"text": "Guild snowflake", "stretch": True},
+            {"text": "Guild name", "stretch": True},
+            {"text": "Author snowflake", "stretch": True},
+            {"text": "Author name", "stretch": True},
+        ]
+        tw_num_msg = tktw.Tableview(
+            frame_num_msg,
+            bootstyle="primary",
+            coldata=coldata,
+            searchable=True,
+            paginated=True,
+            autofit=True)
+        frame_combo_num_messages.pack(fill=tk.X)
+
+        ttk.Button(
+            frame_num_msg,
+            text="Calculate",
+            command=lambda: self._async_queue.put_nowait(self.analytics_load_num_msg())
+        ).pack(anchor=tk.W, pady=10)
+
+        frame_num_msg.pack(fill=tk.BOTH, expand=True, pady=5)
+        tw_num_msg.pack(expand=True, fill=tk.BOTH)
+
+        self.tw_num_msg = tw_num_msg
+        self.frame_combo_num_messages = frame_combo_num_messages
 
     @property
     def opened(self) -> bool:
@@ -189,6 +289,99 @@ class Application():
         if self.objects_edit_window is None or self.objects_edit_window.closed:
             self.objects_edit_window = ObjectEditWindow()
             self.objects_edit_window.open_object_edit_frame(*args, **kwargs)
+
+    async def analytics_load_msg(self):
+        logger = daf.get_logger()
+        if not isinstance(logger, daf.LoggerSQL):
+            raise ValueError("Analytics only allowed when using LoggerSQL")
+
+        param_object = self.frame_combo_messages.combo.get()
+        data = param_object.data.copy()
+        for k, v in data.items():
+            if isinstance(v, ObjectInfo):
+                data[k] = convert_to_objects(v)
+
+        messages = await logger.analytic_get_message_log(
+            **data
+        )
+        messages = convert_to_object_info(messages)
+        self.lst_message_log.clear()
+        self.lst_message_log.insert(tk.END, *messages)
+
+    async def analytics_load_num_msg(self):
+        logger = daf.get_logger()
+        if not isinstance(logger, daf.LoggerSQL):
+            raise ValueError("Analytics only allowed when using LoggerSQL")
+
+        param_object = self.frame_combo_num_messages.combo.get()
+        data = param_object.data.copy()
+        for k, v in data.items():
+            if isinstance(v, ObjectInfo):
+                data[k] = convert_to_objects(v)
+
+        count = await logger.analytic_get_num_messages(
+            **data
+        )
+
+        self.tw_num_msg.delete_rows()
+        self.tw_num_msg.insert_rows(0, count)
+        self.tw_num_msg.goto_first_page()
+
+    def export_message_log_json(self):
+        selection = self.lst_message_log.curselection()
+        if len(selection):
+            object_: list[ObjectInfo] = [convert_to_json(l) for i, l in enumerate(self.lst_message_log.get()) if i in selection]
+            filename = tkfile.asksaveasfilename(filetypes=[("SQL data", "*.json")])
+            if filename == "":
+                return
+
+            if not filename.endswith(".json"):
+                filename += ".json"
+
+            with open(filename, "w", encoding="utf-8") as writer:
+                json.dump(object_, writer, indent=4)
+        else:
+            tkdiag.Messagebox.show_error("Select atleast one item!", "Empty list!")
+
+    def show_message_log(self):
+        selection = self.lst_message_log.curselection()
+        if len(selection) == 1:
+            object_: ObjectInfo = self.lst_message_log.get()[selection[0]]
+            self.open_object_edit_window(
+                daf.sql.MessageLOG,
+                self.lst_message_log,
+                old=object_,
+                check_parameters=False,
+                allow_save=False
+            )
+        else:
+            tkdiag.Messagebox.show_error("Select ONE item!", "Empty list!")
+
+    def edit_analytics_messages(self):
+        selection = self.frame_combo_messages.combo.current()
+        if selection >= 0:
+            object_: ObjectInfo = self.frame_combo_messages.combo.get()
+            self.open_object_edit_window(
+                daf.logging.LoggerBASE.analytic_get_message_log,
+                self.frame_combo_messages.combo,
+                old=object_,
+                check_parameters=False
+            )
+        else:
+            tkdiag.Messagebox.show_error("Select atleast one item!", "Empty list!")
+
+    def edit_analytics_num_msg(self):
+        selection = self.frame_combo_num_messages.combo.current()
+        if selection >= 0:
+            object_: ObjectInfo = self.frame_combo_num_messages.combo.get()
+            self.open_object_edit_window(
+                daf.logging.LoggerBASE.analytic_get_num_messages,
+                self.frame_combo_num_messages.combo,
+                old=object_,
+                check_parameters=False
+            )
+        else:
+            tkdiag.Messagebox.show_error("Select atleast one item!", "Empty list!")
 
     def edit_logger(self):
         selection = self.combo_logging_mgr.current()
@@ -230,52 +423,10 @@ class Application():
 
         accounts: list[ObjectInfo] = self.lb_accounts.get()
 
-        def convert_objects_to_script(object: ObjectInfo | list | tuple | set):
-            object_data = []
-            import_data = []
-
-            if isinstance(object, ObjectInfo):
-                object_str = f"{object.class_.__name__}(\n    "
-                attr_str = ""
-                for attr, value in object.data.items():
-                    if isinstance(value, ObjectInfo | list | tuple | set):
-                        value, import_data_ = convert_objects_to_script(value)
-                        import_data.extend(import_data_)
-
-                    elif isinstance(value, str):
-                        value = value.replace("\n", "\\n")
-                        value = f'"{value}"'
-
-                    attr_str += f"{attr}={value},\n"
-                    if issubclass(type(value), Enum):
-                        import_data.append(f"from {type(value).__module__} import {type(value).__name__}")
-
-                object_str += "    ".join(attr_str.splitlines(True)) + ")"
-                object_data.append(object_str)
-                import_data.append(f"from {object.class_.__module__} import {object.class_.__name__}")
-
-            elif isinstance(object, list | tuple | set):
-                _list_data = "[\n"
-                for element in object:
-                    object_str, import_data_ = convert_objects_to_script(element)
-                    _list_data += object_str + ",\n"
-                    import_data.extend(import_data_)
-
-                _list_data = "    ".join(_list_data.splitlines(keepends=True))
-                _list_data += "]"
-                object_data.append(_list_data)
-
-            else:
-                if isinstance(object, str):
-                    object = object.replace("\n", "\\n")
-                    object_data.append(f'"{object}"')
-                else:
-                    object_data.append(str(object))
-
-            return ",".join(object_data), import_data
-
-        accounts_str, imports = convert_objects_to_script(accounts)
+        accounts_str, imports, other_str = convert_objects_to_script(accounts)
         imports = "\n".join(set(imports))
+        if other_str != "":
+            other_str = "\n" + other_str
 
         _ret = f'''
 """
@@ -293,7 +444,7 @@ At the bottom of the file the framework is then started with the run function.
 {f"from {tracing.__module__} import {tracing.__class__.__name__}" if tracing_is_present else ""}
 {imports}
 
-import daf
+import daf{other_str}
 
 # Define the logger
 {f"logger = {logger}" if logger_is_present else ""}
@@ -346,8 +497,8 @@ daf.run(
 
                 # Load accounts
                 accounts = convert_from_json(json_data["accounts"])
-                self.lb_accounts.delete(0, tk.END)
-                self.lb_accounts.insert(tk.END, *accounts)
+                self.lb_accounts.clear()
+                self.lb_accounts.listbox.insert(tk.END, *accounts)
 
                 # Load loggers
                 loggers = [convert_from_json(x) for x in json_data["loggers"]["all"]]
@@ -377,7 +528,9 @@ daf.run(
                 tracing = None
 
             self._async_queue.put_nowait(daf.initialize(logger=logger, debug=tracing))
-            self._async_queue.put_nowait([daf.add_object(convert_to_objects(account)) for account in self.lb_accounts.get()])
+            self._async_queue.put_nowait(
+                [daf.add_object(convert_to_objects(account)) for account in self.lb_accounts.get()]
+            )
             self.bnt_toolbar_start_daf.configure(state="disabled")
             self.bnt_toolbar_stop_daf.configure(state="enabled")
             self._daf_running = True

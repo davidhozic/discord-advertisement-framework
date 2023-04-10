@@ -4,66 +4,37 @@ from collections.abc import Iterable as ABCIterable
 from contextlib import suppress
 from enum import Enum
 
-from daf import VERSION as DAF_VERSION, FILE as DAFFile, LoggerJSON, LoggerCSV
-from _discord._version import __version__ as PYCORD_VERSION
-from _discord import Embed as DiscordEmbed, Colour as DiscordColor
+try:
+    from .convert import *
+except ImportError:
+    from convert import *
+
+
+import _discord as discord
+import daf
 
 import ttkbootstrap as ttk
 import tkinter as tk
 import ttkbootstrap.dialogs.dialogs as tkdiag
 import tkinter.filedialog as tkfile
 
+
 import webbrowser
 import types
 import datetime as dt
+import inspect
 
 
 __all__ = (
     "Text",
     "ListBoxObjects",
+    "ListBoxScrolled",
     "ComboBoxObjects",
     "ObjectEditWindow",
     "NewObjectFrame",
-    "ObjectInfo",
-    "convert_to_objects",
-    "convert_to_json",
-    "convert_from_json",
+    "ComboBoxText",
+    "ComboEditFrame",
 )
-
-
-HELP_URLS = {
-    "daf": f"https://daf.davidhozic.com/en/{DAF_VERSION}/?rtd_search={{}}",
-    "_discord": f"https://docs.pycord.dev/en/v{PYCORD_VERSION}/search.html?q={{}}",
-    "builtins": "https://docs.python.org/3/search.html?q={}"
-}
-
-ADDITIONAL_ANNOTATIONS = {
-    dt.timedelta: {
-        "days": float,
-        "seconds": float,
-        "microseconds": float,
-        "milliseconds": float,
-        "minutes": float,
-        "hours": float,
-        "weeks": float
-    },
-    dt.datetime: {
-        "year": int,
-        "month": int | None,
-        "day": int | None,
-        "hour": int,
-        "minute": int,
-        "second": int,
-        "microsecond": int,
-        "tzinfo": dt.tzinfo | None,
-        "fold": int
-    },
-    DiscordEmbed: {
-        "title": str,
-        "url": str,
-        "description": str
-    },
-}
 
 
 class AdditionalWidget:
@@ -135,121 +106,34 @@ def setup_additional_widget_file_chooser_logger(w: ttk.Button, window: "NewObjec
     w.configure(command=_callback)
 
 
-ADDITIONAL_WIDGETS = {
-    dt.datetime: [AdditionalWidget(ttk.Button, setup_additional_widget_datetime, text="Select date")],
-    DiscordColor: [AdditionalWidget(ttk.Button, setup_additional_widget_color_picker, text="Color picker")],
-    DAFFile: [AdditionalWidget(ttk.Button, setup_additional_widget_file_chooser, text="File browse")],
-    LoggerJSON: [AdditionalWidget(ttk.Button, setup_additional_widget_file_chooser_logger, text="Select folder")],
-    LoggerCSV: [AdditionalWidget(ttk.Button, setup_additional_widget_file_chooser_logger, text="Select folder")],
+HELP_URLS = {
+    "daf": f"https://daf.davidhozic.com/en/{daf.VERSION}/?rtd_search={{}}",
+    "_discord": f"https://docs.pycord.dev/en/v{discord._version.__version__}/search.html?q={{}}",
+    "builtins": "https://docs.python.org/3/search.html?q={}"
 }
 
 
-def issubclass_noexcept(*args):
-    try:
-        return issubclass(*args)
-    except Exception:
-        return False
-
-
-class ObjectInfo:
-    """
-    Describes Python objects' parameters.
-    """
-    CHARACTER_LIMIT = 200
-
-    def __init__(self, class_, data: dict) -> None:
-        self.class_ = class_
-        self.data = data
-
-    def __repr__(self) -> str:
-        _ret: str = self.class_.__name__ + "("
-        for k, v in self.data.items():
-            v = f'"{v}"' if isinstance(v, str) else str(v)
-            _ret += f"{k}={v}, "
-
-        _ret = _ret.rstrip(", ") + ")"
-        if len(_ret) > self.CHARACTER_LIMIT:
-            _ret = _ret[:self.CHARACTER_LIMIT] + "...)"
-
-        return _ret
-
-    @classmethod
-    def disable_limit(cls):
-        cls.CHARACTER_LIMIT = 99999999999999999
-
-    @classmethod
-    def enable_limit(cls):
-        cls.CHARACTER_LIMIT = 200
-
-
-def convert_to_objects(d: ObjectInfo):
-    data_conv = {}
-    for k, v in d.data.items():
-        if isinstance(v, ObjectInfo):
-            v = convert_to_objects(v)
-
-        elif isinstance(v, list):
-            v = v.copy()
-            for i, subv in enumerate(v):
-                if isinstance(subv, ObjectInfo):
-                    v[i] = convert_to_objects(subv)
-
-        data_conv[k] = v
-
-    return d.class_(**data_conv)
-
-
-def convert_to_json(d: ObjectInfo):
-    data_conv = {}
-    for k, v in d.data.items():
-        if isinstance(v, ObjectInfo):
-            v = convert_to_json(v)
-
-        elif isinstance(v, list):
-            v = v.copy()
-            for i, subv in enumerate(v):
-                if isinstance(subv, ObjectInfo):
-                    v[i] = convert_to_json(subv)
-
-        data_conv[k] = v
-
-    return {"type": f"{d.class_.__module__}.{d.class_.__name__}", "data": data_conv}
-
-
-def convert_from_json(d: dict | list[dict] | Any) -> ObjectInfo:
-    if isinstance(d, list):
-        result = []
-        for item in d:
-            result.append(convert_from_json(item))
-
-        return result
-
-    elif isinstance(d, dict):
-        type_: str = d["type"]
-        data: dict = d["data"]
-        type_split = type_.split('.')
-        module = type_split[:len(type_split) - 1]
-        type_ = type_split[-1]
-        module_ = __import__(module[0])
-        module.pop(0)
-        for i, m in enumerate(module):
-            module_ = getattr(module_, module[i])
-
-        type_ = getattr(module_, type_)
-        for k, v in data.items():
-            if isinstance(v, list) or isinstance(v, dict) and v.get("type") is not None:
-                v = convert_from_json(v)
-                data[k] = v
-
-        return ObjectInfo(type_, data)
-
-    else:
-        return d
+ADDITIONAL_WIDGETS = {
+    dt.datetime: [AdditionalWidget(ttk.Button, setup_additional_widget_datetime, text="Select date")],
+    discord.Colour: [AdditionalWidget(ttk.Button, setup_additional_widget_color_picker, text="Color picker")],
+    daf.FILE: [AdditionalWidget(ttk.Button, setup_additional_widget_file_chooser, text="File browse")],
+    daf.LoggerJSON: [AdditionalWidget(ttk.Button, setup_additional_widget_file_chooser_logger, text="Select folder")],
+    daf.LoggerCSV: [AdditionalWidget(ttk.Button, setup_additional_widget_file_chooser_logger, text="Select folder")],
+    daf.AUDIO: [AdditionalWidget(ttk.Button, setup_additional_widget_file_chooser, text="File browse")],
+}
 
 
 class Text(tk.Text):
     def get(self) -> str:
         return super().get("1.0", tk.END).removesuffix("\n")
+
+
+class ComboBoxText(ttk.Frame):
+    def __init__(self, text: str, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        ttk.Label(self, text=text).pack(fill=tk.X, expand=True)
+        self.combo = ComboBoxObjects(self)
+        self.combo.pack(fill=tk.X, expand=True)
 
 
 class ListBoxObjects(tk.Listbox):
@@ -277,6 +161,65 @@ class ListBoxObjects(tk.Listbox):
         for index in indexes:
             super().delete(index)
             del self._original_items[index]
+
+    def clear(self) -> None:
+        super().delete(0, tk.END)
+        self._original_items.clear()
+
+
+class ListBoxScrolled(ttk.Frame):
+    def __init__(self, parent, *args, **kwargs):
+        super().__init__(parent)
+        listbox = ListBoxObjects(self, *args, **kwargs)
+
+        listbox.pack(side="left", fill=tk.BOTH, expand=True)
+
+        scrollbar = ttk.Scrollbar(self)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.BOTH)
+        scrollbar.config(command=listbox.yview)
+
+        listbox.config(yscrollcommand=scrollbar.set)
+
+        listbox.bind("<Control-c>", lambda e: self.listbox_copy_selected())
+        listbox.bind("<BackSpace>", lambda e: self.listbox_delete_selected())
+        listbox.bind("<Delete>", lambda e: self.listbox_delete_selected())
+
+        self.listbox = listbox
+
+    def see(self, *args, **kwargs):
+        return self.listbox.see(*args, **kwargs)
+
+    def get(self, *args, **kwargs):
+        return self.listbox.get(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        return self.listbox.delete(*args, **kwargs)
+
+    def clear(self, *args, **kwargs):
+        return self.listbox.clear(*args, **kwargs)
+
+    def curselection(self, *args, **kwargs):
+        return self.listbox.curselection(*args, **kwargs)
+
+    def insert(self, *args, **kwargs):
+        return self.listbox.insert(*args, **kwargs)
+
+    def listbox_delete_selected(self):
+        listbox = self.listbox
+        selection = listbox.curselection()
+        if len(selection):
+            listbox.delete(*selection)
+        else:
+            tkdiag.Messagebox.show_error("Select atleast one item!", "Empty list!", parent=self)
+
+    def listbox_copy_selected(self):
+        listbox = self.listbox
+        selection = self.listbox.curselection()
+        if len(selection):
+            object_: ObjectInfo | Any = listbox.get()[selection[0]]
+            listbox.insert(tk.END, object_)
+        else:
+            tkdiag.Messagebox.show_error("Select atleast one item!", "Empty list!", parent=self)
 
 
 class ComboBoxObjects(ttk.Combobox):
@@ -319,6 +262,18 @@ class ComboBoxObjects(ttk.Combobox):
         return super().__getitem__(key)
 
 
+class ComboEditFrame(ttk.Frame):
+    def __init__(self, command, value: ObjectInfo, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        combo = ComboBoxObjects(self)
+        ttk.Button(self, text="Edit", command=command).pack(side="right")
+        combo.pack(side="left", fill=tk.X, expand=True)
+
+        combo.insert(tk.END, value)
+        combo.current(0)
+        self.combo = combo
+
+
 class ObjectEditWindow(ttk.Toplevel):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -358,6 +313,8 @@ class ObjectEditWindow(ttk.Toplevel):
         prev_frame = None
         if len(self.opened_frames):
             prev_frame = self.opened_frames[-1]
+            kwargs["check_parameters"] = prev_frame.check_parameters
+            kwargs["allow_save"] = prev_frame.allow_save
 
         self.opened_frames.append(frame := NewObjectFrame(parent=self.frame_main, *args, **kwargs))
         frame.pack(fill=tk.BOTH, expand=True)
@@ -387,30 +344,24 @@ class ObjectEditWindow(ttk.Toplevel):
 class NewObjectFrame(ttk.Frame):
     origin_window: ObjectEditWindow = None
 
-    def __init__(self, class_, return_widget: ComboBoxObjects | ListBoxObjects, parent = None, old: ObjectInfo = None, *args, **kwargs):
-        def convert_types(types_in):
-            while get_origin(types_in) in {Union, types.UnionType}:
-                types_in = get_args(types_in)
-
-            if not isinstance(types_in, list):
-                if isinstance(types_in, tuple):
-                    types_in = list(types_in)
-                else:
-                    types_in = [types_in, ]
-
-            subtypes = []
-            for t in types_in:
-                if hasattr(t, "__subclasses__") and t.__module__.split('.', 1)[0] in {"_discord", "daf"}:
-                    for st in t.__subclasses__():
-                        subtypes.extend(convert_types(st))
-
-            return types_in + subtypes
-
+    def __init__(
+        self,
+        class_,
+        return_widget: ComboBoxObjects | ListBoxScrolled,
+        parent = None,
+        old: ObjectInfo = None,
+        check_parameters = True,
+        allow_save = True,
+        *args,
+        **kwargs
+    ):
         self.class_ = class_
         self.return_widget = return_widget
         self._map = {}
         self.parent = parent
         self.old_object_info = old  # Edit requested
+        self.check_parameters = check_parameters  # At save time
+        self.allow_save = allow_save  # Allow save or not allow (eg. viewing SQL data)
 
         super().__init__(
             master=parent,
@@ -418,8 +369,50 @@ class NewObjectFrame(ttk.Frame):
             **kwargs
         )
 
-        frame_toolbar = ttk.Frame(self)
+        self.init_toolbar_frame(class_)
+        if not self.init_main_frame(class_):
+            return
 
+        if old is not None:  # Edit
+            self.load(old)
+
+    def init_main_frame(self, class_) -> bool:
+        frame_main = ttk.Frame(self)
+        frame_main.pack(expand=True, fill=tk.BOTH)
+        self.frame_main = frame_main
+
+        # Additional annotations defined in daf to support more types
+        try:
+            if inspect.isclass(class_):
+                annot_object = class_.__init__
+            else:
+                annot_object = class_
+
+            annotations = get_type_hints(annot_object, include_extras=True)
+        except (NameError, TypeError):
+            annotations = {}
+
+        additional_annotations = ADDITIONAL_ANNOTATIONS.get(class_)
+        if additional_annotations is not None:
+            annotations = {**annotations, **additional_annotations}
+
+        if class_ is str:
+            self.init_str()
+        elif class_ in {int, float}:
+            self.init_int_float(class_)
+        elif get_origin(class_) in {list, Iterable, ABCIterable, tuple}:
+            self.init_iterable(class_)
+        elif annotations or additional_annotations is not None:
+            self.init_structured(annotations)
+        else:
+            tkdiag.Messagebox.show_error("This object cannot be edited.", "Load error", parent=self.origin_window)
+            self.origin_window.after_idle(self._cleanup)  # Can not clean the object before it has been added to list
+            return False
+
+        return True
+
+    def init_toolbar_frame(self, class_):
+        frame_toolbar = ttk.Frame(self)
 
         package = class_.__module__.split(".", 1)[0]
         help_url = HELP_URLS.get(package)
@@ -438,126 +431,121 @@ class NewObjectFrame(ttk.Frame):
                 setup_cmd(add_widg, self)
 
         frame_toolbar.pack(fill=tk.X)
-        frame_main = ttk.Frame(self)
-        frame_main.pack(expand=True, fill=tk.BOTH)
 
-        # Additional annotations defined in daf to support more types
-        try:
-            annotations = get_type_hints(class_.__init__, include_extras=True)
-        except NameError:
-            annotations = {}
-        additional_annotations = ADDITIONAL_ANNOTATIONS.get(class_)
-        if additional_annotations is not None:
-            annotations = {**annotations, **additional_annotations}
+    def init_structured(self, annotations: dict):
+        annotations.pop("return", None)
 
-        def init_frame_str():
-            w = Text(frame_main)
-            w.pack(fill=tk.BOTH, expand=True)
-            self._map[None] = (w, class_)
+        for (k, v) in annotations.items():
+            frame_annotated = ttk.Frame(self.frame_main)
+            frame_annotated.pack(fill=tk.BOTH, expand=True)
 
-        def init_frame_num():
-            w = ttk.Spinbox(frame_main, from_=-9999, to=9999)
-            w.pack(fill=tk.X)
-            self._map[None] = (w, class_)
+            entry_types = v
+            ttk.Label(frame_annotated, text=k, width=15).pack(side="left")
 
-        def init_frame_list():
-            w = ListBoxObjects(frame_main)
-            frame_edit_remove = ttk.Frame(frame_main)
-            menubtn = ttk.Menubutton(frame_edit_remove, text="Add object")
-            menu = tk.Menu(menubtn)
-            menubtn.configure(menu=menu)
-            menubtn.pack()
-            ttk.Button(frame_edit_remove, text="Remove", command=self.listbox_delete_selected(w)).pack(fill=tk.X)
-            ttk.Button(frame_edit_remove, text="Edit", command=self.listbox_edit_selected(w)).pack(fill=tk.X)
-            ttk.Button(frame_edit_remove, text="Copy", command=self.listbox_copy_selected(w)).pack(fill=tk.X)
+            entry_types = self.convert_types(entry_types)
 
-            w.bind("<Control-c>", lambda e: self.listbox_copy_selected(w)())
-            w.bind("<BackSpace>", lambda e: self.listbox_delete_selected(w)())
-            w.bind("<Delete>", lambda e: self.listbox_delete_selected(w)())
+            bnt_menu = ttk.Menubutton(frame_annotated)
+            menu = tk.Menu(bnt_menu)
+            bnt_menu.configure(menu=menu)
 
-            w.pack(side="left", fill=tk.BOTH, expand=True)
-            frame_edit_remove.pack(side="right")
-            args = get_args(class_)
-            args = convert_types(args)
-            if get_origin(args[0]) is Union:
-                args = get_args(args[0])
+            w = combo = ComboBoxObjects(frame_annotated)
+            bnt_menu.pack(side="right")
+            combo.pack(fill=tk.X, side="right", expand=True, padx=5, pady=5)
 
-            for arg in args:
-                # ttk.Button(frame, text=f"Add {arg.__name__}", command=_(arg, w)).pack(fill=tk.X)
-                menu.add_radiobutton(label=arg.__name__, command=self.new_object_window(arg, w))
+            last_list_type = None
+            for entry_type in entry_types:
+                if get_origin(entry_type) is Literal:
+                    combo["values"] = get_args(entry_type)
+                elif entry_type is bool:
+                    combo.insert(tk.END, True)
+                    combo.insert(tk.END, False)
+                elif issubclass_noexcept(entry_type, Enum):
+                    combo["values"] = [en for en in entry_type]
+                elif entry_type is type(None):
+                    if bool not in entry_types:
+                        combo.insert(tk.END, None)
+                else:  # Type not supported, try other types
+                    if get_origin(entry_type) in {list, tuple, set, Iterable, ABCIterable}:
+                        last_list_type = entry_type
 
-            self._map[None] = (w, list)
+                    if self.allow_save:
+                        menu.add_radiobutton(
+                            label=f"New {entry_type.__name__}",
+                            command=self.new_object_window(entry_type, combo)
+                        )
 
-        def init_frame_annotated_object():
-            annotations.pop("return", None)
+            menu.add_radiobutton(label="Edit selected", command=self.combo_edit_selected(w, last_list_type))
+            self._map[k] = (w, entry_types)
 
-            for (k, v) in annotations.items():
-                frame_annotated = ttk.Frame(frame_main)
-                frame_annotated.pack(fill=tk.BOTH, expand=True)
+    def init_iterable(self, class_):
+        w = ListBoxScrolled(self.frame_main)
+        frame_edit_remove = ttk.Frame(self.frame_main)
+        menubtn = ttk.Menubutton(frame_edit_remove, text="Add object")
+        menu = tk.Menu(menubtn)
+        menubtn.configure(menu=menu)
+        menubtn.pack()
+        ttk.Button(frame_edit_remove, text="Remove", command=w.listbox_delete_selected).pack(fill=tk.X)
+        ttk.Button(frame_edit_remove, text="Edit", command=self.listbox_edit_selected(w)).pack(fill=tk.X)
+        ttk.Button(frame_edit_remove, text="Copy", command=w.listbox_copy_selected).pack(fill=tk.X)
 
-                entry_types = v
-                ttk.Label(frame_annotated, text=k, width=15).pack(side="left")
+        w.pack(side="left", fill=tk.BOTH, expand=True)
+        frame_edit_remove.pack(side="right")
+        args = get_args(class_)
+        args = self.convert_types(args)
+        if get_origin(args[0]) is Union:
+            args = get_args(args[0])
 
-                entry_types = convert_types(entry_types)
+        for arg in args:
+            menu.add_radiobutton(label=arg.__name__, command=self.new_object_window(arg, w))
 
-                bnt_menu = ttk.Menubutton(frame_annotated)
-                menu = tk.Menu(bnt_menu)
-                bnt_menu.configure(menu=menu)
+        self._map[None] = (w, list)
 
-                w = combo = ComboBoxObjects(frame_annotated)
-                bnt_menu.pack(side="right")
-                combo.pack(fill=tk.X, side="right", expand=True, padx=5, pady=5)
+    def init_int_float(self, class_):
+        w = ttk.Spinbox(self.frame_main, from_=-9999, to=9999)
+        w.pack(fill=tk.X)
+        self._map[None] = (w, class_)
 
-                editable_types = []
-                for entry_type in entry_types:
-                    if get_origin(entry_type) is Literal:
-                        combo["values"] = get_args(entry_type)
-                    elif entry_type is bool:
-                        combo.insert(tk.END, True)
-                        combo.insert(tk.END, False)
-                    elif issubclass_noexcept(entry_type, Enum):
-                        combo["values"] = [en for en in entry_type]
-                    elif entry_type is type(None):
-                        if bool not in entry_types:
-                            combo.insert(tk.END, None)
-                    else:  # Type not supported, try other types
-                        menu.add_radiobutton(label=f"New {entry_type.__name__}", command=self.new_object_window(entry_type, combo))
-                        if get_origin(entry_type) in {list, Iterable, ABCIterable}:
-                            editable_types.append(entry_type)
-
-                menu.add_radiobutton(label="Edit selected", command=self.combo_edit_selected(w, editable_types))
-                self._map[k] = (w, entry_types)
-
-        if class_ is str:
-            init_frame_str()
-        elif class_ in {int, float}:
-            init_frame_num()
-        elif get_origin(class_) in {list, Iterable, ABCIterable}:
-            init_frame_list()
-        elif annotations or additional_annotations is not None:
-            init_frame_annotated_object()
-        else:
-            tkdiag.Messagebox.show_error("This object cannot be edited.", "Load error", parent=self.origin_window)
-            self.origin_window.after_idle(self._cleanup)  # Can not clean the object before it has been added to list
-            return
-
-        if old is not None:  # Edit
-            self.load(old)
+    def init_str(self):
+        w = Text(self.frame_main)
+        w.pack(fill=tk.BOTH, expand=True)
+        self._map[None] = (w, str)
 
     @classmethod
     def set_origin_window(cls, window: ObjectEditWindow):
         cls.origin_window = window
 
+    @classmethod
+    def convert_types(cls, types_in):
+        while get_origin(types_in) in {Union, types.UnionType}:
+            types_in = get_args(types_in)
+
+        if not isinstance(types_in, list):
+            if isinstance(types_in, tuple):
+                types_in = list(types_in)
+            else:
+                types_in = [types_in, ]
+
+        subtypes = []
+        for t in types_in:
+            if hasattr(t, "__subclasses__") and t.__module__.split('.', 1)[0] in {"_discord", "daf"}:
+                for st in t.__subclasses__():
+                    subtypes.extend(cls.convert_types(st))
+
+        return types_in + subtypes
+
     def update_window_title(self):
         self.origin_window.title(f"{'New' if self.old_object_info is None else 'Edit'} {self.class_.__name__} object")
 
     def close_frame(self):
-        resp = tkdiag.Messagebox.yesnocancel("Do you wish to save?", "Save?", alert=True, parent=self)
-        if resp is not None:
-            if resp == "Yes":
-                self.save()
-            elif resp == "No":
-                self._cleanup()
+        if self.allow_save:
+            resp = tkdiag.Messagebox.yesnocancel("Do you wish to save?", "Save?", alert=True, parent=self)
+            if resp is not None:
+                if resp == "Yes":
+                    self.save()
+                elif resp == "No":
+                    self._cleanup()
+        else:
+            self._cleanup()
 
     def load(self, object_: ObjectInfo):
         object_ = object_.data if self._map.get(None) is None else object_
@@ -566,7 +554,7 @@ class NewObjectFrame(ttk.Frame):
                 if attr not in object_:
                     continue
 
-                val = object_[attr] 
+                val = object_[attr]
             else:
                 val = object_  # Single value type
 
@@ -576,7 +564,7 @@ class NewObjectFrame(ttk.Frame):
 
                 widget.current(widget["values"].index(val))
 
-            elif isinstance(widget, ListBoxObjects):
+            elif isinstance(widget, ListBoxScrolled):
                 widget.insert(tk.END, *object_)
 
             elif isinstance(widget, tk.Text):
@@ -591,28 +579,7 @@ class NewObjectFrame(ttk.Frame):
 
         return __
 
-    def listbox_delete_selected(self, lb: ListBoxObjects):
-        def __():
-            selection = lb.curselection()
-            if len(selection):
-                lb.delete(*selection)
-            else:
-                tkdiag.Messagebox.show_error("Select atleast one item!", "Empty list!", parent=self.origin_window)
-
-        return __
-
-    def listbox_copy_selected(self, lb: ListBoxObjects):
-        def __():
-            selection = lb.curselection()
-            if len(selection):
-                object_: ObjectInfo | Any = lb.get()[selection[0]]
-                lb.insert(tk.END, object_)
-            else:
-                tkdiag.Messagebox.show_error("Select atleast one item!", "Empty list!", parent=self.origin_window)
-
-        return __
-
-    def listbox_edit_selected(self, lb: ListBoxObjects):
+    def listbox_edit_selected(self, lb: ListBoxScrolled):
         def __():
             selection = lb.curselection()
             if len(selection) == 1:
@@ -626,13 +593,13 @@ class NewObjectFrame(ttk.Frame):
 
         return __
 
-    def combo_edit_selected(self, combo: ComboBoxObjects, types):
+    def combo_edit_selected(self, combo: ComboBoxObjects, original_type = None):
         def __():
             selection = combo.get()
 
             if isinstance(selection, list):
-                return self.origin_window.open_object_edit_frame(Union[tuple(types)], combo, old=selection)
-            elif isinstance(selection, ObjectInfo):
+                return self.origin_window.open_object_edit_frame(original_type, combo, old=selection)
+            if isinstance(selection, ObjectInfo):
                 return self.origin_window.open_object_edit_frame(selection.class_, combo, old=selection)
             else:
                 if isinstance(selection, str) and not len(selection):
@@ -647,6 +614,9 @@ class NewObjectFrame(ttk.Frame):
 
     def save(self):
         try:
+            if not self.allow_save:
+                raise TypeError("Saving is not allowed in this context!")
+
             map_ = {}
             for attr, (widget, type_) in self._map.items():
                 value = widget.get()
@@ -672,12 +642,13 @@ class NewObjectFrame(ttk.Frame):
                 object_ = single_value
             else:
                 object_ = ObjectInfo(self.class_, map_)
-                convert_to_objects(object_)  # Tries to create instances to check for errors
+                if self.check_parameters:
+                    convert_to_objects(object_)  # Tries to create instances to check for errors
 
             # Edit was requested, delete old value
             if self.old_object_info is not None:
                 ret_widget = self.return_widget
-                if isinstance(ret_widget, ListBoxObjects):
+                if isinstance(ret_widget, ListBoxScrolled):
                     ind = ret_widget.get().index(self.old_object_info)
                 else:
                     ind = ret_widget["values"].index(self.old_object_info)
@@ -690,4 +661,8 @@ class NewObjectFrame(ttk.Frame):
 
             self._cleanup()
         except Exception as exc:
-            tkdiag.Messagebox.show_error(f"Could not save the object.\n\n{exc}", "Saving error", parent=self.origin_window)
+            tkdiag.Messagebox.show_error(
+                f"Could not save the object.\n\n{exc}",
+                "Saving error",
+                parent=self.origin_window
+            )

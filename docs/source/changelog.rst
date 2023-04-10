@@ -35,12 +35,17 @@ Releases
 
 v2.6.0
 ==========
-- Graphical User Inferface - **GUI** for controlling the framework,
+- Graphical User Interface - **GUI** for controlling the framework,
   defining the schema (with backup and restore) and script generation!
 
 .. image:: ./DEP/images/daf-gui-front.png
     :align: center
     :scale: 40%
+
+- Logging:
+  
+  - Added ``author`` field to all logging managers (tells us which account sent the message).
+  - SQL analysis
 
 
 

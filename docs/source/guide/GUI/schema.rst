@@ -3,14 +3,14 @@ Schema definition (GUI)
 =========================
 
 We can define the schema (accounts, guilds, messages) inside the *Schema definition* tab.
-Here we can 2 different subsections:
+The tab allows us to define:
 
-1. Account definition
-2. Logging definition
+1. Accounts
+2. Logging & tracing
 
 
 .. image:: ./DEP/images/daf-gui-front.png
-    :scale: 40%
+    :scale: 70%
     :align: center
 
 
@@ -23,16 +23,16 @@ We can define :class:`~daf.client.ACCOUNT` objects by clicking on ``Add ACCOUNT`
 
 .. image:: images/gui-new-account-window.png
     :align: center
-    :scale: 40%
+    :scale: 70%
 
-The window is automaticaly generated based on the :class:`~daf.client.ACCOUNT`'s parameter annotations and contains exactly the same
+The window is automatically generated based on the :class:`~daf.client.ACCOUNT`'s parameter annotations and contains exactly the same
 parameters like the core object :class:`~daf.client.ACCOUNT`.
 
 In the toolbar (top) we can observe 3 buttons and one toggle. The **Close** button closes the window and asks the user
 if they want to save the object, while the **Save** does the same thing except it saves the object without user
 confirmation. The toggle **Keep on top** will prevent other windows from covering our definition window.
 
-The **Help** button opens up the documentation and searches for the coresponding object, in our case, the
+The **Help** button opens up the documentation and searches for the corresponding object, in our case, the
 :class:`~daf.client.ACCOUNT` object. You can use this button to gain knowledge about what each **parameter does**
 and which **types it accepts**.
 
@@ -40,10 +40,10 @@ and which **types it accepts**.
     :align: center
 
 
-.. note:: Some datatypes will have additional widgets, such as Color Picker or Datetime select.
+.. note:: Some data types will have additional widgets, such as Color Picker or Datetime select.
 
 In the main frame (below the toolbar) we can see different labels and dropdown menus with one button on the right side.
-These represent the **parameters** of the coresponding objects. These are exactly the same as in the DAF's core library
+These represent the **parameters** of the corresponding objects. These are exactly the same as in the DAF's core library
 - :ref:`Guide (core)`.
 
 
@@ -64,11 +64,11 @@ Depending on the datatype each parameter accepts, we can either:
     :align: center
     :scale: 40%
 
-.. figure:: images/gui-new-item-define-string-window.png
+.. image:: images/gui-new-item-define-string-window.png
     :align: center
     :scale: 40%
 
-    Example new (string) definition window
+
 
 3. Edit a value (selected in the dropdown) by clicking on the button on the right side of the dropdown and clicking
    *Edit selected*, which will open a new definition window for the specific datatype and load in the previously defined
@@ -79,11 +79,10 @@ Depending on the datatype each parameter accepts, we can either:
     :scale: 40%
 
 
-.. figure:: images/gui-new-item-edit-string-window.png
+.. image:: images/gui-new-item-edit-string-window.png
     :align: center
     :scale: 40%
 
-    Example edit (string) definition window
 
 
 After we are satisfied with our definition, we can click *Save* to save the changes into the parent (previous) object.
@@ -105,7 +104,7 @@ For additional information about these see :ref:`Guide (core)` or click the *Hel
 
 .. note::
 
-    To loging with **username** and **password** we can use the coresponding fields in the definition window.
+    To logging with **username** and **password** we can use the corresponding fields in the definition window.
 
     Logging in with username and password happens though the browser and requires additional dependencies which
     can be installed with:
@@ -114,7 +113,7 @@ For additional information about these see :ref:`Guide (core)` or click the *Hel
 
         $ pip install discord-advert-framework[web]
 
-    This is only available on desktop computers and cannot be eg. run on a linux server. It is recommened to obtain the
+    This is only available on desktop computers and cannot be eg. run on a linux server. It is recommended to obtain the
     user token instead unless additional features from the web modules are desired (see :ref:`Web browser (core)`)
 
 
@@ -143,7 +142,7 @@ After successful definition, we can observe a new account added to our accounts 
 
 .. image:: images/gui-defined-accounts-list.png
     :align: center
-    :scale: 40%
+    :scale: 70%
 
 
 If we click the *Start* (on top of the main window), we can observe our account being logged-in and messages being sent
@@ -151,7 +150,7 @@ to the defined guilds and channels.
 
 .. image:: images/gui-started-output-defined-accounts.png
     :align: center
-    :scale: 40%
+    :scale: 70%
 
 .. image:: images/gui-messages-sent-post-acc-definition.png
     :align: center
@@ -163,12 +162,12 @@ Logging definition (GUI)
 We can also define what type of logging DAF will use to log sent messages and the detail of prints inside the
 *Logging* section of the *Schema definition* tab
 
-To select a logger we can select the wanted logger and then click on the *Edit* button,
+To configure a logger we can select the wanted logger and click on the *Edit* button,
 located on the right side of the 1st dropdown menu.
 
 .. image:: images/gui-logger-definition-edit-json.png
     :align: center
-    :scale: 40%
+    :scale: 70%
 
 
 After clicking on *Save*, our logging manager is now defined and will be responsible for logging the data.
@@ -179,9 +178,9 @@ it is considered the most detailed trace configuration.
 
 .. image:: images/gui-logger-definition-tracing.png
     :align: center
-    :scale: 40%
+    :scale: 70%
 
 
-*NORMAL* trace is recommened for most users.
+*NORMAL* trace is recommended for most users.
 
 For more information about logging refer to the core documentation - :ref:`Logging (core)`.
