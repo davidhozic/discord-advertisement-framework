@@ -126,6 +126,9 @@ class SeleniumCLIENT:
         self.driver = None
         self._token = None
 
+    def __str__(self) -> str:
+        return f"{type(self).__name__}(username={self._username})"
+
     def _parse_token(self) -> str:
         """
         Get's the token from local storage.

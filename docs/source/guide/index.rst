@@ -1,14 +1,15 @@
 ==================
 Guide
 ==================
-This section contains the guide to using this framework.
 
+
+The following pages contain guides to running the Discord Advertisement Framework in 2 main modes:
+
+1. Core mode (console)
+2. Graphical mode (GUI)
 
 .. toctree::
 
-    quickstart
-    messages
-    logging
-    modification
-    autogen
-    web
+    GUI/index
+    core/index
+    

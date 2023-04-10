@@ -22,21 +22,30 @@ Links
         - `PyCord Documentation <https://docs.pycord.dev/en/master/>`_
 
 
+.. figure:: ./DEP/images/daf-gui-front.png
+    :width: 15cm
+
+    Graphical interface (GUI)
+
+.. figure:: ./DEP/images/daf-console-run.png
+    :width: 15cm
+
+    Script (for running in console)
+
+
 ----------------------
 Key features
 ----------------------
-- Ability to run on **multiple** accounts at once, either on a personal account or as **normal bot** account.
+- Graphical Interface (GUI) / Console (script)
+- Multi-account support
+- Periodic and scheduled advertisements,
+- Logging and analytics of sent messages (including SQL) - :ref:`Logging (core)`
+- Easy to setup
+- Asynchronous
 
 .. caution::
-    While running this on user accounts is possible, it is :strong:`not recommended` since it is against Discord's ToS.
+    While running this on user accounts is possible, it is against Discord's ToS.
     I am not responsible if your account get's disabled for using self-bots!
-
-- Periodic advertisement to different channels,
-- Login with username/password - :ref:`Automatic login`,
-- Automatic guild discovery and join - :ref:`Automatic guild discovery and join`,
-- Logging of sent messages (including SQL) - :ref:`Logging`
-- Async framework
-- Easy to setup, with minimal code
 
 ----------------------
 Installation
@@ -86,12 +95,9 @@ DAF can be installed though command prompt/terminal using the bottom commands.
                 Install all of the (left) optional dependencies
 
                 - .. code-block:: bash
-                    :caption: SQL logging
+                    :caption: All
 
                     pip install discord-advert-framework[all]
-
-
-
 
 
 ----------------------

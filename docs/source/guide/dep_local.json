@@ -1,0 +1,8 @@
+{
+    "copy": [
+        {"from": "../../../Examples/**", "to":"./core/DEP/"},
+        {"from": "../../../Examples/**", "to":"./GUI/DEP/"},
+        {"from": "../../images/*", "to":"./GUI/DEP/"}
+    ],
+    "scripts": []
+}

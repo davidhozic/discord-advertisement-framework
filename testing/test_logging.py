@@ -20,11 +20,12 @@ async def test_logging_json(channels, guilds, accounts):
     try:
         json_logger = daf.LoggerJSON("./History")
         await json_logger.initialize()
-        daf.logging._set_logger(json_logger)
+        daf.logging._logging._set_logger(json_logger)
 
         guild = daf.GUILD(dc_guild, logging=True)
         await guild.initialize(parent=account)
         guild_context = guild.generate_log_context()
+        account_context = account.generate_log_context()
         await guild.add_message(tm := daf.TextMESSAGE(None, timedelta(seconds=5), data="Hello World", channels=text_channels))
 
         def check_json_results(message_context):
@@ -62,7 +63,7 @@ async def test_logging_json(channels, guilds, accounts):
             await tm.update(data=d)
             result = await tm._send() 
             message_ctx = result.message_context
-            await daf.logging.save_log(guild_context, message_ctx)
+            await daf.logging.save_log(guild_context, message_ctx, account_context)
             check_json_results(message_ctx)
     finally:
         shutil.rmtree("./History", ignore_errors=True)
@@ -81,10 +82,11 @@ async def test_logging_sql(channels, guilds, accounts):
     try:
         sql_logger = daf.LoggerSQL(database="testdb")
         await sql_logger.initialize()
-        daf.logging._set_logger(sql_logger)
+        daf.logging._logging._set_logger(sql_logger)
         guild = daf.GUILD(dc_guild, logging=True)
         await guild.initialize(parent=account)
         guild_context = guild.generate_log_context()
+        account_context = account.generate_log_context()
         await guild.add_message(tm := daf.TextMESSAGE(None, timedelta(seconds=5), data="Hello World", channels=text_channels))
 
         data = [
@@ -97,6 +99,6 @@ async def test_logging_sql(channels, guilds, accounts):
             await tm.update(data=d)
             result = await tm._send()
             message_ctx = result.message_context
-            await daf.logging.save_log(guild_context, message_ctx)
+            await daf.logging.save_log(guild_context, message_ctx, account_context)
     finally:
         os.remove("./testdb.db")

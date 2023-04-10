@@ -1,34 +1,74 @@
 =========================================================
-DAF
+DAF (|version|)
 =========================================================
-.. image:: docs/images/logo.png
-    :width: 100
-    
-The Discord advertisement framework is a  **shilling framework** that allows easy advertising on Discord.
+The Discord advertisement framework is a Python based **shilling framework** that allows easy advertising on Discord.
 
-----------------------
-Other information
-----------------------
-For more information see the project's `Webpage <https://daf.davidhozic.com>`_.
+**Documentation** can be found `here <https://daf.davidhozic.com>`_.
+
+
+.. figure:: ./docs/images/daf-gui-front.png
+    :width: 15cm
+
+    Graphical interface (GUI)
+
+.. figure:: ./docs/images/daf-console-run.png
+    :width: 15cm
+
+    Script (for running in console)
+
 
 ----------------------
 Key features
 ----------------------
-- Ability to run on **multiple** accounts at once, either as a **self-bot** (personal account) or a **normal bot** account.
+- Graphical Interface (GUI) / Console (script)
+- Multi-account support
+- Periodic and scheduled advertisements,
+- Logging and analytics of sent messages (including SQL) - :ref:`Logging (core)`
+- Easy to setup
+- Asynchronous
 
 .. caution::
-    While running this on user accounts is possible, it is :strong:`not recommended` since it is against Discord's ToS.
+    While running this on user accounts is possible, it is against Discord's ToS.
     I am not responsible if your account get's disabled for using self-bots!
 
-- Periodic advertisement to **Direct (Private) Messages**, **Text channels** and **Voice channels**
-- **Automatic guild/channel discovery**
-- Dynamically obtained shill data
-- Error recovery
-- Logging of sent messages (including SQL)
-- Async framework
-- Easy to setup, with minimal code
+----------------------
+Installation
+----------------------
+DAF can be installed though command prompt/terminal using the bottom commands.
 
---------------------
-Basic example
---------------------
-For basic example see `main_send_multiple.py <https://github.com/davidhozic/discord-advertisement-framework/blob/master/Examples/Message%20Types/TextMESSAGE/main_send_multiple.py>`_
+Pre-requirement: `Python (minimum v3.10) <https://www.python.org/downloads/>`_.
+
+**Main package**
+
+.. code-block:: bash
+
+    pip install discord-advert-framework
+
+**Voice**
+            
+.. code-block:: bash
+    :caption: Voice Messaging / AUDIO
+
+    pip install discord-advert-framework[voice]
+
+
+.. code-block:: bash
+    :caption: Proxy support
+
+    pip install discord-advert-framework[proxy]
+
+**SQL**
+            
+.. code-block:: bash
+    :caption: SQL logging
+
+    pip install discord-advert-framework[sql]
+
+
+            
+Install all of the (left) optional dependencies
+
+.. code-block:: bash
+    :caption: All
+
+    pip install discord-advert-framework[all]

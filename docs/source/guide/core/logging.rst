@@ -1,5 +1,5 @@
 ====================
-Logging
+Logging (core)
 ====================
 
 .. |PK| replace:: **[Primary Key]**
@@ -55,14 +55,14 @@ All logs will contain keys:
   + :py:meth:`daf.message.DirectMESSAGE.generate_log_context`
 
 .. seealso:: 
-    :download:`Example structure <../DEP/Examples/Logging/JSON files/History/2022/05/23/#David's dungeon.json>`
+    :download:`Example structure <./DEP/Examples/Logging/JSON files/History/2022/05/23/#David's dungeon.json>`
 
 
 .. only:: html
 
     JSON code example
     -----------------
-    .. literalinclude:: ../DEP/Examples/Logging/JSON files/main_rickroll.py
+    .. literalinclude:: ./DEP/Examples/Logging/JSON files/main_rickroll.py
         :language: python
         :caption: Code to produce JSON logs
         
@@ -102,14 +102,14 @@ The structure contains the following attributes:
     Attributes marked with ``(json)`` are the same as in :ref:`JSON Logging (file)`
 
 .. seealso::
-    :download:`Structure example <../DEP/Examples/Logging/CSV files/History/2022/09/22/David's py dungeon.csv>`
+    :download:`Structure example <./DEP/Examples/Logging/CSV files/History/2022/09/22/David's py dungeon.csv>`
 
 
 .. only:: html
 
     CSV code example
     -----------------
-    .. literalinclude:: ../DEP/Examples/Logging/CSV files/main_rickroll.py
+    .. literalinclude:: ./DEP/Examples/Logging/CSV files/main_rickroll.py
         :language: python
         :caption: Code to produce JSON logs
         
@@ -120,32 +120,16 @@ The structure contains the following attributes:
 
 Relational Database Log (SQL)
 ================================
-.. versionadded:: v1.9
+.. versionchanged:: v2.6
 
-.. versionchanged:: v2.1
-    
-    .. card::
-        
-        Turned into an optional feature.
-        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-        .. code-block:: bash
-            
-            pip install discord-advert-framework[sql]
-
-.. versionchanged:: v2.2
-
-    .. card::
-
-        :Additional dialect support: Microsoft SQL Server, PostgreSQL, MariaDB/MySQL, SQLite
-        :Better Caching: Improved caching to significantly increase logging speed
-        :asynchronous: All of the SQL connectors except MS SQL Server are asynchronous.
+    Added author parameter to :ref:`MessageLOG`
 
 
 This type of logging enables saving logs to a remote server inside the database.
 In addition to being smaller in size, database logging takes up less space and it allows easier data analysis.
 
 
-.. figure:: images/sql_logging_process.drawio.svg
+.. figure:: ./images/sql_logging_process.drawio.svg
 
     SQL Logging diagram
 
@@ -167,7 +151,7 @@ For daf to use SQL logging, you need to pass the :func:`~daf.core.run` function 
 
 .. only:: html
 
-    .. literalinclude:: ../DEP/Examples/Logging/SQL Logging/rolls.py
+    .. literalinclude:: ./DEP/Examples/Logging/SQL Logging/rolls.py
         :language: python
         
 
@@ -184,7 +168,18 @@ Features
 
 ER diagram
 --------------------------------
-.. image:: images/sql_er.drawio.svg
+.. image:: ./images/sql_er.drawio.svg
+    :width: 1440
+
+
+
+Analysis
+-------------------------------
+The :class:`~daf.logging.sql.LoggerSQL` provides some methods for data analysis:
+
+- :py:meth:`~daf.logging.sql.LoggerSQL.analytic_get_num_messages`
+- :py:meth:`~daf.logging.sql.LoggerSQL.analytic_get_message_log`
+
 
 Tables
 --------------------------------
@@ -199,13 +194,12 @@ MessageLOG
   - |PK| id: Integer  - This is an internal ID of the log inside the database.
   - sent_data: Integer - Foreign key pointing to a row inside the :ref:`DataHISTORY` table.
   - message_type: SmallInteger - Foreign key ID pointing to a entry inside the :ref:`MessageTYPE` table.
-  - guild_id: Integer -  Foreign key pointing to :ref:`GuildUSER` table.
+  - guild_id: Integer -  Foreign key pointing to :ref:`GuildUSER` table, represents guild id of guild the message was sent into.
+  - author_id: Integer -  Foreign key pointing to :ref:`GuildUSER` table, represents the author account of the message.
   - message_mode: SmallInteger - Foreign key pointing to :ref:`MessageMODE` table. This is non-null only for :ref:`DirectMESSAGE`.
   - dm_reason: String -  If MessageTYPE is not DirectMESSAGE or the send attempt was successful, this is NULL, otherwise it contains the string representation of the error that caused the message send attempt to be unsuccessful.
   - timestamp: DateTime - The timestamp of the message send attempt.
   
-
-
 
 DataHISTORY
 ~~~~~~~~~~~~~~~~~~~~
@@ -232,7 +226,7 @@ MessageTYPE
 GuildUSER
 ~~~~~~~~~~~~~~~~~~~~
 :Description:
-    The table contains all the guilds/users the framework ever generated a log for.
+    The table contains all the guilds/users the framework ever generated a log for and all the authors.
 
 :Attributes:
   - |PK| id: Integer - Internal ID of the Guild/User inside the database.

@@ -3,7 +3,7 @@
     related to the console debug long or trace.
 """
 from typing import Union, Optional
-from enum import IntEnum, auto
+from enum import Enum, auto
 from threading import Lock
 from datetime import datetime
 from sys import _getframe
@@ -27,7 +27,7 @@ C_TRACE_FORMAT = "[{date}] ({level}) | {module}: {message} ({reason})"
 
 @document_enum
 @misc.doc_category("Logging reference")
-class TraceLEVELS(IntEnum):
+class TraceLEVELS(Enum):
     """
     Levels of trace for debug.
 
@@ -57,6 +57,9 @@ class TraceLEVELS(IntEnum):
     """
     Show deprecations, errors, warnings, info messages, debug messages.
     """
+
+    def __ge__(self, __value: "TraceLEVELS") -> bool:
+        return self.value >= __value.value
 
 
 TRACE_COLOR_MAP = {

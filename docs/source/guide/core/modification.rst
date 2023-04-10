@@ -1,6 +1,6 @@
-=========================
-Dynamic modification
-=========================
+=============================
+Dynamic modification (core)
+=============================
 This document describes how the framework can be modified dynamically.
 
 
@@ -68,7 +68,7 @@ The function can be used to add the following object types:
 
 .. only:: html
 
-    .. literalinclude:: ../DEP/Examples/Dynamic Modification/main_add_object.py
+    .. literalinclude:: ./DEP/Examples/Dynamic Modification/main_add_object.py
         :language: python
 
 
@@ -80,7 +80,7 @@ Objects can be removed with the :func:`daf.core.remove_object`.
 
 .. only:: html
 
-    .. literalinclude:: ../DEP/Examples/Dynamic Modification/main_remove_object.py
+    .. literalinclude:: ./DEP/Examples/Dynamic Modification/main_remove_object.py
         :language: python
 
 
@@ -123,13 +123,13 @@ in the following way:
 For a full list of objects that support ``.update`` search ".update" in the search bar 
 **or click on the image below**.
 
-.. image:: images/search_update_method.png
+.. image:: ./images/search_update_method.png
     :target: ../search.html?q=.update&check_keywords=yes&area=default 
 
 
 .. only:: html
     
-    .. literalinclude:: ../DEP/Examples/Dynamic Modification/main_update.py
+    .. literalinclude:: ./DEP/Examples/Dynamic Modification/main_update.py
         :language: python
         
 

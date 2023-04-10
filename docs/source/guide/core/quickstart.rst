@@ -1,8 +1,8 @@
 
 ======================
-Quickstart
+Quickstart (core)
 ======================
-This page contains information to quickly getting started.
+This page contains information to quickly getting started with the core.
 
 The first thing you need is the library installed, see :ref:`Installation`.
 
@@ -25,7 +25,7 @@ Function :func:`~daf.core.run` accepts many parameters but there is only one tha
 
     The below example shows a minimum definition of the accounts list. 
     For information about parameters with specific object, please use the search bar or 
-    refer to the :ref:`Programming Reference`.
+    refer to the :ref:`API reference`.
 
 
     .. seealso::

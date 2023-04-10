@@ -1,0 +1,146 @@
+{
+  "loggers": {
+    "all": [
+      {
+        "type": "daf.logging.sql.LoggerSQL",
+        "data": {}
+      },
+      {
+        "type": "daf.logging._logging.LoggerCSV",
+        "data": {}
+      },
+      {
+        "type": "daf.logging._logging.LoggerJSON",
+        "data": {
+          "path": "./OutputPath/"
+        }
+      }
+    ],
+    "selected_index": 2
+  },
+  "tracing": 3,
+  "accounts": [
+    {
+      "type": "daf.client.ACCOUNT",
+      "data": {
+        "token": "DSNDASDJHSAKJDHASIKLJHDASKJLGDASJKHDFGAKSJHDFGKJAHSFDAKSJH",
+        "is_user": false,
+        "servers": [
+          {
+            "type": "daf.guild.GUILD",
+            "data": {
+              "snowflake": 863071397207212052,
+              "messages": [
+                {
+                  "type": "daf.message.text_based.TextMESSAGE",
+                  "data": {
+                    "start_period": null,
+                    "end_period": {
+                      "type": "datetime.timedelta",
+                      "data": {
+                        "seconds": 10.0
+                      }
+                    },
+                    "data": {
+                      "type": "_discord.embeds.Embed",
+                      "data": {
+                        "title": "Test Embed Title",
+                        "type": "rich",
+                        "description": "This is a test embedded message description.",
+                        "timestamp": {
+                          "type": "datetime.datetime",
+                          "data": {
+                            "year": 2023,
+                            "month": 4,
+                            "day": 2
+                          }
+                        },
+                        "fields": [
+                          {
+                            "type": "_discord.embeds.EmbedField",
+                            "data": {
+                              "name": "Field1",
+                              "value": "Value1"
+                            }
+                          },
+                          {
+                            "type": "_discord.embeds.EmbedField",
+                            "data": {
+                              "name": "Field2",
+                              "value": "Value2"
+                            }
+                          },
+                          {
+                            "type": "_discord.embeds.EmbedField",
+                            "data": {
+                              "name": "Field3",
+                              "value": "Value3"
+                            }
+                          },
+                          {
+                            "type": "_discord.embeds.EmbedField",
+                            "data": {
+                              "name": "Field4",
+                              "value": "Value4",
+                              "inline": true
+                            }
+                          },
+                          {
+                            "type": "_discord.embeds.EmbedField",
+                            "data": {
+                              "name": "Field5",
+                              "value": "Value5",
+                              "inline": true
+                            }
+                          },
+                          {
+                            "type": "_discord.embeds.EmbedField",
+                            "data": {
+                              "name": "Field6",
+                              "value": "Value6",
+                              "inline": true
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    "channels": {
+                      "type": "daf.message.base.AutoCHANNEL",
+                      "data": {
+                        "include_pattern": "shill",
+                        "interval": {
+                          "type": "datetime.timedelta",
+                          "data": {
+                            "seconds": 5.0
+                          }
+                        }
+                      }
+                    },
+                    "mode": "send",
+                    "remove_after": {
+                      "type": "datetime.datetime",
+                      "data": {
+                        "year": 2025,
+                        "month": 1,
+                        "day": 1
+                      }
+                    }
+                  }
+                }
+              ],
+              "logging": true,
+              "remove_after": {
+                "type": "datetime.datetime",
+                "data": {
+                  "year": 2023,
+                  "month": 4,
+                  "day": 26
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

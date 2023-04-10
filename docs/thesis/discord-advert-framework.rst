@@ -149,7 +149,7 @@ It also supports automatic guild definition based on regex and can join guilds a
 Channels can also be managed manually by using :class:`~daf.message.AutoCHANNEL` objects.
 For more information about automatic shilling see :ref:`Automatic generation` .
 
-Individual classes and function descriptions can be found on :ref:`Programming Reference` .
+Individual classes and function descriptions can be found on :ref:`API reference` .
 
 Additional guide is available on :ref:`Guide` .
 
