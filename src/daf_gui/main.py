@@ -20,9 +20,11 @@ import webbrowser
 try:
     from .widgets import *
     from .convert import *
+    from .dpi import *
 except ImportError:
     from widgets import *
     from convert import *
+    from dpi import *
 
 
 WIN_UPDATE_DELAY = 0.005
@@ -43,6 +45,9 @@ class Application():
     def __init__(self) -> None:
         # Window initialization
         win_main = ttk.Window(themename="cosmo")
+        dpi_5 = dpi_scaled(5)
+        # DPI
+        set_dpi(win_main.winfo_fpixels('1i'))
         # path = os.path.join(os.path.dirname(__file__), "img/logo.png")
         # photo = tk.PhotoImage(file=path)
         # win_main.iconphoto(True, photo)
@@ -58,7 +63,7 @@ class Application():
 
         # Toolbar
         self.frame_toolbar = ttk.Frame(self.win_main)
-        self.frame_toolbar.pack(fill=tk.X, side="top", padx=5, pady=5)
+        self.frame_toolbar.pack(fill=tk.X, side="top", padx=dpi_5, pady=dpi_5)
         self.bnt_toolbar_start_daf = ttk.Button(self.frame_toolbar, text="Start", command=self.start_daf)
         self.bnt_toolbar_start_daf.pack(side="left")
         self.bnt_toolbar_stop_daf = ttk.Button(self.frame_toolbar, text="Stop", state="disabled", command=self.stop_daf)
@@ -95,8 +100,10 @@ class Application():
 
     def init_schema_tab(self):
         self.objects_edit_window = None
+        dpi_10 = dpi_scaled(10)
+        dpi_5 = dpi_scaled(5)
 
-        tab_schema = ttk.Frame(self.tabman_mf, padding=(10, 10))
+        tab_schema = ttk.Frame(self.tabman_mf, padding=(dpi_10, dpi_10))
         self.tabman_mf.add(tab_schema, text="Schema definition")
 
         # Object tab file menu
@@ -109,10 +116,12 @@ class Application():
         bnt_file_menu.pack(anchor=tk.W)
 
         # Object tab account tab
-        frame_tab_account = ttk.Labelframe(tab_schema, text="Accounts", padding=(10, 10), bootstyle="primary")
-        frame_tab_account.pack(side="left", fill=tk.BOTH, expand=True, pady=10, padx=5)
+        frame_tab_account = ttk.Labelframe(
+            tab_schema,
+            text="Accounts", padding=(dpi_10, dpi_10), bootstyle="primary")
+        frame_tab_account.pack(side="left", fill=tk.BOTH, expand=True, pady=dpi_10, padx=dpi_5)
 
-        frame_account_bnts = ttk.Frame(frame_tab_account, padding=(0, 10))
+        frame_account_bnts = ttk.Frame(frame_tab_account, padding=(0, dpi_10))
         frame_account_bnts.pack(fill=tk.X)
         self.bnt_add_object = ttk.Button(
             frame_account_bnts,
@@ -129,10 +138,10 @@ class Application():
         self.lb_accounts.pack(fill=tk.BOTH, expand=True)
 
         # Object tab account tab logging tab
-        frame_logging = ttk.Labelframe(tab_schema, padding=(10, 10), text="Logging", bootstyle="primary")
+        frame_logging = ttk.Labelframe(tab_schema, padding=(dpi_10, dpi_10), text="Logging", bootstyle="primary")
         label_logging_mgr = ttk.Label(frame_logging, text="Selected logger:")
         label_logging_mgr.pack(anchor=tk.N)
-        frame_logging.pack(side="left", fill=tk.BOTH, expand=True, pady=10, padx=5)
+        frame_logging.pack(side="left", fill=tk.BOTH, expand=True, pady=dpi_10, padx=dpi_5)
 
         frame_logger_select = ttk.Frame(frame_logging)
         frame_logger_select.pack(fill=tk.X)
@@ -186,6 +195,8 @@ class Application():
         sys.stdout = STDIOOutput()
 
     def init_credits_tab(self):
+        dpi_10 = dpi_scaled(10)
+        dpi_30 = dpi_scaled(30)
         logo_img = Image.open(f"{os.path.dirname(__file__)}/img/logo.png")
         logo_img = logo_img.resize(
             (self.win_main.winfo_screenwidth() // 8, self.win_main.winfo_screenwidth() // 8),
@@ -195,25 +206,27 @@ class Application():
         self.tab_info = ttk.Frame(self.tabman_mf)
         self.tabman_mf.add(self.tab_info, text="About")
         info_bnts_frame = ttk.Frame(self.tab_info)
-        info_bnts_frame.pack(pady=30)
+        info_bnts_frame.pack(pady=dpi_30)
         ttk.Button(info_bnts_frame, text="Github", command=lambda: webbrowser.open(GITHUB_URL)).grid(row=0, column=0)
         ttk.Button(
             info_bnts_frame,
             text="Documentation",
             command=lambda: webbrowser.open(DOC_URL)
         ).grid(row=0, column=1)
-        ttk.Label(self.tab_info, text="Like the app? Give it a star :) on GitHub (^)").pack(pady=10)
+        ttk.Label(self.tab_info, text="Like the app? Give it a star :) on GitHub (^)").pack(pady=dpi_10)
         ttk.Label(self.tab_info, text=CREDITS_TEXT).pack()
         label_logo = ttk.Label(self.tab_info, image=logo)
         label_logo.image = logo
         label_logo.pack()
 
     def init_analytics_tab(self):
-        tab_analytics = ttk.Frame(self.tabman_mf, padding=(10, 10))
+        dpi_10 = dpi_scaled(10)
+        dpi_5 = dpi_scaled(5)
+        tab_analytics = ttk.Frame(self.tabman_mf, padding=(dpi_10, dpi_10))
         self.tabman_mf.add(tab_analytics, text="Analytics")
 
         # Message log
-        frame_msg_history = ttk.Labelframe(tab_analytics, padding=(10, 10), text="Messages", bootstyle="primary")
+        frame_msg_history = ttk.Labelframe(tab_analytics, padding=(dpi_10, dpi_10), text="Messages", bootstyle="primary")
         frame_msg_history.pack(fill=tk.BOTH, expand=True)
 
         frame_combo_messages = ComboEditFrame(
@@ -225,7 +238,7 @@ class Application():
         self.frame_combo_messages = frame_combo_messages
 
         frame_msg_history_bnts = ttk.Frame(frame_msg_history)
-        frame_msg_history_bnts.pack(fill=tk.X, pady=10)
+        frame_msg_history_bnts.pack(fill=tk.X, pady=dpi_10)
         ttk.Button(
             frame_msg_history_bnts,
             text="Get logs",
@@ -244,7 +257,7 @@ class Application():
         self.lst_message_log = lst_messages
 
         # Number of messages
-        frame_num_msg = ttk.Labelframe(tab_analytics, padding=(10, 10), text="Number of messages", bootstyle="primary")
+        frame_num_msg = ttk.Labelframe(tab_analytics, padding=(dpi_10, dpi_10), text="Number of messages", bootstyle="primary")
         frame_combo_num_messages = ComboEditFrame(
             self.edit_analytics_num_msg,
             ObjectInfo(daf.logging.LoggerBASE.analytic_get_num_messages, {}),
@@ -273,9 +286,9 @@ class Application():
             frame_num_msg,
             text="Calculate",
             command=lambda: self._async_queue.put_nowait(self.analytics_load_num_msg())
-        ).pack(anchor=tk.W, pady=10)
+        ).pack(anchor=tk.W, pady=dpi_10)
 
-        frame_num_msg.pack(fill=tk.BOTH, expand=True, pady=5)
+        frame_num_msg.pack(fill=tk.BOTH, expand=True, pady=dpi_5)
         tw_num_msg.pack(expand=True, fill=tk.BOTH)
 
         self.tw_num_msg = tw_num_msg

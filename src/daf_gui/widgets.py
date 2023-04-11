@@ -5,8 +5,10 @@ from enum import Enum
 
 try:
     from .convert import *
+    from .dpi import *
 except ImportError:
     from convert import *
+    from dpi import *
 
 
 import _discord as discord
@@ -277,10 +279,12 @@ class ObjectEditWindow(ttk.Toplevel):
         super().__init__(*args, **kwargs)
         self._closed = False
 
+        dpi_5 = dpi_scaled(5)
+
         # Elements
         self.opened_frames = []
-        self.frame_main = ttk.Frame(self, padding=(5, 5))
-        self.frame_toolbar = ttk.Frame(self, padding=(5, 5))
+        self.frame_main = ttk.Frame(self, padding=(dpi_5, dpi_5))
+        self.frame_toolbar = ttk.Frame(self, padding=(dpi_5, dpi_5))
         ttk.Button(self.frame_toolbar, text="Close", command=self.close_object_edit_frame).pack(side="left")
         ttk.Button(self.frame_toolbar, text="Save", command=self.save_object_edit_frame).pack(side="left")
 
@@ -427,6 +431,7 @@ class NewObjectFrame(ttk.Frame):
         frame_toolbar.pack(fill=tk.X)
 
     def init_structured(self, annotations: dict):
+        dpi_5 = dpi_scaled(5)
         annotations.pop("return", None)
 
         for (k, v) in annotations.items():
@@ -444,7 +449,7 @@ class NewObjectFrame(ttk.Frame):
 
             w = combo = ComboBoxObjects(frame_annotated)
             bnt_menu.pack(side="right")
-            combo.pack(fill=tk.X, side="right", expand=True, padx=5, pady=5)
+            combo.pack(fill=tk.X, side="right", expand=True, padx=dpi_5, pady=dpi_5)
 
             last_list_type = None
             for entry_type in entry_types:
