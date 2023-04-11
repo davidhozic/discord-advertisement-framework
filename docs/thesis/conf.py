@@ -17,6 +17,9 @@ import sys
 sys.path.insert(0, os.path.abspath('../../src/'))
 sys.path.insert(0, os.path.abspath('.'))
 
+LANGUAGE = os.environ["LANGUAGE"]
+
+root_doc = f"{LANGUAGE}/index"
 
 # -- Project information -----------------------------------------------------
 project = 'Discord Advertisement Framework'
@@ -34,7 +37,6 @@ else:
 
 
 # -- General configuration ---------------------------------------------------
-root_doc = 'index'
 
 numfig = True
 # Add any Sphinx extension module names here, as strings. They can be
@@ -114,7 +116,7 @@ html_theme_options = {
 }
 
 # ----------- Latex ----------- #
-with open("titlepage.tex", "r", encoding="utf-8") as reader:
+with open(f"./{LANGUAGE}/titlepage.tex", "r", encoding="utf-8") as reader:
     latex_title_page = reader.read()
 
 # latex_engine = 'xelatex'

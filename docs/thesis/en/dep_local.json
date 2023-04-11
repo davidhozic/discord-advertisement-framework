@@ -1,0 +1,11 @@
+{
+    "copy": [
+        {"from": "../../images/logo.png", "to": "./DEP/"},
+        {"from": "../../source/guide/core/images/sql*", "to": "./DEP/"},
+        {"from": "../../source/guide/core/images/logging*", "to": "./DEP/"},
+        {"from": "../../source/dep_local.json", "to": "./DEP/_dep_local.json"},
+        {"from": "../scripts/*", "to": "./DEP/"},
+        {"from": "../sources.json", "to": "./DEP/sources.json"}
+    ],
+    "scripts": ["./DEP/scripts/generate_lit.py"]
+}

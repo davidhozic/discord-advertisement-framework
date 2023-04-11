@@ -7,6 +7,7 @@ SPHINXOPTS    ?=
 SPHINXBUILD   ?= sphinx-build
 SOURCEDIR     ?= source
 BUILDDIR      ?= build
+USE_LANGUAGE  ?= en
 
 
 # Put it first so that "make" without argument is like "make help".
@@ -25,6 +26,8 @@ clean:
 pdf: latex
 	docker run --rm -v $(CURDIR)/build/latex:/home/ -w /home/ texlive/texlive make all-pdf
 
+
+export LANGUAGE=$(USE_LANGUAGE)
 
 %: Makefile
 	python3 ./setup.py

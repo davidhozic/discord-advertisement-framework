@@ -75,7 +75,7 @@ In some directories, files named "dep_local.json" can be found. These are setup 
 that contain a list of files to copy and scripts to run before building the documentation.
 For example the ``/project root/docs/source/dep_local.json`` directory has the following dictionary:
 
-.. literalinclude:: DEP/source/_dep_local.json
+.. literalinclude:: DEP/_dep_local.json
     :caption: Documentation setup file (dep_local.json)
 
 The above file tells the setup.py script to copy DAF's logo to a local ``DEP/`` folder and run the script

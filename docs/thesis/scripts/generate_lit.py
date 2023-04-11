@@ -7,7 +7,7 @@ import os
 import json
 
 
-OUTPUT_FILE = "../thesis_lit.rst"
+OUTPUT_FILE = "../../thesis_lit.rst"
 SOURCES_FILE = "../sources.json"
 
 

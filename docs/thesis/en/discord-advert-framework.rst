@@ -255,7 +255,7 @@ Logging is handled thru logging manager objects and it supports 3 different logg
 3. SQL logging (multiple dialects) - :class:`daf.logging.LoggerSQL`
 
 
-.. figure:: ./DEP/source/guide/images/logging_process.drawio.svg
+.. figure:: ./DEP/source/guide/core/images/logging_process.drawio.svg
     :width: 300
 
     Logging layer flow diagram
