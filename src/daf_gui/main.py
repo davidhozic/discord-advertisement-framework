@@ -45,9 +45,10 @@ class Application():
     def __init__(self) -> None:
         # Window initialization
         win_main = ttk.Window(themename="cosmo")
-        dpi_5 = dpi_scaled(5)
+
         # DPI
         set_dpi(win_main.winfo_fpixels('1i'))
+        dpi_5 = dpi_scaled(5)
         # path = os.path.join(os.path.dirname(__file__), "img/logo.png")
         # photo = tk.PhotoImage(file=path)
         # win_main.iconphoto(True, photo)
