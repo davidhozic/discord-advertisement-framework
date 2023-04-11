@@ -1,0 +1,199 @@
+===================
+Discord
+===================
+
+.. _`Developer mode`: https://support.discord.com/hc/en-us/articles/206346498-Where-can-I-find-my-User-Server-Message-ID-
+
+.. _`API Reference`: https://discord.com/developers/docs/topics/opcodes-and-status-codes
+
+Projekt se fokusira na oglaševanje po Discordu-u in za to da bi bil preostanek diplomskega dela bolj razumljiv, to poglavje
+vsebuje nekaj informacij o Discord-u - Osnovne informacije, kako je nastal in kako deluje.
+
+Kaj je Discord
+==================
+Discord je bil ustvarjen leta 2015 s strani Discord Inc (prej znan kot Hammer & Chisel), studia za razvoj iger, ki sta ga ustanovila Jason Citron in Stanislav Vishnevskiy.
+Platforma je bila zasnovana kot orodje za komunikacijo med igralci, posebej kot način, da se lahko igralci med seboj pogovarjajo med igranjem iger na spletu.
+
+Zamisel za Discord je izvirala iz Citronove osebne izkušnje kot igralca računalniških igric.
+Opazil je, da so mnoga obstoječa orodja za komunikacijo (Skype, TeamSpeak) za igralce zastarela in težko uporabna,
+in želel je ustvariti bolj uporabniku prijazno platformo, ki bi igralcem omogočila enostavno komuniciranje med seboj med igranjem iger.
+
+Discord se je od takrat razvil v več kot samo orodje za komunikacijo med igralci in postal priljubljena platforma za skupnosti vseh vrst, da se povežejo in komunicirajo.
+Uporabljajo ga milijoni po vsem svetu za vse od igranja iger do izobraževanja in druženja.
+
+Discord je priljubljena komunikacijska platforma, ki uporabnikom omogoča komuniciranje preko glasovnega, video in besedilnega klepeta.
+Discord se pogosto uporablja za različne namene, vključno z razpravljanjem o umetniških projektih, načrtovanjem družinskih izletov, iskanjem pomoči pri domačih nalogah in nudenjem podpore za duševno zdravje.
+Prav tako ima dobro funkcijo iskanja za iskanje vsebine, ki je bila nekoč objavljena, kar je koristno, na primer, pri iskanju roka izpita, ki ga je nekdo objavil pred mesecem dni.
+
+Čeprav lahko Discord služi kot dom skupnostim vseh velikosti, je še posebej priljubljen med manjšimi, aktivnimi skupinami, ki med seboj pogosto komunicirajo.
+Večina strežnikov Discord je zasebnih in zahtevajo povabilo za vstop, kar omogoča prijateljem in skupnostim, da ostanejo povezani.
+Vendar pa obstajajo tudi večje, bolj javne skupnosti, osredotočene na določene teme, kot so priljubljene videoigre
+ali pa, kot v primeru te naloge, stvari, kot so blockchain in NFT.
+Uporablja se lahko tudi kot skupnost fakultete / šole, kjer študenti lahko govorijo preko glasovnih kanalov, delijo študijske materiale
+in postavljajo vprašanja o gradivu, ki ga ne razumejo.
+Nekaj primerov skupnosti Discord, povezanih s Univerzo v Ljubljani:
+
+- :ref:`Student council of Faculty of Electrical Engineering (ŠSFE) <ssfe-community-fig>`,
+- :ref:`FE UNI <fe-uni-community-fig>` ,
+- FE VSŠ,
+- FRI UNI,
+- ...
+
+
+.. figure:: ./DEP/images/discord_logo.svg
+    :width: 400
+
+    Discord brand
+
+
+.. _ssfe-community-fig:
+.. figure:: ./DEP/images/ssfe_discord.png
+    :width: 400
+
+    ŠSFE Discord community
+
+
+.. _fe-uni-community-fig:
+.. figure:: ./DEP/images/feuni_discord.png
+    :width: 400
+
+    FE UNI Discord community
+
+
+.. raw:: latex
+
+    \newpage
+
+
+Discordova struktura
+======================
+
+.. figure:: ./DEP/images/discord_client_struct.drawio.png
+
+    Struktura aplikacije
+
+Discord klient je aplikacija, prek katere lahko uporabniki komunicirajo.
+V jedru je sestavljena iz gumba za direktna (osebna) sporočila, seznama cehov, seznama kanalov in seznama uporabnikov,
+ki so pridruženi v ceh.
+Obstajata dve vrsti računov, ki sta lahko v cehu:
+
+1. Uporabniški računi
+2. Avtomatizirani (robotski) računi
+
+Discordovi pogoji uporabe prepovedujejo avtomatiziranje uporabniških računov.
+
+
+Vloge
+--------------
+Discord ima pravice narejene po principu vlog, kjer vsaka vloga določa katere pravice bo posamezen uporabnik imel v
+cehu in kanalu. Uporabne so npr. za skrivanje šolskih kanalov tretjih letnikov v primeru da je nek uporavnik drugi letnik.
+
+
+Kanali
+---------------
+Discord ima tri vrste kanalov:
+
+1. Tekstovni kanali - kanali za pisanje besedila v cehu,
+2. Glasovni kanali - kanali za govor in predvajanje glasbe
+3. Direktna sporočila - Kanali za pogovor (tekstovno ali glasovno) z enim samim uporabnikom.
+
+Tekstovni kanali se nahajo v cehih in se jih lahko prepozna glede na simbol *#*, ki se nahaja pred imenom vsakega
+kanala. Sem lahko pošiljate navaden tekst, emotikone, nalepke in darila ter, v primeru da imate avtomatiziran račun,
+lahko pošiljate tudi tako imenovana vgrajena sporočila (*Embedded messages*), ki so malo bolj formatirana sporočila
+znotraj nekakšne škatle - pogosto se jih uporablja za oglase.
+
+.. figure:: ./DEP/images/discord_text_channel.png
+
+    Discord tekstovni kanal
+
+Tako kot se tekstovni kanali lahko uporabljajo za pošiljanje tekstovnih sporočil, se analogno lahko v glasovne kanale
+lahko pošilja glasovna sporočila oz. se lahko v njih pogovarja preko mikrofona ali pa predvaja glasbo.
+Za samo oglaševanja te kanali niso tako aktualni, saj bi vaše oglase lahko prejeli le uporabniki, ki so v času
+oglaševanja v kanalu.
+
+
+.. figure:: ./DEP/images/discord_voice_channel.png
+
+    Discord glasovni kanal
+
+
+Direktna oz. osebna sporočila so za razliko od zgornjih kanalov, namenjena komuniciranju z enim samin uporabnikom.
+Sem noter sta všteta tekstovni kanal uporabnika ter tudi glasovna komunikacija. V zvezi z *Shillingom* oz. vsiljivega
+oglaševanja so te najbližje vsiljivi kategoriji, vendar je to prepovedano v pogojih uporabe Discord-a in v primeru
+prevelikega in hitrega oglaševanja v direktna sporočila, lahko Discord ukine vaš račun.
+
+.. figure:: ./DEP/images/discord_direct_message_channel.png
+
+    Discord direktna sporočila
+
+
+
+Oglaševanje v Discord
+==========================
+Kot je bilo razloženo v :ref:`Shilling`, je *shilling* vrsta oglaševanja.
+V Discord se lahko oglašuje ročno ali pa avtomatično z primernim orodjem.
+
+
+Ročno oglaševanje
+---------------------
+Ročno oglaševanje vključuje pisanje vašega oglasa, ustvarjanje računov, iskanje cehov in večkratno periodično pošiljanje
+sporočil v kanale oz. v direktna sporočila posameznih uporabnikov.
+
+
+Generiranje vsebine
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+Oglaševalsko vsebino se lahko napiše na pamet iz glave ali pa se uporabi malo bolj sofisticirana orodja, kot je to 
+GPT (*Generative pretrained transformer*).
+
+GPT-3 je najsodobnejši jezikovni model umetne inteligence, ki ga je razvilo podjetje OpenAI.
+Ima sposobnost generiranja besedila, ki se zdi človeško in opravljanja različnih nalog, kot so prevajanje, povzemanje in odgovarjanje na vprašanja.
+GPT-3 je največji in najmočnejši jezikovni model do danes, s kapaciteto 175 milijard parametrov.
+Prislužil si je pozornost tako raziskovalcev kot industrijskih strokovnjakov zaradi svojih impresivnih sposobnosti in potencialnih aplikacij.
+
+Za referenco, zgornji odstavek je zgeneriral GPT-3 sam.
+
+
+Za generacijo oglaševalske vsebina lahko npr. GPT-ju podamo slednjo zahtevo:
+
+*"Write advertisement for my White Rabbit NFT project which came out in 2023. 
+We have over 9000 different NFT available for purchase. Talk about the limited Gray Rabbit NFT (only 50 available). Get additional information here www.mynft.domain"*
+
+in njegov rezultat bo:
+
+*"Attention all NFT collectors and art enthusiasts!
+We are excited to announce the launch of our White Rabbit NFT project, featuring over 9000 unique and one-of-a-kind digital art pieces. But that's not all - we have a special edition of limited Gray Rabbit NFTs available for purchase, with only 50 available worldwide.
+Don't miss out on the opportunity to own a piece of digital art history. These Gray Rabbit NFTs are sure to become highly sought after and increase in value over time.
+But act fast - there are only 50 available, and once they're gone, they're gone for good.
+For more information and to purchase your own Gray Rabbit NFT, visit www.mynft.domain. Don't wait - add one of these rare and valuable NFTs to your collection today!"*
+
+Ko imate oglaševalsko vsebino jo samo prepošiljate po vseh kanalih.
+
+.. figure:: ./DEP/images/chatgpt.png
+    :width: 400
+
+    Primer Chat-GPT
+
+
+Finding guilds to shill into
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Once you have your advertisement content, you need to find your guilds, that you want to shill into.
+A good place to find the servers would be simply searching the web for websites that have a list of different
+servers and allows searching for guilds by name / category.
+
+A good example for finding guilds (servers), would actually be Discord itself, as they hold a list of certain servers, but for a server to be eligible 
+for discovery on Discord, it needs to have at least 1000 members, meaning that the servers you can join directly from Discord's website, 
+probably have some protection against shilling and they probably don't allow it.
+
+Another, probably better, example would be website `Top.GG <https://top.gg>`_, which besides holding a list of servers,
+also holds a list of public Discord bots, but that is not relevant for the purposes of this thesis.
+Top.gg has a search bar with various parameters you can use to find your servers, to find NFT servers, it can be used
+to simply search for "NFT".
+
+After finding all the guilds, you would join all the guilds and find the channels appropriate to shill into
+(without the owners kicking / banning you). These channels are usually named *shill, shilling, advertising, self-promo, ...*.
+
+.. figure:: ./DEP/images/topgg_find_servers.png
+    :width: 400
+
+    Top.GG server discovery
+

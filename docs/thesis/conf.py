@@ -17,9 +17,12 @@ import sys
 sys.path.insert(0, os.path.abspath('../../src/'))
 sys.path.insert(0, os.path.abspath('.'))
 
-LANGUAGE = os.environ["LANGUAGE"]
+language = os.environ["language"]
 
-root_doc = f"{LANGUAGE}/index"
+root_doc = f"{language}/index"
+exclude_patterns = ["sl/**", "en/**"]
+
+exclude_patterns.remove(f"{language}/**")
 
 # -- Project information -----------------------------------------------------
 project = 'Discord Advertisement Framework'
@@ -63,12 +66,6 @@ source_suffix = {
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
-
-# List of patterns, relative to source directory, that match files and
-# directories to ignore when looking for source files.
-# This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = []
-
 
 # Autodoc
 autodoc_typehints = "signature"
@@ -116,17 +113,21 @@ html_theme_options = {
 }
 
 # ----------- Latex ----------- #
-with open(f"./{LANGUAGE}/titlepage.tex", "r", encoding="utf-8") as reader:
+with open(f"./{language}/titlepage.tex", "r", encoding="utf-8") as reader:
     latex_title_page = reader.read()
 
 # latex_engine = 'xelatex'
+literal_block_str =  {
+    "en": r"\listof{literalblock}{List of literal blocks}",
+    "sl": r"\listof{literalblock}{Seznam literalnih blokov}"
+}
 latex_elements = {
     "tableofcontents": r"""
         \tableofcontents
         \listoffigures
-        \listof{literalblock}{List of literal blocks}
         \listoftables
-    """,
+        {}
+    """.format(literal_block_str.get(language)),
     'fncychap': r'',
     # 'fontpkg': r"""
     #     \setromanfont{Times New Roman}
