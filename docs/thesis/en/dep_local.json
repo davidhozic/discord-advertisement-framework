@@ -1,6 +1,6 @@
 {
     "copy": [
-        {"from": "../../images/logo.png", "to": "./DEP/"},
+        {"from": "../../images/*", "to": "./DEP/"},
         {"from": "../../source/guide/core/images/sql*", "to": "./DEP/"},
         {"from": "../../source/guide/core/images/logging*", "to": "./DEP/"},
         {"from": "../../source/dep_local.json", "to": "./DEP/_dep_local.json"},

@@ -17,7 +17,7 @@ import sys
 sys.path.insert(0, os.path.abspath('../../src/'))
 sys.path.insert(0, os.path.abspath('.'))
 
-language = os.environ["language"]
+language = os.environ["LANGUAGE"]
 
 root_doc = f"{language}/index"
 exclude_patterns = ["sl/**", "en/**"]

@@ -10,8 +10,8 @@ verigi blokov brez možnosti replikacije.
 Najpogosteje predstavljajo digitalna umetniška dela.
 
 
-.. figure:: images/example_bunny_nft.png
-    :width: 5 cm
+.. figure:: ./DEP/images/example_bunny_nft.png
+    :width: 5cm
 
     Primer NFT (ustvaril `DALL-E <https://openai.com/dall-e-2/>`_)
 
@@ -30,7 +30,7 @@ ki določa prenosljivost in NFT dodeli lastnika.
 Medtem ko se NFT kuje, dobi tudi edinstven identifikator, ki je neposredno povezan z enim
 naslovom verige blokov. Vsi žetoni imajo lastnika in informacije o lastništvu so javne vsem.
 
-Žetoni NFT hitro pridobivajo na priljubljenosti kot način hrambe kriptovalut in kot potencialna finančna naložba.
+Žetoni NFT hitro pridobivajo na priljubljenosti kot način hrambe kripto valut in kot potencialna finančna naložba.
 Uporabljajo se lahko tudi kot zavarovanje za posojila ali predstavljajo finančne produkte,
 s katerimi se lahko trguje na sekundarnih trgih.
 Priljubljenost NFT odraža vse večje zanimanje za digitalno premoženje v digitalnem svetu, vključno z razvojem "metaverse", mreže interaktivnih virtualnih svetov.

@@ -174,26 +174,24 @@ Ko imate oglaševalsko vsebino jo samo prepošiljate po vseh kanalih.
     Primer Chat-GPT
 
 
-Finding guilds to shill into
+Iskanje cehov za oglaševanje
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Once you have your advertisement content, you need to find your guilds, that you want to shill into.
-A good place to find the servers would be simply searching the web for websites that have a list of different
-servers and allows searching for guilds by name / category.
+Ko enkrat imate oglaševalsko vsebino, rabite najti cehe kamor boste to vsebino pošiljali.
+Dober kraj za začetek je kar nek spletni iskalnik.
+Nabor cehov ponuja tudi kar Discord sam, ampak za to da nek ceh pride na njihov seznam mora imeti zagotovljenih kar
+nekaj pogojev med katerimi je tudi ta da mora imeti ceh vsaj 1000 uporabnikov. To posledično pomeni da ima ceh verjetno
+politiko proti pretiranem oglaševanju, za to morda ta seznam ni najbolj primeren za to rabo.
 
-A good example for finding guilds (servers), would actually be Discord itself, as they hold a list of certain servers, but for a server to be eligible 
-for discovery on Discord, it needs to have at least 1000 members, meaning that the servers you can join directly from Discord's website, 
-probably have some protection against shilling and they probably don't allow it.
+Na srečo obstajajo tudi drugi strani za iskanje cehov, kot je na primer spletna stran `Top.GG <https://top.gg>`_.
+Na tej strani lahko v vgrajeni iskalnik dodamo določene parametre med katerimi je tudi imenska poizvedba v kateri lahko
+uporabimo akronim "NFT" in spletna stran nam bo vrnila cehe povezane z NFT.
 
-Another, probably better, example would be website `Top.GG <https://top.gg>`_, which besides holding a list of servers,
-also holds a list of public Discord bots, but that is not relevant for the purposes of this thesis.
-Top.gg has a search bar with various parameters you can use to find your servers, to find NFT servers, it can be used
-to simply search for "NFT".
-
-After finding all the guilds, you would join all the guilds and find the channels appropriate to shill into
-(without the owners kicking / banning you). These channels are usually named *shill, shilling, advertising, self-promo, ...*.
+Tem cehom se lahko potem pridružimo in v primerne kanale oglašujemo našo vsebino. Cehi na temo NFT in kripto valut
+imajo ponavadi namenske kanale, ki so namenjeni oglaševanju in v te lahko oglašujemo brez posledic, medtem ko nas
+oglaševanje lahko privede do izključitve iz strežnika.
 
 .. figure:: ./DEP/images/topgg_find_servers.png
     :width: 400
 
-    Top.GG server discovery
+    Iskanje cehov na Top.GG
 
