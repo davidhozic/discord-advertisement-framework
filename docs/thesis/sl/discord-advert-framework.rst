@@ -140,7 +140,7 @@ opravilo vezano na specifičen uporabniški račun.
 
 
 .. figure:: ./DEP/images/daf-account-layer-flowchart.svg
-    :height: 720
+    :width: 500
 
     Delovanje računskega nivoja
 
@@ -163,21 +163,41 @@ Nivoju pripadajo trije razredi:
 
 |GUILD| in |USER| sta med seboj praktično enaka, edina razlika med njima je ta,
 da |USER| predstavlja osebe katerim bomo pošiljali sporočila, |GUILD| pa predstavlja
-cehe z kanali. |AutoGUILD| pa sam po sebi ne predstavlja točno specifičnega ceha, ampak več cehov, katerih ime
+cehe z kanali.
+
+|AutoGUILD| pa po drugi strani sam po sebi ne predstavlja točno specifičnega ceha, ampak več cehov, katerih ime
 se ujema z podanim RegEx vzorcem.
 
+Inicializacija |GUILD| in |USER| je preprosta. Na podlagi parametra ``snowflake``, ki predstavlja Discord-ov
+unikaten identifikator, pridobi objekt, ki predstavlja nek ceh oz. uporabnika v nivoju abstrakcije Discord API in za
+vsak objekt, ki predstavlja sporočilo, pošlje sporočilnem nivoju ukaz naj se sporočilo inicializira.
 
-The guild layer is responsible for initializing the message layer and signaling 
-the message layer to send messages to channels, whenever it detects a message is ready to be shilled.
-It is also responsible for removing any messages that should be deleted, either by design or by critical errors
-that require intervention.
+|GUILD| in |USER| na začetku glavne metode najprej vprašata sporočilni nivo za sporočila, ki jih je potrebno odstraniti
+(``remove_after`` parameter sporočila), in ta sporočila odstranita iz svoje shrambe. Zatem povprašata po sporočilih, ki
+so pripravljeni za pošiljanje (jim je potekla perioda) ter sporočilnemu nivoju, za posamezno sporočilo, pošlje ukaz naj se
+sporočilo pošlje. Od sporočilnega nivoja prejme informacije o poslanem sporočilu oz. neuspelem poskusu pošiljanja, kar
+cehovski nivo pošlje nivoju beleženja. Poleg informacij o sporočilu, prejme cehovski nivo od sporočilnega nivoja
+tudi morebitno informacijo da je bil ceh zbrisan, oz. je bil uporabnik odstranjen iz ceha kar posledično pomeni da je
+potrebno |GUILD| / |USER| objekt zbrisati preko računskega nivoja.
 
-The guild layer checks each message if it is to be removed, if not it creates coroutine objects for each message and then awaits
-the coroutines which causes the message layer to shill each message to the belonging channels.
+.. figure:: ./DEP/images/daf-guild-layer-flowchart.svg
+    :width: 500
 
-After each message send, the guild layer also signals the logging layer to make a log of the just now sent message.
+    Delovanje cehovskega nivoja
 
-.. error:: **TODO:** Guild layer diagram.
+|AutoGUILD| objekti omogočajo interno generacijo |GUILD| objektov na podlagi danega RegEx vzorca (``include_pattern``).
+V primeru uporabe uporabniškega imena in gesla za prijavo na računskem nivoju, omogoča preko nivoja brskalnika
+tudi avtomatično najdbo novih cehov in njihovo pridruževanje preko brskalnika.
+Osnovni del (generacija |GUILD| objektov) deluje tako da najprej preko nivoja abstrakcije Discord API najde, katerim
+cehom je uporabnik pridružen in za vsak ceh, ki ustreza RegEx vzorcem ustvari nov |GUILD| objekt, ki ga interno hrani.
+Vsak |GUILD| objekt podeduje parametre, ki jih je ob definiciji prejel |AutoGUILD|. Na koncu, ko so najde vse cehe,
+vsakemu |GUILD| objektu da ukaz naj oglašuje, na enak način kot |GUILD| objektu da ta ukaz računski nivo.
+Ta del bi lahko torej, s stališča abstrakcije, postavili nekje med računski nivo in cehovski nivo.
+
+.. figure:: ./DEP/images/daf-guild-auto-layer-flowchart.svg
+    :width: 500
+
+    Delovanje AutoGUILD pod nivoja
 
 
 .. raw:: latex
@@ -185,8 +205,11 @@ After each message send, the guild layer also signals the logging layer to make 
     \newpage
 
 
-Logging layer
+Nivo beleženja
 ---------------
+Nivo beleženja je zadolžen za beleženje poslanih sporočil oz. beleženje poskusov pošiljanja sporočil. Podatke, ki jih
+mora zabeležiti dobi neposredno iz cehovskega nivoja (:ref:`Cehovski nivo`).
+
 The logging layer is responsible for saving message logs after getting data from the :ref:`Guild layer`.
 
 Logging is handled thru logging manager objects and it supports 3 different logging schemes:
