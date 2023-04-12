@@ -87,7 +87,8 @@ intersphinx_mapping = {
     'PyCord': ("https://docs.pycord.dev/en/stable/", None),
     "DAF" : ("https://daf.davidhozic.com/en/stable/", None),
     "Python" : ("https://docs.python.org/3/", None),
-    "Sphinx" : ("https://www.sphinx-doc.org/en/master", None)
+    "Sphinx" : ("https://www.sphinx-doc.org/en/master", None),
+    "SQLAlchemy" : ("https://docs.sqlalchemy.org/en/20/", None)
 }
 
 # ----------- HTML ----------- #

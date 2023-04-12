@@ -205,31 +205,113 @@ Ta del bi lahko torej, s stališča abstrakcije, postavili nekje med računski n
     \newpage
 
 
+Sporočilni nivo
+-----------------
+.. error:: TODO: Write
+
 Nivo beleženja
 ---------------
 Nivo beleženja je zadolžen za beleženje poslanih sporočil oz. beleženje poskusov pošiljanja sporočil. Podatke, ki jih
 mora zabeležiti dobi neposredno iz cehovskega nivoja (:ref:`Cehovski nivo`).
 
-The logging layer is responsible for saving message logs after getting data from the :ref:`Guild layer`.
+DAF omogoča beleženje v tri različne formate, kjer vsakemu pripada lasten objekt beleženja:
 
-Logging is handled thru logging manager objects and it supports 3 different logging schemes:
-
-1. JSON logging - :class:`daf.logging.LoggerJSON`,
-2. CSV logging (nested fields are JSON) - :class:`daf.logging.LoggerCSV` and
-3. SQL logging (multiple dialects) - :class:`daf.logging.LoggerSQL`
+1. JSON - :class:`~daf.logging.LoggerJSON`
+2. CSV (nekatera polja so JSON) - :class:`~daf.logging.LoggerCSV`
+3. SQL (*Structured Query Language*) - :class:`~daf.logging.sql.LoggerSQL`
 
 
-.. figure:: ./DEP/source/guide/core/images/logging_process.drawio.svg
+Ob inicializaciji, se v jedrnem nivoju poda željen objekt beleženja, ki se inicializira in shrani v nivo beleženja.
+V postopku inicializaciji po svoji lastni inicializaciji, inicializira še njegov nadomestni (``fallback`` parameter)
+objekt, ki se uporabi v primeru kakršne koli napake pri beleženju (bolj pomembno pri SQL beleženju na oddaljen strežnik).
+
+Po vsakem poslanem sporočilu se iz cehovskega nivoja naredi zahteva, ki vsebuje podatke o cehu, poslanem sporočilu oz.
+poskusu pošiljanja ter podatki o uporabniškem računu, ki je sporočilo poslal. Nivo beleženja posreduje zahtevo
+izbranem objektu beleženja, ki v primeru napake dvigne Python_ napako (*exception*), na kar nivo beleženja 
+reagira tako, da začasno zamenja objekt beleženja na njegov nadomestek in spet poskusi. Poskuša dokler mu ne
+zmanjka nadomestkov ali pa je beleženje uspešno.
+
+
+.. figure:: ./DEP/images/daf-high-level-log.svg
+    :width: 500
+
+    Višji nivo beleženja
+
+JSON beleženje
+~~~~~~~~~~~~~~~~~
+JSON beleženje je implementirano z objektom beleženja :class:`~daf.logging.LoggerJSON`.
+Ta vrsta beleženja nima nobene specifične inicializacije, kliče se le inicializacijska metoda njegovega morebitnega
+nadomestka.
+
+Ob zahtevi beleženja objekt :class:`~daf.logging.LoggerJSON` najprej pogleda trenuten datum, iz katerega tvori
+končno pot do datoteke od v parametrih podane osnovne poti. Končna pot je določena kot ``Leto/Mesec/Dan/<Ime Ceha>.json``.
+
+To pot, v primeru da ne obstaja, ustvari in zatem z uporabo vgrajenega Python_ modula :mod:`json` podatke shrani v
+datoteko. Za specifike glej :ref:`Logging (core)`.
+
+
+.. figure:: ./DEP/images/daf-logging-json.svg
     :width: 300
 
-    Logging layer flow diagram
+    Process JSON beleženja
 
 
-Upon a logging request from the :ref:`Guild layer`, the logging layer obtains the globally set logging manager and calls
-the method responsible for saving the log. If no exceptions are raised the logging layer stays silent.
+CSV beleženje
+~~~~~~~~~~~~~~~~~~
+CSV beleženje deluje na enak način kot :ref:`JSON beleženje`. Edina razlika je v formatu, kjer je format tu CSV.
+Lokacija datotek je enaka kot pri :ref:`JSON beleženje`. Za shranjevanje je uporabljen vgrajen Python_ modul :mod:`csv`.
 
-In case of any exceptions, the logging layers traces the exception to the console, selects the backup (fallback) logging manager that is 
-set by the manager's ``fallback`` parameter and repeats the process. It repeats this process until it runs out of fallbacks.
 
-If it runs out of fallbacks, then the log will not be saved and an error will traced to the console notifying the user that
-a log will not be saved.
+SQL beleženje
+~~~~~~~~~~~~~~~~~~
+SQL beleženja pa deluje precej drugače kot :ref:`JSON beleženje` in :ref:`CSV beleženje`. Medtem ko sicer omogoča tudi shranjevanje
+v datoteke, so te datoteke dejansko baze podatkov SQLite.
+
+DAF omogoča beleženje v 4 dialekte:
+
+1. SQLite
+2. Microsoft SQL Server (mssql)
+3. PostgreSQL
+4. MySQL / MariaDB
+
+Za čim bolj univerzalno implementacijo na vseh dialektih, je bila pri razvoju uporabljena knjižnica :mod:`SQLAlchemy`.
+Celoten sistem SQL beleženja je implementiran s pomočjo ORM (*Object relational mapping*), kar med drugim omogoča tudi
+da SQL tabele predstavimo z Python_ razredi, posamezne vnose v bazo podatkov oz. vrstice pa predstavimo z instancami
+teh razredov. Z ORM lahko skoraj v celoti skrijemo SQL in delamo neposredno z Python_ objekti, ki so lahko tudi gnezdene
+strukture, npr. vnosa dveh ločenih tabel lahko predstavimo z dvema ločenima instancama, kjer je ena instanca znotraj
+druge instance.
+
+.. figure:: ./DEP/images/sql_er.drawio.svg
+
+    SQL entitetno-relacijski diagram
+
+Zgornja slika prikazuje povezavo posamezne tabele med seboj. Glavna tabela je :ref:`MessageLOG`.
+Za opis posamezne tabele glej :ref:`Logging (core)`.
+
+SQL inicializacija poteka v treh delih. Najprej se zgodi inicializacija :mod:`sqlalchemy`, kjer se vzpostavi povezava do
+podatkovne baze. Podatkovna baza mora biti že vnaprej ustvarjena (razen SQLite), vendar ni potrebo ročno ustvarjati sheme (tabel).
+Po vzpostavljeni povezavi, se ustvari celotna shema - tabele, objekti zaporedij (*Sequence*), in podobno.
+Zatem se se v bazo v *lookup* tabele zapišejo določene konstantne vrednosti, kot so vrste sporočil, cehov za manjšo porabo podatkov
+baze in na koncu se inicializira morebiten nadomestni objekt beleženja. Objekt beleženja za SQL je zdaj pripravljen za uporabo.
+
+Proces beleženja v bazo je malo bolj kompleksen, zato tu ni na dolgo napisan in je spodaj diagram, ki prikazuje
+celoten process.
+
+Je morda smiselno poudariti procesiranje napak v bazi. V primeru da se v procesu beleženja zgodi kakršna koli napaka, se bo
+proces odzval na dva možna načina:
+
+1. V primeru da je bila zaznana prekinitev povezave do baze, objekt SQL beleženja takoj nivoju beleženja da ukaz
+   naj se beleženje permanentno izvaja na njegovem nadomestnem objektu in zatem se ustvari opravilo, ki čaka 5
+   minut in se zatem poskusi povezati na podatkovno bazo. V primeru uspešne povezave na bazo se beleženje spet izvaja
+   s SQL, v primeru neuspešne povezave pa čez 5 minut poskusi ponovno in nikoli ne neha poskušati.
+
+2. V primeru da povezava ni prekinjena ampak je prišlo na primer do brisanja katere koli od tabel oz. *lookup* vrednosti,
+   se shema ponovno poskusi postaviti. To poskuša narediti 5-krat in če se napaka ni odpravila, potem trenuten poskus
+   pošiljanja zabeleži z nadomestim objektom beleženja, vendar le enkrat - naslednjič bo spet poizkusil z beleženjem SQL.
+
+
+
+.. figure:: ./DEP/images/sql_logging_process.drawio.svg
+
+    Proces beleženja z SQL podatkovno bazo
+
