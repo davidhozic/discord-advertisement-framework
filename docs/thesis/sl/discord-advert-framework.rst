@@ -1,6 +1,8 @@
-=====================================
-Ogrodje za oglaševanje po Discord-u
-=====================================
+==================================================
+Projekt (DAF)
+==================================================
+
+DAF - *Discord Advertisement Framework*
 
 .. _Python: https://www.python.org
 
@@ -8,6 +10,9 @@ Ogrodje za oglaševanje po Discord-u
 
 .. |DAFDOC| replace:: DAF dokumentacija
 
+.. |USER| replace:: :class:`~daf.guild.USER`
+.. |GUILD| replace:: :class:`~daf.guild.GUILD`
+.. |AutoGUILD| replace:: :class:`~daf.guild.AutoGUILD`
 
 .. note:: 
 
@@ -28,14 +33,14 @@ Ogrodje za oglaševanje po Discord-u
 Namen projekta
 =================
 Pobudo za projekt sem prejel od kolega,
-ki je za svoj projekt povezan z nezamenljivimi žetoni potreboval orodje, ki po več dni v tednu lahko
+ki je za svoj projekt povezan z nezamenljivimi žetoni potreboval orodje, ki bi po več dni v tednu lahko
 neprestano samodejno oglaševal njegov projekt po različnih cehih.
 
 Cilj projekta je izdelati ogrodje, ki lahko deluje 24 ur na dan in samodejno oglašuje v naprej definirano vsebino ali
 pa tudi dinamično vsebino, omogoča pregled poslanih sporočil in poročanje o uspešnosti preko beleženja zgodovine
 poslanih sporočil.
 Ker naj bi to ogrodje delovalo brez prekinitev je cilj ogrodje narediti, da bo delovalo kot demonski proces v ozadju
-brez grafičnega vmesnika. Ker je pa definicija brez grafičnega vmesnika težja in zahteva malo več dela, pa je cilj izdelati
+brez grafičnega vmesnika. Vendar je pa definicija brez grafičnega vmesnika težja in zahteva malo več dela, zato je cilj izdelati
 tudi grafični vmesnik, ki bo deloval kot dodaten nivo nad samim ogrodjem in bo omogočal generacijo oglaševalske skripte, 
 ki se jo lahko potem zažene na strežniku brez grafičnega vmesnika za neprekinjeno oglaševanje. Za lažji pregled dogajanja
 na strežniku, je cilj na grafičnem vmesniku implementirati možnost oddaljenega dostopa, ki bo omogočal direktno manipulacijo
@@ -64,11 +69,11 @@ ali pa kot GUI se ga lahko uporabi na dva načina in sicer kot:
    Za več informacij glede definicije sheme glej |DAFDOC|_.
 
 
-2. navaden program (še deluje v Python_-u), ki se ga lahko zažene preko ukazne vrstice z ukazom ``daf-gui``, kar odpre
+2. navaden program (deluje v Python_-u), ki se ga lahko zažene preko ukazne vrstice z ukazom ``daf-gui``, kar odpre
    grafični vmesnik.
 
    .. figure:: ./DEP/images/daf-gui-front.png
-      :width: 15cm
+      :width: 12cm
 
       Grafični vmesnik
 
@@ -76,10 +81,11 @@ ali pa kot GUI se ga lahko uporabi na dva načina in sicer kot:
 
     \newpage
 
-V obeh zgornjih primerih celotno ogrodje deluje znotraj opravil, ki se jih ustvari z vgrajenim modulom :mod:`asyncio`.
+V obeh zgornjih primerih celotno ogrodje deluje znotraj opravil, ki se jih ustvari z  modulom :mod:`asyncio`, ki je eden 
+iz med več vgrajenih Python_ modulov.
 
 
-Za lažjo implementacijo in kasnejši razvoj, je DAF razdeljen na več nivojev abstrakcije.
+Za lažjo implementacijo in kasnejši razvoj, je DAF razdeljen na več nivojev abstrakcije oziroma plasti.
 Ti nivoji so:
 
 - Jedrni nivo
@@ -108,22 +114,35 @@ Ko zaženemo ogrodje, ta v jedrnem nivoju sproži inicializacijo nivoja beležen
 kjer za vsak definiran uporabniški račun, ustvari lastno :mod:`asyncio` opravilo, ki omogoča simultano oglaševanje po več računih hkrati.
 Na koncu pokliče funkcijo, ki je bila dana ob klicu zaganjalne funkcije :func:`daf.core.run`.
 
+Ta nivo sam po sebi nima nobenih opravil, ki bi neprestano karkoli opravljala, razen enega opravila, ki skrbi
+za čiščenje uporabniških računov v primeru, da so se ti zaradi neke napake sami zaprli. V primeru da napake ni,
+se račune dodaja preko :func:`daf.core.add_object` in briše preko :func:`daf.core.remove_object` funkcij.
 
 
-Account layer
+
+Računski nivo
 ---------------
-The account layer is responsible for managing accounts.
 
-The account layer on each new account first makes a login attempt. 
-If the attempt is successful it signals the guild layer to initialize all the given servers.
-At the end it creates a shilling task for the related account.
+Računski nivo je zadolžen za upravljanjem z uporabniškimi računi. Vse kar se dogaja v tem nivoju se zgodi preko
+:class:`daf.client.ACCOUNT` objekta.
 
-Each account runs it's own shilling task to allow parallel shilling of multiple accounts at once. 
-A single shilling task iterates all the servers the :class:`~daf.client.ACCOUNT` object has and signals the guild layer to check for ready
-messages to be shilled. More than one shilling task would be redundant since Discord would simply start returning rate limit errors, thus removing any parallelism in each account.
-Debatably 2 tasks would make sense since audio messages could be streamed while text messages are being sent without causing a rate limit, however having 2 tasks would require
-some extra protection and possibly cause unpredictable code since they would share resources.
-Using :class:`~asyncio.Lock`'s (mutexes) would solve unpredictable behavior, but would remove any parallelism.
+Računski nivo skrbi za inicializacijo nivoja, ki ovija Discord API in za upravljanje opravila, ki komunicira z
+cehovskim nivojem.
+
+Ob dodajanju novega računa v ogrodje, jedrni nivo za vsak definiran račun pokliče :py:meth:`daf.client.ACCOUNT.initialize` metodo, ki
+v primeru da sta bila podana uporabniško ime in geslo, da ukaz nivoju brskalnika naj se prijavi preko uradne Discord
+aplikacije in potem uporabniški žeton pošlje nazaj uporabniškemu nivoju. Ko ima uporabniški nivo žeton
+(preko direktne podaje s parametrom ali preko nivoja brskalnika), da ovojnem API nivoju ukaz naj se ustvari nova
+povezava in klient za dostop do Discord'a (:class:`discord.Client`)  s podanim računom, kjer se ta klient veže na trenuten :class:`~daf.client.ACCOUNT`
+objekt. Prav tako se na trenuten :class:`~daf.client.ACCOUNT` objekt veže morebiten klient nivoja brskalnika (:class:`daf.web.SeleniumCLIENT`).
+Na koncu se za posamezen definiran ceh, da cehovskem nivoju še ukaz za inicializacijo le tega in ustvari še glavno
+opravilo vezano na specifičen uporabniški račun.
+
+
+.. figure:: ./DEP/images/daf-account-layer-flowchart.svg
+    :height: 720
+
+    Delovanje računskega nivoja
 
 
 .. raw:: latex
@@ -131,8 +150,23 @@ Using :class:`~asyncio.Lock`'s (mutexes) would solve unpredictable behavior, but
     \newpage
 
 
-Guild layer
--------------
+Cehovski nivo
+---------------
+Cehovski nivo je primarno zadolžen za upravljanje s cehi in komuniciranje s sporočilnim nivojem. V primeru
+naprednejših funkcionalnostih, kot je avtomatično pridruževanje cehom, komunicira tudi z nivojem brskalnika.
+
+Nivoju pripadajo trije razredi:
+
+- |GUILD|
+- |USER|
+- |AutoGUILD|
+
+|GUILD| in |USER| sta med seboj praktično enaka, edina razlika med njima je ta,
+da |USER| predstavlja osebe katerim bomo pošiljali sporočila, |GUILD| pa predstavlja
+cehe z kanali. |AutoGUILD| pa sam po sebi ne predstavlja točno specifičnega ceha, ampak več cehov, katerih ime
+se ujema z podanim RegEx vzorcem.
+
+
 The guild layer is responsible for initializing the message layer and signaling 
 the message layer to send messages to channels, whenever it detects a message is ready to be shilled.
 It is also responsible for removing any messages that should be deleted, either by design or by critical errors
