@@ -14,6 +14,10 @@ DAF - *Discord Advertisement Framework*
 .. |GUILD| replace:: :class:`~daf.guild.GUILD`
 .. |AutoGUILD| replace:: :class:`~daf.guild.AutoGUILD`
 
+.. |TextMESSAGE| replace:: :class:`~daf.message.TextMESSAGE`
+.. |VoiceMESSAGE| replace:: :class:`~daf.message.VoiceMESSAGE`
+.. |DirectMESSAGE| replace:: :class:`~daf.message.DirectMESSAGE`
+
 .. note:: 
 
     Sledeča vsebina se včasih nanaša na objekte, ki niso opisani v diplomskem delu, so pa na voljo
@@ -207,7 +211,72 @@ Ta del bi lahko torej, s stališča abstrakcije, postavili nekje med računski n
 
 Sporočilni nivo
 -----------------
-.. error:: TODO: Write
+Sporočilni nivo je zadolžen za pošiljanje dejanskih sporočil v posamezne kanale na Discord-u.
+V tem nivoju so na voljo trije glavni razredi za ustvarjanje različnih vrst sporočil:
+
+1. |TextMESSAGE| - pošiljanje tekstovnih sporočil v cehovske kanale
+2. |VoiceMESSAGE| - predvajanje posnetkov v cehovskih kanalih
+3. |DirectMESSAGE| - pošiljanje glasovnih sporočil v cehovske kanale.
+
+
+|TextMESSAGE| in |DirectMESSAGE| sta si precej podobna, primarno gre v obeh primerih za tekstovna sporočila, razlika
+je v kanalih ki jih |DirectMESSAGE| nima, temveč ta pošilja le sporočila v direktna sporočila uporabnika.
+|VoiceMESSAGE| in |TextMESSAGE|, sta si po vrsti podatkov sicer različna, vendar pa oba pošiljata sporočila v kanale, ki
+pripadata nekemu cehu in imata praktično enako inicializacijo.
+
+Inicializacija |TextMESSAGE| in |VoiceMESSAGE| objektov poteka na sledeč način. Najprej preveri se podatkovni tip parametra
+``channels``, ki predstavlja kanale kamor se bo sporočila pošiljalo in sicer obstajajo 2 možnosti podatkovnega tipa:
+
+1. :class:`daf.message.AutoCHANNEL` - Je objekt, ki skrbi za avtomatično najdbo kanalov v cehu na podlagi nekega RegEx
+   vzorca, podobno kot |AutoGUILD| v :ref:`Cehovski nivo`.
+   V tem primeru sporočilni nivo inicializira podani :class:`~daf.message.AutoCHANNEL` objekt.
+
+2. :class:`list` (seznam), *snowflake* identifikatorjev (tipa :class:`int`) ali pa objektov iz ovojnega API nivoja, ki so lahko
+   :class:`discord.TextChannel` za |TextMESSAGE| ali :class:`discord.VoiceChannel` za |VoiceMESSAGE| objekt.
+   Inicializacija gre čez celoten seznam in v primeru *snowflake* identifikatorja za ta identifikator poskusi najti pripadajoči
+   :class:`~discord.TextChannel` oz. :class:`~discord.VoiceChannel` objekt s tem identifikatorjem. Če pripadajočega
+   objekta ne najde, se v terminalu izpiše opozorilo in inicializacija se nadaljuje na ostalih elementih v seznamu.
+   V primeru neveljavnega tipa elementa v seznamu, inicializacija dvigne Python_ napako tipa :class:`TypeError`.
+   V primeru da identifikator pripada kanalu, ki pripada nekem drugemu cehu, kot je ceh v katerem se nahaja trenutni 
+   sporočilni objekt, inicializacija dvigne napako tipa :class:`ValueError`.
+
+   V primeru |TextMESSAGE| objekta se na koncu še preveri če je podana perioda pošiljanja manjša od minimalnega
+   čakanja počasnega načina (*Slow mode*) in periodo ustrezno popravi.
+
+
+Inicializacija |DirectMESSAGE| objekta je precej bolj enostavna. Iz starša (|USER|) se pridobi objekt, ki na ovojnem API
+nivoju predstavlja ceh in na tem objektu se kliče metoda :py:meth:`discord.User.create_dm`.
+Metoda :py:meth:`~discord.User.create_dm` predstavlja analogijo na tekstovni kanal v cehu.
+
+
+Medtem ko se inicializacija različnih vrst sporočilnih objektov razlikuje, je sama glavna logika večinoma enaka.
+V cehovskem nivoju se od sporočilnega nivoja preko :py:meth:`~daf.message.TextMESSAGE._is_ready` metode preverja ali
+je sporočilo pripravljeno za pošiljanje v slednjem primeru začne s procesom pošiljanja sporočila.
+
+Kdaj je sporočilo pripravljeno za pošiljanje določa notranji atribut objekta, ki predstavlja točno specifičen čas naslednjega
+pošiljanja sporočila. V primeru da je trenutni čas večji od tega atributa, je sporočilo pripravljeno za pošiljanje.
+Ob ponastavitvi "časovnika" se ta atribut prišteje za konfigurirano periodo.
+Torej dejanski čas pošiljanja ni relativen na prejšnji čas pošiljanja, temveč je relativen na predvideni čas pošiljanja.
+Taka vrsta računanja časa omogoča določeno toleranco pri pošiljanju sporočila, saj se zaradi raznih zakasnitev in omejitev
+zahtev na API v ovojnem API nivoju (pri pošiljanju vsakega sporočila in ostalih zahtev) dejansko sporočilo lahko pošlje kasneje kot predvideno.
+To je še posebno pomembno v primeru da imamo definiranih veliko sporočil v enem računu, kar je zagotovilo da se sporočilo ne bo
+poslalo točno ob določenem času. Ker se čas prišteva od prejšnjega časa pošiljanja, posledično to pomeni da bo v primeru
+zamude sporočila, razmak med tem in naslednjim sporočilom manjši točno za to časovno napako (če privzamemo da ne bo ponovne zakasnitve).
+Prvi čas pošiljanja je določen z ``start_in`` parametrom.
+Primer časovne napake je prikazan na spodnji sliki.
+
+
+.. figure:: ./DEP/images/daf-message-period.svg
+    :width: 500
+
+    Čas pošiljanja sporočila s toleranco zamud
+
+
+.. raw:: latex
+
+    \newpage
+
+
 
 Nivo beleženja
 ---------------
@@ -294,11 +363,14 @@ Po vzpostavljeni povezavi, se ustvari celotna shema - tabele, objekti zaporedij 
 Zatem se se v bazo v *lookup* tabele zapišejo določene konstantne vrednosti, kot so vrste sporočil, cehov za manjšo porabo podatkov
 baze in na koncu se inicializira morebiten nadomestni objekt beleženja. Objekt beleženja za SQL je zdaj pripravljen za uporabo.
 
-Proces beleženja v bazo je malo bolj kompleksen, zato tu ni na dolgo napisan in je spodaj diagram, ki prikazuje
-celoten process.
-
-Je morda smiselno poudariti procesiranje napak v bazi. V primeru da se v procesu beleženja zgodi kakršna koli napaka, se bo
-proces odzval na dva možna načina:
+Ob zahtevi beleženja v bazo podatkov, objekt beleženja :class:`~daf.logging.LoggerJSON` najprej preveri ali je baza morda
+v čakanju na ponovno povezavo (več opravil lahko čaka da se konča beleženje drugega opravila) in če čaka na povezavo, se
+vrne v nivo beleženja, kjer beleženje opravi z nadomestnim objektom beleženja. V primeru povezane baze, objekt beleženja
+iz začasne shrambe poskusi pridobiti od prej shranjene podatke (za pohitrenje beleženja) in če ti ne obstajajo, naredi
+zahtevo po podatkih na podatkovno bazo. Nato se ustvari ORM objekt, ki predstavlja tabelo :ref:`MessageLOG` in znotraj
+njega tudi ostali ORM objekti, ki predstavljajo tuje SQL ključe na druge relacije (tabele). Ustvarjeni ORM objekt
+tabele :ref:`MessageLOG` se potem doda v bazo podatkov in v primeru da ni napak to pomeni konec beleženja. V primeru,
+da se je zgodila kakršna koli napaka, se lahko SQL pod-nivo nivoja beleženja nanjo odzove na dva načina:
 
 1. V primeru da je bila zaznana prekinitev povezave do baze, objekt SQL beleženja takoj nivoju beleženja da ukaz
    naj se beleženje permanentno izvaja na njegovem nadomestnem objektu in zatem se ustvari opravilo, ki čaka 5
@@ -310,8 +382,28 @@ proces odzval na dva možna načina:
    pošiljanja zabeleži z nadomestim objektom beleženja, vendar le enkrat - naslednjič bo spet poizkusil z beleženjem SQL.
 
 
-
 .. figure:: ./DEP/images/sql_logging_process.drawio.svg
 
     Proces beleženja z SQL podatkovno bazo
+
+
+.. code-block:: python
+    :caption: Izsek kode, ki prikazuje uporabo ORM za beleženje poslanega sporočila
+    :linenos:
+
+    # Save message log
+    message_log_obj = MessageLOG(
+        data_obj,
+        message_type_obj,
+        message_mode_obj,
+        dm_success_info_reason,
+        guild_obj,
+        author_obj,
+        [
+            MessageChannelLOG(channel, reason)
+            for channel, reason in _channels
+        ],
+    )
+    session.add(message_log_obj)
+    await self._run_async(session.commit)
 
