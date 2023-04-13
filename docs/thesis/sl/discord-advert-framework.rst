@@ -51,12 +51,6 @@ na strežniku, je cilj na grafičnem vmesniku implementirati možnost oddaljeneg
 oglaševalske sheme in pregled zgodovine poslanih sporočil za določitev uspešnosti oglaševanja.
 
 
-.. figure:: ./DEP/images/daf_goal_design.svg
-    :width: 800
-
-    Skica osnovne ideje
-
-
 Zasnova in razvoj
 ==================
 DAF je zasnovan kot Python_ knjižnica / paket, ki se jo lahko namesti preko PIP-a (*Preferred Installer Program*), ki je
@@ -199,7 +193,7 @@ vsakemu |GUILD| objektu da ukaz naj oglašuje, na enak način kot |GUILD| objekt
 Ta del bi lahko torej, s stališča abstrakcije, postavili nekje med računski nivo in cehovski nivo.
 
 .. figure:: ./DEP/images/daf-guild-auto-layer-flowchart.svg
-    :width: 500
+    :width: 600
 
     Delovanje AutoGUILD pod nivoja
 
@@ -228,7 +222,7 @@ Inicializacija |TextMESSAGE| in |VoiceMESSAGE| objektov poteka na sledeč način
 ``channels``, ki predstavlja kanale kamor se bo sporočila pošiljalo in sicer obstajajo 2 možnosti podatkovnega tipa:
 
 1. :class:`daf.message.AutoCHANNEL` - Je objekt, ki skrbi za avtomatično najdbo kanalov v cehu na podlagi nekega RegEx
-   vzorca, podobno kot |AutoGUILD| v :ref:`Cehovski nivo`.
+   vzorca, podobno kot |AutoGUILD| v :ref:`cehovskem nivoju <Cehovski nivo>`.
    V tem primeru sporočilni nivo inicializira podani :class:`~daf.message.AutoCHANNEL` objekt.
 
 2. :class:`list` (seznam), *snowflake* identifikatorjev (tipa :class:`int`) ali pa objektov iz ovojnega API nivoja, ki so lahko
@@ -265,7 +259,6 @@ zamude sporočila, razmak med tem in naslednjim sporočilom manjši točno za to
 Prvi čas pošiljanja je določen z ``start_in`` parametrom.
 Primer časovne napake je prikazan na spodnji sliki.
 
-
 .. figure:: ./DEP/images/daf-message-period.svg
     :width: 500
 
@@ -277,11 +270,33 @@ Primer časovne napake je prikazan na spodnji sliki.
     \newpage
 
 
+Proces pošiljanja sporočila poteka tako, da sporočilni nivo najprej pridobi podatke za pošiljanje. Ti podatki so lahko
+fiksni podatki podani ob kreaciji sporočilnega objekta, lahko pa se jih pridobi tudi dinamično v primeru, da je bila
+ob kreaciji objekta podana funkcija. V slednjem primeru se funkcijo pokliče in v primeru da vrne veljaven tip podatka za
+vrsto sporočilnega objekta, se ta podatek uporabi pri pošiljanju sporočila - glej :func:`daf.dtypes.data_function`.
+Po pridobivanju podatkov, sporočilni objekt za vsak svoj kanal preveri ali je uporabnik:
+
+- še pridružen cehu,
+- ima pravice za pošiljanje,
+- kanal še obstaja.
+
+Če karkoli od zgornjega ni res, se dvigne ustrezna Python_ napaka, ki simulira napako ovojnega API nivoja.
+Tip dvignjene napake je podedovan iz :class:`discord.HTTPException`.
+V primeru, da ni bila dvignjena nobena napaka, se sporočilo pošlje v kanal. Če je sporočilni objekt tipa
+|TextMESSAGE| ali |DirectMESSAGE|, se lahko na podlagi ``mode`` parametra sporočilo pošlje na različne načine.
+
+Po poslanem sporočilu se podatke sporočila in status pošiljanja pošlje :ref:`cehovskem novoju <Cehovski nivo>`.
+
+.. figure:: ./DEP/images/daf-message-process.svg
+    :width: 800
+
+    Proces sporočilnega nivoja
+
 
 Nivo beleženja
 ---------------
 Nivo beleženja je zadolžen za beleženje poslanih sporočil oz. beleženje poskusov pošiljanja sporočil. Podatke, ki jih
-mora zabeležiti dobi neposredno iz cehovskega nivoja (:ref:`Cehovski nivo`).
+mora zabeležiti dobi neposredno iz :ref:`cehovskega nivoja <Cehovski nivo>`.
 
 DAF omogoča beleženje v tri različne formate, kjer vsakemu pripada lasten objekt beleženja:
 
