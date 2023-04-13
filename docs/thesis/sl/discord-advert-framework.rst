@@ -185,7 +185,7 @@ potrebno |GUILD| / |USER| objekt zbrisati preko računskega nivoja.
 
 |AutoGUILD| objekti omogočajo interno generacijo |GUILD| objektov na podlagi danega RegEx vzorca (``include_pattern``).
 V primeru uporabe uporabniškega imena in gesla za prijavo na računskem nivoju, omogoča preko nivoja brskalnika
-tudi avtomatično najdbo novih cehov in njihovo pridruževanje preko brskalnika.
+tudi avtomatično najdbo novih cehov in njihovo pridruževanje preko brskalnika (``auto_join`` parameter).
 Osnovni del (generacija |GUILD| objektov) deluje tako da najprej preko nivoja abstrakcije Discord API najde, katerim
 cehom je uporabnik pridružen in za vsak ceh, ki ustreza RegEx vzorcem ustvari nov |GUILD| objekt, ki ga interno hrani.
 Vsak |GUILD| objekt podeduje parametre, ki jih je ob definiciji prejel |AutoGUILD|. Na koncu, ko so najde vse cehe,
@@ -421,4 +421,57 @@ da se je zgodila kakršna koli napaka, se lahko SQL pod-nivo nivoja beleženja n
     )
     session.add(message_log_obj)
     await self._run_async(session.commit)
+
+
+
+Nivo brskalnika (Selenium)
+-------------------------------
+Velika večina DAF deluje na podlagi ovojnega API nivoja, kjer direktno komunicira z Discord API.
+Določenih stvari se pa neposredno z API ne da narediti ali pa prek API
+obstaja velika možnost, da Discord suspendira uporabnikov račun (npr. pridruževanje cehom), saj je po Discord ToS
+uporaba avtomatiziranih računov prepovedana.
+
+Za ta namen je bil ustvarjen nivo brskalnika, kjer DAF namesto komuniciranja z Discord API, komunicira z brskalnikom
+Google Chrome. To opravlja s knjižnico `Selenium <https://www.selenium.dev/>`_, ki je namenjena avtomatizaciji brskalnikov
+in se posledično uporablja tudi kot orodje za preizkušanje spletnih vmesnikov.
+
+V DAF projektu, se ta knjižnica ne uporablja za testiranje, ampak za avtomatično prijavljanje v Discord z uporabniškim
+imenom in geslom, ter tudi za pridruževanje cehom. Za to da bo ta nivo uporabljen, je potrebno ob ustvarjanju :class:`~daf.client.ACCOUNT`
+objekta podati uporabniško ime in geslo namesto žetona. Znotraj :class:`~daf.client.ACCOUNT` objekta se bo potem samodejno
+ustvaril nanj vezanj objekt :class:`~daf.web.SeleniumCLIENT`.
+
+Prijavljanje v Discord z uporabniškim imenom in geslom poteka po sledečem načinu. Najprej se odpre brskalnik Chrome, na
+katerega se poveže :class:`~daf.web.SeleniumCLIENT` in zatem :class:`~daf.web.SeleniumCLIENT` odpre URL 
+https://discord.com/login. Ko se stran naloži, se vtipkata uporabniško ime in geslo, potem pa pa se klikne gumb "Login",
+kar uporabnika prijavi v Discord. V primeru CAPTCHA (*Completely Automated Public Turing test to tell Computers and Humans Apart*)
+okna, DAF čaka uporabnika da reši izziv. Po uspešni prijavi nivo brskalnika pošlje nivoju računa Discord prijavni žeton,
+preko katerega se lahko ustvarja API klice. Nivo brskalnika hrani podatke prejšnje seje, tako da ob ponovnem zagonu ogrodja,
+prijava ni ponovno potrebna.
+
+Cehom se ogrodje pridružuje po sledečem postopku. Najprej naključno klika po seznamu strežnikov, da poskusi simulirati
+človeško obnašanje in zmanjša možnost za pojav CAPTCHA testa. Zatem klikne na *Join server* gumb, ki pokaže okno za vpis
+cehovske povezave, kjer to povezavo vpiše in klikne na gumb *Join*. Na koncu potrdi še morebitna pravila, preko Discord sistema
+pravil. Velika možnost je da bo moral uporabnik opraviti potrdilo še na drug način, ki ni definiran prek Discord platforme -
+npr. preko robotskega računa (*Bot*), ki ga ima ceh. Cehe, ki se jim bo pridružil najde preko https://top.gg platforme oz.
+preko :class:`daf.web.GuildDISCOVERY` in sicer je ta del definiran v :ref:`cehovskem nivoju <Cehovski nivo>`.
+
+
+Ovojni Discord API nivo
+-----------------------------
+Nivo, ki ovija Discord API ni striktno del samega ogrodja, ampak je to knjižnica oz. ogrodje `Pycord <https://docs.pycord.dev/en/stable/>`_.
+PyCord je odprto-kodno ogrodje, ki je nastalo iz kode starejšega `discord.py <https://discordpy.readthedocs.io/en/stable/>`_.
+Razlog da ga tu imenujem ogrodje, je da poleg tega da ponuja abstrakcijo Discord API, PyCord interno za vsak račun ustvari
+tudi svoje :mod:`asyncio` opravilo, ki na podlagi dogodkov iz Discord "Gateway"-a (uradno ime) posodablja svoje objekte,
+kot so :class:`~discord.TextChannel`, :class:`~discord.Guild`, :class:`~discord.User` in druge. Na primer, če bi imeli nekje
+shranjen objekt :class:`discord.Guild` in bi pripadajočem cehu spremenili ime, bi se ta sprememba takoj poznala v 
+:class:`~discord.Guild` objektu. Vsi objekti v Python_-u  se kopirajo po referenci, zato se spremembe poznajo na vseh kopijah.
+Ogrodje PyCord skoraj popolnoma zakrije Discord API z raznimi objekti, ki jih DAF interno uporablja.
+
+Če bi si ogledali izvirno kodo DAF, bi opazili da je poleg ``daf`` paketa zraven tudi paket z imenom ``_discord``.
+To ni nič drugega, kot PyCord ogrodje, le da je modificirano za možnost rabe na osebnih uporabniških računih.
+Za možno posodabljanje PyCord ogrodja, so ustvarjene GIT datoteke za krpanje (*patch*) - ustvarjene z ukazom ``git diff``,
+kar daje možnost enostavne menjave za novejšo verzijo PyCord ogrodja,
+na kateri se potem z ukazom ``git apply`` spremembe prenese na posodobljeno verzijo.
+
+Več o tem nivoju se lahko izve na https://docs.pycord.dev/en/stable/.
 
