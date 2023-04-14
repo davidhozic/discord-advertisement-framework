@@ -33,6 +33,11 @@ Releases
 ----------------------
 
 
+v2.6.1
+=============
+- Restored support for Python v3.8.
+
+
 v2.6.0
 ==========
 - Graphical User Interface - **GUI** for controlling the framework,
@@ -47,6 +52,10 @@ v2.6.0
   - Added ``author`` field to all logging managers (tells us which account sent the message).
   - SQL analysis
 
+
+v2.5.3
+=============
+- Fixed voice not working due to Discord's API changes.
 
 
 v2.5.1

@@ -424,7 +424,10 @@ class Application():
         accounts: list[ObjectInfo] = self.lb_accounts.get()
 
         accounts_str, imports, other_str = convert_objects_to_script(accounts)
+        logger_str, logger_imports, _ = convert_objects_to_script(logger)
+
         imports = "\n".join(set(imports))
+        logger_imports = "\n".join(set(logger_imports))
         if other_str != "":
             other_str = "\n" + other_str
 
@@ -440,14 +443,13 @@ At the bottom of the file the framework is then started with the run function.
 """
 
 # Import the necessary items
-{f"from {logger.class_.__module__} import {logger.class_.__name__}" if logger_is_present else ""}
+{logger_imports}
 {f"from {tracing.__module__} import {tracing.__class__.__name__}" if tracing_is_present else ""}
 {imports}
-
 import daf{other_str}
 
 # Define the logger
-{f"logger = {logger}" if logger_is_present else ""}
+{f"logger = {logger_str}" if logger_is_present else ""}
 
 # Defined accounts
 accounts = {accounts_str}
