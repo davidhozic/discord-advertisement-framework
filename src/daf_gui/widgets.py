@@ -107,7 +107,7 @@ def setup_additional_widget_file_chooser_logger(w: ttk.Button, window: "NewObjec
 
 
 HELP_URLS = {
-    "daf": f"https://daf.davidhozic.com/en/{daf.VERSION}/?rtd_search={{}}",
+    "daf": f"https://daf.davidhozic.com/en/v{daf.VERSION}/?rtd_search={{}}",
     "_discord": f"https://docs.pycord.dev/en/v{discord._version.__version__}/search.html?q={{}}",
     "builtins": "https://docs.python.org/3/search.html?q={}"
 }
