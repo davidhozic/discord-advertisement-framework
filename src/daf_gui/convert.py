@@ -183,7 +183,7 @@ def convert_objects_to_script(object: ObjectInfo | list | tuple | set | str):
         else:
             object_data.append(str(object))
 
-    return ",".join(object_data), import_data, "\n".join(other_data)
+    return ",".join(object_data).strip(), import_data, "\n".join(other_data).strip()
 
 
 def convert_to_object_info(object_: object):

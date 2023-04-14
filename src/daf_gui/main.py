@@ -36,7 +36,7 @@ Authors: David Hozic - Student at UL FE.
 """
 
 GITHUB_URL = "https://github.com/davidhozic/discord-advertisement-framework"
-DOC_URL = f"https://daf.davidhozic.com/en/{daf.VERSION}"
+DOC_URL = f"https://daf.davidhozic.com/en/v{daf.VERSION}"
 
 
 class Application():
@@ -428,6 +428,12 @@ class Application():
         if other_str != "":
             other_str = "\n" + other_str
 
+        if logger_is_present:
+            logger_str, logger_imports, _ = convert_objects_to_script(logger)
+            logger_imports = "\n".join(set(logger_imports))
+        else:
+            logger_imports = ""
+
         _ret = f'''
 """
 Automatically generated file for Discord Advertisement Framework {daf.VERSION}.
@@ -440,18 +446,16 @@ At the bottom of the file the framework is then started with the run function.
 """
 
 # Import the necessary items
-{f"from {logger.class_.__module__} import {logger.class_.__name__}" if logger_is_present else ""}
-{f"from {tracing.__module__} import {tracing.__class__.__name__}" if tracing_is_present else ""}
+{logger_imports}
 {imports}
-
+{f"from {tracing.__module__} import {tracing.__class__.__name__}" if tracing_is_present else ""}
 import daf{other_str}
 
 # Define the logger
-{f"logger = {logger}" if logger_is_present else ""}
+{f"logger = {logger_str}" if logger_is_present else ""}
 
 # Defined accounts
 accounts = {accounts_str}
-
 
 # Run the framework (blocking)
 daf.run(
