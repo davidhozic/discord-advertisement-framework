@@ -475,3 +475,6 @@ na kateri se potem z ukazom ``git apply`` spremembe prenese na posodobljeno verz
 
 Več o tem nivoju se lahko izve na https://docs.pycord.dev/en/stable/.
 
+
+
+

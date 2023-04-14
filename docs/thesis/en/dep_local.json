@@ -4,7 +4,8 @@
         {"from": "../../source/dep_local.json", "to": "./DEP/_dep_local.json"},
         {"from": "../scripts/*", "to": "./DEP/"},
         {"from": "../sources.json", "to": "./DEP/sources.json"},
-        {"from": "../images/*", "to": "./DEP/"}
+        {"from": "../images/*", "to": "./DEP/"},
+        {"from": "../../../testing/test_period_dynamic.py", "to": "./DEP/test_period_dynamic.py"}
     ],
     "scripts": ["./DEP/scripts/generate_lit.py"]
 }
