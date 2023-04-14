@@ -31,7 +31,9 @@ Glossary
 ----------------------
 Releases
 ----------------------
-
+v2.6.1
+========
+- Fixed logger not being converted properly when exporting GUI data into a script.
 
 v2.6.0
 ==========

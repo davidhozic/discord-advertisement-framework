@@ -771,7 +771,7 @@ class GuildDISCOVERY:
         cache_key = (self.prompt, self.sort_by, self.total_members, self.limit)
         cache_result: List[QueryResult] = self.query_cache.get(cache_key, None)
         # List[ { 'id': int, 'name': str, 'invite': str } ]"
-        if not (cache_result is None or cache_result[0].pending_refresh):
+        if not (cache_result is None or (len(cache_result) and cache_result[0].pending_refresh)):
             for cached in cache_result:
                 yield cached
 
