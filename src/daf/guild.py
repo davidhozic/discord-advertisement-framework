@@ -870,7 +870,7 @@ class AutoGUILD:
 
         try:
             # Get next result from top.gg
-            yielded: web.QueryResult = await self.guild_query_iter.__anext__()  # anext introduced since Python 3.10
+            yielded: web.QueryResult = await anext(self.guild_query_iter)
             if (
                 re.search(self.include_pattern, yielded.name) is None or
                 (

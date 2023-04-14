@@ -12,7 +12,7 @@ build:
   apt_packages:
     - inkscape
   tools:
-    python: "3.8"
+    python: "3.10"
   jobs:
     pre_build:
       - pip install .[all] .[docs]
