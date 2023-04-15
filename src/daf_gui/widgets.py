@@ -1,5 +1,4 @@
-from __future__ import annotations
-from typing import get_args, get_origin, get_type_hints, Iterable, Union, Literal, Any
+from typing import get_args, get_origin, Iterable, Union, Literal, Any
 from collections.abc import Iterable as ABCIterable
 from contextlib import suppress
 from enum import Enum
@@ -20,7 +19,6 @@ import tkinter.filedialog as tkfile
 
 
 import webbrowser
-import types
 import datetime as dt
 import inspect
 
@@ -67,7 +65,7 @@ def setup_additional_widget_color_picker(w: ttk.Button, window: "NewObjectFrame"
             return
 
         rgb, hsl, hex_ = _
-        color = int(hex_.removeprefix("#"), base=16)
+        color = int(hex_.lstrip("#"), base=16)
         if color not in widget["values"]:
             widget.insert(tk.END, color)
 
@@ -125,7 +123,7 @@ ADDITIONAL_WIDGETS = {
 
 class Text(tk.Text):
     def get(self) -> str:
-        return super().get("1.0", tk.END).removesuffix("\n")
+        return super().get("1.0", tk.END).strip()
 
 
 class ComboBoxText(ttk.Frame):
@@ -148,7 +146,7 @@ class ListBoxObjects(tk.Listbox):
 
         return super().get(*args, **kwargs)
 
-    def insert(self, index: str | int, *elements: str | float) -> None:
+    def insert(self, index: Union[str, int], *elements: Union[str, float]) -> None:
         _ret = super().insert(index, *elements)
         self._original_items.extend(elements)
         return _ret
@@ -216,7 +214,7 @@ class ListBoxScrolled(ttk.Frame):
         listbox = self.listbox
         selection = self.listbox.curselection()
         if len(selection):
-            object_: ObjectInfo | Any = listbox.get()[selection[0]]
+            object_: Union[ObjectInfo, Any] = listbox.get()[selection[0]]
             listbox.insert(tk.END, object_)
         else:
             tkdiag.Messagebox.show_error("Select atleast one item!", "Empty list!", parent=self)
@@ -239,7 +237,7 @@ class ComboBoxObjects(ttk.Combobox):
         super().delete(index)
         self["values"] = self["values"]  # Update the text list, NOT a code mistake
 
-    def insert(self, index: int | str, element: Any) -> None:
+    def insert(self, index: Union[int, str], element: Any) -> None:
         if index == tk.END:
             self._original_items.append(element)
             index = len(self._original_items)
@@ -347,7 +345,7 @@ class NewObjectFrame(ttk.Frame):
     def __init__(
         self,
         class_,
-        return_widget: ComboBoxObjects | ListBoxScrolled,
+        return_widget: Union[ComboBoxObjects, ListBoxScrolled],
         parent = None,
         old: ObjectInfo = None,
         check_parameters = True,
@@ -381,16 +379,12 @@ class NewObjectFrame(ttk.Frame):
         frame_main.pack(expand=True, fill=tk.BOTH)
         self.frame_main = frame_main
 
-        # Additional annotations defined in daf to support more types
-        try:
+        annotations = {}
+        with suppress(AttributeError):
             if inspect.isclass(class_):
-                annot_object = class_.__init__
+                annotations = class_.__init__.__annotations__
             else:
-                annot_object = class_
-
-            annotations = get_type_hints(annot_object, include_extras=True)
-        except (NameError, TypeError):
-            annotations = {}
+                annotations = class_.__annotations__
 
         additional_annotations = ADDITIONAL_ANNOTATIONS.get(class_)
         if additional_annotations is not None:
@@ -402,7 +396,7 @@ class NewObjectFrame(ttk.Frame):
             self.init_int_float(class_)
         elif get_origin(class_) in {list, Iterable, ABCIterable, tuple}:
             self.init_iterable(class_)
-        elif annotations or additional_annotations is not None:
+        elif annotations:
             self.init_structured(annotations)
         else:
             tkdiag.Messagebox.show_error("This object cannot be edited.", "Load error", parent=self.origin_window)
@@ -418,7 +412,7 @@ class NewObjectFrame(ttk.Frame):
         help_url = HELP_URLS.get(package)
         if help_url is not None:
             def cmd():
-                webbrowser.open(help_url.format(class_.__name__))
+                webbrowser.open(help_url.format(self.get_cls_name(class_)))
 
             ttk.Button(frame_toolbar, text="Help", command=cmd).pack(side="left")
 
@@ -470,7 +464,7 @@ class NewObjectFrame(ttk.Frame):
 
                     if self.allow_save:
                         menu.add_radiobutton(
-                            label=f"New {entry_type.__name__}",
+                            label=f"New {self.get_cls_name(entry_type)}",
                             command=self.new_object_window(entry_type, combo)
                         )
 
@@ -496,7 +490,7 @@ class NewObjectFrame(ttk.Frame):
             args = get_args(args[0])
 
         for arg in args:
-            menu.add_radiobutton(label=arg.__name__, command=self.new_object_window(arg, w))
+            menu.add_radiobutton(label=self.get_cls_name(arg), command=self.new_object_window(arg, w))
 
         self._map[None] = (w, list)
 
@@ -510,13 +504,22 @@ class NewObjectFrame(ttk.Frame):
         w.pack(fill=tk.BOTH, expand=True)
         self._map[None] = (w, str)
 
+    @staticmethod
+    def get_cls_name(cls):
+        if hasattr(cls, "_name"):
+            return cls._name
+        if hasattr(cls, "__name__"):
+            return cls.__name__
+        else:
+            return cls
+
     @classmethod
     def set_origin_window(cls, window: ObjectEditWindow):
         cls.origin_window = window
 
     @classmethod
     def convert_types(cls, types_in):
-        while get_origin(types_in) in {Union, types.UnionType}:
+        while get_origin(types_in) is Union:
             types_in = get_args(types_in)
 
         if not isinstance(types_in, list):
@@ -534,7 +537,7 @@ class NewObjectFrame(ttk.Frame):
         return types_in + subtypes
 
     def update_window_title(self):
-        self.origin_window.title(f"{'New' if self.old_object_info is None else 'Edit'} {self.class_.__name__} object")
+        self.origin_window.title(f"{'New' if self.old_object_info is None else 'Edit'} {self.get_cls_name(self.class_)} object")
 
     def close_frame(self):
         if self.allow_save:

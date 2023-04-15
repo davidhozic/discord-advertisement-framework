@@ -8,7 +8,7 @@
         Made SQL an optional functionality
 """
 from datetime import datetime, date
-from typing import Callable, Dict, List, Literal, Any, Union, Optional
+from typing import Callable, Dict, List, Literal, Any, Union, Optional, Tuple
 from contextlib import suppress
 from typeguard import typechecked
 
@@ -128,7 +128,6 @@ class ORMBase(DeclarativeBase):
             return self.id << 4 | id(type(self)) >> 8
         except AttributeError:
             return super().__hash__()
-
 
 
 class TableCache:
@@ -801,7 +800,7 @@ class LoggerSQL(logging.LoggerBASE):
         else:
             raise RuntimeError(f"Unable to save log within {SQL_MAX_SAVE_ATTEMPTS} tries")
 
-    async def _get_guild(self, id_: int, session: AsyncSession | Session):
+    async def _get_guild(self, id_: int, session: Union[AsyncSession, Session]):
         guilduser: GuildUSER = self.guild_user_cache.get(id_)
         if guilduser is not None:
             return guilduser
@@ -818,17 +817,17 @@ class LoggerSQL(logging.LoggerBASE):
 
     async def analytic_get_num_messages(
             self,
-            guild: int | None = None,
-            author: int | None = None,
-            after: datetime | None = None,
-            before: datetime | None = None,
-            guild_type: Literal["USER", "GUILD"] | None = None,
-            message_type: Literal["TextMESSAGE", "VoiceMESSAGE", "DirectMESSAGE"] | None = None,
+            guild: Union[int, None] = None,
+            author: Union[int, None] = None,
+            after: Union[datetime, None] = None,
+            before: Union[datetime, None] = None,
+            guild_type: Union[Literal["USER", "GUILD"], None] = None,
+            message_type: Union[Literal["TextMESSAGE", "VoiceMESSAGE", "DirectMESSAGE"], None] = None,
             sort_by: Literal["successful", "failed", "guild_snow", "guild_name", "author_snow", "author_name"] = "successful",
             sort_by_direction: Literal["asc", "desc"] = "desc",
             limit: int = 500,
             group_by: Literal["year", "month", "day"] = "day"
-    ) -> list[tuple[date, int, int, int, str, int, str]]:
+    ) -> List[Tuple[date, int, int, int, str, int, str]]:
         """
 
         Parameters
@@ -837,9 +836,9 @@ class LoggerSQL(logging.LoggerBASE):
             The snowflake id of the guild.
         author: int
             The snowflake id of the author.
-        after: datetime | None = None
+        after: Union[datetime, None] = None
             Only count messages sent after the datetime.
-        before: datetime | None
+        before: Union[datetime, None]
             Only count messages sent before the datetime.
         guild_type: Literal["USER", "GUILD"] | None,
             Type of guild.
@@ -942,29 +941,29 @@ class LoggerSQL(logging.LoggerBASE):
 
     async def analytic_get_message_log(
             self,
-            guild: int | None = None,
-            author: int | None = None,
-            after: datetime | None = None,
-            before: datetime | None = None,
-            success_rate: tuple[float, float] = (0, 100),
-            guild_type: Literal["USER", "GUILD"] | None = None,
-            message_type: Literal["TextMESSAGE", "VoiceMESSAGE", "DirectMESSAGE"] | None = None,
+            guild: Union[int, None] = None,
+            author: Union[int, None] = None,
+            after: Union[datetime, None] = None,
+            before: Union[datetime, None] = None,
+            success_rate: Tuple[float, float] = (0, 100),
+            guild_type: Union[Literal["USER", "GUILD"], None] = None,
+            message_type: Union[Literal["TextMESSAGE", "VoiceMESSAGE", "DirectMESSAGE"], None] = None,
             sort_by: Literal["timestamp", "success_rate"] = "timestamp",
             sort_by_direction: Literal["asc", "desc"] = "desc",
             limit: int = 500,
-    ) -> list["MessageLOG"]:
+    ) -> List["MessageLOG"]:
         """
         Returns a list MessageLOG objects (message logs) that match the parameters.
 
         Parameters
         --------------
-        guild: int | None
+        guild: Union[int, None]
             The snowflake id of the guild.
-        author: int | None
+        author: Union[int, None]
             The snowflake id of the author.
-        after: datetime | None
+        after: Union[datetime, None]
             Include only messages sent after this datetime.
-        before: datetime | None
+        before: Union[datetime, None]
             Include only messages sent before this datetime.
         success_rate: tuple[int, int]
             Success rate tuple containing minimum success rate and maximum success
