@@ -2,8 +2,8 @@
 This module is responsible for the logging in daf.
 It contains all the logging classes.
 """
-from datetime import datetime
-from typing import Optional, Literal
+from datetime import datetime, date
+from typing import Optional, Literal, Union, Tuple, List
 
 from .tracing import trace, TraceLEVELS
 from .. import misc
@@ -23,7 +23,7 @@ __all__ = (
 
 # Constants
 # ---------------------#
-C_FILE_NAME_FORBIDDEN_CHAR = ('<','>','"','/','\\','|','?','*',":")
+C_FILE_NAME_FORBIDDEN_CHAR = ('<', '>', '"', '/', '\\', '|', '?', '*', ":")
 
 
 class GLOBAL:
@@ -75,28 +75,28 @@ class LoggerBASE:
 
     async def analytic_get_num_messages(
             self,
-            guild: int | None = None,
-            author: int | None = None,
-            after: datetime | None = None,
-            before: datetime | None = None,
-            guild_type: Literal["USER", "GUILD"] | None = None,
-            message_type: Literal["TextMESSAGE", "VoiceMESSAGE", "DirectMESSAGE"] | None = None,
+            guild: Union[int, None] = None,
+            author: Union[int, None] = None,
+            after: Union[datetime, None] = None,
+            before: Union[datetime, None] = None,
+            guild_type: Union[Literal["USER", "GUILD"], None] = None,
+            message_type: Union[Literal["TextMESSAGE", "VoiceMESSAGE", "DirectMESSAGE"], None] = None,
             sort_by: Literal["successful", "failed", "guild_snow", "guild_name", "author_snow", "author_name"] = "successful",
             sort_by_direction: Literal["asc", "desc"] = "desc",
             limit: int = 500,
             group_by: Literal["year", "month", "day"] = "day"
-    ) -> tuple[int]:
+    ) -> List[Tuple[date, int, int, int, str, int, str]]:
         raise NotImplementedError
 
     async def analytic_get_message_log(
             self,
-            guild: int | None = None,
-            author: int | None = None,
-            after: datetime | None = None,
-            before: datetime | None = None,
-            success_rate: tuple[float, float] = (0, 100),
-            guild_type: Literal["USER", "GUILD"] | None = None,
-            message_type: Literal["TextMESSAGE", "VoiceMESSAGE", "DirectMESSAGE"] | None = None,
+            guild: Union[int, None] = None,
+            author: Union[int, None] = None,
+            after: Union[datetime, None] = None,
+            before: Union[datetime, None] = None,
+            success_rate: Tuple[float, float] = (0, 100),
+            guild_type: Union[Literal["USER", "GUILD"], None] = None,
+            message_type: Union[Literal["TextMESSAGE", "VoiceMESSAGE", "DirectMESSAGE"], None] = None,
             sort_by: Literal["timestamp", "success_rate"] = "timestamp",
             sort_by_direction: Literal["asc", "desc"] = "desc",
             limit: int = 500,

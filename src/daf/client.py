@@ -1,7 +1,7 @@
 """
     This modules contains definitions related to the client (for API)
 """
-from typing import Optional, Union, List
+from typing import Optional, Union, List, Dict
 
 from . import misc
 from . import guild
@@ -276,7 +276,7 @@ class ACCOUNT:
         self.tasks.append(asyncio.create_task(self._loop()))
         self._running = True
 
-    def generate_log_context(self) -> dict[str, Union[str, int]]:
+    def generate_log_context(self) -> Dict[str, Union[str, int]]:
         """
         Generates a dictionary of the user's context,
         which is then used for logging.
