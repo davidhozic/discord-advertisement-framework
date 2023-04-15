@@ -2,9 +2,8 @@
 Front page of the thesis
 ================================
 
-
 .. toctree::
-
+    
     acknowledgements
     abstract
     introduction
@@ -13,3 +12,4 @@ Front page of the thesis
     documenting
     testing
     thesis_lit
+

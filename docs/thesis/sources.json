@@ -31,14 +31,14 @@
         "id": "discord_api_ref",
         "author": "Discord",
         "title" : "Discord API Reference",
-        "source": "https://discord.com/developers/docs/reference - :ref:`Discord API`",
+        "source": "https://discord.com/developers/docs/reference - ",
         "updated": "jan. 2023"
     },
     {
         "id": "discord_api_rl",
         "author": "Discord",
         "title" : "Discord rate limits",
-        "source": "https://discord.com/developers/docs/topics/rate-limits - :ref:`Discord rate limiting`",
+        "source": "https://discord.com/developers/docs/topics/rate-limits - ",
         "updated": "jan. 2023"
     },
     {

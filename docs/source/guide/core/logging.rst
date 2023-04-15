@@ -129,7 +129,7 @@ This type of logging enables saving logs to a remote server inside the database.
 In addition to being smaller in size, database logging takes up less space and it allows easier data analysis.
 
 
-.. figure:: ./images/sql_logging_process.drawio.svg
+.. figure:: ./DEP/images/sql_logging_process.drawio.svg
 
     SQL Logging diagram
 
@@ -168,7 +168,7 @@ Features
 
 ER diagram
 --------------------------------
-.. image:: ./images/sql_er.drawio.svg
+.. image:: ./DEP/images/sql_er.drawio.svg
     :width: 1440
 
 
