@@ -4,7 +4,6 @@ It contains definitions related to the Selenium integration
 and definitions responsible for making HTTP requests to find servers
 the user might want to shill into.
 """
-from __future__ import annotations
 from typing import Dict, Tuple, Callable, List, Optional, Any
 from contextlib import suppress
 from enum import auto, Enum

@@ -1,7 +1,7 @@
 """
     This modules contains definitions related to the client (for API)
 """
-from typing import Optional, Union, List
+from typing import Optional, Union, List, Dict
 
 from . import misc
 from . import guild

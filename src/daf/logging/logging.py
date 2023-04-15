@@ -2,8 +2,8 @@
 This module is responsible for the logging in daf.
 It contains all the logging classes.
 """
-from datetime import datetime
-from typing import Optional
+from datetime import datetime, date
+from typing import Optional, Literal, Union, Tuple, List
 
 from .tracing import trace, TraceLEVELS
 from .. import misc
@@ -23,7 +23,7 @@ __all__ = (
 
 # Constants
 # ---------------------#
-C_FILE_NAME_FORBIDDEN_CHAR = ('<','>','"','/','\\','|','?','*',":")
+C_FILE_NAME_FORBIDDEN_CHAR = ('<', '>', '"', '/', '\\', '|', '?', '*', ":")
 
 
 class GLOBAL:

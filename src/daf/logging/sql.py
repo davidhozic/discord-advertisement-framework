@@ -7,6 +7,8 @@
     .. versionchanged:: v2.1
         Made SQL an optional functionality
 """
+from datetime import datetime, date
+from typing import Callable, Dict, List, Literal, Any, Union, Optional, Tuple
 from datetime import datetime
 from typing import Callable, Dict, List, Literal, Any, Union, Optional
 from contextlib import suppress
@@ -116,6 +118,14 @@ def register_type(lookuptable: Literal["GuildTYPE", "MessageTYPE", "MessageMODE"
 
 class ORMBase(DeclarativeBase):
     "Base for all of ORM classes"
+
+
+    def __hash__(self):
+        try:
+            return self.id << 4 | id(type(self)) >> 8
+        except AttributeError:
+            return super().__hash__()
+
 
 
 class TableCache:
