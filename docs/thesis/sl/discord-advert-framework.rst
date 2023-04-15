@@ -292,6 +292,9 @@ Po poslanem sporočilu se podatke sporočila in status pošiljanja pošlje :ref:
 
     Proces sporočilnega nivoja
 
+.. raw:: latex
+
+    \newpage
 
 Nivo beleženja
 ---------------
@@ -321,6 +324,10 @@ zmanjka nadomestkov ali pa je beleženje uspešno.
 
     Višji nivo beleženja
 
+.. raw:: latex
+
+    \newpage
+
 JSON beleženje
 ~~~~~~~~~~~~~~~~~
 JSON beleženje je implementirano z objektom beleženja :class:`~daf.logging.LoggerJSON`.
@@ -339,6 +346,9 @@ datoteko. Za specifike glej :ref:`Logging (core)`.
 
     Process JSON beleženja
 
+.. raw:: latex
+
+    \newpage
 
 CSV beleženje
 ~~~~~~~~~~~~~~~~~~
@@ -366,6 +376,7 @@ strukture, npr. vnosa dveh ločenih tabel lahko predstavimo z dvema ločenima in
 druge instance.
 
 .. figure:: ./DEP/images/sql_er.drawio.svg
+    :width: 500
 
     SQL entitetno-relacijski diagram
 
@@ -398,6 +409,7 @@ da se je zgodila kakršna koli napaka, se lahko SQL pod-nivo nivoja beleženja n
 
 
 .. figure:: ./DEP/images/sql_logging_process.drawio.svg
+    :width: 500
 
     Proces beleženja z SQL podatkovno bazo
 

@@ -126,7 +126,9 @@ prevelikega in hitrega oglaševanja v direktna sporočila, lahko Discord ukine v
 
     Discord direktna sporočila
 
+.. raw:: latex
 
+    \newpage
 
 Oglaševanje v Discord
 ==========================
