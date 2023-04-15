@@ -57,6 +57,7 @@ def setup_additional_widget_datetime(w: ttk.Button, window: "NewObjectFrame"):
             widget.set(value)
 
     w.configure(command=_callback)
+    w.pack(side="right")
 
 
 def setup_additional_widget_color_picker(w: ttk.Button, window: "NewObjectFrame"):
@@ -74,6 +75,7 @@ def setup_additional_widget_color_picker(w: ttk.Button, window: "NewObjectFrame"
         widget.set(color)
 
     w.configure(command=_callback)
+    w.pack(side="right")
 
 
 def setup_additional_widget_file_chooser(w: ttk.Button, window: "NewObjectFrame"):
@@ -91,6 +93,7 @@ def setup_additional_widget_file_chooser(w: ttk.Button, window: "NewObjectFrame"
         filename_combo.set(filename)
 
     w.configure(command=_callback)
+    w.pack(side="right")
 
 
 def setup_additional_widget_file_chooser_logger(w: ttk.Button, window: "NewObjectFrame"):
@@ -104,6 +107,7 @@ def setup_additional_widget_file_chooser_logger(w: ttk.Button, window: "NewObjec
         filename_combo.set(path)
 
     w.configure(command=_callback)
+    w.pack(side="right")
 
 
 HELP_URLS = {
@@ -425,7 +429,6 @@ class NewObjectFrame(ttk.Frame):
             for add_widg in add_widgets:
                 setup_cmd = add_widg.setup_cmd
                 add_widg = add_widg.widget_class(frame_toolbar, *add_widg.args, **add_widg.kwargs)
-                add_widg.pack(side="right")
                 setup_cmd(add_widg, self)
 
         frame_toolbar.pack(fill=tk.X)
