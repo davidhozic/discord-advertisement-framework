@@ -1,4 +1,4 @@
-from typing import get_type_hints, Iterable, Any, Union
+from typing import get_type_hints, Iterable, Any, Union, List
 from contextlib import suppress
 from enum import Enum
 
@@ -59,19 +59,27 @@ ADDITIONAL_ANNOTATIONS = {
     },
     dt.datetime: {
         "year": int,
-        "month": int | None,
-        "day": int | None,
+        "month": Union[int, None],
+        "day": Union[int, None],
         "hour": int,
         "minute": int,
         "second": int,
         "microsecond": int,
-        "tzinfo": dt.tzinfo | None,
+        "tzinfo": Union[dt.tzinfo, None],
         "fold": int
     },
     discord.Embed: {
+        "colour": Union[int, discord.Colour],
+        "color": Union[int, discord.Colour],
         "title": str,
+        "type": discord.embeds.EmbedType,
         "url": str,
-        "description": str
+        "description": str,
+        "timestamp": dt.datetime,
+        "fields": List[discord.EmbedField]
+    },
+    discord.EmbedField: {
+        "name": str, "value": str, "inline": bool
     },
     daf.TextMESSAGE: {
         "data": Union[Iterable[Union[str, discord.Embed, daf.FILE]], str, discord.Embed, daf.FILE, UserDataFunction]
@@ -131,7 +139,7 @@ class ObjectInfo:
         return _ret
 
 
-def convert_objects_to_script(object: ObjectInfo | list | tuple | set | str):
+def convert_objects_to_script(object: Union[ObjectInfo, list, tuple, set, str]):
     object_data = []
     import_data = []
     other_data = []
@@ -145,7 +153,7 @@ def convert_objects_to_script(object: ObjectInfo | list | tuple | set | str):
             object_str = f"{object.class_.__name__}(\n    "
             attr_str = ""
             for attr, value in object.data.items():
-                if isinstance(value, ObjectInfo | list | tuple | set):
+                if isinstance(value, (ObjectInfo, list, tuple, set)):
                     value, import_data_, other_str = convert_objects_to_script(value)
                     import_data.extend(import_data_)
                     if other_str != "":
@@ -165,7 +173,7 @@ def convert_objects_to_script(object: ObjectInfo | list | tuple | set | str):
         object_str += "    ".join(attr_str.splitlines(True)) + ")"
         object_data.append(object_str)
 
-    elif isinstance(object, list | tuple | set):
+    elif isinstance(object, (list, tuple, set)):
         _list_data = "[\n"
         for element in object:
             object_str, import_data_, other_str = convert_objects_to_script(element)
@@ -267,7 +275,7 @@ def convert_to_json(d: ObjectInfo):
     return {"type": f"{d.class_.__module__}.{d.class_.__name__}", "data": data_conv}
 
 
-def convert_from_json(d: dict | list[dict] | Any) -> ObjectInfo:
+def convert_from_json(d: Union[dict, List[dict], Any]) -> ObjectInfo:
     if isinstance(d, list):
         result = []
         for item in d:
