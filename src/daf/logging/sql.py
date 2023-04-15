@@ -800,7 +800,7 @@ class LoggerSQL(logging.LoggerBASE):
         else:
             raise RuntimeError(f"Unable to save log within {SQL_MAX_SAVE_ATTEMPTS} tries")
 
-    async def _get_guild(self, id_: int, session: AsyncSession | Session):
+    async def _get_guild(self, id_: int, session: Union[AsyncSession, Session]):
         guilduser: GuildUSER = self.guild_user_cache.get(id_)
         if guilduser is not None:
             return guilduser
