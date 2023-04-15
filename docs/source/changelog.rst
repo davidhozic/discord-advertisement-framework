@@ -31,7 +31,7 @@ Glossary
 ----------------------
 Releases
 ----------------------
-v2.5.4
+v2.5.5
 =============
 - Restored support for Python v3.8
 
