@@ -31,6 +31,10 @@ Glossary
 ----------------------
 Releases
 ----------------------
+v2.6.3
+=============
+- Restored support for Python v3.8
+
 v2.6.1
 ========
 - Fixed logger not being converted properly when exporting GUI data into a script.
@@ -48,7 +52,6 @@ v2.6.0
   
   - Added ``author`` field to all logging managers (tells us which account sent the message).
   - SQL analysis
-
 
 
 v2.5.1
