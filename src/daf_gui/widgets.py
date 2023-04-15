@@ -288,7 +288,7 @@ class ObjectEditWindow(ttk.Toplevel):
         ttk.Button(self.frame_toolbar, text="Close", command=self.close_object_edit_frame).pack(side="left")
         ttk.Button(self.frame_toolbar, text="Save", command=self.save_object_edit_frame).pack(side="left")
 
-        self.frame_toolbar.pack(expand=True, fill=tk.X)
+        self.frame_toolbar.pack(expand=False, fill=tk.X)
         self.frame_main.pack(expand=True, fill=tk.BOTH)
         self.frame_main.rowconfigure(0, weight=1)
         self.frame_main.columnconfigure(0, weight=1)
