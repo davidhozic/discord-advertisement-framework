@@ -17,4 +17,4 @@ if DOCUMENTATION_MODE:
     from .misc import *
 
 
-VERSION = "2.6.2"
+VERSION = "2.6.3"
