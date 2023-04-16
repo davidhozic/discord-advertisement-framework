@@ -453,7 +453,7 @@ class ACCOUNT:
 
         if "intents" in kwargs:
             intents: discord.Intents = kwargs["intents"]
-            if intents.value == 0:
+            if isinstance(intents, discord.Intents) and intents.value == 0:
                 kwargs["intents"] = None
 
         await _update(self)

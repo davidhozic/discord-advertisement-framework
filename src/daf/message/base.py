@@ -89,8 +89,9 @@ class BaseMESSAGE:
         eg. if you pass the value `5`, that means the message will be sent every 5 seconds.
     data: inherited class dependant
         The data to be sent to discord.
-    start_in: timedelta
+    start_in: Optional[timedelta | datetime]
         When should the message be first sent.
+        *timedelta* means the difference from current time, while *datetime* means actual first send time.
     remove_after: Optional[Union[int, timedelta, datetime]]
         Deletes the message after:
 
@@ -118,7 +119,7 @@ class BaseMESSAGE:
                  start_period: Optional[Union[int, timedelta]],
                  end_period: Union[int, timedelta],
                  data: Any,
-                 start_in: Union[timedelta, bool],
+                 start_in: Optional[Union[timedelta, datetime, bool]],
                  remove_after: Optional[Union[int, timedelta, datetime]]):
         # Data parameter checks
         if isinstance(data, Iterable):
@@ -155,6 +156,8 @@ class BaseMESSAGE:
                 "Use timedelta object instead.",
                 TraceLEVELS.DEPRECATED
             )
+        elif isinstance(start_in, datetime):
+            self.next_send_time = start_in
         else:
             self.next_send_time = datetime.now() + start_in
 

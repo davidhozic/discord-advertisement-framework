@@ -119,6 +119,7 @@ if daf.sql.SQL_INSTALLED:
 for item in {daf.TextMESSAGE, daf.VoiceMESSAGE, daf.DirectMESSAGE}:
     CONVERSION_ATTR_TO_PARAM[item] = {k: k for k in item.__init__.__annotations__}
     CONVERSION_ATTR_TO_PARAM[item]["data"] = "_data"
+    CONVERSION_ATTR_TO_PARAM[item]["start_in"] = "next_send_time"
 
 
 CONVERSION_ATTR_TO_PARAM[daf.TextMESSAGE]["channels"] = (

@@ -468,12 +468,12 @@ class NewObjectFrame(ttk.Frame):
                         last_list_type = entry_type
 
                     if self.allow_save:
-                        menu.add_radiobutton(
+                        menu.add_command(
                             label=f"New {self.get_cls_name(entry_type)}",
                             command=self._lambda(self.new_object_window, entry_type, combo)
                         )
 
-            menu.add_radiobutton(
+            menu.add_command(
                 label=f"{'Edit' if self.allow_save else 'View'} selected", 
                 command=self.combo_edit_selected(w, last_list_type)
             )
@@ -498,7 +498,7 @@ class NewObjectFrame(ttk.Frame):
                 args = get_args(args[0])
 
             for arg in args:
-                menu.add_radiobutton(label=self.get_cls_name(arg), command=self._lambda(self.new_object_window, arg, w))
+                menu.add_command(label=self.get_cls_name(arg), command=self._lambda(self.new_object_window, arg, w))
         else:
             ttk.Button(frame_edit_remove, text="View", command=self.listbox_edit_selected(w)).pack(fill=tk.X)
 
