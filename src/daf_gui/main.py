@@ -174,15 +174,13 @@ class Application():
 
     def init_live_inspect_tab(self):
         dpi_10 = dpi_scaled(10)
-        dpi_5 = dpi_scaled(5)
-
         tab_live = ttk.Frame(self.tabman_mf, padding=(dpi_10, dpi_10))
         self.tabman_mf.add(tab_live, text="Live view")
         frame_view_refresh = ttk.Frame(tab_live)
         frame_view_refresh.pack(fill=tk.X)
         bnt_view = ttk.Button(
             frame_view_refresh,
-            text="View",
+            text="Edit",
             command=self.view_live_account
         )
 
@@ -345,7 +343,12 @@ class Application():
         selection = self.list_live_accounts.curselection()
         if len(selection):
             object_: ObjectInfo = self.list_live_accounts.get()[selection[0]]
-            self.open_object_edit_window(daf.ACCOUNT, self.list_live_accounts, old=object_, allow_save=False)
+            self.open_object_edit_window(
+                daf.ACCOUNT,
+                self.list_live_accounts,
+                old=object_,
+                allow_save=True,
+            )
         else:
             tkdiag.Messagebox.show_error("Select atleast one item!", "Empty list!")
 

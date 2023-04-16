@@ -450,11 +450,11 @@ class AutoCHANNEL:
                  interval: Optional[timedelta] = timedelta(minutes=5)) -> None:
         self.include_pattern = include_pattern
         self.exclude_pattern = exclude_pattern
-        self.interval = interval.total_seconds()
+        self.interval = interval
         self.parent = None
         self.channel_getter: property = None
         self.cache: Set[ChannelType] = set()
-        self.last_scan = 0
+        self.last_scan = datetime.min
 
     def __iter__(self):
         "Returns the channel iterator."
@@ -493,7 +493,7 @@ class AutoCHANNEL:
         Task that scans and adds new channels to cache.
         """
         channel: ChannelType
-        stamp = datetime.now().timestamp()
+        stamp = datetime.now()
         if stamp - self.last_scan > self.interval:
             self.last_scan = stamp
             guild: discord.Guild = self.parent.parent.apiobject
@@ -550,9 +550,6 @@ class AutoCHANNEL:
         Any
             Raised from :py:meth:`~daf.message.AutoCHANNEL.initialize` method.
         """
-        if "interval" not in kwargs:
-            kwargs["interval"] = timedelta(seconds=self.interval)
-
         return await misc._update(self,
                                   init_options={"parent": self.parent, "channel_type": self.channel_getter},
                                   **kwargs)

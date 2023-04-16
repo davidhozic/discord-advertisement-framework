@@ -451,6 +451,11 @@ class ACCOUNT:
             kwargs["username"] = None
             kwargs["password"] = None
 
+        if "intents" in kwargs:
+            intents: discord.Intents = kwargs["intents"]
+            if intents.value == 0:
+                kwargs["intents"] = None
+
         await _update(self)
 
 

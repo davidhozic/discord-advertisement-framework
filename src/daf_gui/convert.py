@@ -116,6 +116,16 @@ if daf.sql.SQL_INSTALLED:
     CONVERSION_ATTR_TO_PARAM[sql_.GuildUSER]["snowflake"] = "snowflake_id"
     CONVERSION_ATTR_TO_PARAM[sql_.CHANNEL]["snowflake"] = "snowflake_id"
 
+for item in {daf.TextMESSAGE, daf.VoiceMESSAGE, daf.DirectMESSAGE}:
+    CONVERSION_ATTR_TO_PARAM[item] = {k: k for k in item.__init__.__annotations__}
+    CONVERSION_ATTR_TO_PARAM[item]["data"] = "_data"
+
+
+CONVERSION_ATTR_TO_PARAM[daf.TextMESSAGE]["channels"] = (
+    "channels",
+    lambda channels: [x.id for x in channels] if not isinstance(channels, daf.AutoCHANNEL) else channels,
+)
+
 
 class ObjectInfo:
     """
@@ -197,9 +207,9 @@ def convert_objects_to_script(object: Union[ObjectInfo, list, tuple, set, str]):
 
 
 def convert_to_object_info(object_: object, save_original = False):
-    with suppress(TypeError):
-        if object_ in OBJECT_CONV_CACHE:
-            return OBJECT_CONV_CACHE.get(object_)
+    # with suppress(TypeError):
+    #     if object_ in OBJECT_CONV_CACHE:
+    #         return OBJECT_CONV_CACHE.get(object_)
 
     object_type = type(object_)
 
@@ -216,18 +226,23 @@ def convert_to_object_info(object_: object, save_original = False):
     data_conv = {}
     attrs = CONVERSION_ATTR_TO_PARAM.get(object_type)
     if attrs is None:
+        attrs = {}
         additional_annots = {key: key for key in ADDITIONAL_ANNOTATIONS.get(object_type, {})}
-        attrs = {key: key for key in object_type.__init__.__annotations__.keys()}
+        with suppress(AttributeError):
+            attrs = {key: key for key in object_type.__init__.__annotations__.keys()}
+
         attrs.update(**additional_annots)
 
     for k, v in attrs.items():
         with suppress(Exception):
-            value = getattr(object_, v)
+            if isinstance(v, tuple):
+                value = v[1](getattr(object_, v[0]))
+            else:
+                value = getattr(object_, v)
             if value is object_:
                 data_conv[k] = value
             else:
                 data_conv[k] = convert_to_object_info(value, save_original)
-                pass
 
     ret = ObjectInfo(object_type, data_conv)
     if save_original:
@@ -242,21 +257,45 @@ def convert_to_object_info(object_: object, save_original = False):
     return ret
 
 
-def convert_to_objects(d: ObjectInfo):
-    data_conv = {}
-    for k, v in d.data.items():
-        if isinstance(v, ObjectInfo):
-            v = convert_to_objects(v)
+def convert_to_objects(d: Union[ObjectInfo, list], keep_original_object: bool = False):
+    if isinstance(d, (list, tuple, set)):
+        _ = []
+        for item in d:
+            _.append(convert_to_objects(item, keep_original_object))
 
-        elif isinstance(v, list):
-            v = v.copy()
-            for i, subv in enumerate(v):
-                if isinstance(subv, ObjectInfo):
-                    v[i] = convert_to_objects(subv)
+        return _
 
-        data_conv[k] = v
+    if isinstance(d, ObjectInfo):
+        data_conv = {}
+        for k, v in d.data.items():
+            if isinstance(v, ObjectInfo):
+                v = convert_to_objects(v, keep_original_object)
 
-    return d.class_(**data_conv)
+            elif isinstance(v, list):
+                v = v.copy()
+                for i, subv in enumerate(v):
+                    if isinstance(subv, ObjectInfo):
+                        v[i] = convert_to_objects(subv, keep_original_object)
+
+            data_conv[k] = v
+
+        new_obj = d.class_(**data_conv)
+        if keep_original_object and d.real_object is not None:
+            real = d.real_object
+            try:
+                args = vars(real)
+            except TypeError:
+                args = dir(real)
+
+            for a in args:
+                with suppress(Exception):
+                    setattr(real, a, getattr(new_obj, a))
+
+            new_obj = real
+
+        return new_obj
+
+    return d
 
 
 def convert_to_json(d: ObjectInfo):

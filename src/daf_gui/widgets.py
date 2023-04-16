@@ -112,10 +112,6 @@ def setup_additional_widget_file_chooser_logger(w: ttk.Button, window: "NewObjec
     w.pack(side="right")
 
 
-def setup_additional_widget_server_edit(w: ttk.Button, window: "NewObjectFrame"):
-    w.pack(side="right")
-
-
 ADDITIONAL_WIDGETS = {
     dt.datetime: [AdditionalWidget(ttk.Button, setup_additional_widget_datetime, text="Select date")],
     discord.Colour: [AdditionalWidget(ttk.Button, setup_additional_widget_color_picker, text="Color picker")],
@@ -123,9 +119,6 @@ ADDITIONAL_WIDGETS = {
     daf.LoggerJSON: [AdditionalWidget(ttk.Button, setup_additional_widget_file_chooser_logger, text="Select folder")],
     daf.LoggerCSV: [AdditionalWidget(ttk.Button, setup_additional_widget_file_chooser_logger, text="Select folder")],
     daf.AUDIO: [AdditionalWidget(ttk.Button, setup_additional_widget_file_chooser, text="File browse")],
-    List[Union[daf.guild.GUILD, daf.guild.USER, daf.guild.AutoGUILD]]: [
-        AdditionalWidget(ttk.Menubutton, setup_additional_widget_server_edit, text="Live object options"),
-    ]
 }
 
 
@@ -686,6 +679,13 @@ class NewObjectFrame(ttk.Frame):
 
             # Edit was requested, delete old value
             if self.old_object_info is not None:
+                old = self.old_object_info
+                if isinstance(old, ObjectInfo):
+                    object_.real_object = old.real_object
+                    if hasattr(object_.real_object, "update"):
+                        map_real = {k: convert_to_objects(v, True) for k, v in map_.copy().items()}
+                        asyncio.create_task(run_coro_gui_errors(object_.real_object.update(**map_real)))
+
                 ret_widget = self.return_widget
                 if isinstance(ret_widget, ListBoxScrolled):
                     ind = ret_widget.get().index(self.old_object_info)

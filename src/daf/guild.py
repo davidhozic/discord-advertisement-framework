@@ -834,6 +834,7 @@ class AutoGUILD:
         for discord_guild in client.guilds:
             if (
                 discord_guild not in self.cache and
+                discord_guild.name is not None and
                 re.search(self.include_pattern, discord_guild.name) is not None and
                 (
                     self.exclude_pattern is None or
