@@ -21,10 +21,13 @@ try:
     from .widgets import *
     from .convert import *
     from .dpi import *
+    from .utilities import *
 except ImportError:
     from widgets import *
     from convert import *
     from dpi import *
+    from utilities import *
+
 
 
 WIN_UPDATE_DELAY = 0.005
@@ -79,6 +82,9 @@ class Application():
 
         # Objects tab
         self.init_schema_tab()
+
+        # Live inspect tab
+        self.init_live_inspect_tab()
 
         # Output tab
         self.init_output_tab()
@@ -166,6 +172,32 @@ class Application():
 
         self.combo_tracing["values"] = [en for en in daf.TraceLEVELS]
 
+    def init_live_inspect_tab(self):
+        dpi_10 = dpi_scaled(10)
+        dpi_5 = dpi_scaled(5)
+
+        tab_live = ttk.Frame(self.tabman_mf, padding=(dpi_10, dpi_10))
+        self.tabman_mf.add(tab_live, text="Live view")
+        frame_view_refresh = ttk.Frame(tab_live)
+        frame_view_refresh.pack(fill=tk.X)
+        bnt_view = ttk.Button(
+            frame_view_refresh,
+            text="View",
+            command=self.view_live_account
+        )
+
+        bnt_refresh = ttk.Button(
+            frame_view_refresh,
+            text="Refresh",
+            command=self.load_live_accounts
+        )
+        bnt_view.pack(side="left")
+        bnt_refresh.pack(side="left")
+
+        list_live_objects = ListBoxScrolled(tab_live)
+        list_live_objects.pack(fill=tk.BOTH, expand=True)
+        self.list_live_accounts = list_live_objects
+
     def init_output_tab(self):
         self.tab_output = ttk.Frame(self.tabman_mf)
         self.tabman_mf.add(self.tab_output, text="Output")
@@ -232,7 +264,7 @@ class Application():
 
         frame_combo_messages = ComboEditFrame(
             self.edit_analytics_messages,
-            ObjectInfo(daf.logging.LoggerBASE.analytic_get_message_log, {}),
+            [ObjectInfo(daf.logging.LoggerBASE.analytic_get_message_log, {})],
             frame_msg_history
         )
         frame_combo_messages.pack(fill=tk.X)
@@ -261,7 +293,7 @@ class Application():
         frame_num_msg = ttk.Labelframe(tab_analytics, padding=(dpi_10, dpi_10), text="Number of messages", bootstyle="primary")
         frame_combo_num_messages = ComboEditFrame(
             self.edit_analytics_num_msg,
-            ObjectInfo(daf.logging.LoggerBASE.analytic_get_num_messages, {}),
+            [ObjectInfo(daf.logging.LoggerBASE.analytic_get_num_messages, {})],
             frame_num_msg
         )
 
@@ -303,6 +335,19 @@ class Application():
         if self.objects_edit_window is None or self.objects_edit_window.closed:
             self.objects_edit_window = ObjectEditWindow()
             self.objects_edit_window.open_object_edit_frame(*args, **kwargs)
+
+    def load_live_accounts(self):
+        object_infos = convert_to_object_info(daf.get_accounts(), save_original=True)
+        self.list_live_accounts.clear()
+        self.list_live_accounts.insert(tk.END, *object_infos)
+
+    def view_live_account(self):
+        selection = self.list_live_accounts.curselection()
+        if len(selection):
+            object_: ObjectInfo = self.list_live_accounts.get()[selection[0]]
+            self.open_object_edit_window(daf.ACCOUNT, self.list_live_accounts, old=object_, allow_save=False)
+        else:
+            tkdiag.Messagebox.show_error("Select atleast one item!", "Empty list!")
 
     async def analytics_load_msg(self):
         logger = daf.get_logger()
@@ -578,23 +623,15 @@ daf.run(
 
         self._async_queue.put_nowait(_tmp())
 
-    async def _run_coro_gui_errors(self, coro: Awaitable):
-        try:
-            await coro
-        except asyncio.QueueEmpty:
-            raise
-        except Exception as exc:
-            tkdiag.Messagebox.show_error(str(exc), "Coroutine error")
-
     async def _process(self):
         self.win_main.update()
         try:
             t = self._async_queue.get_nowait()
             if isinstance(t, Iterable):
                 for c in t:
-                    asyncio.create_task(self._run_coro_gui_errors(c))
+                    asyncio.create_task(run_coro_gui_errors(c))
             else:
-                await self._run_coro_gui_errors(t)
+                await run_coro_gui_errors(t)
         except asyncio.QueueEmpty:
             pass
 

@@ -95,7 +95,7 @@ ADDITIONAL_ANNOTATIONS = {
 if daf.sql.SQL_INSTALLED:
     sql_ = daf.sql
     for item in sql_.ORMBase.__subclasses__():
-        ADDITIONAL_ANNOTATIONS[item] = get_type_hints(item.__init__._sa_original_init)
+        ADDITIONAL_ANNOTATIONS[item] = item.__init__._sa_original_init.__annotations__
 
     ADDITIONAL_ANNOTATIONS[sql_.MessageLOG] = {"id": int, "timestamp": dt.datetime, **ADDITIONAL_ANNOTATIONS[sql_.MessageLOG]}
     ADDITIONAL_ANNOTATIONS[sql_.MessageLOG]["success_rate"] = decimal.Decimal
@@ -104,7 +104,8 @@ if daf.sql.SQL_INSTALLED:
 CONVERSION_ATTR_TO_PARAM = {}
 OBJECT_CONV_CACHE = {}
 
-
+CONVERSION_ATTR_TO_PARAM[daf.client.ACCOUNT] = {k: k for k in daf.client.ACCOUNT.__init__.__annotations__}
+CONVERSION_ATTR_TO_PARAM[daf.client.ACCOUNT]["token"] = "_token"
 if daf.sql.SQL_INSTALLED:
     sql_ = daf.sql
 
@@ -122,9 +123,10 @@ class ObjectInfo:
     """
     CHARACTER_LIMIT = 200
 
-    def __init__(self, class_, data: dict) -> None:
+    def __init__(self, class_, data: dict, real_object: object = None) -> None:
         self.class_ = class_
         self.data = data
+        self.real_object = real_object
 
     def __repr__(self) -> str:
         _ret: str = self.class_.__name__ + "("
@@ -194,7 +196,7 @@ def convert_objects_to_script(object: Union[ObjectInfo, list, tuple, set, str]):
     return ",".join(object_data).strip(), import_data, "\n".join(other_data).strip()
 
 
-def convert_to_object_info(object_: object):
+def convert_to_object_info(object_: object, save_original = False):
     with suppress(TypeError):
         if object_ in OBJECT_CONV_CACHE:
             return OBJECT_CONV_CACHE.get(object_)
@@ -207,21 +209,15 @@ def convert_to_object_info(object_: object):
 
         return object_
 
-    if isinstance(object_, Iterable):
-        if type(object_) not in {set, list, tuple}:
-            object_ = list(object_)
-
-        for i, value in enumerate(object_):
-            object_[i] = convert_to_object_info(value)
-            pass
-
+    if isinstance(object_, (set, list, tuple)):
+        object_ = [convert_to_object_info(value, save_original) for value in object_]
         return object_
 
     data_conv = {}
     attrs = CONVERSION_ATTR_TO_PARAM.get(object_type)
     if attrs is None:
         additional_annots = {key: key for key in ADDITIONAL_ANNOTATIONS.get(object_type, {})}
-        attrs = {key: key for key in get_type_hints(object_type.__init__).keys()}
+        attrs = {key: key for key in object_type.__init__.__annotations__.keys()}
         attrs.update(**additional_annots)
 
     for k, v in attrs.items():
@@ -230,11 +226,16 @@ def convert_to_object_info(object_: object):
             if value is object_:
                 data_conv[k] = value
             else:
-                data_conv[k] = convert_to_object_info(value)
+                data_conv[k] = convert_to_object_info(value, save_original)
                 pass
 
     ret = ObjectInfo(object_type, data_conv)
-    OBJECT_CONV_CACHE[object_] = ret
+    if save_original:
+        ret.real_object = object_
+
+    with suppress(TypeError):
+        OBJECT_CONV_CACHE[object_] = ret
+
     if len(OBJECT_CONV_CACHE) > 10000:
         OBJECT_CONV_CACHE.clear()
 
