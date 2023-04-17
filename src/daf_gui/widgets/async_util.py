@@ -10,10 +10,16 @@ import ttkbootstrap.dialogs.dialogs as tkdiag
 
 CONF_TASK_SLEEP = 0.1
 
+
 class GLOBAL:
     tasks_to_run: Queue = Queue()
     running = False
     async_task: Task = None
+
+
+async def dummy_task():
+    "Dummy task for force waking async_runner()"
+    pass
 
 
 async def async_runner():
@@ -29,12 +35,12 @@ async def async_runner():
         except Exception as exc:
             if parent_window is not None:
                 tkdiag.Messagebox.show_error(
-                    f"Error while running coroutine: {awaitable} ({exc})",
+                    f"{exc}\n(Error while running coroutine: {awaitable.__name__})",
                     "Coroutine error",
                     parent_window
                 )
             else:
-                trace(f"Error while running coroutine: {awaitable}", TraceLEVELS.ERROR, exc)
+                trace(f"Error while running coroutine: {awaitable.__name__}", TraceLEVELS.ERROR, exc)
 
 
 async def async_stop():
@@ -42,10 +48,7 @@ async def async_stop():
     Stops the async queue executor.
     """
     GLOBAL.running = False
-    async def dummy():
-        pass
-
-    async_execute(dummy())  # Force wakeup
+    async_execute(dummy_task())  # Force wakeup
     await GLOBAL.async_task
 
 

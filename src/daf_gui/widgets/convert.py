@@ -97,6 +97,9 @@ ADDITIONAL_ANNOTATIONS = {
     daf.DirectMESSAGE: {
         "data": Union[Iterable[Union[str, discord.Embed, daf.FILE]], str, discord.Embed, daf.FILE, UserDataFunction]
     },
+    daf.add_object: {
+        "obj": daf.ACCOUNT
+    },
 }
 
 if daf.sql.SQL_INSTALLED:
@@ -228,7 +231,7 @@ def convert_objects_to_script(object: Union[ObjectInfo, list, tuple, set, str]):
     return ",".join(object_data).strip(), import_data, "\n".join(other_data).strip()
 
 
-def convert_to_object_info(object_: object, save_original = False):
+def convert_to_object_info(object_: object, save_original = False, cache = False):
     """
     Converts an object into ObjectInfo.
 
@@ -238,6 +241,8 @@ def convert_to_object_info(object_: object, save_original = False):
         The object to convert.
     save_original: bool
         If True, will save the original object inside the ``real_object`` attribute of :class:`ObjectInfo`
+    cache: bool
+        Should cache be used to speed up lookups.
     """
     def _convert_object_info(object_, save_original, object_type, attrs):
         data_conv = {}
@@ -251,7 +256,7 @@ def convert_to_object_info(object_: object, save_original = False):
                 if value is object_:
                     data_conv[k] = value
                 else:
-                    data_conv[k] = convert_to_object_info(value, save_original)
+                    data_conv[k] = convert_to_object_info(value, save_original, cache=cache)
 
         ret = ObjectInfo(object_type, data_conv)
         if save_original:
@@ -271,7 +276,7 @@ def convert_to_object_info(object_: object, save_original = False):
         return attrs
 
     with suppress(TypeError):
-        if object_ in OBJECT_CONV_CACHE:
+        if cache and object_ in OBJECT_CONV_CACHE:
             return OBJECT_CONV_CACHE.get(object_)
 
     object_type = type(object_)
@@ -283,14 +288,15 @@ def convert_to_object_info(object_: object, save_original = False):
         return object_
 
     if isinstance(object_, (set, list, tuple)):
-        object_ = [convert_to_object_info(value, save_original) for value in object_]
+        object_ = [convert_to_object_info(value, save_original, cache=cache) for value in object_]
         return object_
 
     attrs = get_conversion_map(object_type)
     ret = _convert_object_info(object_, save_original, object_type, attrs)
 
     with suppress(TypeError):
-        OBJECT_CONV_CACHE[object_] = ret
+        if cache:
+            OBJECT_CONV_CACHE[object_] = ret
 
     if len(OBJECT_CONV_CACHE) > 10000:
         OBJECT_CONV_CACHE.clear()

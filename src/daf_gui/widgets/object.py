@@ -272,7 +272,7 @@ class NewObjectFrame(ttk.Frame):
 
     def init_iterable(self, class_):
         w = ListBoxScrolled(self.frame_main)
-        self._map[None] = (w, list)
+        self._map[None] = (w, [list])
         frame_edit_remove = ttk.Frame(self.frame_main)
         frame_edit_remove.pack(side="right")
         if self.allow_save:
@@ -298,12 +298,12 @@ class NewObjectFrame(ttk.Frame):
     def init_int_float(self, class_):
         w = ttk.Spinbox(self.frame_main, from_=-9999, to=9999)
         w.pack(fill=tk.X)
-        self._map[None] = (w, class_)
+        self._map[None] = (w, [class_])
 
     def init_str(self):
         w = Text(self.frame_main)
         w.pack(fill=tk.BOTH, expand=True)
-        self._map[None] = (w, str)
+        self._map[None] = (w, [str])
 
     def _read_gui_values(self) -> dict:
         """
@@ -311,9 +311,9 @@ class NewObjectFrame(ttk.Frame):
         are the actual values.
         """
         values = {}
-        for attr, widget in self._map.items():
-            value = widget[0].get()
-            if isinstance(value, (list, tuple, set)):
+        for attr, (widget, types_) in self._map.items():
+            value = widget.get()
+            if isinstance(value, (list, tuple, set)):  # Copy lists else the values would change in the original state
                 value = copy.copy(value)
 
             values[attr] = value
@@ -474,7 +474,7 @@ class NewObjectFrame(ttk.Frame):
 
     def _gui_to_object(self):
         map_ = {}
-        for attr, (widget, type_) in self._map.items():
+        for attr, (widget, types_) in self._map.items():
             value = widget.get()
 
             if isinstance(value, str):  # Ignore empty values
@@ -482,9 +482,9 @@ class NewObjectFrame(ttk.Frame):
                     continue
 
                 # Iterate all valid types until conversion is successful                        
-                for type__ in type_:
+                for type_ in types_:
                     with suppress(Exception):
-                        value = type__(value)
+                        value = type_(value)
                         break
 
             map_[attr] = value
@@ -498,7 +498,7 @@ class NewObjectFrame(ttk.Frame):
                 convert_to_objects(object_)  # Tries to create instances to check for errors
 
         return object_
-    
+
     def _update_old_object(self, new: Union[ObjectInfo, Any]):
         if self.old_object_info is not None:
             old = self.old_object_info
@@ -506,7 +506,7 @@ class NewObjectFrame(ttk.Frame):
                 new.real_object = old.real_object
                 if hasattr(new.real_object, "update"):
                     map_real = {k: convert_to_objects(v, True) for k, v in new.data.copy().items()}
-                    async_execute(new.real_object.update(**map_real))
+                    async_execute(new.real_object.update(**map_real), parent_window=self.origin_window)
 
             ret_widget = self.return_widget
             if isinstance(ret_widget, ListBoxScrolled):

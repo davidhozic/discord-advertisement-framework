@@ -22,11 +22,11 @@ class AdditionalWidget:
         self.setup_cmd = setup_cmd
 
 
-def setup_additional_widget_datetime(w: ttk.Button, window: "NewObjectFrame"):
+def setup_additional_widget_datetime(w: ttk.Button, frame):
     def _callback(*args):
-        date = tkdiag.Querybox.get_date(window, title="Select the date")
+        date = tkdiag.Querybox.get_date(frame, title="Select the date")
         for attr in {"year", "month", "day"}:
-            widget, types_ = window._map.get(attr)
+            widget, types_ = frame._map.get(attr)
             value = getattr(date, attr)
             if value not in widget["values"]:
                 widget.insert(tk.END, value)
@@ -37,10 +37,10 @@ def setup_additional_widget_datetime(w: ttk.Button, window: "NewObjectFrame"):
     w.pack(side="right")
 
 
-def setup_additional_widget_color_picker(w: ttk.Button, window: "NewObjectFrame"):
+def setup_additional_widget_color_picker(w: ttk.Button, frame):
     def _callback(*args):
-        widget, types = window._map.get("value")
-        _ = tkdiag.Querybox.get_color(window, "Choose color")
+        widget, types = frame._map.get("value")
+        _ = tkdiag.Querybox.get_color(frame, "Choose color")
         if _ is None:
             return
 
@@ -55,9 +55,9 @@ def setup_additional_widget_color_picker(w: ttk.Button, window: "NewObjectFrame"
     w.pack(side="right")
 
 
-def setup_additional_widget_file_chooser(w: ttk.Button, window: "NewObjectFrame"):
+def setup_additional_widget_file_chooser(w: ttk.Button, frame):
     def _callback(*args):
-        file = tkfile.askopenfile(parent=window)
+        file = tkfile.askopenfile(parent=frame)
         if file is None:  # File not opened
             return
 
@@ -65,7 +65,7 @@ def setup_additional_widget_file_chooser(w: ttk.Button, window: "NewObjectFrame"
         with file:
             filename = file.name
 
-        filename_combo = window._map.get("filename")[0]
+        filename_combo = frame._map.get("filename")[0]
         filename_combo.insert(tk.END, filename)
         filename_combo.set(filename)
 
@@ -73,18 +73,19 @@ def setup_additional_widget_file_chooser(w: ttk.Button, window: "NewObjectFrame"
     w.pack(side="right")
 
 
-def setup_additional_widget_file_chooser_logger(w: ttk.Button, window: "NewObjectFrame"):
+def setup_additional_widget_file_chooser_logger(w: ttk.Button, frame):
     def _callback(*args):
-        path = tkfile.askdirectory(parent=window)
+        path = tkfile.askdirectory(parent=frame)
         if path == "":
             return
 
-        filename_combo = window._map.get("path")[0]
+        filename_combo = frame._map.get("path")[0]
         filename_combo.insert(tk.END, path)
         filename_combo.set(path)
 
     w.configure(command=_callback)
     w.pack(side="right")
+
 
 # Map that maps the instance we are defining class to a list of additional objects.
 ADDITIONAL_WIDGETS = {

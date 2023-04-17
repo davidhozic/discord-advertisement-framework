@@ -314,6 +314,9 @@ class TextMESSAGE(BaseMESSAGE):
         ValueError
             No valid channels were passed to object"
         """
+        if parent is None:
+            return
+
         ch_i = 0
         self.parent = parent
         cl = parent.parent.client
@@ -764,6 +767,9 @@ class DirectMESSAGE(BaseMESSAGE):
             Raised when the direct message channel could not be created
         """
         try:
+            if parent is None:
+                return
+
             self.parent = parent
             user = parent.apiobject
             await user.create_dm()
@@ -888,7 +894,6 @@ class DirectMESSAGE(BaseMESSAGE):
         Other
             Raised from .initialize() method
         """
-
         if "start_in" not in kwargs:
             # This parameter does not appear as attribute, manual setting necessary
             kwargs["start_in"] = self.next_send_time

@@ -684,7 +684,7 @@ class AutoGUILD:
                  remove_after: Optional[Union[timedelta, datetime]] = None,
                  messages: Optional[List[BaseMESSAGE]] = [],
                  logging: Optional[bool] = False,
-                 interval: Optional[timedelta] = timedelta(minutes=10),
+                 interval: Optional[timedelta] = timedelta(minutes=1),
                  auto_join: Optional[web.GuildDISCOVERY] = None) -> None:
         self.include_pattern = include_pattern
         self.exclude_pattern = exclude_pattern

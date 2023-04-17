@@ -38,6 +38,19 @@ GITHUB_URL = "https://github.com/davidhozic/discord-advertisement-framework"
 DOC_URL = f"https://daf.davidhozic.com/en/v{daf.VERSION}"
 
 
+def gui_except(fnc):
+    """
+    Decorator that catches exceptions and displays them in GUI.
+    """
+    def wrapper(*args, **kwargs):
+        try:
+            return fnc(*args, **kwargs)
+        except Exception as exc:
+            tkdiag.Messagebox.show_error(f"{exc}\n(Exception in {fnc.__name__})")              
+
+    return wrapper
+
+
 class Application():
     def __init__(self) -> None:
         # Window initialization
@@ -55,9 +68,6 @@ class Application():
         win_main.wm_title(f"Discord Advert Framework {daf.VERSION}")
         win_main.wm_minsize(*screen_res)
         win_main.protocol("WM_DELETE_WINDOW", self.close_window)
-
-        # Console initialization
-        self.win_debug = None
 
         # Toolbar
         self.frame_toolbar = ttk.Frame(self.win_main)
@@ -165,27 +175,72 @@ class Application():
 
     def init_live_inspect_tab(self):
         dpi_10 = dpi_scaled(10)
+        dpi_5 = dpi_scaled(5)
+
+        def remove_account():
+            selection = list_live_objects.curselection()
+            if len(selection):
+                values = list_live_objects.get()
+                for i in selection:
+                    async_execute(
+                        daf.remove_object(values[i].real_object),
+                        parent_window=self.win_main
+                    )
+
+                async_execute(dummy_task(), lambda x: load_live_accounts(), self.win_main)
+            else:
+                tkdiag.Messagebox.show_error("Select atlest one item!", "Select errror")
+
+        @gui_except
+        def add_account():
+            selection = combo_add_object_edit.combo.current()
+            if selection >= 0:
+                fnc: ObjectInfo = combo_add_object_edit.combo.get()
+                mapping = {k: convert_to_objects(v) for k, v in fnc.data.items()}
+                async_execute(fnc.class_(**mapping), parent_window=self.win_main)
+            else:
+                tkdiag.Messagebox.show_error("Combobox does not have valid selection.", "Combo invalid selection")
+
+        def load_live_accounts():
+            object_infos = convert_to_object_info(daf.get_accounts(), save_original=True)
+            list_live_objects.clear()
+            list_live_objects.insert(tk.END, *object_infos)
+
+        def view_live_account():
+            selection = list_live_objects.curselection()
+            if len(selection) == 1:
+                object_: ObjectInfo = list_live_objects.get()[selection[0]]
+                self.open_object_edit_window(
+                    daf.ACCOUNT,
+                    list_live_objects,
+                    old=object_,
+                    allow_save=True,
+                )
+            else:
+                tkdiag.Messagebox.show_error("Select one item!", "Empty list!")
+
         tab_live = ttk.Frame(self.tabman_mf, padding=(dpi_10, dpi_10))
         self.tabman_mf.add(tab_live, text="Live view")
-        frame_view_refresh = ttk.Frame(tab_live)
-        frame_view_refresh.pack(fill=tk.X)
-        bnt_view = ttk.Button(
-            frame_view_refresh,
-            text="Edit",
-            command=self.view_live_account
-        )
+        frame_add_account = ttk.Frame(tab_live)
+        frame_add_account.pack(fill=tk.X)
 
-        bnt_refresh = ttk.Button(
-            frame_view_refresh,
-            text="Refresh",
-            command=self.load_live_accounts
+        combo_add_object_edit = ComboEditFrame(
+            self,
+            [ObjectInfo(daf.add_object, {})],
+            master=frame_add_account,
+            check_parameters=False
         )
-        bnt_view.pack(side="left")
-        bnt_refresh.pack(side="left")
+        ttk.Button(frame_add_account, text="Execute", command=add_account).pack(side="left")
+        combo_add_object_edit.pack(side="left", fill=tk.X, expand=True)
+
+        frame_account_opts = ttk.Frame(tab_live)
+        frame_account_opts.pack(fill=tk.X, pady=dpi_5)
+        ttk.Button(frame_account_opts, text="Refresh", command=load_live_accounts).pack(side="left")
+        ttk.Button(frame_account_opts, text="Edit", command=view_live_account).pack(side="left")
+        ttk.Button(frame_account_opts, text="Remove", command=remove_account).pack(side="left")
 
         list_live_objects = ListBoxScrolled(tab_live)
         list_live_objects.pack(fill=tk.BOTH, expand=True)
-        self.list_live_accounts = list_live_objects
 
     def init_output_tab(self):
         self.tab_output = ttk.Frame(self.tabman_mf)
@@ -252,9 +307,10 @@ class Application():
         frame_msg_history.pack(fill=tk.BOTH, expand=True)
 
         frame_combo_messages = ComboEditFrame(
-            self.edit_analytics_messages,
+            self,
             [ObjectInfo(daf.logging.LoggerBASE.analytic_get_message_log, {})],
-            frame_msg_history
+            frame_msg_history,
+            check_parameters=False
         )
         frame_combo_messages.pack(fill=tk.X)
         self.frame_combo_messages = frame_combo_messages
@@ -264,7 +320,7 @@ class Application():
         ttk.Button(
             frame_msg_history_bnts,
             text="Get logs",
-            command=lambda: async_execute(self.analytics_load_msg())
+            command=lambda: async_execute(self.analytics_load_msg(), parent_window=self.win_main)
         ).pack(side="left", fill=tk.X)
         ttk.Button(frame_msg_history_bnts, command=self.show_message_log, text="View log").pack(side="left", fill=tk.X)
         ttk.Button(
@@ -281,9 +337,10 @@ class Application():
         # Number of messages
         frame_num_msg = ttk.Labelframe(tab_analytics, padding=(dpi_10, dpi_10), text="Number of messages", bootstyle="primary")
         frame_combo_num_messages = ComboEditFrame(
-            self.edit_analytics_num_msg,
+            self,
             [ObjectInfo(daf.logging.LoggerBASE.analytic_get_num_messages, {})],
-            frame_num_msg
+            frame_num_msg,
+            check_parameters=False
         )
 
         coldata = [
@@ -307,7 +364,7 @@ class Application():
         ttk.Button(
             frame_num_msg,
             text="Calculate",
-            command=lambda: async_execute(self.analytics_load_num_msg())
+            command=lambda: async_execute(self.analytics_load_num_msg(), parent_window=self.win_main)
         ).pack(anchor=tk.W, pady=dpi_10)
 
         frame_num_msg.pack(fill=tk.BOTH, expand=True, pady=dpi_5)
@@ -325,24 +382,6 @@ class Application():
             self.objects_edit_window = ObjectEditWindow()
             self.objects_edit_window.open_object_edit_frame(*args, **kwargs)
 
-    def load_live_accounts(self):
-        object_infos = convert_to_object_info(daf.get_accounts(), save_original=True)
-        self.list_live_accounts.clear()
-        self.list_live_accounts.insert(tk.END, *object_infos)
-
-    def view_live_account(self):
-        selection = self.list_live_accounts.curselection()
-        if len(selection):
-            object_: ObjectInfo = self.list_live_accounts.get()[selection[0]]
-            self.open_object_edit_window(
-                daf.ACCOUNT,
-                self.list_live_accounts,
-                old=object_,
-                allow_save=True,
-            )
-        else:
-            tkdiag.Messagebox.show_error("Select atleast one item!", "Empty list!")
-
     async def analytics_load_msg(self):
         logger = daf.get_logger()
         if not isinstance(logger, daf.LoggerSQL):
@@ -357,7 +396,7 @@ class Application():
         messages = await logger.analytic_get_message_log(
             **data
         )
-        messages = convert_to_object_info(messages)
+        messages = convert_to_object_info(messages, cache=True)
         self.lst_message_log.clear()
         self.lst_message_log.insert(tk.END, *messages)
 
@@ -409,32 +448,6 @@ class Application():
             )
         else:
             tkdiag.Messagebox.show_error("Select ONE item!", "Empty list!")
-
-    def edit_analytics_messages(self):
-        selection = self.frame_combo_messages.combo.current()
-        if selection >= 0:
-            object_: ObjectInfo = self.frame_combo_messages.combo.get()
-            self.open_object_edit_window(
-                daf.logging.LoggerBASE.analytic_get_message_log,
-                self.frame_combo_messages.combo,
-                old=object_,
-                check_parameters=False
-            )
-        else:
-            tkdiag.Messagebox.show_error("Select atleast one item!", "Empty list!")
-
-    def edit_analytics_num_msg(self):
-        selection = self.frame_combo_num_messages.combo.current()
-        if selection >= 0:
-            object_: ObjectInfo = self.frame_combo_num_messages.combo.get()
-            self.open_object_edit_window(
-                daf.logging.LoggerBASE.analytic_get_num_messages,
-                self.frame_combo_num_messages.combo,
-                old=object_,
-                check_parameters=False
-            )
-        else:
-            tkdiag.Messagebox.show_error("Select atleast one item!", "Empty list!")
 
     def edit_logger(self):
         selection = self.combo_logging_mgr.current()
@@ -543,57 +556,51 @@ daf.run(
 
         return True
 
+    @gui_except
     def load_schema(self):
-        try:
-            filename = tkfile.askopenfilename(filetypes=[("JSON", "*.json")])
-            if filename == "":
-                return
+        filename = tkfile.askopenfilename(filetypes=[("JSON", "*.json")])
+        if filename == "":
+            return
 
-            with open(filename, "r", encoding="utf-8") as file:
-                json_data = json.load(file)
+        with open(filename, "r", encoding="utf-8") as file:
+            json_data = json.load(file)
 
-                # Load accounts
-                accounts = convert_from_json(json_data["accounts"])
-                self.lb_accounts.clear()
-                self.lb_accounts.listbox.insert(tk.END, *accounts)
+            # Load accounts
+            accounts = convert_from_json(json_data["accounts"])
+            self.lb_accounts.clear()
+            self.lb_accounts.listbox.insert(tk.END, *accounts)
 
-                # Load loggers
-                loggers = [convert_from_json(x) for x in json_data["loggers"]["all"]]
-                self.combo_logging_mgr["values"] = loggers
-                selected_index = json_data["loggers"]["selected_index"]
-                if selected_index >= 0:
-                    self.combo_logging_mgr.current(selected_index)
+            # Load loggers
+            loggers = [convert_from_json(x) for x in json_data["loggers"]["all"]]
+            self.combo_logging_mgr["values"] = loggers
+            selected_index = json_data["loggers"]["selected_index"]
+            if selected_index >= 0:
+                self.combo_logging_mgr.current(selected_index)
 
-                # Tracing
-                tracing_index = json_data["tracing"]
-                if tracing_index >= 0:
-                    self.combo_tracing.current(json_data["tracing"])
+            # Tracing
+            tracing_index = json_data["tracing"]
+            if tracing_index >= 0:
+                self.combo_tracing.current(json_data["tracing"])
 
-        except Exception as exc:
-            tkdiag.Messagebox.show_error(f"Could not load schema!\n\n{exc}", "Schema load error!")
-
+    @gui_except
     def start_daf(self):
-        try:
-            logger = self.combo_logging_mgr.get()
-            if isinstance(logger, str) and logger == "":
-                logger = None
-            elif logger is not None:
-                logger = convert_to_objects(logger)
+        logger = self.combo_logging_mgr.get()
+        if isinstance(logger, str) and logger == "":
+            logger = None
+        elif logger is not None:
+            logger = convert_to_objects(logger)
 
-            tracing = self.combo_tracing.get()
-            if isinstance(tracing, str) and tracing == "":
-                tracing = None
+        tracing = self.combo_tracing.get()
+        if isinstance(tracing, str) and tracing == "":
+            tracing = None
 
-            async_execute(daf.initialize(logger=logger, debug=tracing))
-            for account in self.lb_accounts.get():
-                async_execute(daf.add_object(convert_to_objects(account)))
+        async_execute(daf.initialize(logger=logger, debug=tracing), parent_window=self.win_main)
+        for account in self.lb_accounts.get():
+            async_execute(daf.add_object(convert_to_objects(account)), parent_window=self.win_main)
 
-            self.bnt_toolbar_start_daf.configure(state="disabled")
-            self.bnt_toolbar_stop_daf.configure(state="enabled")
-            self._daf_running = True
-        except Exception as exc:
-            print(exc)
-            tkdiag.Messagebox.show_error(f"Could not start daf due to exception!\n\n{exc}", "Start error!")
+        self.bnt_toolbar_start_daf.configure(state="disabled")
+        self.bnt_toolbar_stop_daf.configure(state="enabled")
+        self._daf_running = True
 
     def stop_daf(self):
         async_execute(daf.shutdown())

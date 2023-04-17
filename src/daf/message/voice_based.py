@@ -251,6 +251,9 @@ class VoiceMESSAGE(BaseMESSAGE):
         ValueError
             No valid channels were passed to object"
         """
+        if parent is None:
+            return
+
         ch_i = 0
         self.parent = parent
         cl = parent.parent.client
