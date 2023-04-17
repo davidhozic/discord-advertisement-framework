@@ -1,4 +1,6 @@
-
+"""
+Module contains definitions for automatic scaling over different DPI displays.
+"""
 
 DPI_ORIGINAL = 96
 

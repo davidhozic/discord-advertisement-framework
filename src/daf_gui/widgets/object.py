@@ -1,17 +1,18 @@
-from typing import get_args, get_origin, Iterable, Union, Literal, Any, List, Coroutine
+"""
+Contains definitions for automatic object definition windows and frames.
+"""
+from typing import get_args, get_origin, Iterable, Union, Literal
+
 from collections.abc import Iterable as ABCIterable
 from contextlib import suppress
 from enum import Enum
 
-try:
-    from .convert import *
-    from .dpi import *
-    from .utilities import *
-except ImportError:
-    from convert import *
-    from dpi import *
-    from utilities import *
+from .convert import *
+from .dpi import *
+from .async_util import *
 
+from .storage import *
+from .extra import *
 
 import _discord as discord
 import daf
@@ -19,11 +20,9 @@ import daf
 import ttkbootstrap as ttk
 import tkinter as tk
 import ttkbootstrap.dialogs.dialogs as tkdiag
-import tkinter.filedialog as tkfile
 
 
 import webbrowser
-import datetime as dt
 import inspect
 
 
@@ -39,250 +38,16 @@ __all__ = (
 )
 
 
-class AdditionalWidget:
-    def __init__(self, widget_class, setup_cmd, *args, **kwargs) -> None:
-        self.widget_class = widget_class
-        self.args = args
-        self.kwargs = kwargs
-        self.setup_cmd = setup_cmd
-
-
-def setup_additional_widget_datetime(w: ttk.Button, window: "NewObjectFrame"):
-    def _callback(*args):
-        date = tkdiag.Querybox.get_date(window, title="Select the date")
-        for attr in {"year", "month", "day"}:
-            widget, types_ = window._map.get(attr)
-            value = getattr(date, attr)
-            if value not in widget["values"]:
-                widget.insert(tk.END, value)
-
-            widget.set(value)
-
-    w.configure(command=_callback)
-    w.pack(side="right")
-
-
-def setup_additional_widget_color_picker(w: ttk.Button, window: "NewObjectFrame"):
-    def _callback(*args):
-        widget, types = window._map.get("value")
-        _ = tkdiag.Querybox.get_color(window, "Choose color")
-        if _ is None:
-            return
-
-        rgb, hsl, hex_ = _
-        color = int(hex_.lstrip("#"), base=16)
-        if color not in widget["values"]:
-            widget.insert(tk.END, color)
-
-        widget.set(color)
-
-    w.configure(command=_callback)
-    w.pack(side="right")
-
-
-def setup_additional_widget_file_chooser(w: ttk.Button, window: "NewObjectFrame"):
-    def _callback(*args):
-        file = tkfile.askopenfile(parent=window)
-        if file is None:  # File not opened
-            return
-
-        filename = None
-        with file:
-            filename = file.name
-
-        filename_combo = window._map.get("filename")[0]
-        filename_combo.insert(tk.END, filename)
-        filename_combo.set(filename)
-
-    w.configure(command=_callback)
-    w.pack(side="right")
-
-
-def setup_additional_widget_file_chooser_logger(w: ttk.Button, window: "NewObjectFrame"):
-    def _callback(*args):
-        path = tkfile.askdirectory(parent=window)
-        if path == "":
-            return
-
-        filename_combo = window._map.get("path")[0]
-        filename_combo.insert(tk.END, path)
-        filename_combo.set(path)
-
-    w.configure(command=_callback)
-    w.pack(side="right")
-
-
-ADDITIONAL_WIDGETS = {
-    dt.datetime: [AdditionalWidget(ttk.Button, setup_additional_widget_datetime, text="Select date")],
-    discord.Colour: [AdditionalWidget(ttk.Button, setup_additional_widget_color_picker, text="Color picker")],
-    daf.FILE: [AdditionalWidget(ttk.Button, setup_additional_widget_file_chooser, text="File browse")],
-    daf.LoggerJSON: [AdditionalWidget(ttk.Button, setup_additional_widget_file_chooser_logger, text="Select folder")],
-    daf.LoggerCSV: [AdditionalWidget(ttk.Button, setup_additional_widget_file_chooser_logger, text="Select folder")],
-    daf.AUDIO: [AdditionalWidget(ttk.Button, setup_additional_widget_file_chooser, text="File browse")],
-}
-
-
 HELP_URLS = {
     "daf": f"https://daf.davidhozic.com/en/v{daf.VERSION}/?rtd_search={{}}",
     "_discord": f"https://docs.pycord.dev/en/v{discord._version.__version__}/search.html?q={{}}",
     "builtins": "https://docs.python.org/3/search.html?q={}"
 }
 
-
-class Text(tk.Text):
-    def get(self) -> str:
-        return super().get("1.0", tk.END).strip()
-
-
-class ComboBoxText(ttk.Frame):
-    def __init__(self, text: str, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        ttk.Label(self, text=text).pack(fill=tk.X, expand=True)
-        self.combo = ComboBoxObjects(self)
-        self.combo.pack(fill=tk.X, expand=True)
-
-
-class ListBoxObjects(tk.Listbox):
-    def __init__(self, *args, **kwargs):
-        self._original_items = []
-        super().__init__(*args, **kwargs)
-        self.configure(selectmode=tk.EXTENDED)
-
-    def get(self, original = True, *args, **kwargs) -> list:
-        if original:
-            return self._original_items
-
-        return super().get(*args, **kwargs)
-
-    def insert(self, index: Union[str, int], *elements: Union[str, float]) -> None:
-        _ret = super().insert(index, *elements)
-        self._original_items.extend(elements)
-        return _ret
-
-    def delete(self, *indexes: int) -> None:
-        if indexes[-1] == "end":
-            indexes = range(indexes[0], len(self._original_items))
-
-        indexes = sorted(indexes, reverse=True)
-        for index in indexes:
-            super().delete(index)
-            del self._original_items[index]
-
-    def clear(self) -> None:
-        super().delete(0, tk.END)
-        self._original_items.clear()
-
-
-class ListBoxScrolled(ttk.Frame):
-    def __init__(self, parent, *args, **kwargs):
-        super().__init__(parent)
-        listbox = ListBoxObjects(self, *args, **kwargs)
-
-        listbox.pack(side="left", fill=tk.BOTH, expand=True)
-
-        scrollbar = ttk.Scrollbar(self)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.BOTH)
-        scrollbar.config(command=listbox.yview)
-
-        listbox.config(yscrollcommand=scrollbar.set)
-
-        listbox.bind("<Control-c>", lambda e: self.listbox_copy_selected())
-        listbox.bind("<BackSpace>", lambda e: self.listbox_delete_selected())
-        listbox.bind("<Delete>", lambda e: self.listbox_delete_selected())
-
-        self.listbox = listbox
-
-    def see(self, *args, **kwargs):
-        return self.listbox.see(*args, **kwargs)
-
-    def get(self, *args, **kwargs):
-        return self.listbox.get(*args, **kwargs)
-
-    def delete(self, *args, **kwargs):
-        return self.listbox.delete(*args, **kwargs)
-
-    def clear(self, *args, **kwargs):
-        return self.listbox.clear(*args, **kwargs)
-
-    def curselection(self, *args, **kwargs):
-        return self.listbox.curselection(*args, **kwargs)
-
-    def insert(self, *args, **kwargs):
-        return self.listbox.insert(*args, **kwargs)
-
-    def listbox_delete_selected(self):
-        listbox = self.listbox
-        selection = listbox.curselection()
-        if len(selection):
-            listbox.delete(*selection)
-        else:
-            tkdiag.Messagebox.show_error("Select atleast one item!", "Empty list!", parent=self)
-
-    def listbox_copy_selected(self):
-        listbox = self.listbox
-        selection = self.listbox.curselection()
-        if len(selection):
-            object_: Union[ObjectInfo, Any] = listbox.get()[selection[0]]
-            listbox.insert(tk.END, object_)
-        else:
-            tkdiag.Messagebox.show_error("Select atleast one item!", "Empty list!", parent=self)
-
-
-class ComboBoxObjects(ttk.Combobox):
-    def __init__(self, *args, **kwargs):
-        self._original_items = []
-        super().__init__(*args, **kwargs)
-
-    def get(self, *args, **kwargs) -> list:
-        index = self.current()
-        if isinstance(index, int) and index >= 0:
-            return self._original_items[index]
-
-        return super().get(*args, **kwargs)
-
-    def delete(self, index: int) -> None:
-        self["values"].pop(index)
-        super().delete(index)
-        self["values"] = self["values"]  # Update the text list, NOT a code mistake
-
-    def insert(self, index: Union[int, str], element: Any) -> None:
-        if index == tk.END:
-            self._original_items.append(element)
-            index = len(self._original_items)
-        else:
-            self._original_items.insert(index, element)
-
-        self["values"] = self._original_items
-
-    def __setitem__(self, key: str, value) -> None:
-        if key == "values":
-            self._original_items = list(value)
-            value = [str(x)[:200] for x in value]
-
-        return super().__setitem__(key, value)
-
-    def __getitem__(self, key: str):
-        if key == "values":
-            return self._original_items
-
-        return super().__getitem__(key)
-
-
-class ComboEditFrame(ttk.Frame):
-    def __init__(self, command, values: List[ObjectInfo] = [], *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        combo = ComboBoxObjects(self)
-        ttk.Button(self, text="Edit", command=command).pack(side="right")
-        combo.pack(side="left", fill=tk.X, expand=True)
-
-        for value in values:
-            combo.insert(tk.END, value)
-            combo.current(0)
-
-        self.combo = combo
-
-
 class ObjectEditWindow(ttk.Toplevel):
+    """
+    Top level window for creating and editing new objects.
+    """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._closed = False
@@ -320,6 +85,9 @@ class ObjectEditWindow(ttk.Toplevel):
         return self._closed
 
     def open_object_edit_frame(self, *args, **kwargs):
+        """
+        Opens new frame for defining an object.
+        """
         prev_frame = None
         if len(self.opened_frames):
             prev_frame = self.opened_frames[-1]          
@@ -350,6 +118,25 @@ class ObjectEditWindow(ttk.Toplevel):
 
 
 class NewObjectFrame(ttk.Frame):
+
+    """
+    Frame for inside the :class:`ObjectEditWindow` that allows object definition.
+
+    Parameters
+    -------------
+    class_: Any
+        The class we are defining for.
+    return_widget: ComboBoxObjects | ListBoxScrolled
+        The widget to insert the ObjectInfo into after saving.
+    parent: TopLevel
+        The parent window.
+    old: ObjectInfo
+        The old ObjectInfo object to edit.
+    check_parameters: bool
+        Check parameters (by creating the real object) upon saving.
+    allow_save: bool
+        If False, will open in read-only mode.
+    """
     origin_window: ObjectEditWindow = None
 
     def __init__(
@@ -470,7 +257,7 @@ class NewObjectFrame(ttk.Frame):
                     if self.allow_save:
                         menu.add_command(
                             label=f"New {self.get_cls_name(entry_type)}",
-                            command=self._lambda(self.new_object_window, entry_type, combo)
+                            command=self._lambda(self.new_object_frame, entry_type, combo)
                         )
 
             menu.add_command(
@@ -498,7 +285,7 @@ class NewObjectFrame(ttk.Frame):
                 args = get_args(args[0])
 
             for arg in args:
-                menu.add_command(label=self.get_cls_name(arg), command=self._lambda(self.new_object_window, arg, w))
+                menu.add_command(label=self.get_cls_name(arg), command=self._lambda(self.new_object_frame, arg, w))
         else:
             ttk.Button(frame_edit_remove, text="View", command=self.listbox_edit_selected(w)).pack(fill=tk.X)
 
@@ -561,6 +348,9 @@ class NewObjectFrame(ttk.Frame):
             self._cleanup()
 
     def load(self):
+        """
+        Loads the old object info data into the GUI.
+        """
         object_ = self.old_object_info.data if self._map.get(None) is None else self.old_object_info
         for attr, (widget, types_) in self._map.items():
             if attr is not None:
@@ -593,7 +383,7 @@ class NewObjectFrame(ttk.Frame):
 
         return _
 
-    def new_object_window(
+    def new_object_frame(
         self,
         class_,
         widget,
@@ -602,6 +392,11 @@ class NewObjectFrame(ttk.Frame):
         *args,
         **kwargs
     ):
+        """
+        Opens up a new object frame on top of the current one.
+
+        Parameters are the same as in :class:`NewObjectFrame` (current class).
+        """
         if check_parameters is None:
             check_parameters = self.check_parameters
         if allow_save is None:
@@ -617,9 +412,9 @@ class NewObjectFrame(ttk.Frame):
             if len(selection) == 1:
                 object_ = lb.get()[selection[0]]
                 if isinstance(object_, ObjectInfo):
-                    self.new_object_window(object_.class_, lb, old=object_)
+                    self.new_object_frame(object_.class_, lb, old=object_)
                 else:
-                    self.new_object_window(type(object_), lb, old=object_)
+                    self.new_object_frame(type(object_), lb, old=object_)
             else:
                 tkdiag.Messagebox.show_error("Select ONE item!", "Selection error", parent=self.origin_window)
 
@@ -630,14 +425,14 @@ class NewObjectFrame(ttk.Frame):
             selection = combo.get()
 
             if isinstance(selection, list):
-                return self.new_object_window(original_type, combo, old=selection)
+                return self.new_object_frame(original_type, combo, old=selection)
             if isinstance(selection, ObjectInfo):
-                return self.new_object_window(selection.class_, combo, old=selection)
+                return self.new_object_frame(selection.class_, combo, old=selection)
             else:
                 if isinstance(selection, str) and not len(selection):
                     selection = None
 
-                return self.new_object_window(type(selection), combo, old=selection)
+                return self.new_object_frame(type(selection), combo, old=selection)
 
         return __
 
@@ -645,6 +440,11 @@ class NewObjectFrame(ttk.Frame):
         self.origin_window.clean_object_edit_frame()
 
     def save(self):
+        """
+        Saves the GUI data into ObjectInfo and place it in the return widget.
+        If the real object is linked to ObjectInfo, also execute update metho of the
+        real object if it has one.
+        """
         try:
             if not self.allow_save:
                 raise TypeError("Saving is not allowed in this context!")
@@ -684,7 +484,7 @@ class NewObjectFrame(ttk.Frame):
                     object_.real_object = old.real_object
                     if hasattr(object_.real_object, "update"):
                         map_real = {k: convert_to_objects(v, True) for k, v in map_.copy().items()}
-                        asyncio.create_task(run_coro_gui_errors(object_.real_object.update(**map_real)))
+                        async_execute(object_.real_object.update(**map_real))
 
                 ret_widget = self.return_widget
                 if isinstance(ret_widget, ListBoxScrolled):

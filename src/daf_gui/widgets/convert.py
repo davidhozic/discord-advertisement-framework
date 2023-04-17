@@ -1,3 +1,7 @@
+"""
+Modules contains definitions related to GUI object transformations.
+"""
+
 from typing import get_type_hints, Iterable, Any, Union, List
 from contextlib import suppress
 from enum import Enum
@@ -31,6 +35,9 @@ def issubclass_noexcept(*args):
 
 
 def UserDataFunction(fnc: str):
+    """
+    Dummy function to define a user getter function for daf inside GUI.
+    """
     mod_spec = import_util.spec_from_loader("__tmp", None)
     __tmp = import_util.module_from_spec(mod_spec)
     exec(fnc, __tmp.__dict__)
@@ -130,7 +137,18 @@ CONVERSION_ATTR_TO_PARAM[daf.TextMESSAGE]["channels"] = (
 
 class ObjectInfo:
     """
-    Describes Python objects' parameters.
+    A GUI object that represents real objects,.
+    The GUI only knows how to work with ObjectInfo.
+
+    Parameters
+    -----------------
+    class_: type
+        Real object's type.
+    data: dict
+        Dictionary mapping to real object's parameters
+    real_object: object
+        Actual object that ObjectInfo represents inside GUI. Used whenever update
+        of the real object is needed upon saving inside the GUI.
     """
     CHARACTER_LIMIT = 200
 
@@ -153,6 +171,9 @@ class ObjectInfo:
 
 
 def convert_objects_to_script(object: Union[ObjectInfo, list, tuple, set, str]):
+    """
+    Converts ObjectInfo objects into equivalent Python code.
+    """
     object_data = []
     import_data = []
     other_data = []
@@ -208,9 +229,19 @@ def convert_objects_to_script(object: Union[ObjectInfo, list, tuple, set, str]):
 
 
 def convert_to_object_info(object_: object, save_original = False):
-    # with suppress(TypeError):
-    #     if object_ in OBJECT_CONV_CACHE:
-    #         return OBJECT_CONV_CACHE.get(object_)
+    """
+    Converts an object into ObjectInfo.
+
+    Parameters
+    ---------------
+    object_: object
+        The object to convert.
+    save_original: bool
+        If True, will save the original object inside the ``real_object`` attribute of :class:`ObjectInfo`
+    """
+    with suppress(TypeError):
+        if object_ in OBJECT_CONV_CACHE:
+            return OBJECT_CONV_CACHE.get(object_)
 
     object_type = type(object_)
 
@@ -258,7 +289,19 @@ def convert_to_object_info(object_: object, save_original = False):
     return ret
 
 
-def convert_to_objects(d: Union[ObjectInfo, list], keep_original_object: bool = False):
+def convert_to_objects(d: Union[ObjectInfo, list], keep_original_object: bool = False) -> object:
+    """
+    Converts :class:`ObjectInfo` instances into actual objects,
+    specified by the ObjectInfo.class_ attribute.
+
+    Parameters
+    -----------------
+    d: ObjectInfo | list[ObjectInfo]
+        The object(s) to convert.
+    keep_original_object: bool
+        If True, the returned object will be the same object (``real_object`` attribute) and will just
+        copy the the attributes. Important for preserving parent-child connections across real objects.
+    """
     if isinstance(d, (list, tuple, set)):
         _ = []
         for item in d:
@@ -300,6 +343,9 @@ def convert_to_objects(d: Union[ObjectInfo, list], keep_original_object: bool = 
 
 
 def convert_to_json(d: ObjectInfo):
+    """
+    Converts ObjectInfo into JSON representation.
+    """
     data_conv = {}
     for k, v in d.data.items():
         if isinstance(v, ObjectInfo):
@@ -317,6 +363,9 @@ def convert_to_json(d: ObjectInfo):
 
 
 def convert_from_json(d: Union[dict, List[dict], Any]) -> ObjectInfo:
+    """
+    Converts previously converted JSON back to ObjectInfo.
+    """
     if isinstance(d, list):
         result = []
         for item in d:

@@ -19,14 +19,8 @@ import webbrowser
 
 try:
     from .widgets import *
-    from .convert import *
-    from .dpi import *
-    from .utilities import *
 except ImportError:
     from widgets import *
-    from convert import *
-    from dpi import *
-    from utilities import *
 
 
 
@@ -98,9 +92,6 @@ class Application():
         # Status variables
         self._daf_running = False
         self._window_opened = True
-
-        # Tasks
-        self._async_queue = asyncio.Queue()
 
         # On close configuration
         self.win_main.protocol("WM_DELETE_WINDOW", self.close_window)
@@ -273,7 +264,7 @@ class Application():
         ttk.Button(
             frame_msg_history_bnts,
             text="Get logs",
-            command=lambda: self._async_queue.put_nowait(self.analytics_load_msg())
+            command=lambda: async_execute(self.analytics_load_msg())
         ).pack(side="left", fill=tk.X)
         ttk.Button(frame_msg_history_bnts, command=self.show_message_log, text="View log").pack(side="left", fill=tk.X)
         ttk.Button(
@@ -316,7 +307,7 @@ class Application():
         ttk.Button(
             frame_num_msg,
             text="Calculate",
-            command=lambda: self._async_queue.put_nowait(self.analytics_load_num_msg())
+            command=lambda: async_execute(self.analytics_load_num_msg())
         ).pack(anchor=tk.W, pady=dpi_10)
 
         frame_num_msg.pack(fill=tk.BOTH, expand=True, pady=dpi_5)
@@ -593,10 +584,10 @@ daf.run(
             if isinstance(tracing, str) and tracing == "":
                 tracing = None
 
-            self._async_queue.put_nowait(daf.initialize(logger=logger, debug=tracing))
-            self._async_queue.put_nowait(
-                [daf.add_object(convert_to_objects(account)) for account in self.lb_accounts.get()]
-            )
+            async_execute(daf.initialize(logger=logger, debug=tracing))
+            for account in self.lb_accounts.get():
+                async_execute(daf.add_object(convert_to_objects(account)))
+
             self.bnt_toolbar_start_daf.configure(state="disabled")
             self.bnt_toolbar_stop_daf.configure(state="enabled")
             self._daf_running = True
@@ -605,7 +596,7 @@ daf.run(
             tkdiag.Messagebox.show_error(f"Could not start daf due to exception!\n\n{exc}", "Start error!")
 
     def stop_daf(self):
-        self._async_queue.put_nowait(daf.shutdown())
+        async_execute(daf.shutdown())
         self._daf_running = False
         self.bnt_toolbar_start_daf.configure(state="enabled")
         self.bnt_toolbar_stop_daf.configure(state="disabled")
@@ -624,19 +615,10 @@ daf.run(
             self.win_main.destroy()
             self.win_main.quit()
 
-        self._async_queue.put_nowait(_tmp())
+        async_execute(_tmp())
 
     async def _process(self):
         self.win_main.update()
-        try:
-            t = self._async_queue.get_nowait()
-            if isinstance(t, Iterable):
-                for c in t:
-                    asyncio.create_task(run_coro_gui_errors(c))
-            else:
-                await run_coro_gui_errors(t)
-        except asyncio.QueueEmpty:
-            pass
 
 
 def run():
@@ -648,7 +630,9 @@ def run():
             await asyncio.sleep(WIN_UPDATE_DELAY)
 
     loop = asyncio.new_event_loop()
+    async_start(loop)
     loop.run_until_complete(update_task())
+    loop.run_until_complete(async_stop())
 
 
 if __name__ == "__main__":
