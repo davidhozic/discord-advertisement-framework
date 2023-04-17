@@ -439,6 +439,55 @@ class NewObjectFrame(ttk.Frame):
     def _cleanup(self):
         self.origin_window.clean_object_edit_frame()
 
+    def _gui_to_object(self):
+        map_ = {}
+        for attr, (widget, type_) in self._map.items():
+            value = widget.get()
+
+            if isinstance(value, str):  # Ignore empty values
+                if not len(value):
+                    continue
+
+                # Iterate all valid types until conversion is successful                        
+                for type__ in type_:
+                    with suppress(Exception):
+                        value = type__(value)
+                        break
+
+            map_[attr] = value
+
+        single_value = map_.get(None)
+        if single_value is not None:
+            object_ = single_value
+        else:
+            object_ = ObjectInfo(self.class_, map_)
+            if self.check_parameters:
+                convert_to_objects(object_)  # Tries to create instances to check for errors
+
+        return object_
+    
+    def _update_old_object(self, new: Union[ObjectInfo, Any]):
+        if self.old_object_info is not None:
+            old = self.old_object_info
+            if isinstance(old, ObjectInfo):
+                new.real_object = old.real_object
+                if hasattr(new.real_object, "update"):
+                    map_real = {k: convert_to_objects(v, True) for k, v in new.data.copy().items()}
+                    async_execute(new.real_object.update(**map_real))
+
+            ret_widget = self.return_widget
+            if isinstance(ret_widget, ListBoxScrolled):
+                ind = ret_widget.get().index(self.old_object_info)
+            else:
+                ind = ret_widget["values"].index(self.old_object_info)
+
+            ret_widget.delete(ind)
+
+    def _insert_to_return_widget(self, new: Union[ObjectInfo, Any]):
+        self.return_widget.insert(tk.END, new)
+        if isinstance(self.return_widget, ComboBoxObjects):
+            self.return_widget.current(self.return_widget["values"].index(new))
+
     def save(self):
         """
         Saves the GUI data into ObjectInfo and place it in the return widget.
@@ -449,55 +498,9 @@ class NewObjectFrame(ttk.Frame):
             if not self.allow_save:
                 raise TypeError("Saving is not allowed in this context!")
 
-            map_ = {}
-            for attr, (widget, type_) in self._map.items():
-                value = widget.get()
-
-                if not isinstance(type_, Iterable):
-                    type_ = (type_, )
-
-                if isinstance(value, str):  # Ignore empty values
-                    if not len(value):
-                        continue
-
-                    for type__ in type_:
-                        with suppress(Exception):
-                            map_[attr] = type__(value)
-                            break
-                    else:
-                        map_[attr] = value  # Could not cast value, use as it is
-                else:
-                    map_[attr] = value
-
-            single_value = map_.get(None)
-            if single_value is not None:
-                object_ = single_value
-            else:
-                object_ = ObjectInfo(self.class_, map_)
-                if self.check_parameters:
-                    convert_to_objects(object_)  # Tries to create instances to check for errors
-
-            # Edit was requested, delete old value
-            if self.old_object_info is not None:
-                old = self.old_object_info
-                if isinstance(old, ObjectInfo):
-                    object_.real_object = old.real_object
-                    if hasattr(object_.real_object, "update"):
-                        map_real = {k: convert_to_objects(v, True) for k, v in map_.copy().items()}
-                        async_execute(object_.real_object.update(**map_real))
-
-                ret_widget = self.return_widget
-                if isinstance(ret_widget, ListBoxScrolled):
-                    ind = ret_widget.get().index(self.old_object_info)
-                else:
-                    ind = ret_widget["values"].index(self.old_object_info)
-
-                ret_widget.delete(ind)
-
-            self.return_widget.insert(tk.END, object_)
-            if isinstance(self.return_widget, ComboBoxObjects):
-                self.return_widget.current(self.return_widget["values"].index(object_))
-
+            object_ = self._gui_to_object()
+            self._update_old_object(object_)
+            self._insert_to_return_widget(object_)
             self._cleanup()
         except Exception as exc:
             tkdiag.Messagebox.show_error(

@@ -9,8 +9,6 @@ import tkinter as tk
 import ttkbootstrap.dialogs.dialogs as tkdiag
 import tkinter.filedialog as tkfile
 
-from .object import *
-
 import datetime as dt
 
 class AdditionalWidget:
@@ -97,3 +95,7 @@ ADDITIONAL_WIDGETS = {
     daf.LoggerCSV: [AdditionalWidget(ttk.Button, setup_additional_widget_file_chooser_logger, text="Select folder")],
     daf.AUDIO: [AdditionalWidget(ttk.Button, setup_additional_widget_file_chooser, text="File browse")],
 }
+
+
+__all__ = list(globals().keys())
+__all__.append("ADDITIONAL_WIDGETS")
