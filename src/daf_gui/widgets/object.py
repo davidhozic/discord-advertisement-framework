@@ -24,6 +24,7 @@ import ttkbootstrap.dialogs.dialogs as tkdiag
 
 import webbrowser
 import inspect
+import copy
 
 
 __all__ = (
@@ -151,6 +152,7 @@ class NewObjectFrame(ttk.Frame):
         self.class_ = class_
         self.return_widget = return_widget
         self._map = {}
+        self._original_gui_data = {}
         self.parent = parent
         self.old_object_info = old  # Edit requested
         self.check_parameters = check_parameters  # At save time
@@ -164,6 +166,8 @@ class NewObjectFrame(ttk.Frame):
 
         if old is not None:  # Edit
             self.load()
+
+        self.save_gui_values()
 
     def init_main_frame(self, class_) -> bool:
         frame_main = ttk.Frame(self)
@@ -301,6 +305,35 @@ class NewObjectFrame(ttk.Frame):
         w.pack(fill=tk.BOTH, expand=True)
         self._map[None] = (w, str)
 
+    def _read_gui_values(self) -> dict:
+        """
+        Returns dictionary who's keys are the class parameters and keys
+        are the actual values.
+        """
+        values = {}
+        for attr, widget in self._map.items():
+            value = widget[0].get()
+            if isinstance(value, (list, tuple, set)):
+                value = copy.copy(value)
+
+            values[attr] = value
+
+        return values
+
+    def save_gui_values(self):
+        """
+        Saves the original GUI values for change check at save.
+        """
+        self._original_gui_data = self._read_gui_values()
+    
+    @property
+    def modified(self) -> bool:
+        """
+        Returns True if the GUI values have been modified.
+        """
+        current_values = self._read_gui_values()
+        return current_values != self._original_gui_data
+
     @staticmethod
     def get_cls_name(cls):
         if hasattr(cls, "_name"):
@@ -337,7 +370,7 @@ class NewObjectFrame(ttk.Frame):
         self.origin_window.title(f"{'New' if self.old_object_info is None else 'Edit'} {self.get_cls_name(self.class_)} object")
 
     def close_frame(self):
-        if self.allow_save:
+        if self.allow_save and self.modified:
             resp = tkdiag.Messagebox.yesnocancel("Do you wish to save?", "Save?", alert=True, parent=self)
             if resp is not None:
                 if resp == "Yes":
