@@ -239,6 +239,37 @@ def convert_to_object_info(object_: object, save_original = False):
     save_original: bool
         If True, will save the original object inside the ``real_object`` attribute of :class:`ObjectInfo`
     """
+    def _convert_object_info(object_, save_original, object_type, attrs):
+        data_conv = {}
+
+        for k, v in attrs.items():
+            with suppress(Exception):
+                if isinstance(v, tuple):
+                    value = v[1](getattr(object_, v[0]))
+                else:
+                    value = getattr(object_, v)
+                if value is object_:
+                    data_conv[k] = value
+                else:
+                    data_conv[k] = convert_to_object_info(value, save_original)
+
+        ret = ObjectInfo(object_type, data_conv)
+        if save_original:
+            ret.real_object = object_
+        return ret
+
+    def get_conversion_map(object_type):
+        attrs = CONVERSION_ATTR_TO_PARAM.get(object_type)
+        if attrs is None:
+            attrs = {}
+            additional_annots = {key: key for key in ADDITIONAL_ANNOTATIONS.get(object_type, {})}
+            with suppress(AttributeError):
+                attrs = {key: key for key in object_type.__init__.__annotations__.keys()}
+
+            attrs.update(**additional_annots)
+
+        return attrs
+
     with suppress(TypeError):
         if object_ in OBJECT_CONV_CACHE:
             return OBJECT_CONV_CACHE.get(object_)
@@ -255,30 +286,8 @@ def convert_to_object_info(object_: object, save_original = False):
         object_ = [convert_to_object_info(value, save_original) for value in object_]
         return object_
 
-    data_conv = {}
-    attrs = CONVERSION_ATTR_TO_PARAM.get(object_type)
-    if attrs is None:
-        attrs = {}
-        additional_annots = {key: key for key in ADDITIONAL_ANNOTATIONS.get(object_type, {})}
-        with suppress(AttributeError):
-            attrs = {key: key for key in object_type.__init__.__annotations__.keys()}
-
-        attrs.update(**additional_annots)
-
-    for k, v in attrs.items():
-        with suppress(Exception):
-            if isinstance(v, tuple):
-                value = v[1](getattr(object_, v[0]))
-            else:
-                value = getattr(object_, v)
-            if value is object_:
-                data_conv[k] = value
-            else:
-                data_conv[k] = convert_to_object_info(value, save_original)
-
-    ret = ObjectInfo(object_type, data_conv)
-    if save_original:
-        ret.real_object = object_
+    attrs = get_conversion_map(object_type)
+    ret = _convert_object_info(object_, save_original, object_type, attrs)
 
     with suppress(TypeError):
         OBJECT_CONV_CACHE[object_] = ret
