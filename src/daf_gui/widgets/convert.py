@@ -329,16 +329,7 @@ def convert_to_objects(d: Union[ObjectInfo, list], keep_original_object: bool = 
     def convert_object_info():
         data_conv = {}
         for k, v in d.data.items():
-            if isinstance(v, ObjectInfo):
-                v = convert_to_objects(v, keep_original_object)
-
-            elif isinstance(v, list):
-                v = v.copy()
-                for i, subv in enumerate(v):
-                    if isinstance(subv, ObjectInfo):
-                        v[i] = convert_to_objects(subv, keep_original_object)
-
-            data_conv[k] = v
+            data_conv[k] = convert_to_objects(v, keep_original_object)
 
         new_obj = d.class_(**data_conv)
         if keep_original_object and d.real_object is not None:
