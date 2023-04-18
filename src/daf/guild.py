@@ -594,8 +594,8 @@ class USER(_BaseGUILD):
 @misc.doc_category("Auto objects")
 class AutoGUILD:
     """
-    .. versionchanged:: v2.5
-        Added ``auto_join`` parameter.
+    .. versionchanged:: v2.7
+        ``interval`` parameter changed to 1 minute.
 
     Internally automatically creates :class:`daf.guild.GUILD` objects.
     Can also automatically join new guilds (``auto_join`` parameter)

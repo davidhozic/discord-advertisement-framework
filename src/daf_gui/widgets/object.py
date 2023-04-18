@@ -504,9 +504,6 @@ class NewObjectFrame(ttk.Frame):
             old = self.old_object_info
             if isinstance(old, ObjectInfo):
                 new.real_object = old.real_object
-                if hasattr(new.real_object, "update"):
-                    map_real = {k: convert_to_objects(v, True) for k, v in new.data.copy().items()}
-                    async_execute(new.real_object.update(**map_real), parent_window=self.origin_window)
 
             ret_widget = self.return_widget
             if isinstance(ret_widget, ListBoxScrolled):

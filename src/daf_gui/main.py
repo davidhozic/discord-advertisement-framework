@@ -214,7 +214,7 @@ class Application():
                     daf.ACCOUNT,
                     list_live_objects,
                     old=object_,
-                    allow_save=True,
+                    allow_save=False,
                 )
             else:
                 tkdiag.Messagebox.show_error("Select one item!", "Empty list!")

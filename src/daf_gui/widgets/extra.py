@@ -1,6 +1,9 @@
 """
 Module contains additional widgets and their setup handlers.
 """
+from .async_util import *
+from .convert import *
+
 import _discord as discord
 import daf
 
@@ -10,6 +13,8 @@ import ttkbootstrap.dialogs.dialogs as tkdiag
 import tkinter.filedialog as tkfile
 
 import datetime as dt
+
+
 
 class AdditionalWidget:
     """
@@ -87,6 +92,17 @@ def setup_additional_widget_file_chooser_logger(w: ttk.Button, frame):
     w.pack(side="right")
 
 
+
+def setup_additional_live_update(w: ttk.Button, frame):
+    def _callback(*args):
+        old = frame.old_object_info
+        values = {k: convert_to_objects(v, True) for k, v in frame._read_gui_values().items() if not isinstance(v, str) or v != ''}
+        async_execute(old.real_object.update(**values), parent_window=frame.origin_window)
+    
+    w.configure(command=_callback)
+    w.pack(side="right")
+
+
 # Map that maps the instance we are defining class to a list of additional objects.
 ADDITIONAL_WIDGETS = {
     dt.datetime: [AdditionalWidget(ttk.Button, setup_additional_widget_datetime, text="Select date")],
@@ -96,6 +112,14 @@ ADDITIONAL_WIDGETS = {
     daf.LoggerCSV: [AdditionalWidget(ttk.Button, setup_additional_widget_file_chooser_logger, text="Select folder")],
     daf.AUDIO: [AdditionalWidget(ttk.Button, setup_additional_widget_file_chooser, text="File browse")],
 }
+
+for name in dir(daf):
+    item = getattr(daf, name)
+    if isinstance(item, dict):
+        continue
+
+    if hasattr(item, "update"):
+        ADDITIONAL_WIDGETS[item] = [AdditionalWidget(ttk.Button, setup_additional_live_update, text="Live update")]
 
 
 __all__ = list(globals().keys())

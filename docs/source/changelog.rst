@@ -31,6 +31,14 @@ Glossary
 ----------------------
 Releases
 ----------------------
+v2.7
+================
+- AutoGUILD ``interval`` default changed to ``timedelta(minutes=1)``
+- xMESSAGE ``start_in`` now accepts :class:`datetime.datetime` - send at specific datetime.
+- GUI:
+  
+  - Live object view for viewing and live updating objects.
+
 v2.6.3
 =============
 - Restored support for Python v3.8
