@@ -4,6 +4,8 @@ Modules contains definitions related to GUI object transformations.
 
 from typing import get_type_hints, Iterable, Any, Union, List
 from contextlib import suppress
+from inspect import isdatadescriptor
+
 from enum import Enum
 
 import decimal
@@ -347,10 +349,16 @@ def convert_to_objects(d: Union[ObjectInfo, list], keep_original_object: bool = 
                 args = dir(real)
 
             for a in args:
-                with suppress(Exception):
-                    setattr(real, a, getattr(new_obj, a))
+                try:
+                    attr = getattr(new_obj, a, "__")
+                    if a.startswith("__") or callable(attr) or isdatadescriptor(getattr(d.class_, a)):
+                        continue
 
-            new_obj = real
+                    setattr(real, a, attr)
+                except Exception:
+                    break
+            else:
+                new_obj = real  # Only use the old object if copy operation completed 100%
 
         return new_obj
 

@@ -15,7 +15,6 @@ import tkinter.filedialog as tkfile
 import datetime as dt
 
 
-
 class AdditionalWidget:
     """
     Configuration class for additional widgets inside the object definition frame.
@@ -92,13 +91,20 @@ def setup_additional_widget_file_chooser_logger(w: ttk.Button, frame):
     w.pack(side="right")
 
 
-
 def setup_additional_live_update(w: ttk.Button, frame):
+    # Don't have a bound object instance
+    if frame.old_object_info is None or frame.old_object_info.real_object is None:
+        return
+
     def _callback(*args):
         old = frame.old_object_info
-        values = {k: convert_to_objects(v, True) for k, v in frame._read_gui_values().items() if not isinstance(v, str) or v != ''}
+        values = {
+            k: convert_to_objects(v, True)
+            for k, v in frame._read_gui_values().items()
+            if not isinstance(v, str) or v != ''
+        }
         async_execute(old.real_object.update(**values), parent_window=frame.origin_window)
-    
+
     w.configure(command=_callback)
     w.pack(side="right")
 

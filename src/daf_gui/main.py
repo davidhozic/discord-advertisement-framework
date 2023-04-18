@@ -213,8 +213,7 @@ class Application():
                 self.open_object_edit_window(
                     daf.ACCOUNT,
                     list_live_objects,
-                    old=object_,
-                    allow_save=False,
+                    old=object_
                 )
             else:
                 tkdiag.Messagebox.show_error("Select one item!", "Empty list!")
