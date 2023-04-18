@@ -319,14 +319,14 @@ def convert_to_objects(d: Union[ObjectInfo, list], keep_original_object: bool = 
         If True, the returned object will be the same object (``real_object`` attribute) and will just
         copy the the attributes. Important for preserving parent-child connections across real objects.
     """
-    if isinstance(d, (list, tuple, set)):
+    def convert_list():
         _ = []
         for item in d:
             _.append(convert_to_objects(item, keep_original_object))
 
         return _
 
-    if isinstance(d, ObjectInfo):
+    def convert_object_info():
         data_conv = {}
         for k, v in d.data.items():
             if isinstance(v, ObjectInfo):
@@ -350,7 +350,7 @@ def convert_to_objects(d: Union[ObjectInfo, list], keep_original_object: bool = 
 
             for a in args:
                 try:
-                    attr = getattr(new_obj, a, "__")
+                    attr = getattr(new_obj, a, "__empty")
                     if a.startswith("__") or callable(attr) or isdatadescriptor(getattr(d.class_, a)):
                         continue
 
@@ -361,6 +361,11 @@ def convert_to_objects(d: Union[ObjectInfo, list], keep_original_object: bool = 
                 new_obj = real  # Only use the old object if copy operation completed 100%
 
         return new_obj
+
+    if isinstance(d, (list, tuple, set)):
+        return convert_list()
+    if isinstance(d, ObjectInfo):
+        return convert_object_info()
 
     return d
 
