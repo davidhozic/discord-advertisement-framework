@@ -129,21 +129,40 @@ class Application():
             text="Accounts", padding=(dpi_10, dpi_10), bootstyle="primary")
         frame_tab_account.pack(side="left", fill=tk.BOTH, expand=True, pady=dpi_10, padx=dpi_5)
 
-        frame_account_bnts = ttk.Frame(frame_tab_account, padding=(0, dpi_10))
+        frame_account_bnts = ttk.Frame(frame_tab_account)
         frame_account_bnts.pack(fill=tk.X)
-        self.bnt_add_object = ttk.Button(
-            frame_account_bnts,
-            text="Add ACCOUNT",
-            command=lambda: self.open_object_edit_window(daf.ACCOUNT, self.lb_accounts)
-        )
-        self.bnt_edit_object = ttk.Button(frame_account_bnts, text="Edit", command=self.edit_accounts)
-        self.bnt_remove_object = ttk.Button(frame_account_bnts, text="Remove", command=self.list_del_account)
-        self.bnt_add_object.pack(side="left")
-        self.bnt_edit_object.pack(side="left")
-        self.bnt_remove_object.pack(side="left")
 
-        self.lb_accounts = ListBoxScrolled(frame_tab_account, background="#000")
-        self.lb_accounts.pack(fill=tk.BOTH, expand=True)
+        @gui_except
+        def import_accounts():
+            filename = tkfile.askopenfilename(filetypes=[("Accounts export", ".json")])
+            if filename == "":
+                return
+        
+            with open(filename, "r", encoding="utf-8") as reader:
+                objectinfos = convert_from_json(json.load(reader))
+                self.lb_accounts.clear()
+                self.lb_accounts.insert(tk.END, *objectinfos)
+
+
+        ttk.Button(
+            frame_account_bnts,
+            text="New ACCOUNT",
+            command=lambda: self.open_object_edit_window(daf.ACCOUNT, self.lb_accounts)
+        ).pack(side="left")
+        ttk.Button(frame_account_bnts, text="Edit", command=self.edit_accounts).pack(side="left")
+        ttk.Button(frame_account_bnts, text="Remove", command=self.list_del_account).pack(side="left")
+        ttk.Button(
+            frame_tab_account, text="Run selected in DAF", command=self.add_accounts_daf
+        ).pack(anchor=tk.W, pady=dpi_10)
+        bnt_import_export = ttk.Menubutton(frame_account_bnts, text="Import / Export")
+        menu = ttk.Menu(bnt_import_export)
+        menu.add_command(label="Import", command=import_accounts)
+        menu.add_command(label="Export", command=lambda: self.export_accounts(self.lb_accounts))
+        bnt_import_export.configure(menu=menu)
+        bnt_import_export.pack(side="right")
+
+        self.lb_accounts = ListBoxScrolled(frame_tab_account)
+        self.lb_accounts.pack(fill=tk.BOTH, expand=True, side="left")
 
         # Object tab account tab logging tab
         frame_logging = ttk.Labelframe(tab_schema, padding=(dpi_10, dpi_10), text="Logging", bootstyle="primary")
@@ -237,6 +256,7 @@ class Application():
         ttk.Button(frame_account_opts, text="Refresh", command=load_live_accounts).pack(side="left")
         ttk.Button(frame_account_opts, text="Edit", command=view_live_account).pack(side="left")
         ttk.Button(frame_account_opts, text="Remove", command=remove_account).pack(side="left")
+        ttk.Button(frame_account_opts, text="Export selection", command=lambda self.export_accounts(list_live_objects))
 
         list_live_objects = ListBoxScrolled(tab_live)
         list_live_objects.pack(fill=tk.BOTH, expand=True)
@@ -380,6 +400,28 @@ class Application():
         if self.objects_edit_window is None or self.objects_edit_window.closed:
             self.objects_edit_window = ObjectEditWindow()
             self.objects_edit_window.open_object_edit_frame(*args, **kwargs)
+
+
+    @gui_except
+    def export_accounts(self, listbox: ListBoxObjects):
+        selection = listbox.curselection()
+        if len(selection) == 0:
+            raise ValueError("Select atleast one item.")
+        
+        selection = set(selection)
+        accounts = [a for i, a in enumerate(listbox.get()) if i in selection]
+
+        filename = tkfile.asksaveasfilename(filetypes=[("Accounts export", ".json")])
+        if filename == "":
+            return
+
+        if not filename.endswith(".json"):
+            filename += ".json"
+
+        with open(filename, "w", encoding="utf-8") as writer:
+            json.dump(convert_to_json(accounts), writer, indent=4)
+
+        tkdiag.Messagebox.show_info(f"Exported to {filename}", "Finished")
 
     async def analytics_load_msg(self):
         logger = daf.get_logger()
@@ -533,6 +575,7 @@ daf.run(
         if not file.name.endswith(".py"):
             os.rename(file.name, file.name + ".py")
 
+    @gui_except
     def save_schema(self) -> bool:
         filename = tkfile.asksaveasfilename(filetypes=[("JSON", "*.json")])
         if filename == "":
@@ -540,18 +583,20 @@ daf.run(
 
         json_data = {
             "loggers": {
-                "all": [convert_to_json(x) for x in self.combo_logging_mgr["values"]],
+                "all": convert_to_json(self.combo_logging_mgr["values"]),
                 "selected_index": self.combo_logging_mgr.current(),
             },
             "tracing": self.combo_tracing.current(),
-            "accounts": [convert_to_json(x) for x in self.lb_accounts.get()],
+            "accounts": convert_to_json(self.lb_accounts.get()),
         }
+
+        if not filename.endswith(".json"):
+            filename += ".json"
 
         with open(filename, "w", encoding="utf-8") as file:
             json.dump(json_data, file, indent=2)
 
-        if not filename.endswith(".json"):
-            os.rename(filename, filename + ".json")
+        tkdiag.Messagebox.show_info(f"Saved to {filename}", "Finished", self.win_main)
 
         return True
 
@@ -594,18 +639,26 @@ daf.run(
             tracing = None
 
         async_execute(daf.initialize(logger=logger, debug=tracing), parent_window=self.win_main)
-        for account in self.lb_accounts.get():
-            async_execute(daf.add_object(convert_to_objects(account)), parent_window=self.win_main)
-
         self.bnt_toolbar_start_daf.configure(state="disabled")
         self.bnt_toolbar_stop_daf.configure(state="enabled")
         self._daf_running = True
 
     def stop_daf(self):
-        async_execute(daf.shutdown())
+        async_execute(daf.shutdown(), parent_window=self.win_main)
         self._daf_running = False
         self.bnt_toolbar_start_daf.configure(state="enabled")
         self.bnt_toolbar_stop_daf.configure(state="disabled")
+    
+    @gui_except
+    def add_accounts_daf(self):
+        accounts = self.lb_accounts.get()
+        selection = self.lb_accounts.curselection()
+        len_select = len(selection)
+        if len_select == 0:
+            raise ValueError("Select at least one account to add to the shilling list.")
+
+        for account in [a for i, a in enumerate(accounts) if i in selection]:
+            async_execute(daf.add_object(convert_to_objects(account)), parent_window=self.win_main)
 
     def close_window(self):
         resp = tkdiag.Messagebox.yesnocancel("Do you wish to save?", "Save?", alert=True, parent=self.win_main)

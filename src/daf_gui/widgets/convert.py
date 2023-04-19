@@ -361,24 +361,31 @@ def convert_to_objects(d: Union[ObjectInfo, list], keep_original_object: bool = 
     return d
 
 
-def convert_to_json(d: ObjectInfo):
+def convert_to_json(d: Union[ObjectInfo, List[ObjectInfo], Any]):
     """
     Converts ObjectInfo into JSON representation.
     """
-    data_conv = {}
-    for k, v in d.data.items():
-        if isinstance(v, ObjectInfo):
-            v = convert_to_json(v)
+    def _convert_to_json_oi(d: ObjectInfo):
+        data_conv = {}
+        for k, v in d.data.items():
+            data_conv[k] = convert_to_json(v)
 
-        elif isinstance(v, list):
-            v = v.copy()
-            for i, subv in enumerate(v):
-                if isinstance(subv, ObjectInfo):
-                    v[i] = convert_to_json(subv)
+        return {"type": f"{d.class_.__module__}.{d.class_.__name__}", "data": data_conv}
+    
+    def _convert_to_json_list(d: List[ObjectInfo]):
+        d = d.copy()
+        for i, element in enumerate(d):
+            d[i] = convert_to_json(element)
 
-        data_conv[k] = v
+        return d
 
-    return {"type": f"{d.class_.__module__}.{d.class_.__name__}", "data": data_conv}
+    if isinstance(d, ObjectInfo):
+        return _convert_to_json_oi(d)
+
+    elif isinstance(d, list):
+        return _convert_to_json_list(d)
+
+    return d
 
 
 def convert_from_json(d: Union[dict, List[dict], Any]) -> ObjectInfo:
