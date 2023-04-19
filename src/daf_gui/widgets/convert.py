@@ -113,7 +113,12 @@ if daf.sql.SQL_INSTALLED:
     ADDITIONAL_ANNOTATIONS[sql_.MessageLOG]["success_rate"] = decimal.Decimal
 
 
-CONVERSION_ATTR_TO_PARAM = {}
+CONVERSION_ATTR_TO_PARAM = {
+    daf.AUDIO: {
+        "filename": "orig"
+    }
+}
+
 OBJECT_CONV_CACHE = {}
 
 CONVERSION_ATTR_TO_PARAM[daf.client.ACCOUNT] = {k: k for k in daf.client.ACCOUNT.__init__.__annotations__}

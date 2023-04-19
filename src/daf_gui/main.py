@@ -38,7 +38,7 @@ GITHUB_URL = "https://github.com/davidhozic/discord-advertisement-framework"
 DOC_URL = f"https://daf.davidhozic.com/en/v{daf.VERSION}"
 
 
-def gui_except(fnc):
+def gui_except(fnc: Callable):
     """
     Decorator that catches exceptions and displays them in GUI.
     """
@@ -47,6 +47,19 @@ def gui_except(fnc):
             return fnc(*args, **kwargs)
         except Exception as exc:
             tkdiag.Messagebox.show_error(f"{exc}\n(Exception in {fnc.__name__})")              
+
+    return wrapper
+
+
+def gui_confirm_action(fnc: Callable):
+    """
+    Decorator that asks the user to confirm the action before calling the
+    targeted function (fnc).
+    """
+    def wrapper(*args, **kwargs):
+        result = tkdiag.Messagebox.show_question("Are you sure?", "Confirm")
+        if result == "Yes":
+            return fnc(*args, **kwargs)
 
     return wrapper
 
@@ -115,7 +128,7 @@ class Application():
         self.tabman_mf.add(tab_schema, text="Schema definition")
 
         # Object tab file menu
-        bnt_file_menu = ttk.Menubutton(tab_schema, text="Load/Save/Generate")
+        bnt_file_menu = ttk.Menubutton(tab_schema, text="Schema")
         menubar_file = ttk.Menu(bnt_file_menu)
         menubar_file.add_command(label="Save schema", command=self.save_schema)
         menubar_file.add_command(label="Load schema", command=self.load_schema)
@@ -137,12 +150,11 @@ class Application():
             filename = tkfile.askopenfilename(filetypes=[("Accounts export", ".json")])
             if filename == "":
                 return
-        
+
             with open(filename, "r", encoding="utf-8") as reader:
                 objectinfos = convert_from_json(json.load(reader))
                 self.lb_accounts.clear()
                 self.lb_accounts.insert(tk.END, *objectinfos)
-
 
         ttk.Button(
             frame_account_bnts,
@@ -151,15 +163,10 @@ class Application():
         ).pack(side="left")
         ttk.Button(frame_account_bnts, text="Edit", command=self.edit_accounts).pack(side="left")
         ttk.Button(frame_account_bnts, text="Remove", command=self.list_del_account).pack(side="left")
+
         ttk.Button(
-            frame_tab_account, text="Run selected in DAF", command=self.add_accounts_daf
-        ).pack(anchor=tk.W, pady=dpi_10)
-        bnt_import_export = ttk.Menubutton(frame_account_bnts, text="Import / Export")
-        menu = ttk.Menu(bnt_import_export)
-        menu.add_command(label="Import", command=import_accounts)
-        menu.add_command(label="Export", command=lambda: self.export_accounts(self.lb_accounts))
-        bnt_import_export.configure(menu=menu)
-        bnt_import_export.pack(side="right")
+            frame_tab_account, text="Import", command=import_accounts
+        ).pack(anchor=tk.W, pady=dpi_5)
 
         self.lb_accounts = ListBoxScrolled(frame_tab_account)
         self.lb_accounts.pack(fill=tk.BOTH, expand=True, side="left")
@@ -199,14 +206,18 @@ class Application():
         def remove_account():
             selection = list_live_objects.curselection()
             if len(selection):
-                values = list_live_objects.get()
-                for i in selection:
-                    async_execute(
-                        daf.remove_object(values[i].real_object),
-                        parent_window=self.win_main
-                    )
+                @gui_confirm_action
+                def _():
+                    values = list_live_objects.get()
+                    for i in selection:
+                        async_execute(
+                            daf.remove_object(values[i].real_object),
+                            parent_window=self.win_main
+                        )
 
-                async_execute(dummy_task(), lambda x: load_live_accounts(), self.win_main)
+                    async_execute(dummy_task(), lambda x: load_live_accounts(), self.win_main)
+
+                _()
             else:
                 tkdiag.Messagebox.show_error("Select atlest one item!", "Select errror")
 
@@ -240,7 +251,7 @@ class Application():
         tab_live = ttk.Frame(self.tabman_mf, padding=(dpi_10, dpi_10))
         self.tabman_mf.add(tab_live, text="Live view")
         frame_add_account = ttk.Frame(tab_live)
-        frame_add_account.pack(fill=tk.X)
+        frame_add_account.pack(fill=tk.X, pady=dpi_10)
 
         combo_add_object_edit = ComboEditFrame(
             self,
@@ -252,11 +263,13 @@ class Application():
         combo_add_object_edit.pack(side="left", fill=tk.X, expand=True)
 
         frame_account_opts = ttk.Frame(tab_live)
-        frame_account_opts.pack(fill=tk.X, pady=dpi_5)
+        frame_account_opts.pack(fill=tk.X)
         ttk.Button(frame_account_opts, text="Refresh", command=load_live_accounts).pack(side="left")
         ttk.Button(frame_account_opts, text="Edit", command=view_live_account).pack(side="left")
         ttk.Button(frame_account_opts, text="Remove", command=remove_account).pack(side="left")
-        ttk.Button(frame_account_opts, text="Export selection", command=lambda self.export_accounts(list_live_objects))
+        ttk.Button(
+            tab_live, text="Export selection", command=lambda: self.export_accounts(list_live_objects)
+        ).pack(anchor=tk.W, pady=dpi_5)
 
         list_live_objects = ListBoxScrolled(tab_live)
         list_live_objects.pack(fill=tk.BOTH, expand=True)
@@ -401,13 +414,12 @@ class Application():
             self.objects_edit_window = ObjectEditWindow()
             self.objects_edit_window.open_object_edit_frame(*args, **kwargs)
 
-
     @gui_except
     def export_accounts(self, listbox: ListBoxObjects):
         selection = listbox.curselection()
         if len(selection) == 0:
             raise ValueError("Select atleast one item.")
-        
+
         selection = set(selection)
         accounts = [a for i, a in enumerate(listbox.get()) if i in selection]
 
@@ -509,7 +521,10 @@ class Application():
     def list_del_account(self):
         selection = self.lb_accounts.curselection()
         if len(selection):
-            self.lb_accounts.delete(*selection)
+            @gui_confirm_action
+            def _():
+                self.lb_accounts.delete(*selection)
+            _()
         else:
             tkdiag.Messagebox.show_error("Select atleast one item!", "Empty list!")
 
@@ -639,6 +654,7 @@ daf.run(
             tracing = None
 
         async_execute(daf.initialize(logger=logger, debug=tracing), parent_window=self.win_main)
+        self.add_accounts_daf()
         self.bnt_toolbar_start_daf.configure(state="disabled")
         self.bnt_toolbar_stop_daf.configure(state="enabled")
         self._daf_running = True
@@ -648,16 +664,11 @@ daf.run(
         self._daf_running = False
         self.bnt_toolbar_start_daf.configure(state="enabled")
         self.bnt_toolbar_stop_daf.configure(state="disabled")
-    
+
     @gui_except
     def add_accounts_daf(self):
         accounts = self.lb_accounts.get()
-        selection = self.lb_accounts.curselection()
-        len_select = len(selection)
-        if len_select == 0:
-            raise ValueError("Select at least one account to add to the shilling list.")
-
-        for account in [a for i, a in enumerate(accounts) if i in selection]:
+        for account in accounts:
             async_execute(daf.add_object(convert_to_objects(account)), parent_window=self.win_main)
 
     def close_window(self):
