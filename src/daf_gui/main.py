@@ -142,31 +142,43 @@ class Application():
             text="Accounts", padding=(dpi_10, dpi_10), bootstyle="primary")
         frame_tab_account.pack(side="left", fill=tk.BOTH, expand=True, pady=dpi_10, padx=dpi_5)
 
-        frame_account_bnts = ttk.Frame(frame_tab_account)
-        frame_account_bnts.pack(fill=tk.X)
-
         @gui_except
         def import_accounts():
             "Imports account from live view"
-            self.load_live_accounts(False)
-            values = self.list_live_objects.get()
+            values = convert_to_object_info(daf.get_accounts(), save_original=False)
             if not len(values):
                 raise ValueError("Live view has no elements.")
 
             self.lb_accounts.clear()
             self.lb_accounts.insert(tk.END, *values)
 
-        ttk.Button(
-            frame_account_bnts,
-            text="New ACCOUNT",
+        menu_bnt = ttk.Menubutton(
+            frame_tab_account,
+            text="Object options"
+        )
+        menu = ttk.Menu(menu_bnt)
+        menu.add_command(
+            label="New ACCOUNT",
             command=lambda: self.open_object_edit_window(daf.ACCOUNT, self.lb_accounts)
-        ).pack(side="left")
-        ttk.Button(frame_account_bnts, text="Edit", command=self.edit_accounts).pack(side="left")
-        ttk.Button(frame_account_bnts, text="Remove", command=self.list_del_account).pack(side="left")
+        )
+        menu.add_command(label="Edit", command=self.edit_accounts)
+        menu.add_command(label="Remove", command=self.list_del_account)
+        menu.add_command(
+            label="Import from live view", command=import_accounts
+        )
 
-        ttk.Button(
-            frame_tab_account, text="Import from live view", command=import_accounts
-        ).pack(anchor=tk.W, pady=dpi_5)
+        menu_bnt.configure(menu=menu)
+        menu_bnt.pack(anchor=tk.W, pady=dpi_5)
+
+        frame_load_to_daf = ttk.Frame(frame_tab_account)
+        frame_load_to_daf.pack(fill=tk.X, pady=dpi_5)
+        ttk.Button(frame_load_to_daf, text="Load selected to DAF").pack(side="left")
+        self.load_at_start_var = ttk.BooleanVar(value=True)
+
+        ttk.Checkbutton(
+            frame_load_to_daf, text="Load all at start", onvalue=True, offvalue=False, state="normal",
+            variable=self.load_at_start_var
+        ).pack(side="left", padx=dpi_5)
 
         self.lb_accounts = ListBoxScrolled(frame_tab_account)
         self.lb_accounts.pack(fill=tk.BOTH, expand=True, side="left")
@@ -258,7 +270,7 @@ class Application():
         combo_add_object_edit.pack(side="left", fill=tk.X, expand=True)
 
         frame_account_opts = ttk.Frame(tab_live)
-        frame_account_opts.pack(fill=tk.X)
+        frame_account_opts.pack(fill=tk.X, pady=dpi_5)
         ttk.Button(frame_account_opts, text="Refresh", command=self.load_live_accounts).pack(side="left")
         ttk.Button(frame_account_opts, text="Edit", command=view_live_account).pack(side="left")
         ttk.Button(frame_account_opts, text="Remove", command=remove_account).pack(side="left")
@@ -407,8 +419,8 @@ class Application():
             self.objects_edit_window = ObjectEditWindow()
             self.objects_edit_window.open_object_edit_frame(*args, **kwargs)
 
-    def load_live_accounts(self, with_objects = True):
-        object_infos = convert_to_object_info(daf.get_accounts(), save_original=with_objects)
+    def load_live_accounts(self):
+        object_infos = convert_to_object_info(daf.get_accounts(), save_original=True)
         self.list_live_objects.clear()
         self.list_live_objects.insert(tk.END, *object_infos)
 
@@ -631,7 +643,9 @@ daf.run(
             tracing = None
 
         async_execute(daf.initialize(logger=logger, debug=tracing), parent_window=self.win_main)
-        self.add_accounts_daf()
+        if self.load_at_start_var.get():
+            self.add_accounts_daf()
+
         self.bnt_toolbar_start_daf.configure(state="disabled")
         self.bnt_toolbar_stop_daf.configure(state="enabled")
         self._daf_running = True
