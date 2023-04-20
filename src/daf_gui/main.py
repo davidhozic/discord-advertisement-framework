@@ -147,14 +147,14 @@ class Application():
 
         @gui_except
         def import_accounts():
-            filename = tkfile.askopenfilename(filetypes=[("Accounts export", ".json")])
-            if filename == "":
-                return
+            "Imports account from live view"
+            self.load_live_accounts(False)
+            values = self.list_live_objects.get()
+            if not len(values):
+                raise ValueError("Live view has no elements.")
 
-            with open(filename, "r", encoding="utf-8") as reader:
-                objectinfos = convert_from_json(json.load(reader))
-                self.lb_accounts.clear()
-                self.lb_accounts.insert(tk.END, *objectinfos)
+            self.lb_accounts.clear()
+            self.lb_accounts.insert(tk.END, *values)
 
         ttk.Button(
             frame_account_bnts,
@@ -165,7 +165,7 @@ class Application():
         ttk.Button(frame_account_bnts, text="Remove", command=self.list_del_account).pack(side="left")
 
         ttk.Button(
-            frame_tab_account, text="Import", command=import_accounts
+            frame_tab_account, text="Import from live view", command=import_accounts
         ).pack(anchor=tk.W, pady=dpi_5)
 
         self.lb_accounts = ListBoxScrolled(frame_tab_account)
@@ -215,7 +215,7 @@ class Application():
                             parent_window=self.win_main
                         )
 
-                    async_execute(dummy_task(), lambda x: load_live_accounts(), self.win_main)
+                    async_execute(dummy_task(), lambda x: self.load_live_accounts(), self.win_main)
 
                 _()
             else:
@@ -230,11 +230,6 @@ class Application():
                 async_execute(fnc.class_(**mapping), parent_window=self.win_main)
             else:
                 tkdiag.Messagebox.show_error("Combobox does not have valid selection.", "Combo invalid selection")
-
-        def load_live_accounts():
-            object_infos = convert_to_object_info(daf.get_accounts(), save_original=True)
-            list_live_objects.clear()
-            list_live_objects.insert(tk.END, *object_infos)
 
         def view_live_account():
             selection = list_live_objects.curselection()
@@ -264,15 +259,13 @@ class Application():
 
         frame_account_opts = ttk.Frame(tab_live)
         frame_account_opts.pack(fill=tk.X)
-        ttk.Button(frame_account_opts, text="Refresh", command=load_live_accounts).pack(side="left")
+        ttk.Button(frame_account_opts, text="Refresh", command=self.load_live_accounts).pack(side="left")
         ttk.Button(frame_account_opts, text="Edit", command=view_live_account).pack(side="left")
         ttk.Button(frame_account_opts, text="Remove", command=remove_account).pack(side="left")
-        ttk.Button(
-            tab_live, text="Export selection", command=lambda: self.export_accounts(list_live_objects)
-        ).pack(anchor=tk.W, pady=dpi_5)
 
         list_live_objects = ListBoxScrolled(tab_live)
         list_live_objects.pack(fill=tk.BOTH, expand=True)
+        self.list_live_objects = list_live_objects
 
     def init_output_tab(self):
         self.tab_output = ttk.Frame(self.tabman_mf)
@@ -414,26 +407,10 @@ class Application():
             self.objects_edit_window = ObjectEditWindow()
             self.objects_edit_window.open_object_edit_frame(*args, **kwargs)
 
-    @gui_except
-    def export_accounts(self, listbox: ListBoxObjects):
-        selection = listbox.curselection()
-        if len(selection) == 0:
-            raise ValueError("Select atleast one item.")
-
-        selection = set(selection)
-        accounts = [a for i, a in enumerate(listbox.get()) if i in selection]
-
-        filename = tkfile.asksaveasfilename(filetypes=[("Accounts export", ".json")])
-        if filename == "":
-            return
-
-        if not filename.endswith(".json"):
-            filename += ".json"
-
-        with open(filename, "w", encoding="utf-8") as writer:
-            json.dump(convert_to_json(accounts), writer, indent=4)
-
-        tkdiag.Messagebox.show_info(f"Exported to {filename}", "Finished")
+    def load_live_accounts(self, with_objects = True):
+        object_infos = convert_to_object_info(daf.get_accounts(), save_original=with_objects)
+        self.list_live_objects.clear()
+        self.list_live_objects.insert(tk.END, *object_infos)
 
     async def analytics_load_msg(self):
         logger = daf.get_logger()
