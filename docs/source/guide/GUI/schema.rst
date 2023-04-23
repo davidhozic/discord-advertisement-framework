@@ -1,5 +1,5 @@
 =========================
-Schema definition (GUI)
+Schema tab (GUI)
 =========================
 
 We can define the schema (accounts, guilds, messages) inside the *Schema definition* tab.
@@ -10,7 +10,7 @@ The tab allows us to define:
 
 
 .. image:: ./DEP/images/daf-gui-front.png
-    :scale: 70%
+    :width: 20cm
     :align: center
 
 
@@ -43,9 +43,7 @@ and which **types it accepts**.
 .. note:: Some data types will have additional widgets, such as Color Picker or Datetime select.
 
 In the main frame (below the toolbar) we can see different labels and dropdown menus with one button on the right side.
-These represent the **parameters** of the corresponding objects. These are exactly the same as in the DAF's core library
-- :ref:`Guide (core)`.
-
+These represent the **parameters** of the corresponding objects.
 
 Defining object parameters
 ---------------------------
@@ -55,18 +53,18 @@ Depending on the datatype each parameter accepts, we can either:
 
 .. image:: images/gui-predefined-value-select.png
     :align: center
-    :scale: 40%
+    :width: 10cm
 
 2. Create new value by clicking on the button on the right side of the dropdown and clicking *New <datatype>*,
    which will open another definition window.
 
 .. image:: images/gui-new-item-define.png
     :align: center
-    :scale: 40%
+    :width: 10cm
 
 .. image:: images/gui-new-item-define-string-window.png
     :align: center
-    :scale: 40%
+    :width: 10cm
 
 
 
@@ -98,9 +96,8 @@ To define an account we can choose from various parameters, the important ones f
    - USER accounts (self-bots) - https://youtu.be/YEgFvgg7ZPI
 
 2. ``is_user`` - Tells the framework the above token type, this must be set to ``True`` if you want advertise using an user account (self-bot).
-3. ``servers`` - A list of GUILDS and USERS messages will be sent to.
+3. ``servers`` - A list of :class:`GUILDS <daf.guild.GUILD>` and :class:`USERS <daf.guild.USER>` messages will be sent to.
 
-For additional information about these see :ref:`Guide (core)` or click the *Help* button.
 
 .. note::
 
@@ -126,13 +123,18 @@ definition window which allows you to define multiple GUILD objects.
 
     New server definition window.
 
+:class:`~daf.guild.GUILD` accepts parameters: ``snowflake``, ``messages``, ``logging`` and ``remove_after``.
 
-For help with parameters click the *Help* button or see :ref:`Sending messages (core)`.
+``snowflake`` represents Discord's ID of the guild, ``messages`` a list of :class:`~daf.message.TextMESSAGE` &
+:class:`~daf.message.VoiceMESSAGE`
+objects, ``logging`` is a bool parameter which enables / disables logging of sent messages for this guild and ``remove_after``
+parameter specifies the time or time delay for this guild to be auto removed from the list.
 
-Defining everything else is pretty much the same, for help click the *Help* button or refer to the core documentation
-:ref:`Guide (core)`.
+:class:`~daf.guild.USER` accepts the same parameters, except ``messages`` is a list of :class:`~daf.message.DirectMESSAGE`
+objects.
 
-
+For more information about the parameters and definition for other objects click the *Help* button or search for
+the object in :ref:`API reference` or read the :ref:`core guide <Guide (core)>`.
 
 
 Successful account definition
@@ -142,7 +144,7 @@ After successful definition, we can observe a new account added to our accounts 
 
 .. image:: images/gui-defined-accounts-list.png
     :align: center
-    :scale: 70%
+    :width: 15cm
 
 
 If we click the *Start* (on top of the main window), we can observe our account being logged-in and messages being sent
@@ -150,11 +152,11 @@ to the defined guilds and channels.
 
 .. image:: images/gui-started-output-defined-accounts.png
     :align: center
-    :scale: 70%
+    :width: 15cm
 
 .. image:: images/gui-messages-sent-post-acc-definition.png
     :align: center
-
+    :width: 15cm
 
 
 Logging definition (GUI)
@@ -167,7 +169,7 @@ located on the right side of the 1st dropdown menu.
 
 .. image:: images/gui-logger-definition-edit-json.png
     :align: center
-    :scale: 70%
+    :width: 15cm
 
 
 After clicking on *Save*, our logging manager is now defined and will be responsible for logging the data.
@@ -178,9 +180,25 @@ it is considered the most detailed trace configuration.
 
 .. image:: images/gui-logger-definition-tracing.png
     :align: center
-    :scale: 70%
+    :width: 20cm
 
 
 *NORMAL* trace is recommended for most users.
 
 For more information about logging refer to the core documentation - :ref:`Logging (core)`.
+
+
+Loading schema into DAF (GUI)
+===============================
+The *Load all at start* checkbox causes (when checked) the GUI to load all the accounts into DAF right after the *Start*
+button in the top left corner is pressed. If the checkbox is not checked, accounts can be loaded by
+selecting them in the list and then clicking on the *Load selection to live* button.
+
+If *Import from live* is pressed, the GUI will copy the accounts loaded inside daf into our list.
+
+Logger is automatically loaded at start and cannot be changed for a different logger without stopping the framework first.
+
+
+.. image:: images/gui-load-accounts-bnts.png
+    :align: center
+    :width: 10cm

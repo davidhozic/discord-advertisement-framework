@@ -686,7 +686,7 @@ class LoggerSQL(logging.LoggerBASE):
         res = True
         await asyncio.sleep(SQL_RECOVERY_TIME)
         try:
-            if exc.connection_invalidated:
+            if getattr(exc, "connection_invalidated", False):
                 res = False
                 await self._reconnect_after(SQL_RECONNECT_TIME)
             else:

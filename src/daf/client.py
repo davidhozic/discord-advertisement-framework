@@ -27,7 +27,6 @@ TASK_STARTUP_DELAY_S = 2
 
 __all__ = (
     "ACCOUNT",
-    "get_client"
 )
 
 
@@ -451,18 +450,9 @@ class ACCOUNT:
             kwargs["username"] = None
             kwargs["password"] = None
 
+        if "intents" in kwargs:
+            intents: discord.Intents = kwargs["intents"]
+            if isinstance(intents, discord.Intents) and intents.value == 0:
+                kwargs["intents"] = None
+
         await _update(self)
-
-
-def get_client() -> discord.Client:
-    """
-    TODO: remove in v2.5
-
-    .. deprecated:: v2.4
-
-    Returns the `CLIENT` object used for communicating with Discord.
-    """
-    trace("get_client is is planned for removal in v2.5. Please use ACCOUNT.client attribute instead.",
-          TraceLEVELS.DEPRECATED)
-    from . import core
-    return core.GLOBALS.accounts[0].client

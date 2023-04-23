@@ -1,5 +1,11 @@
+"""
+Modules contains definitions related to GUI object transformations.
+"""
+
 from typing import get_type_hints, Iterable, Any, Union, List
 from contextlib import suppress
+from inspect import isdatadescriptor
+
 from enum import Enum
 
 import decimal
@@ -31,6 +37,9 @@ def issubclass_noexcept(*args):
 
 
 def UserDataFunction(fnc: str):
+    """
+    Dummy function to define a user getter function for daf inside GUI.
+    """
     mod_spec = import_util.spec_from_loader("__tmp", None)
     __tmp = import_util.module_from_spec(mod_spec)
     exec(fnc, __tmp.__dict__)
@@ -90,21 +99,30 @@ ADDITIONAL_ANNOTATIONS = {
     daf.DirectMESSAGE: {
         "data": Union[Iterable[Union[str, discord.Embed, daf.FILE]], str, discord.Embed, daf.FILE, UserDataFunction]
     },
+    daf.add_object: {
+        "obj": daf.ACCOUNT
+    },
 }
 
 if daf.sql.SQL_INSTALLED:
     sql_ = daf.sql
     for item in sql_.ORMBase.__subclasses__():
-        ADDITIONAL_ANNOTATIONS[item] = get_type_hints(item.__init__._sa_original_init)
+        ADDITIONAL_ANNOTATIONS[item] = item.__init__._sa_original_init.__annotations__
 
     ADDITIONAL_ANNOTATIONS[sql_.MessageLOG] = {"id": int, "timestamp": dt.datetime, **ADDITIONAL_ANNOTATIONS[sql_.MessageLOG]}
     ADDITIONAL_ANNOTATIONS[sql_.MessageLOG]["success_rate"] = decimal.Decimal
 
 
-CONVERSION_ATTR_TO_PARAM = {}
+CONVERSION_ATTR_TO_PARAM = {
+    daf.AUDIO: {
+        "filename": "orig"
+    }
+}
+
 OBJECT_CONV_CACHE = {}
 
-
+CONVERSION_ATTR_TO_PARAM[daf.client.ACCOUNT] = {k: k for k in daf.client.ACCOUNT.__init__.__annotations__}
+CONVERSION_ATTR_TO_PARAM[daf.client.ACCOUNT]["token"] = "_token"
 if daf.sql.SQL_INSTALLED:
     sql_ = daf.sql
 
@@ -115,16 +133,39 @@ if daf.sql.SQL_INSTALLED:
     CONVERSION_ATTR_TO_PARAM[sql_.GuildUSER]["snowflake"] = "snowflake_id"
     CONVERSION_ATTR_TO_PARAM[sql_.CHANNEL]["snowflake"] = "snowflake_id"
 
+for item in {daf.TextMESSAGE, daf.VoiceMESSAGE, daf.DirectMESSAGE}:
+    CONVERSION_ATTR_TO_PARAM[item] = {k: k for k in item.__init__.__annotations__}
+    CONVERSION_ATTR_TO_PARAM[item]["data"] = "_data"
+    CONVERSION_ATTR_TO_PARAM[item]["start_in"] = "next_send_time"
+
+
+CONVERSION_ATTR_TO_PARAM[daf.TextMESSAGE]["channels"] = (
+    "channels",
+    lambda channels: [x.id for x in channels] if not isinstance(channels, daf.AutoCHANNEL) else channels,
+)
+
 
 class ObjectInfo:
     """
-    Describes Python objects' parameters.
+    A GUI object that represents real objects,.
+    The GUI only knows how to work with ObjectInfo.
+
+    Parameters
+    -----------------
+    class_: type
+        Real object's type.
+    data: dict
+        Dictionary mapping to real object's parameters
+    real_object: object
+        Actual object that ObjectInfo represents inside GUI. Used whenever update
+        of the real object is needed upon saving inside the GUI.
     """
     CHARACTER_LIMIT = 200
 
-    def __init__(self, class_, data: dict) -> None:
+    def __init__(self, class_, data: dict, real_object: object = None) -> None:
         self.class_ = class_
         self.data = data
+        self.real_object = real_object
 
     def __repr__(self) -> str:
         _ret: str = self.class_.__name__ + "("
@@ -140,6 +181,9 @@ class ObjectInfo:
 
 
 def convert_objects_to_script(object: Union[ObjectInfo, list, tuple, set, str]):
+    """
+    Converts ObjectInfo objects into equivalent Python code.
+    """
     object_data = []
     import_data = []
     other_data = []
@@ -194,9 +238,52 @@ def convert_objects_to_script(object: Union[ObjectInfo, list, tuple, set, str]):
     return ",".join(object_data).strip(), import_data, "\n".join(other_data).strip()
 
 
-def convert_to_object_info(object_: object):
+def convert_to_object_info(object_: object, save_original = False, cache = False):
+    """
+    Converts an object into ObjectInfo.
+
+    Parameters
+    ---------------
+    object_: object
+        The object to convert.
+    save_original: bool
+        If True, will save the original object inside the ``real_object`` attribute of :class:`ObjectInfo`
+    cache: bool
+        Should cache be used to speed up lookups.
+    """
+    def _convert_object_info(object_, save_original, object_type, attrs):
+        data_conv = {}
+
+        for k, v in attrs.items():
+            with suppress(Exception):
+                if isinstance(v, tuple):
+                    value = v[1](getattr(object_, v[0]))
+                else:
+                    value = getattr(object_, v)
+                if value is object_:
+                    data_conv[k] = value
+                else:
+                    data_conv[k] = convert_to_object_info(value, save_original, cache=cache)
+
+        ret = ObjectInfo(object_type, data_conv)
+        if save_original:
+            ret.real_object = object_
+        return ret
+
+    def get_conversion_map(object_type):
+        attrs = CONVERSION_ATTR_TO_PARAM.get(object_type)
+        if attrs is None:
+            attrs = {}
+            additional_annots = {key: key for key in ADDITIONAL_ANNOTATIONS.get(object_type, {})}
+            with suppress(AttributeError):
+                attrs = {key: key for key in object_type.__init__.__annotations__.keys()}
+
+            attrs.update(**additional_annots)
+
+        return attrs
+
     with suppress(TypeError):
-        if object_ in OBJECT_CONV_CACHE:
+        if cache and object_ in OBJECT_CONV_CACHE:
             return OBJECT_CONV_CACHE.get(object_)
 
     object_type = type(object_)
@@ -207,75 +294,109 @@ def convert_to_object_info(object_: object):
 
         return object_
 
-    if isinstance(object_, Iterable):
-        if type(object_) not in {set, list, tuple}:
-            object_ = list(object_)
-
-        for i, value in enumerate(object_):
-            object_[i] = convert_to_object_info(value)
-            pass
-
+    if isinstance(object_, (set, list, tuple)):
+        object_ = [convert_to_object_info(value, save_original, cache=cache) for value in object_]
         return object_
 
-    data_conv = {}
-    attrs = CONVERSION_ATTR_TO_PARAM.get(object_type)
-    if attrs is None:
-        additional_annots = {key: key for key in ADDITIONAL_ANNOTATIONS.get(object_type, {})}
-        attrs = {key: key for key in get_type_hints(object_type.__init__).keys()}
-        attrs.update(**additional_annots)
+    attrs = get_conversion_map(object_type)
+    ret = _convert_object_info(object_, save_original, object_type, attrs)
 
-    for k, v in attrs.items():
-        with suppress(Exception):
-            value = getattr(object_, v)
-            if value is object_:
-                data_conv[k] = value
-            else:
-                data_conv[k] = convert_to_object_info(value)
-                pass
+    with suppress(TypeError):
+        if cache:
+            OBJECT_CONV_CACHE[object_] = ret
 
-    ret = ObjectInfo(object_type, data_conv)
-    OBJECT_CONV_CACHE[object_] = ret
     if len(OBJECT_CONV_CACHE) > 10000:
         OBJECT_CONV_CACHE.clear()
 
     return ret
 
 
-def convert_to_objects(d: ObjectInfo):
-    data_conv = {}
-    for k, v in d.data.items():
-        if isinstance(v, ObjectInfo):
-            v = convert_to_objects(v)
+def convert_to_objects(d: Union[ObjectInfo, list], keep_original_object: bool = False) -> object:
+    """
+    Converts :class:`ObjectInfo` instances into actual objects,
+    specified by the ObjectInfo.class_ attribute.
 
-        elif isinstance(v, list):
-            v = v.copy()
-            for i, subv in enumerate(v):
-                if isinstance(subv, ObjectInfo):
-                    v[i] = convert_to_objects(subv)
+    Parameters
+    -----------------
+    d: ObjectInfo | list[ObjectInfo]
+        The object(s) to convert.
+    keep_original_object: bool
+        If True, the returned object will be the same object (``real_object`` attribute) and will just
+        copy the the attributes. Important for preserving parent-child connections across real objects.
+    """
+    def convert_list():
+        _ = []
+        for item in d:
+            _.append(convert_to_objects(item, keep_original_object))
 
-        data_conv[k] = v
+        return _
 
-    return d.class_(**data_conv)
+    def convert_object_info():
+        data_conv = {}
+        for k, v in d.data.items():
+            data_conv[k] = convert_to_objects(v, keep_original_object)
+
+        new_obj = d.class_(**data_conv)
+        if keep_original_object and d.real_object is not None:
+            real = d.real_object
+            try:
+                args = vars(real)
+            except TypeError:
+                args = dir(real)
+
+            for a in args:
+                try:
+                    attr = getattr(new_obj, a, "__empty")
+                    if a.startswith("__") or callable(attr) or isdatadescriptor(getattr(d.class_, a)):
+                        continue
+
+                    setattr(real, a, attr)
+                except Exception:
+                    break
+            else:
+                new_obj = real  # Only use the old object if copy operation completed 100%
+
+        return new_obj
+
+    if isinstance(d, (list, tuple, set)):
+        return convert_list()
+    if isinstance(d, ObjectInfo):
+        return convert_object_info()
+
+    return d
 
 
-def convert_to_json(d: ObjectInfo):
-    data_conv = {}
-    for k, v in d.data.items():
-        if isinstance(v, ObjectInfo):
-            v = convert_to_json(v)
+def convert_to_json(d: Union[ObjectInfo, List[ObjectInfo], Any]):
+    """
+    Converts ObjectInfo into JSON representation.
+    """
+    def _convert_to_json_oi(d: ObjectInfo):
+        data_conv = {}
+        for k, v in d.data.items():
+            data_conv[k] = convert_to_json(v)
 
-        elif isinstance(v, list):
-            v = v.copy()
-            for i, subv in enumerate(v):
-                if isinstance(subv, ObjectInfo):
-                    v[i] = convert_to_json(subv)
+        return {"type": f"{d.class_.__module__}.{d.class_.__name__}", "data": data_conv}
+    
+    def _convert_to_json_list(d: List[ObjectInfo]):
+        d = d.copy()
+        for i, element in enumerate(d):
+            d[i] = convert_to_json(element)
 
-        data_conv[k] = v
+        return d
 
-    return {"type": f"{d.class_.__module__}.{d.class_.__name__}", "data": data_conv}
+    if isinstance(d, ObjectInfo):
+        return _convert_to_json_oi(d)
+
+    elif isinstance(d, list):
+        return _convert_to_json_list(d)
+
+    return d
 
 
 def convert_from_json(d: Union[dict, List[dict], Any]) -> ObjectInfo:
+    """
+    Converts previously converted JSON back to ObjectInfo.
+    """
     if isinstance(d, list):
         result = []
         for item in d:

@@ -594,8 +594,8 @@ class USER(_BaseGUILD):
 @misc.doc_category("Auto objects")
 class AutoGUILD:
     """
-    .. versionchanged:: v2.5
-        Added ``auto_join`` parameter.
+    .. versionchanged:: v2.7
+        ``interval`` parameter changed to 1 minute.
 
     Internally automatically creates :class:`daf.guild.GUILD` objects.
     Can also automatically join new guilds (``auto_join`` parameter)
@@ -684,7 +684,7 @@ class AutoGUILD:
                  remove_after: Optional[Union[timedelta, datetime]] = None,
                  messages: Optional[List[BaseMESSAGE]] = [],
                  logging: Optional[bool] = False,
-                 interval: Optional[timedelta] = timedelta(minutes=10),
+                 interval: Optional[timedelta] = timedelta(minutes=1),
                  auto_join: Optional[web.GuildDISCOVERY] = None) -> None:
         self.include_pattern = include_pattern
         self.exclude_pattern = exclude_pattern
@@ -834,6 +834,7 @@ class AutoGUILD:
         for discord_guild in client.guilds:
             if (
                 discord_guild not in self.cache and
+                discord_guild.name is not None and
                 re.search(self.include_pattern, discord_guild.name) is not None and
                 (
                     self.exclude_pattern is None or

@@ -37,14 +37,11 @@ class VoiceMESSAGE(BaseMESSAGE):
 
     .. deprecated:: v2.1
 
-        - start_in (start_now) - Using bool value to dictate whether the message should be sent at framework start.
         - start_period, end_period - Using int values, use ``timedelta`` object instead.
 
-    .. versionchanged:: v2.1
+    .. versionchanged:: v2.7
 
-        - start_period, end_period Accept timedelta objects.
-        - start_now - renamed into ``start_in`` which describes when the message should be first sent.
-        - removed ``deleted`` property
+        *start_in* now accepts datetime object
 
     Parameters
     ------------
@@ -90,8 +87,9 @@ class VoiceMESSAGE(BaseMESSAGE):
         Channels that it will be advertised into (Can be snowflake ID or channel objects from PyCord).
     volume: Optional[int]
         The volume (0-100%) at which to play the audio. Defaults to 50%. This was added in v2.0.0
-    start_in: Optional[timedelta]
+    start_in: Optional[timedelta | datetime]
         When should the message be first sent.
+        *timedelta* means the difference from current time, while *datetime* means actual first send time.
     remove_after: Optional[Union[int, timedelta, datetime]]
         Deletes the message after:
 
@@ -115,7 +113,7 @@ class VoiceMESSAGE(BaseMESSAGE):
                  data: Union[AUDIO, Iterable[AUDIO], _FunctionBaseCLASS],
                  channels: Union[Iterable[Union[int, discord.VoiceChannel]], AutoCHANNEL],
                  volume: Optional[int] = 50,
-                 start_in: Optional[Union[timedelta, bool]] = timedelta(seconds=0),
+                 start_in: Optional[Union[timedelta, datetime]] = datetime.now(),
                  remove_after: Optional[Union[int, timedelta, datetime]] = None):
 
         if not dtypes.GLOBALS.voice_installed:
@@ -252,6 +250,9 @@ class VoiceMESSAGE(BaseMESSAGE):
         ValueError
             No valid channels were passed to object"
         """
+        if parent is None:
+            return
+
         ch_i = 0
         self.parent = parent
         cl = parent.parent.client
@@ -410,7 +411,7 @@ class VoiceMESSAGE(BaseMESSAGE):
         """
         if "start_in" not in kwargs:
             # This parameter does not appear as attribute, manual setting necessary
-            kwargs["start_in"] = timedelta(seconds=0)
+            kwargs["start_in"] = self.next_send_time
 
         if "data" not in kwargs:
             kwargs["data"] = self._data
