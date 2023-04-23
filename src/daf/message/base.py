@@ -69,7 +69,6 @@ class BaseMESSAGE:
 
     .. deprecated:: v2.1
 
-        - start_in (start_now) - Using bool value to dictate whether the message should be sent at framework start.
         - start_period, end_period - Using int values, use ``timedelta`` object instead.
 
     .. versionchanged:: v2.1
@@ -119,7 +118,7 @@ class BaseMESSAGE:
                  start_period: Optional[Union[int, timedelta]],
                  end_period: Union[int, timedelta],
                  data: Any,
-                 start_in: Optional[Union[timedelta, datetime, bool]],
+                 start_in: Optional[Union[timedelta, datetime]],
                  remove_after: Optional[Union[int, timedelta, datetime]]):
         # Data parameter checks
         if isinstance(data, Iterable):
@@ -148,15 +147,7 @@ class BaseMESSAGE:
         self.end_period = max(end_period, timedelta(seconds=C_PERIOD_MINIMUM_SEC))
         self.period = self.end_period  # This can randomize in _reset_timer
 
-        # Deprecated bool since v2.1
-        if isinstance(start_in, bool):
-            self.next_send_time = datetime.now() if start_in else datetime.now() + self.end_period
-            trace(
-                "Using bool value for 'start_in' ('start_now') parameter is deprecated and planned for removal. "
-                "Use timedelta object instead.",
-                TraceLEVELS.DEPRECATED
-            )
-        elif isinstance(start_in, datetime):
+        if isinstance(start_in, datetime):
             self.next_send_time = start_in
         else:
             self.next_send_time = datetime.now() + start_in

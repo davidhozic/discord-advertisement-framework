@@ -120,7 +120,7 @@ class TextMESSAGE(BaseMESSAGE):
                  data: Union[Iterable[Union[str, discord.Embed, FILE]], str, discord.Embed, FILE, _FunctionBaseCLASS],
                  channels: Union[Iterable[Union[int, discord.TextChannel, discord.Thread]], AutoCHANNEL],
                  mode: Optional[Literal["send", "edit", "clear-send"]] = "send",
-                 start_in: Optional[Union[timedelta, datetime, bool]] = datetime.now(),
+                 start_in: Optional[Union[timedelta, datetime]] = datetime.now(),
                  remove_after: Optional[Union[int, timedelta, datetime]] = None):
         super().__init__(start_period, end_period, data, start_in, remove_after)
         self.mode = mode
@@ -569,7 +569,6 @@ class DirectMESSAGE(BaseMESSAGE):
 
     .. deprecated:: v2.1
 
-        - start_in (start_now) - Using bool value to dictate whether the message should be sent at framework start.
         - start_period, end_period - Using int values, use ``timedelta`` object instead.
 
     .. versionchanged:: v2.7
@@ -651,7 +650,7 @@ class DirectMESSAGE(BaseMESSAGE):
                  end_period: Union[int, timedelta],
                  data: Union[str, discord.Embed, FILE, Iterable[Union[str, discord.Embed, FILE]], _FunctionBaseCLASS],
                  mode: Optional[Literal["send", "edit", "clear-send"]] = "send",
-                 start_in: Optional[Union[timedelta, datetime, bool]] = datetime.now(),
+                 start_in: Optional[Union[timedelta, datetime]] = datetime.now(),
                  remove_after: Optional[Union[int, timedelta, datetime]] = None):
         super().__init__(start_period, end_period, data, start_in, remove_after)
         self.mode = mode

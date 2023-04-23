@@ -37,7 +37,6 @@ class VoiceMESSAGE(BaseMESSAGE):
 
     .. deprecated:: v2.1
 
-        - start_in (start_now) - Using bool value to dictate whether the message should be sent at framework start.
         - start_period, end_period - Using int values, use ``timedelta`` object instead.
 
     .. versionchanged:: v2.7
@@ -114,7 +113,7 @@ class VoiceMESSAGE(BaseMESSAGE):
                  data: Union[AUDIO, Iterable[AUDIO], _FunctionBaseCLASS],
                  channels: Union[Iterable[Union[int, discord.VoiceChannel]], AutoCHANNEL],
                  volume: Optional[int] = 50,
-                 start_in: Optional[Union[timedelta, datetime, bool]] = datetime.now(),
+                 start_in: Optional[Union[timedelta, datetime]] = datetime.now(),
                  remove_after: Optional[Union[int, timedelta, datetime]] = None):
 
         if not dtypes.GLOBALS.voice_installed:

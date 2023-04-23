@@ -90,6 +90,13 @@ DAF can be installed though command prompt/terminal using the bottom commands.
 
                     pip install discord-advert-framework[sql]
 
+            .. tab-item:: Chrome integration
+
+                - .. code-block:: bash
+                     :caption: Chrome integration
+                     
+                     pip install discord-advert-framework[web]
+
             .. tab-item:: All
                 
                 Install all of the (left) optional dependencies

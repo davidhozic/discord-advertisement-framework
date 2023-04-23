@@ -38,6 +38,10 @@ GITHUB_URL = "https://github.com/davidhozic/discord-advertisement-framework"
 DOC_URL = f"https://daf.davidhozic.com/en/v{daf.VERSION}"
 
 
+class GLOBAL:
+    app: "Application" = None
+
+
 def gui_except(fnc: Callable):
     """
     Decorator that catches exceptions and displays them in GUI.
@@ -62,6 +66,11 @@ def gui_confirm_action(fnc: Callable):
             return fnc(*args, **kwargs)
 
     return wrapper
+
+
+def gui_daf_assert_running():
+    if not GLOBAL.app._daf_running:
+        raise ConnectionError("Start the framework first (START button)")
 
 
 class Application():
@@ -143,9 +152,14 @@ class Application():
         frame_tab_account.pack(side="left", fill=tk.BOTH, expand=True, pady=dpi_10, padx=dpi_5)
 
         @gui_except
+        @gui_confirm_action
         def import_accounts():
             "Imports account from live view"
-            values = convert_to_object_info(daf.get_accounts(), save_original=False)
+            accs = daf.get_accounts()
+            for acc in accs:
+                acc.intents = None  # Intents cannot be loaded properly
+
+            values = convert_to_object_info(accs, save_original=False)
             if not len(values):
                 raise ValueError("Live view has no elements.")
 
@@ -163,20 +177,20 @@ class Application():
         )
         menu.add_command(label="Edit", command=self.edit_accounts)
         menu.add_command(label="Remove", command=self.list_del_account)
-        menu.add_command(
-            label="Import from live view", command=import_accounts
-        )
-
         menu_bnt.configure(menu=menu)
-        menu_bnt.pack(anchor=tk.W, pady=dpi_5)
+        menu_bnt.pack(anchor=tk.W)
 
-        frame_load_to_daf = ttk.Frame(frame_tab_account)
-        frame_load_to_daf.pack(fill=tk.X, pady=dpi_5)
-        ttk.Button(frame_load_to_daf, text="Load selected to DAF").pack(side="left")
+        frame_account_bnts = ttk.Frame(frame_tab_account)
+        frame_account_bnts.pack(fill=tk.X, pady=dpi_5)
+        ttk.Button(
+            frame_account_bnts, text="Import from live", command=import_accounts
+        ).pack(side="left")
+        ttk.Button(
+            frame_account_bnts, text="Load selection to live", command=lambda: self.add_accounts_daf(True)
+        ).pack(side="left")
         self.load_at_start_var = ttk.BooleanVar(value=True)
-
         ttk.Checkbutton(
-            frame_load_to_daf, text="Load all at start", onvalue=True, offvalue=False, state="normal",
+            frame_account_bnts, text="Load all at start", onvalue=True, offvalue=False, state="normal",
             variable=self.load_at_start_var
         ).pack(side="left", padx=dpi_5)
 
@@ -235,6 +249,7 @@ class Application():
 
         @gui_except
         def add_account():
+            gui_daf_assert_running()
             selection = combo_add_object_edit.combo.current()
             if selection >= 0:
                 fnc: ObjectInfo = combo_add_object_edit.combo.get()
@@ -425,6 +440,7 @@ class Application():
         self.list_live_objects.insert(tk.END, *object_infos)
 
     async def analytics_load_msg(self):
+        gui_daf_assert_running()
         logger = daf.get_logger()
         if not isinstance(logger, daf.LoggerSQL):
             raise ValueError("Analytics only allowed when using LoggerSQL")
@@ -443,6 +459,7 @@ class Application():
         self.lst_message_log.insert(tk.END, *messages)
 
     async def analytics_load_num_msg(self):
+        gui_daf_assert_running()
         logger = daf.get_logger()
         if not isinstance(logger, daf.LoggerSQL):
             raise ValueError("Analytics only allowed when using LoggerSQL")
@@ -643,12 +660,12 @@ daf.run(
             tracing = None
 
         async_execute(daf.initialize(logger=logger, debug=tracing), parent_window=self.win_main)
+        self._daf_running = True
         if self.load_at_start_var.get():
             self.add_accounts_daf()
 
         self.bnt_toolbar_start_daf.configure(state="disabled")
         self.bnt_toolbar_stop_daf.configure(state="enabled")
-        self._daf_running = True
 
     def stop_daf(self):
         async_execute(daf.shutdown(), parent_window=self.win_main)
@@ -657,8 +674,17 @@ daf.run(
         self.bnt_toolbar_stop_daf.configure(state="disabled")
 
     @gui_except
-    def add_accounts_daf(self):
+    def add_accounts_daf(self, selection: bool = False):
+        gui_daf_assert_running()
         accounts = self.lb_accounts.get()
+        if selection:
+            indexes = self.lb_accounts.curselection()
+            if not len(indexes):
+                raise ValueError("Select at least one item.")
+
+            indexes = set(indexes)
+            accounts = [a for i, a in enumerate(accounts) if i in indexes]
+
         for account in accounts:
             async_execute(daf.add_object(convert_to_objects(account)), parent_window=self.win_main)
 
@@ -683,11 +709,12 @@ daf.run(
 
 
 def run():
-    win_main = Application()
+    app = Application()
+    GLOBAL.app = app
 
     async def update_task():
-        while win_main.opened:
-            await win_main._process()
+        while app.opened:
+            await app._process()
             await asyncio.sleep(WIN_UPDATE_DELAY)
 
     loop = asyncio.new_event_loop()

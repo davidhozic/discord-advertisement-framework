@@ -39,6 +39,35 @@ v2.7
   
   - Live object view for viewing and live updating objects.
 
+- |BREAK_CH| Removed DEPRECATED parameters for :func:`daf.core.run` and :func:`daf.core.initialize`:
+    
+  - ``token``
+  - ``server_list``
+  - ``is_user``
+  - ``server_log_output``
+  - ``sql_manager``
+  - ``intents``
+  - ``proxy``
+
+- |BREAK_CH| Removed DEPRECATED function ``client.get_client``. This is replaced with :func:`daf.core.get_accounts`,
+  from which the Discord client can be obtained by :py:attr:`daf.client.ACCOUNT.client` for each account.
+
+- |BREAK_CH| Parameter ``debug`` in function :func:`daf.core.run` / :func:`daf.core.initialize` no longer accepts :class:`bool`.
+  This was deprecated in some older version and now removed.
+
+- |BREAK_CH| Removed DEPRECATED functionality inside ``add_object`` that allowed guilds to be added without passing the account
+  to ``snowflake`` parameter. Before it implicitly took the first account from the shill list. This has been
+  deprecated since :ref:`v2.4`.
+
+- |BREAK_CH| Removed DEPRECATED functionality inside ``add_object`` that allowed snowflake ID and Discord's objects
+  to be passed as ``snowflake`` parameter.
+
+- |BREAK_CH| Removed DEPRECATED function ``get_guild_user``, which has been deprecated since :ref:`v2.4`.
+
+- |BREAK_CH| ``xMESSAGE`` types no longer accept :class:`bool` for parameter ``start_in``. This has been deprecated
+  since :ref:`v2.1`.
+
+
 v2.6.3
 =============
 - Restored support for Python v3.8

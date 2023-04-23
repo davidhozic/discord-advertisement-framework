@@ -9,5 +9,6 @@ This section contains the guide to using the Discord Advertisement Framework ins
     quickstart
     control
     schema
+    live_view
     filegen
     analytics
