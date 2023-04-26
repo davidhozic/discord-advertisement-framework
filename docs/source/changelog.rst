@@ -31,6 +31,10 @@ Glossary
 ----------------------
 Releases
 ----------------------
+v2.6.4
+=============
+- Fixed author context in :class:`~daf.logging.LoggerJSON`.
+
 v2.6.3
 =============
 - Restored support for Python v3.8
