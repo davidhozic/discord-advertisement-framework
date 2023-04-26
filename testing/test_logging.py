@@ -14,7 +14,7 @@ C_FILE_NAME_FORBIDDEN_CHAR = ('<','>','"','/','\\','|','?','*',":")
 @pytest.mark.asyncio
 async def test_logging_json(channels, guilds, accounts):
     "Test if json logging works"
-    account = accounts[0]
+    account: daf.ACCOUNT = accounts[0]
     dc_guild, _ = guilds
     text_channels, _ = channels
     try:
@@ -35,7 +35,7 @@ async def test_logging_json(channels, guilds, accounts):
                             .joinpath("{:02d}".format(timestruct.month))
                             .joinpath("{:02d}".format(timestruct.day)))
 
-            logging_output.mkdir(parents=True,exist_ok=True)
+            logging_output.mkdir(parents=True, exist_ok=True)
             logging_output = logging_output.joinpath("".join(char if char not in C_FILE_NAME_FORBIDDEN_CHAR
                                                                 else "#" for char in guild_context["name"]) + ".json")
             # Check results
@@ -44,14 +44,14 @@ async def test_logging_json(channels, guilds, accounts):
                 # Check guild data
                 for k, v in guild_context.items():
                     assert result_json[k] == v, "Resulting data does not match the guild_context"
-                
+
                 # Check message data
-                message_history = result_json["message_history"]
-                message_history = message_history[0] # Get only last send data
+                str_acc = str(account.client.user.id)
+                message_history = result_json["authors"][str_acc]["messages"]
+                message_history = message_history[0]  # Get only last send data
                 message_history.pop("index")
                 message_history.pop("timestamp")
-                assert message_history == message_context # Should be exact match
-
+                assert message_history == message_context  # Should be exact match
 
         data = [
             "Hello World",
