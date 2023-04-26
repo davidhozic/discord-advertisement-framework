@@ -83,10 +83,13 @@ class _BaseGUILD:
     def __init__(
         self,
         snowflake: Any,
-        messages: Optional[List] = [],
+        messages: Optional[List] = None,
         logging: Optional[bool] = False,
         remove_after: Optional[Union[timedelta, datetime]] = None
     ) -> None:
+        if messages is None:
+            messages = []
+
         self._apiobject: discord.Object = snowflake
         self.logging: bool = logging
         # Contains all the different message objects (added in .initialize())
@@ -281,6 +284,12 @@ class _BaseGUILD:
             return
 
         raise ValueError(f"Unable to find object with ID: {guild_id}")
+    
+    async def on_member_join(self, member: discord.Member):
+        """
+        Event listener that get's called when a member joins a guild.
+        """
+        raise NotImplementedError
 
     async def update(self, init_options={}, **kwargs):
         """
@@ -395,9 +404,13 @@ class GUILD(_BaseGUILD):
 
         * timedelta - the specified time difference
         * datetime - specific date & time
+
+    invite_track: Optional[List[str]]
+        List of invite IDs to be tracked for member join count inside the guild.
     """
     __slots__ = (
         "update_semaphore",
+        "join_count"
     )
 
     @typechecked
@@ -405,8 +418,14 @@ class GUILD(_BaseGUILD):
                  snowflake: Union[int, discord.Guild],
                  messages: Optional[List[Union[TextMESSAGE, VoiceMESSAGE]]] = [],
                  logging: Optional[bool] = False,
-                 remove_after: Optional[Union[timedelta, datetime]] = None):
+                 remove_after: Optional[Union[timedelta, datetime]] = None,
+                 invite_track: Optional[List[str]] = None):
         super().__init__(snowflake, messages, logging, remove_after)
+        if invite_track is None:
+            invite_track = []
+
+        # Auto strip any url parts and keep only ID by splitting
+        self.join_count = {invite.split("/")[-1]: 0 for invite in invite_track}
         misc._write_attr_once(self, "update_semaphore", asyncio.Semaphore(1))
 
     def _check_state(self) -> bool:
@@ -422,6 +441,14 @@ class GUILD(_BaseGUILD):
         """
         return (self.parent.client.get_guild(self.snowflake) is None or
                 super()._check_state())
+    
+    async def get_invites(self) -> Union[List[discord.Invite], None]:
+        guild: discord.Guild = self.apiobject
+        try:
+            return await guild.invites()
+        except discord.HTTPException as exc:
+            trace(f"Error reading invite links for guild {guild.name}!", TraceLEVELS.ERROR, exc)
+            return None
 
     async def initialize(self, parent: Any) -> None:
         """
@@ -439,7 +466,58 @@ class GUILD(_BaseGUILD):
         Other
             Raised from .add_message(message_object) method.
         """
-        return await super().initialize(parent, parent.client.get_guild)
+        await super().initialize(parent, parent.client.get_guild)
+        guild: discord.Guild = self.apiobject
+        # Fill invite counts
+        invites = await self.get_invites()
+        if invites is None:
+            trace(
+                f"Could not get information about invites inside guild {guild.name} ({guild.id})",
+                TraceLEVELS.ERROR
+            )
+            return
+        
+        invites = {invite.id: invite.uses for invite in invites}
+        
+        counts = self.join_count
+        for invite in counts.keys():
+            try:
+                counts[invite] = invites[invite]
+            except KeyError as exc:
+                del counts[invite]
+                trace(
+                    f"Invite link {invite} not found in {self.apiobject.name}. It will not be tracked!",
+                    TraceLEVELS.WARNING
+                )
+
+        parent.client.event(self.on_member_join)
+
+    async def on_member_join(self, member: discord.Member):
+        """
+        Event listener that get's called when a member joins a guild.
+
+        Parameters
+        ---------------
+        """
+        guild: discord.Guild = self.apiobject
+        # Only check current guild
+        if member.guild.id != guild.id:
+            return
+        
+        invites = await self.get_invites()
+        if invites is None:
+            return
+ 
+        counts = self.join_count
+        for invite in invites:
+            id_ = invite.id
+            uses = invite.uses
+            last_uses = counts.get(id_, uses)  # If exists get count else set to current count
+            if last_uses != uses:
+                # Send logging event
+                trace(f"User {member.name} joined to {member.guild.name} with invite {invite.id}", TraceLEVELS.DEBUG)
+                counts[id_] = uses
+                return
 
     @misc._async_safe("update_semaphore", 1)
     async def update(self, init_options={}, **kwargs):
@@ -674,7 +752,8 @@ class AutoGUILD:
         "join_history",
         "guild_query_iter",
         "last_guild_join",
-        "guild_join_count"
+        "guild_join_count",
+        "invite_track"
     )
 
     @typechecked
@@ -685,10 +764,12 @@ class AutoGUILD:
                  messages: Optional[List[BaseMESSAGE]] = [],
                  logging: Optional[bool] = False,
                  interval: Optional[timedelta] = timedelta(minutes=1),
-                 auto_join: Optional[web.GuildDISCOVERY] = None) -> None:
+                 auto_join: Optional[web.GuildDISCOVERY] = None,
+                 invite_track: Optional[List[str]] = None) -> None:
         self.include_pattern = include_pattern
         self.exclude_pattern = exclude_pattern
         self.remove_after = remove_after
+        self.invite_track = invite_track
         # Uninitialized template messages that get copied for each found guild.
         self.messages = messages
         self.logging = logging
@@ -844,7 +925,8 @@ class AutoGUILD:
                 try:
                     new_guild = GUILD(snowflake=discord_guild,
                                       messages=deepcopy(self.messages),
-                                      logging=self.logging)
+                                      logging=self.logging,
+                                      invite_track=self.invite_track)
 
                     await new_guild.initialize(parent=self.parent)
                     self.cache[discord_guild] = new_guild

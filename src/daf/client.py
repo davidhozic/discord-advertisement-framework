@@ -133,6 +133,7 @@ class ACCOUNT:
         # If intents not passed, enable default
         if intents is None:
             intents = discord.Intents.default()
+            intents.members = True
 
         self.intents = intents
         self._running = False
