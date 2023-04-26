@@ -284,7 +284,7 @@ class _BaseGUILD:
             return
 
         raise ValueError(f"Unable to find object with ID: {guild_id}")
-    
+
     async def on_member_join(self, member: discord.Member):
         """
         Event listener that get's called when a member joins a guild.
@@ -362,6 +362,9 @@ class _BaseGUILD:
                 return GUILD_ADVERT_STATUS_ERROR_REMOVE_ACCOUNT
 
         return GUILD_ADVERT_STATUS_SUCCESS
+
+    def generate_invite_log_context(self, member: discord.Member, invite_id: str) -> dict:
+        raise NotImplementedError
 
     def generate_log_context(self) -> Dict[str, Union[str, int]]:
         """
@@ -441,14 +444,14 @@ class GUILD(_BaseGUILD):
         """
         return (self.parent.client.get_guild(self.snowflake) is None or
                 super()._check_state())
-    
-    async def get_invites(self) -> Union[List[discord.Invite], None]:
+
+    async def get_invites(self) -> List[discord.Invite]:
         guild: discord.Guild = self.apiobject
         try:
             return await guild.invites()
         except discord.HTTPException as exc:
             trace(f"Error reading invite links for guild {guild.name}!", TraceLEVELS.ERROR, exc)
-            return None
+            return []
 
     async def initialize(self, parent: Any) -> None:
         """
@@ -470,20 +473,20 @@ class GUILD(_BaseGUILD):
         guild: discord.Guild = self.apiobject
         # Fill invite counts
         invites = await self.get_invites()
-        if invites is None:
+        if not len(invites):
             trace(
                 f"Could not get information about invites inside guild {guild.name} ({guild.id})",
                 TraceLEVELS.ERROR
             )
             return
-        
+
         invites = {invite.id: invite.uses for invite in invites}
-        
+
         counts = self.join_count
         for invite in counts.keys():
             try:
                 counts[invite] = invites[invite]
-            except KeyError as exc:
+            except KeyError:
                 del counts[invite]
                 trace(
                     f"Invite link {invite} not found in {self.apiobject.name}. It will not be tracked!",
@@ -500,24 +503,57 @@ class GUILD(_BaseGUILD):
         ---------------
         """
         guild: discord.Guild = self.apiobject
-        # Only check current guild
-        if member.guild.id != guild.id:
-            return
-        
-        invites = await self.get_invites()
-        if invites is None:
-            return
- 
         counts = self.join_count
-        for invite in invites:
-            id_ = invite.id
-            uses = invite.uses
-            last_uses = counts.get(id_, uses)  # If exists get count else set to current count
-            if last_uses != uses:
-                # Send logging event
-                trace(f"User {member.name} joined to {member.guild.name} with invite {invite.id}", TraceLEVELS.DEBUG)
-                counts[id_] = uses
-                return
+        # Only check current guild if any invites are tracked
+        if member.guild.id != guild.id or not len(counts):
+            return
+
+        invites = await self.get_invites()
+        invites = {invite.id: invite.uses for invite in invites}
+        for id_, last_uses in counts.items():
+            try:
+                uses = invites[id_]
+                if last_uses != uses:
+                    invite_ctx = self.generate_invite_log_context(member, id_)
+                    await logging.save_log(self.generate_log_context(), None, None, invite_ctx)
+                    trace(f"User {member.name} joined to {member.guild.name} with invite {id_}", TraceLEVELS.DEBUG)
+                    counts[id_] = uses
+                    return
+            except KeyError:
+                trace(
+                    f"Invite {id_} no longer exists! Removing it from tracking. Guild: {guild.name} (ID: {guild.id})",
+                    TraceLEVELS.WARNING
+                )
+
+    def generate_invite_log_context(self, member: discord.Member, invite_id: str) -> dict:
+        """
+        Generates dictionary representing the log of a member joining a guild.
+
+        Parameters
+        ------------
+        member: discord.Member
+            The member that joined a guild.
+
+        Returns
+        ---------
+        dict
+            ::
+
+                {
+                    "id": ID of the invite,
+                    "member": {
+                        "id": Member ID,
+                        "name": Member name
+                    }
+                }
+        """
+        return {
+            "id": invite_id,
+            "member": {
+                "id": member.id,
+                "name": member.name
+            }
+        }
 
     @misc._async_safe("update_semaphore", 1)
     async def update(self, init_options={}, **kwargs):
