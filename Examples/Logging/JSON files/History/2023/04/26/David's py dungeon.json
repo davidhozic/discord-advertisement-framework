@@ -1,0 +1,55 @@
+{
+    "name": "David's py dungeon",
+    "id": 863071397207212052,
+    "type": "GUILD",
+    "authors": {
+        "909382417087881276": {
+            "name": "[ŠSFE] Zajcek Bine",
+            "id": 909382417087881276,
+            "messages": [
+                {
+                    "sent_data": {
+                        "streamed_audio": {
+                            "type:": "Youtube",
+                            "title": "Stripper Magician",
+                            "url": "https://www.youtube.com/watch?v=lDRjqI-fBVI"
+                        }
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1098345120455213126
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "VoiceMESSAGE",
+                    "index": 1,
+                    "timestamp": "26.04.2023 20:37:36"
+                },
+                {
+                    "sent_data": {
+                        "streamed_audio": {
+                            "type:": "Youtube",
+                            "title": "Stripper Magician",
+                            "url": "https://www.youtube.com/watch?v=lDRjqI-fBVI"
+                        }
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1098345120455213126
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "VoiceMESSAGE",
+                    "index": 0,
+                    "timestamp": "26.04.2023 20:35:40"
+                }
+            ]
+        }
+    }
+}

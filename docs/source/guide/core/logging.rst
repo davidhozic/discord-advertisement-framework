@@ -48,14 +48,19 @@ All logs will contain keys:
 - "name": The name of the guild/user
 - "id": Snowflake ID of the guild/user
 - "type": object type (GUILD/USER) that generated the log.
-- "message_history": Array of logs for each sent message to the guild/user, the structure is message type dependant and is generated inside  methods:
+- "authors": Dictionary which's values represent author ids and the values are dictionaries containing keys:
 
-  + :py:meth:`daf.message.TextMESSAGE.generate_log_context`
-  + :py:meth:`daf.message.VoiceMESSAGE.generate_log_context`
-  + :py:meth:`daf.message.DirectMESSAGE.generate_log_context`
+  - "name": Name of the sender (author)
+  - "id": Snowflake ID of the sender
+  - "messages": List of previously sent messages by the corresponding author with their context.
+    It is message type dependent and is generated in:
 
-.. seealso:: 
-    :download:`Example structure <./DEP/Examples/Logging/JSON files/History/2022/05/23/#David's dungeon.json>`
+    + :py:meth:`daf.message.TextMESSAGE.generate_log_context`
+    + :py:meth:`daf.message.VoiceMESSAGE.generate_log_context`
+    + :py:meth:`daf.message.DirectMESSAGE.generate_log_context`
+
+.. seealso::
+    :download:`Example structure <./DEP/Examples/Logging/JSON files/History/2023/04/26/David's py dungeon.json>`
 
 
 .. only:: html
