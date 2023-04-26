@@ -245,7 +245,7 @@ class LoggerJSON(LoggerBASE):
             file_exists = False
 
         # Write to file
-        with open(logging_output,'r+', encoding='utf-8') as f_writer:
+        with open(logging_output, 'r+', encoding='utf-8') as f_writer:
             json_data = None
             if file_exists:
                 try:
@@ -263,15 +263,18 @@ class LoggerJSON(LoggerBASE):
                 json_data["name"] = guild_context["name"]
                 json_data["id"] = guild_context["id"]
                 json_data["type"] = guild_context["type"]
-                json_data["author"] = author_context
-                json_data["message_history"] = []
 
-            json_data["message_history"].insert(0,
-                {
-                    **message_context,
-                    "index": json_data["message_history"][0]["index"] + 1 if len(json_data["message_history"]) else 0,
-                    "timestamp": timestamp
-                }
+            author_id_str = str(author_context["id"])
+            if author_id_str not in json_data["authors"]:
+                messages = author_context["messages"] = []
+                json_data["authors"][author_id_str] = author_context
+            else:
+                messages = json_data["authors"][author_id_str]["messages"]
+
+            messages.insert(0, {
+                **message_context,
+                "index": messages[0]["index"] + 1 if len(messages) else 0,
+                "timestamp": timestamp}
             )
             json.dump(json_data, f_writer, indent=4, ensure_ascii=False)
             f_writer.truncate()  # Remove any old data
@@ -280,7 +283,7 @@ class LoggerJSON(LoggerBASE):
 async def initialize(logger: LoggerBASE) -> None:
     """
     Initialization coroutine for the module.
-    
+
     Parameters
     --------------
     The logger manager to use for saving logs.
