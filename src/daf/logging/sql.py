@@ -1,11 +1,8 @@
 """
-    The sql module contains definitions related to the
-    relational database logging that is available in this shiller.
-    It is only used if the sql logging is enabled by passing
-    the daf.run function with the SqlCONTROLLER object.
+    The sql module contains definitions related to the relational database logging.
 
-    .. versionchanged:: v2.1
-        Made SQL an optional functionality
+    .. versionchanged:: v2.7
+        Added Discord invite link tracking.
 """
 from datetime import datetime, date
 from typing import Callable, Dict, List, Literal, Any, Union, Optional, Tuple
@@ -256,6 +253,8 @@ class LoggerSQL(logging.LoggerBASE):
     ----------
     ValueError
         Unsupported dialect (db type).
+    ModuleNotFoundError
+        Extra requirements are required.
     """
 
     @typechecked
@@ -532,7 +531,39 @@ class LoggerSQL(logging.LoggerBASE):
         await self._generate_lookup_values()
         await super().initialize()
 
-    async def _get_insert_invite(
+    async def __get_insert_base(
+        self,
+        key: Any,
+        cache_object: TableCache,
+        compare_key,
+        type_: type,
+        session: Union[AsyncSession, Session],
+        *args,
+        **kwargs
+    ):
+        result = None
+        if not cache_object.exists(key):
+            result = await self._run_async(
+                session.execute,
+                select(type_).where(compare_key)
+            )
+            result = result.first()
+            if result is not None:
+                result = result[0]
+            else:
+                result = type_(*args, **kwargs)
+                session.add(result)
+                await self._run_async(session.commit)
+                await self._run_async(session.begin)
+                result = result
+
+            cache_object.insert(key, result)
+        else:
+            result = cache_object.get(key)
+
+        return result
+
+    def _get_insert_invite(
         self,
         id_: str,
         guild: "GuildUSER",
@@ -547,37 +578,17 @@ class LoggerSQL(logging.LoggerBASE):
         id_: str
             The invite link ID (final part of URL).
         guild: GuildUSER,
-            The guild that 
+            The guild that
         session: Union[AsyncSession, Session]
             The session to use as transaction.
         """
-        result = None
-        if not self.invites_cache.exists(id_):
-            result = await self._run_async(
-                session.execute,
-                select(Invite).where(Invite.discord_id == id_)
-            )
-            result = result.first()
-            if result is not None:
-                result = result[0]
-            else:
-                result = Invite(id_, guild)
-                session.add(result)
-                await self._run_async(session.commit)
-                await self._run_async(session.begin)
-                result = result
+        return self.__get_insert_base(id_, self.invites_cache, Invite.discord_id == id_, Invite, session, id_, guild)
 
-            self.invites_cache.insert(id_, result)
-        else:
-            result = self.invites_cache.get(id_)
-
-        return result
-
-    async def _get_insert_guild(self,
-                                snowflake: int,
-                                name: str,
-                                guild_type: int,
-                                session: Union[AsyncSession, Session]) -> int:
+    def _get_insert_guild(self,
+                          snowflake: int,
+                          name: str,
+                          guild_type: int,
+                          session: Union[AsyncSession, Session]) -> int:
         """
         Inserts the guild into the db if it doesn't exist,
         adds it to cache and returns it's internal db id from cache.
@@ -593,27 +604,16 @@ class LoggerSQL(logging.LoggerBASE):
         session: Union[AsyncSession, Session]
             The session to use as transaction.
         """
-        result = None
-        if not self.guild_user_cache.exists(snowflake):
-            result = await self._run_async(
-                session.execute,
-                select(GuildUSER).where(GuildUSER.snowflake_id == snowflake)
-            )
-            result = result.first()
-            if result is not None:
-                result = result[0]
-            else:
-                result = GuildUSER(guild_type, snowflake, name)
-                session.add(result)
-                await self._run_async(session.commit)
-                await self._run_async(session.begin)
-                result = result
-
-            self.guild_user_cache.insert(snowflake, result)
-        else:
-            result = self.guild_user_cache.get(snowflake)
-
-        return result
+        return self.__get_insert_base(
+            snowflake,
+            self.guild_user_cache,
+            GuildUSER.snowflake_id == snowflake,
+            GuildUSER,
+            session,
+            guild_type,
+            snowflake,
+            name
+        )
 
     async def _get_insert_channels(self,
                                    channels: List[dict],
@@ -669,7 +669,7 @@ class LoggerSQL(logging.LoggerBASE):
         ret = [(self.channel_cache.get(d["id"]), d.get("reason", None)) for d in channels]
         return ret
 
-    async def _get_insert_data(self, data: dict, session: Union[AsyncSession, Session]) -> int:
+    def _get_insert_data(self, data: dict, session: Union[AsyncSession, Session]) -> int:
         """
         Get's data's row ID from the cache/database, if it does not exists,
         it inserts into the database and then caches the value.
@@ -686,26 +686,15 @@ class LoggerSQL(logging.LoggerBASE):
         int
             Primary key of a row inside DataHISTORY table.
         """
-        result: tuple = None
         const_data = json.dumps(data)
-
-        if not self.data_history_cache.exists(const_data):
-            result = await self._run_async(
-                session.execute,
-                select(DataHISTORY).where(DataHISTORY.content.cast(String) == const_data)
-            )
-            result = result.first()
-            if result is None:
-                # Add to the database
-                to_add = DataHISTORY(const_data)
-                session.add(to_add)
-                await self._run_async(session.commit)
-                await self._run_async(session.begin)
-                result = (to_add,)
-
-            self.data_history_cache.insert(const_data, result[0])
-
-        return self.data_history_cache.get(const_data)
+        return self.__get_insert_base(
+            const_data,
+            self.data_history_cache,
+            DataHISTORY.content.cast(String) == const_data,
+            DataHISTORY,
+            session,
+            const_data
+        )
 
     async def _stop_engine(self):
         """
