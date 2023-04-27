@@ -1,14 +1,16 @@
 """
 Main file of the DAF GUI.
 """
-from typing import Iterable, Awaitable
-from PIL import Image, ImageTk
+try:
+    from PIL import Image, ImageTk
+    import tkinter as tk
+    import tkinter.filedialog as tkfile
+    import ttkbootstrap.dialogs.dialogs as tkdiag
+    import ttkbootstrap as ttk
+    import ttkbootstrap.tableview as tktw
+except ModuleNotFoundError as exc:
+    raise ModuleNotFoundError("GUI not available since modules could not be imported.") from exc
 
-import tkinter as tk
-import tkinter.filedialog as tkfile
-import ttkbootstrap.dialogs.dialogs as tkdiag
-import ttkbootstrap as ttk
-import ttkbootstrap.tableview as tktw
 
 import asyncio
 import json
@@ -21,7 +23,6 @@ try:
     from .widgets import *
 except ImportError:
     from widgets import *
-
 
 
 WIN_UPDATE_DELAY = 0.005
