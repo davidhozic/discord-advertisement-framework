@@ -1,16 +1,29 @@
 """
 Main file of the DAF GUI.
 """
-try:
-    from PIL import Image, ImageTk
-    import tkinter as tk
-    import tkinter.filedialog as tkfile
-    import ttkbootstrap.dialogs.dialogs as tkdiag
-    import ttkbootstrap as ttk
-    import ttkbootstrap.tableview as tktw
-except ModuleNotFoundError as exc:
-    raise ModuleNotFoundError("GUI not available since modules could not be imported.") from exc
+import subprocess
+import sys
 
+from importlib.util import find_spec
+
+installed = find_spec("ttkbootstrap") is not None
+
+
+# Automatically install GUI requirements if GUI is requested to avoid making it an optional dependency
+# One other way would be to create a completely different package on pypi for the core daf, but that is a lot of
+# work to be done. It is better to auto install.
+TTKBOOSTRAP_VERSION = "1.10.1"
+
+if not installed:
+    print("Auto installing requirements: ttkbootstrap")
+    subprocess.check_call([sys.executable, "-m", "pip", "install", f"ttkbootstrap=={TTKBOOSTRAP_VERSION}"])
+
+from PIL import Image, ImageTk
+import tkinter as tk
+import tkinter.filedialog as tkfile
+import ttkbootstrap.dialogs.dialogs as tkdiag
+import ttkbootstrap as ttk
+import ttkbootstrap.tableview as tktw
 
 import asyncio
 import json
@@ -82,9 +95,9 @@ class Application():
         # DPI
         set_dpi(win_main.winfo_fpixels('1i'))
         dpi_5 = dpi_scaled(5)
-        # path = os.path.join(os.path.dirname(__file__), "img/logo.png")
-        # photo = tk.PhotoImage(file=path)
-        # win_main.iconphoto(True, photo)
+        path = os.path.join(os.path.dirname(__file__), "img/logo.png")
+        photo = ImageTk.PhotoImage(file=path)
+        win_main.iconphoto(0, photo)
 
         self.win_main = win_main
         screen_res = int(win_main.winfo_screenwidth() / 1.25), int(win_main.winfo_screenheight() / 1.5)
@@ -329,7 +342,7 @@ class Application():
         dpi_30 = dpi_scaled(30)
         logo_img = Image.open(f"{os.path.dirname(__file__)}/img/logo.png")
         logo_img = logo_img.resize(
-            (self.win_main.winfo_screenwidth() // 8, self.win_main.winfo_screenwidth() // 8),
+            (dpi_scaled(self.win_main.winfo_screenwidth() // 6), dpi_scaled(self.win_main.winfo_screenwidth() // 6)),
             resample=0
         )
         logo = ImageTk.PhotoImage(logo_img)
