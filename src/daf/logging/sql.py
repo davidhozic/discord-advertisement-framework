@@ -1034,7 +1034,7 @@ class LoggerSQL(logging.LoggerBASE):
 
             extract_stm_len = len(extract_stms)
             count = [
-                (date(*s[:extract_stm_len], *([1] * (3 - extract_stm_len))), *s[extract_stm_len:])
+                ("-".join("{:02d}".format(x) for x in s[:extract_stm_len]), *s[extract_stm_len:])
                 for s in count
             ]
 
@@ -1133,6 +1133,102 @@ class LoggerSQL(logging.LoggerBASE):
             )
 
             return list(*zip(*messages.unique().all()))
+
+    async def analytic_get_num_invites(
+            self,
+            guild: Union[int, None] = None,
+            after: Union[datetime, None] = None,
+            before: Union[datetime, None] = None,
+            sort_by: Literal["count", "guild_snow", "guild_name", "invite_id"] = "count",
+            sort_by_direction: Literal["asc", "desc"] = "desc",
+            limit: int = 500,
+            group_by: Literal["year", "month", "day"] = "day"
+    ) -> List[Tuple[date, int, str]]:
+        """
+        Returns invite link join counts.
+
+        Parameters
+        -----------
+        guild: int
+            The snowflake id of the guild.
+        after: Union[datetime, None] = None
+            Only count messages sent after the datetime.
+        before: Union[datetime, None]
+            Only count messages sent before the datetime.
+        sort_by: Literal["count", "guild_snow", "guild_name", "invite_id"],
+            Sort items by selected.
+            Defaults to "successful"
+        sort_by_direction: Literal["asc", "desc"]
+            Sort items by ``sort_by`` in selected direction (asc = ascending, desc = descending).
+            Defaults to "desc"
+        limit: int = 500
+            Limit of the rows to return. Defaults to 500.
+        group_by: Literal["year", "month", "day"]
+            Results returned are grouped by ``group_by``
+
+        Returns
+        --------
+        list[Tuple[date, int, int, str, str]]
+            List of tuples.
+
+            Each tuple contains:
+
+            - Date
+            - Invite count
+            - Invite ID
+
+        Raises
+        ------------
+        SQLAlchemyError
+            There was a problem with the database.
+        """
+        if after is None:
+            after = datetime.min
+
+        if before is None:
+            before = datetime.max
+
+        regions = ["day", "month", "year"]
+        regions = reversed(regions[regions.index(group_by):])
+        extract_stms = []
+        for region_ in regions:
+            extract_stms.append(func.extract(region_, InviteLOG.timestamp).cast(Integer))
+
+        async with self.session_maker() as session:
+            conditions = []
+            if guild is not None:
+                conditions.append(
+                    InviteLOG.invite.has(Invite.guild.has(GuildUSER.snowflake_id == guild))
+                )
+
+            count = (await self._run_async(
+                session.execute,
+                select(
+                    *extract_stms,
+                    func.count().label("count"),
+                    GuildUSER.snowflake_id.label("guild_snow"),
+                    GuildUSER.name.label("guild_name"),
+                    Invite.discord_id,
+                )
+                .where(
+                    InviteLOG.timestamp.between(after, before),
+                    *conditions
+                )
+                .select_from(InviteLOG)
+                .join(Invite, InviteLOG.invite_id == Invite.id)
+                .join(GuildUSER, Invite.guild_id == GuildUSER.id)
+                .group_by(*extract_stms, InviteLOG.invite_id)
+                .limit(limit)
+                .order_by(text(f"{sort_by} {sort_by_direction}"))
+            )).all()
+
+            extract_stm_len = len(extract_stms)
+            count = [
+                ("-".join("{:02d}".format(x) for x in s[:extract_stm_len]), *s[extract_stm_len:])
+                for s in count
+            ]
+
+            return count
 
     async def analytic_get_invite_log(
         self,

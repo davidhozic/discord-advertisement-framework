@@ -114,6 +114,18 @@ class LoggerBASE:
     ) -> list:
         raise NotImplementedError
 
+    async def analytic_get_num_invites(
+            self,
+            guild: Union[int, None] = None,
+            after: Union[datetime, None] = None,
+            before: Union[datetime, None] = None,
+            sort_by: Literal["count", "guild_snow", "guild_name", "invite_id"] = "count",
+            sort_by_direction: Literal["asc", "desc"] = "desc",
+            limit: int = 500,
+            group_by: Literal["year", "month", "day"] = "day"
+    ) -> list:
+        raise NotImplementedError
+
     async def analytic_get_invite_log(
         self,
         guild: Union[int, None] = None,

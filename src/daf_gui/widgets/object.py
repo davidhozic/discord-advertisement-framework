@@ -45,6 +45,7 @@ HELP_URLS = {
     "builtins": "https://docs.python.org/3/search.html?q={}"
 }
 
+
 class ObjectEditWindow(ttk.Toplevel):
     """
     Top level window for creating and editing new objects.
