@@ -736,9 +736,9 @@ class LoggerSQL(logging.LoggerBASE):
         return res  # Returns if the error was handled or not
 
     async def _save_log_invite(
-            self,
-            guild_context: dict,
-            invite_context: dict
+        self,
+        guild_context: dict,
+        invite_context: dict
     ):
         # Parse the data
         guild_snowflake: int = guild_context.get("id")
@@ -779,10 +779,10 @@ class LoggerSQL(logging.LoggerBASE):
             raise RuntimeError(f"Unable to save invite log within {SQL_MAX_SAVE_ATTEMPTS} tries")
 
     async def _save_log_message(
-            self,
-            guild_context: dict,
-            message_context: Optional[dict] = None,
-            author_context: Optional[dict] = None,
+        self,
+        guild_context: dict,
+        message_context: Optional[dict] = None,
+        author_context: Optional[dict] = None,
     ):
         # Parse the data
         author_name: str = author_context.get("name")
@@ -1029,18 +1029,18 @@ class LoggerSQL(logging.LoggerBASE):
 
             return count
 
-    async def analytic_get_message_log(
-            self,
-            guild: Union[int, None] = None,
-            author: Union[int, None] = None,
-            after: Union[datetime, None] = None,
-            before: Union[datetime, None] = None,
-            success_rate: Tuple[float, float] = (0, 100),
-            guild_type: Union[Literal["USER", "GUILD"], None] = None,
-            message_type: Union[Literal["TextMESSAGE", "VoiceMESSAGE", "DirectMESSAGE"], None] = None,
-            sort_by: Literal["timestamp", "success_rate"] = "timestamp",
-            sort_by_direction: Literal["asc", "desc"] = "desc",
-            limit: int = 500,
+    def analytic_get_message_log(
+        self,
+        guild: Union[int, None] = None,
+        author: Union[int, None] = None,
+        after: Union[datetime, None] = None,
+        before: Union[datetime, None] = None,
+        success_rate: Tuple[float, float] = (0, 100),
+        guild_type: Union[Literal["USER", "GUILD"], None] = None,
+        message_type: Union[Literal["TextMESSAGE", "VoiceMESSAGE", "DirectMESSAGE"], None] = None,
+        sort_by: Literal["timestamp", "success_rate"] = "timestamp",
+        sort_by_direction: Literal["asc", "desc"] = "desc",
+        limit: int = 500,
     ) -> List["MessageLOG"]:
         """
         Returns a list MessageLOG objects (message logs) that match the parameters.
@@ -1058,9 +1058,9 @@ class LoggerSQL(logging.LoggerBASE):
         success_rate: tuple[int, int]
             Success rate tuple containing minimum success rate and maximum success
             rate the message log can have for it to be included.
-            Success rate is meassured in % and it is defined by:
+            Success rate is measured in % and it is defined by:
 
-            Successuly sent channels / all channels.
+            Successfully sent channels / all channels.
         guild_type: Literal["USER", "GUILD"] | None,
             Type of guild.
         message_type: Literal["TextMESSAGE", "VoiceMESSAGE", "DirectMESSAGE"] | None,
@@ -1085,43 +1085,29 @@ class LoggerSQL(logging.LoggerBASE):
         if before is None:
             before = datetime.max
 
-        # Obtain internal guild id
+        conditions = [
+            MessageLOG.timestamp.between(after, before),
+            MessageLOG.success_rate.between(*success_rate)
+        ]
 
-        async with self.session_maker() as session:
-            conditions = []
-            if guild is not None:
-                conditions.append(
-                    MessageLOG.guild.has(GuildUSER.snowflake_id == guild)
-                )
+        if guild is not None:
+            conditions.append(MessageLOG.guild.has(GuildUSER.snowflake_id == guild))
 
-            if author is not None:
-                conditions.append(
-                    MessageLOG.author.has(GuildUSER.snowflake_id == author)
-                )
+        if author is not None:
+            conditions.append(MessageLOG.author.has(GuildUSER.snowflake_id == author))
 
-            if guild_type is not None:
-                conditions.append(
-                    MessageLOG.guild.has(
-                        GuildUSER.guild_type.has(GuildTYPE.name == guild_type)
-                    )
-                )
+        if guild_type is not None:
+            conditions.append(MessageLOG.guild.has(GuildUSER.guild_type.has(GuildTYPE.name == guild_type)))
 
-            if message_type is not None:
-                conditions.append(
-                    MessageLOG.message_type.has(MessageTYPE.name == message_type)
-                )
+        if message_type is not None:
+            conditions.append(MessageLOG.message_type.has(MessageTYPE.name == message_type))
 
-            messages = await self._run_async(
-                session.execute,
-                select(MessageLOG)
-                .where(
-                    MessageLOG.success_rate.between(*success_rate),
-                    MessageLOG.timestamp.between(after, before),
-                    *conditions
-                ).order_by(getattr(getattr(MessageLOG, sort_by), sort_by_direction)()).limit(limit)
-            )
-
-            return list(*zip(*messages.unique().all()))
+        return self.__analytic_get_log(
+            MessageLOG,
+            conditions,
+            getattr(getattr(MessageLOG, sort_by), sort_by_direction)(),
+            limit
+        )
 
     async def analytic_get_num_invites(
             self,
@@ -1219,7 +1205,7 @@ class LoggerSQL(logging.LoggerBASE):
 
             return count
 
-    async def analytic_get_invite_log(
+    def analytic_get_invite_log(
         self,
         guild: Union[int, None] = None,
         invite: Union[str, None] = None,
@@ -1262,22 +1248,34 @@ class LoggerSQL(logging.LoggerBASE):
         if before is None:
             before = datetime.max
 
-        async with self.session_maker() as session:
-            conditions = []
-            if guild is not None:
-                conditions.append(InviteLOG.invite.has(Invite.guild.has(GuildUSER.snowflake_id == guild)))
-            if invite is not None:
-                conditions.append(InviteLOG.invite.has(Invite.discord_id == invite))
+        conditions = [InviteLOG.timestamp.between(after, before)]
+        if guild is not None:
+            conditions.append(InviteLOG.invite.has(Invite.guild.has(GuildUSER.snowflake_id == guild)))
+        if invite is not None:
+            conditions.append(InviteLOG.invite.has(Invite.discord_id == invite))
 
+        return self.__analytic_get_log(
+            InviteLOG,
+            conditions,
+            getattr(getattr(InviteLOG, sort_by), sort_by_direction)(),
+            limit
+        )
+
+    async def __analytic_get_log(
+        self,
+        select_items: Any,
+        conditions: list,
+        order_by: Any,
+        limit: int
+    ):
+        """
+        Common helper method universal for multiple log types.
+        """
+        async with self.session_maker() as session:
             logs = await self._run_async(
                 session.execute,
-                select(InviteLOG)
-                .where(
-                    InviteLOG.timestamp.between(after, before),
-                    *conditions
-                ).order_by(getattr(getattr(InviteLOG, sort_by), sort_by_direction)()).limit(limit)
+                select(select_items).where(*conditions).order_by(order_by).limit(limit)
             )
-
             return list(*zip(*logs.unique().all()))
 
     @misc._async_safe("safe_sem", 1)

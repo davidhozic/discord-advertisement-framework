@@ -389,12 +389,12 @@ class Application():
                     if isinstance(v, ObjectInfo):
                         data[k] = convert_to_objects(v)
 
-                messages = await getattr(logger, getter_history)(
+                items = await getattr(logger, getter_history)(
                     **data
                 )
-                messages = convert_to_object_info(messages, cache=True)
+                items = convert_to_object_info(items, cache=True)
                 lst_history.clear()
-                lst_history.insert(tk.END, *messages)
+                lst_history.insert(tk.END, *items)
 
             frame_message = ttk.Frame(tab_analytics, padding=(dpi_5, dpi_5))
             tab_analytics.add(frame_message, text=tab_name)
