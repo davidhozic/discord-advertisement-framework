@@ -474,7 +474,8 @@ class Application():
         create_analytic_frame(
             "analytic_get_message_log",
             "analytic_get_num_messages",
-            daf.logging.sql.MessageLOG,
+            # SQL is an optional feature so fake the object if not present
+            getattr(daf.logging.sql, "MessageLOG", object),
             [
                 {"text": "Date", "stretch": True},
                 {"text": "Number of successful", "stretch": True},
@@ -491,7 +492,8 @@ class Application():
         create_analytic_frame(
             "analytic_get_invite_log",
             "analytic_get_num_invites",
-            daf.logging.sql.InviteLOG,
+            # SQL is an optional feature so fake the object if not present
+            getattr(daf.logging.sql, "InviteLOG", object),
             [
                 {"text": "Date", "stretch": True},
                 {"text": "Count", "stretch": True},
