@@ -118,7 +118,7 @@ if daf.sql.SQL_INSTALLED:
 CONVERSION_ATTR_TO_PARAM = {
     daf.AUDIO: {
         "filename": "orig"
-    }
+    },
 }
 
 OBJECT_CONV_CACHE = {}
@@ -135,6 +135,7 @@ if daf.sql.SQL_INSTALLED:
     CONVERSION_ATTR_TO_PARAM[sql_.GuildUSER]["snowflake"] = "snowflake_id"
     CONVERSION_ATTR_TO_PARAM[sql_.CHANNEL]["snowflake"] = "snowflake_id"
 
+
 for item in {daf.TextMESSAGE, daf.VoiceMESSAGE, daf.DirectMESSAGE}:
     CONVERSION_ATTR_TO_PARAM[item] = {k: k for k in item.__init__.__annotations__}
     CONVERSION_ATTR_TO_PARAM[item]["data"] = "_data"
@@ -144,6 +145,12 @@ for item in {daf.TextMESSAGE, daf.VoiceMESSAGE, daf.DirectMESSAGE}:
 CONVERSION_ATTR_TO_PARAM[daf.TextMESSAGE]["channels"] = (
     "channels",
     lambda channels: [x.id for x in channels] if not isinstance(channels, daf.AutoCHANNEL) else channels,
+)
+
+CONVERSION_ATTR_TO_PARAM[daf.GUILD] = {k: k for k in daf.GUILD.__init__.__annotations__}
+CONVERSION_ATTR_TO_PARAM[daf.GUILD]["invite_track"] = (
+    "join_count",
+    lambda counts: list(counts.keys())
 )
 
 

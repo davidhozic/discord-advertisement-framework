@@ -268,10 +268,9 @@ class _BaseGUILD:
         """
         self.parent = parent
         guild_id = self.snowflake
-        if isinstance(self._apiobject, int):
-            self._apiobject = getter(guild_id)
-            if isinstance(self._apiobject, Coroutine):
-                self._apiobject = await self._apiobject
+        self._apiobject = getter(guild_id)
+        if isinstance(self._apiobject, Coroutine):
+            self._apiobject = await self._apiobject
 
         if self._apiobject is not None:
             for message in self._messages_uninitialized:
@@ -483,7 +482,7 @@ class GUILD(_BaseGUILD):
         invites = {invite.id: invite.uses for invite in invites}
 
         counts = self.join_count
-        for invite in counts.keys():
+        for invite in list(counts.keys()):
             try:
                 counts[invite] = invites[invite]
             except KeyError:
@@ -492,8 +491,6 @@ class GUILD(_BaseGUILD):
                     f"Invite link {invite} not found in {self.apiobject.name}. It will not be tracked!",
                     TraceLEVELS.WARNING
                 )
-
-        parent.client.event(self.on_member_join)
 
     async def on_member_join(self, member: discord.Member):
         """
@@ -504,10 +501,6 @@ class GUILD(_BaseGUILD):
         """
         guild: discord.Guild = self.apiobject
         counts = self.join_count
-        # Only check current guild if any invites are tracked
-        if member.guild.id != guild.id or not len(counts):
-            return
-
         invites = await self.get_invites()
         invites = {invite.id: invite.uses for invite in invites}
         for id_, last_uses in counts.items():
@@ -585,13 +578,20 @@ class GUILD(_BaseGUILD):
         if "snowflake" not in kwargs:
             kwargs["snowflake"] = self.snowflake
 
+        if "invite_track" not in kwargs:
+            kwargs["invite_track"] = list(self.join_count.keys())
+
         if len(init_options) == 0:
             init_options = {"parent": self.parent}
 
+        messages = kwargs.pop("messages", self.messages)  # Updates separately
+        kwargs["messages"] = []
+
         await misc._update(self, **kwargs, init_options=init_options)
         # Update messages
-        for message in self.messages:
+        for message in messages:
             await message.update(_init_options={"parent": self})
+            self._messages.append(message)
 
 
 @misc.doc_category("Guilds")

@@ -272,6 +272,14 @@ class ACCOUNT:
             except Exception as exc:
                 trace("Unable to add server.", TraceLEVELS.ERROR, exc)
 
+        # Invite link tracking
+        async def on_member_join(member: discord.Member):
+            server = self.get_server(member.guild)
+            if server is not None:
+                await server.on_member_join(member)
+
+        self._client.event(on_member_join)
+
         self._uiservers.clear()  # Only needed for predefined initialization
         self.tasks.append(asyncio.create_task(self._loop()))
         self._running = True
@@ -432,10 +440,16 @@ class ACCOUNT:
         """
         @misc._async_safe("_update_sem", 1)
         async def _update(self_):
+            servers = kwargs.pop("servers", self.servers)
+            kwargs["servers"] = []  # Servers are updated at the end
             await misc._update(self, **kwargs)
 
-            for server in self.servers:
+            for server in servers:
                 await server.update(init_options={"parent": self})
+                if isinstance(server, guild.AutoGUILD):
+                    self._autoguilds.append(server)
+                else:
+                    self._servers.append(server)
 
         await self._close()
 
