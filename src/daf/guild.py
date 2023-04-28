@@ -446,11 +446,15 @@ class GUILD(_BaseGUILD):
 
     async def get_invites(self) -> List[discord.Invite]:
         guild: discord.Guild = self.apiobject
+        client: discord.Client = self.parent.client
         try:
-            return await guild.invites()
+            perms = guild.get_member(client.user.id).guild_permissions
+            if perms.manage_guild:
+                return await guild.invites()
         except discord.HTTPException as exc:
             trace(f"Error reading invite links for guild {guild.name}!", TraceLEVELS.ERROR, exc)
-            return []
+
+        return []  # Return empty on error or no permissions
 
     async def initialize(self, parent: Any) -> None:
         """
@@ -469,18 +473,9 @@ class GUILD(_BaseGUILD):
             Raised from .add_message(message_object) method.
         """
         await super().initialize(parent, parent.client.get_guild)
-        guild: discord.Guild = self.apiobject
         # Fill invite counts
         invites = await self.get_invites()
-        if not len(invites):
-            trace(
-                f"Could not get information about invites inside guild {guild.name} ({guild.id})",
-                TraceLEVELS.ERROR
-            )
-            return
-
         invites = {invite.id: invite.uses for invite in invites}
-
         counts = self.join_count
         for invite in list(counts.keys()):
             try:

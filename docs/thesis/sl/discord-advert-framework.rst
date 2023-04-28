@@ -408,7 +408,7 @@ da se je zgodila kakršna koli napaka, se lahko SQL pod-nivo nivoja beleženja n
    pošiljanja zabeleži z nadomestim objektom beleženja, vendar le enkrat - naslednjič bo spet poizkusil z beleženjem SQL.
 
 
-.. figure:: ./DEP/images/sql_logging_process.drawio.svg
+.. figure:: ./DEP/images/daf-logging-sql.svg
     :width: 500
 
     Proces beleženja z SQL podatkovno bazo

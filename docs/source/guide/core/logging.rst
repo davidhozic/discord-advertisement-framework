@@ -2,33 +2,41 @@
 Logging (core)
 ====================
 
+.. versionchanged:: v2.7
+
+    Added **invite link tracking**
+
+
 .. |PK| replace:: **[Primary Key]**
 .. |FK| replace:: **[Foreign Key]**
 
+The logging module is responsible for 2 types of logging:
 
-The framework allows to log sent messages for each :ref:`GUILD`/:ref:`USER` (if you set the "logging" to True inside the :ref:`GUILD` or :ref:`USER` object).
+1. **Messages** - Logs (attempts of) sent messages
+2. **Invite links** - Tracks new member joins with configured invite links.
 
-Logging is handled thru so called **logging managers**. Currently, 3 different managers exists:
+Logging can be enabled for each :class:`~daf.guild.GUILD` / :class:`~daf.guild.USER` if the ``logging`` parameter is
+set to ``True``.
 
-- LoggerJSON: Used for saving file logs in the JSON format. (:ref:`JSON Logging (file)`)
-- LoggerCSV:  Used for saving file logs in the CSV format, where certain fields are still JSON. (:ref:`CSV Logging (file)`)
-- LoggerSQL:  Used for saving relational database logs into a remote database. (:ref:`Relational Database Log (SQL)`)
-- Custom logger: User can create a custom logger if they desire. (:ref:`Custom Logger`)
+It is handled thru so called **logging managers** and currently 3 exist:
 
+- LoggerJSON: (default) Logging into JSON files. (:ref:`JSON Logging (file)`)
+- LoggerSQL:  Logging into a relational database (local or remote). (:ref:`Relational Database Log (SQL)`)
+- LoggerCSV:  Logging into CSV files, where certain fields are still JSON. (:ref:`CSV Logging (file)`)
 
-If a logging managers fails saving a log, then it's fallback manager will be used temporarily to store the log.
-It will only use the fallback once and then, at the next message, the original manager will be used.
+Each logging manager can have a backup manager specified by it's ``fallback`` parameter.
+If current manager fails, it's fallback manager will be used temporarily to store the log.
+It will only use the fallback once and then, at the next logging attempt, the original manager will be used.
 
 .. figure:: ./images/logging_process.drawio.svg
     
     Logging process with fallback
 
 
-
 JSON Logging (file)
 =========================
-The logs are written in the JSON format and saved into a JSON file, that has the name of the guild or an user you were sending messages into.
-The JSON files are fragmented by day and stored into folder ``Year/Month/Day``, this means that each day a new JSON file will be generated for that specific day for easier managing,
+The logs are written in the JSON format and saved into a JSON file, that has the name of the guild / user you were sending messages into.
+The JSON files are grouped by day and stored into folder ``Year/Month/Day``, this means that each day a new JSON file will be generated for that specific day for easier managing,
 for example, if today is ``13.07.2022``, the log will be saved into the file that is located in 
 
 .. code-block::
@@ -48,20 +56,37 @@ All logs will contain keys:
 - "name": The name of the guild/user
 - "id": Snowflake ID of the guild/user
 - "type": object type (GUILD/USER) that generated the log.
-- "authors": Dictionary which's values represent author ids and the values are dictionaries containing keys:
+- "invite_tracking": Dictionary that holds invite link tracking information.
+  
+  It's keys are invite link ID's (final part of invite link URL) and the value is a list of invite link logs, where
+  a new log is created on each member join.
+  
+  Each invite log is a dictionary and contains the following keys:
+
+  - "id": Member's snowflake (Discord) ID,
+  - "name": Member's username,
+  - "index": serial number of the log,
+  - "timestamp": Date-Time when the log was created.
+
+- "message_tracking": Dictionary that holds information about sent messages.
+
+  .. note:: Only messages sent from DAF are tracked. Other messages are not tracked.
+  
+  The keys are snowflake IDs of each each account who has sent the message from DAF.
+  
+  The value under each key is a dictionary containing: 
 
   - "name": Name of the sender (author)
   - "id": Snowflake ID of the sender
   - "messages": List of previously sent messages by the corresponding author with their context.
     It is message type dependent and is generated in:
-
+   
     + :py:meth:`daf.message.TextMESSAGE.generate_log_context`
     + :py:meth:`daf.message.VoiceMESSAGE.generate_log_context`
     + :py:meth:`daf.message.DirectMESSAGE.generate_log_context`
 
 .. seealso::
-    :download:`Example structure <./DEP/Examples/Logging/JSON files/History/2023/04/26/David's py dungeon.json>`
-
+    :download:`Example structure <./DEP/Examples/Logging/JSON files/History/2023/04/28/David's py dungeon.json>`
 
 .. only:: html
 
@@ -91,23 +116,29 @@ for example, if today is ``13.07.2023``, the log will be saved into the file tha
 
 CSV structure
 ------------------
+
+.. warning:: **Invite link** tracking is not supported with CSV logging.
+
 The structure contains the following attributes:
 
 - Timestamp (string)
 - Guild Type (string),
 - Guild Name (string),
 - Guild Snowflake (integer),
+- Author name (string),
+- Author Snowflake (integer),
 - Message Type (string),
 - Sent Data (json),
 - Message Mode (non-empty for :class:`~daf.message.TextMESSAGE` and :class:`~daf.message.DirectMESSAGE`) (string),
 - Message Channels (non-empty for :class:`~daf.message.TextMESSAGE` and :class:`~daf.message.VoiceMESSAGE`) (json),
 - Success Info (non-empty for :class:`~daf.message.DirectMESSAGE`) (json),
 
+
 .. note::
     Attributes marked with ``(json)`` are the same as in :ref:`JSON Logging (file)`
 
 .. seealso::
-    :download:`Structure example <./DEP/Examples/Logging/CSV files/History/2022/09/22/David's py dungeon.csv>`
+    :download:`Structure example <./DEP/Examples/Logging/CSV files/History/2023/04/28/David's py dungeon.csv>`
 
 
 .. only:: html
@@ -125,18 +156,8 @@ The structure contains the following attributes:
 
 Relational Database Log (SQL)
 ================================
-.. versionchanged:: v2.6
-
-    Added author parameter to :ref:`MessageLOG`
-
-
 This type of logging enables saving logs to a remote server inside the database.
 In addition to being smaller in size, database logging takes up less space and it allows easier data analysis.
-
-
-.. figure:: ./DEP/images/sql_logging_process.drawio.svg
-
-    SQL Logging diagram
 
 
 Dialects
@@ -162,20 +183,22 @@ For daf to use SQL logging, you need to pass the :func:`~daf.core.run` function 
 
 Features
 --------------------------------
+- Multiple dialects (sqlite, mssql, postgresql, mysql)
 - Automatic creation of the schema
 - Caching for faster logging
 - Low redundancy for reduced file size
 - Automatic error recovery
 
-.. note:: 
+.. warning:: 
 
-    The database must already exist! However it can be completely empty, no need to manually create the schema.
+    The database must already exist (unless using SQLite).
+    However it can be completely empty, no need to manually create the schema.
+
 
 ER diagram
 --------------------------------
 .. image:: ./DEP/images/sql_er.drawio.svg
     :width: 1440
-
 
 
 Analysis
@@ -285,94 +308,3 @@ MessageChannelLOG
   - |PK| |FK| log_id: Integer - Foreign key pointing to a row inside :ref:`MessageLOG` (to which log this channel log belongs to).
   - |PK| |FK| channel_id: Integer  - Foreign key pointing to a row inside the :ref:`CHANNEL` table.
   - reason: String - Reason why the send failed or ``NULL`` if send succeeded.
-
-
-Custom Logger
-====================
-If you want to use a different logging scheme than the ones built in, you can do so by creating a custom logging manager that 
-inherits the :class:`daf.logging.LoggerBASE`.
-
-The derived logger class can then implement the following methods:
-
-1. __init__(self, param1, param2, ...) [Required]:
-    The method used for passing parameters and for basic non-async initialization.
-    This method must contain a fallback parameter and also needs to have an attribute of the same name.
-
-    .. code-block:: python
-        :caption: Custom __init__ method
-
-         class LoggerCUSTOM(daf.logging.LoggerBASE):
-            def __init__(self, ..., logger):
-                ... # Set attributes
-                super().__init__(logger)
-
-            ... # Other methods
-
-
-2. async initialize(self) [Optional]:
-    The base's ``initialize`` method calls ``initialize`` method of it's fallback,
-    if it fails then the fallback is set to None.
-    
-    If you wish to do additional initialization that requires async/await operations, you can implement
-    your own ``initialize`` method but make sure you call the base's method in the end.
-    
-    .. code-block:: python
-        :caption: Custom initialize method
-
-        class LoggerCUSTOM(daf.logging.LoggerBASE):
-            ... # Other methods
-
-            async def initialize(self):
-                ... # Custom implementation code
-                await super().initialize()
-    
-
-3. async _save_log(self, guild_context: dict, message_context: dict) [Required]:
-    Method that stores the message log. 
-    If there is any error in saving the log an exception should be raised, which will then
-    make the logging module automatically use the fallback manager, **do not call the fallback manager from this method!**
-
-    :Parameters:
-        **guild_context** (dict) - Contains keys:
-        
-        - "name": The name of the guild/user (str)
-        - "id": Snowflake ID of the guild/user (int)
-        - "type": object type (GUILD/USER) that generated the log. (str)
-
-        **message_context** (dict) - Dictionary returned by:
-        
-        - :py:meth:`daf.message.TextMESSAGE.generate_log_context`
-        - :py:meth:`daf.message.VoiceMESSAGE.generate_log_context`
-        - :py:meth:`daf.message.DirectMESSAGE.generate_log_context`
-
-4. async update(self, \*\*kwargs) [Optional]:
-    Custom implementation of the ``update`` method.
-
-    This method is used for updating the parameters that are available thru ``__init__`` method and
-    **is not required if the attributes inside the object have the same name as the parameters inside the** ``__init__`` **function**
-    and there are no pre-required steps that need to be taken before updating (see :ref:`JSON Logging (file)`'s code for example).
-
-    However if the name of attributes differ from parameter name or the attribute doesn't exist at all or other steps are 
-    required than just re-initialization (see :class:`daf.logging.sql.LoggerSQL`'s update method), then this method is required to be implemented.
-    It should be implemented in a way that it calls the base update method.
-    Example:
-    
-    .. code-block:: python
-        
-    
-        class LoggerCUSTOM(daf.logging.LoggerBASE):
-            def __init__(self, name, fallback):
-                self._name = name
-                super().__init__(fallback)
-            
-            ... # Other methods
-
-            async def update(self, **kwargs)
-                # Only modify if the parameter is not passed to update method
-                if "name" not kwargs: 
-                    # The name parameter is stored under "_name" attribute instead of "name"
-                    kwargs["name"] = self._name
-
-                ... # Other pre-required code (eg. remote SQL server needs to be disconnected)
-
-                super().update(**kwargs) # Call base update method
