@@ -284,9 +284,25 @@ class _BaseGUILD:
 
         raise ValueError(f"Unable to find object with ID: {guild_id}")
 
-    async def on_member_join(self, member: discord.Member):
+    async def _on_member_join(self, member: discord.Member):
         """
         Event listener that get's called when a member joins a guild.
+
+        Parameters
+        ---------------
+        member: :class:`discord.Member`
+            The member who joined the guild.
+        """
+        raise NotImplementedError
+
+    async def _on_invite_delete(self, invite: discord.Invite):
+        """
+        Event listener that get's called when an invite has been deleted from a guild.
+
+        Parameters
+        --------------
+        invite: :class:`discord.Invite`
+            The invite that was deleted.
         """
         raise NotImplementedError
 
@@ -409,10 +425,17 @@ class GUILD(_BaseGUILD):
 
     invite_track: Optional[List[str]]
         List of invite IDs to be tracked for member join count inside the guild.
+
+        .. warning::
+
+            Accounts need to have *Manage Channels* and *Manage Server* permissions are required for tracking to
+            fully function. *Manage Server* is needed for getting information about invite links, *Manage Channels*
+            is needed to delete the invite from the list if it has been deleted,
+            however tracking still works without it.
     """
     __slots__ = (
         "update_semaphore",
-        "join_count"
+        "join_count",
     )
 
     @typechecked
@@ -473,7 +496,11 @@ class GUILD(_BaseGUILD):
             Raised from .add_message(message_object) method.
         """
         await super().initialize(parent, parent.client.get_guild)
+
         # Fill invite counts
+        if not len(self.join_count):  # Skip invite query from Discord
+            return
+
         invites = await self.get_invites()
         invites = {invite.id: invite.uses for invite in invites}
         counts = self.join_count
@@ -487,31 +514,26 @@ class GUILD(_BaseGUILD):
                     TraceLEVELS.WARNING
                 )
 
-    async def on_member_join(self, member: discord.Member):
-        """
-        Event listener that get's called when a member joins a guild.
-
-        Parameters
-        ---------------
-        """
-        guild: discord.Guild = self.apiobject
+    async def _on_member_join(self, member: discord.Member):
         counts = self.join_count
         invites = await self.get_invites()
         invites = {invite.id: invite.uses for invite in invites}
         for id_, last_uses in counts.items():
-            try:
-                uses = invites[id_]
-                if last_uses != uses:
-                    invite_ctx = self.generate_invite_log_context(member, id_)
-                    await logging.save_log(self.generate_log_context(), None, None, invite_ctx)
-                    trace(f"User {member.name} joined to {member.guild.name} with invite {id_}", TraceLEVELS.DEBUG)
-                    counts[id_] = uses
-                    return
-            except KeyError:
-                trace(
-                    f"Invite {id_} no longer exists! Removing it from tracking. Guild: {guild.name} (ID: {guild.id})",
-                    TraceLEVELS.WARNING
-                )
+            uses = invites[id_]
+            if last_uses != uses:
+                trace(f"User {member.name} joined to {member.guild.name} with invite {id_}", TraceLEVELS.DEBUG)
+                counts[id_] = uses
+                invite_ctx = self.generate_invite_log_context(member, id_)
+                await logging.save_log(self.generate_log_context(), None, None, invite_ctx)
+                return
+
+    async def _on_invite_delete(self, invite: discord.Invite):
+        if invite.id in self.join_count:
+            del self.join_count[invite.id]
+            trace(
+                f"Invite link ID {invite.id} deleted from {self.apiobject.name} (ID: {self.apiobject.id})",
+                TraceLEVELS.DEBUG
+            )
 
     def generate_invite_log_context(self, member: discord.Member, invite_id: str) -> dict:
         """
@@ -806,7 +828,7 @@ class AutoGUILD:
         self.logging = logging
         self.interval = interval
         self.auto_join = auto_join
-        self.cache: Dict[discord.Guild, GUILD] = {}
+        self.cache: Dict[int, GUILD] = {}
         self.join_history: Set[int] = set()  # History of auto-joined guild ids
         self.last_scan = datetime.min
         self._deleted = False
@@ -932,6 +954,27 @@ class AutoGUILD:
         for guild in self.guilds:
             guild.remove_message(message)
 
+    def _get_server(self, snowflake: Union[int, discord.Guild, discord.User, discord.Object]):
+        """
+        Retrieves the server from internal cache based on the snowflake id or discord API object.
+
+        Parameters
+        -------------
+        snowflake: Union[int, discord.Guild, discord.User, discord.Object]
+            Snowflake ID or Discord API object.
+
+        Returns
+        ---------
+        Union[guild.GUILD, guild.USER]
+            The DAF server object.
+        None
+            The object was not found.
+        """
+        if not isinstance(snowflake, int):
+            snowflake = snowflake.id
+
+        return self.cache.get(snowflake)
+
     async def _generate_guilds(self):
         """
         Coroutine generates GUILD object for every joined guild that matches
@@ -945,7 +988,7 @@ class AutoGUILD:
         client: discord.Client = self.parent.client
         for discord_guild in client.guilds:
             if (
-                discord_guild not in self.cache and
+                discord_guild.id not in self.cache and
                 discord_guild.name is not None and
                 re.search(self.include_pattern, discord_guild.name) is not None and
                 (
@@ -960,7 +1003,7 @@ class AutoGUILD:
                                       invite_track=self.invite_track)
 
                     await new_guild.initialize(parent=self.parent)
-                    self.cache[discord_guild] = new_guild
+                    self.cache[discord_guild.id] = new_guild
                 except Exception as exc:
                     trace("Unable to add new object.", TraceLEVELS.WARNING, exc)
 
@@ -1029,7 +1072,7 @@ class AutoGUILD:
         await self._join_guilds()
         for g in self.guilds:
             if g._check_state():
-                del self.cache[g.apiobject]
+                del self.cache[g.apiobject.id]
             else:
                 status = await g._advertise()
                 if status == GUILD_ADVERT_STATUS_ERROR_REMOVE_ACCOUNT:
