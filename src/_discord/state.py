@@ -348,6 +348,15 @@ class ConnectionState:
             vc.main_ws = ws  # type: ignore
 
     def store_user(self, data: UserPayload) -> User:
+        # Check if data contains necessary items
+        for attr in {"username", "id", "discriminator", "avatar"}:
+            if attr not in data:
+                _log.warning(
+                    f"Payload does not contain necessary information (Missing {attr}). "
+                    f"Payload contains: {str(data.keys())}"
+                )
+                return
+
         user_id = int(data["id"])
         try:
             return self._users[user_id]
