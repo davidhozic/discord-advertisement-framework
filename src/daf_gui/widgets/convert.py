@@ -87,6 +87,7 @@ ADDITIONAL_ANNOTATIONS = {
         "timestamp": dt.datetime,
         "fields": List[discord.EmbedField]
     },
+    discord.Intents: {k: bool for k in discord.Intents.VALID_FLAGS},
     discord.EmbedField: {
         "name": str, "value": str, "inline": bool
     },
@@ -385,7 +386,7 @@ def convert_to_json(d: Union[ObjectInfo, List[ObjectInfo], Any]):
             data_conv[k] = convert_to_json(v)
 
         return {"type": f"{d.class_.__module__}.{d.class_.__name__}", "data": data_conv}
-    
+
     def _convert_to_json_list(d: List[ObjectInfo]):
         d = d.copy()
         for i, element in enumerate(d):

@@ -31,13 +31,23 @@ Glossary
 ----------------------
 Releases
 ----------------------
+
+
 v2.7
 ================
-- AutoGUILD ``interval`` default changed to ``timedelta(minutes=1)``
+- Analytics:
+  
+  - Invite link tracking
+  - :class:`~daf.guild.GUILD`: ``invite_track`` parameter for tracking invite links
+
+- :class:`~daf.guild.AutoGUILD` ``interval`` default changed to ``timedelta(minutes=1)``
 - xMESSAGE ``start_in`` now accepts :class:`datetime.datetime` - send at specific datetime.
 - GUI:
   
   - Live object view for viewing and live updating objects.
+  - Invite link analytics
+  - :class:`~discord.Intents` can now also be defined from the GUI.
+  - Fixed schema save for enums (enums are not JSON serializable)
 
 - |BREAK_CH| Removed DEPRECATED parameters for :func:`daf.core.run` and :func:`daf.core.initialize`:
     

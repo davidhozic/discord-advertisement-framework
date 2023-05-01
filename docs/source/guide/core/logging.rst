@@ -18,7 +18,13 @@ The logging module is responsible for 2 types of logging:
 Logging can be enabled for each :class:`~daf.guild.GUILD` / :class:`~daf.guild.USER` if the ``logging`` parameter is
 set to ``True``.
 
-It is handled thru so called **logging managers** and currently 3 exist:
+.. note:: 
+    
+    **Invite links** will be tracked regardless of the ``logging`` parameter. Invite link tracking is configured
+    solely by the ``invite_track`` parameter inside :class:`~daf.guild.GUILD`.
+
+
+Logging is handled thru so called **logging managers** and currently 3 exist:
 
 - LoggerJSON: (default) Logging into JSON files. (:ref:`JSON Logging (file)`)
 - LoggerSQL:  Logging into a relational database (local or remote). (:ref:`Relational Database Log (SQL)`)
@@ -205,11 +211,21 @@ Analysis
 -------------------------------
 The :class:`~daf.logging.sql.LoggerSQL` provides some methods for data analysis:
 
-- :py:meth:`~daf.logging.sql.LoggerSQL.analytic_get_num_messages`
-- :py:meth:`~daf.logging.sql.LoggerSQL.analytic_get_message_log`
+- For message history:
+
+  - :py:meth:`~daf.logging.sql.LoggerSQL.analytic_get_num_messages`
+  - :py:meth:`~daf.logging.sql.LoggerSQL.analytic_get_message_log`
+
+- For invite link tracking:
+
+  - :py:meth:`~daf.logging.sql.LoggerSQL.analytic_get_num_invites`
+  - :py:meth:`~daf.logging.sql.LoggerSQL.analytic_get_invite_log`
 
 
-Tables
+
+
+
+SQL Tables
 --------------------------------
 
 MessageLOG
@@ -308,3 +324,26 @@ MessageChannelLOG
   - |PK| |FK| log_id: Integer - Foreign key pointing to a row inside :ref:`MessageLOG` (to which log this channel log belongs to).
   - |PK| |FK| channel_id: Integer  - Foreign key pointing to a row inside the :ref:`CHANNEL` table.
   - reason: String - Reason why the send failed or ``NULL`` if send succeeded.
+
+
+Invite
+~~~~~~~~~~~~~~~~~~~~
+:Description:
+    Table that represents tracked invite links.
+
+:Attributes:
+  - |PK| id: Integer - Internal ID of the invite inside the database.
+  - |FK| guild_id: Integer  - Foreign key pointing to a row inside the :ref:`GuildUSER` table (The guild that owns the invite).
+  - discord_id: String - Discord's invite ID (final part of the invite URL).
+
+
+InviteLOG
+~~~~~~~~~~~~~~~~~~~~
+:Description:
+    Table which's entries are logs of member joins into a guild using a specific invite link.
+
+:Attributes:
+  - |PK| id: Integer - Internal ID of the log inside the database.
+  - |FK| invite_id: Integer  - Foreign key pointing to a row inside the :ref:`Invite` table. Describes the link member used to join a guild.
+  - |FK| member_id: Integer - Foreign key pointing to a row inside the :ref:`GuildUSER` table. Describes the member who joined.
+  - timestamp: DateTime - The date and time a member joined into a guild.

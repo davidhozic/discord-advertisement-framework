@@ -1043,7 +1043,7 @@ class LoggerSQL(logging.LoggerBASE):
         limit: int = 500,
     ) -> List["MessageLOG"]:
         """
-        Returns a list MessageLOG objects (message logs) that match the parameters.
+        Returns a list of :ref:`MessageLOG` objects (message logs) that match the parameters.
 
         Parameters
         --------------
@@ -1216,7 +1216,7 @@ class LoggerSQL(logging.LoggerBASE):
         limit: int = 500,
     ) -> List["InviteLOG"]:
         """
-        Returns a list InviteLOG objects (invite logs) filtered by the given parameters.
+        Returns a list of :ref:`InviteLOG` objects (invite logs) filtered by the given parameters.
 
         Parameters
         --------------

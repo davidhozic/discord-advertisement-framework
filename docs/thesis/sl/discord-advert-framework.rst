@@ -381,7 +381,7 @@ druge instance.
     SQL entitetno-relacijski diagram
 
 Zgornja slika prikazuje povezavo posamezne tabele med seboj. Glavna tabela je :ref:`MessageLOG`.
-Za opis posamezne tabele glej :ref:`Logging (core)`.
+Za opis posamezne tabele glej :ref:`SQL Tables`.
 
 SQL inicializacija poteka v treh delih. Najprej se zgodi inicializacija :mod:`sqlalchemy`, kjer se vzpostavi povezava do
 podatkovne baze. Podatkovna baza mora biti že vnaprej ustvarjena (razen SQLite), vendar ni potrebo ročno ustvarjati sheme (tabel).
@@ -389,7 +389,7 @@ Po vzpostavljeni povezavi, se ustvari celotna shema - tabele, objekti zaporedij 
 Zatem se se v bazo v *lookup* tabele zapišejo določene konstantne vrednosti, kot so vrste sporočil, cehov za manjšo porabo podatkov
 baze in na koncu se inicializira morebiten nadomestni objekt beleženja. Objekt beleženja za SQL je zdaj pripravljen za uporabo.
 
-Ob zahtevi beleženja v bazo podatkov, objekt beleženja :class:`~daf.logging.LoggerJSON` najprej preveri ali je baza morda
+Ob zahtevi beleženja v bazo podatkoDa :class:`~daf.logging.LoggerJSON` najprej preveri ali je baza morda
 v čakanju na ponovno povezavo (več opravil lahko čaka da se konča beleženje drugega opravila) in če čaka na povezavo, se
 vrne v nivo beleženja, kjer beleženje opravi z nadomestnim objektom beleženja. V primeru povezane baze, objekt beleženja
 iz začasne shrambe poskusi pridobiti od prej shranjene podatke (za pohitrenje beleženja) in če ti ne obstajajo, naredi

@@ -12,4 +12,3 @@ Front page of the thesis
     documenting
     testing
     thesis_lit
-

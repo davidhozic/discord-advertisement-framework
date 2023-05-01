@@ -403,10 +403,9 @@ class GUILD(_BaseGUILD):
     """
     The GUILD object represents a server to which messages will be sent.
 
-    .. versionchanged:: v2.1
+    .. versionchanged:: v2.7
 
-        - Added ``created_at`` attribute
-        - Added ``remove_after`` parameter
+        Added ``invite_track`` parameter.
 
     Parameters
     ------------
@@ -424,11 +423,13 @@ class GUILD(_BaseGUILD):
         * datetime - specific date & time
 
     invite_track: Optional[List[str]]
+        .. versionadded:: 2.7
+
         List of invite IDs to be tracked for member join count inside the guild.
 
-        .. warning::
+        .. note::
 
-            Accounts need to have *Manage Channels* and *Manage Server* permissions are required for tracking to
+            Accounts are required to have *Manage Channels* and *Manage Server* permissions inside a guild for tracking to
             fully function. *Manage Server* is needed for getting information about invite links, *Manage Channels*
             is needed to delete the invite from the list if it has been deleted,
             however tracking still works without it.

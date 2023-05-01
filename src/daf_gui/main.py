@@ -342,7 +342,7 @@ class Application():
         dpi_30 = dpi_scaled(30)
         logo_img = Image.open(f"{os.path.dirname(__file__)}/img/logo.png")
         logo_img = logo_img.resize(
-            (dpi_scaled(self.win_main.winfo_screenwidth() // 6), dpi_scaled(self.win_main.winfo_screenwidth() // 6)),
+            (dpi_scaled(400), dpi_scaled(400)),
             resample=0
         )
         logo = ImageTk.PhotoImage(logo_img)
