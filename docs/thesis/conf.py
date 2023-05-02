@@ -10,12 +10,14 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
-import os
 import sys
-
+import os
 
 sys.path.insert(0, os.path.abspath('../../src/'))
 sys.path.insert(0, os.path.abspath('.'))
+
+from daf import VERSION
+
 
 language = os.environ["LANGUAGE"]
 
@@ -28,15 +30,7 @@ exclude_patterns.remove(f"{language}/**")
 project = 'Discord Advertisement Framework'
 copyright = '2023, David Hozic'
 author = 'David Hozic'
-version = None
-gh_release = os.environ.get("GITHUB_REF_NAME", default=None) # Workflow run release
-readthedocs_release = os.environ.get("READTHEDOCS_VERSION", default=None) # Readthe docs version
-if gh_release is not None:
-    version = gh_release
-elif readthedocs_release is not None:
-    version = readthedocs_release
-else:
-    version = "v0.0.1"
+version = VERSION
 
 
 # -- General configuration ---------------------------------------------------

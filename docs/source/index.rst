@@ -36,10 +36,10 @@ Links
 ----------------------
 Key features
 ----------------------
-- Graphical Interface (GUI) / Console (script)
-- Multi-account support
 - Periodic and scheduled advertisements,
-- Logging and analytics of sent messages (including SQL) - :ref:`Logging (core)`
+- Message logging, invite link tracking & statistics
+- Multi-account support
+- Graphical Interface (GUI) / Console (script)
 - Easy to setup
 - Asynchronous
 

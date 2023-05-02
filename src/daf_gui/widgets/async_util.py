@@ -12,7 +12,7 @@ CONF_TASK_SLEEP = 0.1
 
 
 class GLOBAL:
-    tasks_to_run: Queue = Queue()
+    tasks_to_run: Queue = None
     running = False
     async_task: Task = None
 
@@ -26,6 +26,7 @@ async def async_runner():
     """
     Executes coroutines from async queue.
     """
+    GLOBAL.tasks_to_run = Queue()
     while GLOBAL.running:
         awaitable, callback, parent_window = await GLOBAL.tasks_to_run.get()  # Coroutine and function to call at end
         try:

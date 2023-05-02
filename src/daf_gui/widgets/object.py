@@ -21,7 +21,6 @@ import ttkbootstrap as ttk
 import tkinter as tk
 import ttkbootstrap.dialogs.dialogs as tkdiag
 
-
 import webbrowser
 import inspect
 import copy
@@ -44,6 +43,9 @@ HELP_URLS = {
     "_discord": f"https://docs.pycord.dev/en/v{discord._version.__version__}/search.html?q={{}}",
     "builtins": "https://docs.python.org/3/search.html?q={}"
 }
+
+TEXT_MAX_UNDO = 20
+
 
 class ObjectEditWindow(ttk.Toplevel):
     """
@@ -271,7 +273,7 @@ class NewObjectFrame(ttk.Frame):
             self._map[k] = (w, entry_types)
 
     def init_iterable(self, class_):
-        w = ListBoxScrolled(self.frame_main)
+        w = ListBoxScrolled(self.frame_main, height=20)
         self._map[None] = (w, [list])
         frame_edit_remove = ttk.Frame(self.frame_main)
         frame_edit_remove.pack(side="right")
@@ -301,7 +303,7 @@ class NewObjectFrame(ttk.Frame):
         self._map[None] = (w, [class_])
 
     def init_str(self):
-        w = Text(self.frame_main)
+        w = Text(self.frame_main, undo=True, maxundo=TEXT_MAX_UNDO)
         w.pack(fill=tk.BOTH, expand=True)
         self._map[None] = (w, [str])
 

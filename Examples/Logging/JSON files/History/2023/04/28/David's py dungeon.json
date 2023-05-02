@@ -1,0 +1,68 @@
+{
+    "name": "David's py dungeon",
+    "id": 863071397207212052,
+    "type": "GUILD",
+    "invite_tracking": {},
+    "message_tracking": {
+        "909382417087881276": {
+            "name": "[ŠSFE] Zajcek Bine",
+            "id": 909382417087881276,
+            "messages": [
+                {
+                    "sent_data": {
+                        "text": "https://static.wikia.nocookie.net/a1dea591-8a10-4c02-a573-5321c601c129"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1097404915351044126
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 2,
+                    "timestamp": "28.04.2023 20:44:35"
+                },
+                {
+                    "sent_data": {
+                        "text": "https://bit.ly/3sHrjQZ"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1097404915351044126
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 1,
+                    "timestamp": "28.04.2023 20:44:30"
+                },
+                {
+                    "sent_data": {
+                        "text": "https://i.pinimg.com/originals/b7/fb/80/b7fb80122cf46d0e584f3a0768aef282.gif"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1097404915351044126
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 0,
+                    "timestamp": "28.04.2023 20:44:28"
+                }
+            ]
+        }
+    }
+}

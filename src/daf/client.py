@@ -133,6 +133,7 @@ class ACCOUNT:
         # If intents not passed, enable default
         if intents is None:
             intents = discord.Intents.default()
+            intents.members = True
 
         self.intents = intents
         self._running = False
@@ -271,6 +272,27 @@ class ACCOUNT:
             except Exception as exc:
                 trace("Unable to add server.", TraceLEVELS.ERROR, exc)
 
+        # Invite link tracking
+        async def on_member_join(member: discord.Member):
+            server = self.get_server(member.guild)
+            if server is not None:
+                await server._on_member_join(member)
+
+        async def on_invite_delete(invite: discord.Invite):
+            guild_id = invite.guild.id
+            server = self.get_server(guild_id)
+            if server is None:  # Try AutoGUILDS
+                for autoserver in self._autoguilds:
+                    server = autoserver._get_server(guild_id)
+                    if server is not None:
+                        break
+
+            if server is not None:
+                await server._on_invite_delete(invite)
+
+        self._client.event(on_member_join)
+        self._client.event(on_invite_delete)
+
         self._uiservers.clear()  # Only needed for predefined initialization
         self.tasks.append(asyncio.create_task(self._loop()))
         self._running = True
@@ -338,7 +360,7 @@ class ACCOUNT:
     @typechecked
     def get_server(
         self,
-        snowflake: Union[int, discord.Guild, discord.User, discord.Object]
+        snowflake: Union[int, discord.Guild, discord.User, discord.Object],
     ) -> Union[guild.GUILD, guild.USER, None]:
         """
         Retrieves the server based on the snowflake id or discord API object.
@@ -355,11 +377,11 @@ class ACCOUNT:
         None
             The object was not found.
         """
-        if isinstance(snowflake, int):
-            snowflake = discord.Object(snowflake)
+        if not isinstance(snowflake, int):
+            snowflake = snowflake.id
 
         for server in self._servers:
-            if server.snowflake == snowflake.id:
+            if server.snowflake == snowflake:
                 return server
 
         return None
@@ -431,10 +453,16 @@ class ACCOUNT:
         """
         @misc._async_safe("_update_sem", 1)
         async def _update(self_):
+            servers = kwargs.pop("servers", self.servers)
+            kwargs["servers"] = []  # Servers are updated at the end
             await misc._update(self, **kwargs)
 
-            for server in self.servers:
+            for server in servers:
                 await server.update(init_options={"parent": self})
+                if isinstance(server, guild.AutoGUILD):
+                    self._autoguilds.append(server)
+                else:
+                    self._servers.append(server)
 
         await self._close()
 

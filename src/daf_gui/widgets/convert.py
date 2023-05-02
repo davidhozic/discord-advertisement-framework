@@ -87,6 +87,7 @@ ADDITIONAL_ANNOTATIONS = {
         "timestamp": dt.datetime,
         "fields": List[discord.EmbedField]
     },
+    discord.Intents: {k: bool for k in discord.Intents.VALID_FLAGS},
     discord.EmbedField: {
         "name": str, "value": str, "inline": bool
     },
@@ -112,11 +113,13 @@ if daf.sql.SQL_INSTALLED:
     ADDITIONAL_ANNOTATIONS[sql_.MessageLOG] = {"id": int, "timestamp": dt.datetime, **ADDITIONAL_ANNOTATIONS[sql_.MessageLOG]}
     ADDITIONAL_ANNOTATIONS[sql_.MessageLOG]["success_rate"] = decimal.Decimal
 
+    ADDITIONAL_ANNOTATIONS[sql_.InviteLOG] = {"id": int, "timestamp": dt.datetime, **ADDITIONAL_ANNOTATIONS[sql_.InviteLOG]}
+
 
 CONVERSION_ATTR_TO_PARAM = {
     daf.AUDIO: {
         "filename": "orig"
-    }
+    },
 }
 
 OBJECT_CONV_CACHE = {}
@@ -133,6 +136,7 @@ if daf.sql.SQL_INSTALLED:
     CONVERSION_ATTR_TO_PARAM[sql_.GuildUSER]["snowflake"] = "snowflake_id"
     CONVERSION_ATTR_TO_PARAM[sql_.CHANNEL]["snowflake"] = "snowflake_id"
 
+
 for item in {daf.TextMESSAGE, daf.VoiceMESSAGE, daf.DirectMESSAGE}:
     CONVERSION_ATTR_TO_PARAM[item] = {k: k for k in item.__init__.__annotations__}
     CONVERSION_ATTR_TO_PARAM[item]["data"] = "_data"
@@ -142,6 +146,12 @@ for item in {daf.TextMESSAGE, daf.VoiceMESSAGE, daf.DirectMESSAGE}:
 CONVERSION_ATTR_TO_PARAM[daf.TextMESSAGE]["channels"] = (
     "channels",
     lambda channels: [x.id for x in channels] if not isinstance(channels, daf.AutoCHANNEL) else channels,
+)
+
+CONVERSION_ATTR_TO_PARAM[daf.GUILD] = {k: k for k in daf.GUILD.__init__.__annotations__}
+CONVERSION_ATTR_TO_PARAM[daf.GUILD]["invite_track"] = (
+    "join_count",
+    lambda counts: list(counts.keys())
 )
 
 
@@ -376,7 +386,7 @@ def convert_to_json(d: Union[ObjectInfo, List[ObjectInfo], Any]):
             data_conv[k] = convert_to_json(v)
 
         return {"type": f"{d.class_.__module__}.{d.class_.__name__}", "data": data_conv}
-    
+
     def _convert_to_json_list(d: List[ObjectInfo]):
         d = d.copy()
         for i, element in enumerate(d):

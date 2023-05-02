@@ -6,7 +6,7 @@ the user might want to shill into.
 """
 from typing import Dict, Tuple, Callable, List, Optional, Any
 from contextlib import suppress
-from enum import auto, Enum
+from enum import auto, IntEnum
 
 from datetime import datetime, timedelta
 from typeguard import typechecked
@@ -652,7 +652,7 @@ class SeleniumCLIENT:
 
 
 @misc.doc_category("Web")
-class QuerySortBy(Enum):
+class QuerySortBy(IntEnum):
     """
     Enumerated options that can be passed to the ``sort_by``
     parameter of :class:`daf.web.GuildDISCOVERY`.
@@ -665,16 +665,24 @@ class QuerySortBy(Enum):
 
 
 @misc.doc_category("Web")
-class QueryMembers(Enum):
+class QueryMembers(IntEnum):
     """
     Enumerated options that can be passed to the ``total_members``
     parameter of :class:`daf.web.GuildDISCOVERY`.
     """
     ALL = 0
-    SUB_100 = (0, 100)
-    B100_1k = (100, 1000)
-    B1k_10k = (1000, 10000)
-    ABV_10k = 1
+    SUB_100 = auto()
+    B100_1k = auto()
+    B1k_10k = auto()
+    ABV_10k = auto()
+
+
+QueryMembers_MAP = {
+    QueryMembers.ALL: (None, None),
+    QueryMembers.SUB_100: (None, 100),
+    QueryMembers.B100_1k: (100, 1000),
+    QueryMembers.ABV_10k: (10000, None),
+}
 
 
 class QueryResult:
@@ -791,13 +799,11 @@ class GuildDISCOVERY:
             "skip": 0
         }
         total_members = self.total_members
-        if total_members is not QueryMembers.ALL:
-            if total_members is QueryMembers.ABV_10k:
-                params["minUsers"] = 10000
-            else:
-                min_, max_ = total_members.value
-                params["minUsers"] = min_
-                params["maxUsers"] = max_
+        min_users, max_users = QueryMembers_MAP[total_members]
+        if min_users is not None:
+            params["minUsers"] = min_users
+        if max_users is not None:
+            params["maxUsers"] = max_users
 
         for i in range(0, 1000, 10):
             params["skip"] = i
