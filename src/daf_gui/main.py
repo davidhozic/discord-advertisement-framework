@@ -813,7 +813,7 @@ def run(restart: mp.Value):
     loop.run_until_complete(async_stop())
 
 
-if __name__ == "__main__":
+def main():
     mp.freeze_support()
     restart = mp.Value('b', True)
     while restart.value:
@@ -821,3 +821,7 @@ if __name__ == "__main__":
         main_p = mp.Process(target=run, args=(restart,))
         main_p.start()
         main_p.join()
+
+
+if __name__ == "__main__":
+    main()
