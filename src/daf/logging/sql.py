@@ -895,8 +895,8 @@ class LoggerSQL(logging.LoggerBASE):
         self,
         guild: Union[int, None] = None,
         author: Union[int, None] = None,
-        after: Union[datetime, None] = None,
-        before: Union[datetime, None] = None,
+        after: datetime = datetime.min,
+        before: datetime = datetime.max,
         guild_type: Union[Literal["USER", "GUILD"], None] = None,
         message_type: Union[Literal["TextMESSAGE", "VoiceMESSAGE", "DirectMESSAGE"], None] = None,
         sort_by: Literal["successful", "failed", "guild_snow", "guild_name", "author_snow", "author_name"] = "successful",
@@ -951,12 +951,6 @@ class LoggerSQL(logging.LoggerBASE):
         SQLAlchemyError
             There was a problem with the database.
         """
-        if after is None:
-            after = datetime.min
-
-        if before is None:
-            before = datetime.max
-
         async with self.session_maker() as session:
             conditions = [MessageLOG.timestamp.between(after, before)]
             if guild is not None:
@@ -1084,8 +1078,8 @@ class LoggerSQL(logging.LoggerBASE):
     async def analytic_get_num_invites(
             self,
             guild: Union[int, None] = None,
-            after: Union[datetime, None] = None,
-            before: Union[datetime, None] = None,
+            after: datetime = datetime.min,
+            before: datetime = datetime.max,
             sort_by: Literal["count", "guild_snow", "guild_name", "invite_id"] = "count",
             sort_by_direction: Literal["asc", "desc"] = "desc",
             limit: int = 500,
@@ -1129,12 +1123,6 @@ class LoggerSQL(logging.LoggerBASE):
         SQLAlchemyError
             There was a problem with the database.
         """
-        if after is None:
-            after = datetime.min
-
-        if before is None:
-            before = datetime.max
-
         async with self.session_maker() as session:
             conditions = [InviteLOG.timestamp.between(after, before)]
             if guild is not None:
@@ -1180,19 +1168,11 @@ class LoggerSQL(logging.LoggerBASE):
         regions = reversed(regions[regions.index(group_by):])
         extract_stms = []
 
+        timestamp = getattr(select_from, "timestamp")
         for region_ in regions:
-            extract_stms.append(func.extract(region_, getattr(select_from, "timestamp")).cast(Integer))
+            extract_stms.append(func.extract(region_, timestamp).cast(Integer))
 
-        select_stm = (
-            select(
-                *extract_stms,
-                *select_items
-            )
-            .where(
-                *conditions
-            )
-            .select_from(select_from)
-        )
+        select_stm = (select(*extract_stms, *select_items).where(*conditions).select_from(select_from))
 
         for join_table, condition in joins:
             select_stm = select_stm.join(join_table, condition)
@@ -1203,13 +1183,7 @@ class LoggerSQL(logging.LoggerBASE):
             .order_by(text(f"{sort_by} {sort_by_direction}"))
         )
 
-        count = (
-            await self._run_async(
-                session.execute,
-                select_stm
-            )
-        ).all()
-
+        count = (await self._run_async(session.execute, select_stm)).all()
         extract_stm_len = len(extract_stms)
         count = [
             ("-".join("{:02d}".format(x) for x in s[:extract_stm_len]), *s[extract_stm_len:])
