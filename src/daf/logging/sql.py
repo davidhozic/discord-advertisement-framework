@@ -824,8 +824,6 @@ class LoggerSQL(logging.LoggerBASE):
         session.add(message_log_obj)
 
     # _async_safe prevents multiple tasks from attempting to do operations on the database at the same time.
-    # This is to avoid eg. procedures being called while they are being created,
-    # handle error being called from different tasks, update method from causing a race condition,etc
     @misc._async_safe("safe_sem", 1)
     async def _save_log(
         self,
@@ -854,10 +852,7 @@ class LoggerSQL(logging.LoggerBASE):
 
         if self.reconnecting:
             # The SQL logger is in the middle of reconnection process
-            # This means the logging is switched to something else but we still got here
-            # since we entered before that happened and landed on a semaphore.
-            await logging.save_log(guild_context, message_context)
-            return
+            return await logging.save_log(guild_context, message_context)
 
         for _ in range(SQL_MAX_SAVE_ATTEMPTS):
             try:
@@ -870,7 +865,6 @@ class LoggerSQL(logging.LoggerBASE):
                     self._run_async(session.commit)
                 return
             except SQLAlchemyError as exc:
-                # Run in executor to prevent blocking
                 if not await self._handle_error(exc):
                     raise RuntimeError("Unable to handle SQL error") from exc
 
@@ -882,10 +876,8 @@ class LoggerSQL(logging.LoggerBASE):
             return guilduser
 
         try:
-            _ret = (await self._run_async(
-                session.execute,
-                select(GuildUSER)
-                .where(GuildUSER.snowflake_id == id_))
+            _ret = (
+                await self._run_async(session.execute, select(GuildUSER).where(GuildUSER.snowflake_id == id_))
             ).first()
             return _ret[0] if _ret is not None else None
         except SQLAlchemyError:
@@ -954,26 +946,16 @@ class LoggerSQL(logging.LoggerBASE):
         async with self.session_maker() as session:
             conditions = [MessageLOG.timestamp.between(after, before)]
             if guild is not None:
-                conditions.append(
-                    MessageLOG.guild.has(GuildUSER.snowflake_id == guild)
-                )
+                conditions.append(MessageLOG.guild.has(GuildUSER.snowflake_id == guild))
 
             if author is not None:
-                conditions.append(
-                    MessageLOG.author.has(GuildUSER.snowflake_id == author)
-                )
+                conditions.append(MessageLOG.author.has(GuildUSER.snowflake_id == author))
 
             if guild_type is not None:
-                conditions.append(
-                    MessageLOG.guild.has(
-                        GuildUSER.guild_type.has(GuildTYPE.name == guild_type)
-                    )
-                )
+                conditions.append(MessageLOG.guild.has(GuildUSER.guild_type.has(GuildTYPE.name == guild_type)))
 
             if message_type is not None:
-                conditions.append(
-                    MessageLOG.message_type.has(MessageTYPE.name == message_type)
-                )
+                conditions.append(MessageLOG.message_type.has(MessageTYPE.name == message_type))
 
             return await self.__analytic_get_counts(
                 session,
