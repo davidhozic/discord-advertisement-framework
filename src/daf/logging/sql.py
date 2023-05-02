@@ -999,8 +999,8 @@ class LoggerSQL(logging.LoggerBASE):
         self,
         guild: Union[int, None] = None,
         author: Union[int, None] = None,
-        after: Union[datetime, None] = None,
-        before: Union[datetime, None] = None,
+        after: datetime = datetime.min,
+        before: datetime = datetime.max,
         success_rate: Tuple[float, float] = (0, 100),
         guild_type: Union[Literal["USER", "GUILD"], None] = None,
         message_type: Union[Literal["TextMESSAGE", "VoiceMESSAGE", "DirectMESSAGE"], None] = None,
@@ -1045,12 +1045,6 @@ class LoggerSQL(logging.LoggerBASE):
         list[MessageLOG]
             List of the message logs.
         """
-        if after is None:
-            after = datetime.min
-
-        if before is None:
-            before = datetime.max
-
         conditions = [
             MessageLOG.timestamp.between(after, before),
             MessageLOG.success_rate.between(*success_rate)
@@ -1196,8 +1190,8 @@ class LoggerSQL(logging.LoggerBASE):
         self,
         guild: Union[int, None] = None,
         invite: Union[str, None] = None,
-        after: Union[datetime, None] = None,
-        before: Union[datetime, None] = None,
+        after: datetime = datetime.min,
+        before: datetime = datetime.max,
         sort_by: Literal["timestamp"] = "timestamp",
         sort_by_direction: Literal["asc", "desc"] = "desc",
         limit: int = 500,
@@ -1229,12 +1223,6 @@ class LoggerSQL(logging.LoggerBASE):
         list[InviteLOG]
             List of the message logs.
         """
-        if after is None:
-            after = datetime.min
-
-        if before is None:
-            before = datetime.max
-
         conditions = [InviteLOG.timestamp.between(after, before)]
         if guild is not None:
             conditions.append(InviteLOG.invite.has(Invite.guild.has(GuildUSER.snowflake_id == guild)))
