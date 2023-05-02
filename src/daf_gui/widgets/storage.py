@@ -4,11 +4,9 @@ Modules contains storage container widgets.
 from typing import Union, Any, List
 from .convert import ObjectInfo
 
-
 import ttkbootstrap as ttk
 import tkinter as tk
 import ttkbootstrap.dialogs.dialogs as tkdiag
-
 
 
 class Text(tk.Text):

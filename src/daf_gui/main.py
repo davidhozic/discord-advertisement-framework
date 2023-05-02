@@ -64,7 +64,7 @@ def gui_except(fnc: Callable):
         try:
             return fnc(*args, **kwargs)
         except Exception as exc:
-            tkdiag.Messagebox.show_error(f"{exc}\n(Exception in {fnc.__name__})")              
+            tkdiag.Messagebox.show_error(f"{exc}\n(Exception in {fnc.__name__})")
 
     return wrapper
 
