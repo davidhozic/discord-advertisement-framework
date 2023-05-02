@@ -677,6 +677,14 @@ class QueryMembers(IntEnum):
     ABV_10k = auto()
 
 
+QueryMembers_MAP = {
+    QueryMembers.ALL: (None, None),
+    QueryMembers.SUB_100: (None, 100),
+    QueryMembers.B100_1k: (100, 1000),
+    QueryMembers.ABV_10k: (10000, None),
+}
+
+
 class QueryResult:
     """
     Contains result of the queries.
@@ -791,19 +799,11 @@ class GuildDISCOVERY:
             "skip": 0
         }
         total_members = self.total_members
-        if total_members != QueryMembers.ALL:
-            if total_members == QueryMembers.SUB_100:
-                params["maxUsers"] = 100
-            if total_members == QueryMembers.B100_1k:
-                params["minUsers"] = 100
-                params["maxUsers"] = 1000
-
-            elif total_members == QueryMembers.B1k_10k:
-                params["minUsers"] = 1000
-                params["maxUsers"] = 10000
-
-            elif total_members == QueryMembers.ABV_10k:
-                params["minUsers"] = 10000
+        min_users, max_users = QueryMembers_MAP[total_members]
+        if min_users is not None:
+            params["minUsers"] = min_users
+        if max_users is not None:
+            params["maxUsers"] = max_users
 
         for i in range(0, 1000, 10):
             params["skip"] = i
