@@ -292,7 +292,7 @@ class LoggerSQL(logging.LoggerBASE):
         self.dialect = dialect
 
         if self.dialect == "sqlite":
-            self.database += ".db"
+            self.database += ".sqlite"
 
         # Set in ._begin_engine
         self.engine: sqa.engine.Engine = None
@@ -868,13 +868,13 @@ class LoggerSQL(logging.LoggerBASE):
                         await self._save_log_invite(session, guild_context, invite_context)
 
                     self._run_async(session.commit)
-                break
+                return
             except SQLAlchemyError as exc:
                 # Run in executor to prevent blocking
                 if not await self._handle_error(exc):
                     raise RuntimeError("Unable to handle SQL error") from exc
-        else:
-            raise RuntimeError(f"Unable to save invite log within {SQL_MAX_SAVE_ATTEMPTS} tries")
+
+        raise RuntimeError(f"Unable to save invite log within {SQL_MAX_SAVE_ATTEMPTS} tries")
 
     async def _get_guild(self, id_: int, session: Union[AsyncSession, Session]):
         guilduser: GuildUSER = self.guild_user_cache.get(id_)
