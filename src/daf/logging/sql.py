@@ -748,35 +748,24 @@ class LoggerSQL(logging.LoggerBASE):
         invite_member_name = invite_context["member"].get("name")
 
         session: Union[AsyncSession, Session]
-        for tries in range(SQL_MAX_SAVE_ATTEMPTS):
-            try:
-                # Lookup table values
-                guild_type_obj = self.guild_type_cache.get(guild_context["type"])
-                # Insert guild into the database and cache if it doesn't exist
-                async with self.session_maker() as session:
-                    guild_obj = await self._get_insert_guild(guild_snowflake, guild_name, guild_type_obj, session)
-                    member_obj = await self._get_insert_guild(
-                        invite_member_id,
-                        invite_member_name,
-                        self.guild_type_cache.get("USER"),
-                        session
-                    )
-                    invite_obj = await self._get_insert_invite(invite_id, guild_obj, session)
-                    invite_log_obj = InviteLOG(
-                        invite_obj,
-                        member_obj
-                    )
-                    session.add(invite_log_obj)
-                    await self._run_async(session.commit)
-
-                break
-            except SQLAlchemyError as exc:
-                # Run in executor to prevent blocking
-                if not await self._handle_error(exc):
-                    raise RuntimeError("Unable to handle SQL error") from exc
-
-        else:
-            raise RuntimeError(f"Unable to save invite log within {SQL_MAX_SAVE_ATTEMPTS} tries")
+        # Lookup table values
+        guild_type_obj = self.guild_type_cache.get(guild_context["type"])
+        # Insert guild into the database and cache if it doesn't exist
+        async with self.session_maker() as session:
+            guild_obj = await self._get_insert_guild(guild_snowflake, guild_name, guild_type_obj, session)
+            member_obj = await self._get_insert_guild(
+                invite_member_id,
+                invite_member_name,
+                self.guild_type_cache.get("USER"),
+                session
+            )
+            invite_obj = await self._get_insert_invite(invite_id, guild_obj, session)
+            invite_log_obj = InviteLOG(
+                invite_obj,
+                member_obj
+            )
+            session.add(invite_log_obj)
+            await self._run_async(session.commit)            
 
     async def _save_log_message(
         self,
@@ -803,51 +792,40 @@ class LoggerSQL(logging.LoggerBASE):
             channels = channels['successful'] + channels['failed']
 
         session: Union[AsyncSession, Session]
-        for tries in range(SQL_MAX_SAVE_ATTEMPTS):
-            try:
-                # Lookup table values
-                guild_type_obj = self.guild_type_cache.get(guild_context["type"])
-                message_type_obj = self.message_type_cache.get(message_context["type"])
-                message_mode_obj = self.message_mode_cache.get(message_mode)
-                # Insert guild into the database and cache if it doesn't exist
-                async with self.session_maker() as session:
-                    guild_obj = await self._get_insert_guild(guild_snowflake, guild_name, guild_type_obj, session)
-                    if channels is not None:
-                        # Insert channels into the database and cache if it doesn't exist
-                        _channels = await self._get_insert_channels(channels, guild_obj, session)
+        # Lookup table values
+        guild_type_obj = self.guild_type_cache.get(guild_context["type"])
+        message_type_obj = self.message_type_cache.get(message_context["type"])
+        message_mode_obj = self.message_mode_cache.get(message_mode)
+        # Insert guild into the database and cache if it doesn't exist
+        async with self.session_maker() as session:
+            guild_obj = await self._get_insert_guild(guild_snowflake, guild_name, guild_type_obj, session)
+            if channels is not None:
+                # Insert channels into the database and cache if it doesn't exist
+                _channels = await self._get_insert_channels(channels, guild_obj, session)
 
-                    data_obj = await self._get_insert_data(sent_data, session)
-                    author_obj = await self._get_insert_guild(
-                        author_snowflake,
-                        author_name,
-                        self.guild_type_cache.get("USER"),
-                        session
-                    )
+            data_obj = await self._get_insert_data(sent_data, session)
+            author_obj = await self._get_insert_guild(
+                author_snowflake,
+                author_name,
+                self.guild_type_cache.get("USER"),
+                session
+            )
 
-                    # Save message log
-                    message_log_obj = MessageLOG(
-                        data_obj,
-                        message_type_obj,
-                        message_mode_obj,
-                        dm_success_info_reason,
-                        guild_obj,
-                        author_obj,
-                        [
-                            MessageChannelLOG(channel, reason)
-                            for channel, reason in _channels
-                        ],
-                    )
-                    session.add(message_log_obj)
-                    await self._run_async(session.commit)
-
-                break
-            except SQLAlchemyError as exc:
-                # Run in executor to prevent blocking
-                if not await self._handle_error(exc):
-                    raise RuntimeError("Unable to handle SQL error") from exc
-
-        else:
-            raise RuntimeError(f"Unable to save message log within {SQL_MAX_SAVE_ATTEMPTS} tries")
+            # Save message log
+            message_log_obj = MessageLOG(
+                data_obj,
+                message_type_obj,
+                message_mode_obj,
+                dm_success_info_reason,
+                guild_obj,
+                author_obj,
+                [
+                    MessageChannelLOG(channel, reason)
+                    for channel, reason in _channels
+                ],
+            )
+            session.add(message_log_obj)
+            await self._run_async(session.commit)
 
     # _async_safe prevents multiple tasks from attempting to do operations on the database at the same time.
     # This is to avoid eg. procedures being called while they are being created,
@@ -885,10 +863,19 @@ class LoggerSQL(logging.LoggerBASE):
             await logging.save_log(guild_context, message_context)
             return
 
-        if message_context is not None:  # Message tracking
-            return await self._save_log_message(guild_context, message_context, author_context)
-        else:  # Invite tracking
-            return await self._save_log_invite(guild_context, invite_context)
+        for _ in range(SQL_MAX_SAVE_ATTEMPTS):
+            try:
+                if message_context is not None:  # Message tracking
+                    return await self._save_log_message(guild_context, message_context, author_context)
+                else:  # Invite tracking
+                    return await self._save_log_invite(guild_context, invite_context)
+
+            except SQLAlchemyError as exc:
+                # Run in executor to prevent blocking
+                if not await self._handle_error(exc):
+                    raise RuntimeError("Unable to handle SQL error") from exc
+        else:
+            raise RuntimeError(f"Unable to save invite log within {SQL_MAX_SAVE_ATTEMPTS} tries")
 
     async def _get_guild(self, id_: int, session: Union[AsyncSession, Session]):
         guilduser: GuildUSER = self.guild_user_cache.get(id_)
