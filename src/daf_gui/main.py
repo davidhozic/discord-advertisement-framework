@@ -2,6 +2,7 @@
 Main file of the DAF GUI.
 """
 import subprocess
+import multiprocessing as mp
 import sys
 
 from importlib.util import find_spec
@@ -51,9 +52,17 @@ Authors: David Hozic - Student at UL FE.
 GITHUB_URL = "https://github.com/davidhozic/discord-advertisement-framework"
 DOC_URL = f"https://daf.davidhozic.com/en/v{daf.VERSION}"
 
+OPTIONAL_MODULES = [
+    # Label, optional name, installed var
+    ("SQL logging", "sql", daf.logging.sql.SQL_INSTALLED),
+    ("Voice messages", "voice", daf.dtypes.GLOBALS.voice_installed),
+    ("Web features (Chrome)", "web", daf.web.GLOBALS.selenium_installed),
+]
+
 
 class GLOBAL:
     app: "Application" = None
+    restart: mp.Value = None
 
 
 def gui_except(fnc: Callable):
@@ -100,7 +109,7 @@ class Application():
         win_main.iconphoto(0, photo)
 
         self.win_main = win_main
-        screen_res = int(win_main.winfo_screenwidth() / 1.25), int(win_main.winfo_screenheight() / 1.5)
+        screen_res = int(win_main.winfo_screenwidth() / 1.25), int(win_main.winfo_screenheight() / 1.375)
         win_main.wm_title(f"Discord Advert Framework {daf.VERSION}")
         win_main.wm_minsize(*screen_res)
         win_main.protocol("WM_DELETE_WINDOW", self.close_window)
@@ -119,6 +128,9 @@ class Application():
         tabman_mf = ttk.Notebook(self.frame_main)
         tabman_mf.pack(fill=tk.BOTH, expand=True)
         self.tabman_mf = tabman_mf
+
+        # Optional dependencies tab
+        self.init_optional_dep_tab()
 
         # Objects tab
         self.init_schema_tab()
@@ -518,6 +530,45 @@ class Application():
             "Invite tracking"
         )
 
+    def init_optional_dep_tab(self):
+        dpi_10 = dpi_scaled(10)
+        dpi_5 = dpi_scaled(5)
+        frame_optionals = ttk.Frame(self.tabman_mf, padding=(dpi_10, dpi_10))
+        self.tabman_mf.add(frame_optionals, text="Optional modules")
+        ttk.Label(
+            frame_optionals,
+            text=
+            "This section allows you to install optional packages available inside DAF\n"
+            "Be aware that loading may be slower when installing these."
+        ).pack(anchor=tk.NW)
+        frame_optionals_packages = ttk.Frame(frame_optionals)
+        frame_optionals_packages.pack(fill=tk.BOTH, expand=True)
+
+        def install_deps(optional: str, gauge: ttk.Floodgauge, bnt: ttk.Button):
+            @gui_except
+            def _installer():
+                subprocess.check_call([
+                    sys.executable, "-m", "pip", "install",
+                    f"discord-advert-framework[{optional}]=={daf.VERSION}"
+                ])
+                tkdiag.Messagebox.show_info("The GUI will now reload. Save your changes!")
+                GLOBAL.restart.value = True
+                self.close_window()
+
+            return _installer
+
+        for row, (title, optional_name, installed_flag) in enumerate(OPTIONAL_MODULES):
+            ttk.Label(frame_optionals_packages, text=title).grid(row=row, column=0)
+            gauge = ttk.Floodgauge(
+                frame_optionals_packages, bootstyle=ttk.SUCCESS if installed_flag else ttk.DANGER, value=0
+            )
+            gauge.grid(pady=dpi_5, row=row, column=1)
+            if not installed_flag:
+                gauge.start()
+                bnt_install = ttk.Button(frame_optionals_packages, text="Install")
+                bnt_install.configure(command=install_deps(optional_name, gauge, bnt_install))
+                bnt_install.grid(row=row, column=1)
+
     @property
     def opened(self) -> bool:
         return self._window_opened
@@ -580,6 +631,9 @@ class Application():
         if filename == "":
             return
 
+        if not filename.endswith(".py"):
+            filename += ".py"
+
         logger = self.combo_logging_mgr.get()
         tracing = self.combo_tracing.get()
         logger_is_present = str(logger) != ""
@@ -631,8 +685,7 @@ daf.run(
         with open(filename, "w", encoding="utf-8") as file:
             file.write(_ret)
 
-        if not file.name.endswith(".py"):
-            os.rename(file.name, file.name + ".py")
+        tkdiag.Messagebox.show_info(f"Saved to {filename}", "Finished", self.win_main)
 
     @gui_except
     def save_schema(self) -> bool:
@@ -737,8 +790,6 @@ daf.run(
 
         async def _tmp():
             sys.stdout = self._oldstdout
-            self.win_main.destroy()
-            self.win_main.quit()
 
         async_execute(_tmp())
 
@@ -746,7 +797,8 @@ daf.run(
         self.win_main.update()
 
 
-def run():
+def run(restart: mp.Value):
+    GLOBAL.restart = restart
     app = Application()
     GLOBAL.app = app
 
@@ -762,4 +814,10 @@ def run():
 
 
 if __name__ == "__main__":
-    run()
+    mp.freeze_support()
+    restart = mp.Value('b', True)
+    while restart.value:
+        restart.value = False
+        main_p = mp.Process(target=run, args=(restart,))
+        main_p.start()
+        main_p.join()
