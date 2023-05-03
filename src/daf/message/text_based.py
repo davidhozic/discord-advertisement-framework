@@ -138,7 +138,11 @@ class TextMESSAGE(BaseMESSAGE):
         timedelta
             The maximum slowmode delay of all channels.
         """
-        return timedelta(seconds=max((c.slowmode_delay for c in self.channels), default=0))
+        seconds = max((c.slowmode_delay for c in self.channels), default=0)
+        if seconds > 0:  # To be sure
+            seconds += 10
+
+        return timedelta(seconds=seconds)
 
     def _check_state(self) -> bool:
         """
