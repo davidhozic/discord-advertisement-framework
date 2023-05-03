@@ -2,7 +2,6 @@
 Main file of the DAF GUI.
 """
 import subprocess
-import multiprocessing as mp
 import sys
 
 from importlib.util import find_spec
@@ -62,7 +61,6 @@ OPTIONAL_MODULES = [
 
 class GLOBAL:
     app: "Application" = None
-    restart: mp.Value = None
 
 
 def gui_except(fnc: Callable):
@@ -551,9 +549,7 @@ class Application():
                     sys.executable, "-m", "pip", "install",
                     f"discord-advert-framework[{optional}]=={daf.VERSION}"
                 ])
-                tkdiag.Messagebox.show_info("The GUI will now reload. Save your changes!")
-                GLOBAL.restart.value = True
-                self.close_window()
+                tkdiag.Messagebox.show_info("To apply the changes, restart the program!")
 
             return _installer
 
@@ -797,8 +793,7 @@ daf.run(
         self.win_main.update()
 
 
-def run(restart: mp.Value):
-    GLOBAL.restart = restart
+def run():
     app = Application()
     GLOBAL.app = app
 
@@ -813,15 +808,5 @@ def run(restart: mp.Value):
     loop.run_until_complete(async_stop())
 
 
-def main():
-    mp.freeze_support()
-    restart = mp.Value('b', True)
-    while restart.value:
-        restart.value = False
-        main_p = mp.Process(target=run, args=(restart,))
-        main_p.start()
-        main_p.join()
-
-
 if __name__ == "__main__":
-    main()
+    run()
