@@ -1,20 +1,23 @@
 diff --git a/src/_discord/state.py b/src/_discord/state.py
-index 13cbf61..ca40b53 100644
+index 13cbf61..94893b2 100644
 --- a/src/_discord/state.py
 +++ b/src/_discord/state.py
-@@ -348,6 +348,15 @@ class ConnectionState:
-             vc.main_ws = ws  # type: ignore
+@@ -1141,7 +1141,17 @@ class ConnectionState:
+         self.dispatch("member_join", member)
  
-     def store_user(self, data: UserPayload) -> User:
+     def parse_guild_member_remove(self, data) -> None:
+-        user = self.store_user(data["user"])
 +        # Check if data contains necessary items
++        user_data = data["user"]
 +        for attr in {"username", "id", "discriminator", "avatar"}:
-+            if attr not in data:
++            if attr not in user_data:
 +                _log.warning(
 +                    f"Payload does not contain necessary information (Missing {attr}). "
 +                    f"Payload contains: {str(data.keys())}"
 +                )
 +                return
 +
-         user_id = int(data["id"])
-         try:
-             return self._users[user_id]
++        user = self.store_user(user_data)
+         raw = RawMemberRemoveEvent(data, user)
+ 
+         guild = self._get_guild(int(data["guild_id"]))

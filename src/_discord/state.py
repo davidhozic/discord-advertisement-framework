@@ -348,15 +348,6 @@ class ConnectionState:
             vc.main_ws = ws  # type: ignore
 
     def store_user(self, data: UserPayload) -> User:
-        # Check if data contains necessary items
-        for attr in {"username", "id", "discriminator", "avatar"}:
-            if attr not in data:
-                _log.warning(
-                    f"Payload does not contain necessary information (Missing {attr}). "
-                    f"Payload contains: {str(data.keys())}"
-                )
-                return
-
         user_id = int(data["id"])
         try:
             return self._users[user_id]
@@ -1150,7 +1141,17 @@ class ConnectionState:
         self.dispatch("member_join", member)
 
     def parse_guild_member_remove(self, data) -> None:
-        user = self.store_user(data["user"])
+        # Check if data contains necessary items
+        user_data = data["user"]
+        for attr in {"username", "id", "discriminator", "avatar"}:
+            if attr not in user_data:
+                _log.warning(
+                    f"Payload does not contain necessary information (Missing {attr}). "
+                    f"Payload contains: {str(data.keys())}"
+                )
+                return
+
+        user = self.store_user(user_data)
         raw = RawMemberRemoveEvent(data, user)
 
         guild = self._get_guild(int(data["guild_id"]))
