@@ -467,16 +467,12 @@ class ACCOUNT:
         await self._close()
 
         selenium = self._selenium
-        if selenium is not None and "token" not in kwargs:
-            if "username" not in kwargs:
-                kwargs["username"] = selenium._username
-            if "password" not in kwargs:
-                kwargs["password"] = selenium._password
-
-            kwargs["token"] = None
-        else:
-            kwargs["username"] = None
-            kwargs["password"] = None
+        if "token" not in kwargs:
+            kwargs["token"] = self._token if selenium is None else None
+        if "username" not in kwargs:
+            kwargs["username"] = selenium._username if selenium is not None else None
+        if "password" not in kwargs:
+            kwargs["password"] = selenium._password if selenium is not None else None
 
         if "intents" in kwargs:
             intents: discord.Intents = kwargs["intents"]

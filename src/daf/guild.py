@@ -803,7 +803,6 @@ class AutoGUILD:
         "_safe_sem",
         "parent",
         "auto_join",
-        "join_history",
         "guild_query_iter",
         "last_guild_join",
         "guild_join_count",
@@ -830,7 +829,6 @@ class AutoGUILD:
         self.interval = interval
         self.auto_join = auto_join
         self.cache: Dict[int, GUILD] = {}
-        self.join_history: Set[int] = set()  # History of auto-joined guild ids
         self.last_scan = datetime.min
         self._deleted = False
         self._created_at = datetime.now()

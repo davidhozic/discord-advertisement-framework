@@ -5,9 +5,10 @@
 """
 from typing import Callable, Coroutine, List, Optional, Union, overload
 from typeguard import typechecked
+from pathlib import Path
 
 from .logging.tracing import TraceLEVELS, trace
-from .logging import sql, _logging as logging, tracing
+from .logging import _logging as logging, tracing
 
 from . import guild
 from . import client
@@ -15,6 +16,8 @@ from . import misc
 from . import message
 
 import asyncio
+import shutil
+import os
 import _discord as discord
 
 
@@ -29,8 +32,10 @@ __all__ = (
 
 
 # -------------- CONSTANTS --------------
-TASK_CLEANUP_SLEEP_SEC = 1
-
+CORE_TASK_SLEEP_SEC = 0.1
+ACCOUNT_CLEANUP_DELAY = 10
+SCHEMA_BACKUP_DELAY = 120
+SHILL_LIST_BACKUP_PATH = Path("sbfobjects.json")  # sbf -> Schema Backup File
 # ---------------------------------------
 
 
@@ -39,28 +44,68 @@ class GLOBALS:
     Storage class used for holding global variables.
     """
     accounts: List[client.ACCOUNT] = []
-    cleanup_task: asyncio.Task = None
+    tasks: List[asyncio.Task] = []
     running: bool = True
+    save_to_file: bool = False
+
+    cleanup_event = asyncio.Event()
+    schema_backup_event = asyncio.Event()
 
 
-async def cleanup_accounts():
+async def cleanup_accounts_task():
     """
     Task for cleaning up closed accounts.
-    TODO (in future): Instead of sleeping, subscribe to event.
     """
+    loop = asyncio.get_event_loop()
+    event = GLOBALS.cleanup_event
     while GLOBALS.running:
+        loop.call_later(ACCOUNT_CLEANUP_DELAY, event.set)
+        await event.wait()
+        event.clear()
         for account in get_accounts():
             if account.deleted:
                 await remove_object(account)
 
-        await asyncio.sleep(TASK_CLEANUP_SLEEP_SEC)
+
+async def schema_backup_task():
+    """
+    Task for backing up the SCHEMA
+    """
+    loop = asyncio.get_event_loop()
+    event = GLOBALS.schema_backup_event
+    while GLOBALS.running:
+        loop.call_later(SCHEMA_BACKUP_DELAY, event.set)
+        await event.wait()
+        event.clear()
+        tmp_path = str(SHILL_LIST_BACKUP_PATH) + ".1"
+        with open(tmp_path, "w+b") as writer:
+            ...
+
+        shutil.copyfile(tmp_path, SHILL_LIST_BACKUP_PATH)
+        os.remove(tmp_path)
+
+
+async def schema_load_from_file() -> None:
+    """
+    Restores the saved shilling list from file.
+    """
+    if not SHILL_LIST_BACKUP_PATH.exists():
+        return
+
+    with open(SHILL_LIST_BACKUP_PATH, "rb") as reader:
+        GLOBALS.accounts.extend(...)
+
+    for account in GLOBALS.accounts:
+        await account.initialize()  # Login
+        await account.update()  # Update with same parameters -> To refresh child objects with new connection
 
 
 @misc.doc_category("DAF control reference")
 async def initialize(user_callback: Optional[Union[Callable, Coroutine]] = None,
                      debug: Optional[Union[TraceLEVELS, int, str]] = TraceLEVELS.NORMAL,
                      logger: Optional[logging.LoggerBASE] = None,
-                     accounts: Optional[List[client.ACCOUNT]] = []) -> None:
+                     accounts: List[client.ACCOUNT] = [],
+                     save_to_file: bool = False) -> None:
     """
     The main initialization function.
     It initializes all the other modules, creates advertising tasks
@@ -92,6 +137,10 @@ async def initialize(user_callback: Optional[Union[Callable, Coroutine]] = None,
     # ------------------------------------------------------------
     # Initialize accounts
     # ------------------------------------------------------------
+    # Load from file
+    if save_to_file:
+        await schema_load_from_file()
+
     for account in accounts:
         try:
             await add_object(account)
@@ -107,8 +156,12 @@ async def initialize(user_callback: Optional[Union[Callable, Coroutine]] = None,
             loop.create_task(user_callback)
 
     # Create account cleanup task (account self-deleted)
-    GLOBALS.cleanup_task = loop.create_task(cleanup_accounts())
+    GLOBALS.tasks.append(loop.create_task(cleanup_accounts_task()))
+    if save_to_file:  # Backup shilling list to pickle file
+        GLOBALS.tasks.append(loop.create_task(schema_backup_task()))
+
     GLOBALS.running = True
+    GLOBALS.save_to_file = save_to_file
     trace("Initialization complete.", TraceLEVELS.NORMAL)
 
 
@@ -285,9 +338,9 @@ def get_accounts() -> List[client.ACCOUNT]:
 
 @typechecked
 @misc.doc_category("DAF control reference")
-async def shutdown(loop: Optional[asyncio.AbstractEventLoop] = None, stop_loop: Optional[bool] = False) -> None:
+async def shutdown() -> None:
     """
-    Stops the framework.
+    Stops and cleans the framework.
 
     Parameters
     ----------
@@ -298,20 +351,17 @@ async def shutdown(loop: Optional[asyncio.AbstractEventLoop] = None, stop_loop: 
     stop_loop: Optional[bool]
         Default: False; If True, it stops the running event loop.
     """
-
-    trace("Shutting down")
     GLOBALS.running = False
-    await GLOBALS.cleanup_task
+    # Signal events for tasks to raise out of sleep
+    GLOBALS.cleanup_event.set()
+    GLOBALS.schema_backup_event.set()  # This also saves one last time, so manually saving is not needed
+    for task in GLOBALS.tasks:  # Wait for core tasks to finish
+        await task
+
     for account in GLOBALS.accounts:
         await account._close()
 
     GLOBALS.accounts.clear()
-
-    if stop_loop:
-        if loop is None:
-            loop = asyncio.get_event_loop()
-
-        loop.stop()
 
 
 def _shutdown_clean(loop: asyncio.AbstractEventLoop) -> None:
@@ -324,12 +374,7 @@ def _shutdown_clean(loop: asyncio.AbstractEventLoop) -> None:
     loop: asyncio.AbstractEventLoop
         The loop to stop.
     """
-    GLOBALS.running = False
-    for account in GLOBALS.accounts:
-        loop.run_until_complete(account._close())
-
-    if GLOBALS.cleanup_task is not None:
-        loop.run_until_complete(GLOBALS.cleanup_task)
+    loop.run_until_complete(shutdown())
 
 
 @typechecked
@@ -337,7 +382,8 @@ def _shutdown_clean(loop: asyncio.AbstractEventLoop) -> None:
 def run(user_callback: Optional[Union[Callable, Coroutine]] = None,
         debug: Optional[Union[TraceLEVELS, int, str, bool]] = TraceLEVELS.NORMAL,
         logger: Optional[logging.LoggerBASE] = None,
-        accounts: Optional[List[client.ACCOUNT]] = []) -> None:
+        accounts: Optional[List[client.ACCOUNT]] = [],
+        save_to_file: bool = False) -> None:
     """
     .. versionchanged:: 2.7
 
@@ -365,9 +411,20 @@ def run(user_callback: Optional[Union[Callable, Coroutine]] = None,
         The logging class to use.
         If this is not provided, JSON is automatically used.
     accounts: Optional[List[client.ACCOUNT]]
-        .. versionadded:: v2.4
-
         List of :class:`~daf.client.ACCOUNT` (Discord accounts) to use.
+        .. versionadded:: v2.4
+    save_to_file: Optional[bool]
+        If ``True``, the shilling list (of accounts, guilds, messages, ...) will be saved to file
+        and preserved on shutdown.
+
+        It is recommended you set this to ``False`` when passing
+        :func:`~daf.core.run` or :func:`~daf.core.initialize` the statically defined ``accounts`` parameter.
+
+        .. note::
+
+            Setting this to True and passing the ``accounts`` parameter as well, results in
+            *Account already added* warnings.
+
 
     Raises
     ---------------
