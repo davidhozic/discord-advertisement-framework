@@ -437,6 +437,7 @@ class GUILD(_BaseGUILD):
     __slots__ = (
         "update_semaphore",
         "join_count",
+        *_BaseGUILD.__slots__
     )
 
     @typechecked

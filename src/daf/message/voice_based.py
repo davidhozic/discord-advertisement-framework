@@ -104,6 +104,7 @@ class VoiceMESSAGE(BaseMESSAGE):
         "end_period",
         "volume",
         "channels",
+        *BaseMESSAGE.__slots__
     )
 
     @typechecked

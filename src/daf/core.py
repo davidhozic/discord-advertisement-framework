@@ -14,10 +14,12 @@ from . import guild
 from . import client
 from . import misc
 from . import message
+from . import convert
 
 import asyncio
 import shutil
 import os
+import json
 import _discord as discord
 
 
@@ -78,8 +80,8 @@ async def schema_backup_task():
         await event.wait()
         event.clear()
         tmp_path = str(SHILL_LIST_BACKUP_PATH) + ".1"
-        with open(tmp_path, "w+b") as writer:
-            ...
+        with open(tmp_path, "w") as writer:
+            json.dump(convert.convert_to_dict(GLOBALS.accounts), writer, indent=4)
 
         shutil.copyfile(tmp_path, SHILL_LIST_BACKUP_PATH)
         os.remove(tmp_path)

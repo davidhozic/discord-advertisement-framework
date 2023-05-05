@@ -2,7 +2,7 @@
 Modules contains definitions related to GUI object transformations.
 """
 
-from typing import get_type_hints, Iterable, Any, Union, List
+from typing import Any, Union, List, get_type_hints
 from contextlib import suppress
 from inspect import isdatadescriptor
 
@@ -10,7 +10,6 @@ from enum import Enum
 
 import decimal
 import datetime as dt
-import importlib.util as import_util
 
 import _discord as discord
 import daf
@@ -24,7 +23,6 @@ __all__ = (
     "convert_from_json",
     "convert_objects_to_script",
     "ADDITIONAL_ANNOTATIONS",
-    "UserDataFunction",
     "issubclass_noexcept",
 )
 
@@ -34,26 +32,6 @@ def issubclass_noexcept(*args):
         return issubclass(*args)
     except Exception:
         return False
-
-
-def UserDataFunction(fnc: str):
-    """
-    Dummy function to define a user getter function for daf inside GUI.
-    """
-    mod_spec = import_util.spec_from_loader("__tmp", None)
-    __tmp = import_util.module_from_spec(mod_spec)
-    exec(fnc, __tmp.__dict__)
-
-    _v = None
-    for v in __tmp.__dict__.values():
-        if issubclass_noexcept(v, daf.dtypes._FunctionBaseCLASS):
-            _v = v()
-            break
-
-    if _v is None:
-        raise ValueError("Could not find any functions. Make sure you've used the @data_function decorator on it!")
-
-    return _v
 
 
 ADDITIONAL_ANNOTATIONS = {
@@ -91,22 +69,13 @@ ADDITIONAL_ANNOTATIONS = {
     discord.EmbedField: {
         "name": str, "value": str, "inline": bool
     },
-    daf.TextMESSAGE: {
-        "data": Union[Iterable[Union[str, discord.Embed, daf.FILE]], str, discord.Embed, daf.FILE, UserDataFunction]
-    },
-    daf.VoiceMESSAGE: {
-        "data": Union[daf.dtypes.AUDIO, Iterable[daf.dtypes.AUDIO], UserDataFunction]
-    },
-    daf.DirectMESSAGE: {
-        "data": Union[Iterable[Union[str, discord.Embed, daf.FILE]], str, discord.Embed, daf.FILE, UserDataFunction]
-    },
     daf.add_object: {
         "obj": daf.ACCOUNT
     },
 }
 
-if daf.sql.SQL_INSTALLED:
-    sql_ = daf.sql
+if daf.logging.sql.SQL_INSTALLED:
+    sql_ = daf.logging.sql.tables
     for item in sql_.ORMBase.__subclasses__():
         ADDITIONAL_ANNOTATIONS[item] = item.__init__._sa_original_init.__annotations__
 
@@ -199,30 +168,25 @@ def convert_objects_to_script(object: Union[ObjectInfo, list, tuple, set, str]):
     other_data = []
 
     if isinstance(object, ObjectInfo):
-        if object.class_ is UserDataFunction:
-            other_data.append(object.data["fnc"])
-            object_str = UserDataFunction(object.data["fnc"]).func_name + "("
-            attr_str = ""
-        else:
-            object_str = f"{object.class_.__name__}(\n    "
-            attr_str = ""
-            for attr, value in object.data.items():
-                if isinstance(value, (ObjectInfo, list, tuple, set)):
-                    value, import_data_, other_str = convert_objects_to_script(value)
-                    import_data.extend(import_data_)
-                    if other_str != "":
-                        other_data.append(other_str)
+        object_str = f"{object.class_.__name__}(\n    "
+        attr_str = ""
+        for attr, value in object.data.items():
+            if isinstance(value, (ObjectInfo, list, tuple, set)):
+                value, import_data_, other_str = convert_objects_to_script(value)
+                import_data.extend(import_data_)
+                if other_str != "":
+                    other_data.append(other_str)
 
-                elif isinstance(value, str):
-                    value, _, other_str = convert_objects_to_script(value)
-                    if other_str != "":
-                        other_data.append(other_str)
+            elif isinstance(value, str):
+                value, _, other_str = convert_objects_to_script(value)
+                if other_str != "":
+                    other_data.append(other_str)
 
-                attr_str += f"{attr}={value},\n"
-                if issubclass(type(value), Enum):
-                    import_data.append(f"from {type(value).__module__} import {type(value).__name__}")
+            attr_str += f"{attr}={value},\n"
+            if issubclass(type(value), Enum):
+                import_data.append(f"from {type(value).__module__} import {type(value).__name__}")
 
-            import_data.append(f"from {object.class_.__module__} import {object.class_.__name__}")
+        import_data.append(f"from {object.class_.__module__} import {object.class_.__name__}")
 
         object_str += "    ".join(attr_str.splitlines(True)) + ")"
         object_data.append(object_str)
@@ -266,8 +230,8 @@ def convert_to_object_info(object_: object, save_original = False, cache = False
 
         for k, v in attrs.items():
             with suppress(Exception):
-                if isinstance(v, tuple):
-                    value = v[1](getattr(object_, v[0]))
+                if callable(v):
+                    value = v(object_)
                 else:
                     value = getattr(object_, v)
                 if value is object_:

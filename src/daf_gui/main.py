@@ -746,7 +746,7 @@ daf.run(
         if isinstance(tracing, str) and tracing == "":
             tracing = None
 
-        async_execute(daf.initialize(logger=logger, debug=tracing), parent_window=self.win_main)
+        async_execute(daf.initialize(logger=logger, debug=tracing, save_to_file=True), parent_window=self.win_main)
         self._daf_running = True
         if self.load_at_start_var.get():
             self.add_accounts_daf()
@@ -802,7 +802,7 @@ def run():
             await app._process()
             await asyncio.sleep(WIN_UPDATE_DELAY)
 
-    loop = asyncio.new_event_loop()
+    loop = asyncio.get_event_loop()
     async_start(loop)
     loop.run_until_complete(update_task())
     loop.run_until_complete(async_stop())

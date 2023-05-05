@@ -9,6 +9,7 @@ from .guild import *
 from .message import *
 from .logging import *
 from .web import *
+from .convert import *
 
 
 
