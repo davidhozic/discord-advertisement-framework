@@ -19,8 +19,9 @@ from . import convert
 import asyncio
 import shutil
 import os
-import json
+import pickle
 import _discord as discord
+
 
 
 __all__ = (
@@ -37,7 +38,7 @@ __all__ = (
 CORE_TASK_SLEEP_SEC = 0.1
 ACCOUNT_CLEANUP_DELAY = 10
 SCHEMA_BACKUP_DELAY = 120
-SHILL_LIST_BACKUP_PATH = Path("sbfobjects.json")  # sbf -> Schema Backup File
+SHILL_LIST_BACKUP_PATH = Path("objects.sbf")  # sbf -> Schema Backup File
 # ---------------------------------------
 
 
@@ -80,8 +81,8 @@ async def schema_backup_task():
         await event.wait()
         event.clear()
         tmp_path = str(SHILL_LIST_BACKUP_PATH) + ".1"
-        with open(tmp_path, "w") as writer:
-            json.dump(convert.convert_to_dict(GLOBALS.accounts), writer, indent=4)
+        with open(tmp_path, "wb") as writer:
+            pickle.dump(convert.convert_to_dict(GLOBALS.accounts), writer)
 
         shutil.copyfile(tmp_path, SHILL_LIST_BACKUP_PATH)
         os.remove(tmp_path)
@@ -95,10 +96,9 @@ async def schema_load_from_file() -> None:
         return
 
     with open(SHILL_LIST_BACKUP_PATH, "rb") as reader:
-        GLOBALS.accounts.extend(...)
+        ... # GLOBALS.accounts = convert.update_from_dict(json.load(reader))
 
     for account in GLOBALS.accounts:
-        await account.initialize()  # Login
         await account.update()  # Update with same parameters -> To refresh child objects with new connection
 
 

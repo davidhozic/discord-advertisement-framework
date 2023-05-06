@@ -111,6 +111,7 @@ class TextMESSAGE(BaseMESSAGE):
         "channels",
         "mode",
         "sent_messages",
+        *BaseMESSAGE.__slots__
     )
 
     @typechecked
@@ -647,6 +648,7 @@ class DirectMESSAGE(BaseMESSAGE):
         "mode",
         "previous_message",
         "dm_channel",
+        *BaseMESSAGE.__slots__
     )
 
     @typechecked

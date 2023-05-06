@@ -641,6 +641,7 @@ class USER(_BaseGUILD):
     """
     __slots__ = (
         "update_semaphore",
+        *_BaseGUILD.__slots__
     )
 
     @typechecked
