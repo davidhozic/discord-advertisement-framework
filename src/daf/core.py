@@ -23,7 +23,6 @@ import pickle
 import _discord as discord
 
 
-
 __all__ = (
     "run",
     "shutdown",
@@ -81,11 +80,15 @@ async def schema_backup_task():
         await event.wait()
         event.clear()
         tmp_path = str(SHILL_LIST_BACKUP_PATH) + ".1"
-        with open(tmp_path, "wb") as writer:
-            pickle.dump(convert.convert_to_dict(GLOBALS.accounts), writer)
+        trace("Saving objects to file.", TraceLEVELS.DEBUG)
+        try:
+            with open(tmp_path, "wb") as writer:
+                pickle.dump(convert.convert_to_dict(GLOBALS.accounts), writer)
 
-        shutil.copyfile(tmp_path, SHILL_LIST_BACKUP_PATH)
-        os.remove(tmp_path)
+            shutil.copyfile(tmp_path, SHILL_LIST_BACKUP_PATH)
+            os.remove(tmp_path)
+        except Exception as exc:
+            trace("Unable to save objects to file.", TraceLEVELS.ERROR, exc)
 
 
 async def schema_load_from_file() -> None:
@@ -95,11 +98,20 @@ async def schema_load_from_file() -> None:
     if not SHILL_LIST_BACKUP_PATH.exists():
         return
 
+    trace("Restoring objects from file...", TraceLEVELS.NORMAL)
     with open(SHILL_LIST_BACKUP_PATH, "rb") as reader:
-        ... # GLOBALS.accounts = convert.update_from_dict(json.load(reader))
+        accounts = convert.convert_from_dict(pickle.load(reader))
 
-    for account in GLOBALS.accounts:
-        await account.update()  # Update with same parameters -> To refresh child objects with new connection
+    trace("Updating accounts.", TraceLEVELS.DEBUG)
+    for account in accounts:
+        try:
+            await account.update(_init=False)  # Refresh without __init__ call
+            GLOBALS.accounts.append(account)
+        except Exception as exc:
+            trace(f"Unable to restore account {account}", TraceLEVELS.ERROR, exc)
+            GLOBALS.accounts.remove(account)
+
+    trace(f"Restored objects from file ({len(GLOBALS.accounts)} accounts).", TraceLEVELS.NORMAL)
 
 
 @misc.doc_category("DAF control reference")
@@ -141,7 +153,10 @@ async def initialize(user_callback: Optional[Union[Callable, Coroutine]] = None,
     # ------------------------------------------------------------
     # Load from file
     if save_to_file:
-        await schema_load_from_file()
+        try:
+            await schema_load_from_file()
+        except Exception as exc:
+            trace("Unable to load from file", TraceLEVELS.ERROR, exc)
 
     for account in accounts:
         try:
@@ -353,6 +368,7 @@ async def shutdown() -> None:
     stop_loop: Optional[bool]
         Default: False; If True, it stops the running event loop.
     """
+    trace("Shutting down...", TraceLEVELS.NORMAL)
     GLOBALS.running = False
     # Signal events for tasks to raise out of sleep
     GLOBALS.cleanup_event.set()
@@ -364,6 +380,7 @@ async def shutdown() -> None:
         await account._close()
 
     GLOBALS.accounts.clear()
+    trace("Shutdown complete.", TraceLEVELS.NORMAL)
 
 
 def _shutdown_clean(loop: asyncio.AbstractEventLoop) -> None:

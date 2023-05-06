@@ -524,7 +524,7 @@ class TextMESSAGE(BaseMESSAGE):
 
     @typechecked
     @misc._async_safe("update_semaphore")
-    async def update(self, _init_options: Optional[dict] = {}, **kwargs: Any):
+    async def update(self, _init_options: Optional[dict] = {}, _init = True, **kwargs: Any):
         """
         .. versionadded:: v2.0
 
@@ -557,14 +557,14 @@ class TextMESSAGE(BaseMESSAGE):
         channels = kwargs.get("channels", self.channels)
         if isinstance(channels, AutoCHANNEL):
             kwargs["channels"] = channels
-            await channels.update()
+            await channels.update(_init=_init)
         else:
             kwargs["channels"] = [x.id for x in self.channels]
 
         if not len(_init_options):
             _init_options = {"parent": self.parent}
 
-        await misc._update(self, init_options=_init_options, **kwargs)
+        await misc._update(self, init_options=_init_options, _init=_init, **kwargs)
 
 
 @misc.doc_category("Messages", path="message")
@@ -877,7 +877,7 @@ class DirectMESSAGE(BaseMESSAGE):
 
     @typechecked
     @misc._async_safe("update_semaphore")
-    async def update(self, _init_options: Optional[dict] = {}, **kwargs):
+    async def update(self, _init_options: Optional[dict] = {}, _init = True, **kwargs):
         """
         .. versionadded:: v2.0
 
@@ -910,4 +910,4 @@ class DirectMESSAGE(BaseMESSAGE):
         if not len(_init_options):
             _init_options = {"parent": self.parent}
 
-        await misc._update(self, init_options=_init_options, **kwargs)  # No additional modifications are required
+        await misc._update(self, init_options=_init_options, _init=_init, **kwargs)

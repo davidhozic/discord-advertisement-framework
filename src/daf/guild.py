@@ -481,7 +481,7 @@ class GUILD(_BaseGUILD):
 
         return []  # Return empty on error or no permissions
 
-    async def initialize(self, parent: Any) -> None:
+    async def initialize(self, parent: Any, _init = True) -> None:
         """
         This function initializes the API related objects and
         then tries to initialize the MESSAGE objects.
@@ -568,7 +568,7 @@ class GUILD(_BaseGUILD):
         }
 
     @misc._async_safe("update_semaphore", 1)
-    async def update(self, init_options={}, **kwargs):
+    async def update(self, init_options = {}, _init = True, **kwargs):
         """
         Used for changing the initialization parameters,
         the object was initialized with.
@@ -603,14 +603,16 @@ class GUILD(_BaseGUILD):
         if len(init_options) == 0:
             init_options = {"parent": self.parent}
 
-        messages = kwargs.pop("messages", self.messages)  # Updates separately
-        kwargs["messages"] = []
+        messages = kwargs.pop("messages", self.messages)
+        kwargs["messages"] = []  # Messages are updated at the end
 
-        await misc._update(self, **kwargs, init_options=init_options)
+        await misc._update(self, init_options=init_options, _init=_init, **kwargs)
+
         # Update messages
         for message in messages:
-            await message.update(_init_options={"parent": self})
-            self._messages.append(message)
+            await message.update(_init_options={"parent": self}, _init=_init)
+
+        self._messages = messages
 
 
 @misc.doc_category("Guilds")
@@ -686,7 +688,7 @@ class USER(_BaseGUILD):
         )
 
     @misc._async_safe("update_semaphore", 1)
-    async def update(self, init_options={}, **kwargs):
+    async def update(self, init_options = {}, _init = True, **kwargs):
         """
         .. versionadded:: v2.0
 
@@ -718,11 +720,16 @@ class USER(_BaseGUILD):
         if len(init_options) == 0:
             init_options = {"parent": self.parent}
 
-        await misc._update(self, init_options=init_options, **kwargs)
+        messages = kwargs.pop("messages", self.messages)
+        kwargs["messages"] = []  # Messages are updated at the end
+
+        await misc._update(self, init_options=init_options, _init=_init, **kwargs)
 
         # Update messages
-        for message in self.messages:
-            await message.update(_init_options={"parent": self})
+        for message in messages:
+            await message.update(_init_options={"parent": self}, _init=_init)
+
+        self._messages = messages
 
 
 @misc.doc_category("Auto objects")
@@ -1082,7 +1089,7 @@ class AutoGUILD:
         return GUILD_ADVERT_STATUS_SUCCESS
 
     @misc._async_safe("_safe_sem", 1)
-    async def update(self, init_options={}, **kwargs):
+    async def update(self, init_options = {}, _init = True, **kwargs):
         """
         Updates the object with new initialization parameters.
 
@@ -1094,4 +1101,4 @@ class AutoGUILD:
             init_options = {"parent": self.parent}
 
         await self._close()
-        return await misc._update(self, init_options=init_options, **kwargs)
+        return await misc._update(self, init_options=init_options, _init=_init, **kwargs)

@@ -444,7 +444,7 @@ class ACCOUNT:
             await __loop()
             await asyncio.sleep(TASK_SLEEP_DELAY_S)
 
-    async def update(self, **kwargs):
+    async def update(self, _init = True, **kwargs):
         """
         Updates the object with new parameters and afterwards updates all lower layers (GUILD->MESSAGE->CHANNEL).
 
@@ -455,16 +455,22 @@ class ACCOUNT:
         async def _update(self_):
             servers = kwargs.pop("servers", self.servers)
             kwargs["servers"] = []  # Servers are updated at the end
-            await misc._update(self, **kwargs)
+            await misc._update(self, _init=_init, **kwargs)
 
+            guilds = []
+            autoguilds = []
             for server in servers:
-                await server.update(init_options={"parent": self})
+                await server.update(init_options={"parent": self}, _init=_init)
                 if isinstance(server, guild.AutoGUILD):
-                    self._autoguilds.append(server)
+                    autoguilds.append(server)
                 else:
-                    self._servers.append(server)
+                    guilds.append(server)
 
-        await self._close()
+            self._servers = guilds
+            self._autoguilds = autoguilds
+
+        if self._running:
+            await self._close()
 
         selenium = self._selenium
         if "token" not in kwargs:
