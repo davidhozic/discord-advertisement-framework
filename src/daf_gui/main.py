@@ -227,7 +227,7 @@ class Application():
         )
         ToolTip(
             t,
-            "When stopping DAF, save all accounts' state (and guilds', messages', ...) to a file.\n"
+            "When stopping DAF, save all account state (and guild, message, ...) to a file.\n"
             "When starting DAF, load everything from that file."
         )
         t.pack(side="left", padx=dpi_5)
