@@ -603,7 +603,8 @@ class GUILD(_BaseGUILD):
         if len(init_options) == 0:
             init_options = {"parent": self.parent}
 
-        messages = kwargs.pop("messages", self.messages)
+        # Add uninitialized servers
+        messages = kwargs.pop("messages", self.messages + self._messages_uninitialized)
         kwargs["messages"] = []  # Messages are updated at the end
 
         await misc._update(self, init_options=init_options, _init=_init, **kwargs)

@@ -4,8 +4,6 @@ Modules contains definitions related to GUI object transformations.
 
 from typing import Any, Union, List, get_type_hints
 from contextlib import suppress
-from inspect import isdatadescriptor
-
 from enum import Enum
 
 import decimal
@@ -95,6 +93,9 @@ OBJECT_CONV_CACHE = {}
 
 CONVERSION_ATTR_TO_PARAM[daf.client.ACCOUNT] = {k: k for k in daf.client.ACCOUNT.__init__.__annotations__}
 CONVERSION_ATTR_TO_PARAM[daf.client.ACCOUNT]["token"] = "_token"
+CONVERSION_ATTR_TO_PARAM[daf.client.ACCOUNT]["username"] = lambda account: account.selenium._username if account.selenium is not None else None
+CONVERSION_ATTR_TO_PARAM[daf.client.ACCOUNT]["password"] = lambda account: account.selenium._password if account.selenium is not None else None
+
 if daf.sql.SQL_INSTALLED:
     sql_ = daf.sql
 
@@ -113,14 +114,13 @@ for item in {daf.TextMESSAGE, daf.VoiceMESSAGE, daf.DirectMESSAGE}:
 
 
 CONVERSION_ATTR_TO_PARAM[daf.TextMESSAGE]["channels"] = (
-    "channels",
-    lambda channels: [x.id for x in channels] if not isinstance(channels, daf.AutoCHANNEL) else channels,
+    lambda message_: [x.id for x in message_.channels] if not isinstance(message_.channels, daf.AutoCHANNEL) else message_.channels
 )
+CONVERSION_ATTR_TO_PARAM[daf.VoiceMESSAGE]["channels"] = CONVERSION_ATTR_TO_PARAM[daf.TextMESSAGE]["channels"]
 
 CONVERSION_ATTR_TO_PARAM[daf.GUILD] = {k: k for k in daf.GUILD.__init__.__annotations__}
 CONVERSION_ATTR_TO_PARAM[daf.GUILD]["invite_track"] = (
-    "join_count",
-    lambda counts: list(counts.keys())
+    lambda guild_: list(guild_.join_count.keys())
 )
 
 
@@ -316,17 +316,13 @@ def convert_to_objects(d: Union[ObjectInfo, list], keep_original_object: bool = 
             try:
                 args = vars(real)
             except TypeError:
-                args = dir(real)
+                args = real.__slots__ if hasattr(real, "__slots__") else dir(real)
 
             for a in args:
                 try:
-                    attr = getattr(new_obj, a, "__empty")
-                    if a.startswith("__") or callable(attr) or isdatadescriptor(getattr(d.class_, a)):
-                        continue
-
-                    setattr(real, a, attr)
+                    setattr(real, a, getattr(new_obj, a))
                 except Exception:
-                    break
+                    continue
             else:
                 new_obj = real  # Only use the old object if copy operation completed 100%
 

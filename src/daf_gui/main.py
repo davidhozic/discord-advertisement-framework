@@ -649,7 +649,7 @@ class Application():
         logger_is_present = str(logger) != ""
         tracing_is_present = str(tracing) != ""
         run_logger_str = "\n    logger=logger," if logger_is_present else ""
-        run_tracing_str = f"\n    debug={tracing}" if tracing_is_present else ""
+        run_tracing_str = f"\n    debug={tracing}," if tracing_is_present else ""
 
         accounts: list[ObjectInfo] = self.lb_accounts.get()
 
@@ -690,6 +690,7 @@ accounts = {accounts_str}
 # Run the framework (blocking)
 daf.run(
     accounts=accounts,{run_logger_str}{run_tracing_str}
+    save_to_file={self.save_objects_to_file_var.get()}
 )
 '''
         with open(filename, "w", encoding="utf-8") as file:

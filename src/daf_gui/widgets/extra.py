@@ -3,6 +3,7 @@ Module contains additional widgets and their setup handlers.
 """
 from .async_util import *
 from .convert import *
+from .dpi import *
 
 import _discord as discord
 import daf
@@ -109,6 +110,20 @@ def setup_additional_live_update(w: ttk.Button, frame):
     w.pack(side="right")
 
 
+def setup_additional_live_refresh(w: ttk.Button, frame):
+    # Don't have a bound object instance
+    if frame.old_object_info is None or frame.old_object_info.real_object is None:
+        return
+
+    def _callback(*args):
+        real = frame.old_object_info.real_object
+        frame.old_object_info = convert_to_object_info(real, True)
+        frame.load()
+
+    w.configure(command=_callback)
+    w.pack(side="right", padx=dpi_scaled(2))
+
+
 # Map that maps the instance we are defining class to a list of additional objects.
 ADDITIONAL_WIDGETS = {
     dt.datetime: [AdditionalWidget(ttk.Button, setup_additional_widget_datetime, text="Select date")],
@@ -125,7 +140,10 @@ for name in dir(daf):
         continue
 
     if hasattr(item, "update"):
-        ADDITIONAL_WIDGETS[item] = [AdditionalWidget(ttk.Button, setup_additional_live_update, text="Live update")]
+        ADDITIONAL_WIDGETS[item] = [
+            AdditionalWidget(ttk.Button, setup_additional_live_update, text="Live update"),
+            AdditionalWidget(ttk.Button, setup_additional_live_refresh, text="Refresh")
+        ]
 
 
 __all__ = list(globals().keys())

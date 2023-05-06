@@ -557,7 +557,7 @@ class TextMESSAGE(BaseMESSAGE):
         channels = kwargs.get("channels", self.channels)
         if isinstance(channels, AutoCHANNEL):
             kwargs["channels"] = channels
-            await channels.update(_init=_init)
+            await channels.update(init_options={"parent": self, "channel_type": "text_channels"}, _init=_init)
         else:
             kwargs["channels"] = [x.id for x in self.channels]
 
