@@ -146,6 +146,12 @@ class ObjectInfo:
         self.data = data
         self.real_object = real_object
 
+    def __eq__(self, __value: object) -> bool:
+        if isinstance(__value, ObjectInfo):
+            return self.class_ is __value.class_ and __value.data == self.data and self.real_object is __value.real_object
+
+        return False
+
     def __repr__(self) -> str:
         _ret: str = self.class_.__name__ + "("
         for k, v in self.data.items():

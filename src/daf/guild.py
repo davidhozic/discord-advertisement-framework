@@ -306,7 +306,7 @@ class _BaseGUILD:
         """
         raise NotImplementedError
 
-    async def update(self, init_options={}, **kwargs):
+    async def update(self, init_options = None, **kwargs):
         """
         .. versionadded:: v2.0
 
@@ -443,7 +443,7 @@ class GUILD(_BaseGUILD):
     @typechecked
     def __init__(self,
                  snowflake: Union[int, discord.Guild],
-                 messages: Optional[List[Union[TextMESSAGE, VoiceMESSAGE]]] = [],
+                 messages: Optional[List[Union[TextMESSAGE, VoiceMESSAGE]]] = None,
                  logging: Optional[bool] = False,
                  remove_after: Optional[Union[timedelta, datetime]] = None,
                  invite_track: Optional[List[str]] = None):
@@ -568,7 +568,7 @@ class GUILD(_BaseGUILD):
         }
 
     @misc._async_safe("update_semaphore", 1)
-    async def update(self, init_options = {}, _init = True, **kwargs):
+    async def update(self, init_options = None, _init = True, **kwargs):
         """
         Used for changing the initialization parameters,
         the object was initialized with.
@@ -600,7 +600,7 @@ class GUILD(_BaseGUILD):
         if "invite_track" not in kwargs:
             kwargs["invite_track"] = list(self.join_count.keys())
 
-        if len(init_options) == 0:
+        if init_options is None:
             init_options = {"parent": self.parent}
 
         # Add uninitialized servers
@@ -651,7 +651,7 @@ class USER(_BaseGUILD):
     def __init__(
         self,
         snowflake: Union[int, discord.User],
-        messages: Optional[List[DirectMESSAGE]] = [],
+        messages: Optional[List[DirectMESSAGE]] = None,
         logging: Optional[bool] = False,
         remove_after: Optional[Union[timedelta, datetime]] = None
     ) -> None:
@@ -689,7 +689,7 @@ class USER(_BaseGUILD):
         )
 
     @misc._async_safe("update_semaphore", 1)
-    async def update(self, init_options = {}, _init = True, **kwargs):
+    async def update(self, init_options = None, _init = True, **kwargs):
         """
         .. versionadded:: v2.0
 
@@ -718,7 +718,7 @@ class USER(_BaseGUILD):
         if "snowflake" not in kwargs:
             kwargs["snowflake"] = self.snowflake
 
-        if len(init_options) == 0:
+        if init_options is None:
             init_options = {"parent": self.parent}
 
         messages = kwargs.pop("messages", self.messages)
@@ -790,7 +790,7 @@ class AutoGUILD:
     logging: Optional[bool] = False
         Set to True if you want the guilds generated to log
         sent messages.
-    interval: Optional[timedelta] = timedelta(minutes=10)
+    interval: Optional[timedelta] = timedelta(minutes=1)
         Interval at which to scan for new guilds
     auto_join: Optional[web.GuildDISCOVERY] = None
         .. versionadded:: v2.5
@@ -824,7 +824,7 @@ class AutoGUILD:
                  include_pattern: str,
                  exclude_pattern: Optional[str] = None,
                  remove_after: Optional[Union[timedelta, datetime]] = None,
-                 messages: Optional[List[BaseMESSAGE]] = [],
+                 messages: Optional[List[BaseMESSAGE]] = None,
                  logging: Optional[bool] = False,
                  interval: Optional[timedelta] = timedelta(minutes=1),
                  auto_join: Optional[web.GuildDISCOVERY] = None,
@@ -834,7 +834,7 @@ class AutoGUILD:
         self.remove_after = remove_after
         self.invite_track = invite_track
         # Uninitialized template messages that get copied for each found guild.
-        self.messages = messages
+        self.messages = messages if messages is not None else []
         self.logging = logging
         self.interval = interval
         self.auto_join = auto_join
@@ -1090,7 +1090,7 @@ class AutoGUILD:
         return GUILD_ADVERT_STATUS_SUCCESS
 
     @misc._async_safe("_safe_sem", 1)
-    async def update(self, init_options = {}, _init = True, **kwargs):
+    async def update(self, init_options = None, _init = True, **kwargs):
         """
         Updates the object with new initialization parameters.
 
@@ -1098,7 +1098,7 @@ class AutoGUILD:
             After calling this method the entire object is reset
             (this includes it's GUILD objects in cache).
         """
-        if len(init_options) == 0:
+        if init_options is None:
             init_options = {"parent": self.parent}
 
         await self._close()
