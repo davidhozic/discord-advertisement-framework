@@ -360,6 +360,9 @@ def convert_to_json(d: Union[ObjectInfo, List[ObjectInfo], Any]):
     elif isinstance(d, list):
         return _convert_to_json_list(d)
 
+    elif issubclass((type_d := type(d)), Enum):
+        return {"type": f"{type_d.__module__}.{type_d.__name__}", "value": d.value}
+
     return d
 
 
@@ -376,7 +379,6 @@ def convert_from_json(d: Union[dict, List[dict], Any]) -> ObjectInfo:
 
     elif isinstance(d, dict):
         type_: str = d["type"]
-        data: dict = d["data"]
         type_split = type_.split('.')
         module = type_split[:len(type_split) - 1]
         type_ = type_split[-1]
@@ -390,12 +392,18 @@ def convert_from_json(d: Union[dict, List[dict], Any]) -> ObjectInfo:
 
             type_ = getattr(module_, type_)
 
+        # Simple object (or enum)
+        if "value" in d:
+            return type_(d["value"])
+
+        # ObjectInfo
+        data: dict = d["data"]
         for k, v in data.items():
-            if isinstance(v, list) or isinstance(v, dict) and v.get("type") is not None:
+            # List or dictionary and dictionary is a object representation of an object
+            if isinstance(v, list) or isinstance(v, dict) and d.get("type") is not None:
                 v = convert_from_json(v)
                 data[k] = v
 
         return ObjectInfo(type_, data)
-
     else:
         return d

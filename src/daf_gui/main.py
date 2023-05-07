@@ -146,6 +146,8 @@ class Application():
         # Credits tab
         self.init_credits_tab()
 
+        self.tabman_mf.select(1)
+
         # Status variables
         self._daf_running = False
         self._window_opened = True

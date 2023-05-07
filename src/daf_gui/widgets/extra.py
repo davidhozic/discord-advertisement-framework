@@ -117,8 +117,9 @@ def setup_additional_live_refresh(w: ttk.Button, frame):
 
     def _callback(*args):
         real = frame.old_object_info.real_object
-        frame.old_object_info = convert_to_object_info(real, True)
+        frame._update_old_object(convert_to_object_info(real, True))
         frame.load()
+        frame.save_gui_values()
 
     w.configure(command=_callback)
     w.pack(side="right", padx=dpi_scaled(2))

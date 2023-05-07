@@ -19,7 +19,7 @@ import copy
 #######################################################################
 # Globals
 #######################################################################
-LOGIN_TIMEOUT_S = 30
+LOGIN_TIMEOUT_S = 15
 TOKEN_MAX_PRINT_LEN = 5
 TASK_SLEEP_DELAY_S = 0.100
 TASK_STARTUP_DELAY_S = 2
@@ -485,4 +485,9 @@ class ACCOUNT:
             if isinstance(intents, discord.Intents) and intents.value == 0:
                 kwargs["intents"] = None
 
-        await _update(self)
+        try:
+            await _update(self)
+        except Exception as exc:
+            trace(f"Unable to update account {self}, restoring old data.", TraceLEVELS.ERROR, exc)
+            await self.update()
+            raise

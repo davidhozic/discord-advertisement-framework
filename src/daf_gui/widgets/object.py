@@ -148,7 +148,7 @@ class NewObjectFrame(ttk.Frame):
         return_widget: Union[ComboBoxObjects, ListBoxScrolled],
         parent = None,
         old: ObjectInfo = None,
-        check_parameters = True,
+        check_parameters: bool = True,
         allow_save = True,
     ):
         self.class_ = class_
@@ -422,23 +422,16 @@ class NewObjectFrame(ttk.Frame):
         self,
         class_,
         widget,
-        check_parameters = None,
-        allow_save = None,
         *args,
         **kwargs
     ):
         """
         Opens up a new object frame on top of the current one.
-
-        Parameters are the same as in :class:`NewObjectFrame` (current class).
+        Parameters are the same as in :class:`NewObjectFrame` (current class) with the exception
+        of ``check_parameters`` and ``allow_save`` - These are inherited from current frame.
         """
-        if check_parameters is None:
-            check_parameters = self.check_parameters
-        if allow_save is None:
-            allow_save = self.allow_save
-
         return self.origin_window.open_object_edit_frame(
-            class_, widget, check_parameters=check_parameters, allow_save=allow_save, *args, **kwargs
+            class_, widget, check_parameters=self.check_parameters, allow_save=self.allow_save, *args, **kwargs
         )
 
     def listbox_edit_selected(self, lb: ListBoxScrolled):
@@ -515,10 +508,11 @@ class NewObjectFrame(ttk.Frame):
 
             ret_widget.delete(ind)
 
-    def _insert_to_return_widget(self, new: Union[ObjectInfo, Any]):
         self.return_widget.insert(tk.END, new)
         if isinstance(self.return_widget, ComboBoxObjects):
             self.return_widget.current(self.return_widget["values"].index(new))
+
+        self.old_object_info = new
 
     def save(self):
         """
@@ -532,7 +526,6 @@ class NewObjectFrame(ttk.Frame):
 
             object_ = self._gui_to_object()
             self._update_old_object(object_)
-            self._insert_to_return_widget(object_)
             self._cleanup()
         except Exception as exc:
             tkdiag.Messagebox.show_error(

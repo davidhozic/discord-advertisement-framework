@@ -35,6 +35,11 @@ Releases
 
 v2.7
 ================
+- Preserve objects state on shutdown (accounts, guilds, ...,) [logger not preserved]:
+  
+  - :func:`daf.core.run` function's ``save_to_file`` parameter or *Preserve state on shutdown* checkbox inside 
+    *Schema definition* tab of the GUI to configure.
+
 - Analytics:
   
   - Invite link tracking
@@ -48,6 +53,8 @@ v2.7
   - Invite link analytics
   - :class:`~discord.Intents` can now also be defined from the GUI.
   - Fixed schema save for enums (enums are not JSON serializable)
+
+- Lowered logging-in timeout to 15 seconds
 
 - |BREAK_CH| Removed DEPRECATED parameters for :func:`daf.core.run` and :func:`daf.core.initialize`:
     
