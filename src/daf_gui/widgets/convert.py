@@ -319,12 +319,10 @@ def convert_to_objects(d: Union[ObjectInfo, list], keep_original_object: bool = 
                 args = real.__slots__ if hasattr(real, "__slots__") else dir(real)
 
             for a in args:
-                try:
+                with suppress(Exception):
                     setattr(real, a, getattr(new_obj, a))
-                except Exception:
-                    continue
-            else:
-                new_obj = real  # Only use the old object if copy operation completed 100%
+
+            new_obj = real
 
         return new_obj
 
