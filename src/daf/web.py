@@ -65,7 +65,7 @@ WD_TIMEOUT_MED = 30
 WD_TIMEOUT_LONG = 90
 WD_RD_CLICK_UPPER_N = 5
 WD_RD_CLICK_LOWER_N = 2
-WD_OUTPUT_PATH = pathlib.Path("./daf_web_data")
+WD_OUTPUT_PATH = pathlib.Path.home().joinpath("daf/daf_web_data")
 WD_TOKEN_PATH = WD_OUTPUT_PATH.joinpath("tokens.json")
 WD_PROFILES_PATH = WD_OUTPUT_PATH.joinpath("chrome_profiles")
 WD_QUERY_SLEEP_S = 5
@@ -436,7 +436,7 @@ class SeleniumCLIENT:
         Any
             Raised in :py:meth:`~SeleniumCLIENT.login` method.
         """
-        WD_OUTPUT_PATH.mkdir(exist_ok=True)
+        WD_OUTPUT_PATH.mkdir(exist_ok=True, parents=True)
         web_data_path = pathlib.Path(WD_PROFILES_PATH, self._username)
 
         opts = Options()

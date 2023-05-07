@@ -45,6 +45,10 @@ v2.7
   - Invite link tracking
   - :class:`~daf.guild.GUILD`: ``invite_track`` parameter for tracking invite links
 
+- File outputs:
+
+  - Changed all paths' defaults to be stored under /<user-home-dir>/daf/ folder to prevent permission problems
+
 - :class:`~daf.guild.AutoGUILD` ``interval`` default changed to ``timedelta(minutes=1)``
 - xMESSAGE ``start_in`` now accepts :class:`datetime.datetime` - send at specific datetime.
 - GUI:

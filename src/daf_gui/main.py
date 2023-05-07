@@ -5,6 +5,7 @@ import subprocess
 import sys
 
 from importlib.util import find_spec
+from pathlib import Path
 
 installed = find_spec("ttkbootstrap") is not None
 
@@ -258,9 +259,9 @@ class Application():
         self.combo_tracing.pack(fill=tk.X, side="left", expand=True)
 
         self.combo_logging_mgr["values"] = [
-            ObjectInfo(daf.LoggerJSON, {"path": "History"}),
-            ObjectInfo(daf.LoggerSQL, {}),
-            ObjectInfo(daf.LoggerCSV, {"path": "History", "delimiter": ";"}),
+            ObjectInfo(daf.LoggerJSON, {"path": str(Path.home().joinpath("daf/History"))}),
+            ObjectInfo(daf.LoggerSQL, {"database": str(Path.home().joinpath("daf/messages")), "dialect": "sqlite"}),
+            ObjectInfo(daf.LoggerCSV, {"path": str(Path.home().joinpath("daf/History")), "delimiter": ";"}),
         ]
 
         self.combo_tracing["values"] = [en for en in daf.TraceLEVELS]

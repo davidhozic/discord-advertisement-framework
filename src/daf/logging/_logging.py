@@ -292,7 +292,7 @@ class LoggerJSON(LoggerBASE):
                         .joinpath("{:02d}".format(timestruct.month))
                         .joinpath("{:02d}".format(timestruct.day)))
 
-        logging_output.mkdir(parents=True,exist_ok=True)
+        logging_output.mkdir(parents=True, exist_ok=True)
         logging_output = logging_output.joinpath("".join(char if char not in C_FILE_NAME_FORBIDDEN_CHAR
                                                               else "#" for char in guild_context["name"]) + ".json")          
         # Create file if it doesn't exist

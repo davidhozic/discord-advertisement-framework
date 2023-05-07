@@ -7,6 +7,7 @@
 from datetime import datetime, date
 from typing import Callable, Dict, List, Literal, Any, Union, Optional, Tuple
 from contextlib import suppress
+from pathlib import Path
 from typeguard import typechecked
 
 from ..tracing import TraceLEVELS, trace
@@ -209,7 +210,9 @@ class TableCache:
 class LoggerSQL(logging.LoggerBASE):
     """
     .. versionchanged:: v2.7
-        Invite link tracking.
+
+        - Invite link tracking.
+        - Default database file output set to /<user-home-dir>/daf/messages
 
     Used for controlling the SQL database used for message logs.
 
@@ -270,11 +273,12 @@ class LoggerSQL(logging.LoggerBASE):
         self.password = password
         self.server = server
         self.port = port
-        self.database = database if database is not None else "messages"
+        self.database = database if database is not None else str(Path.home().joinpath("daf/messages"))
         self.dialect = dialect
 
         if self.dialect == "sqlite":
             self.database += ".db"
+            Path(self.database).parent.mkdir(parents=True, exist_ok=True)
 
         # Set in ._begin_engine
         self.engine: sqa.engine.Engine = None
@@ -706,6 +710,9 @@ class LoggerSQL(logging.LoggerBASE):
                 res = False
                 await self._reconnect_after(SQL_RECONNECT_TIME)
             else:
+                if self.dialect == "sqlite":
+                    Path(self.database).parent.mkdir(parents=True, exist_ok=True)
+
                 await self._create_tables()
                 self._clear_caches()
                 await self._generate_lookup_values()

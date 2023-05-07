@@ -37,7 +37,8 @@ __all__ = (
 CORE_TASK_SLEEP_SEC = 0.1
 ACCOUNT_CLEANUP_DELAY = 10
 SCHEMA_BACKUP_DELAY = 120
-SHILL_LIST_BACKUP_PATH = Path("objects.sbf")  # sbf -> Schema Backup File
+DAF_PATH = Path.home().joinpath("daf")
+SHILL_LIST_BACKUP_PATH = DAF_PATH.joinpath("objects.sbf")  # sbf -> Schema Backup File
 # ---------------------------------------
 
 
@@ -79,6 +80,7 @@ async def schema_backup_task():
         loop.call_later(SCHEMA_BACKUP_DELAY, event.set)
         await event.wait()
         event.clear()
+        DAF_PATH.mkdir(parents=True, exist_ok=True)
         tmp_path = str(SHILL_LIST_BACKUP_PATH) + ".1"
         trace("Saving objects to file.", TraceLEVELS.DEBUG)
         try:
@@ -118,7 +120,7 @@ async def schema_load_from_file() -> None:
 async def initialize(user_callback: Optional[Union[Callable, Coroutine]] = None,
                      debug: Optional[Union[TraceLEVELS, int, str]] = TraceLEVELS.NORMAL,
                      logger: Optional[logging.LoggerBASE] = None,
-                     accounts: List[client.ACCOUNT] = [],
+                     accounts: List[client.ACCOUNT] = None,
                      save_to_file: bool = False) -> None:
     """
     The main initialization function.
@@ -132,6 +134,8 @@ async def initialize(user_callback: Optional[Union[Callable, Coroutine]] = None,
         Parameters are the same as in :func:`daf.core.run`.
     """
     loop = asyncio.get_event_loop()
+    if accounts is None:
+        accounts = []
     # ------------------------------------------------------------
     # Initialize tracing
     # ------------------------------------------------------------
@@ -143,7 +147,7 @@ async def initialize(user_callback: Optional[Union[Callable, Coroutine]] = None,
     # Initialize logging
     # ------------------------------------------------------------
     if logger is None:
-        logger = logging.LoggerJSON(path="History")
+        logger = logging.LoggerJSON(path=str(Path.home().joinpath("daf/History")))
 
     await logging.initialize(logger)
     # ------------------------------------------------------------
@@ -401,7 +405,7 @@ def _shutdown_clean(loop: asyncio.AbstractEventLoop) -> None:
 def run(user_callback: Optional[Union[Callable, Coroutine]] = None,
         debug: Optional[Union[TraceLEVELS, int, str, bool]] = TraceLEVELS.NORMAL,
         logger: Optional[logging.LoggerBASE] = None,
-        accounts: Optional[List[client.ACCOUNT]] = [],
+        accounts: Optional[List[client.ACCOUNT]] = None,
         save_to_file: bool = False) -> None:
     """
     .. versionchanged:: 2.7
@@ -428,7 +432,7 @@ def run(user_callback: Optional[Union[Callable, Coroutine]] = None,
         The higher value this option is, the more will be displayed.
     logger: Optional[loggers.LoggerBASE]
         The logging class to use.
-        If this is not provided, JSON is automatically used.
+        If this is not provided, JSON is automatically used with the ``path`` parameter set to /<user-home-dir>/daf/History
     accounts: Optional[List[client.ACCOUNT]]
         List of :class:`~daf.client.ACCOUNT` (Discord accounts) to use.
         .. versionadded:: v2.4
