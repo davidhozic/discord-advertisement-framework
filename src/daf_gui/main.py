@@ -19,6 +19,7 @@ if not installed:
     subprocess.check_call([sys.executable, "-m", "pip", "install", f"ttkbootstrap=={TTKBOOSTRAP_VERSION}"])
 
 from PIL import Image, ImageTk
+from ttkbootstrap.tooltip import ToolTip
 import tkinter as tk
 import tkinter.filedialog as tkfile
 import ttkbootstrap.dialogs.dialogs as tkdiag
@@ -145,6 +146,8 @@ class Application():
         # Credits tab
         self.init_credits_tab()
 
+        self.tabman_mf.select(1)
+
         # Status variables
         self._daf_running = False
         self._window_opened = True
@@ -207,16 +210,29 @@ class Application():
         frame_account_bnts = ttk.Frame(frame_tab_account)
         frame_account_bnts.pack(fill=tk.X, pady=dpi_5)
         ttk.Button(
-            frame_account_bnts, text="Import from live", command=import_accounts
+            frame_account_bnts, text="Import from DAF (live)", command=import_accounts
         ).pack(side="left")
-        ttk.Button(
-            frame_account_bnts, text="Load selection to live", command=lambda: self.add_accounts_daf(True)
+        t = ttk.Button(
+            frame_account_bnts, text="Load selection to DAF (live)", command=lambda: self.add_accounts_daf(True)
         ).pack(side="left")
         self.load_at_start_var = ttk.BooleanVar(value=True)
-        ttk.Checkbutton(
-            frame_account_bnts, text="Load all at start", onvalue=True, offvalue=False, state="normal",
+        t = ttk.Checkbutton(
+            frame_account_bnts, text="Load all at start", onvalue=True, offvalue=False,
             variable=self.load_at_start_var
-        ).pack(side="left", padx=dpi_5)
+        )
+        ToolTip(t, "When starting DAF, load all accounts from the list automatically.")
+        t.pack(side="left", padx=dpi_5)
+        self.save_objects_to_file_var = ttk.BooleanVar(value=False)
+        t = ttk.Checkbutton(
+            frame_account_bnts, text="Preserve state on shutdown", onvalue=True, offvalue=False,
+            variable=self.save_objects_to_file_var,
+        )
+        ToolTip(
+            t,
+            "When stopping DAF, save all account state (and guild, message, ...) to a file.\n"
+            "When starting DAF, load everything from that file."
+        )
+        t.pack(side="left", padx=dpi_5)
 
         self.lb_accounts = ListBoxScrolled(frame_tab_account)
         self.lb_accounts.pack(fill=tk.BOTH, expand=True, side="left")
@@ -635,7 +651,7 @@ class Application():
         logger_is_present = str(logger) != ""
         tracing_is_present = str(tracing) != ""
         run_logger_str = "\n    logger=logger," if logger_is_present else ""
-        run_tracing_str = f"\n    debug={tracing}" if tracing_is_present else ""
+        run_tracing_str = f"\n    debug={tracing}," if tracing_is_present else ""
 
         accounts: list[ObjectInfo] = self.lb_accounts.get()
 
@@ -676,6 +692,7 @@ accounts = {accounts_str}
 # Run the framework (blocking)
 daf.run(
     accounts=accounts,{run_logger_str}{run_tracing_str}
+    save_to_file={self.save_objects_to_file_var.get()}
 )
 '''
         with open(filename, "w", encoding="utf-8") as file:
@@ -746,7 +763,10 @@ daf.run(
         if isinstance(tracing, str) and tracing == "":
             tracing = None
 
-        async_execute(daf.initialize(logger=logger, debug=tracing), parent_window=self.win_main)
+        async_execute(
+            daf.initialize(logger=logger, debug=tracing, save_to_file=self.save_objects_to_file_var.get()),
+            parent_window=self.win_main
+        )
         self._daf_running = True
         if self.load_at_start_var.get():
             self.add_accounts_daf()
@@ -802,7 +822,7 @@ def run():
             await app._process()
             await asyncio.sleep(WIN_UPDATE_DELAY)
 
-    loop = asyncio.new_event_loop()
+    loop = asyncio.get_event_loop()
     async_start(loop)
     loop.run_until_complete(update_task())
     loop.run_until_complete(async_stop())

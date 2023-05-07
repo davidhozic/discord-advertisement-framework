@@ -6,7 +6,7 @@ the user might want to shill into.
 """
 from typing import Dict, Tuple, Callable, List, Optional, Any
 from contextlib import suppress
-from enum import auto, IntEnum
+from enum import auto, Enum
 
 from datetime import datetime, timedelta
 from typeguard import typechecked
@@ -652,7 +652,7 @@ class SeleniumCLIENT:
 
 
 @misc.doc_category("Web")
-class QuerySortBy(IntEnum):
+class QuerySortBy(Enum):
     """
     Enumerated options that can be passed to the ``sort_by``
     parameter of :class:`daf.web.GuildDISCOVERY`.
@@ -665,7 +665,7 @@ class QuerySortBy(IntEnum):
 
 
 @misc.doc_category("Web")
-class QueryMembers(IntEnum):
+class QueryMembers(Enum):
     """
     Enumerated options that can be passed to the ``total_members``
     parameter of :class:`daf.web.GuildDISCOVERY`.

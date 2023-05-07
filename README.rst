@@ -47,11 +47,6 @@ Pre-requirement: `Python (minimum v3.8) <https://www.python.org/downloads/>`_.
 
     pip install discord-advert-framework[voice]
 
-**Proxies**
-
-::
-
-    pip install discord-advert-framework[proxy]
 
 **SQL logging**
             

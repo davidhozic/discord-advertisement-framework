@@ -37,7 +37,7 @@ def _write_attr_once(obj: Any, name: str, value: Any):
         setattr(obj, name, value)
 
 
-async def _update(obj: Any, *, init_options: dict = {}, **kwargs):
+async def _update(obj: Any, *, init_options: dict = {}, _init = True, **kwargs):
     """
     .. versionadded:: v2.0
 
@@ -60,6 +60,8 @@ async def _update(obj: Any, *, init_options: dict = {}, **kwargs):
         Contains the initialization options used in
         .initialize() method for re-initializing certain objects.
         This is implementation specific and not necessarily available.
+    _init: bool
+        If True, calls the __init__ and initialize, otherwise only calls initialize.
     Other:
         Other allowed parameters are the initialization parameters,
         first used on creation of the object.
@@ -88,13 +90,15 @@ async def _update(obj: Any, *, init_options: dict = {}, **kwargs):
         # into the `updated_params` dictionary and
         # then calls the __init__ method with the same parameters,
         # with the exception of start_period, end_period and start_now
-        updated_params = {}
-        for k in init_keys:
-            updated_params[k] = kwargs[k] if k in kwargs else getattr(obj, k)
+        if _init:
+            updated_params = {}
+            for k in init_keys:
+                updated_params[k] = kwargs[k] if k in kwargs else getattr(obj, k)
 
-        # Call the implementation __init__ function and
-        # then initialize API related things
-        obj.__init__(**updated_params)
+            # Call the implementation __init__ function and
+            # then initialize API related things
+            obj.__init__(**updated_params)
+
         # Call additional initialization function (if it has one)
         if hasattr(obj, "initialize"):
             await obj.initialize(**init_options)

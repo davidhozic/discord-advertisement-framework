@@ -2,15 +2,12 @@
 Modules contains definitions related to GUI object transformations.
 """
 
-from typing import get_type_hints, Iterable, Any, Union, List
+from typing import Any, Union, List, get_type_hints
 from contextlib import suppress
-from inspect import isdatadescriptor
-
 from enum import Enum
 
 import decimal
 import datetime as dt
-import importlib.util as import_util
 
 import _discord as discord
 import daf
@@ -24,7 +21,6 @@ __all__ = (
     "convert_from_json",
     "convert_objects_to_script",
     "ADDITIONAL_ANNOTATIONS",
-    "UserDataFunction",
     "issubclass_noexcept",
 )
 
@@ -34,26 +30,6 @@ def issubclass_noexcept(*args):
         return issubclass(*args)
     except Exception:
         return False
-
-
-def UserDataFunction(fnc: str):
-    """
-    Dummy function to define a user getter function for daf inside GUI.
-    """
-    mod_spec = import_util.spec_from_loader("__tmp", None)
-    __tmp = import_util.module_from_spec(mod_spec)
-    exec(fnc, __tmp.__dict__)
-
-    _v = None
-    for v in __tmp.__dict__.values():
-        if issubclass_noexcept(v, daf.dtypes._FunctionBaseCLASS):
-            _v = v()
-            break
-
-    if _v is None:
-        raise ValueError("Could not find any functions. Make sure you've used the @data_function decorator on it!")
-
-    return _v
 
 
 ADDITIONAL_ANNOTATIONS = {
@@ -91,22 +67,13 @@ ADDITIONAL_ANNOTATIONS = {
     discord.EmbedField: {
         "name": str, "value": str, "inline": bool
     },
-    daf.TextMESSAGE: {
-        "data": Union[Iterable[Union[str, discord.Embed, daf.FILE]], str, discord.Embed, daf.FILE, UserDataFunction]
-    },
-    daf.VoiceMESSAGE: {
-        "data": Union[daf.dtypes.AUDIO, Iterable[daf.dtypes.AUDIO], UserDataFunction]
-    },
-    daf.DirectMESSAGE: {
-        "data": Union[Iterable[Union[str, discord.Embed, daf.FILE]], str, discord.Embed, daf.FILE, UserDataFunction]
-    },
     daf.add_object: {
         "obj": daf.ACCOUNT
     },
 }
 
-if daf.sql.SQL_INSTALLED:
-    sql_ = daf.sql
+if daf.logging.sql.SQL_INSTALLED:
+    sql_ = daf.logging.sql.tables
     for item in sql_.ORMBase.__subclasses__():
         ADDITIONAL_ANNOTATIONS[item] = item.__init__._sa_original_init.__annotations__
 
@@ -126,6 +93,9 @@ OBJECT_CONV_CACHE = {}
 
 CONVERSION_ATTR_TO_PARAM[daf.client.ACCOUNT] = {k: k for k in daf.client.ACCOUNT.__init__.__annotations__}
 CONVERSION_ATTR_TO_PARAM[daf.client.ACCOUNT]["token"] = "_token"
+CONVERSION_ATTR_TO_PARAM[daf.client.ACCOUNT]["username"] = lambda account: account.selenium._username if account.selenium is not None else None
+CONVERSION_ATTR_TO_PARAM[daf.client.ACCOUNT]["password"] = lambda account: account.selenium._password if account.selenium is not None else None
+
 if daf.sql.SQL_INSTALLED:
     sql_ = daf.sql
 
@@ -144,14 +114,13 @@ for item in {daf.TextMESSAGE, daf.VoiceMESSAGE, daf.DirectMESSAGE}:
 
 
 CONVERSION_ATTR_TO_PARAM[daf.TextMESSAGE]["channels"] = (
-    "channels",
-    lambda channels: [x.id for x in channels] if not isinstance(channels, daf.AutoCHANNEL) else channels,
+    lambda message_: [x.id for x in message_.channels] if not isinstance(message_.channels, daf.AutoCHANNEL) else message_.channels
 )
+CONVERSION_ATTR_TO_PARAM[daf.VoiceMESSAGE]["channels"] = CONVERSION_ATTR_TO_PARAM[daf.TextMESSAGE]["channels"]
 
 CONVERSION_ATTR_TO_PARAM[daf.GUILD] = {k: k for k in daf.GUILD.__init__.__annotations__}
 CONVERSION_ATTR_TO_PARAM[daf.GUILD]["invite_track"] = (
-    "join_count",
-    lambda counts: list(counts.keys())
+    lambda guild_: list(guild_.join_count.keys())
 )
 
 
@@ -199,30 +168,25 @@ def convert_objects_to_script(object: Union[ObjectInfo, list, tuple, set, str]):
     other_data = []
 
     if isinstance(object, ObjectInfo):
-        if object.class_ is UserDataFunction:
-            other_data.append(object.data["fnc"])
-            object_str = UserDataFunction(object.data["fnc"]).func_name + "("
-            attr_str = ""
-        else:
-            object_str = f"{object.class_.__name__}(\n    "
-            attr_str = ""
-            for attr, value in object.data.items():
-                if isinstance(value, (ObjectInfo, list, tuple, set)):
-                    value, import_data_, other_str = convert_objects_to_script(value)
-                    import_data.extend(import_data_)
-                    if other_str != "":
-                        other_data.append(other_str)
+        object_str = f"{object.class_.__name__}(\n    "
+        attr_str = ""
+        for attr, value in object.data.items():
+            if isinstance(value, (ObjectInfo, list, tuple, set)):
+                value, import_data_, other_str = convert_objects_to_script(value)
+                import_data.extend(import_data_)
+                if other_str != "":
+                    other_data.append(other_str)
 
-                elif isinstance(value, str):
-                    value, _, other_str = convert_objects_to_script(value)
-                    if other_str != "":
-                        other_data.append(other_str)
+            elif isinstance(value, str):
+                value, _, other_str = convert_objects_to_script(value)
+                if other_str != "":
+                    other_data.append(other_str)
 
-                attr_str += f"{attr}={value},\n"
-                if issubclass(type(value), Enum):
-                    import_data.append(f"from {type(value).__module__} import {type(value).__name__}")
+            attr_str += f"{attr}={value},\n"
+            if issubclass(type(value), Enum):
+                import_data.append(f"from {type(value).__module__} import {type(value).__name__}")
 
-            import_data.append(f"from {object.class_.__module__} import {object.class_.__name__}")
+        import_data.append(f"from {object.class_.__module__} import {object.class_.__name__}")
 
         object_str += "    ".join(attr_str.splitlines(True)) + ")"
         object_data.append(object_str)
@@ -266,8 +230,8 @@ def convert_to_object_info(object_: object, save_original = False, cache = False
 
         for k, v in attrs.items():
             with suppress(Exception):
-                if isinstance(v, tuple):
-                    value = v[1](getattr(object_, v[0]))
+                if callable(v):
+                    value = v(object_)
                 else:
                     value = getattr(object_, v)
                 if value is object_:
@@ -352,19 +316,13 @@ def convert_to_objects(d: Union[ObjectInfo, list], keep_original_object: bool = 
             try:
                 args = vars(real)
             except TypeError:
-                args = dir(real)
+                args = real.__slots__ if hasattr(real, "__slots__") else dir(real)
 
             for a in args:
-                try:
-                    attr = getattr(new_obj, a, "__empty")
-                    if a.startswith("__") or callable(attr) or isdatadescriptor(getattr(d.class_, a)):
-                        continue
+                with suppress(Exception):
+                    setattr(real, a, getattr(new_obj, a))
 
-                    setattr(real, a, attr)
-                except Exception:
-                    break
-            else:
-                new_obj = real  # Only use the old object if copy operation completed 100%
+            new_obj = real
 
         return new_obj
 
@@ -400,6 +358,9 @@ def convert_to_json(d: Union[ObjectInfo, List[ObjectInfo], Any]):
     elif isinstance(d, list):
         return _convert_to_json_list(d)
 
+    elif issubclass((type_d := type(d)), Enum):
+        return {"type": f"{type_d.__module__}.{type_d.__name__}", "value": d.value}
+
     return d
 
 
@@ -416,7 +377,6 @@ def convert_from_json(d: Union[dict, List[dict], Any]) -> ObjectInfo:
 
     elif isinstance(d, dict):
         type_: str = d["type"]
-        data: dict = d["data"]
         type_split = type_.split('.')
         module = type_split[:len(type_split) - 1]
         type_ = type_split[-1]
@@ -430,12 +390,18 @@ def convert_from_json(d: Union[dict, List[dict], Any]) -> ObjectInfo:
 
             type_ = getattr(module_, type_)
 
+        # Simple object (or enum)
+        if "value" in d:
+            return type_(d["value"])
+
+        # ObjectInfo
+        data: dict = d["data"]
         for k, v in data.items():
-            if isinstance(v, list) or isinstance(v, dict) and v.get("type") is not None:
+            # List or dictionary and dictionary is a object representation of an object
+            if isinstance(v, list) or isinstance(v, dict) and d.get("type") is not None:
                 v = convert_from_json(v)
                 data[k] = v
 
         return ObjectInfo(type_, data)
-
     else:
         return d

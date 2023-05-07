@@ -529,7 +529,7 @@ class AutoCHANNEL:
         """
         self.cache.remove(channel)
 
-    async def update(self, **kwargs):
+    async def update(self, init_options = None, _init = True, **kwargs):
         """
         Updates the object with new initialization parameters.
 
@@ -544,6 +544,12 @@ class AutoCHANNEL:
         Any
             Raised from :py:meth:`~daf.message.AutoCHANNEL.initialize` method.
         """
+        if init_options is None:
+            init_options = {}
+            init_options["parent"] = self.parent
+            init_options["channel_type"] = self.channel_getter
+
         return await misc._update(self,
-                                  init_options={"parent": self.parent, "channel_type": self.channel_getter},
+                                  init_options=init_options,
+                                  _init=_init,
                                   **kwargs)

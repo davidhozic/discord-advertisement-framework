@@ -19,7 +19,7 @@ import copy
 #######################################################################
 # Globals
 #######################################################################
-LOGIN_TIMEOUT_S = 30
+LOGIN_TIMEOUT_S = 15
 TOKEN_MAX_PRINT_LEN = 5
 TASK_SLEEP_DELAY_S = 0.100
 TASK_STARTUP_DELAY_S = 2
@@ -444,7 +444,7 @@ class ACCOUNT:
             await __loop()
             await asyncio.sleep(TASK_SLEEP_DELAY_S)
 
-    async def update(self, **kwargs):
+    async def update(self, _init = True, **kwargs):
         """
         Updates the object with new parameters and afterwards updates all lower layers (GUILD->MESSAGE->CHANNEL).
 
@@ -455,32 +455,39 @@ class ACCOUNT:
         async def _update(self_):
             servers = kwargs.pop("servers", self.servers)
             kwargs["servers"] = []  # Servers are updated at the end
-            await misc._update(self, **kwargs)
+            await misc._update(self, _init=_init, **kwargs)
 
+            guilds = []
+            autoguilds = []
             for server in servers:
-                await server.update(init_options={"parent": self})
+                await server.update(init_options={"parent": self}, _init=_init)
                 if isinstance(server, guild.AutoGUILD):
-                    self._autoguilds.append(server)
+                    autoguilds.append(server)
                 else:
-                    self._servers.append(server)
+                    guilds.append(server)
 
-        await self._close()
+            self._servers = guilds
+            self._autoguilds = autoguilds
+
+        if self._running:
+            await self._close()
 
         selenium = self._selenium
-        if selenium is not None and "token" not in kwargs:
-            if "username" not in kwargs:
-                kwargs["username"] = selenium._username
-            if "password" not in kwargs:
-                kwargs["password"] = selenium._password
-
-            kwargs["token"] = None
-        else:
-            kwargs["username"] = None
-            kwargs["password"] = None
+        if "token" not in kwargs:
+            kwargs["token"] = self._token if selenium is None else None
+        if "username" not in kwargs:
+            kwargs["username"] = selenium._username if selenium is not None else None
+        if "password" not in kwargs:
+            kwargs["password"] = selenium._password if selenium is not None else None
 
         if "intents" in kwargs:
             intents: discord.Intents = kwargs["intents"]
             if isinstance(intents, discord.Intents) and intents.value == 0:
                 kwargs["intents"] = None
 
-        await _update(self)
+        try:
+            await _update(self)
+        except Exception as exc:
+            trace(f"Unable to update account {self}, restoring old data.", TraceLEVELS.ERROR, exc)
+            await self.update()
+            raise

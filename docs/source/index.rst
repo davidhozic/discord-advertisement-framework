@@ -76,13 +76,6 @@ DAF can be installed though command prompt/terminal using the bottom commands.
 
                     pip install discord-advert-framework[voice]
 
-            .. tab-item:: Proxies
-
-                - .. code-block:: bash
-                    :caption: Proxy support
-
-                    pip install discord-advert-framework[proxy]
-
             .. tab-item:: SQL
                 
                 - .. code-block:: bash
