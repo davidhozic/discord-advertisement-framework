@@ -42,6 +42,12 @@ class TextMESSAGE(BaseMESSAGE):
 
         *start_in* now accepts datetime object
 
+    .. note::
+
+        Slow mode period handling:
+            If the advertisement period is set less than the biggest slow-mode delay of the given channels,
+            the period will be automatically set slightly above the slow-mode delay.
+
     Parameters
     ------------
     start_period: Union[int, timedelta, None]
@@ -121,7 +127,7 @@ class TextMESSAGE(BaseMESSAGE):
                  data: Union[Iterable[Union[str, discord.Embed, FILE]], str, discord.Embed, FILE, _FunctionBaseCLASS],
                  channels: Union[Iterable[Union[int, discord.TextChannel, discord.Thread]], AutoCHANNEL],
                  mode: Optional[Literal["send", "edit", "clear-send"]] = "send",
-                 start_in: Optional[Union[timedelta, datetime]] = datetime.now(),
+                 start_in: Optional[Union[timedelta, datetime]] = timedelta(seconds=0),
                  remove_after: Optional[Union[int, timedelta, datetime]] = None):
         super().__init__(start_period, end_period, data, start_in, remove_after)
         self.mode = mode
@@ -365,11 +371,6 @@ class TextMESSAGE(BaseMESSAGE):
         This method handles the error that occurred during the execution of the function.
         Returns `True` if error was handled.
 
-        Slow mode period handling:
-        When the period is lower than the remaining time, the framework will start
-        incrementing the original period by original period until it is larger then
-        the slow mode remaining time.
-
         Parameters
         -----------
         channel: Union[discord.TextChannel, discord.Thread]
@@ -524,7 +525,7 @@ class TextMESSAGE(BaseMESSAGE):
 
     @typechecked
     @misc._async_safe("update_semaphore")
-    async def update(self, _init_options: Optional[dict] = {}, _init = True, **kwargs: Any):
+    async def update(self, _init_options: Optional[dict] = None, _init = True, **kwargs: Any):
         """
         .. versionadded:: v2.0
 
@@ -561,7 +562,7 @@ class TextMESSAGE(BaseMESSAGE):
         else:
             kwargs["channels"] = [x.id for x in self.channels]
 
-        if not len(_init_options):
+        if _init_options is None:
             _init_options = {"parent": self.parent}
 
         await misc._update(self, init_options=_init_options, _init=_init, **kwargs)
@@ -657,7 +658,7 @@ class DirectMESSAGE(BaseMESSAGE):
                  end_period: Union[int, timedelta],
                  data: Union[str, discord.Embed, FILE, Iterable[Union[str, discord.Embed, FILE]], _FunctionBaseCLASS],
                  mode: Optional[Literal["send", "edit", "clear-send"]] = "send",
-                 start_in: Optional[Union[timedelta, datetime]] = datetime.now(),
+                 start_in: Optional[Union[timedelta, datetime]] = timedelta(seconds=0),
                  remove_after: Optional[Union[int, timedelta, datetime]] = None):
         super().__init__(start_period, end_period, data, start_in, remove_after)
         self.mode = mode
@@ -877,7 +878,7 @@ class DirectMESSAGE(BaseMESSAGE):
 
     @typechecked
     @misc._async_safe("update_semaphore")
-    async def update(self, _init_options: Optional[dict] = {}, _init = True, **kwargs):
+    async def update(self, _init_options: Optional[dict] = None, _init = True, **kwargs):
         """
         .. versionadded:: v2.0
 
@@ -907,7 +908,7 @@ class DirectMESSAGE(BaseMESSAGE):
         if "data" not in kwargs:
             kwargs["data"] = self._data
 
-        if not len(_init_options):
+        if _init_options is None:
             _init_options = {"parent": self.parent}
 
         await misc._update(self, init_options=_init_options, _init=_init, **kwargs)

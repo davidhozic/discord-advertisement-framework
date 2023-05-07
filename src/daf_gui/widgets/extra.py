@@ -12,6 +12,7 @@ import ttkbootstrap as ttk
 import tkinter as tk
 import ttkbootstrap.dialogs.dialogs as tkdiag
 import tkinter.filedialog as tkfile
+from ttkbootstrap.tooltip import ToolTip
 
 import datetime as dt
 
@@ -107,6 +108,7 @@ def setup_additional_live_update(w: ttk.Button, frame):
         async_execute(old.real_object.update(**values), parent_window=frame.origin_window)
 
     w.configure(command=_callback)
+    ToolTip(w, "Update the actual object with new parameters (taken from this window)", topmost=True)
     w.pack(side="right")
 
 
@@ -122,6 +124,7 @@ def setup_additional_live_refresh(w: ttk.Button, frame):
         frame.save_gui_values()
 
     w.configure(command=_callback)
+    ToolTip(w, "Load updated values from the object into the window", topmost=True)
     w.pack(side="right", padx=dpi_scaled(2))
 
 

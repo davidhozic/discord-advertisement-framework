@@ -114,7 +114,7 @@ class VoiceMESSAGE(BaseMESSAGE):
                  data: Union[AUDIO, Iterable[AUDIO], _FunctionBaseCLASS],
                  channels: Union[Iterable[Union[int, discord.VoiceChannel]], AutoCHANNEL],
                  volume: Optional[int] = 50,
-                 start_in: Optional[Union[timedelta, datetime]] = datetime.now(),
+                 start_in: Optional[Union[timedelta, datetime]] = timedelta(seconds=0),
                  remove_after: Optional[Union[int, timedelta, datetime]] = None):
 
         if not dtypes.GLOBALS.voice_installed:
@@ -387,7 +387,7 @@ class VoiceMESSAGE(BaseMESSAGE):
 
     @typechecked
     @misc._async_safe("update_semaphore")
-    async def update(self, _init_options: Optional[dict] = {}, _init = True, **kwargs):
+    async def update(self, _init_options: Optional[dict] = None, _init = True, **kwargs):
         """
         .. versionadded:: v2.0
 
@@ -424,7 +424,7 @@ class VoiceMESSAGE(BaseMESSAGE):
         else:
             kwargs["channels"] = [x.id for x in self.channels]
 
-        if not len(_init_options):
+        if _init_options is None:
             _init_options = {"parent": self.parent}
 
         await misc._update(self, init_options=_init_options, _init=_init, **kwargs)

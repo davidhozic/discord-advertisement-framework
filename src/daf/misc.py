@@ -37,7 +37,7 @@ def _write_attr_once(obj: Any, name: str, value: Any):
         setattr(obj, name, value)
 
 
-async def _update(obj: Any, *, init_options: dict = {}, _init = True, **kwargs):
+async def _update(obj: Any, *, init_options: dict = None, _init = True, **kwargs):
     """
     .. versionadded:: v2.0
 
@@ -73,6 +73,9 @@ async def _update(obj: Any, *, init_options: dict = {}, _init = True, **kwargs):
     Other
         Raised from .initialize() method.
     """
+    if init_options is None:
+        init_options = {}
+
     # Retrieves list of call args
     init_keys = getfullargspec(obj.__init__.__wrapped__ if hasattr(obj.__init__, "__wrapped__") else obj.__init__).args
     init_keys.remove("self")
