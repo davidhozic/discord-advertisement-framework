@@ -178,9 +178,9 @@ class LoggerCSV(LoggerBASE):
     Parameters
     ----------------
     path: str
-        Path to the folder where logs will be saved.
+        Path to the folder where logs will be saved. Defaults to /<user-home>/daf/History
     delimiter: str
-        The delimiter between columns to use.
+        The delimiter between columns to use. Defaults to ';'
     fallback: Optional[LoggerBASE]
         The manager to use, in case saving using this manager fails.
 
@@ -190,7 +190,12 @@ class LoggerCSV(LoggerBASE):
         Something went wrong at OS level (insufficient permissions?)
         and fallback failed as well.
     """
-    def __init__(self, path: str, delimiter: str, fallback: Optional[LoggerBASE] = None) -> None:
+    def __init__(
+        self,
+        path: str = str(pathlib.Path.home().joinpath("daf/History")),
+        delimiter: str = ';',
+        fallback: Optional[LoggerBASE] = None
+    ) -> None:
         self.path = path
         self.delimiter = delimiter
         super().__init__(fallback)
@@ -261,8 +266,8 @@ class LoggerJSON(LoggerBASE):
 
     Parameters
     ----------------
-    path: str
-        Path to the folder where logs will be saved.
+    path: Optional[str]
+        Path to the folder where logs will be saved. Defaults to /<user-home>/daf/History
     fallback: Optional[LoggerBASE]
         The manager to use, in case saving using this manager fails.
 
@@ -272,7 +277,11 @@ class LoggerJSON(LoggerBASE):
         Something went wrong at OS level (insufficient permissions?)
         and fallback failed as well.
     """
-    def __init__(self, path: str, fallback: Optional[LoggerBASE] = None) -> None:
+    def __init__(
+        self,
+        path: str = str(pathlib.Path.home().joinpath("daf/History")),
+        fallback: Optional[LoggerBASE] = None
+    ) -> None:
         self.path = path
         super().__init__(fallback)
 

@@ -258,7 +258,7 @@ class LoggerSQL(logging.LoggerBASE):
         if fallback is Ellipsis:
             # Cannot use None as this can be a legit user value
             # and cannot pass directly due to Sphinx issues
-            fallback = logging.LoggerJSON("History")
+            fallback = logging.LoggerJSON()
 
         if dialect is None:
             dialect = "sqlite"

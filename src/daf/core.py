@@ -147,7 +147,7 @@ async def initialize(user_callback: Optional[Union[Callable, Coroutine]] = None,
     # Initialize logging
     # ------------------------------------------------------------
     if logger is None:
-        logger = logging.LoggerJSON(path=str(Path.home().joinpath("daf/History")))
+        logger = logging.LoggerJSON()
 
     await logging.initialize(logger)
     # ------------------------------------------------------------

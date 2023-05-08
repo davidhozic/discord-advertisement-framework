@@ -95,7 +95,11 @@ def setup_additional_widget_file_chooser_logger(w: ttk.Button, frame):
 
 def setup_additional_live_update(w: ttk.Button, frame):
     # Don't have a bound object instance
-    if frame.old_object_info is None or frame.old_object_info.real_object is None:
+    if (
+        (oi := frame.old_object_info) is None or
+        (ro := oi.real_object) is None or
+        getattr(ro, "parent", False) is None
+    ):
         return
 
     def _callback(*args):
@@ -114,7 +118,11 @@ def setup_additional_live_update(w: ttk.Button, frame):
 
 def setup_additional_live_refresh(w: ttk.Button, frame):
     # Don't have a bound object instance
-    if frame.old_object_info is None or frame.old_object_info.real_object is None:
+    if (
+        (oi := frame.old_object_info) is None or
+        (ro := oi.real_object) is None or
+        getattr(ro, "parent", False) is None
+    ):
         return
 
     def _callback(*args):
@@ -146,6 +154,7 @@ for name in dir(daf):
     if hasattr(item, "update"):
         if item not in ADDITIONAL_WIDGETS:
             ADDITIONAL_WIDGETS[item] = []
+
         ADDITIONAL_WIDGETS[item].extend([
             AdditionalWidget(ttk.Button, setup_additional_live_update, text="Live update"),
             AdditionalWidget(ttk.Button, setup_additional_live_refresh, text="Refresh")
