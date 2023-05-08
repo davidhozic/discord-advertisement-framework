@@ -144,10 +144,12 @@ for name in dir(daf):
         continue
 
     if hasattr(item, "update"):
-        ADDITIONAL_WIDGETS[item] = [
+        if item not in ADDITIONAL_WIDGETS:
+            ADDITIONAL_WIDGETS[item] = []
+        ADDITIONAL_WIDGETS[item].extend([
             AdditionalWidget(ttk.Button, setup_additional_live_update, text="Live update"),
             AdditionalWidget(ttk.Button, setup_additional_live_refresh, text="Refresh")
-        ]
+        ])
 
 
 __all__ = list(globals().keys())
