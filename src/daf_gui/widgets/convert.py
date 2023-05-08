@@ -5,6 +5,7 @@ Modules contains definitions related to GUI object transformations.
 from typing import Any, Union, List, get_type_hints
 from contextlib import suppress
 from enum import Enum
+from inspect import signature
 
 import decimal
 import datetime as dt
@@ -233,13 +234,20 @@ def convert_to_object_info(object_: object, save_original = False, cache = False
     """
     def _convert_object_info(object_, save_original, object_type, attrs):
         data_conv = {}
-
         for k, v in attrs.items():
             with suppress(Exception):
                 if callable(v):
                     value = v(object_)
                 else:
                     value = getattr(object_, v)
+
+                # Check if object is a singleton that is not builtin.
+                # Singletons should not be stored as they would get recreated causing issues on save -> load.
+                type_value = type(value)
+                with suppress(ValueError):  # Some don't have a signature
+                    if type_value.__name__ not in __builtins__ and not len(signature(type_value).parameters):
+                        continue
+
                 if value is object_:
                     data_conv[k] = value
                 else:

@@ -1099,7 +1099,11 @@ class LoggerSQL(logging.LoggerBASE):
             return await self.__analytic_get_counts(
                 session,
                 group_by,
-                [InviteLOG.invite_id],
+                [
+                    Invite.discord_id,
+                    GuildUSER.snowflake_id,
+                    GuildUSER.name,
+                ],
                 conditions,
                 limit,
                 sort_by,
