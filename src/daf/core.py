@@ -5,16 +5,21 @@
 """
 from typing import Callable, Coroutine, List, Optional, Union, overload
 from typeguard import typechecked
+from pathlib import Path
 
 from .logging.tracing import TraceLEVELS, trace
-from .logging import sql, _logging as logging, tracing
+from .logging import _logging as logging, tracing
 
 from . import guild
 from . import client
 from . import misc
 from . import message
+from . import convert
 
 import asyncio
+import shutil
+import os
+import pickle
 import _discord as discord
 
 
@@ -23,15 +28,17 @@ __all__ = (
     "shutdown",
     "add_object",
     "remove_object",
-    "get_guild_user",
     "get_accounts",
     "initialize"
 )
 
 
 # -------------- CONSTANTS --------------
-TASK_CLEANUP_SLEEP_SEC = 1
-
+CORE_TASK_SLEEP_SEC = 0.1
+ACCOUNT_CLEANUP_DELAY = 10
+SCHEMA_BACKUP_DELAY = 120
+DAF_PATH = Path.home().joinpath("daf")
+SHILL_LIST_BACKUP_PATH = DAF_PATH.joinpath("objects.sbf")  # sbf -> Schema Backup File
 # ---------------------------------------
 
 
@@ -40,35 +47,81 @@ class GLOBALS:
     Storage class used for holding global variables.
     """
     accounts: List[client.ACCOUNT] = []
-    cleanup_task: asyncio.Task = None
+    tasks: List[asyncio.Task] = []
     running: bool = True
+    save_to_file: bool = False
+
+    cleanup_event = asyncio.Event()
+    schema_backup_event = asyncio.Event()
 
 
-async def cleanup_accounts():
+async def cleanup_accounts_task():
     """
     Task for cleaning up closed accounts.
-    TODO (in future): Instead of sleeping, subscribe to event.
     """
+    loop = asyncio.get_event_loop()
+    event = GLOBALS.cleanup_event
     while GLOBALS.running:
+        loop.call_later(ACCOUNT_CLEANUP_DELAY, event.set)
+        await event.wait()
+        event.clear()
         for account in get_accounts():
             if account.deleted:
                 await remove_object(account)
 
-        await asyncio.sleep(TASK_CLEANUP_SLEEP_SEC)
+
+async def schema_backup_task():
+    """
+    Task for backing up the SCHEMA
+    """
+    loop = asyncio.get_event_loop()
+    event = GLOBALS.schema_backup_event
+    while GLOBALS.running:
+        loop.call_later(SCHEMA_BACKUP_DELAY, event.set)
+        await event.wait()
+        event.clear()
+        DAF_PATH.mkdir(parents=True, exist_ok=True)
+        tmp_path = str(SHILL_LIST_BACKUP_PATH) + ".1"
+        trace("Saving objects to file.", TraceLEVELS.DEBUG)
+        try:
+            with open(tmp_path, "wb") as writer:
+                pickle.dump(convert.convert_to_dict(GLOBALS.accounts), writer)
+
+            shutil.copyfile(tmp_path, SHILL_LIST_BACKUP_PATH)
+            os.remove(tmp_path)
+        except Exception as exc:
+            trace("Unable to save objects to file.", TraceLEVELS.ERROR, exc)
+
+
+async def schema_load_from_file() -> None:
+    """
+    Restores the saved shilling list from file.
+    """
+    if not SHILL_LIST_BACKUP_PATH.exists():
+        return
+
+    trace("Restoring objects from file...", TraceLEVELS.NORMAL)
+    with open(SHILL_LIST_BACKUP_PATH, "rb") as reader:
+        accounts = convert.convert_from_dict(pickle.load(reader))
+
+    trace("Updating accounts.", TraceLEVELS.DEBUG)
+    for account in accounts:
+        try:
+            await account.update(_init=False)  # Refresh without __init__ call
+            GLOBALS.accounts.append(account)
+        except Exception as exc:
+            trace(f"Unable to restore account {account}", TraceLEVELS.ERROR, exc)
+            GLOBALS.accounts.remove(account)
+
+    trace(f"Restored objects from file ({len(GLOBALS.accounts)} accounts).", TraceLEVELS.NORMAL)
 
 
 @misc.doc_category("DAF control reference")
-async def initialize(token: Optional[str] = None,
-                     server_list: Optional[List[Union[guild.GUILD, guild.USER, guild.AutoGUILD]]] = None,
-                     is_user: Optional[bool] = False,
-                     user_callback: Optional[Union[Callable, Coroutine]] = None,
-                     server_log_output: Optional[str] = None,
-                     sql_manager: Optional[sql.LoggerSQL] = None,
-                     intents: Optional[discord.Intents] = None,
-                     debug: Optional[Union[TraceLEVELS, int, str, bool]] = TraceLEVELS.NORMAL,
-                     proxy: Optional[str] = None,
+async def initialize(user_callback: Optional[Union[Callable, Coroutine]] = None,
+                     debug: Optional[Union[TraceLEVELS, int, str]] = TraceLEVELS.NORMAL,
                      logger: Optional[logging.LoggerBASE] = None,
-                     accounts: Optional[List[client.ACCOUNT]] = []) -> None:
+                     accounts: List[client.ACCOUNT] = None,
+                     save_to_file: bool = False) -> None:
     """
     The main initialization function.
     It initializes all the other modules, creates advertising tasks
@@ -81,13 +134,11 @@ async def initialize(token: Optional[str] = None,
         Parameters are the same as in :func:`daf.core.run`.
     """
     loop = asyncio.get_event_loop()
+    if accounts is None:
+        accounts = []
     # ------------------------------------------------------------
     # Initialize tracing
     # ------------------------------------------------------------
-    if isinstance(debug, bool):
-        trace("Using bool for debug parameter is DEPRECATED. Use daf.logging.TraceLEVELS", TraceLEVELS.DEPRECATED)
-        debug = TraceLEVELS.NORMAL if debug else TraceLEVELS.DEPRECATED
-
     if debug is None:
         debug = TraceLEVELS.NORMAL
 
@@ -95,26 +146,8 @@ async def initialize(token: Optional[str] = None,
     # ------------------------------------------------------------
     # Initialize logging
     # ------------------------------------------------------------
-    # --------------- DEPRECATED -------------------- #
-    if server_log_output is not None:
-        if logger is None:
-            trace("Using 'server_log_output' is planned for removal.\n"
-                  "Use logger=LoggerJSON(path=\"{server_log_output}\") instead.",
-                  TraceLEVELS.DEPRECATED)
-            logger = logging.LoggerJSON(path=server_log_output)
-        else:
-            trace("'logger' parameter was passed, ignoring server_log_output", TraceLEVELS.WARNING)
-
-    if sql_manager is not None:
-        if logger is None:
-            trace("'sql_manager' is scheduled for removal\nUse logger=LoggerSQL(...) instead.",
-                  TraceLEVELS.DEPRECATED)
-            logger = sql_manager
-        else:
-            trace("logger parameter was passed, ignoring sql_manager", TraceLEVELS.WARNING)
-    # ----------------------------------------------- #
     if logger is None:
-        logger = logging.LoggerJSON(path="History")
+        logger = logging.LoggerJSON()
 
     await logging.initialize(logger)
     # ------------------------------------------------------------
@@ -122,14 +155,13 @@ async def initialize(token: Optional[str] = None,
     # ------------------------------------------------------------
     # Initialize accounts
     # ------------------------------------------------------------
-    # ------------- DEPRECATED -----------------
-    if token is not None:
-        trace("Passing the token argument directly is deprecated since v2.4 where support\n"
-              "for multiple accounts was added. Please use the ``accounts`` parameter",
-              TraceLEVELS.DEPRECATED)
+    # Load from file
+    if save_to_file:
+        try:
+            await schema_load_from_file()
+        except Exception as exc:
+            trace("Unable to load from file", TraceLEVELS.ERROR, exc)
 
-        accounts.append(client.ACCOUNT(token=token, is_user=is_user, intents=intents, proxy=proxy, servers=server_list))
-    # ------------------------------------------
     for account in accounts:
         try:
             await add_object(account)
@@ -145,8 +177,12 @@ async def initialize(token: Optional[str] = None,
             loop.create_task(user_callback)
 
     # Create account cleanup task (account self-deleted)
-    GLOBALS.cleanup_task = loop.create_task(cleanup_accounts())
+    GLOBALS.tasks.append(loop.create_task(cleanup_accounts_task()))
+    if save_to_file:  # Backup shilling list to pickle file
+        GLOBALS.tasks.append(loop.create_task(schema_backup_task()))
+
     GLOBALS.running = True
+    GLOBALS.save_to_file = save_to_file
     trace("Initialization complete.", TraceLEVELS.NORMAL)
 
 
@@ -197,9 +233,6 @@ async def add_object(obj: Union[guild.USER, guild.GUILD, guild.AutoGUILD],
         The object provided is not supported for addition.
     TypeError
         Invalid parameter type.
-    RuntimeError
-        When using deprecated method of adding items to the shill list,
-        no accounts were available.
     Other
         Raised in the obj.initialize() method
     """
@@ -211,11 +244,6 @@ async def add_object(obj: Union[guild.USER, guild.GUILD, guild.AutoGUILD],
 async def add_object(obj: Union[message.DirectMESSAGE, message.TextMESSAGE, message.VoiceMESSAGE],
                      snowflake: Union[guild.GUILD, guild.USER]) -> None:
     """
-    .. deprecated:: v2.4
-
-        Using int, discord.* objects in the snowflake parameter.
-        This functionality is planned for removal in v2.5.
-
     Adds a message to the daf.
 
     Parameters
@@ -253,16 +281,6 @@ async def add_object(obj, snowflake=None):
         await obj.initialize()
         GLOBALS.accounts.append(obj)
     elif isinstance(obj, (guild._BaseGUILD, guild.AutoGUILD)):
-        if snowflake is None:
-            # Compatibility with prior versions of v2.4
-            trace("Directly adding guild like objects to the framework is deprecated since v2.4 (multi-account support)\n"
-                  "The object will be added to the first account in the list. Update your code to pass ``snowflake`` with :class:`~daf.client.ACCOUNT`",
-                  TraceLEVELS.DEPRECATED)
-            try:
-                snowflake = GLOBALS.accounts[0]
-            except IndexError as exc:
-                raise RuntimeError("No accounts are running in the framework") from exc
-
         if not isinstance(snowflake, client.ACCOUNT):
             raise TypeError("snowflake parameter type must be ACCOUNT when the obj parameter type is guild like.")
 
@@ -273,16 +291,7 @@ async def add_object(obj, snowflake=None):
             raise ValueError("snowflake parameter (guild-like) is required to add a message.")
 
         if not isinstance(snowflake, (guild.AutoGUILD, guild._BaseGUILD)):
-            # --------- DEPRECATED ----------- #
-            # TODO: remove in v2.5, uncomment TypError
-            snowflake = get_guild_user(snowflake)
-            trace("Using int or discord.* objects is deprecated for the snowflake parameter of add_object.\n"
-                  "It is planned for removal in version v2.5!",
-                  TraceLEVELS.DEPRECATED)
-            if snowflake is None:
-                raise ValueError("The GUILD/USER with specified snowflake could not be found.")
-            # -------------------------------- #
-            # raise TypeError("snowflake parameter must be one of: guild.AutoGUILD, guild.GUILD, guild.USER")
+            raise TypeError("snowflake parameter must be one of: guild.AutoGUILD, guild.GUILD, guild.USER")
 
         await snowflake.add_message(obj)
 
@@ -335,45 +344,6 @@ async def remove_object(
         GLOBALS.accounts.remove(snowflake)
 
 
-@typechecked
-def get_guild_user(
-    snowflake: Union[int, discord.Object, discord.Guild, discord.User, discord.Object]
-) -> Union[guild.GUILD, guild.USER, None]:
-    """
-    TODO: Remove in v2.5
-    .. deprecated:: v2.4
-
-    Retrieves the GUILD/USER object that has the ``snowflake`` ID from the shilling list.
-
-    Parameters
-    -------------
-    snowflake: Union[int, discord.Object, discord.Guild, discord.User, discord.Object]
-        Snowflake ID or discord objects containing snowflake id of the GUILD.
-
-    Raises
-    ---------------
-    TypeError
-        Incorrect snowflake type
-
-    Returns
-    ---------------
-    :class:`daf.guild.GUILD` | :class:`daf.guild.USER`
-        The object requested.
-    None
-        If not guild/user not in the shilling list.
-    """
-
-    trace("This function is planned for removal in the future. Use ACCOUNT.get_server method instead!", TraceLEVELS.DEPRECATED)
-    if isinstance(snowflake, int):
-        snowflake = discord.Object(snowflake)
-
-    for guild in GLOBALS.accounts[0]._servers:
-        if guild.snowflake == snowflake.id:
-            return guild
-
-    return None
-
-
 @misc.doc_category("Clients")
 def get_accounts() -> List[client.ACCOUNT]:
     """
@@ -389,9 +359,9 @@ def get_accounts() -> List[client.ACCOUNT]:
 
 @typechecked
 @misc.doc_category("DAF control reference")
-async def shutdown(loop: Optional[asyncio.AbstractEventLoop] = None, stop_loop: Optional[bool] = False) -> None:
+async def shutdown() -> None:
     """
-    Stops the framework.
+    Stops and cleans the framework.
 
     Parameters
     ----------
@@ -402,20 +372,19 @@ async def shutdown(loop: Optional[asyncio.AbstractEventLoop] = None, stop_loop: 
     stop_loop: Optional[bool]
         Default: False; If True, it stops the running event loop.
     """
-
-    trace("Shutting down")
+    trace("Shutting down...", TraceLEVELS.NORMAL)
     GLOBALS.running = False
-    await GLOBALS.cleanup_task
+    # Signal events for tasks to raise out of sleep
+    GLOBALS.cleanup_event.set()
+    GLOBALS.schema_backup_event.set()  # This also saves one last time, so manually saving is not needed
+    for task in GLOBALS.tasks:  # Wait for core tasks to finish
+        await task
+
     for account in GLOBALS.accounts:
         await account._close()
 
     GLOBALS.accounts.clear()
-
-    if stop_loop:
-        if loop is None:
-            loop = asyncio.get_event_loop()
-
-        loop.stop()
+    trace("Shutdown complete.", TraceLEVELS.NORMAL)
 
 
 def _shutdown_clean(loop: asyncio.AbstractEventLoop) -> None:
@@ -428,60 +397,33 @@ def _shutdown_clean(loop: asyncio.AbstractEventLoop) -> None:
     loop: asyncio.AbstractEventLoop
         The loop to stop.
     """
-    GLOBALS.running = False
-    for account in GLOBALS.accounts:
-        loop.run_until_complete(account._close())
-
-    if GLOBALS.cleanup_task is not None:
-        loop.run_until_complete(GLOBALS.cleanup_task)
+    loop.run_until_complete(shutdown())
 
 
 @typechecked
 @misc.doc_category("DAF control reference")
-def run(token: Optional[str] = None,
-        server_list: Optional[List[Union[guild.GUILD, guild.USER, guild.AutoGUILD]]] = None,
-        is_user: Optional[bool] = False,
-        user_callback: Optional[Union[Callable, Coroutine]] = None,
-        server_log_output: Optional[str] = None,
-        sql_manager: Optional[sql.LoggerSQL] = None,
-        intents: Optional[discord.Intents] = None,
+def run(user_callback: Optional[Union[Callable, Coroutine]] = None,
         debug: Optional[Union[TraceLEVELS, int, str, bool]] = TraceLEVELS.NORMAL,
-        proxy: Optional[str] = None,
         logger: Optional[logging.LoggerBASE] = None,
-        accounts: Optional[List[client.ACCOUNT]] = []) -> None:
+        accounts: Optional[List[client.ACCOUNT]] = None,
+        save_to_file: bool = False) -> None:
     """
+    .. versionchanged:: 2.7
+
+       Removed deprecated parameters (see :ref:`v2.7`)
+
     Runs the framework and does not return until the framework is stopped (:func:`daf.core.shutdown`).
     After stopping, it returns None.
 
-    .. warning::
-        This will block until the framework is stopped, if you want manual control over the
-        asyncio event loop, eg. you want to start the framework as a task, use
-        the :func:`daf.core.initialize` coroutine.
-
-
-    .. versionchanged:: v2.4
-        Added ``accounts`` parameter.
-
-    .. deprecated:: v2.4
-
-        .. card::
-
-            The following parameters were deprecated in favor of support for multiple accounts
-            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-            - token
-            - is_user
-            - server_list
-            - intents
-            - proxy
-            +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-            The above parameters should be passed to :class:`~daf.client.ACCOUNT`.
-
+    This will block until the framework is stopped, if you want manual control over the
+    asyncio event loop, eg. you want to start the framework as a task, use
+    the :func:`daf.core.initialize` coroutine.
 
     Parameters
     ---------------
     user_callback: Optional[Union[Callable, Coroutine]]
         Function or async function to call after the framework has been started.
-    debug : Optional[TraceLEVELS | int | str] = TraceLEVELS.NORMAL
+    debug: Optional[TraceLEVELS | int | str] = TraceLEVELS.NORMAL
         .. versionchanged:: v2.3
             Deprecate use of bool (assume TraceLEVELS.NORMAL).
             Add support for TraceLEVELS or int or str that converts to TraceLEVELS.
@@ -490,11 +432,22 @@ def run(token: Optional[str] = None,
         The higher value this option is, the more will be displayed.
     logger: Optional[loggers.LoggerBASE]
         The logging class to use.
-        If this is not provided, JSON is automatically used.
+        If this is not provided, JSON is automatically used with the ``path`` parameter set to /<user-home-dir>/daf/History
     accounts: Optional[List[client.ACCOUNT]]
-        .. versionadded:: v2.4
-
         List of :class:`~daf.client.ACCOUNT` (Discord accounts) to use.
+        .. versionadded:: v2.4
+    save_to_file: Optional[bool]
+        If ``True``, the shilling list (of accounts, guilds, messages, ...) will be saved to file
+        and preserved on shutdown.
+
+        It is recommended you set this to ``False`` when passing
+        :func:`~daf.core.run` or :func:`~daf.core.initialize` the statically defined ``accounts`` parameter.
+
+        .. note::
+
+            Setting this to True and passing the ``accounts`` parameter as well, results in
+            *Account already added* warnings.
+
 
     Raises
     ---------------

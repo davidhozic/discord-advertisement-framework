@@ -9,6 +9,7 @@ from .guild import *
 from .message import *
 from .logging import *
 from .web import *
+from .convert import *
 
 
 
@@ -17,4 +18,4 @@ if DOCUMENTATION_MODE:
     from .misc import *
 
 
-VERSION = "2.6.3"
+VERSION = "2.7.0"

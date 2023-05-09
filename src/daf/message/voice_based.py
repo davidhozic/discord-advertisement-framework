@@ -37,14 +37,11 @@ class VoiceMESSAGE(BaseMESSAGE):
 
     .. deprecated:: v2.1
 
-        - start_in (start_now) - Using bool value to dictate whether the message should be sent at framework start.
         - start_period, end_period - Using int values, use ``timedelta`` object instead.
 
-    .. versionchanged:: v2.1
+    .. versionchanged:: v2.7
 
-        - start_period, end_period Accept timedelta objects.
-        - start_now - renamed into ``start_in`` which describes when the message should be first sent.
-        - removed ``deleted`` property
+        *start_in* now accepts datetime object
 
     Parameters
     ------------
@@ -90,8 +87,9 @@ class VoiceMESSAGE(BaseMESSAGE):
         Channels that it will be advertised into (Can be snowflake ID or channel objects from PyCord).
     volume: Optional[int]
         The volume (0-100%) at which to play the audio. Defaults to 50%. This was added in v2.0.0
-    start_in: Optional[timedelta]
+    start_in: Optional[timedelta | datetime]
         When should the message be first sent.
+        *timedelta* means the difference from current time, while *datetime* means actual first send time.
     remove_after: Optional[Union[int, timedelta, datetime]]
         Deletes the message after:
 
@@ -106,6 +104,7 @@ class VoiceMESSAGE(BaseMESSAGE):
         "end_period",
         "volume",
         "channels",
+        *BaseMESSAGE.__slots__
     )
 
     @typechecked
@@ -115,7 +114,7 @@ class VoiceMESSAGE(BaseMESSAGE):
                  data: Union[AUDIO, Iterable[AUDIO], _FunctionBaseCLASS],
                  channels: Union[Iterable[Union[int, discord.VoiceChannel]], AutoCHANNEL],
                  volume: Optional[int] = 50,
-                 start_in: Optional[Union[timedelta, bool]] = timedelta(seconds=0),
+                 start_in: Optional[Union[timedelta, datetime]] = timedelta(seconds=0),
                  remove_after: Optional[Union[int, timedelta, datetime]] = None):
 
         if not dtypes.GLOBALS.voice_installed:
@@ -252,6 +251,9 @@ class VoiceMESSAGE(BaseMESSAGE):
         ValueError
             No valid channels were passed to object"
         """
+        if parent is None:
+            return
+
         ch_i = 0
         self.parent = parent
         cl = parent.parent.client
@@ -385,7 +387,7 @@ class VoiceMESSAGE(BaseMESSAGE):
 
     @typechecked
     @misc._async_safe("update_semaphore")
-    async def update(self, _init_options: Optional[dict] = {}, **kwargs):
+    async def update(self, _init_options: Optional[dict] = None, _init = True, **kwargs):
         """
         .. versionadded:: v2.0
 
@@ -410,17 +412,19 @@ class VoiceMESSAGE(BaseMESSAGE):
         """
         if "start_in" not in kwargs:
             # This parameter does not appear as attribute, manual setting necessary
-            kwargs["start_in"] = timedelta(seconds=0)
+            kwargs["start_in"] = self.next_send_time
 
         if "data" not in kwargs:
             kwargs["data"] = self._data
 
-        if "channels" not in kwargs and not isinstance(self.channels, AutoCHANNEL):
+        channels = kwargs.get("channels", self.channels)
+        if isinstance(channels, AutoCHANNEL):
+            kwargs["channels"] = channels
+            await channels.update(_init=_init)
+        else:
             kwargs["channels"] = [x.id for x in self.channels]
 
-        if not len(_init_options):
+        if _init_options is None:
             _init_options = {"parent": self.parent}
 
-        await misc._update(self, init_options=_init_options, **kwargs)  # No additional modifications are required
-        if isinstance(self.channels, AutoCHANNEL):
-            await self.channels.update()
+        await misc._update(self, init_options=_init_options, _init=_init, **kwargs)

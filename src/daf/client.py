@@ -19,7 +19,7 @@ import copy
 #######################################################################
 # Globals
 #######################################################################
-LOGIN_TIMEOUT_S = 30
+LOGIN_TIMEOUT_S = 15
 TOKEN_MAX_PRINT_LEN = 5
 TASK_SLEEP_DELAY_S = 0.100
 TASK_STARTUP_DELAY_S = 2
@@ -27,7 +27,6 @@ TASK_STARTUP_DELAY_S = 2
 
 __all__ = (
     "ACCOUNT",
-    "get_client"
 )
 
 
@@ -134,6 +133,7 @@ class ACCOUNT:
         # If intents not passed, enable default
         if intents is None:
             intents = discord.Intents.default()
+            intents.members = True
 
         self.intents = intents
         self._running = False
@@ -272,6 +272,27 @@ class ACCOUNT:
             except Exception as exc:
                 trace("Unable to add server.", TraceLEVELS.ERROR, exc)
 
+        # Invite link tracking
+        async def on_member_join(member: discord.Member):
+            server = self.get_server(member.guild)
+            if server is not None:
+                await server._on_member_join(member)
+
+        async def on_invite_delete(invite: discord.Invite):
+            guild_id = invite.guild.id
+            server = self.get_server(guild_id)
+            if server is None:  # Try AutoGUILDS
+                for autoserver in self._autoguilds:
+                    server = autoserver._get_server(guild_id)
+                    if server is not None:
+                        break
+
+            if server is not None:
+                await server._on_invite_delete(invite)
+
+        self._client.event(on_member_join)
+        self._client.event(on_invite_delete)
+
         self._uiservers.clear()  # Only needed for predefined initialization
         self.tasks.append(asyncio.create_task(self._loop()))
         self._running = True
@@ -339,7 +360,7 @@ class ACCOUNT:
     @typechecked
     def get_server(
         self,
-        snowflake: Union[int, discord.Guild, discord.User, discord.Object]
+        snowflake: Union[int, discord.Guild, discord.User, discord.Object],
     ) -> Union[guild.GUILD, guild.USER, None]:
         """
         Retrieves the server based on the snowflake id or discord API object.
@@ -356,11 +377,11 @@ class ACCOUNT:
         None
             The object was not found.
         """
-        if isinstance(snowflake, int):
-            snowflake = discord.Object(snowflake)
+        if not isinstance(snowflake, int):
+            snowflake = snowflake.id
 
         for server in self._servers:
-            if server.snowflake == snowflake.id:
+            if server.snowflake == snowflake:
                 return server
 
         return None
@@ -423,7 +444,7 @@ class ACCOUNT:
             await __loop()
             await asyncio.sleep(TASK_SLEEP_DELAY_S)
 
-    async def update(self, **kwargs):
+    async def update(self, _init = True, **kwargs):
         """
         Updates the object with new parameters and afterwards updates all lower layers (GUILD->MESSAGE->CHANNEL).
 
@@ -432,37 +453,41 @@ class ACCOUNT:
         """
         @misc._async_safe("_update_sem", 1)
         async def _update(self_):
-            await misc._update(self, **kwargs)
+            servers = kwargs.pop("servers", self.servers)
+            kwargs["servers"] = []  # Servers are updated at the end
+            await misc._update(self, _init=_init, **kwargs)
 
-            for server in self.servers:
-                await server.update(init_options={"parent": self})
+            guilds = []
+            autoguilds = []
+            for server in servers:
+                await server.update(init_options={"parent": self}, _init=_init)
+                if isinstance(server, guild.AutoGUILD):
+                    autoguilds.append(server)
+                else:
+                    guilds.append(server)
 
-        await self._close()
+            self._servers = guilds
+            self._autoguilds = autoguilds
+
+        if self._running:
+            await self._close()
 
         selenium = self._selenium
-        if selenium is not None and "token" not in kwargs:
-            if "username" not in kwargs:
-                kwargs["username"] = selenium._username
-            if "password" not in kwargs:
-                kwargs["password"] = selenium._password
+        if "token" not in kwargs:
+            kwargs["token"] = self._token if selenium is None else None
+        if "username" not in kwargs:
+            kwargs["username"] = selenium._username if selenium is not None else None
+        if "password" not in kwargs:
+            kwargs["password"] = selenium._password if selenium is not None else None
 
-            kwargs["token"] = None
-        else:
-            kwargs["username"] = None
-            kwargs["password"] = None
+        if "intents" in kwargs:
+            intents: discord.Intents = kwargs["intents"]
+            if isinstance(intents, discord.Intents) and intents.value == 0:
+                kwargs["intents"] = None
 
-        await _update(self)
-
-
-def get_client() -> discord.Client:
-    """
-    TODO: remove in v2.5
-
-    .. deprecated:: v2.4
-
-    Returns the `CLIENT` object used for communicating with Discord.
-    """
-    trace("get_client is is planned for removal in v2.5. Please use ACCOUNT.client attribute instead.",
-          TraceLEVELS.DEPRECATED)
-    from . import core
-    return core.GLOBALS.accounts[0].client
+        try:
+            await _update(self)
+        except Exception as exc:
+            trace(f"Unable to update account {self}, restoring old data.", TraceLEVELS.ERROR, exc)
+            await self.update()
+            raise

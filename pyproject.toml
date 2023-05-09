@@ -47,8 +47,6 @@ file = [
     "requirements/web.txt"
 ]
 
-
-
 [tool.setuptools.packages.find]
 where = [
     "src"

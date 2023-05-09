@@ -36,10 +36,10 @@ Links
 ----------------------
 Key features
 ----------------------
-- Graphical Interface (GUI) / Console (script)
-- Multi-account support
 - Periodic and scheduled advertisements,
-- Logging and analytics of sent messages (including SQL) - :ref:`Logging (core)`
+- Message logging, invite link tracking & statistics
+- Multi-account support
+- Graphical Interface (GUI) / Console (script)
 - Easy to setup
 - Asynchronous
 
@@ -76,19 +76,19 @@ DAF can be installed though command prompt/terminal using the bottom commands.
 
                     pip install discord-advert-framework[voice]
 
-            .. tab-item:: Proxies
-
-                - .. code-block:: bash
-                    :caption: Proxy support
-
-                    pip install discord-advert-framework[proxy]
-
             .. tab-item:: SQL
                 
                 - .. code-block:: bash
                     :caption: SQL logging
 
                     pip install discord-advert-framework[sql]
+
+            .. tab-item:: Chrome integration
+
+                - .. code-block:: bash
+                     :caption: Chrome integration
+                     
+                     pip install discord-advert-framework[web]
 
             .. tab-item:: All
                 

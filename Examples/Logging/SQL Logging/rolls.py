@@ -1,5 +1,13 @@
+# Import the necessary items
+from daf.logging import LoggerSQL, LoggerJSON
+from daf.guild import GUILD
 from datetime import timedelta
+from daf.client import ACCOUNT
+from daf.message.base import AutoCHANNEL
+from daf.message.text_based import TextMESSAGE
+from daf.logging.tracing import TraceLEVELS
 import daf
+
 
 rolls = [
     "https://i.pinimg.com/originals/b7/fb/80/b7fb80122cf46d0e584f3a0768aef282.gif",
@@ -12,26 +20,58 @@ rolls = [
     "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
 ]
 
+
 @daf.data_function
 def get(st):
     item = st.pop(0)
     st.append(item)
     return item
 
+
+# Define the logger
+logger = LoggerSQL(
+    dialect="mysql",
+    database="mydatabase",
+    fallback=LoggerJSON(path="History")
+)
+
+# Defined accounts
 accounts = [
-    daf.ACCOUNT( token="SDASKDKLSADJKLSDJ",
-                 is_user=False,
-                 servers=[ 
-                    daf.GUILD(12345, [daf.TextMESSAGE(None, timedelta(seconds=5), get(rolls.copy()), [12345], "edit")], True) 
-                  ] )
+    ACCOUNT(
+        token="OTA5MzgyNDE3MDg3ODgxMjc2.YZDeXw.34V-TbQSsxJxx8Fu399Mafu8jDI",
+        is_user=False,
+        intents=None,
+        proxy=None,
+        servers=[
+            GUILD(
+                snowflake=863071397207212052,
+                messages=[
+                    TextMESSAGE(
+                        start_period=None,
+                        end_period=timedelta(
+                            seconds=5.0,
+                        ),
+                        data=get(rolls),
+                        channels=AutoCHANNEL(
+                            include_pattern="test",
+                        ),
+                    ),
+                ],
+                logging=True,
+                remove_after=None,
+                invite_track=[
+                    "5fYEEpak",
+                    "WxWdjKMp",
+                    "qDvbRF7C",
+                ],
+            ),
+        ],
+    ),
 ]
 
-
-
+# Run the framework (blocking)
 daf.run(
-    #logger=daf.LoggerSQL(dialect="mysql", username="user", password="pass", database="TestDB", server="127.0.0.1"),
-    logger=daf.LoggerSQL(dialect="postgresql", username="postgres", password="pass", database="TestDB", server="127.0.0.1"),
-    #logger=daf.LoggerSQL(dialect="mssql", username="sa", password="pass", database="TestDB", server="127.0.0.1"),
-    #logger=daf.LoggerSQL(dialect="sqlite", database="testdb"),
-    accounts=accounts
+    accounts=accounts,
+    logger=logger,
+    debug=TraceLEVELS.NORMAL
 )

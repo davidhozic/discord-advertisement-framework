@@ -7,7 +7,10 @@ SPHINXOPTS    ?=
 SPHINXBUILD   ?= sphinx-build
 SOURCEDIR     ?= source
 BUILDDIR      ?= build
+USE_LANGUAGE  ?= en
 
+
+_BUILD_DIR = $(BUILDDIR)/$(SOURCEDIR)
 
 # Put it first so that "make" without argument is like "make help".
 help:
@@ -23,9 +26,13 @@ clean:
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
 pdf: latex
-	docker run --rm -v $(CURDIR)/build/latex:/home/ -w /home/ texlive/texlive make all-pdf
+	docker run --rm -v $(CURDIR)/$(_BUILD_DIR)/latex:/home/ -w /home/ texlive/texlive make all-pdf
+	mkdir -p $(CURDIR)/$(_BUILD_DIR)/pdf/
+	cp $(CURDIR)/$(_BUILD_DIR)/latex/*.pdf $(CURDIR)/$(_BUILD_DIR)/pdf/
 
+
+export LANGUAGE=$(USE_LANGUAGE)
 
 %: Makefile
 	python3 ./setup.py
-	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(_BUILD_DIR)" $(SPHINXOPTS) $(O)

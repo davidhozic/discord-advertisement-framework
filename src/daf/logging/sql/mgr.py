@@ -1,26 +1,24 @@
 """
-    The sql module contains definitions related to the
-    relational database logging that is available in this shiller.
-    It is only used if the sql logging is enabled by passing
-    the daf.run function with the SqlCONTROLLER object.
+    The sql module contains definitions related to the relational database logging.
 
-    .. versionchanged:: v2.1
-        Made SQL an optional functionality
+    .. versionchanged:: v2.7
+        Added Discord invite link tracking.
 """
 from datetime import datetime, date
 from typing import Callable, Dict, List, Literal, Any, Union, Optional, Tuple
 from contextlib import suppress
+from pathlib import Path
 from typeguard import typechecked
 
-from .tracing import TraceLEVELS, trace
+from ..tracing import TraceLEVELS, trace
 
-from . import _logging as logging
+from .. import _logging as logging
 
 import json
 import copy
 import asyncio
 
-from .. import misc
+from ... import misc
 
 
 class GLOBALS:
@@ -45,9 +43,10 @@ DIALECT_CONN_MAP = {
 }
 # ------------------------------------ Optional ------------------------------------
 try:
+    from .tables import *
+
     from sqlalchemy import (
-        SmallInteger, Integer, BigInteger, DateTime,
-        Sequence, String, JSON, select, text, ForeignKey, func, case
+        Integer, String, select, text, func, case
     )
     from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
     from sqlalchemy.engine import URL as SQLURL, create_engine
@@ -55,16 +54,11 @@ try:
     from sqlalchemy.orm import (
         sessionmaker,
         Session,
-        DeclarativeBase,
-        mapped_column,
-        column_property,
-        relationship,
-        Mapped,
     )
     import sqlalchemy as sqa
+
     SQL_INSTALLED = True
 except ImportError:
-    DeclarativeBase = object
     AsyncSession = object
     Session = object
     SQLAlchemyError = Exception
@@ -75,6 +69,8 @@ except ImportError:
 
 __all__ = (
     "LoggerSQL",
+    "register_type",
+    "SQL_INSTALLED",
 )
 
 
@@ -112,22 +108,6 @@ def register_type(lookuptable: Literal["GuildTYPE", "MessageTYPE", "MessageMODE"
         return decorator_register_type(object)
 
     return decorator_register_type
-
-
-class ORMBase(DeclarativeBase):
-    "Base for all of ORM classes"
-
-    def __eq__(self, value: object) -> bool:
-        try:
-            return self.id == value.id and type(self) is type(value)
-        except AttributeError:
-            return super().__eq__(value)
-
-    def __hash__(self):
-        try:
-            return self.id << 4 | id(type(self)) >> 8
-        except AttributeError:
-            return super().__hash__()
 
 
 class TableCache:
@@ -229,6 +209,11 @@ class TableCache:
 @misc.doc_category("Logging reference", path="logging.sql")
 class LoggerSQL(logging.LoggerBASE):
     """
+    .. versionchanged:: v2.7
+
+        - Invite link tracking.
+        - Default database file output set to /<user-home-dir>/daf/messages
+
     Used for controlling the SQL database used for message logs.
 
     Parameters
@@ -253,6 +238,8 @@ class LoggerSQL(logging.LoggerBASE):
     ----------
     ValueError
         Unsupported dialect (db type).
+    ModuleNotFoundError
+        Extra requirements are required.
     """
 
     @typechecked
@@ -271,7 +258,7 @@ class LoggerSQL(logging.LoggerBASE):
         if fallback is Ellipsis:
             # Cannot use None as this can be a legit user value
             # and cannot pass directly due to Sphinx issues
-            fallback = logging.LoggerJSON("History")
+            fallback = logging.LoggerJSON()
 
         if dialect is None:
             dialect = "sqlite"
@@ -286,11 +273,12 @@ class LoggerSQL(logging.LoggerBASE):
         self.password = password
         self.server = server
         self.port = port
-        self.database = database if database is not None else "messages"
+        self.database = database if database is not None else str(Path.home().joinpath("daf/messages"))
         self.dialect = dialect
 
         if self.dialect == "sqlite":
             self.database += ".db"
+            Path(self.database).parent.mkdir(parents=True, exist_ok=True)
 
         # Set in ._begin_engine
         self.engine: sqa.engine.Engine = None
@@ -311,6 +299,7 @@ class LoggerSQL(logging.LoggerBASE):
         self.guild_user_cache = TableCache(GuildUSER, SQL_TABLE_CACHE_SIZE)
         self.channel_cache = TableCache(CHANNEL, SQL_TABLE_CACHE_SIZE)
         self.data_history_cache = TableCache(DataHISTORY, SQL_TABLE_CACHE_SIZE)
+        self.invites_cache = TableCache(Invite, SQL_TABLE_CACHE_SIZE)
 
         super().__init__(fallback)
 
@@ -528,11 +517,64 @@ class LoggerSQL(logging.LoggerBASE):
         await self._generate_lookup_values()
         await super().initialize()
 
-    async def _get_insert_guild(self,
-                                snowflake: int,
-                                name: str,
-                                guild_type: int,
-                                session: Union[AsyncSession, Session]) -> int:
+    async def __get_insert_base(
+        self,
+        key: Any,
+        cache_object: TableCache,
+        compare_key,
+        type_: type,
+        session: Union[AsyncSession, Session],
+        *args,
+        **kwargs
+    ):
+        result = None
+        if not cache_object.exists(key):
+            result = await self._run_async(
+                session.execute,
+                select(type_).where(compare_key)
+            )
+            result = result.first()
+            if result is not None:
+                result = result[0]
+            else:
+                result = type_(*args, **kwargs)
+                session.add(result)
+                await self._run_async(session.commit)
+                await self._run_async(session.begin)
+                result = result
+
+            cache_object.insert(key, result)
+        else:
+            result = cache_object.get(key)
+
+        return result
+
+    def _get_insert_invite(
+        self,
+        id_: str,
+        guild: "GuildUSER",
+        session: Union[AsyncSession, Session]
+    ) -> int:
+        """
+        Inserts the invite link into the db if it doesn't exist,
+        adds it to cache and returns it's internal db id from cache.
+
+        Parameters
+        ------------
+        id_: str
+            The invite link ID (final part of URL).
+        guild: GuildUSER,
+            The guild that
+        session: Union[AsyncSession, Session]
+            The session to use as transaction.
+        """
+        return self.__get_insert_base(id_, self.invites_cache, Invite.discord_id == id_, Invite, session, id_, guild)
+
+    def _get_insert_guild(self,
+                          snowflake: int,
+                          name: str,
+                          guild_type: int,
+                          session: Union[AsyncSession, Session]) -> int:
         """
         Inserts the guild into the db if it doesn't exist,
         adds it to cache and returns it's internal db id from cache.
@@ -548,27 +590,16 @@ class LoggerSQL(logging.LoggerBASE):
         session: Union[AsyncSession, Session]
             The session to use as transaction.
         """
-        result = None
-        if not self.guild_user_cache.exists(snowflake):
-            result = await self._run_async(
-                session.execute,
-                select(GuildUSER).where(GuildUSER.snowflake_id == snowflake)
-            )
-            result = result.first()
-            if result is not None:
-                result = result[0]
-            else:
-                result = GuildUSER(guild_type, snowflake, name)
-                savepoint = await self._run_async(session.begin_nested)  # Savepoint
-                session.add(result)
-                await self._run_async(savepoint.commit)
-                result = result
-
-            self.guild_user_cache.insert(snowflake, result)
-        else:
-            result = self.guild_user_cache.get(snowflake)
-
-        return result
+        return self.__get_insert_base(
+            snowflake,
+            self.guild_user_cache,
+            GuildUSER.snowflake_id == snowflake,
+            GuildUSER,
+            session,
+            guild_type,
+            snowflake,
+            name
+        )
 
     async def _get_insert_channels(self,
                                    channels: List[dict],
@@ -614,9 +645,9 @@ class LoggerSQL(logging.LoggerBASE):
                 for x in not_cached if not self.channel_cache.exists(x["id"])
             ]
             if len(to_add):
-                savepoint = await self._run_async(session.begin_nested)  # Savepoint
                 session.add_all(to_add)
-                await self._run_async(savepoint.commit)
+                await self._run_async(session.commit)
+                await self._run_async(session.begin)
                 for channel in to_add:
                     self.channel_cache.insert(channel.snowflake_id, channel)
 
@@ -624,7 +655,7 @@ class LoggerSQL(logging.LoggerBASE):
         ret = [(self.channel_cache.get(d["id"]), d.get("reason", None)) for d in channels]
         return ret
 
-    async def _get_insert_data(self, data: dict, session: Union[AsyncSession, Session]) -> int:
+    def _get_insert_data(self, data: dict, session: Union[AsyncSession, Session]) -> int:
         """
         Get's data's row ID from the cache/database, if it does not exists,
         it inserts into the database and then caches the value.
@@ -641,26 +672,15 @@ class LoggerSQL(logging.LoggerBASE):
         int
             Primary key of a row inside DataHISTORY table.
         """
-        result: tuple = None
         const_data = json.dumps(data)
-
-        if not self.data_history_cache.exists(const_data):
-            result = await self._run_async(
-                session.execute,
-                select(DataHISTORY).where(DataHISTORY.content.cast(String) == const_data)
-            )
-            result = result.first()
-            if result is None:
-                # Add to the database
-                to_add = DataHISTORY(const_data)
-                savepoint = await self._run_async(session.begin_nested)
-                session.add(to_add)
-                await self._run_async(savepoint.commit)
-                result = (to_add,)
-
-            self.data_history_cache.insert(const_data, result[0])
-
-        return self.data_history_cache.get(const_data)
+        return self.__get_insert_base(
+            const_data,
+            self.data_history_cache,
+            DataHISTORY.content.cast(String) == const_data,
+            DataHISTORY,
+            session,
+            const_data
+        )
 
     async def _stop_engine(self):
         """
@@ -686,10 +706,13 @@ class LoggerSQL(logging.LoggerBASE):
         res = True
         await asyncio.sleep(SQL_RECOVERY_TIME)
         try:
-            if exc.connection_invalidated:
+            if getattr(exc, "connection_invalidated", False):
                 res = False
                 await self._reconnect_after(SQL_RECONNECT_TIME)
             else:
+                if self.dialect == "sqlite":
+                    Path(self.database).parent.mkdir(parents=True, exist_ok=True)
+
                 await self._create_tables()
                 self._clear_caches()
                 await self._generate_lookup_values()
@@ -701,14 +724,103 @@ class LoggerSQL(logging.LoggerBASE):
 
         return res  # Returns if the error was handled or not
 
+    async def _save_log_invite(
+        self,
+        session: Union[AsyncSession, Session],
+        guild_context: dict,
+        invite_context: dict
+    ):
+        # Parse the data
+        guild_snowflake: int = guild_context.get("id")
+        guild_name: str = guild_context.get("name")
+        invite_id: str = invite_context.get("id")
+        invite_member_id = invite_context["member"].get("id")
+        invite_member_name = invite_context["member"].get("name")
+
+        # Lookup table values
+        guild_type_obj = self.guild_type_cache.get(guild_context["type"])
+        # Insert guild into the database and cache if it doesn't exist
+        guild_obj = await self._get_insert_guild(guild_snowflake, guild_name, guild_type_obj, session)
+        member_obj = await self._get_insert_guild(
+            invite_member_id,
+            invite_member_name,
+            self.guild_type_cache.get("USER"),
+            session
+        )
+        invite_obj = await self._get_insert_invite(invite_id, guild_obj, session)
+        invite_log_obj = InviteLOG(
+            invite_obj,
+            member_obj
+        )
+        session.add(invite_log_obj)
+
+    async def _save_log_message(
+        self,
+        session: Union[AsyncSession, Session],
+        guild_context: dict,
+        message_context: Optional[dict] = None,
+        author_context: Optional[dict] = None,
+    ):
+        # Parse the data
+        author_name: str = author_context.get("name")
+        author_snowflake: str = author_context.get("id")
+        sent_data: dict = message_context.get("sent_data")
+        guild_snowflake: int = guild_context.get("id")
+        guild_name: str = guild_context.get("name")
+        channels: List[dict] = message_context.get("channels", None)
+        dm_success_info: dict = message_context.get("success_info", None)
+        dm_success_info_reason: str = None
+        message_mode: Union[int, str, None] = message_context.get("mode", None)
+
+        if dm_success_info is not None and "reason" in dm_success_info:
+            dm_success_info_reason = dm_success_info["reason"]
+
+        _channels = []
+        if channels is not None:
+            channels = channels['successful'] + channels['failed']
+
+        # Lookup table values
+        guild_type_obj = self.guild_type_cache.get(guild_context["type"])
+        message_type_obj = self.message_type_cache.get(message_context["type"])
+        message_mode_obj = self.message_mode_cache.get(message_mode)
+        # Insert guild into the database and cache if it doesn't exist
+        guild_obj = await self._get_insert_guild(guild_snowflake, guild_name, guild_type_obj, session)
+        if channels is not None:
+            # Insert channels into the database and cache if it doesn't exist
+            _channels = await self._get_insert_channels(channels, guild_obj, session)
+
+        data_obj = await self._get_insert_data(sent_data, session)
+        author_obj = await self._get_insert_guild(
+            author_snowflake,
+            author_name,
+            self.guild_type_cache.get("USER"),
+            session
+        )
+
+        # Save message log
+        message_log_obj = MessageLOG(
+            data_obj,
+            message_type_obj,
+            message_mode_obj,
+            dm_success_info_reason,
+            guild_obj,
+            author_obj,
+            [
+                MessageChannelLOG(channel, reason)
+                for channel, reason in _channels
+            ],
+        )
+        session.add(message_log_obj)
+
     # _async_safe prevents multiple tasks from attempting to do operations on the database at the same time.
-    # This is to avoid eg. procedures being called while they are being created,
-    # handle error being called from different tasks, update method from causing a race condition,etc
     @misc._async_safe("safe_sem", 1)
-    async def _save_log(self,
-                        guild_context: dict,
-                        message_context: dict,
-                        author_context: dict):
+    async def _save_log(
+        self,
+        guild_context: dict,
+        message_context: Optional[dict] = None,
+        author_context: Optional[dict] = None,
+        invite_context: Optional[dict] = None
+    ):
         """
         This method saves the log generated by the xGUILD object into the database.
 
@@ -729,76 +841,24 @@ class LoggerSQL(logging.LoggerBASE):
 
         if self.reconnecting:
             # The SQL logger is in the middle of reconnection process
-            # This means the logging is switched to something else but we still got here
-            # since we entered before that happened and landed on a semaphore.
-            await logging.save_log(guild_context, message_context)
-            return
+            return await logging.save_log(guild_context, message_context)
 
-        # Parse the data
-        author_name: str = author_context.get("name")
-        author_snowflake: str = author_context.get("id")
-        sent_data: dict = message_context.get("sent_data")
-        guild_snowflake: int = guild_context.get("id")
-        guild_name: str = guild_context.get("name")
-        channels: List[dict] = message_context.get("channels", None)
-        dm_success_info: dict = message_context.get("success_info", None)
-        dm_success_info_reason: str = None
-        message_mode: Union[int, str, None] = message_context.get("mode", None)
-
-        if dm_success_info is not None:
-            if "reason" in dm_success_info:
-                dm_success_info_reason = dm_success_info["reason"]
-
-        _channels = []
-        if channels is not None:
-            channels = channels['successful'] + channels['failed']
-
-        session: Union[AsyncSession, Session]
-        for tries in range(SQL_MAX_SAVE_ATTEMPTS):
+        for _ in range(SQL_MAX_SAVE_ATTEMPTS):
             try:
-                # Lookup table values
-                guild_type_obj = self.guild_type_cache.get(guild_context["type"])
-                message_type_obj = self.message_type_cache.get(message_context["type"])
-                message_mode_obj = self.message_mode_cache.get(message_mode)
-                # Insert guild into the database and cache if it doesn't exist
                 async with self.session_maker() as session:
-                    guild_obj = await self._get_insert_guild(guild_snowflake, guild_name, guild_type_obj, session)
-                    if channels is not None:
-                        # Insert channels into the database and cache if it doesn't exist
-                        _channels = await self._get_insert_channels(channels, guild_obj, session)
+                    if message_context is not None:  # Message tracking
+                        await self._save_log_message(session, guild_context, message_context, author_context)
+                    else:  # Invite tracking
+                        await self._save_log_invite(session, guild_context, invite_context)
 
-                    data_obj = await self._get_insert_data(sent_data, session)
-                    author_obj = await self._get_insert_guild(
-                        author_snowflake,
-                        author_name,
-                        self.guild_type_cache.get("USER"),
-                        session
-                    )
-
-                    # Save message log
-                    message_log_obj = MessageLOG(
-                        data_obj,
-                        message_type_obj,
-                        message_mode_obj,
-                        dm_success_info_reason,
-                        guild_obj,
-                        author_obj,
-                        [
-                            MessageChannelLOG(channel, reason)
-                            for channel, reason in _channels
-                        ],
-                    )
-                    session.add(message_log_obj)
                     await self._run_async(session.commit)
 
-                break
+                return
             except SQLAlchemyError as exc:
-                # Run in executor to prevent blocking
                 if not await self._handle_error(exc):
                     raise RuntimeError("Unable to handle SQL error") from exc
 
-        else:
-            raise RuntimeError(f"Unable to save log within {SQL_MAX_SAVE_ATTEMPTS} tries")
+        raise RuntimeError(f"Unable to save invite log within {SQL_MAX_SAVE_ATTEMPTS} tries")
 
     async def _get_guild(self, id_: int, session: Union[AsyncSession, Session]):
         guilduser: GuildUSER = self.guild_user_cache.get(id_)
@@ -806,27 +866,25 @@ class LoggerSQL(logging.LoggerBASE):
             return guilduser
 
         try:
-            _ret = (await self._run_async(
-                session.execute,
-                select(GuildUSER)
-                .where(GuildUSER.snowflake_id == id_))
+            _ret = (
+                await self._run_async(session.execute, select(GuildUSER).where(GuildUSER.snowflake_id == id_))
             ).first()
             return _ret[0] if _ret is not None else None
         except SQLAlchemyError:
             return None
 
     async def analytic_get_num_messages(
-            self,
-            guild: Union[int, None] = None,
-            author: Union[int, None] = None,
-            after: Union[datetime, None] = None,
-            before: Union[datetime, None] = None,
-            guild_type: Union[Literal["USER", "GUILD"], None] = None,
-            message_type: Union[Literal["TextMESSAGE", "VoiceMESSAGE", "DirectMESSAGE"], None] = None,
-            sort_by: Literal["successful", "failed", "guild_snow", "guild_name", "author_snow", "author_name"] = "successful",
-            sort_by_direction: Literal["asc", "desc"] = "desc",
-            limit: int = 500,
-            group_by: Literal["year", "month", "day"] = "day"
+        self,
+        guild: Union[int, None] = None,
+        author: Union[int, None] = None,
+        after: datetime = datetime.min,
+        before: datetime = datetime.max,
+        guild_type: Union[Literal["USER", "GUILD"], None] = None,
+        message_type: Union[Literal["TextMESSAGE", "VoiceMESSAGE", "DirectMESSAGE"], None] = None,
+        sort_by: Literal["successful", "failed", "guild_snow", "guild_name", "author_snow", "author_name"] = "successful",
+        sort_by_direction: Literal["asc", "desc"] = "desc",
+        limit: int = 500,
+        group_by: Literal["year", "month", "day"] = "day"
     ) -> List[Tuple[date, int, int, int, str, int, str]]:
         """
 
@@ -875,85 +933,55 @@ class LoggerSQL(logging.LoggerBASE):
         SQLAlchemyError
             There was a problem with the database.
         """
-        if after is None:
-            after = datetime.min
-
-        if before is None:
-            before = datetime.max
-
-        regions = ["day", "month", "year"]
-        regions = reversed(regions[regions.index(group_by):])
-        extract_stms = []
-        for region_ in regions:
-            extract_stms.append(func.extract(region_, MessageLOG.timestamp).cast(Integer))
-
         async with self.session_maker() as session:
-            conditions = []
+            conditions = [MessageLOG.timestamp.between(after, before)]
             if guild is not None:
-                conditions.append(
-                    MessageLOG.guild.has(GuildUSER.snowflake_id == guild)
-                )
+                conditions.append(MessageLOG.guild.has(GuildUSER.snowflake_id == guild))
 
             if author is not None:
-                conditions.append(
-                    MessageLOG.author.has(GuildUSER.snowflake_id == author)
-                )
+                conditions.append(MessageLOG.author.has(GuildUSER.snowflake_id == author))
 
             if guild_type is not None:
-                conditions.append(
-                    MessageLOG.guild.has(
-                        GuildUSER.guild_type.has(GuildTYPE.name == guild_type)
-                    )
-                )
+                conditions.append(MessageLOG.guild.has(GuildUSER.guild_type.has(GuildTYPE.name == guild_type)))
 
             if message_type is not None:
-                conditions.append(
-                    MessageLOG.message_type.has(MessageTYPE.name == message_type)
-                )
+                conditions.append(MessageLOG.message_type.has(MessageTYPE.name == message_type))
 
-            count = (await self._run_async(
-                session.execute,
-                select(
-                    *extract_stms,
+            return await self.__analytic_get_counts(
+                session,
+                group_by,
+                [MessageLOG.guild_id, MessageLOG.author_id],
+                conditions,
+                limit,
+                sort_by,
+                sort_by_direction,
+                [
                     func.sum(case((MessageLOG.success_rate > 0, 1), else_=0)).label("successful"),
                     func.sum(case((MessageLOG.success_rate == 0, 1), else_=0)).label("failed"),
                     select(GuildUSER.snowflake_id).where(GuildUSER.id == MessageLOG.guild_id).scalar_subquery().label("guild_snow"),
                     select(GuildUSER.name).where(GuildUSER.id == MessageLOG.guild_id).scalar_subquery().label("guild_name"),
                     select(GuildUSER.snowflake_id).where(GuildUSER.id == MessageLOG.author_id).scalar_subquery().label("author_snow"),
                     select(GuildUSER.name).where(GuildUSER.id == MessageLOG.author_id).scalar_subquery().label("author_name")
-                )
-                .where(
-                    MessageLOG.timestamp.between(after, before),
-                    *conditions
-                )
-                .group_by(*extract_stms, MessageLOG.guild_id, MessageLOG.author_id)
-                .limit(limit)
-                .order_by(text(f"{sort_by} {sort_by_direction}"))
-            )).all()
+                ],
+                [],
+                MessageLOG
+            )
 
-            extract_stm_len = len(extract_stms)
-            count = [
-                (date(*s[:extract_stm_len], *([1] * (3 - extract_stm_len))), *s[extract_stm_len:])
-                for s in count
-            ]
-
-            return count
-
-    async def analytic_get_message_log(
-            self,
-            guild: Union[int, None] = None,
-            author: Union[int, None] = None,
-            after: Union[datetime, None] = None,
-            before: Union[datetime, None] = None,
-            success_rate: Tuple[float, float] = (0, 100),
-            guild_type: Union[Literal["USER", "GUILD"], None] = None,
-            message_type: Union[Literal["TextMESSAGE", "VoiceMESSAGE", "DirectMESSAGE"], None] = None,
-            sort_by: Literal["timestamp", "success_rate"] = "timestamp",
-            sort_by_direction: Literal["asc", "desc"] = "desc",
-            limit: int = 500,
+    def analytic_get_message_log(
+        self,
+        guild: Union[int, None] = None,
+        author: Union[int, None] = None,
+        after: datetime = datetime.min,
+        before: datetime = datetime.max,
+        success_rate: Tuple[float, float] = (0, 100),
+        guild_type: Union[Literal["USER", "GUILD"], None] = None,
+        message_type: Union[Literal["TextMESSAGE", "VoiceMESSAGE", "DirectMESSAGE"], None] = None,
+        sort_by: Literal["timestamp", "success_rate"] = "timestamp",
+        sort_by_direction: Literal["asc", "desc"] = "desc",
+        limit: int = 500,
     ) -> List["MessageLOG"]:
         """
-        Returns a list MessageLOG objects (message logs) that match the parameters.
+        Returns a list of :ref:`MessageLOG` objects (message logs) that match the parameters.
 
         Parameters
         --------------
@@ -968,9 +996,9 @@ class LoggerSQL(logging.LoggerBASE):
         success_rate: tuple[int, int]
             Success rate tuple containing minimum success rate and maximum success
             rate the message log can have for it to be included.
-            Success rate is meassured in % and it is defined by:
+            Success rate is measured in % and it is defined by:
 
-            Successuly sent channels / all channels.
+            Successfully sent channels / all channels.
         guild_type: Literal["USER", "GUILD"] | None,
             Type of guild.
         message_type: Literal["TextMESSAGE", "VoiceMESSAGE", "DirectMESSAGE"] | None,
@@ -989,49 +1017,217 @@ class LoggerSQL(logging.LoggerBASE):
         list[MessageLOG]
             List of the message logs.
         """
-        if after is None:
-            after = datetime.min
+        conditions = [
+            MessageLOG.timestamp.between(after, before),
+            MessageLOG.success_rate.between(*success_rate)
+        ]
 
-        if before is None:
-            before = datetime.max
+        if guild is not None:
+            conditions.append(MessageLOG.guild.has(GuildUSER.snowflake_id == guild))
 
-        # Obtain internal guild id
+        if author is not None:
+            conditions.append(MessageLOG.author.has(GuildUSER.snowflake_id == author))
 
+        if guild_type is not None:
+            conditions.append(MessageLOG.guild.has(GuildUSER.guild_type.has(GuildTYPE.name == guild_type)))
+
+        if message_type is not None:
+            conditions.append(MessageLOG.message_type.has(MessageTYPE.name == message_type))
+
+        return self.__analytic_get_log(
+            MessageLOG,
+            conditions,
+            getattr(getattr(MessageLOG, sort_by), sort_by_direction)(),
+            limit
+        )
+
+    async def analytic_get_num_invites(
+            self,
+            guild: Union[int, None] = None,
+            after: datetime = datetime.min,
+            before: datetime = datetime.max,
+            sort_by: Literal["count", "guild_snow", "guild_name", "invite_id"] = "count",
+            sort_by_direction: Literal["asc", "desc"] = "desc",
+            limit: int = 500,
+            group_by: Literal["year", "month", "day"] = "day"
+    ) -> List[Tuple[date, int, str]]:
+        """
+        Returns invite link join counts.
+
+        Parameters
+        -----------
+        guild: int
+            The snowflake id of the guild.
+        after: Union[datetime, None] = None
+            Only count messages sent after the datetime.
+        before: Union[datetime, None]
+            Only count messages sent before the datetime.
+        sort_by: Literal["count", "guild_snow", "guild_name", "invite_id"],
+            Sort items by selected.
+            Defaults to "successful"
+        sort_by_direction: Literal["asc", "desc"]
+            Sort items by ``sort_by`` in selected direction (asc = ascending, desc = descending).
+            Defaults to "desc"
+        limit: int = 500
+            Limit of the rows to return. Defaults to 500.
+        group_by: Literal["year", "month", "day"]
+            Results returned are grouped by ``group_by``
+
+        Returns
+        --------
+        list[Tuple[date, int, int, str, str]]
+            List of tuples.
+
+            Each tuple contains:
+
+            - Date
+            - Invite count
+            - Invite ID
+
+        Raises
+        ------------
+        SQLAlchemyError
+            There was a problem with the database.
+        """
         async with self.session_maker() as session:
-            conditions = []
+            conditions = [InviteLOG.timestamp.between(after, before)]
             if guild is not None:
                 conditions.append(
-                    MessageLOG.guild.has(GuildUSER.snowflake_id == guild)
+                    InviteLOG.invite.has(Invite.guild.has(GuildUSER.snowflake_id == guild))
                 )
 
-            if author is not None:
-                conditions.append(
-                    MessageLOG.author.has(GuildUSER.snowflake_id == author)
-                )
-
-            if guild_type is not None:
-                conditions.append(
-                    MessageLOG.guild.has(
-                        GuildUSER.guild_type.has(GuildTYPE.name == guild_type)
-                    )
-                )
-
-            if message_type is not None:
-                conditions.append(
-                    MessageLOG.message_type.has(MessageTYPE.name == message_type)
-                )
-
-            messages = await self._run_async(
-                session.execute,
-                select(MessageLOG)
-                .where(
-                    MessageLOG.success_rate.between(*success_rate),
-                    MessageLOG.timestamp.between(after, before),
-                    *conditions
-                ).order_by(getattr(getattr(MessageLOG, sort_by), sort_by_direction)()).limit(limit)
+            return await self.__analytic_get_counts(
+                session,
+                group_by,
+                [
+                    Invite.discord_id,
+                    GuildUSER.snowflake_id,
+                    GuildUSER.name,
+                ],
+                conditions,
+                limit,
+                sort_by,
+                sort_by_direction,
+                [
+                    func.count().label("count"),
+                    GuildUSER.snowflake_id.label("guild_snow"),
+                    GuildUSER.name.label("guild_name"),
+                    Invite.discord_id,
+                ],
+                [
+                    (Invite, InviteLOG.invite_id == Invite.id),
+                    (GuildUSER, Invite.guild_id == GuildUSER.id)
+                ],
+                InviteLOG
             )
 
-            return list(*zip(*messages.unique().all()))
+    async def __analytic_get_counts(
+        self,
+        session: Union[Session, AsyncSession],
+        group_by: str,
+        group_by_extra: List[Any],
+        conditions: list,
+        limit: int,
+        sort_by: str,
+        sort_by_direction: str,
+        select_items: List[Any],
+        joins: List[Tuple[Any, Any]],
+        select_from: Any
+    ):
+        regions = ["day", "month", "year"]
+        regions = reversed(regions[regions.index(group_by):])
+        extract_stms = []
+
+        timestamp = getattr(select_from, "timestamp")
+        for region_ in regions:
+            extract_stms.append(func.extract(region_, timestamp).cast(Integer))
+
+        select_stm = (select(*extract_stms, *select_items).where(*conditions).select_from(select_from))
+
+        for join_table, condition in joins:
+            select_stm = select_stm.join(join_table, condition)
+
+        select_stm = (
+            select_stm.group_by(*extract_stms, *group_by_extra)
+            .limit(limit)
+            .order_by(text(f"{sort_by} {sort_by_direction}"))
+        )
+
+        count = (await self._run_async(session.execute, select_stm)).all()
+        extract_stm_len = len(extract_stms)
+        count = [
+            ("-".join("{:02d}".format(x) for x in s[:extract_stm_len]), *s[extract_stm_len:])
+            for s in count
+        ]
+
+        return count
+
+    def analytic_get_invite_log(
+        self,
+        guild: Union[int, None] = None,
+        invite: Union[str, None] = None,
+        after: datetime = datetime.min,
+        before: datetime = datetime.max,
+        sort_by: Literal["timestamp"] = "timestamp",
+        sort_by_direction: Literal["asc", "desc"] = "desc",
+        limit: int = 500,
+    ) -> List["InviteLOG"]:
+        """
+        Returns a list of :ref:`InviteLOG` objects (invite logs) filtered by the given parameters.
+
+        Parameters
+        --------------
+        guild: Union[int, None]
+            The snowflake id of the guild.
+        invite: Union[str, None]
+            Discord invite ID (final part of URL).
+        after: Union[datetime, None]
+            Include only invites sent after this datetime.
+        before: Union[datetime, None]
+            Include only invites sent before this datetime.
+        sort_by: Literal["timestamp"],
+            Sort items by selected.
+            Defaults to "timestamp"
+        sort_by_direction: Literal["asc", "desc"] = "desc"
+            Sort items by ``sort_by`` in selected direction (asc = ascending, desc = descending).
+            Defaults to "desc"
+        limit: int = 500
+            Limit of the invite logs to return. Defaults to 500.
+
+        Return
+        ---------
+        list[InviteLOG]
+            List of the message logs.
+        """
+        conditions = [InviteLOG.timestamp.between(after, before)]
+        if guild is not None:
+            conditions.append(InviteLOG.invite.has(Invite.guild.has(GuildUSER.snowflake_id == guild)))
+        if invite is not None:
+            conditions.append(InviteLOG.invite.has(Invite.discord_id == invite))
+
+        return self.__analytic_get_log(
+            InviteLOG,
+            conditions,
+            getattr(getattr(InviteLOG, sort_by), sort_by_direction)(),
+            limit
+        )
+
+    async def __analytic_get_log(
+        self,
+        select_items: Any,
+        conditions: list,
+        order_by: Any,
+        limit: int
+    ):
+        """
+        Common helper method universal for multiple log types.
+        """
+        async with self.session_maker() as session:
+            logs = await self._run_async(
+                session.execute,
+                select(select_items).where(*conditions).order_by(order_by).limit(limit)
+            )
+            return list(*zip(*logs.unique().all()))
 
     @misc._async_safe("safe_sem", 1)
     async def update(self, **kwargs):
@@ -1065,267 +1261,3 @@ class LoggerSQL(logging.LoggerBASE):
             # Reinitialize since engine was disconnected
             await self.initialize()
             raise
-
-
-if SQL_INSTALLED:
-    # Do not create ORM classes if the optional group is not installed
-    class MessageTYPE(ORMBase):
-        """
-        Lookup table for storing xMESSAGE types
-
-        Parameters
-        -----------
-        name: str
-            Name of the xMESSAGE class.
-        """
-        __tablename__ = "MessageTYPE"
-
-        id = mapped_column(
-            SmallInteger().with_variant(Integer, "sqlite"),
-            Sequence("msg_tp_seq", 0, 1, minvalue=0, maxvalue=32767, cycle=True),
-            primary_key=True
-        )
-        name = mapped_column(String(3072), unique=True)
-
-        def __init__(self, name: str = None):
-            self.name = name
-
-    class MessageMODE(ORMBase):
-        """
-        Lookup table for storing message sending modes.
-
-        Parameters
-        -----------
-        name: str
-            Name of the xMESSAGE class.
-        """
-
-        __tablename__ = "MessageMODE"
-
-        id = mapped_column(
-            SmallInteger().with_variant(Integer, "sqlite"),
-            Sequence("msg_mode_seq", 0, 1, minvalue=0, maxvalue=32767, cycle=True),
-            primary_key=True
-        )
-        name = mapped_column(String(3072), unique=True)
-
-        def __init__(self, name: str = None):
-            self.name = name
-
-    class GuildTYPE(ORMBase):
-        """
-        Lookup table for storing xGUILD types
-
-        Parameters
-        -----------
-        name: str
-            Name of the xMESSAGE class.
-        """
-
-        __tablename__ = "GuildTYPE"
-
-        id: Mapped[int] = mapped_column(
-            SmallInteger().with_variant(Integer, "sqlite"),
-            Sequence("guild_tp_seq", 0, 1, minvalue=0, maxvalue=32767, cycle=True),
-            primary_key=True
-        )
-        name = mapped_column(String(3072), unique=True)
-
-        def __init__(self, name: str = None):
-            self.name = name
-
-    class GuildUSER(ORMBase):
-        """
-        Table for storing different guilds and users.
-
-        Parameters
-        -----------
-        guild_type: int
-            Foreign key pointing to GuildTYPE.id.
-        snowflake: int
-            Discord's snowflake ID of the guild.
-        name: str
-            The name of the guild.
-        """
-        __tablename__ = "GuildUSER"
-
-        id = mapped_column(
-            Integer,
-            Sequence("guild_user_seq", 0, 1, minvalue=0, maxvalue=2147483647, cycle=True),
-            primary_key=True
-        )
-        snowflake_id = mapped_column(BigInteger, index=True)
-        name = mapped_column(String(3072))
-        guild_type_id: Mapped[int] = mapped_column(ForeignKey("GuildTYPE.id"))
-        guild_type: Mapped["GuildTYPE"] = relationship(lazy="joined")
-
-        def __init__(self,
-                     guild_type: GuildTYPE,
-                     snowflake: int,
-                     name: str):
-            self.snowflake_id = snowflake
-            self.name = name
-            self.guild_type = guild_type
-
-    class CHANNEL(ORMBase):
-        """
-        Table for storing different channels.
-
-        Parameters
-        -----------
-        snowflake: int
-            Discord's snowflake ID of the channel.
-        name: str
-            The name of the channel.
-        guild_id: int
-            Foreign key pointing to GuildUSER.id.
-        """
-        __tablename__ = "CHANNEL"
-        id = mapped_column(
-            Integer,
-            Sequence("channel_seq", 0, 1, minvalue=0, maxvalue=2147483647, cycle=True),
-            primary_key=True
-        )
-        snowflake_id = mapped_column(BigInteger)
-        name = mapped_column(String(3072))
-        guild_id: Mapped[int] = mapped_column(ForeignKey("GuildUSER.id"))
-        guild: Mapped["GuildUSER"] = relationship(lazy="joined")
-
-        def __init__(self,
-                     snowflake: int,
-                     name: str,
-                     guild: GuildUSER):
-            self.snowflake_id = snowflake
-            self.name = name
-            self.guild = guild
-
-    class DataHISTORY(ORMBase):
-        """
-        Table used for storing all the different data(JSON) that was ever sent (to reduce redundancy
-        and file size in the MessageLOG).
-
-        Parameters
-        -----------
-        content: str
-            The JSON string representing sent data.
-        """
-        __tablename__ = "DataHISTORY"
-
-        id = mapped_column(
-            Integer,
-            Sequence("dhist_seq", 0, 1, minvalue=0, maxvalue=2147483647, cycle=True),
-            primary_key=True
-        )
-
-        content = mapped_column(JSON())
-
-        def __init__(self,
-                     content: dict):
-            self.content = content
-
-    class MessageChannelLOG(ORMBase):
-        """
-        This is a table that contains a log of channels that are linked to a certain message log.
-
-        Parameters
-        ------------
-        message_log: MessageLOG
-            Foreign key pointing to MessageLOG.id.
-        channel: CHANNEL
-            Foreign key pointing to CHANNEL.id.
-        reason: str
-            Stringified description of Exception that caused the send attempt to be successful for a certain channel.
-        """
-
-        __tablename__ = "MessageChannelLOG"
-
-        log_id: Mapped[int] = mapped_column(Integer, ForeignKey("MessageLOG.id"), primary_key=True)
-        channel_id: Mapped[int] = mapped_column(Integer, ForeignKey("CHANNEL.id"), primary_key=True)
-        reason = mapped_column(String(3072))
-
-        log: Mapped["MessageLOG"] = relationship(back_populates="channels", uselist=False, lazy="joined")
-        channel: Mapped["CHANNEL"] = relationship(lazy="joined")
-
-        def __init__(self,
-                     channel: CHANNEL,
-                     reason: str = None):
-            self.channel = channel
-            self.reason = reason
-
-    class MessageLOG(ORMBase):
-        """
-        Table containing information for each message send attempt.
-
-        NOTE: This table is missing successful and failed channels (or DM success status).
-        That is because those are a separate table.
-
-        Parameters
-        ------------
-        sent_data: DataHISTORY
-            DataHISTORY object containing JSON data.
-        message_type: MessageTYPE
-            MessageTYPE object representing type of the message.
-        message_mode: MessageMODE | None
-            MessageMODE object representing mode of the message. (TextMESSAGE and DirectMESSAGE only)
-        dm_reason: str | None
-            The reason why sending to the USER failed. (DirectMESSAGE only)
-        guild: GuildUSER
-            The guild / user message was sent to.
-        author: GuildUSER
-            The author of the message.
-        channels: List["MessageChannelLOG"]
-            List of MessageChannelLOG representing channel the message was sent into and the fail reason.
-        """
-
-        __tablename__ = "MessageLOG"
-
-        id = mapped_column(
-            Integer,
-            Sequence("ml_seq", 0, 1, minvalue=0, maxvalue=2147483647, cycle=True),
-            primary_key=True
-        )
-        sent_data_id: Mapped[int] = mapped_column(ForeignKey("DataHISTORY.id"))
-        message_type_id: Mapped[int] = mapped_column(ForeignKey("MessageTYPE.id"))
-        guild_id: Mapped[int] = mapped_column(ForeignKey("GuildUSER.id"))
-        author_id: Mapped[int] = mapped_column(ForeignKey("GuildUSER.id"))
-        # [TextMESSAGE, DirectMESSAGE]
-        message_mode_id: Mapped[int] = mapped_column(ForeignKey("MessageMODE.id"), nullable=True)
-        dm_reason = mapped_column(String(3072))  # [DirectMESSAGE]
-        timestamp = mapped_column(DateTime)
-
-        sent_data: Mapped["DataHISTORY"] = relationship(lazy="joined")
-        message_type: Mapped["MessageTYPE"] = relationship(lazy="joined")
-        guild: Mapped["GuildUSER"] = relationship(foreign_keys=[guild_id], lazy="joined")
-        author: Mapped["GuildUSER"] = relationship(foreign_keys=[author_id], lazy="joined")
-        message_mode: Mapped["MessageMODE"] = relationship(lazy="joined")
-        channels: Mapped[List["MessageChannelLOG"]] = relationship(back_populates="log", lazy="joined")
-        success_rate = column_property(
-            case(
-                (
-                    select(1).where(MessageChannelLOG.log_id == id).limit(1).exists(),
-                    100 * select(func.count()).where(MessageChannelLOG.reason.is_(None), MessageChannelLOG.log_id == id)
-                    .select_from(MessageChannelLOG)
-                    .scalar_subquery() /
-                    select(func.count()).where(MessageChannelLOG.log_id == id).select_from(MessageChannelLOG)
-                    .scalar_subquery(),
-                ),
-                else_=case((dm_reason.is_(None), 100), else_=0)
-            )
-        )
-
-        def __init__(self,
-                     sent_data: DataHISTORY = None,
-                     message_type: MessageTYPE = None,
-                     message_mode: MessageMODE = None,
-                     dm_reason: str = None,
-                     guild: GuildUSER = None,
-                     author: GuildUSER = None,
-                     channels: List["MessageChannelLOG"] = None):
-            self.sent_data = sent_data
-            self.message_type = message_type
-            self.message_mode = message_mode
-            self.dm_reason = dm_reason
-            self.guild = guild
-            self.author = author
-            self.timestamp = datetime.now()
-            self.channels = channels
