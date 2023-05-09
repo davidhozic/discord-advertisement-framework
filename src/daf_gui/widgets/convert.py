@@ -327,16 +327,13 @@ def convert_to_objects(d: Union[ObjectInfo, list], keep_original_object: bool = 
         new_obj = d.class_(**data_conv)
         if keep_original_object and d.real_object is not None:
             real = d.real_object
-            try:
-                args = vars(real)
-            except TypeError:
-                args = real.__slots__ if hasattr(real, "__slots__") else dir(real)
-
-            for a in args:
-                with suppress(Exception):
+            with suppress(TypeError, AttributeError):
+                # Only update old objects that are surely not built-in and have information about attributes
+                args = real.__slots__ if hasattr(real, "__slots__") else vars(real)
+                for a in args:
                     setattr(real, a, getattr(new_obj, a))
 
-            new_obj = real
+                new_obj = real
 
         return new_obj
 
