@@ -26,7 +26,7 @@ DAF - *Discord Advertisement Framework*
 
 
 
-.. figure:: ./DEP/images/logo.png
+.. figure:: ./DEP/logo.png
     :width: 3cm
 
     Discord Advertisement Framework logo
@@ -59,7 +59,7 @@ ali pa kot GUI se ga lahko uporabi na dva načina in sicer kot:
 
 1. Python paket, ki se ga vključi v ``.py`` Python_ skripto, v kateri se definira oglaševalsko shemo.
    
-   .. literalinclude:: ./DEP/images/shill-script-example.py
+   .. literalinclude:: ./DEP/shill-script-example.py
       :language: python
       :caption: Primer definirane skripte
 
@@ -70,7 +70,7 @@ ali pa kot GUI se ga lahko uporabi na dva načina in sicer kot:
 2. navaden program (deluje v Python_-u), ki se ga lahko zažene preko ukazne vrstice z ukazom ``daf-gui``, kar odpre
    grafični vmesnik.
 
-   .. figure:: ./DEP/images/daf-gui-front.png
+   .. figure:: ./DEP/daf-gui-front.png
       :width: 12cm
 
       Grafični vmesnik
@@ -95,7 +95,7 @@ Ti nivoji so:
 - Ovojni nivo Discord API
 
 
-.. figure:: ./DEP/images/daf_abstraction.drawio.svg
+.. figure:: ./DEP/daf_abstraction.drawio.svg
 
     Abstrakcija
 
@@ -137,7 +137,7 @@ Na koncu se za posamezen definiran ceh, da cehovskem nivoju še ukaz za iniciali
 opravilo vezano na specifičen uporabniški račun.
 
 
-.. figure:: ./DEP/images/daf-account-layer-flowchart.svg
+.. figure:: ./DEP/daf-account-layer-flowchart.svg
     :width: 500
 
     Delovanje računskega nivoja
@@ -178,7 +178,7 @@ cehovski nivo pošlje nivoju beleženja. Poleg informacij o sporočilu, prejme c
 tudi morebitno informacijo da je bil ceh zbrisan, oz. je bil uporabnik odstranjen iz ceha kar posledično pomeni da je
 potrebno |GUILD| / |USER| objekt zbrisati preko računskega nivoja.
 
-.. figure:: ./DEP/images/daf-guild-layer-flowchart.svg
+.. figure:: ./DEP/daf-guild-layer-flowchart.svg
     :width: 500
 
     Delovanje cehovskega nivoja
@@ -192,7 +192,7 @@ Vsak |GUILD| objekt podeduje parametre, ki jih je ob definiciji prejel |AutoGUIL
 vsakemu |GUILD| objektu da ukaz naj oglašuje, na enak način kot |GUILD| objektu da ta ukaz računski nivo.
 Ta del bi lahko torej, s stališča abstrakcije, postavili nekje med računski nivo in cehovski nivo.
 
-.. figure:: ./DEP/images/daf-guild-auto-layer-flowchart.svg
+.. figure:: ./DEP/daf-guild-auto-layer-flowchart.svg
     :width: 600
 
     Delovanje AutoGUILD pod nivoja
@@ -259,7 +259,7 @@ zamude sporočila, razmak med tem in naslednjim sporočilom manjši točno za to
 Prvi čas pošiljanja je določen z ``start_in`` parametrom.
 Primer časovne napake je prikazan na spodnji sliki.
 
-.. figure:: ./DEP/images/daf-message-period.svg
+.. figure:: ./DEP/daf-message-period.svg
     :width: 500
 
     Čas pošiljanja sporočila s toleranco zamud
@@ -287,7 +287,7 @@ V primeru, da ni bila dvignjena nobena napaka, se sporočilo pošlje v kanal. Č
 
 Po poslanem sporočilu se podatke sporočila in status pošiljanja pošlje :ref:`cehovskem novoju <Cehovski nivo>`.
 
-.. figure:: ./DEP/images/daf-message-process.svg
+.. figure:: ./DEP/daf-message-process.svg
     :width: 800
 
     Proces sporočilnega nivoja
@@ -319,7 +319,7 @@ reagira tako, da začasno zamenja objekt beleženja na njegov nadomestek in spet
 zmanjka nadomestkov ali pa je beleženje uspešno.
 
 
-.. figure:: ./DEP/images/daf-high-level-log.svg
+.. figure:: ./DEP/daf-high-level-log.svg
     :width: 500
 
     Višji nivo beleženja
@@ -341,7 +341,7 @@ To pot, v primeru da ne obstaja, ustvari in zatem z uporabo vgrajenega Python_ m
 datoteko. Za specifike glej :ref:`Logging (core)`.
 
 
-.. figure:: ./DEP/images/daf-logging-json.svg
+.. figure:: ./DEP/daf-logging-json.svg
     :width: 300
 
     Process JSON beleženja
@@ -375,7 +375,7 @@ teh razredov. Z ORM lahko skoraj v celoti skrijemo SQL in delamo neposredno z Py
 strukture, npr. vnosa dveh ločenih tabel lahko predstavimo z dvema ločenima instancama, kjer je ena instanca znotraj
 druge instance.
 
-.. figure:: ./DEP/images/sql_er.drawio.svg
+.. figure:: ./DEP/sql_er.drawio.svg
     :width: 500
 
     SQL entitetno-relacijski diagram
@@ -408,7 +408,7 @@ da se je zgodila kakršna koli napaka, se lahko SQL pod-nivo nivoja beleženja n
    pošiljanja zabeleži z nadomestim objektom beleženja, vendar le enkrat - naslednjič bo spet poizkusil z beleženjem SQL.
 
 
-.. figure:: ./DEP/images/daf-logging-sql.svg
+.. figure:: ./DEP/daf-logging-sql.svg
     :width: 500
 
     Proces beleženja z SQL podatkovno bazo
@@ -497,7 +497,7 @@ ja marskikomu težje, sploh če se še nikoli niso srečali s Python jezikom.
 V namen enostavnejše izkušnje pri uporabi ogrodja, obstaja grafični vmesnik, ki deluje ločeno od samega ogrodja, z njim pa
 komunicira preko njegovih kontrolnih funkcij, ki se nahajajo v :ref:`jedrnem nivoju <Jedrni nivo>`.
 
-.. figure:: ./DEP/images/daf-gui-front.png
+.. figure:: ./DEP/daf-gui-front.png
     :width: 15cm
 
     Grafični vmesnik (privzet prikaz)
@@ -508,9 +508,67 @@ Tkinter
 Za izdelavo grafičnega vmesnika je bila uporabljena knjižnica `ttkboostrap <https://ttkbootstrap.readthedocs.io/en/latest/>`_, ki je razširitev
 vgrajene Python_ knjižnice :mod:`tkinter`.
 
-Tkinter knjižnica je v osnovi vmesnik na Tcl/Tk orodja za izdelavo grafičnih vmesnikov, doda pa tudi veliko svoje logike, za
-izkušnjo bolj podobno Python podobi.
+Tkinter knjižnica je v osnovi vmesnik na Tcl/Tk orodja za izdelavo grafičnih vmesnikov, doda pa tudi nekaj svojih nivojev,
+ki še dodatno razširijo delovanje knjižnice.
 
 Tkinter omogoča definicijo različnih pripomočkov (angl. *widgets*), ki se jih da dodatno razširiti in shraniti pod nove
-pripomočke, katere lahko večkrat uporabimo.
+pripomočke, katere lahko večkrat uporabimo. Ti pripomočki so naprimer :class:`ttk.Combobox`, ki je neke vrste 
+(angl.) "drop-down" meni, :class:`ttk.Spinbox` za vnašanje številkških vrednosti, gumbi :class:`ttk.Button`, itd.
+Posamezne pripomočke se da tudi znatno konfigurirati, kjer lahko spreminjamo stile, velikost, pisavo, ipd.
 
+Posamezne pripomočke se da v uporabniškem vmesniku pozicionirati na več načinov in sicer z:
+
+:Pakirno (angl. *pack*) geometrijo:
+
+    To je najhitrejši način za postavitev geometrije pripomočku in sicer pripomoček v vmesnik postavi
+    relativno na ostale pripomočke, ki so že v vmesniku. Ta način geometrije omogoča izdelavo vmesnika,
+    kjer se widgeti vsi prilagajo drug na drugega, tudi ob spreminjanju velikosti okna (lahko pa to postane
+    performančno potratno).
+
+:Mrežno (angl. *grid*) geometrijo:
+
+    Pri mrežni geometriji se pripomočke postavlja v vrstice in stoplce.
+    Ta način omogoča postavitev bolj zahtevne geometrije, kjer bi pri pakirni geometriji potrebovali več
+    gnezdenih okvirjev za doseg iste stvari.
+
+    .. seealso::
+        
+        Okvir je vrsta pripomočka, ki je kot neka plošča na katero lahko postavljamo ostale pripomočke.
+
+
+
+:Pozicijsko (angl. place) geometrijo:
+
+    Ta vrsta geometrije omogoča, da pripomočke postavimo na točno določeno koordinato oz. tudi
+    postavitev na koordinato relativno na velikost glavnega okna.
+
+    Ta vrsta geometrije v grafičnem vmesniku DAF projekta ni uporabljena.
+
+
+Več o tkinter knjižnici si lahko preberete na uradni Python dokumentaciju :mod:`tukaj <tkinter>`.
+
+
+Zavihki
+----------------------
+Grafični vmesnik DAF je razdeljen na več zavihkov, kjer je vsak namenjen svoji stvari.
+
+
+*Optional modules* zavihek
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Ta zavihek omogoča namestitev dodatnih funkcionalnosti, ki v osnovem DAF paketu niso prisotni (za hitrejši zagon in namestitveni čas).
+Sestavljen je iz statusnih panelov, ki če so rdeči (modul ni nameščen) vsebuje še gumb za namestitev.
+Gumb bo namestil potrebne pakete, potem pa bo vmesnik uporabniku sporočil, da mora za spremembe ponovno odpreti vmesnik.
+Ob ponovnem odprtju po namestitvi bo statusni panel za posamezen modul obarvan zelen.
+
+*Schema definition* zavihek
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Zavihek omogoča definicijo uporabniških računov (in v njih cehov, sporočil, ...), definicijo upravljalnika za beleženje.
+Omogoča tudi shrambo teh definicij v JSON datoteko, braje definicij iz JSON datoteke in pa generacijo ekvivalentne
+*.py* datoteke, ki deluje v samem jedru DAF (brez grafičnega vmesnika - :ref:`Zasnova in razvoj (jedro)`).
+
+.. figure:: ./DEP/images/gui-schema-restore-bnt.png
+    :width: 15cm
+
+    Zavihek za definicijo sheme
+
+Omogoča tudi dinamično branje in pretvorbo objektov v že zagnanem vmesniku preko gumbov, ki vsebujejo besedo *live*.

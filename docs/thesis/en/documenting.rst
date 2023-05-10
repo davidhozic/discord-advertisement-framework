@@ -152,7 +152,7 @@ that have a docstring attached to them.
 
 The above would result in the following:
 
-.. figure:: ./DEP/images/autodoc_example.png
+.. figure:: ./DEP/autodoc_example.png
     :height: 140mm
 
     Automatic documentation output example

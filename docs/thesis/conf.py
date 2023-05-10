@@ -87,7 +87,7 @@ intersphinx_mapping = {
 
 # ----------- HTML ----------- #
 html_title = project
-html_logo = "./DEP/images/logo.png"
+html_logo = "./DEP/logo.png"
 html_favicon = html_logo
 html_theme = 'furo'
 html_static_path = ['_static']

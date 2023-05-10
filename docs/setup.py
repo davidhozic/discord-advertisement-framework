@@ -42,7 +42,7 @@ for path, dirs, files in os.walk("./"):
                 cp_to = dest["to"]
                 if re.search(r"\.[A-z]+$", cp_to) is None:  # The path does not have extension -> assume a dir
                     _src = [x for x in glob.glob(cp_from, recursive=True) if os.path.isfile(x)]
-                    _dest = [os.path.join(cp_to, m.lstrip("./").lstrip("../")) for m in _src]
+                    _dest = [os.path.join(cp_to, os.path.basename(m)) for m in _src]
                 else:
                     _src = [cp_from]
                     _dest = [cp_to]

@@ -15,7 +15,7 @@ Discord Advertisement Framework
     Any links referencing functions/classes inside the project will open a page to |DAFDOC|_
 
 
-.. figure:: ./DEP/images/logo.png
+.. figure:: ./DEP/logo.png
     :width: 3cm
 
     Discord Advertisement Framework logo
