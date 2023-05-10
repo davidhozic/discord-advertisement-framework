@@ -51,9 +51,9 @@ na strežniku, je cilj na grafičnem vmesniku implementirati možnost oddaljeneg
 oglaševalske sheme in pregled zgodovine poslanih sporočil za določitev uspešnosti oglaševanja.
 
 
-Zasnova in razvoj
-==================
-DAF je zasnovan kot Python_ knjižnica / paket, ki se jo lahko namesti preko PIP-a (*Preferred Installer Program*), ki je
+Zasnova in razvoj (jedro)
+============================
+Jedro DAF-a je zasnovan kot Python_ knjižnica / paket, ki se jo lahko namesti preko PIP-a (*Preferred Installer Program*), ki je
 vgrajen v Python_ in služi nalaganju Python paketov. Ker je DAF zasnovan kot ogrodje, ki lahko deluje neprekinjeno na strežniku,
 ali pa kot GUI se ga lahko uporabi na dva načina in sicer kot:
 
@@ -489,4 +489,28 @@ Več o tem nivoju se lahko izve na https://docs.pycord.dev/en/stable/.
 
 
 
+Zasnova in razvoj (grafični vmesnik [GUI])
+============================================
+DAF lahko deluje popolnoma brez grafičnega vmesnika, a ta način zahteva pisanje *.py* datotek oz. Python skript, kar
+ja marskikomu težje, sploh če se še nikoli niso srečali s Python jezikom.
+
+V namen enostavnejše izkušnje pri uporabi ogrodja, obstaja grafični vmesnik, ki deluje ločeno od samega ogrodja, z njim pa
+komunicira preko njegovih kontrolnih funkcij, ki se nahajajo v :ref:`jedrnem nivoju <Jedrni nivo>`.
+
+.. figure:: ./DEP/images/daf-gui-front.png
+    :width: 15cm
+
+    Grafični vmesnik (privzet prikaz)
+
+
+Tkinter
+------------------
+Za izdelavo grafičnega vmesnika je bila uporabljena knjižnica `ttkboostrap <https://ttkbootstrap.readthedocs.io/en/latest/>`_, ki je razširitev
+vgrajene Python_ knjižnice :mod:`tkinter`.
+
+Tkinter knjižnica je v osnovi vmesnik na Tcl/Tk orodja za izdelavo grafičnih vmesnikov, doda pa tudi veliko svoje logike, za
+izkušnjo bolj podobno Python podobi.
+
+Tkinter omogoča definicijo različnih pripomočkov (angl. *widgets*), ki se jih da dodatno razširiti in shraniti pod nove
+pripomočke, katere lahko večkrat uporabimo.
 

@@ -82,5 +82,12 @@
         "source" : "https://medium.com/codex/why-use-pytest-to-test-your-software-project-7758ac9970ba",
         "title": "Why Use Pytest to Test Your Software Project?",
         "updated": "jan. 2023"
+    },
+    {
+        "id" : "tkinter_py_docs",
+        "author": "Python Software Foundation",
+        "source" : "https://docs.python.org/3/library/tkinter.html#module-tkinter",
+        "title": "tkinter — Python interface to Tcl/Tk",
+        "updated": "may. 2023"
     }
 ]

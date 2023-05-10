@@ -92,3 +92,10 @@ Sources
     | Source: https://medium.com/codex/why-use-pytest-to-test-your-software-project-7758ac9970ba
     | Last checked: jan. 2023
 
+[13]
+
+    | Title: tkinter — Python interface to Tcl/Tk
+    | Author: Python Software Foundation
+    | Source: https://docs.python.org/3/library/tkinter.html#module-tkinter
+    | Last checked: may. 2023
+
