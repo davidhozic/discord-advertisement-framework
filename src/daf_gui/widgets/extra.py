@@ -126,10 +126,15 @@ def setup_additional_live_refresh(w: ttk.Button, frame):
         return
 
     def _callback(*args):
-        real = frame.old_object_info.real_object
-        frame._update_old_object(convert_to_object_info(real, True))
-        frame.load()
-        frame.save_gui_values()
+        opened_frames = frame.origin_window.opened_frames
+        # Need to do this on all previous frames, otherwise we would have wrong data
+        for frame_ in reversed(opened_frames):
+            if not isinstance(frame_.old_object_info, list):
+                real = frame_.old_object_info.real_object
+                frame_._update_old_object(convert_to_object_info(real, True))
+                frame_.load()
+
+            frame_.save_gui_values()
 
     w.configure(command=_callback)
     ToolTip(w, "Load updated values from the object into the window", topmost=True)
