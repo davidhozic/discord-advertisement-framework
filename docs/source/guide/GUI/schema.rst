@@ -194,6 +194,14 @@ The *Load all at start* checkbox causes (when checked) the GUI to load all the a
 button in the top left corner is pressed. If the checkbox is not checked, accounts can be loaded by
 selecting them in the list and then clicking on the *Load selection to live* button.
 
+The *Preserve state on shutdown* checkbox sets the ``save_to_file`` parameter inside :func:`~daf.core.run` to True if checked
+or False if not checked. Basically this means that if the checkbox is checked, DAF will save the accounts list (and guilds, messages, ...)
+to a binary file on DAF shutdown and every 2 minutes to prevent data loss on force shutdown.
+When starting DAF again, the same list will be loaded from file into DAF.
+
+State preservation is not really meant as a shilling feature where you can define the schema statically inside the GUI and save it to a JSON file,
+but it's meant to be used in case DAF will have accounts, guilds, messages dynamically added while it's running (added in *Live view*).
+
 If *Import from live* is pressed, the GUI will copy the accounts loaded inside daf into our list.
 
 Logger is automatically loaded at start and cannot be changed for a different logger without stopping the framework first.
