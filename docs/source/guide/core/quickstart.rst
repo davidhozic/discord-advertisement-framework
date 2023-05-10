@@ -82,6 +82,16 @@ Function :func:`~daf.core.run` accepts many parameters but there is only one tha
 
         daf.run(accounts=accounts)
 
+.. _objects_in_file_ref:
+.. note::
+    
+    DAF also supports the accounts list to be **saved to file** or **restored from file** on startup.
+    
+    This behaviour can be enabled by setting the ``save_to_file`` parameter to ``True``.
+    Please note that when this is set to ``True``, the framework will first load the accounts from file
+    and then also load accounts present in the ``accounts`` parameter, which will result in *Account already added*
+    warnings if the same account has been backed up to file before.
+
 
 After you've successfully defined your accounts list and started the framework with :func:`~daf.core.run`, the framework will run on it's own and there is nothing you need to do
 from this point forward if basic periodic shilling with text messages is all you desire.

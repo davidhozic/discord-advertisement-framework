@@ -65,7 +65,7 @@ WD_TIMEOUT_MED = 30
 WD_TIMEOUT_LONG = 90
 WD_RD_CLICK_UPPER_N = 5
 WD_RD_CLICK_LOWER_N = 2
-WD_OUTPUT_PATH = pathlib.Path("./daf_web_data")
+WD_OUTPUT_PATH = pathlib.Path.home().joinpath("daf/daf_web_data")
 WD_TOKEN_PATH = WD_OUTPUT_PATH.joinpath("tokens.json")
 WD_PROFILES_PATH = WD_OUTPUT_PATH.joinpath("chrome_profiles")
 WD_QUERY_SLEEP_S = 5
@@ -436,7 +436,7 @@ class SeleniumCLIENT:
         Any
             Raised in :py:meth:`~SeleniumCLIENT.login` method.
         """
-        WD_OUTPUT_PATH.mkdir(exist_ok=True)
+        WD_OUTPUT_PATH.mkdir(exist_ok=True, parents=True)
         web_data_path = pathlib.Path(WD_PROFILES_PATH, self._username)
 
         opts = Options()
@@ -671,10 +671,18 @@ class QueryMembers(Enum):
     parameter of :class:`daf.web.GuildDISCOVERY`.
     """
     ALL = 0
-    SUB_100 = (0, 100)
-    B100_1k = (100, 1000)
-    B1k_10k = (1000, 10000)
-    ABV_10k = 1
+    SUB_100 = auto()
+    B100_1k = auto()
+    B1k_10k = auto()
+    ABV_10k = auto()
+
+
+QueryMembers_MAP = {
+    QueryMembers.ALL: (None, None),
+    QueryMembers.SUB_100: (None, 100),
+    QueryMembers.B100_1k: (100, 1000),
+    QueryMembers.ABV_10k: (10000, None),
+}
 
 
 class QueryResult:
@@ -791,13 +799,11 @@ class GuildDISCOVERY:
             "skip": 0
         }
         total_members = self.total_members
-        if total_members is not QueryMembers.ALL:
-            if total_members is QueryMembers.ABV_10k:
-                params["minUsers"] = 10000
-            else:
-                min_, max_ = total_members.value
-                params["minUsers"] = min_
-                params["maxUsers"] = max_
+        min_users, max_users = QueryMembers_MAP[total_members]
+        if min_users is not None:
+            params["minUsers"] = min_users
+        if max_users is not None:
+            params["maxUsers"] = max_users
 
         for i in range(0, 1000, 10):
             params["skip"] = i

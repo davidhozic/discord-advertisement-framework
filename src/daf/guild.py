@@ -83,10 +83,13 @@ class _BaseGUILD:
     def __init__(
         self,
         snowflake: Any,
-        messages: Optional[List] = [],
+        messages: Optional[List] = None,
         logging: Optional[bool] = False,
         remove_after: Optional[Union[timedelta, datetime]] = None
     ) -> None:
+        if messages is None:
+            messages = []
+
         self._apiobject: discord.Object = snowflake
         self.logging: bool = logging
         # Contains all the different message objects (added in .initialize())
@@ -265,10 +268,9 @@ class _BaseGUILD:
         """
         self.parent = parent
         guild_id = self.snowflake
-        if isinstance(self._apiobject, int):
-            self._apiobject = getter(guild_id)
-            if isinstance(self._apiobject, Coroutine):
-                self._apiobject = await self._apiobject
+        self._apiobject = getter(guild_id)
+        if isinstance(self._apiobject, Coroutine):
+            self._apiobject = await self._apiobject
 
         if self._apiobject is not None:
             for message in self._messages_uninitialized:
@@ -282,7 +284,29 @@ class _BaseGUILD:
 
         raise ValueError(f"Unable to find object with ID: {guild_id}")
 
-    async def update(self, init_options={}, **kwargs):
+    async def _on_member_join(self, member: discord.Member):
+        """
+        Event listener that get's called when a member joins a guild.
+
+        Parameters
+        ---------------
+        member: :class:`discord.Member`
+            The member who joined the guild.
+        """
+        raise NotImplementedError
+
+    async def _on_invite_delete(self, invite: discord.Invite):
+        """
+        Event listener that get's called when an invite has been deleted from a guild.
+
+        Parameters
+        --------------
+        invite: :class:`discord.Invite`
+            The invite that was deleted.
+        """
+        raise NotImplementedError
+
+    async def update(self, init_options = None, **kwargs):
         """
         .. versionadded:: v2.0
 
@@ -354,6 +378,9 @@ class _BaseGUILD:
 
         return GUILD_ADVERT_STATUS_SUCCESS
 
+    def generate_invite_log_context(self, member: discord.Member, invite_id: str) -> dict:
+        raise NotImplementedError
+
     def generate_log_context(self) -> Dict[str, Union[str, int]]:
         """
         Generates a dictionary of the guild's context,
@@ -376,10 +403,9 @@ class GUILD(_BaseGUILD):
     """
     The GUILD object represents a server to which messages will be sent.
 
-    .. versionchanged:: v2.1
+    .. versionchanged:: v2.7
 
-        - Added ``created_at`` attribute
-        - Added ``remove_after`` parameter
+        Added ``invite_track`` parameter.
 
     Parameters
     ------------
@@ -395,18 +421,38 @@ class GUILD(_BaseGUILD):
 
         * timedelta - the specified time difference
         * datetime - specific date & time
+
+    invite_track: Optional[List[str]]
+        .. versionadded:: 2.7
+
+        List of invite IDs to be tracked for member join count inside the guild.
+
+        .. note::
+
+            Accounts are required to have *Manage Channels* and *Manage Server* permissions inside a guild for tracking to
+            fully function. *Manage Server* is needed for getting information about invite links, *Manage Channels*
+            is needed to delete the invite from the list if it has been deleted,
+            however tracking still works without it.
     """
     __slots__ = (
         "update_semaphore",
+        "join_count",
+        *_BaseGUILD.__slots__
     )
 
     @typechecked
     def __init__(self,
                  snowflake: Union[int, discord.Guild],
-                 messages: Optional[List[Union[TextMESSAGE, VoiceMESSAGE]]] = [],
+                 messages: Optional[List[Union[TextMESSAGE, VoiceMESSAGE]]] = None,
                  logging: Optional[bool] = False,
-                 remove_after: Optional[Union[timedelta, datetime]] = None):
+                 remove_after: Optional[Union[timedelta, datetime]] = None,
+                 invite_track: Optional[List[str]] = None):
         super().__init__(snowflake, messages, logging, remove_after)
+        if invite_track is None:
+            invite_track = []
+
+        # Auto strip any url parts and keep only ID by splitting
+        self.join_count = {invite.split("/")[-1]: 0 for invite in invite_track}
         misc._write_attr_once(self, "update_semaphore", asyncio.Semaphore(1))
 
     def _check_state(self) -> bool:
@@ -423,7 +469,19 @@ class GUILD(_BaseGUILD):
         return (self.parent.client.get_guild(self.snowflake) is None or
                 super()._check_state())
 
-    async def initialize(self, parent: Any) -> None:
+    async def get_invites(self) -> List[discord.Invite]:
+        guild: discord.Guild = self.apiobject
+        client: discord.Client = self.parent.client
+        try:
+            perms = guild.get_member(client.user.id).guild_permissions
+            if perms.manage_guild:
+                return await guild.invites()
+        except discord.HTTPException as exc:
+            trace(f"Error reading invite links for guild {guild.name}!", TraceLEVELS.ERROR, exc)
+
+        return []  # Return empty on error or no permissions
+
+    async def initialize(self, parent: Any, _init = True) -> None:
         """
         This function initializes the API related objects and
         then tries to initialize the MESSAGE objects.
@@ -439,10 +497,78 @@ class GUILD(_BaseGUILD):
         Other
             Raised from .add_message(message_object) method.
         """
-        return await super().initialize(parent, parent.client.get_guild)
+        await super().initialize(parent, parent.client.get_guild)
+
+        # Fill invite counts
+        if not len(self.join_count):  # Skip invite query from Discord
+            return
+
+        invites = await self.get_invites()
+        invites = {invite.id: invite.uses for invite in invites}
+        counts = self.join_count
+        for invite in list(counts.keys()):
+            try:
+                counts[invite] = invites[invite]
+            except KeyError:
+                del counts[invite]
+                trace(
+                    f"Invite link {invite} not found in {self.apiobject.name}. It will not be tracked!",
+                    TraceLEVELS.WARNING
+                )
+
+    async def _on_member_join(self, member: discord.Member):
+        counts = self.join_count
+        invites = await self.get_invites()
+        invites = {invite.id: invite.uses for invite in invites}
+        for id_, last_uses in counts.items():
+            uses = invites[id_]
+            if last_uses != uses:
+                trace(f"User {member.name} joined to {member.guild.name} with invite {id_}", TraceLEVELS.DEBUG)
+                counts[id_] = uses
+                invite_ctx = self.generate_invite_log_context(member, id_)
+                await logging.save_log(self.generate_log_context(), None, None, invite_ctx)
+                return
+
+    async def _on_invite_delete(self, invite: discord.Invite):
+        if invite.id in self.join_count:
+            del self.join_count[invite.id]
+            trace(
+                f"Invite link ID {invite.id} deleted from {self.apiobject.name} (ID: {self.apiobject.id})",
+                TraceLEVELS.DEBUG
+            )
+
+    def generate_invite_log_context(self, member: discord.Member, invite_id: str) -> dict:
+        """
+        Generates dictionary representing the log of a member joining a guild.
+
+        Parameters
+        ------------
+        member: discord.Member
+            The member that joined a guild.
+
+        Returns
+        ---------
+        dict
+            ::
+
+                {
+                    "id": ID of the invite,
+                    "member": {
+                        "id": Member ID,
+                        "name": Member name
+                    }
+                }
+        """
+        return {
+            "id": invite_id,
+            "member": {
+                "id": member.id,
+                "name": member.name
+            }
+        }
 
     @misc._async_safe("update_semaphore", 1)
-    async def update(self, init_options={}, **kwargs):
+    async def update(self, init_options = None, _init = True, **kwargs):
         """
         Used for changing the initialization parameters,
         the object was initialized with.
@@ -471,13 +597,23 @@ class GUILD(_BaseGUILD):
         if "snowflake" not in kwargs:
             kwargs["snowflake"] = self.snowflake
 
-        if len(init_options) == 0:
+        if "invite_track" not in kwargs:
+            kwargs["invite_track"] = list(self.join_count.keys())
+
+        if init_options is None:
             init_options = {"parent": self.parent}
 
-        await misc._update(self, **kwargs, init_options=init_options)
+        # Add uninitialized servers
+        messages = kwargs.pop("messages", self.messages + self._messages_uninitialized)
+        kwargs["messages"] = []  # Messages are updated at the end
+
+        await misc._update(self, init_options=init_options, _init=_init, **kwargs)
+
         # Update messages
-        for message in self.messages:
-            await message.update(_init_options={"parent": self})
+        for message in messages:
+            await message.update(_init_options={"parent": self}, _init=_init)
+
+        self._messages = messages
 
 
 @misc.doc_category("Guilds")
@@ -508,13 +644,14 @@ class USER(_BaseGUILD):
     """
     __slots__ = (
         "update_semaphore",
+        *_BaseGUILD.__slots__
     )
 
     @typechecked
     def __init__(
         self,
         snowflake: Union[int, discord.User],
-        messages: Optional[List[DirectMESSAGE]] = [],
+        messages: Optional[List[DirectMESSAGE]] = None,
         logging: Optional[bool] = False,
         remove_after: Optional[Union[timedelta, datetime]] = None
     ) -> None:
@@ -552,7 +689,7 @@ class USER(_BaseGUILD):
         )
 
     @misc._async_safe("update_semaphore", 1)
-    async def update(self, init_options={}, **kwargs):
+    async def update(self, init_options = None, _init = True, **kwargs):
         """
         .. versionadded:: v2.0
 
@@ -581,21 +718,26 @@ class USER(_BaseGUILD):
         if "snowflake" not in kwargs:
             kwargs["snowflake"] = self.snowflake
 
-        if len(init_options) == 0:
+        if init_options is None:
             init_options = {"parent": self.parent}
 
-        await misc._update(self, init_options=init_options, **kwargs)
+        messages = kwargs.pop("messages", self.messages)
+        kwargs["messages"] = []  # Messages are updated at the end
+
+        await misc._update(self, init_options=init_options, _init=_init, **kwargs)
 
         # Update messages
-        for message in self.messages:
-            await message.update(_init_options={"parent": self})
+        for message in messages:
+            await message.update(_init_options={"parent": self}, _init=_init)
+
+        self._messages = messages
 
 
 @misc.doc_category("Auto objects")
 class AutoGUILD:
     """
-    .. versionchanged:: v2.5
-        Added ``auto_join`` parameter.
+    .. versionchanged:: v2.7
+        ``interval`` parameter changed to 1 minute.
 
     Internally automatically creates :class:`daf.guild.GUILD` objects.
     Can also automatically join new guilds (``auto_join`` parameter)
@@ -648,7 +790,7 @@ class AutoGUILD:
     logging: Optional[bool] = False
         Set to True if you want the guilds generated to log
         sent messages.
-    interval: Optional[timedelta] = timedelta(minutes=10)
+    interval: Optional[timedelta] = timedelta(minutes=1)
         Interval at which to scan for new guilds
     auto_join: Optional[web.GuildDISCOVERY] = None
         .. versionadded:: v2.5
@@ -671,10 +813,10 @@ class AutoGUILD:
         "_safe_sem",
         "parent",
         "auto_join",
-        "join_history",
         "guild_query_iter",
         "last_guild_join",
-        "guild_join_count"
+        "guild_join_count",
+        "invite_track"
     )
 
     @typechecked
@@ -682,20 +824,21 @@ class AutoGUILD:
                  include_pattern: str,
                  exclude_pattern: Optional[str] = None,
                  remove_after: Optional[Union[timedelta, datetime]] = None,
-                 messages: Optional[List[BaseMESSAGE]] = [],
+                 messages: Optional[List[BaseMESSAGE]] = None,
                  logging: Optional[bool] = False,
-                 interval: Optional[timedelta] = timedelta(minutes=10),
-                 auto_join: Optional[web.GuildDISCOVERY] = None) -> None:
+                 interval: Optional[timedelta] = timedelta(minutes=1),
+                 auto_join: Optional[web.GuildDISCOVERY] = None,
+                 invite_track: Optional[List[str]] = None) -> None:
         self.include_pattern = include_pattern
         self.exclude_pattern = exclude_pattern
         self.remove_after = remove_after
+        self.invite_track = invite_track
         # Uninitialized template messages that get copied for each found guild.
-        self.messages = messages
+        self.messages = messages if messages is not None else []
         self.logging = logging
         self.interval = interval
         self.auto_join = auto_join
-        self.cache: Dict[discord.Guild, GUILD] = {}
-        self.join_history: Set[int] = set()  # History of auto-joined guild ids
+        self.cache: Dict[int, GUILD] = {}
         self.last_scan = datetime.min
         self._deleted = False
         self._created_at = datetime.now()
@@ -820,6 +963,27 @@ class AutoGUILD:
         for guild in self.guilds:
             guild.remove_message(message)
 
+    def _get_server(self, snowflake: Union[int, discord.Guild, discord.User, discord.Object]):
+        """
+        Retrieves the server from internal cache based on the snowflake id or discord API object.
+
+        Parameters
+        -------------
+        snowflake: Union[int, discord.Guild, discord.User, discord.Object]
+            Snowflake ID or Discord API object.
+
+        Returns
+        ---------
+        Union[guild.GUILD, guild.USER]
+            The DAF server object.
+        None
+            The object was not found.
+        """
+        if not isinstance(snowflake, int):
+            snowflake = snowflake.id
+
+        return self.cache.get(snowflake)
+
     async def _generate_guilds(self):
         """
         Coroutine generates GUILD object for every joined guild that matches
@@ -833,7 +997,8 @@ class AutoGUILD:
         client: discord.Client = self.parent.client
         for discord_guild in client.guilds:
             if (
-                discord_guild not in self.cache and
+                discord_guild.id not in self.cache and
+                discord_guild.name is not None and
                 re.search(self.include_pattern, discord_guild.name) is not None and
                 (
                     self.exclude_pattern is None or
@@ -843,10 +1008,11 @@ class AutoGUILD:
                 try:
                     new_guild = GUILD(snowflake=discord_guild,
                                       messages=deepcopy(self.messages),
-                                      logging=self.logging)
+                                      logging=self.logging,
+                                      invite_track=self.invite_track)
 
                     await new_guild.initialize(parent=self.parent)
-                    self.cache[discord_guild] = new_guild
+                    self.cache[discord_guild.id] = new_guild
                 except Exception as exc:
                     trace("Unable to add new object.", TraceLEVELS.WARNING, exc)
 
@@ -915,7 +1081,7 @@ class AutoGUILD:
         await self._join_guilds()
         for g in self.guilds:
             if g._check_state():
-                del self.cache[g.apiobject]
+                del self.cache[g.apiobject.id]
             else:
                 status = await g._advertise()
                 if status == GUILD_ADVERT_STATUS_ERROR_REMOVE_ACCOUNT:
@@ -924,7 +1090,7 @@ class AutoGUILD:
         return GUILD_ADVERT_STATUS_SUCCESS
 
     @misc._async_safe("_safe_sem", 1)
-    async def update(self, init_options={}, **kwargs):
+    async def update(self, init_options = None, _init = True, **kwargs):
         """
         Updates the object with new initialization parameters.
 
@@ -932,8 +1098,8 @@ class AutoGUILD:
             After calling this method the entire object is reset
             (this includes it's GUILD objects in cache).
         """
-        if len(init_options) == 0:
+        if init_options is None:
             init_options = {"parent": self.parent}
 
         await self._close()
-        return await misc._update(self, init_options=init_options, **kwargs)
+        return await misc._update(self, init_options=init_options, _init=_init, **kwargs)

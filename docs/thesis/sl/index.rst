@@ -2,9 +2,8 @@
 Front page of the thesis
 ================================
 
-
 .. toctree::
-
+    
     acknowledgements
     abstract
     introduction

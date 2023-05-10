@@ -69,7 +69,6 @@ class BaseMESSAGE:
 
     .. deprecated:: v2.1
 
-        - start_in (start_now) - Using bool value to dictate whether the message should be sent at framework start.
         - start_period, end_period - Using int values, use ``timedelta`` object instead.
 
     .. versionchanged:: v2.1
@@ -89,8 +88,9 @@ class BaseMESSAGE:
         eg. if you pass the value `5`, that means the message will be sent every 5 seconds.
     data: inherited class dependant
         The data to be sent to discord.
-    start_in: timedelta
+    start_in: Optional[timedelta | datetime]
         When should the message be first sent.
+        *timedelta* means the difference from current time, while *datetime* means actual first send time.
     remove_after: Optional[Union[int, timedelta, datetime]]
         Deletes the message after:
 
@@ -118,7 +118,7 @@ class BaseMESSAGE:
                  start_period: Optional[Union[int, timedelta]],
                  end_period: Union[int, timedelta],
                  data: Any,
-                 start_in: Union[timedelta, bool],
+                 start_in: Optional[Union[timedelta, datetime]],
                  remove_after: Optional[Union[int, timedelta, datetime]]):
         # Data parameter checks
         if isinstance(data, Iterable):
@@ -147,14 +147,8 @@ class BaseMESSAGE:
         self.end_period = max(end_period, timedelta(seconds=C_PERIOD_MINIMUM_SEC))
         self.period = self.end_period  # This can randomize in _reset_timer
 
-        # Deprecated bool since v2.1
-        if isinstance(start_in, bool):
-            self.next_send_time = datetime.now() if start_in else datetime.now() + self.end_period
-            trace(
-                "Using bool value for 'start_in' ('start_now') parameter is deprecated and planned for removal. "
-                "Use timedelta object instead.",
-                TraceLEVELS.DEPRECATED
-            )
+        if isinstance(start_in, datetime):
+            self.next_send_time = start_in
         else:
             self.next_send_time = datetime.now() + start_in
 
@@ -450,11 +444,11 @@ class AutoCHANNEL:
                  interval: Optional[timedelta] = timedelta(minutes=5)) -> None:
         self.include_pattern = include_pattern
         self.exclude_pattern = exclude_pattern
-        self.interval = interval.total_seconds()
+        self.interval = interval
         self.parent = None
         self.channel_getter: property = None
         self.cache: Set[ChannelType] = set()
-        self.last_scan = 0
+        self.last_scan = datetime.min
 
     def __iter__(self):
         "Returns the channel iterator."
@@ -493,7 +487,7 @@ class AutoCHANNEL:
         Task that scans and adds new channels to cache.
         """
         channel: ChannelType
-        stamp = datetime.now().timestamp()
+        stamp = datetime.now()
         if stamp - self.last_scan > self.interval:
             self.last_scan = stamp
             guild: discord.Guild = self.parent.parent.apiobject
@@ -535,7 +529,7 @@ class AutoCHANNEL:
         """
         self.cache.remove(channel)
 
-    async def update(self, **kwargs):
+    async def update(self, init_options = None, _init = True, **kwargs):
         """
         Updates the object with new initialization parameters.
 
@@ -550,9 +544,12 @@ class AutoCHANNEL:
         Any
             Raised from :py:meth:`~daf.message.AutoCHANNEL.initialize` method.
         """
-        if "interval" not in kwargs:
-            kwargs["interval"] = timedelta(seconds=self.interval)
+        if init_options is None:
+            init_options = {}
+            init_options["parent"] = self.parent
+            init_options["channel_type"] = self.channel_getter
 
         return await misc._update(self,
-                                  init_options={"parent": self.parent, "channel_type": self.channel_getter},
+                                  init_options=init_options,
+                                  _init=_init,
                                   **kwargs)

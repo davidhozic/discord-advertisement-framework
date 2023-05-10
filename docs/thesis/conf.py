@@ -10,31 +10,30 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
-import os
 import sys
-
+import os
 
 sys.path.insert(0, os.path.abspath('../../src/'))
 sys.path.insert(0, os.path.abspath('.'))
 
+from daf import VERSION
+
+
+language = os.environ["LANGUAGE"]
+
+root_doc = f"{language}/index"
+exclude_patterns = ["sl/**", "en/**"]
+
+exclude_patterns.remove(f"{language}/**")
 
 # -- Project information -----------------------------------------------------
 project = 'Discord Advertisement Framework'
 copyright = '2023, David Hozic'
 author = 'David Hozic'
-version = None
-gh_release = os.environ.get("GITHUB_REF_NAME", default=None) # Workflow run release
-readthedocs_release = os.environ.get("READTHEDOCS_VERSION", default=None) # Readthe docs version
-if gh_release is not None:
-    version = gh_release
-elif readthedocs_release is not None:
-    version = readthedocs_release
-else:
-    version = "v0.0.1"
+version = VERSION
 
 
 # -- General configuration ---------------------------------------------------
-root_doc = 'index'
 
 numfig = True
 # Add any Sphinx extension module names here, as strings. They can be
@@ -62,12 +61,6 @@ source_suffix = {
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 
-# List of patterns, relative to source directory, that match files and
-# directories to ignore when looking for source files.
-# This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = []
-
-
 # Autodoc
 autodoc_typehints = "signature"
 autodoc_typehints_format = "short"
@@ -88,7 +81,8 @@ intersphinx_mapping = {
     'PyCord': ("https://docs.pycord.dev/en/stable/", None),
     "DAF" : ("https://daf.davidhozic.com/en/stable/", None),
     "Python" : ("https://docs.python.org/3/", None),
-    "Sphinx" : ("https://www.sphinx-doc.org/en/master", None)
+    "Sphinx" : ("https://www.sphinx-doc.org/en/master", None),
+    "SQLAlchemy" : ("https://docs.sqlalchemy.org/en/20/", None)
 }
 
 # ----------- HTML ----------- #
@@ -114,17 +108,21 @@ html_theme_options = {
 }
 
 # ----------- Latex ----------- #
-with open("titlepage.tex", "r", encoding="utf-8") as reader:
+with open(f"./{language}/titlepage.tex", "r", encoding="utf-8") as reader:
     latex_title_page = reader.read()
 
 # latex_engine = 'xelatex'
+literal_block_str =  {
+    "en": r"\listof{literalblock}{List of literal blocks}",
+    "sl": r"\listof{literalblock}{Seznam literalnih blokov}"
+}
 latex_elements = {
     "tableofcontents": r"""
         \tableofcontents
         \listoffigures
-        \listof{literalblock}{List of literal blocks}
         \listoftables
-    """,
+        {}
+    """.format(literal_block_str.get(language)),
     'fncychap': r'',
     # 'fontpkg': r"""
     #     \setromanfont{Times New Roman}

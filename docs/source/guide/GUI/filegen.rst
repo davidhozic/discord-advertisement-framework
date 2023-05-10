@@ -28,11 +28,11 @@ We will be asked for a file location of the schema backup, where the GUI will sa
 
 .. image:: images/gui-schema-backup-bnt.png
     :align: center
-    :scale: 70%
+    :width: 20cm
 
 .. image:: images/gui-schema-backup-file-save.png
     :align: center
-    :scale: 40%
+    :width: 15cm
 
 
 Schema restore
@@ -44,7 +44,7 @@ We will be asked for a file location of the schema backup, from which the GUI wi
 
 .. image:: images/gui-schema-restore-bnt.png
     :align: center
-    :scale: 70%
+    :width: 20cm
 
 
 
@@ -64,7 +64,7 @@ can run it by using the command ``python <out script here>``.
 
 .. image:: images/gui-shill-script-gen-bnt.png
     :align: center
-    :scale: 70%
+    :width: 20cm
 
 
 Here is an example of the shilling script generated from the above option.

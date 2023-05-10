@@ -38,13 +38,15 @@ class TextMESSAGE(BaseMESSAGE):
     """
     This class is used for creating objects that represent messages which will be sent to Discord's TEXT CHANNELS.
 
-    .. versionchanged:: v2.3
+    .. versionchanged:: v2.7
 
-        :Slow mode period handling:
+        *start_in* now accepts datetime object
 
-            When the period is lower than the remaining time, the framework will start
-            incrementing the original period by original period until it is larger then
-            the slow mode remaining time.
+    .. note::
+
+        Slow mode period handling:
+            If the advertisement period is set less than the biggest slow-mode delay of the given channels,
+            the period will be automatically set slightly above the slow-mode delay.
 
     Parameters
     ------------
@@ -100,8 +102,9 @@ class TextMESSAGE(BaseMESSAGE):
         - "send" -    each period a new message will be sent,
         - "edit" -    each period the previously send message will be edited (if it exists)
         - "clear-send" -    previous message will be deleted and a new one sent.
-    start_in: Optional[timedelta]
+    start_in: Optional[timedelta | datetime]
         When should the message be first sent.
+        *timedelta* means the difference from current time, while *datetime* means actual first send time.
     remove_after: Optional[Union[int, timedelta, datetime]]
         Deletes the message after:
 
@@ -114,6 +117,7 @@ class TextMESSAGE(BaseMESSAGE):
         "channels",
         "mode",
         "sent_messages",
+        *BaseMESSAGE.__slots__
     )
 
     @typechecked
@@ -123,7 +127,7 @@ class TextMESSAGE(BaseMESSAGE):
                  data: Union[Iterable[Union[str, discord.Embed, FILE]], str, discord.Embed, FILE, _FunctionBaseCLASS],
                  channels: Union[Iterable[Union[int, discord.TextChannel, discord.Thread]], AutoCHANNEL],
                  mode: Optional[Literal["send", "edit", "clear-send"]] = "send",
-                 start_in: Optional[Union[timedelta, bool]] = timedelta(seconds=0),
+                 start_in: Optional[Union[timedelta, datetime]] = timedelta(seconds=0),
                  remove_after: Optional[Union[int, timedelta, datetime]] = None):
         super().__init__(start_period, end_period, data, start_in, remove_after)
         self.mode = mode
@@ -141,7 +145,11 @@ class TextMESSAGE(BaseMESSAGE):
         timedelta
             The maximum slowmode delay of all channels.
         """
-        return timedelta(seconds=max((c.slowmode_delay for c in self.channels), default=0))
+        seconds = max((c.slowmode_delay for c in self.channels), default=0)
+        if seconds > 0:  # To be sure
+            seconds += 10
+
+        return timedelta(seconds=seconds)
 
     def _check_state(self) -> bool:
         """
@@ -317,6 +325,9 @@ class TextMESSAGE(BaseMESSAGE):
         ValueError
             No valid channels were passed to object"
         """
+        if parent is None:
+            return
+
         ch_i = 0
         self.parent = parent
         cl = parent.parent.client
@@ -359,11 +370,6 @@ class TextMESSAGE(BaseMESSAGE):
         """
         This method handles the error that occurred during the execution of the function.
         Returns `True` if error was handled.
-
-        Slow mode period handling:
-        When the period is lower than the remaining time, the framework will start
-        incrementing the original period by original period until it is larger then
-        the slow mode remaining time.
 
         Parameters
         -----------
@@ -519,7 +525,7 @@ class TextMESSAGE(BaseMESSAGE):
 
     @typechecked
     @misc._async_safe("update_semaphore")
-    async def update(self, _init_options: Optional[dict] = {}, **kwargs: Any):
+    async def update(self, _init_options: Optional[dict] = None, _init = True, **kwargs: Any):
         """
         .. versionadded:: v2.0
 
@@ -544,21 +550,22 @@ class TextMESSAGE(BaseMESSAGE):
         """
         if "start_in" not in kwargs:
             # This parameter does not appear as attribute, manual setting necessary
-            kwargs["start_in"] = timedelta(seconds=0)
+            kwargs["start_in"] = self.next_send_time
 
         if "data" not in kwargs:
             kwargs["data"] = self._data
 
-        if "channels" not in kwargs and not isinstance(self.channels, AutoCHANNEL):
+        channels = kwargs.get("channels", self.channels)
+        if isinstance(channels, AutoCHANNEL):
+            kwargs["channels"] = channels
+            await channels.update(init_options={"parent": self, "channel_type": "text_channels"}, _init=_init)
+        else:
             kwargs["channels"] = [x.id for x in self.channels]
 
-        if not len(_init_options):
+        if _init_options is None:
             _init_options = {"parent": self.parent}
 
-        await misc._update(self, init_options=_init_options, **kwargs)  # No additional modifications are required
-
-        if isinstance(self.channels, AutoCHANNEL):
-            await self.channels.update()
+        await misc._update(self, init_options=_init_options, _init=_init, **kwargs)
 
 
 @misc.doc_category("Messages", path="message")
@@ -569,14 +576,11 @@ class DirectMESSAGE(BaseMESSAGE):
 
     .. deprecated:: v2.1
 
-        - start_in (start_now) - Using bool value to dictate whether the message should be sent at framework start.
         - start_period, end_period - Using int values, use ``timedelta`` object instead.
 
-    .. versionchanged:: v2.1
+    .. versionchanged:: v2.7
 
-        - start_period, end_period Accept timedelta objects.
-        - start_now - renamed into ``start_in`` which describes when the message should be first sent.
-        - removed ``deleted`` property
+        *start_in* now accepts datetime object
 
     Parameters
     ------------
@@ -630,8 +634,9 @@ class DirectMESSAGE(BaseMESSAGE):
         - "edit" -    each period the previously send message will be edited (if it exists)
         - "clear-send" -    previous message will be deleted and a new one sent.
 
-    start_in: Optional[timedelta]
+    start_in: Optional[timedelta | datetime]
         When should the message be first sent.
+        *timedelta* means the difference from current time, while *datetime* means actual first send time.
     remove_after: Optional[Union[int, timedelta, datetime]]
         Deletes the guild after:
 
@@ -644,6 +649,7 @@ class DirectMESSAGE(BaseMESSAGE):
         "mode",
         "previous_message",
         "dm_channel",
+        *BaseMESSAGE.__slots__
     )
 
     @typechecked
@@ -652,7 +658,7 @@ class DirectMESSAGE(BaseMESSAGE):
                  end_period: Union[int, timedelta],
                  data: Union[str, discord.Embed, FILE, Iterable[Union[str, discord.Embed, FILE]], _FunctionBaseCLASS],
                  mode: Optional[Literal["send", "edit", "clear-send"]] = "send",
-                 start_in: Optional[Union[timedelta, bool]] = timedelta(seconds=0),
+                 start_in: Optional[Union[timedelta, datetime]] = timedelta(seconds=0),
                  remove_after: Optional[Union[int, timedelta, datetime]] = None):
         super().__init__(start_period, end_period, data, start_in, remove_after)
         self.mode = mode
@@ -768,6 +774,9 @@ class DirectMESSAGE(BaseMESSAGE):
             Raised when the direct message channel could not be created
         """
         try:
+            if parent is None:
+                return
+
             self.parent = parent
             user = parent.apiobject
             await user.create_dm()
@@ -869,7 +878,7 @@ class DirectMESSAGE(BaseMESSAGE):
 
     @typechecked
     @misc._async_safe("update_semaphore")
-    async def update(self, _init_options: Optional[dict] = {}, **kwargs):
+    async def update(self, _init_options: Optional[dict] = None, _init = True, **kwargs):
         """
         .. versionadded:: v2.0
 
@@ -892,15 +901,14 @@ class DirectMESSAGE(BaseMESSAGE):
         Other
             Raised from .initialize() method
         """
-
         if "start_in" not in kwargs:
             # This parameter does not appear as attribute, manual setting necessary
-            kwargs["start_in"] = timedelta(seconds=0)
+            kwargs["start_in"] = self.next_send_time
 
         if "data" not in kwargs:
             kwargs["data"] = self._data
 
-        if not len(_init_options):
+        if _init_options is None:
             _init_options = {"parent": self.parent}
 
-        await misc._update(self, init_options=_init_options, **kwargs)  # No additional modifications are required
+        await misc._update(self, init_options=_init_options, _init=_init, **kwargs)

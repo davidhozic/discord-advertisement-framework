@@ -58,6 +58,9 @@ for path, dirs, files in os.walk("./"):
                         shutil.copy2(fromf, tof)
 
             # Run scripts
+            if CLEAN:
+                continue
+
             scripts = setup_file_data["scripts"]
             for script in scripts:
                 process = subprocess.Popen([sys.executable, script], universal_newlines=True)

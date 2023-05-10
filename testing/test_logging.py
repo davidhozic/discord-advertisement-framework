@@ -14,7 +14,7 @@ C_FILE_NAME_FORBIDDEN_CHAR = ('<','>','"','/','\\','|','?','*',":")
 @pytest.mark.asyncio
 async def test_logging_json(channels, guilds, accounts):
     "Test if json logging works"
-    account = accounts[0]
+    account: daf.ACCOUNT = accounts[0]
     dc_guild, _ = guilds
     text_channels, _ = channels
     try:
@@ -46,7 +46,7 @@ async def test_logging_json(channels, guilds, accounts):
                     assert result_json[k] == v, "Resulting data does not match the guild_context"
                 
                 # Check message data
-                message_history = result_json["message_history"]
+                message_history = result_json["message_tracking"][str(account_context["id"])]["messages"]
                 message_history = message_history[0] # Get only last send data
                 message_history.pop("index")
                 message_history.pop("timestamp")
@@ -65,6 +65,12 @@ async def test_logging_json(channels, guilds, accounts):
             message_ctx = result.message_context
             await daf.logging.save_log(guild_context, message_ctx, account_context)
             check_json_results(message_ctx)
+
+        # Simulate member join without checking data
+        await daf.logging.save_log(
+            guild_context,
+            invite_context={"id": "ABCDE", "member": {"id": 123456789, "name": "test"}}
+        )
     finally:
         shutil.rmtree("./History", ignore_errors=True)
 
@@ -76,7 +82,7 @@ async def test_logging_sql(channels, guilds, accounts):
     It does not test any of the results as it assumes the database
     will raise an exception if anything is wrong.
     """
-    account = accounts[0]
+    account: daf.ACCOUNT = accounts[0]
     dc_guild, _ = guilds
     text_channels, _ = channels
     try:
@@ -100,5 +106,11 @@ async def test_logging_sql(channels, guilds, accounts):
             result = await tm._send()
             message_ctx = result.message_context
             await daf.logging.save_log(guild_context, message_ctx, account_context)
+
+        # Simulate member join without checking data
+        await daf.logging.save_log(
+            guild_context,
+            invite_context={"id": "ABCDE", "member": {"id": 123456789, "name": "test"}}
+        )
     finally:
         os.remove("./testdb.db")
