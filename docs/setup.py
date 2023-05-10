@@ -59,6 +59,7 @@ for path, dirs, files in os.walk("./"):
 
             # Run scripts
             if CLEAN:
+                os.chdir(cwd)
                 continue
 
             scripts = setup_file_data["scripts"]
