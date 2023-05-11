@@ -572,3 +572,50 @@ Omogoča tudi shrambo teh definicij v JSON datoteko, braje definicij iz JSON dat
     Zavihek za definicijo sheme
 
 Omogoča tudi dinamično branje in pretvorbo objektov v že zagnanem vmesniku preko gumbov, ki vsebujejo besedo *live*.
+
+Uporabniške račune se lahko definira tako, da ob kliku na opcijski meni *Object options*, uporabniki izberejo opcijo *New ACCOUNT*.
+Ob kliku se nam odpre novo okno, ki je avtomatično in dinamično generirano iz podatkov o podatkovnih tipih (anotacije), ki jih sprejme
+razred ob definiciji. V oknu se za vsak parameter generira labela, opcijski meni in pa opcijski gumb, v katerem lahko urejamo izbrano vrednost
+oz. definiramo novo vrednost.
+
+.. figure:: ./DEP/images/gui-new-item-define.png
+
+    Definicija uporabiškega računa
+
+.. raw:: latex
+
+    \newpage
+
+Na zgornji sliki je mogoče opaziti tudi 3 gumbe, ki so prisotni v definicijskem oknu vedno, ne glede na to katere objekte definiramo.
+Ti so *Save*, *Close* in *Keep on top*. *Save* gumb bo shranil vrednosti okna v abstrakten objekt ObjectInfo in ga shranil v prejšen GUI pripomoček (*Listbox* ali Opcijski meni).
+*Close* gumb bo poskušal zapreti okno in če je bila v oknu narejena sprememba, okno vpraša uporabnika, če želi shraniti trenutne vrednosti.
+*Keep on top* gumb pa prisili, da bo okno vedno prikazano na vrhu ostalih oken v operacijskem sistemu.
+Opazimo pa tudi gumb *Help*. Ta gumb ni vedno prisoten, ampak je na voljo le če urejamo objekte, ki so del DAF ogrodja, PyCord ogrodja ali pa del
+vgrajene Python_ knjižnice. Klik na ta gumb bo v brskalniku odprl dokumentacijo pripadajočega modula objekta in v iskalnik dokumentacije vpisal ime objekta.
+Na tak način lahko uporabniki zelo hitro najdejo objekt v dokumentaciji brez dolgočasnega branja le te.
+
+
+.. figure:: ./DEP/images/gui-help-search.png
+    :width: 15cm
+
+    Primer odprte dokumentacije ob kliku na gumb *Help* znotraj okna za definicijo
+    :class:`~daf.client.ACCOUNT` objekta.
+
+
+.. seealso::
+
+    Za nekatere objekte, bodo prikazani tudi dodatni gumbi. Te gumbi so npr. gumb, ki odpre pripomoček za izboro barve (:class:`discord.Colour`),
+    pripomoček za izbiro datoteke oz. mape (:class:`~daf.dtypes.FILE`, :class:`~daf.dtypes.AUDIO`, :class:`~daf.logging.LoggerJSON`, :class:`~daf.logging.LoggerCSV`) ipd.
+
+
+Upravljalnik za beleženje definiramo tako, da v desnem okvirju zavihka v meniju izberemo vrsto upravljalnika 
+za logiranje in za spremembo parametrov kliknemo na gumb *Edit*. Odpre se definicijsko okno, ki deluje na enak način kot za definicijo
+uporabniških računov.
+
+
+.. figure:: ./DEP/images/gui-logger-definition-edit-json.png
+    :width: 15cm
+
+    Definicija upravljalnika beleženja
+
+
