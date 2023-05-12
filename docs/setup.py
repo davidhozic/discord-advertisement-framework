@@ -69,4 +69,3 @@ for path, dirs, files in os.walk("./"):
 
             # Change cwd back to original
             os.chdir(cwd)
-

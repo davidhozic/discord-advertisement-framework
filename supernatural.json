@@ -1,0 +1,156 @@
+{
+  "loggers": {
+    "all": [
+      {
+        "type": "daf.logging._logging.LoggerJSON",
+        "data": {
+          "path": "C:\\Users\\David\\daf\\History"
+        }
+      },
+      {
+        "type": "daf.logging._logging.LoggerCSV",
+        "data": {
+          "path": "C:\\Users\\David\\daf\\History",
+          "delimiter": ";"
+        }
+      },
+      {
+        "type": "daf.logging.sql.mgr.LoggerSQL",
+        "data": {
+          "database": "C:\\Users\\David\\daf\\messages",
+          "dialect": "sqlite",
+          "fallback": null
+        }
+      }
+    ],
+    "selected_index": 2
+  },
+  "tracing": -1,
+  "accounts": [
+    {
+      "type": "daf.client.ACCOUNT",
+      "data": {
+        "token": "OTM2NzM5NDMxMDczODY1Nzg5.G6ntKm.Qkd2B289RClbdKljlcgcrvuBabZycrNRkNYAdg",
+        "is_user": false,
+        "intents": null,
+        "proxy": null,
+        "servers": [
+          {
+            "type": "daf.guild.AutoGUILD",
+            "data": {
+              "include_pattern": "David",
+              "exclude_pattern": null,
+              "remove_after": null,
+              "messages": [
+                {
+                  "type": "daf.message.text_based.TextMESSAGE",
+                  "data": {
+                    "start_period": null,
+                    "end_period": {
+                      "type": "datetime.timedelta",
+                      "data": {
+                        "days": 0,
+                        "seconds": 5,
+                        "microseconds": 0
+                      }
+                    },
+                    "data": {
+                      "type": "_discord.embeds.Embed",
+                      "data": {
+                        "colour": {
+                          "type": "_discord.colour.Colour",
+                          "data": {
+                            "value": 16574467
+                          }
+                        },
+                        "color": {
+                          "type": "_discord.colour.Colour",
+                          "data": {
+                            "value": 16574467
+                          }
+                        },
+                        "title": "Spooky discovery",
+                        "type": "rich",
+                        "description": "The article is about 2 brothers, the Winchesters, who hunt montsters, fight demons, and get girls (atleast Dean does).\nThe younger brother is Sam, who is smart and the older one is Dean, the strong sexy one.",
+                        "fields": [
+                          {
+                            "type": "_discord.embeds.EmbedField",
+                            "data": {
+                              "name": "Series name",
+                              "value": "Supernatural",
+                              "inline": true
+                            }
+                          },
+                          {
+                            "type": "_discord.embeds.EmbedField",
+                            "data": {
+                              "name": "Seasons",
+                              "value": "15",
+                              "inline": true
+                            }
+                          },
+                          {
+                            "type": "_discord.embeds.EmbedField",
+                            "data": {
+                              "name": "First aired",
+                              "value": "2005",
+                              "inline": true
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    "channels": {
+                      "type": "daf.message.base.AutoCHANNEL",
+                      "data": {
+                        "include_pattern": "test",
+                        "exclude_pattern": null,
+                        "interval": {
+                          "type": "datetime.timedelta",
+                          "data": {
+                            "days": 0,
+                            "seconds": 300,
+                            "microseconds": 0
+                          }
+                        }
+                      }
+                    },
+                    "mode": "send",
+                    "start_in": {
+                      "type": "datetime.datetime",
+                      "data": {
+                        "year": 2023,
+                        "month": 5,
+                        "day": 7,
+                        "hour": 21,
+                        "minute": 55,
+                        "second": 32,
+                        "microsecond": 233940,
+                        "tzinfo": null,
+                        "fold": 0
+                      }
+                    },
+                    "remove_after": null
+                  }
+                }
+              ],
+              "logging": true,
+              "interval": {
+                "type": "datetime.timedelta",
+                "data": {
+                  "days": 0,
+                  "seconds": 60,
+                  "microseconds": 0
+                }
+              },
+              "auto_join": null,
+              "invite_track": null
+            }
+          }
+        ],
+        "username": null,
+        "password": null
+      }
+    }
+  ]
+}

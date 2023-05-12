@@ -502,6 +502,12 @@ komunicira preko njegovih kontrolnih funkcij, ki se nahajajo v :ref:`jedrnem niv
 
     Grafični vmesnik (privzet prikaz)
 
+.. raw:: latex
+
+    \newpage
+
+Kot je razvidno iz gornje slike, je za dizajn vmesnika izbran svetel dizajn z modrimi odtenki za posamezne elemente.
+
 
 Tkinter
 ------------------
@@ -516,36 +522,7 @@ pripomočke, katere lahko večkrat uporabimo. Ti pripomočki so naprimer :class:
 (angl.) "drop-down" meni, :class:`ttk.Spinbox` za vnašanje številkških vrednosti, gumbi :class:`ttk.Button`, itd.
 Posamezne pripomočke se da tudi znatno konfigurirati, kjer lahko spreminjamo stile, velikost, pisavo, ipd.
 
-Posamezne pripomočke se da v uporabniškem vmesniku pozicionirati na več načinov in sicer z:
-
-:Pakirno (angl. *pack*) geometrijo:
-
-    To je najhitrejši način za postavitev geometrije pripomočku in sicer pripomoček v vmesnik postavi
-    relativno na ostale pripomočke, ki so že v vmesniku. Ta način geometrije omogoča izdelavo vmesnika,
-    kjer se widgeti vsi prilagajo drug na drugega, tudi ob spreminjanju velikosti okna (lahko pa to postane
-    performančno potratno).
-
-:Mrežno (angl. *grid*) geometrijo:
-
-    Pri mrežni geometriji se pripomočke postavlja v vrstice in stoplce.
-    Ta način omogoča postavitev bolj zahtevne geometrije, kjer bi pri pakirni geometriji potrebovali več
-    gnezdenih okvirjev za doseg iste stvari.
-
-    .. seealso::
-        
-        Okvir je vrsta pripomočka, ki je kot neka plošča na katero lahko postavljamo ostale pripomočke.
-
-
-
-:Pozicijsko (angl. place) geometrijo:
-
-    Ta vrsta geometrije omogoča, da pripomočke postavimo na točno določeno koordinato oz. tudi
-    postavitev na koordinato relativno na velikost glavnega okna.
-
-    Ta vrsta geometrije v grafičnem vmesniku DAF projekta ni uporabljena.
-
-
-Več o tkinter knjižnici si lahko preberete na uradni Python dokumentaciju :mod:`tukaj <tkinter>`.
+Več o Tkinter knjižnici si lahko preberete na uradni Python dokumentaciji :mod:`tukaj <tkinter>`.
 
 
 Zavihki
@@ -602,9 +579,9 @@ Na tak način lahko uporabniki zelo hitro najdejo objekt v dokumentaciji brez do
     :class:`~daf.client.ACCOUNT` objekta.
 
 
-.. seealso::
+.. note::
 
-    Za nekatere objekte, bodo prikazani tudi dodatni gumbi. Te gumbi so npr. gumb, ki odpre pripomoček za izboro barve (:class:`discord.Colour`),
+    Za nekatere objekte, bodo prikazani tudi dodatni gumbi. Te gumbi so npr. gumb, ki odpre pripomoček za izbiro barve (:class:`discord.Colour`),
     pripomoček za izbiro datoteke oz. mape (:class:`~daf.dtypes.FILE`, :class:`~daf.dtypes.AUDIO`, :class:`~daf.logging.LoggerJSON`, :class:`~daf.logging.LoggerCSV`) ipd.
 
 
@@ -619,3 +596,54 @@ uporabniških računov.
     Definicija upravljalnika beleženja
 
 
+Pod izbiro za upravljalnik se nahaja tudi opcijski meni za izbiro nivoja izpisov v *Output* zavihku.
+
+
+*Live view* zavihek
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Medtem, ko je :ref:`*Schema definition* zavihek` namenjen definiciji v naprej definirane sheme oz. predloge objektov,
+*Live view* zavihek omogoča direktno manipulacijo z objekti, ki so dejansko dodani in delujejo v DAF in predstavljajo prave objekte.
+
+Na začetku zavihka se nahaja opcijski meni, v katerem je *add_object* funkcija, kateri lahko definiramo nov račun.
+Ob kliku na gumb *Execute* bo definiran račun takoj dodan v DAF in začel z oglaševanjem.
+
+Pod opcijskem menijem se nahajajo 3 gumbi. *Refresh* posodobi spodnji seznam z računi, ki oglašujejo v DAF, *Edit*
+gumb odpre okno za definiranje računov, kjer se vanj naložijo obstoječe vrednosti iz uporabniškega računa, ki ga urejamo.
+Okno poleg gumbov oz. pripomočkov, ki jih ima pri urejanju :ref:`Schema definition zavihku <*Schema definition* zavihek>`, vsebuje
+tudi 2 dodatna gumba. Ta gumba sta *Refresh* gumb, ki v okno naloži osvežene vrednosti iz dejanskega objekta dodanega v DAF in 
+*Live update* gumb, ki dejanski objekt v DAF, na novo inicializira z vrednostnimi definiranimi v oknu.
+
+
+*Output* zavihek
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Vse kar se nahaja v tem zavihku, je seznam izpisov, ki se izpišejo na standardnem izhodu stdout.
+Uporabi se ga lahko za bolj podroben pregled kaj se dogaja z jedrom DAF.
+
+
+*Analytics* zavihek
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Zavihek omogoča analizo poslanih sporočil in njihovo statistiko. Prav tako omogoča analizo pridruževanj preko sledenja
+cehovskih povezav (angl. *Invite links*) in njihovo statistiko.
+
+Za pridobitev vnosov, se uporabi gumb *Get logs*, ki na podlagi parametrov definiranih v zgornjem opcijskem meniju, vrne
+v spodnji seznam filtrirane elemente. Te elemente se lahko vsakega posebej pregleda z gumbom *View log*, ki 
+odpre okno za urejanje objektov.
+
+Za pridobitev statistike se uporabi gumb *Calculate*, ki na podlagi opcijskega meniji nad gumbom, v spodnjo tabelo vrne podatke.
+
+
+.. figure:: ./DEP/images/gui-analytics-message-frame-view-log.png
+    :height: 10cm
+
+    Prikaz vnosa o poslanem sporočilu.
+
+
+.. figure:: ./DEP/images/gui-analytics-tab.png
+    :width: 15cm
+
+    Zavihek z analitiko / statistiko
+
+
+.. raw:: latex
+
+    \newpage
