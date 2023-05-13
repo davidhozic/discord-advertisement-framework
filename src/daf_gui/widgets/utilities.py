@@ -17,6 +17,43 @@ class GLOBAL:
     async_task: Task = None
 
 
+def gui_except(parent = None):
+    """
+    Propagate any exceptions to the ``parent`` window.
+    """
+    def decorator(fnc: Callable):
+        """
+        Decorator that catches exceptions and displays them in GUI.
+        """
+        def wrapper(*args, **kwargs):
+            try:
+                return fnc(*args, **kwargs)
+            except Exception as exc:
+                tkdiag.Messagebox.show_error(f"{exc}\n(Exception in {fnc.__name__})", parent=parent)
+
+        return wrapper
+
+    if callable(parent):  # Assume no parameters given
+        fnc = parent
+        parent = None
+        return decorator(fnc)
+
+    return decorator
+
+
+def gui_confirm_action(fnc: Callable):
+    """
+    Decorator that asks the user to confirm the action before calling the
+    targeted function (fnc).
+    """
+    def wrapper(*args, **kwargs):
+        result = tkdiag.Messagebox.show_question("Are you sure?", "Confirm")
+        if result == "Yes":
+            return fnc(*args, **kwargs)
+
+    return wrapper
+
+
 async def dummy_task():
     "Dummy task for force waking async_runner()"
     pass

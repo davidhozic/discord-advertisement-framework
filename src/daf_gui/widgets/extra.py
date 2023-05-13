@@ -1,7 +1,7 @@
 """
 Module contains additional widgets and their setup handlers.
 """
-from .async_util import *
+from .utilities import *
 from .convert import *
 from .dpi import *
 

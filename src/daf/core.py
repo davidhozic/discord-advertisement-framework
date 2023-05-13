@@ -19,6 +19,7 @@ from . import convert
 import asyncio
 import shutil
 import os
+import sys
 import pickle
 import _discord as discord
 
@@ -458,7 +459,13 @@ def run(user_callback: Optional[Union[Callable, Coroutine]] = None,
         Invalid proxy url.
     """
     _params = locals().copy()
-    loop = asyncio.get_event_loop()
+
+    if sys.version_info.minor < 10:
+        loop = asyncio.get_event_loop()
+    else:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
     try:
         loop.create_task(initialize(**_params))
         loop.run_forever()
