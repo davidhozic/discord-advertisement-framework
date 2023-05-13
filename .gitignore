@@ -18,5 +18,5 @@ docs/common/reference
 daf_web_data
 test.py
 
-venv/*
-.venv/*
+venv*
+.venv*
