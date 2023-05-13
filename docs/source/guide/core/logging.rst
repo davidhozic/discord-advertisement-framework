@@ -203,7 +203,7 @@ Features
 
 ER diagram
 --------------------------------
-.. image:: ./DEP/images/sql_er.drawio.svg
+.. image:: ./DEP/sql_er.drawio.svg
     :width: 1440
 
 

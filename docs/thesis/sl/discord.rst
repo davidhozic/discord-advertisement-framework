@@ -40,21 +40,21 @@ Nekaj primerov skupnosti Discord, povezanih s Univerzo v Ljubljani:
 - ...
 
 
-.. figure:: ./DEP/images/discord_logo.svg
+.. figure:: ./DEP/discord_logo.svg
     :width: 400
 
     Discord brand
 
 
 .. _ssfe-community-fig:
-.. figure:: ./DEP/images/ssfe_discord.png
+.. figure:: ./DEP/ssfe_discord.png
     :width: 400
 
     ŠSFE Discord community
 
 
 .. _fe-uni-community-fig:
-.. figure:: ./DEP/images/feuni_discord.png
+.. figure:: ./DEP/feuni_discord.png
     :width: 400
 
     FE UNI Discord community
@@ -68,7 +68,7 @@ Nekaj primerov skupnosti Discord, povezanih s Univerzo v Ljubljani:
 Discordova struktura
 ======================
 
-.. figure:: ./DEP/images/discord_client_struct.drawio.png
+.. figure:: ./DEP/discord_client_struct.drawio.png
 
     Struktura aplikacije
 
@@ -102,7 +102,7 @@ kanala. Sem lahko pošiljate navaden tekst, emotikone, nalepke in darila ter, v 
 lahko pošiljate tudi tako imenovana vgrajena sporočila (*Embedded messages*), ki so malo bolj formatirana sporočila
 znotraj nekakšne škatle - pogosto se jih uporablja za oglase.
 
-.. figure:: ./DEP/images/discord_text_channel.png
+.. figure:: ./DEP/discord_text_channel.png
 
     Discord tekstovni kanal
 
@@ -112,7 +112,7 @@ Za samo oglaševanja te kanali niso tako aktualni, saj bi vaše oglase lahko pre
 oglaševanja v kanalu.
 
 
-.. figure:: ./DEP/images/discord_voice_channel.png
+.. figure:: ./DEP/discord_voice_channel.png
 
     Discord glasovni kanal
 
@@ -122,7 +122,7 @@ Sem noter sta všteta tekstovni kanal uporabnika ter tudi glasovna komunikacija.
 oglaševanja so te najbližje vsiljivi kategoriji, vendar je to prepovedano v pogojih uporabe Discord-a in v primeru
 prevelikega in hitrega oglaševanja v direktna sporočila, lahko Discord ukine vaš račun.
 
-.. figure:: ./DEP/images/discord_direct_message_channel.png
+.. figure:: ./DEP/discord_direct_message_channel.png
 
     Discord direktna sporočila
 
@@ -170,7 +170,7 @@ For more information and to purchase your own Gray Rabbit NFT, visit www.mynft.d
 
 Ko imate oglaševalsko vsebino jo samo prepošiljate po vseh kanalih.
 
-.. figure:: ./DEP/images/chatgpt.png
+.. figure:: ./DEP/chatgpt.png
     :width: 400
 
     Primer Chat-GPT
@@ -192,7 +192,7 @@ Tem cehom se lahko potem pridružimo in v primerne kanale oglašujemo našo vseb
 imajo ponavadi namenske kanale, ki so namenjeni oglaševanju in v te lahko oglašujemo brez posledic, medtem ko nas
 oglaševanje lahko privede do izključitve iz strežnika.
 
-.. figure:: ./DEP/images/topgg_find_servers.png
+.. figure:: ./DEP/topgg_find_servers.png
     :width: 400
 
     Iskanje cehov na Top.GG

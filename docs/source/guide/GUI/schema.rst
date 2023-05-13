@@ -9,7 +9,7 @@ The tab allows us to define:
 2. Logging & tracing
 
 
-.. image:: ./DEP/images/daf-gui-front.png
+.. image:: ./DEP/daf-gui-front.png
     :width: 20cm
     :align: center
 

@@ -22,12 +22,12 @@ Links
         - `PyCord Documentation <https://docs.pycord.dev/en/master/>`_
 
 
-.. figure:: ./DEP/images/daf-gui-front.png
+.. figure:: ./DEP/daf-gui-front.png
     :width: 15cm
 
     Graphical interface (GUI)
 
-.. figure:: ./DEP/images/daf-console-run.png
+.. figure:: ./DEP/daf-console-run.png
     :width: 15cm
 
     Script (for running in console)

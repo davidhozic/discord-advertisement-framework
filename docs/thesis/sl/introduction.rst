@@ -10,7 +10,7 @@ verigi blokov brez možnosti replikacije.
 Najpogosteje predstavljajo digitalna umetniška dela.
 
 
-.. figure:: ./DEP/images/example_bunny_nft.png
+.. figure:: ./DEP/example_bunny_nft.png
     :width: 5cm
 
     Primer NFT (ustvaril `DALL-E <https://openai.com/dall-e-2/>`_)

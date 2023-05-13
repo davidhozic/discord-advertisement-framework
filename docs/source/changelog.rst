@@ -102,7 +102,7 @@ v2.6.0
 - Graphical User Interface - **GUI** for controlling the framework,
   defining the schema (with backup and restore) and script generation!
 
-.. image:: ./DEP/images/daf-gui-front.png
+.. image:: ./DEP/daf-gui-front.png
     :align: center
     :scale: 40%
 

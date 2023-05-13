@@ -167,4 +167,3 @@ for name in dir(daf):
 
 
 __all__ = list(globals().keys())
-__all__.append("ADDITIONAL_WIDGETS")
