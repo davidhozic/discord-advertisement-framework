@@ -65,32 +65,6 @@ class GLOBAL:
     app: "Application" = None
 
 
-def gui_except(fnc: Callable):
-    """
-    Decorator that catches exceptions and displays them in GUI.
-    """
-    def wrapper(*args, **kwargs):
-        try:
-            return fnc(*args, **kwargs)
-        except Exception as exc:
-            tkdiag.Messagebox.show_error(f"{exc}\n(Exception in {fnc.__name__})")
-
-    return wrapper
-
-
-def gui_confirm_action(fnc: Callable):
-    """
-    Decorator that asks the user to confirm the action before calling the
-    targeted function (fnc).
-    """
-    def wrapper(*args, **kwargs):
-        result = tkdiag.Messagebox.show_question("Are you sure?", "Confirm")
-        if result == "Yes":
-            return fnc(*args, **kwargs)
-
-    return wrapper
-
-
 def gui_daf_assert_running():
     if not GLOBAL.app._daf_running:
         raise ConnectionError("Start the framework first (START button)")
@@ -317,10 +291,9 @@ class Application():
         frame_add_account.pack(fill=tk.X, pady=dpi_10)
 
         combo_add_object_edit = ComboEditFrame(
-            self,
+            self.open_object_edit_window,
             [ObjectInfo(daf.add_object, {})],
             master=frame_add_account,
-            check_parameters=False
         )
         ttk.Button(frame_add_account, text="Execute", command=add_account).pack(side="left")
         combo_add_object_edit.pack(side="left", fill=tk.X, expand=True)
@@ -443,10 +416,9 @@ class Application():
             frame_msg_history.pack(fill=tk.BOTH, expand=True)
 
             combo_history = ComboEditFrame(
-                self,
+                self.open_object_edit_window,
                 [ObjectInfo(getattr(daf.logging.LoggerBASE, getter_history), {})],
                 frame_msg_history,
-                check_parameters=False
             )
             combo_history.pack(fill=tk.X)
 
@@ -488,10 +460,9 @@ class Application():
 
             frame_num = ttk.Labelframe(frame_message, padding=(dpi_10, dpi_10), text="Counts", bootstyle="primary")
             combo_count = ComboEditFrame(
-                self,
+                self.open_object_edit_window,
                 [ObjectInfo(getattr(daf.logging.LoggerBASE, getter_counts), {})],
                 frame_num,
-                check_parameters=False
             )
             combo_count.pack(fill=tk.X)
             tw_num = tktw.Tableview(
@@ -823,10 +794,16 @@ def run():
             await app._process()
             await asyncio.sleep(WIN_UPDATE_DELAY)
 
-    loop = asyncio.get_event_loop()
+    if sys.version_info.minor < 10:
+        loop = asyncio.get_event_loop()
+    else:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
     async_start(loop)
     loop.run_until_complete(update_task())
     loop.run_until_complete(async_stop())
+    asyncio.set_event_loop(None)
 
 
 if __name__ == "__main__":

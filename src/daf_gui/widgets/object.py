@@ -9,7 +9,7 @@ from enum import Enum
 
 from .convert import *
 from .dpi import *
-from .async_util import *
+from .utilities import *
 
 from .storage import *
 from .extra import *
@@ -44,7 +44,27 @@ HELP_URLS = {
     "builtins": "https://docs.python.org/3/search.html?q={}"
 }
 
+# Mapping which tells the frame which methods can be executed on live objects
+EXECUTABLE_METHODS = {
+    daf.guild.GUILD: [daf.guild.GUILD.add_message, daf.guild.GUILD.remove_message],
+    daf.client.ACCOUNT: [daf.client.ACCOUNT.add_server, daf.client.ACCOUNT.remove_server]
+}
+
+# Mapping which tells the frame to insert additional values into the ComboBox of certain parameter
+# if lambda is given, the old ObjectInfo object will be passed as parameter and a list of values is expected
+ADDITIONAL_PARAMETER_VALUES = {
+    daf.GUILD.remove_message: {
+        # GUILD.messages
+        "message": lambda old_info: convert_to_object_info(old_info.real_object.__self__.messages, save_original=True)
+    },
+    daf.ACCOUNT.remove_server: {
+        # ACCOUNT.servers
+        "server": lambda old_info: convert_to_object_info(old_info.real_object.__self__.servers, save_original=True)
+    }
+}
+
 TEXT_MAX_UNDO = 20
+LAMBDA_TYPE = type(lambda x: None)
 
 
 class ObjectEditWindow(ttk.Toplevel):
@@ -137,6 +157,7 @@ class NewObjectFrame(ttk.Frame):
         The old ObjectInfo object to edit.
     check_parameters: bool
         Check parameters (by creating the real object) upon saving.
+        This is ignored if editing a function instead of a class.
     allow_save: bool
         If False, will open in read-only mode.
     """
@@ -159,12 +180,15 @@ class NewObjectFrame(ttk.Frame):
         self.old_object_info = old  # Edit requested
         self.check_parameters = check_parameters  # At save time
         self.allow_save = allow_save  # Allow save or not allow (eg. viewing SQL data)
+        self.method_exec_frame = None  # Frame within current frame for executing methods
 
         super().__init__(master=parent)
 
         self.init_toolbar_frame(class_)
         if not self.init_main_frame(class_):
             return
+
+        self.init_method_frame(class_)
 
         if old is not None:  # Edit
             self.load()
@@ -206,6 +230,7 @@ class NewObjectFrame(ttk.Frame):
         frame_toolbar = ttk.Frame(self)
         self.frame_toolbar = frame_toolbar
 
+        # Help button
         package = class_.__module__.split(".", 1)[0]
         help_url = HELP_URLS.get(package)
         if help_url is not None:
@@ -214,6 +239,7 @@ class NewObjectFrame(ttk.Frame):
 
             ttk.Button(frame_toolbar, text="Help", command=cmd).pack(side="left")
 
+        # Additional widgets
         add_widgets = ADDITIONAL_WIDGETS.get(class_)
         if add_widgets is not None:
             for add_widg in add_widgets:
@@ -223,27 +249,53 @@ class NewObjectFrame(ttk.Frame):
 
         frame_toolbar.pack(fill=tk.X)
 
+    def init_method_frame(self, class_):
+        # Method execution
+        if (
+            self.old_object_info is None or
+            # getattr since class_ can also be non ObjectInfo
+            getattr(self.old_object_info, "real_object", None) is None or
+            (available_methods := EXECUTABLE_METHODS.get(class_)) is None
+        ):
+            return
+
+        @gui_except(self.origin_window)
+        def execute_method():
+            method = frame_execute_method.combo.get()
+            if not isinstance(method, ObjectInfo):
+                tkdiag.Messagebox.show_error("No method selected!", "Selection error")
+                return
+
+            method = copy.copy(method)  # Copy to prevent the self from becoming a paramter
+            method.data["self"] = self.old_object_info.real_object
+            result = convert_to_objects(method, True)  # Executes the method by "initializing" the ObjectInfo class
+            if isinstance(result, Coroutine):
+                async_execute(result, parent_window=self.origin_window)
+
+        dpi_5, dpi_10 = dpi_scaled(5), dpi_scaled(10)
+        frame_method = ttk.LabelFrame(self, text="Method execution", padding=(dpi_5, dpi_10), bootstyle=ttk.INFO)
+        ttk.Button(frame_method, text="Execute", command=execute_method).pack(side="left")
+        combo_values = []
+        real_object = self.old_object_info.real_object
+        for unbound_meth in available_methods:
+            bound_meth = getattr(real_object, unbound_meth.__name__)
+            combo_values.append(ObjectInfo(unbound_meth, {}, bound_meth))
+
+        frame_execute_method = ComboEditFrame(
+            self.new_object_frame,
+            combo_values,
+            master=frame_method,
+        )
+        frame_execute_method.pack(side="right", fill=tk.X, expand=True)
+        frame_method.pack(fill=tk.X)
+
     def init_structured(self, annotations: dict):
         dpi_5 = dpi_scaled(5)
         annotations.pop("return", None)
+        additional_values_map = ADDITIONAL_PARAMETER_VALUES.get(self.class_)
 
-        for (k, v) in annotations.items():
-            frame_annotated = ttk.Frame(self.frame_main)
-            frame_annotated.pack(fill=tk.BOTH, expand=True)
-
-            entry_types = v
-            ttk.Label(frame_annotated, text=k, width=15).pack(side="left")
-
-            entry_types = self.convert_types(entry_types)
-
-            bnt_menu = ttk.Menubutton(frame_annotated)
-            menu = tk.Menu(bnt_menu)
-            bnt_menu.configure(menu=menu)
-
-            w = combo = ComboBoxObjects(frame_annotated)
-            bnt_menu.pack(side="right")
-            combo.pack(fill=tk.X, side="right", expand=True, padx=dpi_5, pady=dpi_5)
-
+        def fill_values(k: str, entry_types: list, menu: ttk.Menu, combo: ComboBoxObjects):
+            "Fill ComboBox values based on types in ``entry_types`` and create New <object_type> buttons"
             last_list_type = None
             for entry_type in entry_types:
                 if get_origin(entry_type) is Literal:
@@ -266,8 +318,39 @@ class NewObjectFrame(ttk.Frame):
                             command=self._lambda(self.new_object_frame, entry_type, combo)
                         )
 
+            # Additional values to be inserted into ComboBox
+            if additional_values_map is not None and (extra_values := additional_values_map.get(k, [])) is not None:
+                if isinstance(extra_values, LAMBDA_TYPE):
+                    extra_values = extra_values(self.old_object_info)
+
+                for val in extra_values:
+                    combo.insert(tk.END, val)
+
+            # The class of last list like type. Needed when "Edit selected" is used
+            # since we don't know what type it was
+            return last_list_type
+
+        for (k, v) in annotations.items():
+            # Init widgets
+            entry_types = self.convert_types(v)
+            frame_annotated = ttk.Frame(self.frame_main)
+            frame_annotated.pack(fill=tk.BOTH, expand=True)
+            ttk.Label(frame_annotated, text=k, width=15).pack(side="left")
+
+            bnt_menu = ttk.Menubutton(frame_annotated)
+            menu = tk.Menu(bnt_menu)
+            bnt_menu.configure(menu=menu)
+            bnt_menu.pack(side="right")
+
+            w = combo = ComboBoxObjects(frame_annotated)
+            combo.pack(fill=tk.X, side="right", expand=True, padx=dpi_5, pady=dpi_5)
+
+            # Fill values
+            last_list_type = fill_values(k, entry_types, menu, combo)
+
+            # Edit / view command button
             menu.add_command(
-                label=f"{'Edit' if self.allow_save else 'View'} selected", 
+                label=f"{'Edit' if self.allow_save else 'View'} selected",
                 command=self.combo_edit_selected(w, last_list_type)
             )
             self._map[k] = (w, entry_types)
@@ -422,6 +505,7 @@ class NewObjectFrame(ttk.Frame):
         self,
         class_,
         widget,
+        check_parameters = None,
         *args,
         **kwargs
     ):
@@ -430,8 +514,11 @@ class NewObjectFrame(ttk.Frame):
         Parameters are the same as in :class:`NewObjectFrame` (current class) with the exception
         of ``check_parameters`` and ``allow_save`` - These are inherited from current frame.
         """
+        if check_parameters is None:
+            check_parameters = self.check_parameters
+
         return self.origin_window.open_object_edit_frame(
-            class_, widget, check_parameters=self.check_parameters, allow_save=self.allow_save, *args, **kwargs
+            class_, widget, check_parameters=check_parameters, allow_save=self.allow_save, *args, **kwargs
         )
 
     def listbox_edit_selected(self, lb: ListBoxScrolled):
@@ -476,8 +563,8 @@ class NewObjectFrame(ttk.Frame):
                 if not len(value):
                     continue
 
-                # Iterate all valid types until conversion is successful                        
-                for type_ in types_:
+                # Iterate all valid types until conversion is successful
+                for type_ in filter(lambda t: t.__name__ in __builtins__, types_):
                     with suppress(Exception):
                         value = type_(value)
                         break
@@ -488,8 +575,9 @@ class NewObjectFrame(ttk.Frame):
         if single_value is not None:
             object_ = single_value
         else:
+
             object_ = ObjectInfo(self.class_, map_)
-            if self.check_parameters:
+            if self.check_parameters and inspect.isclass(self.class_):  # Only check objects
                 convert_to_objects(object_)  # Tries to create instances to check for errors
 
         return object_

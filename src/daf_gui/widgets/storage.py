@@ -151,10 +151,9 @@ class ComboBoxObjects(ttk.Combobox):
 class ComboEditFrame(ttk.Frame):
     def __init__(
             self,
-            parent: Any,
+            edit_method: Any,
             values: List[ObjectInfo] = [],
             master=None,
-            check_parameters=True,
             *args,
             **kwargs
     ):
@@ -162,24 +161,22 @@ class ComboEditFrame(ttk.Frame):
         combo = ComboBoxObjects(self)
         ttk.Button(self, text="Edit", command=self._edit).pack(side="right")
         combo.pack(side="left", fill=tk.X, expand=True)
-
-        for value in values:
-            combo.insert(tk.END, value)
-            combo.current(0)
-
         self.combo = combo
-        self.parent = parent
-        self.check_parameters = check_parameters
+        self.edit_method = edit_method
+        self.set_values(values)
+
+    def set_values(self, values: List[ObjectInfo] = []):
+        self.combo["values"] = values
+        self.combo.current(0)
 
     def _edit(self):
         selection = self.combo.current()
         if selection >= 0:
             object_: ObjectInfo = self.combo.get()
-            self.parent.open_object_edit_window(
+            self.edit_method(
                 object_.class_,
                 self.combo,
                 old=object_,
-                check_parameters=self.check_parameters
             )
         else:
             tkdiag.Messagebox.show_error("Select atleast one item!", "Empty list!")
