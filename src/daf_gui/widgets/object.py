@@ -294,23 +294,8 @@ class NewObjectFrame(ttk.Frame):
         annotations.pop("return", None)
         additional_values_map = ADDITIONAL_PARAMETER_VALUES.get(self.class_)
 
-        for (k, v) in annotations.items():
-            # Init widgets
-            frame_annotated = ttk.Frame(self.frame_main)
-            frame_annotated.pack(fill=tk.BOTH, expand=True)
-            entry_types = v
-            ttk.Label(frame_annotated, text=k, width=15).pack(side="left")
-            entry_types = self.convert_types(entry_types)
-
-            bnt_menu = ttk.Menubutton(frame_annotated)
-            menu = tk.Menu(bnt_menu)
-            bnt_menu.configure(menu=menu)
-            bnt_menu.pack(side="right")
-
-            w = combo = ComboBoxObjects(frame_annotated)
-            combo.pack(fill=tk.X, side="right", expand=True, padx=dpi_5, pady=dpi_5)
-
-            # Fill values
+        def fill_values(k: str, entry_types: list, menu: ttk.Menu, combo: ComboBoxObjects):
+            "Fill ComboBox values based on types in ``entry_types`` and create New <object_type> buttons"
             last_list_type = None
             for entry_type in entry_types:
                 if get_origin(entry_type) is Literal:
@@ -340,6 +325,28 @@ class NewObjectFrame(ttk.Frame):
 
                 for val in extra_values:
                     combo.insert(tk.END, val)
+
+            # The class of last list like type. Needed when "Edit selected" is used
+            # since we don't know what type it was
+            return last_list_type
+
+        for (k, v) in annotations.items():
+            # Init widgets
+            entry_types = self.convert_types(v)
+            frame_annotated = ttk.Frame(self.frame_main)
+            frame_annotated.pack(fill=tk.BOTH, expand=True)
+            ttk.Label(frame_annotated, text=k, width=15).pack(side="left")
+
+            bnt_menu = ttk.Menubutton(frame_annotated)
+            menu = tk.Menu(bnt_menu)
+            bnt_menu.configure(menu=menu)
+            bnt_menu.pack(side="right")
+
+            w = combo = ComboBoxObjects(frame_annotated)
+            combo.pack(fill=tk.X, side="right", expand=True, padx=dpi_5, pady=dpi_5)
+
+            # Fill values
+            last_list_type = fill_values(k, entry_types, menu, combo)
 
             # Edit / view command button
             menu.add_command(
