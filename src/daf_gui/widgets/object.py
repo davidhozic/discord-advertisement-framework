@@ -250,41 +250,44 @@ class NewObjectFrame(ttk.Frame):
         frame_toolbar.pack(fill=tk.X)
 
     def init_method_frame(self, class_):
-        frame_method = ttk.LabelFrame(self, text="Method execution", padding=(dpi_scaled(5), dpi_scaled(10)), bootstyle=ttk.INFO)
         # Method execution
         if (
-            self.old_object_info is not None and
+            self.old_object_info is None or
             # getattr since class_ can also be non ObjectInfo
-            getattr(self.old_object_info, "real_object", None) is not None and
-            (available_methods := EXECUTABLE_METHODS.get(class_)) is not None
+            getattr(self.old_object_info, "real_object", None) is None or
+            (available_methods := EXECUTABLE_METHODS.get(class_)) is None
         ):
-            @gui_except(self.origin_window)
-            def execute_method():
-                method = frame_execute_method.combo.get()
-                if not isinstance(method, ObjectInfo):
-                    tkdiag.Messagebox.show_error("No method selected!", "Selection error")
-                    return
+            return
 
-                method = copy.copy(method)  # Copy to prevent the self from becoming a paramter
-                method.data["self"] = self.old_object_info.real_object
-                result = convert_to_objects(method)
-                if isinstance(result, Coroutine):
-                    async_execute(result, parent_window=self.origin_window)
+        @gui_except(self.origin_window)
+        def execute_method():
+            method = frame_execute_method.combo.get()
+            if not isinstance(method, ObjectInfo):
+                tkdiag.Messagebox.show_error("No method selected!", "Selection error")
+                return
 
-            ttk.Button(frame_method, text="Execute", command=execute_method).pack(side="left")
-            combo_values = []
-            real_object = self.old_object_info.real_object
-            for unbound_meth in available_methods:
-                bound_meth = getattr(real_object, unbound_meth.__name__)
-                combo_values.append(ObjectInfo(unbound_meth, {}, bound_meth))
+            method = copy.copy(method)  # Copy to prevent the self from becoming a paramter
+            method.data["self"] = self.old_object_info.real_object
+            result = convert_to_objects(method, True)  # Executes the method by "initializing" the ObjectInfo class
+            if isinstance(result, Coroutine):
+                async_execute(result, parent_window=self.origin_window)
 
-            frame_execute_method = ComboEditFrame(
-                self.new_object_frame,
-                combo_values,
-                master=frame_method,
-            )
-            frame_execute_method.pack(side="right", fill=tk.X, expand=True)
-            frame_method.pack(fill=tk.X)
+        dpi_5, dpi_10 = dpi_scaled(5), dpi_scaled(10)
+        frame_method = ttk.LabelFrame(self, text="Method execution", padding=(dpi_5, dpi_10), bootstyle=ttk.INFO)
+        ttk.Button(frame_method, text="Execute", command=execute_method).pack(side="left")
+        combo_values = []
+        real_object = self.old_object_info.real_object
+        for unbound_meth in available_methods:
+            bound_meth = getattr(real_object, unbound_meth.__name__)
+            combo_values.append(ObjectInfo(unbound_meth, {}, bound_meth))
+
+        frame_execute_method = ComboEditFrame(
+            self.new_object_frame,
+            combo_values,
+            master=frame_method,
+        )
+        frame_execute_method.pack(side="right", fill=tk.X, expand=True)
+        frame_method.pack(fill=tk.X)
 
     def init_structured(self, annotations: dict):
         dpi_5 = dpi_scaled(5)
@@ -292,6 +295,7 @@ class NewObjectFrame(ttk.Frame):
         additional_values_map = ADDITIONAL_PARAMETER_VALUES.get(self.class_)
 
         for (k, v) in annotations.items():
+            # Init widgets
             frame_annotated = ttk.Frame(self.frame_main)
             frame_annotated.pack(fill=tk.BOTH, expand=True)
             entry_types = v
@@ -306,17 +310,7 @@ class NewObjectFrame(ttk.Frame):
             w = combo = ComboBoxObjects(frame_annotated)
             combo.pack(fill=tk.X, side="right", expand=True, padx=dpi_5, pady=dpi_5)
 
-            if additional_values_map is not None and (additional_values := additional_values_map.get(k)) is not None:
-                # Additional values to be inserted into ComboBox
-                if isinstance(additional_values, LAMBDA_TYPE):
-                    if self.old_object_info is None:
-                        additional_values = []  # No object info -> empty
-                    else:
-                        additional_values = additional_values(self.old_object_info)  # Get additional values from lambda
-
-                for val in additional_values:
-                    combo.insert(tk.END, val)
-
+            # Fill values
             last_list_type = None
             for entry_type in entry_types:
                 if get_origin(entry_type) is Literal:
@@ -338,6 +332,14 @@ class NewObjectFrame(ttk.Frame):
                             label=f"New {self.get_cls_name(entry_type)}",
                             command=self._lambda(self.new_object_frame, entry_type, combo)
                         )
+
+            # Additional values to be inserted into ComboBox
+            if additional_values_map is not None and (extra_values := additional_values_map.get(k, [])) is not None:
+                if isinstance(extra_values, LAMBDA_TYPE):
+                    extra_values = extra_values(self.old_object_info)
+
+                for val in extra_values:
+                    combo.insert(tk.END, val)
 
             # Edit / view command button
             menu.add_command(
@@ -554,8 +556,8 @@ class NewObjectFrame(ttk.Frame):
                 if not len(value):
                     continue
 
-                # Iterate all valid types until conversion is successful                        
-                for type_ in types_:
+                # Iterate all valid types until conversion is successful
+                for type_ in filter(lambda t: t.__name__ in __builtins__, types_):
                     with suppress(Exception):
                         value = type_(value)
                         break
