@@ -417,7 +417,7 @@ class VoiceMESSAGE(BaseMESSAGE):
         if "data" not in kwargs:
             kwargs["data"] = self._data
 
-        channels = kwargs.get("channels", self.channels)
+        kwargs["channels"] = channels = kwargs.get("channels", self.channels)
         if isinstance(channels, AutoCHANNEL):
             await channels.update(init_options={"parent": self, "channel_type": "voice_channels"})
         elif not isinstance(self.channels[0], int):  # Not initialized (newly created):
