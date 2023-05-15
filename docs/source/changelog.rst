@@ -32,6 +32,10 @@ Glossary
 Releases
 ----------------------
 
+v2.7.1
+===============
+- Fixed ``update`` methods and account infinite loading if token was changed when using *Preserve state on shutdown*.
+
 
 v2.7
 ================
