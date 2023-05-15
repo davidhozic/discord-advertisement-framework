@@ -268,8 +268,8 @@ class Application():
             selection = combo_add_object_edit.combo.current()
             if selection >= 0:
                 fnc: ObjectInfo = combo_add_object_edit.combo.get()
-                mapping = {k: convert_to_objects(v) for k, v in fnc.data.items()}
-                async_execute(fnc.class_(**mapping), parent_window=self.win_main)
+                fnc_data = convert_to_objects(fnc.data)
+                async_execute(fnc.class_(**fnc_data), parent_window=self.win_main)
             else:
                 tkdiag.Messagebox.show_error("Combobox does not have valid selection.", "Combo invalid selection")
 
@@ -398,13 +398,9 @@ class Application():
                     raise ValueError("Analytics only allowed when using LoggerSQL")
 
                 param_object = combo_history.combo.get()
-                data = param_object.data.copy()
-                for k, v in data.items():
-                    if isinstance(v, ObjectInfo):
-                        data[k] = convert_to_objects(v)
-
+                param_object_params = convert_to_objects(param_object.data)
                 items = await getattr(logger, getter_history)(
-                    **data
+                    **param_object_params
                 )
                 items = convert_to_object_info(items, cache=True)
                 lst_history.clear()
@@ -445,13 +441,9 @@ class Application():
                     raise ValueError("Analytics only allowed when using LoggerSQL")
 
                 param_object = combo_count.combo.get()
-                data = param_object.data.copy()
-                for k, v in data.items():
-                    if isinstance(v, ObjectInfo):
-                        data[k] = convert_to_objects(v)
-
+                parameters = convert_to_objects(param_object.data)
                 count = await getattr(logger, getter_counts)(
-                    **data
+                    **parameters
                 )
 
                 tw_num.delete_rows()

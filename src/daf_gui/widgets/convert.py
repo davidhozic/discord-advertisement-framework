@@ -299,15 +299,19 @@ def convert_to_object_info(object_: object, save_original = False, cache = False
     return ret
 
 
-def convert_to_objects(d: Union[ObjectInfo, list], keep_original_object: bool = False) -> object:
+def convert_to_objects(
+    d: Union[ObjectInfo, dict, list],
+    keep_original_object: bool = False
+) -> Union[object, dict, List]:
     """
     Converts :class:`ObjectInfo` instances into actual objects,
     specified by the ObjectInfo.class_ attribute.
 
     Parameters
     -----------------
-    d: ObjectInfo | list[ObjectInfo]
-        The object(s) to convert.
+    d: ObjectInfo | list[ObjectInfo] | dict
+        The object(s) to convert. Can be an ObjectInfo object, a list of ObjectInfo objects or a dictionary that is a
+        mapping of ObjectInfo parameters.
     keep_original_object: bool
         If True, the returned object will be the same object (``real_object`` attribute) and will just
         copy the the attributes. Important for preserving parent-child connections across real objects.
@@ -337,10 +341,19 @@ def convert_to_objects(d: Union[ObjectInfo, list], keep_original_object: bool = 
 
         return new_obj
 
+    def convert_object_info_dict():
+        data_conv = {}
+        for k, v in d.items():
+            data_conv[k] = convert_to_objects(v, keep_original_object)
+
+        return data_conv
+
     if isinstance(d, (list, tuple, set)):
         return convert_list()
     if isinstance(d, ObjectInfo):
         return convert_object_info()
+    if isinstance(d, dict):
+        return convert_object_info_dict()
 
     return d
 

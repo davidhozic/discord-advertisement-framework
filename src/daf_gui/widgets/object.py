@@ -262,13 +262,13 @@ class NewObjectFrame(ttk.Frame):
         @gui_except(self.origin_window)
         def execute_method():
             method = frame_execute_method.combo.get()
-            if not isinstance(method, ObjectInfo):
+            if not isinstance(method, ObjectInfo):  # String typed in that doesn't match any names
                 tkdiag.Messagebox.show_error("No method selected!", "Selection error")
                 return
 
-            method = copy.copy(method)  # Copy to prevent the self from becoming a paramter
-            method.data["self"] = self.old_object_info.real_object
-            result = convert_to_objects(method, True)  # Executes the method by "initializing" the ObjectInfo class
+            method_parameters = convert_to_objects(method.data, True)
+            # Call function wrapped in ObjectInfo
+            result = method.class_(self.old_object_info.real_object, **method_parameters)
             if isinstance(result, Coroutine):
                 async_execute(result, parent_window=self.origin_window)
 
@@ -564,7 +564,7 @@ class NewObjectFrame(ttk.Frame):
                     continue
 
                 # Iterate all valid types until conversion is successful
-                for type_ in filter(lambda t: t.__name__ in __builtins__, types_):
+                for type_ in filter(lambda t: self.get_cls_name(t) in __builtins__, types_):
                     with suppress(Exception):
                         value = type_(value)
                         break
