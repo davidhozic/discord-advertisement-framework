@@ -387,7 +387,7 @@ class ACCOUNT:
 
         return None
 
-    async def _close(self):
+    async def _close(self, _delete = True):
         """
         Signals the tasks of this account to finish and
         waits for them.
@@ -402,6 +402,7 @@ class ACCOUNT:
                     exc
                 )
 
+        self.tasks.clear()
         selenium = self.selenium
         if selenium is not None:
             selenium._close()
@@ -410,7 +411,10 @@ class ACCOUNT:
             await guild_._close()
 
         await self._client.close()
-        self._delete()
+        self.client.clear()
+
+        if _delete:
+            self._delete()
 
     async def _loop(self):
         """
@@ -446,7 +450,7 @@ class ACCOUNT:
             await asyncio.sleep(TASK_SLEEP_DELAY_S)
 
     @misc._async_safe("_update_sem")
-    async def update(self,  *, _init = True, **kwargs):
+    async def update(self, **kwargs):
         """
         Updates the object with new parameters and afterwards updates all lower layers (GUILD->MESSAGE->CHANNEL).
 
@@ -454,9 +458,8 @@ class ACCOUNT:
             After calling this method the entire object is reset.
         """
         if self._running:
-            await self._close()
+            await self._close(False)
 
-        self._deleted = False  # Prevents cleanup task from cleaning this up
         selenium = self._selenium
         if "token" not in kwargs:
             kwargs["token"] = self._token if selenium is None else None
@@ -470,32 +473,28 @@ class ACCOUNT:
             if isinstance(intents, discord.Intents) and intents.value == 0:
                 kwargs["intents"] = None
 
-        servers = kwargs.pop("servers", self.servers)
-        kwargs["servers"] = []  # Servers are updated at the end
+        servers = kwargs.pop("servers", self.servers + self._uiservers)
 
-        acc_exc = None
+        async def update_servers():
+            _servers = []
+            _autoguilds = []
+            for server in servers:
+                try:
+                    await server.update(init_options={"parent": self})
+                    if isinstance(server, guild._BaseGUILD):
+                        _servers.append(server)
+                    else:
+                        _autoguilds.append(servers)
+                except Exception as exc:
+                    trace(f"Could not update {server} after updating {self} - Skipping server.", TraceLEVELS.ERROR, exc)
+
+            self._servers = _servers
+            self._autoguilds = _autoguilds
+
         try:
-            await misc._update(self, _init=_init, **kwargs)
-        except Exception as exc:
-            self._client = discord.Client(intents=self.intents)  # Issues when relogging in?
+            await misc._update(self, **kwargs)
+            await update_servers()
+        except Exception:
             await self.initialize()  # re-login
-            acc_exc = exc
-
-        # Update the guilds in the end finnaly
-        guilds = []
-        autoguilds = []
-        for server in servers:
-            try:
-                await server.update(init_options={"parent": self}, _init=_init)
-                if isinstance(server, guild.AutoGUILD):
-                    autoguilds.append(server)
-                else:
-                    guilds.append(server)
-            except Exception as exc:
-                trace(f"Could not update server after updating account, server: {server}", TraceLEVELS.ERROR, exc)
-
-        self._servers = guilds
-        self._autoguilds = autoguilds
-
-        if acc_exc is not None:
-            raise acc_exc
+            await update_servers()
+            raise

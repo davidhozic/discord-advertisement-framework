@@ -3,7 +3,7 @@
     regarding the guild and also defines a USER class from the
     _BaseGUILD class.
 """
-from typing import Any, Coroutine, Union, List, Optional, Dict, Callable, Set
+from typing import Any, Coroutine, Union, List, Optional, Dict, Callable
 from typeguard import typechecked
 from datetime import timedelta, datetime
 from copy import deepcopy
@@ -429,9 +429,9 @@ class GUILD(_BaseGUILD):
 
         .. note::
 
-            Accounts are required to have *Manage Channels* and *Manage Server* permissions inside a guild for tracking to
-            fully function. *Manage Server* is needed for getting information about invite links, *Manage Channels*
-            is needed to delete the invite from the list if it has been deleted,
+            Accounts are required to have *Manage Channels* and *Manage Server* permissions inside a guild for
+            tracking to fully function. *Manage Server* is needed for getting information about invite links,
+            *Manage Channels* is needed to delete the invite from the list if it has been deleted,
             however tracking still works without it.
     """
     __slots__ = (
@@ -481,7 +481,7 @@ class GUILD(_BaseGUILD):
 
         return []  # Return empty on error or no permissions
 
-    async def initialize(self, parent: Any, _init = True) -> None:
+    async def initialize(self, parent: Any) -> None:
         """
         This function initializes the API related objects and
         then tries to initialize the MESSAGE objects.
@@ -568,7 +568,7 @@ class GUILD(_BaseGUILD):
         }
 
     @misc._async_safe("update_semaphore", 1)
-    async def update(self, init_options = None, _init = True, **kwargs):
+    async def update(self, init_options = None, **kwargs):
         """
         Used for changing the initialization parameters,
         the object was initialized with.
@@ -600,23 +600,22 @@ class GUILD(_BaseGUILD):
         if "invite_track" not in kwargs:
             kwargs["invite_track"] = list(self.join_count.keys())
 
+        messages = kwargs.pop("messages", self.messages + self._messages_uninitialized)
+
         if init_options is None:
             init_options = {"parent": self.parent}
 
-        # Add uninitialized servers
-        messages = kwargs.pop("messages", self.messages + self._messages_uninitialized)
-        kwargs["messages"] = []  # Messages are updated at the end
+        await misc._update(self, init_options=init_options, **kwargs)
 
-        await misc._update(self, init_options=init_options, _init=_init, **kwargs)
-
-        # Update messages
+        _messages = []
         for message in messages:
             try:
-                await message.update(_init_options={"parent": self}, _init=_init)
+                await message.update()
+                _messages.append(message)
             except Exception as exc:
-                trace(f"Unable to update message after updating GUILD, message: {message}", TraceLEVELS.ERROR, exc)
+                trace(f"Could not update {message} after updating {self} - Skipping message.", TraceLEVELS.ERROR, exc)
 
-        self._messages = messages
+        self._messages = _messages
 
 
 @misc.doc_category("Guilds")
@@ -692,7 +691,7 @@ class USER(_BaseGUILD):
         )
 
     @misc._async_safe("update_semaphore", 1)
-    async def update(self, init_options = None, _init = True, **kwargs):
+    async def update(self, init_options = None, **kwargs):
         """
         .. versionadded:: v2.0
 
@@ -721,23 +720,22 @@ class USER(_BaseGUILD):
         if "snowflake" not in kwargs:
             kwargs["snowflake"] = self.snowflake
 
+        messages = kwargs.pop("messages", self.messages + self._messages_uninitialized)
+
         if init_options is None:
             init_options = {"parent": self.parent}
 
-        messages = kwargs.pop("messages", self.messages)
-        kwargs["messages"] = []  # Messages are updated at the end
+        await misc._update(self, init_options=init_options, **kwargs)
 
-        await misc._update(self, init_options=init_options, _init=_init, **kwargs)
-
-        # Update messages
+        _messages = []
         for message in messages:
             try:
-                await message.update(_init_options={"parent": self}, _init=_init)
+                await message.update()
+                _messages.append(message)
             except Exception as exc:
-                trace(f"Unable to update message after updating GUILD, message: {message}", TraceLEVELS.ERROR, exc)
+                trace(f"Could not update {message} after updating {self} - Skipping message.", TraceLEVELS.ERROR, exc)
 
-
-        self._messages = messages
+        self._messages = _messages
 
 
 @misc.doc_category("Auto objects")
@@ -1097,7 +1095,7 @@ class AutoGUILD:
         return GUILD_ADVERT_STATUS_SUCCESS
 
     @misc._async_safe("_safe_sem", 1)
-    async def update(self, init_options = None, _init = True, **kwargs):
+    async def update(self, init_options = None, **kwargs):
         """
         Updates the object with new initialization parameters.
 
@@ -1110,6 +1108,8 @@ class AutoGUILD:
 
         await self._close()
         try:
-            return await misc._update(self, init_options=init_options, _init=_init, **kwargs)
-        finally:
+            return await misc._update(self, init_options=init_options, **kwargs)
+        except Exception:
+            self.cache.clear()
             await self.initialize(self.parent)  # Reopen any async related connections
+            raise
