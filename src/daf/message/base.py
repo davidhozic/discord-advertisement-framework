@@ -529,7 +529,7 @@ class AutoCHANNEL:
         """
         self.cache.remove(channel)
 
-    async def update(self, init_options = None, _init = True, **kwargs):
+    async def update(self, init_options = None, **kwargs):
         """
         Updates the object with new initialization parameters.
 
@@ -551,5 +551,4 @@ class AutoCHANNEL:
 
         return await misc._update(self,
                                   init_options=init_options,
-                                  _init=_init,
                                   **kwargs)

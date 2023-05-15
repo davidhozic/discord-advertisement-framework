@@ -108,11 +108,10 @@ async def schema_load_from_file() -> None:
     trace("Updating accounts.", TraceLEVELS.DEBUG)
     for account in accounts:
         try:
-            await account.update(_init=False)  # Refresh without __init__ call
+            await account.update()  # Refresh without __init__ call
             GLOBALS.accounts.append(account)
         except Exception as exc:
             trace(f"Unable to restore account {account}", TraceLEVELS.ERROR, exc)
-            GLOBALS.accounts.remove(account)
 
     trace(f"Restored objects from file ({len(GLOBALS.accounts)} accounts).", TraceLEVELS.NORMAL)
 
@@ -381,6 +380,7 @@ async def shutdown() -> None:
     for task in GLOBALS.tasks:  # Wait for core tasks to finish
         await task
 
+    GLOBALS.tasks.clear()
     for account in GLOBALS.accounts:
         await account._close()
 
