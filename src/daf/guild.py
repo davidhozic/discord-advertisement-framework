@@ -611,7 +611,10 @@ class GUILD(_BaseGUILD):
 
         # Update messages
         for message in messages:
-            await message.update(_init_options={"parent": self}, _init=_init)
+            try:
+                await message.update(_init_options={"parent": self}, _init=_init)
+            except Exception as exc:
+                trace(f"Unable to update message after updating GUILD, message: {message}", TraceLEVELS.ERROR, exc)
 
         self._messages = messages
 
@@ -728,7 +731,11 @@ class USER(_BaseGUILD):
 
         # Update messages
         for message in messages:
-            await message.update(_init_options={"parent": self}, _init=_init)
+            try:
+                await message.update(_init_options={"parent": self}, _init=_init)
+            except Exception as exc:
+                trace(f"Unable to update message after updating GUILD, message: {message}", TraceLEVELS.ERROR, exc)
+
 
         self._messages = messages
 
@@ -1102,4 +1109,7 @@ class AutoGUILD:
             init_options = {"parent": self.parent}
 
         await self._close()
-        return await misc._update(self, init_options=init_options, _init=_init, **kwargs)
+        try:
+            return await misc._update(self, init_options=init_options, _init=_init, **kwargs)
+        finally:
+            await self.initialize(self.parent)  # Reopen any async related connections
