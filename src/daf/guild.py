@@ -610,7 +610,7 @@ class GUILD(_BaseGUILD):
         _messages = []
         for message in messages:
             try:
-                await message.update()
+                await message.update({"parent": self})
                 _messages.append(message)
             except Exception as exc:
                 trace(f"Could not update {message} after updating {self} - Skipping message.", TraceLEVELS.ERROR, exc)
@@ -730,7 +730,7 @@ class USER(_BaseGUILD):
         _messages = []
         for message in messages:
             try:
-                await message.update()
+                await message.update({"parent": self})
                 _messages.append(message)
             except Exception as exc:
                 trace(f"Could not update {message} after updating {self} - Skipping message.", TraceLEVELS.ERROR, exc)
