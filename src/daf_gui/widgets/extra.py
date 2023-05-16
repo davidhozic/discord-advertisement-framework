@@ -103,7 +103,7 @@ def setup_additional_live_update(w: ttk.Button, frame):
         return
 
     def _callback(*args):
-        async def async_callback():
+        async def update():
             old = frame.old_object_info
             values = {
                 k: convert_to_objects(v)
@@ -112,7 +112,7 @@ def setup_additional_live_update(w: ttk.Button, frame):
             }
             await old.real_object.update(**values)
 
-        async_execute(async_callback(), parent_window=frame.origin_window)
+        async_execute(update(), parent_window=frame.origin_window)
 
     w.configure(command=_callback)
     ToolTip(w, "Update the actual object with new parameters (taken from this window)", topmost=True)

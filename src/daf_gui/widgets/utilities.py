@@ -2,19 +2,58 @@
 Module contains interface to run async tasks from GUI.
 """
 from typing import Coroutine, Callable
-from asyncio import Queue, Task
+from asyncio import Queue, Task, Semaphore, Lock
 
 from daf import trace, TraceLEVELS
 
+from .dpi import dpi_scaled
+
 import ttkbootstrap.dialogs.dialogs as tkdiag
+import ttkbootstrap as ttk
+
+import asyncio
+
 
 CONF_TASK_SLEEP = 0.1
 
 
 class GLOBAL:
-    tasks_to_run: Queue = None
+    tasks_to_run = Queue()
     running = False
     async_task: Task = None
+
+
+class ExecutingAsyncWindow(ttk.Toplevel):
+    """
+    Window that hovers while executing async methods.
+    """
+    def __init__(self, awaitable: Coroutine, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.title("Async execution window")
+        self.resizable(False, False)
+        self.geometry(f"{dpi_scaled(500)}x{dpi_scaled(100)}")
+        dpi_10 = dpi_scaled(10)
+        frame_main = ttk.Frame(self, padding=(dpi_10, dpi_10))
+        frame_main.pack(fill=ttk.BOTH, expand=True)
+
+        ttk.Label(frame_main, text=f"Executing async {awaitable.__name__}").pack(fill=ttk.X)
+        gauge = ttk.Floodgauge(frame_main)
+        gauge.start()
+        gauge.pack(fill=ttk.BOTH)
+
+
+async def wait_for_mutexes(obj: object):
+    "Waits for all mutexes the ``obj`` has to become available."
+    mutexes = []
+    for item in obj.__slots__ if hasattr(obj, "__slots__") else vars(obj):
+        if isinstance((value := getattr(obj, item)), (Semaphore, Lock)):
+            mutexes.append(value)
+
+    for mutex in mutexes:
+        await mutex.acquire()
+
+    for mutex in mutexes:
+        mutex.release()
 
 
 def gui_except(parent = None):
@@ -67,6 +106,7 @@ async def async_runner():
     while GLOBAL.running:
         awaitable, callback, parent_window = await GLOBAL.tasks_to_run.get()  # Coroutine and function to call at end
         try:
+            executor_win = ExecutingAsyncWindow(awaitable, topmost=True, master=parent_window)
             result = await awaitable
             if callback is not None:
                 callback(result)
@@ -79,6 +119,9 @@ async def async_runner():
                 )
             else:
                 trace(f"Error while running coroutine: {awaitable.__name__}", TraceLEVELS.ERROR, exc)
+
+        finally:
+            executor_win.destroy()
 
 
 async def async_stop():

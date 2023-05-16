@@ -448,7 +448,6 @@ class ACCOUNT:
             await __loop()
             await asyncio.sleep(TASK_SLEEP_DELAY_S)
 
-    @misc._async_safe("_update_sem")
     async def update(self, **kwargs):
         """
         Updates the object with new parameters and afterwards updates all lower layers (GUILD->MESSAGE->CHANNEL).
@@ -474,7 +473,8 @@ class ACCOUNT:
 
         servers = kwargs.pop("servers", self.servers + self._uiservers)
 
-        async def update_servers():
+        @misc._async_safe("_update_sem")
+        async def update_servers(self_):
             _servers = []
             _autoguilds = []
             for server in servers:
@@ -492,8 +492,8 @@ class ACCOUNT:
 
         try:
             await misc._update(self, **kwargs)
-            await update_servers()
+            await update_servers(self)
         except Exception:
             await self.initialize()  # re-login
-            await update_servers()
+            await update_servers(self)
             raise

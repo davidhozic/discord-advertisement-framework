@@ -24,6 +24,7 @@ __all__ = (
 # Constants
 # ---------------------#
 C_FILE_NAME_FORBIDDEN_CHAR = ('<', '>', '"', '/', '\\', '|', '?', '*', ":")
+C_FILE_MAX_SIZE = 100000
 
 
 class GLOBAL:
@@ -255,8 +256,8 @@ class LoggerCSV(LoggerBASE):
 @misc.doc_category("Logging reference", path="logging")
 class LoggerJSON(LoggerBASE):
     """
-    .. versionchanged:: v2.7
-        Invite link tracking.
+    .. versionchanged:: v2.8
+        When file reaches size of 100 kilobytes, a new file is created.
 
     .. versionadded:: v2.2
 
@@ -286,12 +287,19 @@ class LoggerJSON(LoggerBASE):
         super().__init__(fallback)
 
     async def _save_log(
-            self,
-            guild_context: dict,
-            message_context: Optional[dict] = None,
-            author_context: Optional[dict] = None,
-            invite_context: Optional[dict] = None
+        self,
+        guild_context: dict,
+        message_context: Optional[dict] = None,
+        author_context: Optional[dict] = None,
+        invite_context: Optional[dict] = None
     ):
+        def replace_strings(name: str):
+            return "".join(
+                char
+                if char not in C_FILE_NAME_FORBIDDEN_CHAR
+                else "#" for char in name
+            )
+
         timestruct = datetime.now()
         timestamp = "{:02d}.{:02d}.{:04d} {:02d}:{:02d}:{:02d}".format(timestruct.day, timestruct.month, timestruct.year,
                                                                     timestruct.hour, timestruct.minute, timestruct.second)
@@ -302,13 +310,23 @@ class LoggerJSON(LoggerBASE):
                         .joinpath("{:02d}".format(timestruct.day)))
 
         logging_output.mkdir(parents=True, exist_ok=True)
-        logging_output = logging_output.joinpath("".join(char if char not in C_FILE_NAME_FORBIDDEN_CHAR
-                                                              else "#" for char in guild_context["name"]) + ".json")          
+        logging_output = logging_output.joinpath(replace_strings(guild_context["name"]) + ".json")
         # Create file if it doesn't exist
         file_exists = True
         if not logging_output.exists():
             logging_output.touch()
             file_exists = False
+
+        # Performance issues
+        elif logging_output.stat().st_size > C_FILE_MAX_SIZE:
+            logging_dir = logging_output.parent
+            logging_filename = logging_output.name.replace(".json", "")
+            new_index = str(len(list(logging_dir.glob(f"{logging_filename}*"))))
+            logging_output.rename(
+                logging_dir.joinpath(logging_filename + new_index + ".json")
+            )
+            file_exists = False
+            logging_output.touch()
 
         # Write to file
         with open(logging_output, 'r+', encoding='utf-8') as f_writer:
