@@ -32,6 +32,19 @@ Glossary
 Releases
 ----------------------
 
+v2.8
+=================
+- GUI:
+  
+  - Method execution
+  - Executing method status window.
+
+- Logging:
+  
+  - :class:`daf.logging.LoggerJSON` will create a new file once the current one reaches 100 kilobytes.
+  - Improved performance of :class:`daf.logging.LoggerJSON`.
+
+
 
 v2.7
 ================
