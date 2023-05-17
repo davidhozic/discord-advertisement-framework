@@ -266,19 +266,7 @@ class NewObjectFrame(ttk.Frame):
                     tkdiag.Messagebox.show_error("No method selected!", "Selection error")
                     return
 
-                objs = [
-                    item.real_object
-                    for item in method.data.values()
-                    if isinstance(item, ObjectInfo) and item.real_object is not None
-                ]
-
-                # Await all mutexes of all real objects before trying to convert them
-                # since converting with the keep_original_object set to True will set attributes of the original
-                # which can cause issues if a task is not paused.
-                for obj in objs:
-                    await wait_for_mutexes(obj)
-
-                method_parameters = convert_to_objects(method.data, True)
+                method_parameters = convert_to_objects(method.data, skip_real_conversion=True)
                 # Call function wrapped in ObjectInfo
                 result = method.class_(self.old_object_info.real_object, **method_parameters)
                 if isinstance(result, Coroutine):

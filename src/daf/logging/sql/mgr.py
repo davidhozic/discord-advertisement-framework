@@ -301,6 +301,7 @@ class LoggerSQL(logging.LoggerBASE):
         self.data_history_cache = TableCache(DataHISTORY, SQL_TABLE_CACHE_SIZE)
         self.invites_cache = TableCache(Invite, SQL_TABLE_CACHE_SIZE)
 
+        trace(f"{type(self).__name__} logs will be saved to {database}")
         super().__init__(fallback)
 
     async def _run_async(self, method: Callable, *args, **kwargs):

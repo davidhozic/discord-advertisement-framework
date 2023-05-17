@@ -301,7 +301,8 @@ def convert_to_object_info(object_: object, save_original = False, cache = False
 
 def convert_to_objects(
     d: Union[ObjectInfo, dict, list],
-    keep_original_object: bool = False
+    keep_original_object: bool = False,
+    skip_real_conversion: bool = False,
 ) -> Union[object, dict, List]:
     """
     Converts :class:`ObjectInfo` instances into actual objects,
@@ -315,22 +316,29 @@ def convert_to_objects(
     keep_original_object: bool
         If True, the returned object will be the same object (``real_object`` attribute) and will just
         copy the the attributes. Important for preserving parent-child connections across real objects.
+    skip_real_conversion: bool
+        If set to True the old real object will be returned without conversion and ``keep_original_object`` parameter
+        has no effect.
+        Defaults to False.
     """
     def convert_list():
         _ = []
         for item in d:
-            _.append(convert_to_objects(item, keep_original_object))
+            _.append(convert_to_objects(item, keep_original_object, skip_real_conversion))
 
         return _
 
     def convert_object_info():
+        # Skip conversion
+        if skip_real_conversion and (real := d.real_object) is not None:
+            return real
+
         data_conv = {}
         for k, v in d.data.items():
             data_conv[k] = convert_to_objects(v, keep_original_object)
 
         new_obj = d.class_(**data_conv)
-        if keep_original_object and d.real_object is not None:
-            real = d.real_object
+        if keep_original_object and real is not None:
             with suppress(TypeError, AttributeError):
                 # Only update old objects that are surely not built-in and have information about attributes
                 args = real.__slots__ if hasattr(real, "__slots__") else vars(real)
@@ -344,7 +352,7 @@ def convert_to_objects(
     def convert_object_info_dict():
         data_conv = {}
         for k, v in d.items():
-            data_conv[k] = convert_to_objects(v, keep_original_object)
+            data_conv[k] = convert_to_objects(v, keep_original_object, skip_real_conversion)
 
         return data_conv
 

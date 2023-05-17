@@ -237,8 +237,11 @@ class Application():
             ObjectInfo(daf.LoggerSQL, {"database": str(Path.home().joinpath("daf/messages")), "dialect": "sqlite"}),
             ObjectInfo(daf.LoggerCSV, {"path": str(Path.home().joinpath("daf/History")), "delimiter": ";"}),
         ]
+        self.combo_logging_mgr.current(0)
 
-        self.combo_tracing["values"] = [en for en in daf.TraceLEVELS]
+        tracing_values = [en for en in daf.TraceLEVELS]
+        self.combo_tracing["values"] = tracing_values
+        self.combo_tracing.current(tracing_values.index(daf.TraceLEVELS.NORMAL))
 
     def init_live_inspect_tab(self):
         dpi_10 = dpi_scaled(10)
@@ -773,7 +776,7 @@ daf.run(
 
         async_execute(_tmp())
 
-    async def _process(self):
+    def _process(self):
         self.win_main.update()
 
 
@@ -783,7 +786,7 @@ def run():
 
     async def update_task():
         while app.opened:
-            await app._process()
+            app._process()
             await asyncio.sleep(WIN_UPDATE_DELAY)
 
     if sys.version_info.minor < 10:

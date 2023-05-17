@@ -11,7 +11,8 @@ from .dpi import dpi_scaled
 import ttkbootstrap.dialogs.dialogs as tkdiag
 import ttkbootstrap as ttk
 
-import asyncio
+import sys
+import daf
 
 
 CONF_TASK_SLEEP = 0.1
@@ -31,15 +32,44 @@ class ExecutingAsyncWindow(ttk.Toplevel):
         super().__init__(*args, **kwargs)
         self.title("Async execution window")
         self.resizable(False, False)
-        self.geometry(f"{dpi_scaled(500)}x{dpi_scaled(100)}")
         dpi_10 = dpi_scaled(10)
         frame_main = ttk.Frame(self, padding=(dpi_10, dpi_10))
         frame_main.pack(fill=ttk.BOTH, expand=True)
 
-        ttk.Label(frame_main, text=f"Executing async {awaitable.__name__}").pack(fill=ttk.X)
+        frame_stdout = ttk.Frame(frame_main)
+        frame_stdout.pack(fill=ttk.BOTH, expand=True)
+        self.status_var = ttk.StringVar()
+        ttk.Label(frame_stdout, text="Last status: ").grid(row=0, column=0)
+        ttk.Label(frame_stdout, textvariable=self.status_var).grid(row=0, column=1)
+
+        ttk.Label(frame_main, text=f"Executing {awaitable.__name__}").pack(fill=ttk.X)
         gauge = ttk.Floodgauge(frame_main)
         gauge.start()
         gauge.pack(fill=ttk.BOTH)
+
+        self.old_stdout = sys.stdout
+        sys.stdout = self
+
+        self.protocol("WM_DELETE_WINDOW", lambda: None)
+        self.grab_set()
+
+    def flush(self):
+        pass
+
+    def write(self, text: str):
+        if text == "\n":
+            return
+
+        text = text.replace("\033[0m", "")
+        for r in daf.tracing.TRACE_COLOR_MAP.values():
+            text = text.replace(r, "")
+
+        self.status_var.set(text)
+        self.old_stdout.write(text)
+
+    def destroy(self) -> None:
+        sys.stdout = self.old_stdout
+        return super().destroy()
 
 
 async def wait_for_mutexes(obj: object):
@@ -111,15 +141,12 @@ async def async_runner():
             if callback is not None:
                 callback(result)
         except Exception as exc:
-            if parent_window is not None:
-                tkdiag.Messagebox.show_error(
-                    f"{exc}\n(Error while running coroutine: {awaitable.__name__})",
-                    "Coroutine error",
-                    parent_window
-                )
-            else:
-                trace(f"Error while running coroutine: {awaitable.__name__}", TraceLEVELS.ERROR, exc)
-
+            tkdiag.Messagebox.show_error(
+                f"{exc}\n(Error while running coroutine: {awaitable.__name__})",
+                "Coroutine error",
+                executor_win
+            )
+            trace(f"Error while running coroutine: {awaitable.__name__}", TraceLEVELS.ERROR, exc)
         finally:
             executor_win.destroy()
 

@@ -353,7 +353,14 @@ class ACCOUNT:
         """
         if isinstance(server, guild._BaseGUILD):
             server._delete()
-            self._servers.remove(server)
+            # Remove by ID
+            ids = [id(s) for s in self._servers]
+            try:
+                index = ids.index(id(server))
+            except ValueError:
+                raise ValueError(f"{server} is not in list")
+
+            del self._servers[index]
         else:
             self._autoguilds.remove(server)
 
@@ -427,18 +434,18 @@ class ACCOUNT:
             @misc._async_safe(self._update_sem)
             async def __loop():
                 to_remove = []
-                to_await = []
+                to_advert: List[guild._BaseGUILD, guild.AutoGUILD] = []
                 for server in self.servers:
                     if server._check_state():
                         to_remove.append(server)
                     else:
-                        to_await.append(server._advertise())
+                        to_advert.append(server)
 
                 for server in to_remove:
                     self.remove_server(server)
 
-                for coro in to_await:
-                    status = await coro
+                for server in to_advert:
+                    status = await server._advertise()
                     if status == guild.GUILD_ADVERT_STATUS_ERROR_REMOVE_ACCOUNT:
                         self._running = False
                     # If loop stop has been requested, stop asap
