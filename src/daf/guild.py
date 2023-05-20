@@ -77,7 +77,8 @@ class _BaseGUILD:
         "remove_after",
         "_created_at",
         "_deleted",
-        "parent"
+        "parent",
+        "__weakref__"
     )
 
     def __init__(
@@ -397,6 +398,7 @@ class _BaseGUILD:
         }
 
 
+@misc.track_id
 @misc.doc_category("Guilds")
 @logging.sql.register_type("GuildTYPE")
 class GUILD(_BaseGUILD):
@@ -437,7 +439,6 @@ class GUILD(_BaseGUILD):
     __slots__ = (
         "update_semaphore",
         "join_count",
-        *_BaseGUILD.__slots__
     )
 
     @typechecked
@@ -618,6 +619,7 @@ class GUILD(_BaseGUILD):
         self._messages = _messages
 
 
+@misc.track_id
 @misc.doc_category("Guilds")
 @logging.sql.register_type("GuildTYPE")
 class USER(_BaseGUILD):
@@ -646,7 +648,6 @@ class USER(_BaseGUILD):
     """
     __slots__ = (
         "update_semaphore",
-        *_BaseGUILD.__slots__
     )
 
     @typechecked
@@ -738,6 +739,7 @@ class USER(_BaseGUILD):
         self._messages = _messages
 
 
+@misc.track_id
 @misc.doc_category("Auto objects")
 class AutoGUILD:
     """
@@ -821,7 +823,8 @@ class AutoGUILD:
         "guild_query_iter",
         "last_guild_join",
         "guild_join_count",
-        "invite_track"
+        "invite_track",
+        "__weakref__"
     )
 
     @typechecked

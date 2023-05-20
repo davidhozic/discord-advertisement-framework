@@ -29,6 +29,7 @@ __all__ = (
 C_VC_CONNECT_TIMEOUT = 3  # Timeout of voice channels
 
 
+@misc.track_id
 @misc.doc_category("Messages", path="message")
 @sql.register_type("MessageTYPE")
 class VoiceMESSAGE(BaseMESSAGE):
@@ -104,7 +105,6 @@ class VoiceMESSAGE(BaseMESSAGE):
         "end_period",
         "volume",
         "channels",
-        *BaseMESSAGE.__slots__
     )
 
     @typechecked

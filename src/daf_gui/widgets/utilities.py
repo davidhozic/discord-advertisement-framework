@@ -72,20 +72,6 @@ class ExecutingAsyncWindow(ttk.Toplevel):
         return super().destroy()
 
 
-async def wait_for_mutexes(obj: object):
-    "Waits for all mutexes the ``obj`` has to become available."
-    mutexes = []
-    for item in obj.__slots__ if hasattr(obj, "__slots__") else vars(obj):
-        if isinstance((value := getattr(obj, item)), (Semaphore, Lock)):
-            mutexes.append(value)
-
-    for mutex in mutexes:
-        await mutex.acquire()
-
-    for mutex in mutexes:
-        mutex.release()
-
-
 def gui_except(parent = None):
     """
     Propagate any exceptions to the ``parent`` window.

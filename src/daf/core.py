@@ -4,8 +4,11 @@
     as well as user function to control the framework
 """
 from typing import Callable, Coroutine, List, Optional, Union, overload
-from typeguard import typechecked
 from pathlib import Path
+
+from aiohttp import BasicAuth, web as aiohttp_web
+from typeguard import typechecked
+from base64 import b64encode, b64decode
 
 from .logging.tracing import TraceLEVELS, trace
 from .logging import _logging as logging, tracing
@@ -15,12 +18,14 @@ from . import client
 from . import misc
 from . import message
 from . import convert
+from . import remote
 
 import asyncio
 import shutil
 import os
 import sys
 import pickle
+
 import _discord as discord
 
 
@@ -51,9 +56,24 @@ class GLOBALS:
     tasks: List[asyncio.Task] = []
     running: bool = True
     save_to_file: bool = False
+    remote_client: remote.RemoteAccessCLIENT = None
 
     cleanup_event = asyncio.Event()
     schema_backup_event = asyncio.Event()
+
+
+# -----------------------------------------------------------------------
+# HTTP tasks
+# These must be in here due to needed interactions with core functions
+# -----------------------------------------------------------------------
+@remote.register("/accounts/", "GET")
+async def http_get_accounts(request: aiohttp_web.Request):
+    return aiohttp_web.Response()
+
+
+@remote.register("/accounts/", "POST")
+async def http_add_account(request: aiohttp_web.Request):
+    return aiohttp_web.Response()
 
 
 async def cleanup_accounts_task():
@@ -121,7 +141,8 @@ async def initialize(user_callback: Optional[Union[Callable, Coroutine]] = None,
                      debug: Optional[Union[TraceLEVELS, int, str]] = TraceLEVELS.NORMAL,
                      logger: Optional[logging.LoggerBASE] = None,
                      accounts: List[client.ACCOUNT] = None,
-                     save_to_file: bool = False) -> None:
+                     save_to_file: bool = False,
+                     remote_client: Optional[remote.RemoteAccessCLIENT] = None) -> None:
     """
     The main initialization function.
     It initializes all the other modules, creates advertising tasks
@@ -169,12 +190,18 @@ async def initialize(user_callback: Optional[Union[Callable, Coroutine]] = None,
             trace("Unable to add account.", TraceLEVELS.ERROR, exc)
 
     # ------------------------------------------
+    # Initialize remote access
+    if remote_client is not None:
+        await remote_client.initialize()
+        GLOBALS.remote_client = remote_client
+
+    # ------------------------------------------
     # Create the user callback task
     if user_callback is not None:
         trace("Starting user callback function", TraceLEVELS.NORMAL)
         user_callback = user_callback()
         if isinstance(user_callback, Coroutine):
-            loop.create_task(user_callback)
+            GLOBALS.tasks.append(loop.create_task(user_callback))
 
     # Create account cleanup task (account self-deleted)
     GLOBALS.tasks.append(loop.create_task(cleanup_accounts_task()))
@@ -377,6 +404,10 @@ async def shutdown() -> None:
     # Signal events for tasks to raise out of sleep
     GLOBALS.cleanup_event.set()
     GLOBALS.schema_backup_event.set()  # This also saves one last time, so manually saving is not needed
+    # Close remote client
+    if GLOBALS.remote_client is not None:
+        await GLOBALS.remote_client._close()
+
     for task in GLOBALS.tasks:  # Wait for core tasks to finish
         await task
 
@@ -407,7 +438,8 @@ def run(user_callback: Optional[Union[Callable, Coroutine]] = None,
         debug: Optional[Union[TraceLEVELS, int, str, bool]] = TraceLEVELS.NORMAL,
         logger: Optional[logging.LoggerBASE] = None,
         accounts: Optional[List[client.ACCOUNT]] = None,
-        save_to_file: bool = False) -> None:
+        save_to_file: bool = False,
+        remote_client: Optional[remote.RemoteAccessCLIENT] = None) -> None:
     """
     .. versionchanged:: 2.7
 

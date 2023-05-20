@@ -341,7 +341,7 @@ def convert_to_objects(
         if keep_original_object and real is not None:
             with suppress(TypeError, AttributeError):
                 # Only update old objects that are surely not built-in and have information about attributes
-                args = real.__slots__ if hasattr(real, "__slots__") else vars(real)
+                args = daf.misc.get_all_slots(type(real)) if hasattr(real, "__slots__") else vars(real)
                 for a in args:
                     setattr(real, a, getattr(new_obj, a))
 

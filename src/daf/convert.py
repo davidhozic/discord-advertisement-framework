@@ -14,6 +14,7 @@ import array
 from . import client
 from . import guild
 from . import message
+from . import misc
 
 
 __all__ = (
@@ -36,16 +37,16 @@ __all__ = (
 LAMBDA_TYPE = type(lambda x: x)
 CONVERSION_ATTRS = {
     client.ACCOUNT: {
-        "attrs": client.ACCOUNT.__slots__,
+        "attrs": misc.get_all_slots(client.ACCOUNT),
         "attrs_restore": {
             "tasks": [],
-            "_client": lambda account: discord.Client(intents=account.intents, connector=None),
             "_update_sem": asyncio.Semaphore(1),
-            "_running": False
+            "_running": False,
+            "_client": None,
         },
     },
     guild.AutoGUILD: {
-        "attrs": guild.AutoGUILD.__slots__,
+        "attrs": misc.get_all_slots(guild.AutoGUILD),
         "attrs_restore": {
             "_safe_sem": asyncio.Semaphore(1),
             "parent": None,
@@ -54,7 +55,7 @@ CONVERSION_ATTRS = {
         },
     },
     message.AutoCHANNEL: {
-        "attrs": message.AutoCHANNEL.__slots__,
+        "attrs": misc.get_all_slots(message.AutoCHANNEL),
         "attrs_restore": {
             "parent": None,
             "cache": set()
@@ -65,7 +66,7 @@ CONVERSION_ATTRS = {
 
 # Guilds
 CONVERSION_ATTRS[guild.GUILD] = {
-    "attrs": guild.GUILD.__slots__,
+    "attrs": misc.get_all_slots(guild.GUILD),
     "attrs_restore": {
         "update_semaphore": asyncio.Semaphore(1),
         "parent": None
@@ -76,7 +77,7 @@ CONVERSION_ATTRS[guild.GUILD] = {
 }
 
 CONVERSION_ATTRS[guild.USER] = CONVERSION_ATTRS[guild.GUILD].copy()
-CONVERSION_ATTRS[guild.USER]["attrs"] = guild.USER.__slots__
+CONVERSION_ATTRS[guild.USER]["attrs"] = misc.get_all_slots(guild.USER)
 
 
 # Messages
@@ -88,7 +89,7 @@ CHANNEL_LAMBDA = (
 )
 
 CONVERSION_ATTRS[message.TextMESSAGE] = {
-    "attrs": message.TextMESSAGE.__slots__,
+    "attrs": misc.get_all_slots(message.TextMESSAGE),
     "attrs_restore": {
         "update_semaphore": asyncio.Semaphore(1),
         "parent": None,
@@ -100,7 +101,7 @@ CONVERSION_ATTRS[message.TextMESSAGE] = {
 }
 
 CONVERSION_ATTRS[message.VoiceMESSAGE] = {
-    "attrs": message.VoiceMESSAGE.__slots__,
+    "attrs": misc.get_all_slots(message.VoiceMESSAGE),
     "attrs_restore": {
         "update_semaphore": asyncio.Semaphore(1),
         "parent": None,
@@ -112,7 +113,7 @@ CONVERSION_ATTRS[message.VoiceMESSAGE] = {
 
 
 CONVERSION_ATTRS[message.DirectMESSAGE] = {
-    "attrs": message.DirectMESSAGE.__slots__,
+    "attrs": misc.get_all_slots(message.DirectMESSAGE),
     "attrs_restore": {
         "update_semaphore": asyncio.Semaphore(1),
         "parent": None,
@@ -150,7 +151,7 @@ def convert_to_dict(object_: object) -> dict:
             attrs["attrs"],
             attrs.get("attrs_restore", {}),
             attrs.get("attrs_convert", {}),
-            attrs.get("skip", [])
+            attrs.get("attrs_skip", [])
         )
         for k in attrs:
             # Manually set during restored or is a class attribute

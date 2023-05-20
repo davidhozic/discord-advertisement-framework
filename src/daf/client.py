@@ -44,6 +44,7 @@ except ImportError:
 # -------------------------------------------- #
 
 
+@misc.track_id
 @misc.doc_category("Clients")
 class ACCOUNT:
     """
@@ -103,6 +104,7 @@ class ACCOUNT:
         "_client",
         "_deleted",
         "_update_sem",
+        "__weakref__"
     )
 
     @typechecked
@@ -114,12 +116,10 @@ class ACCOUNT:
                  servers: Optional[List[Union[guild.GUILD, guild.USER, guild.AutoGUILD]]] = None,
                  username: Optional[str] = None,
                  password: Optional[str] = None) -> None:
-        connector = None
+
         if proxy is not None:
             if not GLOBALS.proxy_installed:
                 raise ModuleNotFoundError("Install extra requirements: pip install discord-advert-framework[proxy]")
-
-            connector = ProxyConnector.from_url(proxy)
 
         if token is not None and username is not None:  # Only one parameter of these at a time
             raise ValueError("'token' parameter not allowed if 'username' is given.")
@@ -151,7 +151,7 @@ class ACCOUNT:
         update method from re-initializing initializes objects.
         This gets deleted in the initialize method"""
 
-        self._client = discord.Client(intents=intents, connector=connector)
+        self._client = None
         self._deleted = False
         misc._write_attr_once(self, "_update_sem", asyncio.Semaphore(1))
 
@@ -167,13 +167,11 @@ class ACCOUNT:
     def __deepcopy__(self, *args):
         "Duplicates the object (for use in AutoGUILD)"
         new = copy.copy(self)
-        for slot in list(self.__slots__):
+        for slot in misc.get_all_slots(type(self)):
             self_val = getattr(self, slot)
             if isinstance(self_val, (asyncio.Semaphore, asyncio.Lock)):
                 # Hack to copy semaphores since not all of it can be copied directly
                 copied = type(self_val)(self_val._value)
-            elif isinstance(self_val, discord.Client):
-                copied = discord.Client(intents=self_val.intents, connector=self_val.http.connector)
             else:
                 copied = copy.deepcopy((self_val))
 
@@ -251,6 +249,12 @@ class ACCOUNT:
             Unable to login to Discord.
         """
         # Obtain token if it is not provided
+        connector = None
+        if self.proxy is not None:
+            connector = ProxyConnector.from_url(self.proxy)
+
+        self._client = discord.Client(intents=self.intents, connector=connector)
+
         if self._selenium is not None:
             trace("Logging in thru browser and obtaining token")
             self._token = await self._selenium.initialize()

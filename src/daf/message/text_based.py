@@ -32,6 +32,7 @@ sql.register_type("MessageMODE", "edit")
 sql.register_type("MessageMODE", "clear-send")
 
 
+@misc.track_id
 @misc.doc_category("Messages", path="message")
 @sql.register_type("MessageTYPE")
 class TextMESSAGE(BaseMESSAGE):
@@ -117,7 +118,6 @@ class TextMESSAGE(BaseMESSAGE):
         "channels",
         "mode",
         "sent_messages",
-        *BaseMESSAGE.__slots__
     )
 
     @typechecked
@@ -567,6 +567,7 @@ class TextMESSAGE(BaseMESSAGE):
         await misc._update(self, init_options=_init_options, **kwargs)
 
 
+@misc.track_id
 @misc.doc_category("Messages", path="message")
 @sql.register_type("MessageTYPE")
 class DirectMESSAGE(BaseMESSAGE):
@@ -648,7 +649,6 @@ class DirectMESSAGE(BaseMESSAGE):
         "mode",
         "previous_message",
         "dm_channel",
-        *BaseMESSAGE.__slots__
     )
 
     @typechecked

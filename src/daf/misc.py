@@ -7,12 +7,17 @@ from asyncio import Semaphore
 from functools import wraps
 from inspect import getfullargspec
 from copy import copy
-from typeguard import typechecked
 from os import environ
+from itertools import chain
+from contextlib import suppress
+
+from typeguard import typechecked
+
+import weakref
 
 
 ###############################
-# Safe access functions
+# Attributes
 ###############################
 def _write_attr_once(obj: Any, name: str, value: Any):
     """
@@ -37,6 +42,20 @@ def _write_attr_once(obj: Any, name: str, value: Any):
         setattr(obj, name, value)
 
 
+def get_all_slots(cls) -> list:
+    """
+    Returns slots of current class and it's bases. Skips the __weakref__ slot.
+    """
+    ret = list(chain.from_iterable(getattr(class_, '__slots__', []) for class_ in cls.__mro__))
+    with suppress(ValueError):
+        ret.remove("__weakref__")
+
+    return ret
+
+
+###############################
+# Update
+###############################
 async def _update(
     obj: object,
     *,
@@ -107,8 +126,9 @@ async def _update(
 
     except Exception:
         # In case of failure, restore to original attributes
-        for k in type(obj).__slots__:
-            setattr(obj, k, getattr(current_state, k))
+        for k in get_all_slots(type(obj)):
+            with suppress(Exception):
+                setattr(obj, k, getattr(current_state, k))
 
         raise
 
@@ -215,3 +235,34 @@ def doc_category(cat: str,
             doc_titles[cat] = []
 
     return _category
+
+
+#######################################
+# ID of different objects ID
+#######################################
+OBJECT_ID_MAP = weakref.WeakValueDictionary()
+
+
+def get_by_id(id_: int):
+    """
+    Returns an object from it's id().
+    """
+    return OBJECT_ID_MAP.get(id_)
+
+
+def track_id(cls):
+    """
+    Decorator which replaces the __new__ method with a function that keeps a weakreference.
+    """
+    def __new__(cls_, *args, **kwargs):
+        try:
+            new = original_new(cls_, *args, **kwargs)
+        except Exception:
+            new = original_new(cls_)
+
+        OBJECT_ID_MAP[id(new)] = new
+        return new
+
+    original_new = cls.__new__
+    cls.__new__ = __new__
+    return cls
