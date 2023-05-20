@@ -57,8 +57,6 @@ class RemoteAccessCLIENT:
 
         self.web_app = aiohttp_web.Application()
         self.web_app.add_routes(GLOBALS.routes)
-        self.runner = None
-        self.sites = []
 
     async def initialize(self):
         GLOBALS.http_task = asyncio.create_task(

@@ -437,7 +437,8 @@ class AutoCHANNEL:
         "parent",
         "cache",
         "channel_getter",
-        "last_scan"
+        "last_scan",
+        "__weakref__"
     )
 
     def __init__(self,

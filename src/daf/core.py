@@ -129,9 +129,15 @@ async def schema_load_from_file() -> None:
     for account in accounts:
         try:
             await account.update()  # Refresh without __init__ call
-            GLOBALS.accounts.append(account)
         except Exception as exc:
-            trace(f"Unable to restore account {account}", TraceLEVELS.ERROR, exc)
+            trace(
+                f"Unable to restore account {account}\n" +
+                "Account still added to list to prevent data loss.\n" +
+                "Use the GUI to edit / remove it.",
+                TraceLEVELS.ERROR, exc
+            )
+        finally:
+            GLOBALS.accounts.append(account)
 
     trace(f"Restored objects from file ({len(GLOBALS.accounts)} accounts).", TraceLEVELS.NORMAL)
 
@@ -203,10 +209,13 @@ async def initialize(user_callback: Optional[Union[Callable, Coroutine]] = None,
         if isinstance(user_callback, Coroutine):
             GLOBALS.tasks.append(loop.create_task(user_callback))
 
-    # Create account cleanup task (account self-deleted)
-    GLOBALS.tasks.append(loop.create_task(cleanup_accounts_task()))
     if save_to_file:  # Backup shilling list to pickle file
         GLOBALS.tasks.append(loop.create_task(schema_backup_task()))
+    else:
+        # Create account cleanup task (account self-deleted)
+        # Only create if state preservation is disable to prevent potential data loss due to
+        # lost connections or reset tokens. The user must use the GUI to cleanup any non-running accounts.
+        GLOBALS.tasks.append(loop.create_task(cleanup_accounts_task()))
 
     GLOBALS.running = True
     GLOBALS.save_to_file = save_to_file

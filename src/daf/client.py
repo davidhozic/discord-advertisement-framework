@@ -108,14 +108,16 @@ class ACCOUNT:
     )
 
     @typechecked
-    def __init__(self,
-                 token: Optional[str] = None,
-                 is_user: Optional[bool] = False,
-                 intents: Optional[discord.Intents] = None,
-                 proxy: Optional[str] = None,
-                 servers: Optional[List[Union[guild.GUILD, guild.USER, guild.AutoGUILD]]] = None,
-                 username: Optional[str] = None,
-                 password: Optional[str] = None) -> None:
+    def __init__(
+        self,
+        token: Optional[str] = None,
+        is_user: Optional[bool] = False,
+        intents: Optional[discord.Intents] = None,
+        proxy: Optional[str] = None,
+        servers: Optional[List[Union[guild.GUILD, guild.USER, guild.AutoGUILD]]] = None,
+        username: Optional[str] = None,
+        password: Optional[str] = None,
+    ) -> None:
 
         if proxy is not None:
             if not GLOBALS.proxy_installed:
@@ -367,6 +369,8 @@ class ACCOUNT:
             del self._servers[index]
         else:
             self._autoguilds.remove(server)
+
+        trace(f"Server {server} has been removed from account {self}", TraceLEVELS.NORMAL)
 
     @typechecked
     def get_server(

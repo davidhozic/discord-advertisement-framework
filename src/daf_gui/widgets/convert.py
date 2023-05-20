@@ -293,7 +293,7 @@ def convert_to_object_info(object_: object, save_original = False, cache = False
         if cache:
             OBJECT_CONV_CACHE[object_] = ret
 
-    if len(OBJECT_CONV_CACHE) > 10000:
+    if len(OBJECT_CONV_CACHE) > 50000:
         OBJECT_CONV_CACHE.clear()
 
     return ret
