@@ -260,6 +260,7 @@ def track_id(cls):
         except Exception:
             new = original_new(cls_)
 
+        new.id__ = id(new)
         OBJECT_ID_MAP[id(new)] = new
         return new
 

@@ -6,6 +6,8 @@ from typing import Union, Any
 import decimal
 import importlib
 import copy
+import base64
+import pickle
 
 import _discord as discord
 import asyncio
@@ -18,8 +20,8 @@ from . import misc
 
 
 __all__ = (
-    "convert_to_dict",
-    "convert_from_dict"
+    "convert_object_to_semi_dict",
+    "convert_from_semi_dict"
 )
 
 # Only take the following attributes from these types
@@ -126,7 +128,7 @@ CONVERSION_ATTRS[message.DirectMESSAGE] = {
 }
 
 
-def convert_to_dict(object_: object) -> dict:
+def convert_object_to_semi_dict(object_: object) -> dict:
     """
     Converts an object into ObjectInfo.
 
@@ -165,14 +167,14 @@ def convert_to_dict(object_: object) -> dict:
             else:
                 value = getattr(object_, k)
 
-            data_conv[k] = convert_to_dict(value)
+            data_conv[k] = convert_object_to_semi_dict(value)
 
         return {"object_type": f"{type_object.__module__}.{type_object.__name__}", "data": data_conv}
 
     def _convert_json_dict(object_: dict):
         data_conv = {}
         for k, v in object_.items():
-            data_conv[k] = convert_to_dict(v)
+            data_conv[k] = convert_object_to_semi_dict(v)
 
         return data_conv
 
@@ -184,7 +186,7 @@ def convert_to_dict(object_: object) -> dict:
         return object_
 
     if isinstance(object_, (set, list, tuple)):
-        object_ = [convert_to_dict(value) for value in object_]
+        object_ = [convert_object_to_semi_dict(value) for value in object_]
         return object_
 
     if isinstance(object_, dict):
@@ -193,18 +195,20 @@ def convert_to_dict(object_: object) -> dict:
     return _convert_json_slots(object_)
 
 
-def convert_from_dict(d: Union[dict, list, Any]):
+def convert_from_semi_dict(d: Union[dict, list, Any]):
     """
+    Function that converts the ``d`` parameter which is a semi-dict back to the object
+    representation.
 
     Parameters
     ---------------
-    object_: object
-        The object to convert.
+    d: Union[dict, list, Any]
+        The semi-dict / list to convert.
     """
     if isinstance(d, list):
         _return = []
         for value in d:
-            _return.append(convert_from_dict(value) if isinstance(value, dict) else value)
+            _return.append(convert_from_semi_dict(value) if isinstance(value, dict) else value)
 
         return _return
 
@@ -212,7 +216,7 @@ def convert_from_dict(d: Union[dict, list, Any]):
         if "object_type" not in d:  # It's a normal dictionary
             data = {}
             for k, v in d.items():
-                data[k] = convert_from_dict(v)
+                data[k] = convert_from_semi_dict(v)
 
             return data
 
@@ -231,7 +235,7 @@ def convert_from_dict(d: Union[dict, list, Any]):
         # Set saved attributes
         for k, v in d["data"].items():
             if isinstance(v, (dict, list)):
-                v = convert_from_dict(v)
+                v = convert_from_semi_dict(v)
 
             setattr(_return, k, v)
 
@@ -251,3 +255,18 @@ def convert_from_dict(d: Union[dict, list, Any]):
         return _return
     else:
         return d
+
+
+def convert_object_to_pickle_b64(d: object) -> bytes:
+    """
+    Converts an object first into semi-dict representation and then into bytes encoded b64 string.
+    """
+    return base64.b64encode(pickle.dumps(convert_object_to_semi_dict(d)))
+
+
+def convert_from_pickle_b64(data: bytes) -> object:
+    """
+    Decodes a b64 string, unpickles it and returns the original object.
+    """
+    return pickle.loads(base64.b64decode(data))
+

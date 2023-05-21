@@ -7,6 +7,7 @@ import sys
 from importlib.util import find_spec
 from pathlib import Path
 
+
 installed = find_spec("ttkbootstrap") is not None
 
 
@@ -36,8 +37,10 @@ import webbrowser
 
 try:
     from .widgets import *
+    from .connector import *
 except ImportError:
     from widgets import *
+    from connector import *
 
 
 WIN_UPDATE_DELAY = 0.005
@@ -92,9 +95,18 @@ class Application():
         self.frame_toolbar = ttk.Frame(self.win_main)
         self.frame_toolbar.pack(fill=tk.X, side="top", padx=dpi_5, pady=dpi_5)
         self.bnt_toolbar_start_daf = ttk.Button(self.frame_toolbar, text="Start", command=self.start_daf)
-        self.bnt_toolbar_start_daf.pack(side="left")
+        self.bnt_toolbar_start_daf.grid(row=0, column=0)
         self.bnt_toolbar_stop_daf = ttk.Button(self.frame_toolbar, text="Stop", state="disabled", command=self.stop_daf)
-        self.bnt_toolbar_stop_daf.pack(side="left")
+        self.bnt_toolbar_stop_daf.grid(row=0, column=1)
+        ttk.Label(self.frame_toolbar,  text="Connection Type:").grid(row=0, column=2, padx=dpi_5)
+        self.combo_connection_edit = ComboEditFrame(
+            self.open_object_edit_window,
+            [
+                ObjectInfo(LocalConnectionCLIENT, {}, LocalConnectionCLIENT())
+            ],
+            self.frame_toolbar
+        )
+        self.combo_connection_edit.grid(row=0, column=3, padx=dpi_5)
 
         # Main Frame
         self.frame_main = ttk.Frame(self.win_main)
@@ -130,6 +142,9 @@ class Application():
         # On close configuration
         self.win_main.protocol("WM_DELETE_WINDOW", self.close_window)
 
+        # Connection
+        self.connection: AbstractConnectionCLIENT = None
+
     def init_schema_tab(self):
         self.objects_edit_window = None
         dpi_10 = dpi_scaled(10)
@@ -157,9 +172,9 @@ class Application():
         @gui_confirm_action
         def import_accounts():
             "Imports account from live view"
-            accs = daf.get_accounts()
-            for acc in accs:
-                acc.intents = None  # Intents cannot be loaded properly
+            accs = self.connection.get_accounts()
+            # for acc in accs:
+            #     acc.intents = None  # Intents cannot be loaded properly
 
             values = convert_to_object_info(accs, save_original=False)
             if not len(values):
@@ -255,7 +270,7 @@ class Application():
                     values = list_live_objects.get()
                     for i in selection:
                         async_execute(
-                            daf.remove_object(values[i].real_object),
+                            self.connection.remove_account(values[i].real_object),
                             parent_window=self.win_main
                         )
 
@@ -720,6 +735,10 @@ daf.run(
 
     @gui_except
     def start_daf(self):
+        # Initialize connection
+        connection = convert_to_objects(self.combo_connection_edit.combo.get())
+        self.connection = connection
+
         logger = self.combo_logging_mgr.get()
         if isinstance(logger, str) and logger == "":
             logger = None
@@ -731,7 +750,7 @@ daf.run(
             tracing = None
 
         async_execute(
-            daf.initialize(logger=logger, debug=tracing, save_to_file=self.save_objects_to_file_var.get()),
+            connection.initialize(logger=logger, debug=tracing, save_to_file=self.save_objects_to_file_var.get()),
             parent_window=self.win_main
         )
         self._daf_running = True
@@ -742,7 +761,7 @@ daf.run(
         self.bnt_toolbar_stop_daf.configure(state="enabled")
 
     def stop_daf(self):
-        async_execute(daf.shutdown(), parent_window=self.win_main)
+        async_execute(self.connection.shutdown(), parent_window=self.win_main)
         self._daf_running = False
         self.bnt_toolbar_start_daf.configure(state="enabled")
         self.bnt_toolbar_stop_daf.configure(state="disabled")
@@ -760,7 +779,7 @@ daf.run(
             accounts = [a for i, a in enumerate(accounts) if i in indexes]
 
         for account in accounts:
-            async_execute(daf.add_object(convert_to_objects(account)), parent_window=self.win_main)
+            async_execute(self.connection.add_account(convert_to_objects(account)), parent_window=self.win_main)
 
     def close_window(self):
         resp = tkdiag.Messagebox.yesnocancel("Do you wish to save?", "Save?", alert=True, parent=self.win_main)

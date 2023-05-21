@@ -66,12 +66,12 @@ class GLOBALS:
 # HTTP tasks
 # These must be in here due to needed interactions with core functions
 # -----------------------------------------------------------------------
-@remote.register("/accounts/", "GET")
+@remote.register("/accounts", "GET")
 async def http_get_accounts(request: aiohttp_web.Request):
-    return aiohttp_web.Response()
+    return aiohttp_web.Response(body=convert.convert_object_to_pickle_b64(get_accounts()))
 
 
-@remote.register("/accounts/", "POST")
+@remote.register("/accounts", "POST")
 async def http_add_account(request: aiohttp_web.Request):
     return aiohttp_web.Response()
 
@@ -106,7 +106,7 @@ async def schema_backup_task():
         trace("Saving objects to file.", TraceLEVELS.DEBUG)
         try:
             with open(tmp_path, "wb") as writer:
-                pickle.dump(convert.convert_to_dict(GLOBALS.accounts), writer)
+                pickle.dump(convert.convert_object_to_semi_dict(GLOBALS.accounts), writer)
 
             shutil.copyfile(tmp_path, SHILL_LIST_BACKUP_PATH)
             os.remove(tmp_path)
@@ -123,7 +123,7 @@ async def schema_load_from_file() -> None:
 
     trace("Restoring objects from file...", TraceLEVELS.NORMAL)
     with open(SHILL_LIST_BACKUP_PATH, "rb") as reader:
-        accounts = convert.convert_from_dict(pickle.load(reader))
+        accounts = convert.convert_from_semi_dict(pickle.load(reader))
 
     trace("Updating accounts.", TraceLEVELS.DEBUG)
     for account in accounts:

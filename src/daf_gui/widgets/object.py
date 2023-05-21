@@ -47,6 +47,8 @@ HELP_URLS = {
 # Mapping which tells the frame which methods can be executed on live objects
 EXECUTABLE_METHODS = {
     daf.guild.GUILD: [daf.guild.GUILD.add_message, daf.guild.GUILD.remove_message],
+    daf.guild.USER: [daf.guild.USER.add_message, daf.guild.USER.remove_message],
+    daf.guild.AutoGUILD: [daf.guild.AutoGUILD.add_message, daf.guild.AutoGUILD.remove_message],
     daf.client.ACCOUNT: [daf.client.ACCOUNT.add_server, daf.client.ACCOUNT.remove_server]
 }
 
@@ -54,6 +56,14 @@ EXECUTABLE_METHODS = {
 # if lambda is given, the old ObjectInfo object will be passed as parameter and a list of values is expected
 ADDITIONAL_PARAMETER_VALUES = {
     daf.GUILD.remove_message: {
+        # GUILD.messages
+        "message": lambda old_info: convert_to_object_info(old_info.real_object.__self__.messages, save_original=True)
+    },
+    daf.USER.remove_message: {
+        # GUILD.messages
+        "message": lambda old_info: convert_to_object_info(old_info.real_object.__self__.messages, save_original=True)
+    },
+    daf.AutoGUILD.remove_message: {
         # GUILD.messages
         "message": lambda old_info: convert_to_object_info(old_info.real_object.__self__.messages, save_original=True)
     },

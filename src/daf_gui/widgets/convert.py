@@ -2,7 +2,7 @@
 Modules contains definitions related to GUI object transformations.
 """
 
-from typing import Any, Union, List, get_type_hints
+from typing import Any, Union, List, get_type_hints, Generic, TypeVar
 from contextlib import suppress
 from enum import Enum
 from inspect import signature
@@ -24,6 +24,8 @@ __all__ = (
     "ADDITIONAL_ANNOTATIONS",
     "issubclass_noexcept",
 )
+
+TClass = TypeVar("TClass")
 
 
 def issubclass_noexcept(*args):
@@ -125,7 +127,7 @@ CONVERSION_ATTR_TO_PARAM[daf.GUILD]["invite_track"] = (
 )
 
 
-class ObjectInfo:
+class ObjectInfo(Generic[TClass]):
     """
     A GUI object that represents real objects,.
     The GUI only knows how to work with ObjectInfo.

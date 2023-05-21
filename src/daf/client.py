@@ -104,7 +104,8 @@ class ACCOUNT:
         "_client",
         "_deleted",
         "_update_sem",
-        "__weakref__"
+        "__weakref__",
+        "id__"
     )
 
     @typechecked
@@ -498,7 +499,7 @@ class ACCOUNT:
                     if isinstance(server, guild._BaseGUILD):
                         _servers.append(server)
                     else:
-                        _autoguilds.append(servers)
+                        _autoguilds.append(server)
                 except Exception as exc:
                     trace(f"Could not update {server} after updating {self} - Skipping server.", TraceLEVELS.ERROR, exc)
 

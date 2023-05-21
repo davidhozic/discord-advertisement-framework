@@ -78,7 +78,8 @@ class _BaseGUILD:
         "_created_at",
         "_deleted",
         "parent",
-        "__weakref__"
+        "__weakref__",
+        "id__"
     )
 
     def __init__(
@@ -824,7 +825,8 @@ class AutoGUILD:
         "last_guild_join",
         "guild_join_count",
         "invite_track",
-        "__weakref__"
+        "__weakref__",
+        "id__"
     )
 
     @typechecked

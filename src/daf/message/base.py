@@ -111,7 +111,8 @@ class BaseMESSAGE:
         "remove_after",
         "_created_at",
         "_deleted",
-        "__weakref__"
+        "__weakref__",
+        "id__"
     )
 
     @typechecked
@@ -438,7 +439,8 @@ class AutoCHANNEL:
         "cache",
         "channel_getter",
         "last_scan",
-        "__weakref__"
+        "__weakref__",
+        "id__"
     )
 
     def __init__(self,
