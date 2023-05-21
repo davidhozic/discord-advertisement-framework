@@ -4,6 +4,7 @@ Module contains additional widgets and their setup handlers.
 from .utilities import *
 from .convert import *
 from .dpi import *
+from .connector import get_connection
 
 import _discord as discord
 import daf
@@ -110,7 +111,8 @@ def setup_additional_live_update(w: ttk.Button, frame):
                 for k, v in frame._read_gui_values().items()
                 if not isinstance(v, str) or v != ''
             }
-            await old.real_object.update(**values)
+            connector = get_connection()
+            await connector.execute_method(old.real_object, "update", **values)
 
         async_execute(update(), parent_window=frame.origin_window)
 
@@ -129,15 +131,19 @@ def setup_additional_live_refresh(w: ttk.Button, frame):
         return
 
     def _callback(*args):
-        opened_frames = frame.origin_window.opened_frames
-        # Need to do this on all previous frames, otherwise we would have wrong data
-        for frame_ in reversed(opened_frames):
-            if not isinstance(frame_.old_object_info, list):
-                real = frame_.old_object_info.real_object
-                frame_._update_old_object(convert_to_object_info(real, True))
-                frame_.load()
+        async def refresh():
+            opened_frames = frame.origin_window.opened_frames
+            connection = get_connection()
+            # Need to do this on all previous frames, otherwise we would have wrong data
+            for frame_ in reversed(opened_frames):
+                if not isinstance(frame_.old_object_info, list):
+                    real = await connection.refresh(frame_.old_object_info.real_object)  # Get refresh object from DAF
+                    frame_._update_old_object(convert_to_object_info(real, True))
+                    frame_.load()
 
-            frame_.save_gui_values()
+                frame_.save_gui_values()
+
+        async_execute(refresh(), parent_window=frame.origin_window)
 
     w.configure(command=_callback)
     ToolTip(w, "Load updated values from the object into the window", topmost=True)

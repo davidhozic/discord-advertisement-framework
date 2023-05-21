@@ -269,4 +269,3 @@ def convert_from_pickle_b64(data: bytes) -> object:
     Decodes a b64 string, unpickles it and returns the original object.
     """
     return pickle.loads(base64.b64decode(data))
-

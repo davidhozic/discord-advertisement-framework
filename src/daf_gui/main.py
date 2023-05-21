@@ -20,6 +20,15 @@ if not installed:
     print("Auto installing requirements: ttkbootstrap")
     subprocess.check_call([sys.executable, "-m", "pip", "install", f"ttkbootstrap=={TTKBOOSTRAP_VERSION}"])
 
+
+from .convert import *
+from .dpi import *
+from .extra import *
+from .object import *
+from .storage import *
+from .utilities import *
+from .connector import *
+
 from PIL import Image, ImageTk
 from ttkbootstrap.tooltip import ToolTip
 import tkinter as tk
@@ -35,12 +44,6 @@ import os
 import daf
 import webbrowser
 
-try:
-    from .widgets import *
-    from .connector import *
-except ImportError:
-    from widgets import *
-    from connector import *
 
 
 WIN_UPDATE_DELAY = 0.005
@@ -95,18 +98,19 @@ class Application():
         self.frame_toolbar = ttk.Frame(self.win_main)
         self.frame_toolbar.pack(fill=tk.X, side="top", padx=dpi_5, pady=dpi_5)
         self.bnt_toolbar_start_daf = ttk.Button(self.frame_toolbar, text="Start", command=self.start_daf)
-        self.bnt_toolbar_start_daf.grid(row=0, column=0)
+        self.bnt_toolbar_start_daf.pack(side="left")
         self.bnt_toolbar_stop_daf = ttk.Button(self.frame_toolbar, text="Stop", state="disabled", command=self.stop_daf)
-        self.bnt_toolbar_stop_daf.grid(row=0, column=1)
-        ttk.Label(self.frame_toolbar,  text="Connection Type:").grid(row=0, column=2, padx=dpi_5)
+        self.bnt_toolbar_stop_daf.pack(side="left")
+
+        # Connection
         self.combo_connection_edit = ComboEditFrame(
             self.open_object_edit_window,
             [
-                ObjectInfo(LocalConnectionCLIENT, {}, LocalConnectionCLIENT())
+                ObjectInfo(LocalConnectionCLIENT, {})
             ],
-            self.frame_toolbar
+            self.frame_toolbar,
         )
-        self.combo_connection_edit.grid(row=0, column=3, padx=dpi_5)
+        self.combo_connection_edit.pack(side="left", fill=ttk.X, expand=True)
 
         # Main Frame
         self.frame_main = ttk.Frame(self.win_main)
@@ -168,20 +172,22 @@ class Application():
             text="Accounts", padding=(dpi_10, dpi_10), bootstyle="primary")
         frame_tab_account.pack(side="left", fill=tk.BOTH, expand=True, pady=dpi_10, padx=dpi_5)
 
-        @gui_except
         @gui_confirm_action
         def import_accounts():
             "Imports account from live view"
-            accs = self.connection.get_accounts()
-            # for acc in accs:
-            #     acc.intents = None  # Intents cannot be loaded properly
+            async def import_accounts_async():
+                accs = await self.connection.get_accounts()
+                # for acc in accs:
+                #     acc.intents = None  # Intents cannot be loaded properly
 
-            values = convert_to_object_info(accs, save_original=False)
-            if not len(values):
-                raise ValueError("Live view has no elements.")
+                values = convert_to_object_info(accs, save_original=False)
+                if not len(values):
+                    raise ValueError("Live view has no elements.")
 
-            self.lb_accounts.clear()
-            self.lb_accounts.insert(tk.END, *values)
+                self.lb_accounts.clear()
+                self.lb_accounts.insert(tk.END, *values)
+
+            async_execute(import_accounts_async(), parent_window=self.win_main)
 
         menu_bnt = ttk.Menubutton(
             frame_tab_account,
@@ -411,15 +417,13 @@ class Application():
             """
             async def analytics_load_history():
                 gui_daf_assert_running()
-                logger = daf.get_logger()
+                logger = await self.connection.get_logger()
                 if not isinstance(logger, daf.LoggerSQL):
                     raise ValueError("Analytics only allowed when using LoggerSQL")
 
                 param_object = combo_history.combo.get()
                 param_object_params = convert_to_objects(param_object.data)
-                items = await getattr(logger, getter_history)(
-                    **param_object_params
-                )
+                items = await self.connection.execute_method(logger, getter_history, **param_object_params)
                 items = convert_to_object_info(items, cache=True)
                 lst_history.clear()
                 lst_history.insert(tk.END, *items)
@@ -454,15 +458,13 @@ class Application():
             # Number of messages
             async def analytics_load_num():
                 gui_daf_assert_running()
-                logger = daf.get_logger()
+                logger = await self.connection.get_logger()
                 if not isinstance(logger, daf.LoggerSQL):
                     raise ValueError("Analytics only allowed when using LoggerSQL")
 
                 param_object = combo_count.combo.get()
                 parameters = convert_to_objects(param_object.data)
-                count = await getattr(logger, getter_counts)(
-                    **parameters
-                )
+                count = await self.connection.execute_method(logger, getter_counts, **parameters)
 
                 tw_num.delete_rows()
                 tw_num.insert_rows(0, count)
@@ -572,10 +574,15 @@ class Application():
             self.objects_edit_window = ObjectEditWindow()
             self.objects_edit_window.open_object_edit_frame(*args, **kwargs)
 
+    @gui_except
     def load_live_accounts(self):
-        object_infos = convert_to_object_info(daf.get_accounts(), save_original=True)
-        self.list_live_objects.clear()
-        self.list_live_objects.insert(tk.END, *object_infos)
+        async def load_accounts():
+            gui_daf_assert_running()
+            object_infos = convert_to_object_info(await self.connection.get_accounts(), save_original=True)
+            self.list_live_objects.clear()
+            self.list_live_objects.insert(tk.END, *object_infos)
+
+        async_execute(load_accounts(), parent_window=self.win_main)
 
     def show_log(self, listbox: ListBoxScrolled, type_):
         selection = listbox.curselection()
@@ -753,6 +760,7 @@ daf.run(
             connection.initialize(logger=logger, debug=tracing, save_to_file=self.save_objects_to_file_var.get()),
             parent_window=self.win_main
         )
+
         self._daf_running = True
         if self.load_at_start_var.get():
             self.add_accounts_daf()

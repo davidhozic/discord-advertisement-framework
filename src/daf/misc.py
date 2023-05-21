@@ -252,18 +252,20 @@ def get_by_id(id_: int):
 
 def track_id(cls):
     """
-    Decorator which replaces the __new__ method with a function that keeps a weakreference.
+    Decorator which replaces the __new__ method with a function that keeps a weak reference.
     """
-    def __new__(cls_, *args, **kwargs):
-        try:
-            new = original_new(cls_, *args, **kwargs)
-        except Exception:
-            new = original_new(cls_)
+    @wraps(cls, updated=[])
+    class TrackedClass(cls):
+        __slots__ = ("__weakref__", "_daf_id__")
 
-        new.id__ = id(new)
-        OBJECT_ID_MAP[id(new)] = new
-        return new
+        def __new__(cls_, *args, **kwargs):
+            try:
+                new = super().__new__(cls_, *args, **kwargs)
+            except Exception:
+                new = super().__new__(cls_)
 
-    original_new = cls.__new__
-    cls.__new__ = __new__
-    return cls
+            new._daf_id__ = id(new)
+            OBJECT_ID_MAP[id(new)] = new
+            return new
+
+    return TrackedClass

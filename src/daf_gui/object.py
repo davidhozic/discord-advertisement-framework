@@ -303,7 +303,6 @@ class NewObjectFrame(ttk.Frame):
 
     def init_structured(self, annotations: dict):
         dpi_5 = dpi_scaled(5)
-        annotations.pop("return", None)
         additional_values_map = ADDITIONAL_PARAMETER_VALUES.get(self.class_)
 
         def fill_values(k: str, entry_types: list, menu: ttk.Menu, combo: ComboBoxObjects):
@@ -449,9 +448,11 @@ class NewObjectFrame(ttk.Frame):
             else:
                 annotations = class_.__annotations__
 
-        additional_annotations = ADDITIONAL_ANNOTATIONS.get(class_)
-        if additional_annotations is not None:
-            annotations = {**annotations, **additional_annotations}
+        additional_annotations = ADDITIONAL_ANNOTATIONS.get(class_, {})
+        annotations = {**annotations, **additional_annotations}
+
+        if "return" in annotations:
+            del annotations["return"]
 
         return annotations
 

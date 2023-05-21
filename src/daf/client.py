@@ -104,8 +104,6 @@ class ACCOUNT:
         "_client",
         "_deleted",
         "_update_sem",
-        "__weakref__",
-        "id__"
     )
 
     @typechecked
