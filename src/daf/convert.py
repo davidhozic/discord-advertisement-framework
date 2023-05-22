@@ -1,17 +1,20 @@
 """
-Module used for object conversion.
+The conversion module is responsible for converting Python objects into different forms.
+It is also responsible for doing the reverse, which is converting those other forms back into Python objects.
 """
+
 from typing import Union, Any
 
 import decimal
 import importlib
 import copy
 import base64
-import pickle
-
-import _discord as discord
+import json
 import asyncio
 import array
+import datetime
+
+import _discord as discord
 
 from . import client
 from . import guild
@@ -23,17 +26,6 @@ __all__ = (
     "convert_object_to_semi_dict",
     "convert_from_semi_dict"
 )
-
-# Only take the following attributes from these types
-# _type: {
-#     "attrs": type.__slots__,
-#     "attrs_restore": {
-#         "tasks": [],
-#         "_client": lambda account: discord.Client(intents=account.intents),
-#         "_update_sem": asyncio.Semaphore(1)
-#     },
-#     "attrs_convert": {},
-# },
 
 
 LAMBDA_TYPE = type(lambda x: x)
@@ -62,8 +54,45 @@ CONVERSION_ATTRS = {
             "parent": None,
             "cache": set()
         },
+    },
+    discord.Intents: {
+        "custom_encoder": lambda intents: intents.value,  # Ignores other keys and calls the lambda to convert
+        "custom_decoder": lambda value: discord.Intents._from_value(value),
+    },
+    datetime.datetime: {
+        "custom_encoder": lambda object: object.isoformat(),
+        "custom_decoder": lambda string: datetime.datetime.fromisoformat(string)
+    },
+    datetime.timedelta: {
+        "custom_encoder": lambda object: object.total_seconds(),
+        "custom_decoder": lambda seconds: datetime.timedelta(seconds=seconds)
     }
 }
+"""
+This is a custom conversion dictionary.
+It's values are datatypes of objects which cannot be normally converted to JSON, so custom rules are required.
+
+Each value of the dictionary is another dictionary, which defined the rules about the specific datatype conversion.
+These can contain the following items:
+
+- "attrs": Iterable of attribute names that will be included in the output JSON-compatible dictionary.
+- "attrs_restored": Dictionary of attributes (keys) that are skipped when converting to dict.
+   When restoring from dictionary, the object will have these attributes set with the co-responding values.
+- "attrs_convert": Dictionary of attributes(keys) that which's values can either be a fixed value of a function.
+  The values of this override the object's attribute values. If a function is given, the function is (as parameter) 
+  passed the object that is being converted and whatever it returns is used in
+  the output dictionary as the attribute value.
+- "attrs_skip": Iterable of attributes names that will be completely ignored when converting. They also won't be set
+  when restoring from the output dictionary.
+
+2 special items can be used, which override the default conversion logic.
+If they are passed, the previously talked about items will be ignored.
+These are:
+
+- "custom_encoder": A function that accepts the object being converted as a parameter. It must return a JSON
+  serializable object.
+- "custom_decoder": A function that accepts the JSON compatible object. It must return the original Python object.
+"""
 
 
 # Guilds
@@ -138,36 +167,45 @@ def convert_object_to_semi_dict(object_: object) -> dict:
         The object to convert.
     """
     def _convert_json_slots(object_):
-        data_conv = {}
         type_object = type(object_)
         attrs = CONVERSION_ATTRS.get(type_object)
         if attrs is None:
-            return object_  # Keep as it is
+            # No custom rules defined, try to convert normally with either vars or __slots__
+            try:
+                attrs = {"attrs": object_.__slots__ if hasattr(object_, "__slots__") else vars(object_)}
+            except TypeError:
+                return object_  # Not structured object or does not have overrides defined, return the object itself
 
-        (
-            attrs,
-            attrs_restore,
-            attrs_convert,
-            skip
-        ) = (
-            attrs["attrs"],
-            attrs.get("attrs_restore", {}),
-            attrs.get("attrs_convert", {}),
-            attrs.get("attrs_skip", [])
-        )
-        for k in attrs:
-            # Manually set during restored or is a class attribute
-            if k in attrs_restore or k in skip:
-                continue
+        # Check if custom conversion function is requested
+        if (encoder_func := attrs.get("custom_encoder")) is not None:
+            data_conv = encoder_func(object_)
+        else:
+            # No custom conversion function provided, use the normal rules
+            data_conv = {}
+            (
+                attrs,
+                attrs_restore,
+                attrs_convert,
+                skip
+            ) = (
+                attrs["attrs"],
+                attrs.get("attrs_restore", {}),
+                attrs.get("attrs_convert", {}),
+                attrs.get("attrs_skip", [])
+            )
+            for k in attrs:
+                # Manually set during restored or is a class attribute
+                if k in attrs_restore or k in skip:
+                    continue
 
-            if k in attrs_convert:
-                value = attrs_convert[k]
-                if isinstance(value, LAMBDA_TYPE):
-                    value = value(object_)
-            else:
-                value = getattr(object_, k)
+                if k in attrs_convert:
+                    value = attrs_convert[k]
+                    if isinstance(value, LAMBDA_TYPE):
+                        value = value(object_)
+                else:
+                    value = getattr(object_, k)
 
-            data_conv[k] = convert_object_to_semi_dict(value)
+                data_conv[k] = convert_object_to_semi_dict(value)
 
         return {"object_type": f"{type_object.__module__}.{type_object.__name__}", "data": data_conv}
 
@@ -225,47 +263,54 @@ def convert_from_semi_dict(d: Union[dict, list, Any]):
         module_path, class_name = '.'.join(path[:-1]), path[-1]
         module = importlib.import_module(module_path)
         class_ = getattr(module, class_name)
+        conversion_attrs = CONVERSION_ATTRS.get(class_)
 
-        # Create an instance
-        if issubclass(class_, array.array):
-            _return = array.array.__new__(class_, 'Q')
+        if conversion_attrs is not None and (decoder_func := conversion_attrs.get("custom_decoder")) is not None:
+            # Custom decoder function is used
+            _return = decoder_func(d["data"])
         else:
-            _return = class_.__new__(class_)
+            # Create an instance
+            if issubclass(class_, array.array):
+                _return = array.array.__new__(class_, 'Q')
+            else:
+                _return = object.__new__(class_)
+                # Use object.__new__ instead of class.__new__
+                # to prevent any objects who have IDs tracked from updating the weakref dictionary (in misc module)
 
-        # Set saved attributes
-        for k, v in d["data"].items():
-            if isinstance(v, (dict, list)):
-                v = convert_from_semi_dict(v)
-
-            setattr(_return, k, v)
-
-        # Set overriden attributes
-        attrs = CONVERSION_ATTRS.get(class_)
-        if attrs is not None:
-            attrs_restore = attrs.get("attrs_restore", {})
-            for k, v in attrs_restore.items():
-                if isinstance(v, LAMBDA_TYPE):
-                    v = v(_return)
-
-                if not isinstance(v, discord.Client):  # For some reason it fails to logging when copied.
-                    v = copy.copy(v)  # Prevent external modifications since it's passed by reference
+            # Set saved attributes
+            for k, v in d["data"].items():
+                if isinstance(v, (dict, list)):
+                    v = convert_from_semi_dict(v)
 
                 setattr(_return, k, v)
+
+            # Set overriden attributes
+            attrs = CONVERSION_ATTRS.get(class_)
+            if attrs is not None:
+                attrs_restore = attrs.get("attrs_restore", {})
+                for k, v in attrs_restore.items():
+                    if isinstance(v, LAMBDA_TYPE):
+                        v = v(_return)
+
+                    if not isinstance(v, discord.Client):  # For some reason it fails to logging when copied.
+                        v = copy.copy(v)  # Prevent external modifications since it's passed by reference
+
+                    setattr(_return, k, v)
 
         return _return
     else:
         return d
 
 
-def convert_object_to_pickle_b64(d: object) -> bytes:
+def convert_object_to_b64(d: object) -> bytes:
     """
     Converts an object first into semi-dict representation and then into bytes encoded b64 string.
     """
-    return base64.b64encode(pickle.dumps(convert_object_to_semi_dict(d))).decode()
+    return base64.b64encode(json.dumps(convert_object_to_semi_dict(d)).encode()).decode()
 
 
-def convert_from_pickle_b64(data: str) -> object:
+def convert_from_b64(data: str) -> object:
     """
-    Decodes a b64 string, unpickles it and returns the original object.
+    Decodes a b64 string and returns the original object.
     """
-    return convert_from_semi_dict(pickle.loads(base64.b64decode(data.encode())))
+    return convert_from_semi_dict(json.loads(base64.b64decode(data).decode()))

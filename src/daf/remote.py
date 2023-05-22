@@ -55,9 +55,9 @@ def register(path: str, type: Literal["GET", "POST", "DELETE", "PATCH"]):
 
             except Exception as exc:
                 raise HTTPInternalServerError(reason=str(exc))
-            
+
         return getattr(GLOBALS.routes, type.lower())(path)(request_wrapper)
-    
+
     return decorator
 
 
@@ -106,5 +106,5 @@ class RemoteAccessCLIENT:
 
 
 @register("/ping", "GET")
-async def ping(request: Request):
-    return Response(text=f"pong {request.host}")
+async def ping():
+    return create_json_response(message="pong")

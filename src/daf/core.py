@@ -8,7 +8,6 @@ from pathlib import Path
 
 from aiohttp import BasicAuth, web as aiohttp_web
 from typeguard import typechecked
-from base64 import b64encode, b64decode
 
 from .logging.tracing import TraceLEVELS, trace
 from .logging import _logging as logging, tracing
@@ -71,30 +70,30 @@ async def http_get_accounts():
     accounts = get_accounts()
     return remote.create_json_response(
         message=f"Retrieved {len(accounts)} accounts",
-        accounts=convert.convert_object_to_pickle_b64(accounts)
+        accounts=convert.convert_object_to_b64(accounts)
     )
 
 
 @remote.register("/accounts", "POST")
 async def http_add_account(account: str):
     try:
-        account = convert.convert_from_pickle_b64(account)
-        account._update_internal_id()
+        account = convert.convert_from_b64(account)
+        account._set_id()
         await add_object(account)
         return remote.create_json_response(message=f"Logged in to {account.client.user.display_name}")
     except Exception as exc:
         raise aiohttp_web.HTTPInternalServerError(reason=str(exc))
-    
+
+
 @remote.register("/accounts", "DELETE")
-async def http_remove_account(account: str):
-    account = convert.convert_from_pickle_b64(account)
-    account = misc.get_by_id(account.internal_daf_id)
+async def http_remove_account(account_id: int):
+    account = misc.get_by_id(account_id)
     if account is None:
         raise aiohttp_web.HTTPInternalServerError(reason="Account not present")
 
     name = account.client.user.display_name
     await remove_object(account)
-    return remote.create_json_response(f"Removed account {name}")
+    return remote.create_json_response(message=f"Removed account {name}")
 
 
 async def cleanup_accounts_task():

@@ -157,7 +157,6 @@ class LocalConnectionCLIENT(AbstractConnectionCLIENT):
         return result
 
 
-
 class RemoteConnectionCLIENT(AbstractConnectionCLIENT):
     """
     Client used for connecting to DAF running on a remote server though
@@ -219,18 +218,18 @@ class RemoteConnectionCLIENT(AbstractConnectionCLIENT):
         self.connected = False
 
     async def add_account(self, account: daf.client.ACCOUNT):
-        trace(f"Logging in.")
-        message = await self._request("POST", "/accounts", account=daf.convert.convert_object_to_pickle_b64(account))
-        trace(message["message"])
+        trace("Logging in.")
+        response = await self._request("POST", "/accounts", account=daf.convert.convert_object_to_b64(account))
+        trace(response["message"])
 
     async def remove_account(self, account: daf.client.ACCOUNT):
-        trace(f"Removing remote account.")
-        message = await self._request("DELETE", "/accounts", account=daf.convert.convert_object_to_pickle_b64(account))
-        trace(message[message])
+        trace("Removing remote account.")
+        response = await self._request("DELETE", "/accounts", account_id=account._daf_id)
+        trace(response["message"])
 
     async def get_accounts(self) -> List[daf.client.ACCOUNT]:
         response = await self._request("GET", "/accounts")
-        return daf.convert.convert_from_pickle_b64(response["result"]["accounts"])
+        return daf.convert.convert_from_b64(response["result"]["accounts"])
 
     async def _ping(self):
         async with self.session.get("/ping"):
