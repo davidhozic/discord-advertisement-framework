@@ -199,8 +199,11 @@ class LoggerCSV(LoggerBASE):
     ) -> None:
         self.path = path
         self.delimiter = delimiter
-        trace(f"{type(self).__name__} logs will be saved to {path}")
         super().__init__(fallback)
+    
+    def initialize(self):
+        trace(f"{type(self).__name__} logs will be saved to {self.path}")
+        return super().initialize()
 
     async def _save_log(
             self,
@@ -285,8 +288,11 @@ class LoggerJSON(LoggerBASE):
         fallback: Optional[LoggerBASE] = None
     ) -> None:
         self.path = path
-        trace(f"{type(self).__name__} logs will be saved to {path}")
         super().__init__(fallback)
+
+    def initialize(self):
+        trace(f"{type(self).__name__} logs will be saved to {self.path}")
+        return super().initialize()
 
     async def _save_log(
         self,

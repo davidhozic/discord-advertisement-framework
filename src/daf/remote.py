@@ -4,14 +4,34 @@ Module contains definitions related to remote access from a graphical interface.
 from typing import Optional, Literal
 from contextlib import suppress
 
-from aiohttp import web as aiohttp_web
+from aiohttp.web import (
+    Response, Request, RouteTableDef, Application, _run_app, json_response,
+    HTTPException, HTTPInternalServerError
+)
 
 import asyncio
 
 
 class GLOBALS:
-    routes = aiohttp_web.RouteTableDef()
+    routes = RouteTableDef()
     http_task: asyncio.Task = None
+
+
+def create_json_response(message: str, dict_: dict = {}, **kwargs):
+    """
+    Creates a JSON response representing JSON response.
+
+    Parameters
+    -----------
+    message: str
+        Status message to return to the server.
+    kwargs:
+        Other keys
+    """
+    return json_response({
+        "message": message,
+        "result": {**kwargs, **dict_}
+    })
 
 
 def register(path: str, type: Literal["GET", "POST", "DELETE", "PATCH"]):
@@ -25,7 +45,20 @@ def register(path: str, type: Literal["GET", "POST", "DELETE", "PATCH"]):
     type: Literal["GET", "POST", "DELETE", "PATCH"]
         Request type.
     """
-    return getattr(GLOBALS.routes, type.lower())(path)
+    def decorator(fnc):
+        async def request_wrapper(request: Request):
+            try:
+                json_data = await request.json()
+                return await fnc(**json_data["parameters"])
+            except HTTPException:
+                raise  # Don't wrap already HTTP exceptions
+
+            except Exception as exc:
+                raise HTTPInternalServerError(reason=str(exc))
+            
+        return getattr(GLOBALS.routes, type.lower())(path)(request_wrapper)
+    
+    return decorator
 
 
 class RemoteAccessCLIENT:
@@ -55,12 +88,12 @@ class RemoteAccessCLIENT:
         self.username = username
         self.password = password
 
-        self.web_app = aiohttp_web.Application()
+        self.web_app = Application()
         self.web_app.add_routes(GLOBALS.routes)
 
     async def initialize(self):
         GLOBALS.http_task = asyncio.create_task(
-            aiohttp_web._run_app(self.web_app, host=self.host, port=self.port, print=False)
+            _run_app(self.web_app, host=self.host, port=self.port, print=False)
         )
 
     async def _close(self):
@@ -70,3 +103,8 @@ class RemoteAccessCLIENT:
         task.cancel()
         with suppress(asyncio.CancelledError):
             await task
+
+
+@register("/ping", "GET")
+async def ping(request: Request):
+    return Response(text=f"pong {request.host}")

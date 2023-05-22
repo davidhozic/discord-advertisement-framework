@@ -128,8 +128,8 @@ async def async_runner():
                 callback(result)
         except Exception as exc:
             tkdiag.Messagebox.show_error(
-                f"{exc}\n(Error while running coroutine: {awaitable.__name__})",
-                "Coroutine error",
+                f"{exc}\n(Error while running coroutine: {awaitable.__name__})\nType: {exc.__class__}",
+                f"Coroutine error",
                 executor_win
             )
             trace(f"Error while running coroutine: {awaitable.__name__}", TraceLEVELS.ERROR, exc)

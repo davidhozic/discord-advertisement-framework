@@ -74,7 +74,7 @@ CONVERSION_ATTRS[guild.GUILD] = {
         "parent": None
     },
     "attrs_convert": {
-        "_apiobject": lambda guild: guild._apiobject.id
+        "_apiobject": lambda guild: guild.snowflake
     },
 }
 
@@ -230,7 +230,7 @@ def convert_from_semi_dict(d: Union[dict, list, Any]):
         if issubclass(class_, array.array):
             _return = array.array.__new__(class_, 'Q')
         else:
-            _return = object.__new__(class_)
+            _return = class_.__new__(class_)
 
         # Set saved attributes
         for k, v in d["data"].items():
@@ -261,11 +261,11 @@ def convert_object_to_pickle_b64(d: object) -> bytes:
     """
     Converts an object first into semi-dict representation and then into bytes encoded b64 string.
     """
-    return base64.b64encode(pickle.dumps(convert_object_to_semi_dict(d)))
+    return base64.b64encode(pickle.dumps(convert_object_to_semi_dict(d))).decode()
 
 
-def convert_from_pickle_b64(data: bytes) -> object:
+def convert_from_pickle_b64(data: str) -> object:
     """
     Decodes a b64 string, unpickles it and returns the original object.
     """
-    return pickle.loads(base64.b64decode(data))
+    return convert_from_semi_dict(pickle.loads(base64.b64decode(data.encode())))

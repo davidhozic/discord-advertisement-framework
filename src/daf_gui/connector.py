@@ -2,17 +2,27 @@
 Module contains definitions related to different connection
 clients.
 """
-from typing import List
+from typing import List, Optional, Literal
+
+from daf.logging.tracing import TraceLEVELS, trace
+
+from daf_gui.utilities import daf
 
 from .convert import *
 from .utilities import *
 
+from aiohttp import ClientSession, BasicAuth
+from urllib.parse import urljoin
+from aiohttp import web
+
 import daf
+import aiohttp
 
 
 __all__ = (
     "AbstractConnectionCLIENT",
     "LocalConnectionCLIENT",
+    "RemoteConnectionCLIENT",
     "get_connection",
 )
 
@@ -145,6 +155,86 @@ class LocalConnectionCLIENT(AbstractConnectionCLIENT):
             result = await result
 
         return result
+
+
+
+class RemoteConnectionCLIENT(AbstractConnectionCLIENT):
+    """
+    Client used for connecting to DAF running on a remote server though
+    the HTTP protocol. The connection is based fully on request from the GUI (this client).
+
+    Parameters
+    ------------
+    host: str
+        The URL / IP of the host.
+    port: Optional[int]
+        The HTTP port of the host.
+        Defaults to 80.
+    userna
+    """
+    def __init__(
+        self,
+        host: str,
+        port: int = 80,
+        username: Optional[str] = None,
+        password: Optional[str] = None
+    ) -> None:
+        self.session = None
+        self.connected = False
+
+        self.host = host.rstrip('/')  # Remove any slashes in the back to prevent errors with port
+        self.port = port
+        self.auth = None
+        if username is not None:
+            self.auth = BasicAuth(username, password)
+
+    async def _request(self, method: Literal["GET", "POST", "DELETE", "PATCH"], route: str, **kwargs):
+        method = method.lower()
+        trace(f"Requesting {route} with {method}.", TraceLEVELS.DEBUG)
+        async with getattr(self.session, method)(route, json={"parameters": kwargs}) as response:
+            if response.status != 200:
+                raise web.HTTPException(reason=response.reason)
+
+            # All communicaiton is in JSON except binary types
+            if response.content_type == "application/json":
+                return await response.json()
+            else:
+                return await response.content.read()
+
+    async def initialize(self, *args, **kwargs):
+        try:
+            self.session = ClientSession(f"{self.host}:{self.port}", auth=self.auth)
+            daf.tracing.initialize(kwargs.get("debug", TraceLEVELS.NORMAL))
+            trace("Pinging server.")
+            await self._ping()
+            GLOBALS.connection = self  # Set self as global connection
+            self.connected = True
+        except Exception:
+            await self.session.close()
+            raise
+
+    async def shutdown(self):
+        trace("Closing connection.")
+        await self.session.close()
+        self.connected = False
+
+    async def add_account(self, account: daf.client.ACCOUNT):
+        trace(f"Logging in.")
+        message = await self._request("POST", "/accounts", account=daf.convert.convert_object_to_pickle_b64(account))
+        trace(message["message"])
+
+    async def remove_account(self, account: daf.client.ACCOUNT):
+        trace(f"Removing remote account.")
+        message = await self._request("DELETE", "/accounts", account=daf.convert.convert_object_to_pickle_b64(account))
+        trace(message[message])
+
+    async def get_accounts(self) -> List[daf.client.ACCOUNT]:
+        response = await self._request("GET", "/accounts")
+        return daf.convert.convert_from_pickle_b64(response["result"]["accounts"])
+
+    async def _ping(self):
+        async with self.session.get("/ping"):
+            pass  # Just test if connection works
 
 
 def get_connection() -> AbstractConnectionCLIENT:

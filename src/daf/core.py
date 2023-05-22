@@ -67,13 +67,34 @@ class GLOBALS:
 # These must be in here due to needed interactions with core functions
 # -----------------------------------------------------------------------
 @remote.register("/accounts", "GET")
-async def http_get_accounts(request: aiohttp_web.Request):
-    return aiohttp_web.Response(body=convert.convert_object_to_pickle_b64(get_accounts()))
+async def http_get_accounts():
+    accounts = get_accounts()
+    return remote.create_json_response(
+        message=f"Retrieved {len(accounts)} accounts",
+        accounts=convert.convert_object_to_pickle_b64(accounts)
+    )
 
 
 @remote.register("/accounts", "POST")
-async def http_add_account(request: aiohttp_web.Request):
-    return aiohttp_web.Response()
+async def http_add_account(account: str):
+    try:
+        account = convert.convert_from_pickle_b64(account)
+        account._update_internal_id()
+        await add_object(account)
+        return remote.create_json_response(message=f"Logged in to {account.client.user.display_name}")
+    except Exception as exc:
+        raise aiohttp_web.HTTPInternalServerError(reason=str(exc))
+    
+@remote.register("/accounts", "DELETE")
+async def http_remove_account(account: str):
+    account = convert.convert_from_pickle_b64(account)
+    account = misc.get_by_id(account.internal_daf_id)
+    if account is None:
+        raise aiohttp_web.HTTPInternalServerError(reason="Account not present")
+
+    name = account.client.user.display_name
+    await remove_object(account)
+    return remote.create_json_response(f"Removed account {name}")
 
 
 async def cleanup_accounts_task():

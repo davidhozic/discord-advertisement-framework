@@ -45,8 +45,12 @@ def _write_attr_once(obj: Any, name: str, value: Any):
 def get_all_slots(cls) -> list:
     """
     Returns slots of current class and it's bases. Skips the __weakref__ slot.
+    Also returns internal_daf_id descriptor for tracked objects
     """
     ret = list(chain.from_iterable(getattr(class_, '__slots__', []) for class_ in cls.__mro__))
+    if hasattr(cls, "internal_daf_id"):
+        ret.append("internal_daf_id")
+
     with suppress(ValueError):
         ret.remove("__weakref__")
 
@@ -256,7 +260,20 @@ def track_id(cls):
     """
     @wraps(cls, updated=[])
     class TrackedClass(cls):
-        __slots__ = ("__weakref__", "_daf_id__")
+        # __slots__ = ("__weakref__", "_daf_id")
+
+        @property
+        def internal_daf_id(self):
+            return self.__daf_id
+        
+        @internal_daf_id.setter
+        def internal_daf_id(self, value: Any):
+            # Update weakref dictionary
+            with suppress(Exception):
+                OBJECT_ID_MAP.pop(self.__daf_id, None)
+
+            self.__daf_id = value
+            OBJECT_ID_MAP[value] = self
 
         def __new__(cls_, *args, **kwargs):
             try:
@@ -264,8 +281,11 @@ def track_id(cls):
             except Exception:
                 new = super().__new__(cls_)
 
-            new._daf_id__ = id(new)
+            new.internal_daf_id = id(new)
             OBJECT_ID_MAP[id(new)] = new
             return new
+        
+        def _update_internal_id(self):
+            self.internal_daf_id = id(self)
 
     return TrackedClass

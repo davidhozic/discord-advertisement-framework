@@ -106,7 +106,8 @@ class Application():
         self.combo_connection_edit = ComboEditFrame(
             self.open_object_edit_window,
             [
-                ObjectInfo(LocalConnectionCLIENT, {})
+                ObjectInfo(LocalConnectionCLIENT, {}),
+                ObjectInfo(RemoteConnectionCLIENT, {"host": "http://"}),
             ],
             self.frame_toolbar,
         )
