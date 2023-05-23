@@ -258,7 +258,8 @@ def track_id(cls):
     """
     @wraps(cls, updated=[])
     class TrackedClass(cls):
-        __slots__ = ("__weakref__", "_daf_id")
+        if hasattr(cls, "__slots__"):  # Don't break classes without slots
+            __slots__ = ("__weakref__", "_daf_id")
 
         def _set_id(self):
             # Update weakref dictionary

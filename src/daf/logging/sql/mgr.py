@@ -206,6 +206,7 @@ class TableCache:
         return key in self.data
 
 
+@misc.track_id
 @misc.doc_category("Logging reference", path="logging.sql")
 class LoggerSQL(logging.LoggerBASE):
     """

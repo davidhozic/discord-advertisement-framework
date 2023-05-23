@@ -230,6 +230,16 @@ class RemoteConnectionCLIENT(AbstractConnectionCLIENT):
     async def get_accounts(self) -> List[daf.client.ACCOUNT]:
         response = await self._request("GET", "/accounts")
         return daf.convert.convert_from_b64(response["result"]["accounts"])
+    
+    def get_logger(self):
+        return self._request("GET", "/logging")
+    
+    async def refresh(self, object_: object):
+        return await super().refresh(object_)
+
+    async def execute_method(self, object_: object, method_name: str, *args, **kwargs):
+        result = await self._request("POST", "/method")
+        return result
 
     async def _ping(self):
         async with self.session.get("/ping"):

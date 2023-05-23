@@ -20,6 +20,7 @@ from . import client
 from . import guild
 from . import message
 from . import misc
+from . import logging
 
 
 __all__ = (
@@ -54,6 +55,15 @@ CONVERSION_ATTRS = {
             "parent": None,
             "cache": set()
         },
+    },
+    logging.LoggerSQL: {
+        "attrs": ["_daf_id"]
+    },
+    logging.LoggerJSON: {
+        "attrs": []
+    },
+    logging.LoggerCSV: {
+        "attrs": []
     },
     discord.Intents: {
         "custom_encoder": lambda intents: intents.value,  # Ignores other keys and calls the lambda to convert

@@ -9,15 +9,20 @@ from aiohttp.web import (
     HTTPException, HTTPInternalServerError
 )
 
+from . import convert
+
 import asyncio
 
+import daf
+
+__all__ = ("RemoteAccessCLIENT",)
 
 class GLOBALS:
     routes = RouteTableDef()
     http_task: asyncio.Task = None
 
 
-def create_json_response(message: str, dict_: dict = {}, **kwargs):
+def create_json_response(message: str = None, dict_: dict = {}, **kwargs):
     """
     Creates a JSON response representing JSON response.
 
@@ -106,5 +111,23 @@ class RemoteAccessCLIENT:
 
 
 @register("/ping", "GET")
-async def ping():
+async def http_ping():
     return create_json_response(message="pong")
+
+
+@register("/logging", "GET")
+async def http_get_logger():
+    return create_json_response(logger=convert.convert_object_to_b64(daf.get_logger()))
+
+@register("/method", "POST")
+async def http_execute_method(object_id: int, method_name: str, *args, **kwargs):
+    object = daf.misc.get_by_id(object_id)
+    if object is None:
+        raise HTTPInternalServerError(reason="Object not present in DAF.")
+    
+    try:
+        getattr(object, method_name)(*args, **kwargs)
+    except Exception as exc:
+        raise HTTPInternalServerError(reason=f"Error executing metohd {method_name}. ({exc})")
+
+    return create_json_response(f"Executed {method_name}")
