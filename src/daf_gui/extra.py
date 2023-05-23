@@ -98,8 +98,7 @@ def setup_additional_live_update(w: ttk.Button, frame):
     # Don't have a bound object instance
     if (
         (oi := frame.old_object_info) is None or
-        (ro := oi.real_object) is None or
-        getattr(ro, "parent", False) is None
+        oi.real_object is None
     ):
         return
 
@@ -125,8 +124,7 @@ def setup_additional_live_refresh(w: ttk.Button, frame):
     # Don't have a bound object instance
     if (
         (oi := frame.old_object_info) is None or
-        (ro := oi.real_object) is None or
-        getattr(ro, "parent", False) is None
+        oi.real_object is None
     ):
         return
 

@@ -267,6 +267,23 @@ def track_id(cls):
             self._daf_id = value
             OBJECT_ID_MAP[value] = self
 
+            # Update others
+            keys = get_all_slots(cls) if hasattr(self, "__slots__") else vars(self).keys()
+            to_set_id = []
+
+            for k in keys:
+                if (object_ := getattr(self, k, None)) is None:
+                    continue
+
+                if isinstance(object_, (list, set, tuple)):
+                    to_set_id.extend(object_)
+                else:
+                    to_set_id.append(object_)
+
+            for object_ in to_set_id:
+                if hasattr(object_, "_set_id"):
+                    object_._set_id()
+
         def __new__(cls_, *args, **kwargs):
             try:
                 new = super().__new__(cls_, *args, **kwargs)

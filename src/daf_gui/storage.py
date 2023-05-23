@@ -113,7 +113,7 @@ class ComboBoxObjects(ttk.Combobox):
         self._original_items = []
         super().__init__(*args, **kwargs)
 
-    def get(self, *args, **kwargs) -> list:
+    def get(self, *args, **kwargs) -> Any:
         index = self.current()
         if isinstance(index, int) and index >= 0:
             return self._original_items[index]

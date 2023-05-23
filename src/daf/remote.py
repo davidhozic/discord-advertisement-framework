@@ -1,7 +1,7 @@
 """
 Module contains definitions related to remote access from a graphical interface.
 """
-from typing import Optional, Literal
+from typing import Optional, Literal, Coroutine
 from contextlib import suppress
 
 from aiohttp.web import (
@@ -117,17 +117,30 @@ async def http_ping():
 
 @register("/logging", "GET")
 async def http_get_logger():
-    return create_json_response(logger=convert.convert_object_to_b64(daf.get_logger()))
+    return create_json_response(logger=convert.convert_object_to_semi_dict(daf.get_logger()))
 
-@register("/method", "POST")
-async def http_execute_method(object_id: int, method_name: str, *args, **kwargs):
+
+@register("/object", "GET")
+async def http_get_object(object_id: int):
     object = daf.misc.get_by_id(object_id)
     if object is None:
         raise HTTPInternalServerError(reason="Object not present in DAF.")
-    
+
+    return create_json_response(object=convert.convert_object_to_semi_dict(object))
+
+
+@register("/method", "POST")
+async def http_execute_method(object_id: int, method_name: str, **kwargs):
+    object = daf.misc.get_by_id(object_id)
+    if object is None:
+        raise HTTPInternalServerError(reason="Object not present in DAF.")
+
     try:
-        getattr(object, method_name)(*args, **kwargs)
+        result = getattr(object, method_name)(**convert.convert_from_semi_dict(kwargs))
+        if isinstance(result, Coroutine):
+            result = await result
+
     except Exception as exc:
         raise HTTPInternalServerError(reason=f"Error executing metohd {method_name}. ({exc})")
 
-    return create_json_response(f"Executed {method_name}")
+    return create_json_response(result=convert.convert_object_to_semi_dict(result))

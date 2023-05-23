@@ -272,9 +272,9 @@ def convert_to_object_info(object_: object, save_original = False, cache = False
 
         return attrs
 
-    with suppress(TypeError):
-        if cache and object_ in OBJECT_CONV_CACHE:
-            return OBJECT_CONV_CACHE.get(object_)
+    with suppress(KeyError, TypeError):
+        if cache:
+            return OBJECT_CONV_CACHE[object_]
 
     object_type = type(object_)
 
@@ -294,9 +294,9 @@ def convert_to_object_info(object_: object, save_original = False, cache = False
     with suppress(TypeError):
         if cache:
             OBJECT_CONV_CACHE[object_] = ret
-
-    if len(OBJECT_CONV_CACHE) > 50000:
-        OBJECT_CONV_CACHE.clear()
+            if len(OBJECT_CONV_CACHE) > 50000:
+                for k in list(OBJECT_CONV_CACHE.keys())[:10000]:
+                    del OBJECT_CONV_CACHE[k]
 
     return ret
 
@@ -332,12 +332,16 @@ def convert_to_objects(
 
     def convert_object_info():
         # Skip conversion
-        if skip_real_conversion and (real := d.real_object) is not None:
+        real = d.real_object
+        if skip_real_conversion and real is not None:
             return real
 
         data_conv = {}
         for k, v in d.data.items():
-            data_conv[k] = convert_to_objects(v, keep_original_object)
+            if isinstance(v, (list, tuple, set, ObjectInfo, dict)):
+                data_conv[k] = convert_to_objects(v, keep_original_object)
+            else:
+                data_conv[k] = v
 
         new_obj = d.class_(**data_conv)
         if keep_original_object and real is not None:

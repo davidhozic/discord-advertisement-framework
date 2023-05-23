@@ -54,7 +54,7 @@ class AbstractConnectionCLIENT:
         """
         raise NotImplementedError
 
-    async def add_account(self, account: daf.client.ACCOUNT):
+    async def add_account(self, obj: daf.client.ACCOUNT):
         """
         Adds and initializes a new account into DAF.
 
@@ -99,7 +99,7 @@ class AbstractConnectionCLIENT:
         """
         raise NotImplementedError
 
-    async def execute_method(self, object_: object, method_name: str, *args, **kwargs):
+    async def execute_method(self, object_: object, method_name: str, **kwargs):
         """
         Executes a method inside object and returns the result.
 
@@ -134,8 +134,8 @@ class LocalConnectionCLIENT(AbstractConnectionCLIENT):
         await daf.shutdown()
         self.connected = False
 
-    def add_account(self, account: daf.client.ACCOUNT):
-        return daf.add_object(account)
+    def add_account(self, obj: daf.client.ACCOUNT):
+        return daf.add_object(obj)
 
     def remove_account(self, account: daf.client.ACCOUNT):
         return daf.remove_object(account)
@@ -149,8 +149,8 @@ class LocalConnectionCLIENT(AbstractConnectionCLIENT):
     async def refresh(self, object_: object) -> object:
         return object_  # Local connection can just use the local object
 
-    async def execute_method(self, object_: object, method_name: str, *args, **kwargs):
-        result = getattr(object_, method_name)(*args, **kwargs)
+    async def execute_method(self, object_: object, method_name: str, **kwargs):
+        result = getattr(object_, method_name)(**kwargs)
         if isinstance(result, Coroutine):
             result = await result
 
@@ -217,9 +217,9 @@ class RemoteConnectionCLIENT(AbstractConnectionCLIENT):
         await self.session.close()
         self.connected = False
 
-    async def add_account(self, account: daf.client.ACCOUNT):
+    async def add_account(self, obj: daf.client.ACCOUNT):
         trace("Logging in.")
-        response = await self._request("POST", "/accounts", account=daf.convert.convert_object_to_b64(account))
+        response = await self._request("POST", "/accounts", account=daf.convert.convert_object_to_semi_dict(obj))
         trace(response["message"])
 
     async def remove_account(self, account: daf.client.ACCOUNT):
@@ -229,21 +229,28 @@ class RemoteConnectionCLIENT(AbstractConnectionCLIENT):
 
     async def get_accounts(self) -> List[daf.client.ACCOUNT]:
         response = await self._request("GET", "/accounts")
-        return daf.convert.convert_from_b64(response["result"]["accounts"])
-    
-    def get_logger(self):
-        return self._request("GET", "/logging")
-    
+        return daf.convert.convert_from_semi_dict(response["result"]["accounts"])
+
+    async def get_logger(self):
+        response = await self._request("GET", "/logging")
+        return daf.convert.convert_from_semi_dict(response["result"]["logger"])
+
     async def refresh(self, object_: object):
-        return await super().refresh(object_)
+        response = await self._request("GET", "/object", object_id=object_._daf_id)
+        return daf.convert.convert_from_semi_dict(response["result"]["object"])
 
-    async def execute_method(self, object_: object, method_name: str, *args, **kwargs):
-        result = await self._request("POST", "/method")
-        return result
+    async def execute_method(self, object_: object, method_name: str, **kwargs):
+        kwargs = daf.convert.convert_object_to_semi_dict(kwargs)
 
-    async def _ping(self):
-        async with self.session.get("/ping"):
-            pass  # Just test if connection works
+        response = await self._request("POST", "/method", object_id=object_._daf_id, method_name=method_name, **kwargs)
+        message = response.get("message")
+        if message is not None:
+            trace(message)
+
+        return daf.convert.convert_from_semi_dict(response["result"]["result"])
+
+    def _ping(self):
+        return self._request("GET", "/ping")
 
 
 def get_connection() -> AbstractConnectionCLIENT:

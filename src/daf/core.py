@@ -70,14 +70,14 @@ async def http_get_accounts():
     accounts = get_accounts()
     return remote.create_json_response(
         message=f"Retrieved {len(accounts)} accounts",
-        accounts=convert.convert_object_to_b64(accounts)
+        accounts=convert.convert_object_to_semi_dict(accounts)
     )
 
 
 @remote.register("/accounts", "POST")
 async def http_add_account(account: str):
     try:
-        account = convert.convert_from_b64(account)
+        account = convert.convert_from_semi_dict(account)
         account._set_id()
         await add_object(account)
         return remote.create_json_response(message=f"Logged in to {account.client.user.display_name}")

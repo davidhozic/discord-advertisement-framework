@@ -4,11 +4,11 @@ It is also responsible for doing the reverse, which is converting those other fo
 """
 
 from typing import Union, Any
+from contextlib import suppress
 
 import decimal
 import importlib
 import copy
-import base64
 import json
 import asyncio
 import array
@@ -30,6 +30,16 @@ __all__ = (
 
 
 LAMBDA_TYPE = type(lambda x: x)
+
+
+def import_class(path: str):
+    path = path.split(".")
+    module_path, class_name = '.'.join(path[:-1]), path[-1]
+    module = importlib.import_module(module_path)
+    class_ = getattr(module, class_name)
+    return class_
+
+
 CONVERSION_ATTRS = {
     client.ACCOUNT: {
         "attrs": misc.get_all_slots(client.ACCOUNT),
@@ -120,6 +130,58 @@ CONVERSION_ATTRS[guild.GUILD] = {
 CONVERSION_ATTRS[guild.USER] = CONVERSION_ATTRS[guild.GUILD].copy()
 CONVERSION_ATTRS[guild.USER]["attrs"] = misc.get_all_slots(guild.USER)
 
+if logging.sql.SQL_INSTALLED:
+    # These methods prevent unbound errors
+    def __hash__(self):
+        return hash(self.__dict__.values())
+
+    def __eq__(self, other):
+        return self.__dict__ == other.__dict__
+
+    def create_decoder(cls):
+        """
+        Function returns the decoder function which uses the ``cls`` parameter.
+        It cannot be passed directly since for loop would update the ``cls`` parameter.
+        """
+        def decoder_func(data: dict):
+            def _decode_object_type(cls, data: dict):
+                new_object = cls.__new__(cls)
+                for k, v in data.items():
+                    if isinstance(v, (dict, list)):
+                        v = convert_from_semi_dict(v)
+
+                    new_object.__dict__[k] = v
+
+                return new_object
+
+            return _decode_object_type(cls, data)
+
+        return decoder_func
+
+    sql_ = logging.sql
+    ORMBase = sql_.tables.ORMBase
+    values = list(sql_.tables.__dict__.values())
+    values.remove(ORMBase)
+    for cls in values:
+        with suppress(TypeError):
+            if not issubclass(cls, ORMBase):
+                continue
+
+            attrs = list(cls.__init__._sa_original_init.__annotations__.keys())
+            if hasattr(cls, "id"):
+                attrs.append("id")
+
+            with suppress(ValueError):
+                attrs.remove("snowflake")
+                attrs.append("snowflake_id")
+
+            CONVERSION_ATTRS[cls] = {
+                "attrs": attrs,
+                "custom_decoder": create_decoder(cls)
+            }
+
+    CONVERSION_ATTRS[sql_.MessageLOG]["attrs"].extend(["id", "timestamp", "success_rate"])
+    CONVERSION_ATTRS[sql_.InviteLOG]["attrs"].extend(["id", "timestamp"])
 
 # Messages
 CHANNEL_LAMBDA = (
@@ -269,10 +331,7 @@ def convert_from_semi_dict(d: Union[dict, list, Any]):
             return data
 
         # Find the class
-        path = d["object_type"].split(".")
-        module_path, class_name = '.'.join(path[:-1]), path[-1]
-        module = importlib.import_module(module_path)
-        class_ = getattr(module, class_name)
+        class_ = import_class(d["object_type"])
         conversion_attrs = CONVERSION_ATTRS.get(class_)
 
         if conversion_attrs is not None and (decoder_func := conversion_attrs.get("custom_decoder")) is not None:
@@ -287,6 +346,7 @@ def convert_from_semi_dict(d: Union[dict, list, Any]):
                 # Use object.__new__ instead of class.__new__
                 # to prevent any objects who have IDs tracked from updating the weakref dictionary (in misc module)
 
+            # Change the setattr function to default Python, since we just want to directly set attributes
             # Set saved attributes
             for k, v in d["data"].items():
                 if isinstance(v, (dict, list)):
@@ -312,15 +372,15 @@ def convert_from_semi_dict(d: Union[dict, list, Any]):
         return d
 
 
-def convert_object_to_b64(d: object) -> bytes:
+def convert_object_to_json(d: object) -> str:
     """
-    Converts an object first into semi-dict representation and then into bytes encoded b64 string.
+    Converts an object first into semi-dict representation and then into json.
     """
-    return base64.b64encode(json.dumps(convert_object_to_semi_dict(d)).encode()).decode()
+    return json.dumps(convert_object_to_semi_dict(d))
 
 
-def convert_from_b64(data: str) -> object:
+def convert_from_json_to_object(data: str) -> object:
     """
-    Decodes a b64 string and returns the original object.
+    Decodes a json string and converts it back to object.
     """
-    return convert_from_semi_dict(json.loads(base64.b64decode(data).decode()))
+    return convert_from_semi_dict(json.loads(data))
