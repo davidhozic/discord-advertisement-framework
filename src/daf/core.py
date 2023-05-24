@@ -78,7 +78,6 @@ async def http_get_accounts():
 async def http_add_account(account: str):
     try:
         account = convert.convert_from_semi_dict(account)
-        account._set_id()
         await add_object(account)
         return remote.create_json_response(message=f"Logged in to {account.client.user.display_name}")
     except Exception as exc:

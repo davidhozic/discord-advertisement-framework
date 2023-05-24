@@ -261,36 +261,18 @@ def track_id(cls):
         if hasattr(cls, "__slots__"):  # Don't break classes without slots
             __slots__ = ("__weakref__", "_daf_id")
 
-        def _set_id(self):
+        async def initialize(self, *args, **kwargs):
+            _r = await super().initialize(*args, **kwargs)
             # Update weakref dictionary
             value = id(self)
             self._daf_id = value
             OBJECT_ID_MAP[value] = self
+            return _r
 
-            # Update others
-            keys = get_all_slots(cls) if hasattr(self, "__slots__") else vars(self).keys()
-            to_set_id = []
-
-            for k in keys:
-                if (object_ := getattr(self, k, None)) is None:
-                    continue
-
-                if isinstance(object_, (list, set, tuple)):
-                    to_set_id.extend(object_)
-                else:
-                    to_set_id.append(object_)
-
-            for object_ in to_set_id:
-                if hasattr(object_, "_set_id"):
-                    object_._set_id()
-
-        def __new__(cls_, *args, **kwargs):
-            try:
-                new = super().__new__(cls_, *args, **kwargs)
-            except Exception:
-                new = super().__new__(cls_)
-
-            new._set_id()
-            return new
+        def __getattr__(self, __key: str):
+            if __key == "_daf_id":
+                return -1
+            
+            raise AttributeError(__key)
 
     return TrackedClass

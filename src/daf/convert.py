@@ -323,16 +323,16 @@ def convert_from_semi_dict(d: Union[dict, list, Any], use_bound: bool = False):
 
             return data
 
-        # If a bound object is found, don't try to recreate but obtain by ID
-        if use_bound and "_daf_id" in d["data"] and (bound := misc.get_by_id(d["data"]["_daf_id"])) is not None:
-            return bound
-
         # d is a object serialized to dict
         class_ = import_class(d["object_type"])
         # Get the custom decoder function
         if (decoder_func := CONVERSION_ATTRS.get(class_, {}).get("custom_decoder")) is not None:
             # Custom decoder function is used
             return decoder_func(d["data"])
+
+        # If a bound object is found, don't try to recreate but obtain by ID
+        if use_bound and "_daf_id" in d["data"] and (bound := misc.get_by_id(d["data"]["_daf_id"])) is not None:
+            return bound
 
         # No custom decoder function, normal conversion is used
         if issubclass(class_, array.array):

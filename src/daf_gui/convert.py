@@ -270,6 +270,7 @@ def convert_to_object_info(object_: object, save_original = False, cache = False
 
             attrs.update(**additional_annots)
 
+        attrs.pop("return", None)
         return attrs
 
     with suppress(KeyError, TypeError):
