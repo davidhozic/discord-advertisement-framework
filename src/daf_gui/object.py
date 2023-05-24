@@ -268,7 +268,6 @@ class NewObjectFrame(ttk.Frame):
         ):
             return
 
-        @gui_except(self.origin_window)
         def execute_method():
             async def runner():
                 method = frame_execute_method.combo.get()
@@ -276,11 +275,14 @@ class NewObjectFrame(ttk.Frame):
                     tkdiag.Messagebox.show_error("No method selected!", "Selection error")
                     return
 
-                method_parameters = convert_to_objects(method.data, skip_real_conversion=True)
-                # Call function wrapped in ObjectInfo
-                result = method.class_(self.old_object_info.real_object, **method_parameters)
-                if isinstance(result, Coroutine):
-                    await result
+                method_param = convert_to_objects(method.data, skip_real_conversion=True)
+                connection = get_connection()
+                # Call the method though the connection manager
+                await connection.execute_method(
+                    self.old_object_info.real_object,
+                    method.class_.__name__,
+                    **method_param,
+                )
 
             async_execute(runner(), parent_window=self.origin_window)
 

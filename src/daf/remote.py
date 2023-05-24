@@ -17,6 +17,7 @@ import daf
 
 __all__ = ("RemoteAccessCLIENT",)
 
+
 class GLOBALS:
     routes = RouteTableDef()
     http_task: asyncio.Task = None
@@ -136,11 +137,11 @@ async def http_execute_method(object_id: int, method_name: str, **kwargs):
         raise HTTPInternalServerError(reason="Object not present in DAF.")
 
     try:
-        result = getattr(object, method_name)(**convert.convert_from_semi_dict(kwargs))
+        result = getattr(object, method_name)(**convert.convert_from_semi_dict(kwargs, True))
         if isinstance(result, Coroutine):
             result = await result
 
     except Exception as exc:
-        raise HTTPInternalServerError(reason=f"Error executing metohd {method_name}. ({exc})")
+        raise HTTPInternalServerError(reason=f"Error executing method {method_name}. ({exc})")
 
-    return create_json_response(result=convert.convert_object_to_semi_dict(result))
+    return create_json_response(f"Executed method {method_name}.", result=convert.convert_object_to_semi_dict(result))

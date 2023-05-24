@@ -131,13 +131,6 @@ CONVERSION_ATTRS[guild.USER] = CONVERSION_ATTRS[guild.GUILD].copy()
 CONVERSION_ATTRS[guild.USER]["attrs"] = misc.get_all_slots(guild.USER)
 
 if logging.sql.SQL_INSTALLED:
-    # These methods prevent unbound errors
-    def __hash__(self):
-        return hash(self.__dict__.values())
-
-    def __eq__(self, other):
-        return self.__dict__ == other.__dict__
-
     def create_decoder(cls):
         """
         Function returns the decoder function which uses the ``cls`` parameter.
@@ -305,7 +298,7 @@ def convert_object_to_semi_dict(object_: object) -> dict:
     return _convert_json_slots(object_)
 
 
-def convert_from_semi_dict(d: Union[dict, list, Any]):
+def convert_from_semi_dict(d: Union[dict, list, Any], use_bound: bool = False):
     """
     Function that converts the ``d`` parameter which is a semi-dict back to the object
     representation.
@@ -314,73 +307,62 @@ def convert_from_semi_dict(d: Union[dict, list, Any]):
     ---------------
     d: Union[dict, list, Any]
         The semi-dict / list to convert.
+    use_bound: bool
+        If ``True`` and objects have the ``_daf_id`` attribute, they will not be recreated but taken from memory.
     """
+    # List conversion, keeps the list but converts the values
     if isinstance(d, list):
-        _return = []
-        for value in d:
-            _return.append(convert_from_semi_dict(value) if isinstance(value, dict) else value)
+        return [convert_from_semi_dict(value, use_bound) if isinstance(value, dict) else value for value in d]
 
-        return _return
-
+    # Either an object serialized to dict or a normal dictionary
     elif isinstance(d, dict):
         if "object_type" not in d:  # It's a normal dictionary
             data = {}
             for k, v in d.items():
-                data[k] = convert_from_semi_dict(v)
+                data[k] = convert_from_semi_dict(v, use_bound)
 
             return data
 
-        # Find the class
+        # If a bound object is found, don't try to recreate but obtain by ID
+        if use_bound and "_daf_id" in d["data"] and (bound := misc.get_by_id(d["data"]["_daf_id"])) is not None:
+            return bound
+
+        # d is a object serialized to dict
         class_ = import_class(d["object_type"])
-        conversion_attrs = CONVERSION_ATTRS.get(class_)
-
-        if conversion_attrs is not None and (decoder_func := conversion_attrs.get("custom_decoder")) is not None:
+        # Get the custom decoder function
+        if (decoder_func := CONVERSION_ATTRS.get(class_, {}).get("custom_decoder")) is not None:
             # Custom decoder function is used
-            _return = decoder_func(d["data"])
-        else:
-            # Create an instance
-            if issubclass(class_, array.array):
-                _return = array.array.__new__(class_, 'Q')
-            else:
-                _return = object.__new__(class_)
-                # Use object.__new__ instead of class.__new__
-                # to prevent any objects who have IDs tracked from updating the weakref dictionary (in misc module)
+            return decoder_func(d["data"])
 
-            # Change the setattr function to default Python, since we just want to directly set attributes
-            # Set saved attributes
-            for k, v in d["data"].items():
-                if isinstance(v, (dict, list)):
-                    v = convert_from_semi_dict(v)
+        # No custom decoder function, normal conversion is used
+        if issubclass(class_, array.array):
+            _return = array.array.__new__(cls, 'Q')
+        else:
+            _return = object.__new__(class_)
+        # Use object.__new__ instead of class.__new__
+        # to prevent any objects who have IDs tracked from updating the weakref dictionary (in misc module)
+
+        # Change the setattr function to default Python, since we just want to directly set attributes
+        # Set saved attributes
+        for k, v in d["data"].items():
+            if isinstance(v, (dict, list)):
+                v = convert_from_semi_dict(v, use_bound)
+
+            setattr(_return, k, v)
+
+        # Modify attributes that have specified different restore values
+        attrs = CONVERSION_ATTRS.get(class_)
+        if attrs is not None:
+            attrs_restore = attrs.get("attrs_restore", {})
+            for k, v in attrs_restore.items():
+                if isinstance(v, LAMBDA_TYPE):
+                    v = v(_return)
+
+                if not isinstance(v, discord.Client):  # For some reason it fails to logging when copied.
+                    v = copy.copy(v)  # Prevent external modifications since it's passed by reference
 
                 setattr(_return, k, v)
 
-            # Set overriden attributes
-            attrs = CONVERSION_ATTRS.get(class_)
-            if attrs is not None:
-                attrs_restore = attrs.get("attrs_restore", {})
-                for k, v in attrs_restore.items():
-                    if isinstance(v, LAMBDA_TYPE):
-                        v = v(_return)
-
-                    if not isinstance(v, discord.Client):  # For some reason it fails to logging when copied.
-                        v = copy.copy(v)  # Prevent external modifications since it's passed by reference
-
-                    setattr(_return, k, v)
-
         return _return
-    else:
-        return d
-
-
-def convert_object_to_json(d: object) -> str:
-    """
-    Converts an object first into semi-dict representation and then into json.
-    """
-    return json.dumps(convert_object_to_semi_dict(d))
-
-
-def convert_from_json_to_object(data: str) -> object:
-    """
-    Decodes a json string and converts it back to object.
-    """
-    return convert_from_semi_dict(json.loads(data))
+    # Normal dictionary or a value, no need for additional conversion
+    return d

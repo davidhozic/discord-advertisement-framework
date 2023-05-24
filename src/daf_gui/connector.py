@@ -245,7 +245,7 @@ class RemoteConnectionCLIENT(AbstractConnectionCLIENT):
         response = await self._request("POST", "/method", object_id=object_._daf_id, method_name=method_name, **kwargs)
         message = response.get("message")
         if message is not None:
-            trace(message)
+            trace(message, TraceLEVELS.DEBUG)
 
         return daf.convert.convert_from_semi_dict(response["result"]["result"])
 
