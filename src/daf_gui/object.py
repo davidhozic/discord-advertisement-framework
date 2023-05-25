@@ -131,6 +131,8 @@ class ObjectEditWindow(ttk.Toplevel):
         if prev_frame is not None:
             prev_frame.pack_forget()
 
+        self.set_default_size_y()
+
     def close_object_edit_frame(self):
         self.opened_frames[-1].close_frame()
 
@@ -145,9 +147,15 @@ class ObjectEditWindow(ttk.Toplevel):
             frame = self.opened_frames[-1]
             frame.pack(fill=tk.BOTH, expand=True)  # (row=0, column=0)
             frame.update_window_title()
+            self.set_default_size_y()
         else:
             self._closed = True
             self.destroy()
+
+    def set_default_size_y(self):
+        "Sets window Y size to default"
+        self.update()
+        self.geometry(f"{self.winfo_width()}x{self.winfo_reqheight()}")
 
 
 class NewObjectFrame(ttk.Frame):
