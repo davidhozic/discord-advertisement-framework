@@ -134,8 +134,9 @@ def setup_additional_live_refresh(w: ttk.Button, frame):
             connection = get_connection()
             # Need to do this on all previous frames, otherwise we would have wrong data
             for frame_ in reversed(opened_frames):
-                if not isinstance(frame_.old_object_info, list):
-                    real = await connection.refresh(frame_.old_object_info.real_object)  # Get refresh object from DAF
+                old_object_info = frame_.old_object_info
+                if not isinstance(old_object_info, list) and hasattr(old_object_info.real_object, "_daf_id"):
+                    real = await connection.refresh(old_object_info.real_object)  # Get refresh object from DAF
                     frame_._update_old_object(convert_to_object_info(real, True))
                     frame_.load()
 

@@ -4,10 +4,12 @@ Module contains definitions related to remote access from a graphical interface.
 from typing import Optional, Literal, Coroutine
 from contextlib import suppress
 
+from aiohttp import BasicAuth
 from aiohttp.web import (
-    Response, Request, RouteTableDef, Application, _run_app, json_response,
-    HTTPException, HTTPInternalServerError
+    Request, RouteTableDef, Application, _run_app, json_response,
+    HTTPException, HTTPInternalServerError, HTTPUnauthorized
 )
+
 
 from . import convert
 
@@ -21,6 +23,7 @@ __all__ = ("RemoteAccessCLIENT",)
 class GLOBALS:
     routes = RouteTableDef()
     http_task: asyncio.Task = None
+    remote_client: "RemoteAccessCLIENT" = None
 
 
 def create_json_response(message: str = None, dict_: dict = {}, **kwargs):
@@ -54,6 +57,13 @@ def register(path: str, type: Literal["GET", "POST", "DELETE", "PATCH"]):
     def decorator(fnc):
         async def request_wrapper(request: Request):
             try:
+                authorization = request.headers.get("Authorization")
+                if (
+                    authorization is None and GLOBALS.remote_client.auth is not None or
+                    authorization != GLOBALS.remote_client.auth
+                ):
+                    raise HTTPUnauthorized(reason="Wrong username / password")
+
                 json_data = await request.json()
                 return await fnc(**json_data["parameters"])
             except HTTPException:
@@ -91,8 +101,7 @@ class RemoteAccessCLIENT:
     ) -> None:
         self.host = host
         self.port = port
-        self.username = username
-        self.password = password
+        self.auth = BasicAuth(username, password).encode()
 
         self.web_app = Application()
         self.web_app.add_routes(GLOBALS.routes)

@@ -52,24 +52,22 @@ EXECUTABLE_METHODS = {
     daf.client.ACCOUNT: [daf.client.ACCOUNT.add_server, daf.client.ACCOUNT.remove_server]
 }
 
-# Mapping which tells the frame to insert additional values into the ComboBox of certain parameter
-# if lambda is given, the old ObjectInfo object will be passed as parameter and a list of values is expected
 ADDITIONAL_PARAMETER_VALUES = {
     daf.GUILD.remove_message: {
         # GUILD.messages
-        "message": lambda old_info: convert_to_object_info(old_info.real_object.__self__.messages, save_original=True)
+        "message": lambda old_info: convert_to_object_info(old_info.real_object.messages, save_original=True)
     },
     daf.USER.remove_message: {
         # GUILD.messages
-        "message": lambda old_info: convert_to_object_info(old_info.real_object.__self__.messages, save_original=True)
+        "message": lambda old_info: convert_to_object_info(old_info.real_object.messages, save_original=True)
     },
     daf.AutoGUILD.remove_message: {
         # GUILD.messages
-        "message": lambda old_info: convert_to_object_info(old_info.real_object.__self__.messages, save_original=True)
+        "message": lambda old_info: convert_to_object_info(old_info.real_object.messages, save_original=True)
     },
     daf.ACCOUNT.remove_server: {
         # ACCOUNT.servers
-        "server": lambda old_info: convert_to_object_info(old_info.real_object.__self__.servers, save_original=True)
+        "server": lambda old_info: convert_to_object_info(old_info.real_object.servers, save_original=True)
     }
 }
 
@@ -112,6 +110,8 @@ class ObjectEditWindow(ttk.Toplevel):
         # Window initialization
         NewObjectFrame.set_origin_window(self)
         self.protocol("WM_DELETE_WINDOW", self.close_object_edit_frame)
+
+        self.grab_set()  # Act like a pop up
 
     @property
     def closed(self) -> bool:
@@ -178,6 +178,8 @@ class NewObjectFrame(ttk.Frame):
         This is ignored if editing a function instead of a class.
     allow_save: bool
         If False, will open in read-only mode.
+    additional_values: Dict[str, Any]
+        A mapping of additional values to be inserted into corresponding field.
     """
     origin_window: ObjectEditWindow = None
 
@@ -199,6 +201,7 @@ class NewObjectFrame(ttk.Frame):
         old: ObjectInfo = None,
         check_parameters: bool = True,
         allow_save = True,
+        additional_values: dict = {},
     ):
         self.class_ = class_
         self.return_widget = return_widget
@@ -209,6 +212,7 @@ class NewObjectFrame(ttk.Frame):
         self.check_parameters = check_parameters  # At save time
         self.allow_save = allow_save  # Allow save or not allow (eg. viewing SQL data)
         self.method_exec_frame = None  # Frame within current frame for executing methods
+        self.additional_values = additional_values
 
         super().__init__(master=parent)
         annotations = self.get_annotations(class_)
@@ -298,22 +302,30 @@ class NewObjectFrame(ttk.Frame):
         frame_method = ttk.LabelFrame(self, text="Method execution", padding=(dpi_5, dpi_10), bootstyle=ttk.INFO)
         ttk.Button(frame_method, text="Execute", command=execute_method).pack(side="left")
         combo_values = []
-        real_object = self.old_object_info.real_object
         for unbound_meth in available_methods:
-            bound_meth = getattr(real_object, unbound_meth.__name__)
-            combo_values.append(ObjectInfo(unbound_meth, {}, bound_meth))
+            combo_values.append(ObjectInfo(unbound_meth, {}))
+
+        def new_object_frame_with_values(class_, widget, *args, **kwargs):
+            """
+            Middleware method for opening a new object frame, that fills in additional
+            values for the specific method (class_) we are editing.
+            """
+            extra_values = ADDITIONAL_PARAMETER_VALUES.get(class_, {}).copy()
+            for k, v in extra_values.items():
+                extra_values[k] = v(self.old_object_info)
+
+            return self.new_object_frame(class_, widget, *args, **kwargs, additional_values=extra_values)
 
         frame_execute_method = ComboEditFrame(
-            self.new_object_frame,
+            new_object_frame_with_values,
             combo_values,
-            master=frame_method,
+            master=frame_method
         )
         frame_execute_method.pack(side="right", fill=tk.X, expand=True)
         frame_method.pack(fill=tk.X)
 
     def init_structured(self, annotations: dict):
         dpi_5 = dpi_scaled(5)
-        additional_values_map = ADDITIONAL_PARAMETER_VALUES.get(self.class_)
 
         def fill_values(k: str, entry_types: list, menu: ttk.Menu, combo: ComboBoxObjects):
             "Fill ComboBox values based on types in ``entry_types`` and create New <object_type> buttons"
@@ -340,12 +352,8 @@ class NewObjectFrame(ttk.Frame):
                         )
 
             # Additional values to be inserted into ComboBox
-            if additional_values_map is not None and (extra_values := additional_values_map.get(k, [])) is not None:
-                if isinstance(extra_values, LAMBDA_TYPE):
-                    extra_values = extra_values(self.old_object_info)
-
-                for val in extra_values:
-                    combo.insert(tk.END, val)
+            for value in self.additional_values.get(k, []):
+                combo.insert(tk.END, value)
 
             # The class of last list like type. Needed when "Edit selected" is used
             # since we don't know what type it was
@@ -386,9 +394,8 @@ class NewObjectFrame(ttk.Frame):
             menu = tk.Menu(menubtn)
             menubtn.configure(menu=menu)
             menubtn.pack()
-            ttk.Button(frame_edit_remove, text="Remove", command=w.listbox_delete_selected).pack(fill=tk.X)
+            ttk.Button(frame_edit_remove, text="Remove", command=w.delete_selected).pack(fill=tk.X)
             ttk.Button(frame_edit_remove, text="Edit", command=self.listbox_edit_selected(w)).pack(fill=tk.X)
-            ttk.Button(frame_edit_remove, text="Copy", command=w.listbox_copy_selected).pack(fill=tk.X)
             args = get_args(self.class_)
             args = self.convert_types(args)
             if get_origin(args[0]) is Union:
@@ -610,8 +617,12 @@ class NewObjectFrame(ttk.Frame):
         if single_value is not Ellipsis:
             object_ = single_value
         else:
-
-            object_ = ObjectInfo(self.class_, map_)
+            object_ = ObjectInfo(
+                self.class_,
+                map_,
+                # Don't erase the bind to the real object in case this is an edit of an existing ObjectInfo
+                None if self.old_object_info is None else self.old_object_info.real_object
+            )
             if self.check_parameters and inspect.isclass(self.class_):  # Only check objects
                 convert_to_objects(object_)  # Tries to create instances to check for errors
 
@@ -619,10 +630,6 @@ class NewObjectFrame(ttk.Frame):
 
     def _update_old_object(self, new: Union[ObjectInfo, Any]):
         if self.old_object_info is not None:
-            old = self.old_object_info
-            if isinstance(new, ObjectInfo):
-                new.real_object = old.real_object
-
             ret_widget = self.return_widget
             if isinstance(ret_widget, ListBoxScrolled):
                 ind = ret_widget.get().index(self.old_object_info)
@@ -640,8 +647,6 @@ class NewObjectFrame(ttk.Frame):
     def save(self):
         """
         Saves the GUI data into ObjectInfo and place it in the return widget.
-        If the real object is linked to ObjectInfo, also execute update metho of the
-        real object if it has one.
         """
         try:
             if not self.allow_save:

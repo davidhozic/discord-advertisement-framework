@@ -218,7 +218,7 @@ async def initialize(user_callback: Optional[Union[Callable, Coroutine]] = None,
     # Initialize remote access
     if remote_client is not None:
         await remote_client.initialize()
-        GLOBALS.remote_client = remote_client
+        remote.GLOBALS.remote_client = remote_client
 
     # ------------------------------------------
     # Create the user callback task
@@ -433,8 +433,8 @@ async def shutdown() -> None:
     GLOBALS.cleanup_event.set()
     GLOBALS.schema_backup_event.set()  # This also saves one last time, so manually saving is not needed
     # Close remote client
-    if GLOBALS.remote_client is not None:
-        await GLOBALS.remote_client._close()
+    if remote.GLOBALS.remote_client is not None:
+        await remote.GLOBALS.remote_client._close()
 
     for task in GLOBALS.tasks:  # Wait for core tasks to finish
         await task

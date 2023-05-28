@@ -272,7 +272,7 @@ def track_id(cls):
         def __getattr__(self, __key: str):
             if __key == "_daf_id":
                 return -1
-            
+
             raise AttributeError(__key)
 
     return TrackedClass

@@ -213,7 +213,7 @@ def convert_objects_to_script(object: Union[ObjectInfo, list, tuple, set, str]):
         object_data.append(_list_data)
     else:
         if isinstance(object, str):
-            object = object.replace("\n", "\\n").replace('"', '\\"')
+            object = object.replace("\n", "\\n").replace('"', '\\"').replace("\\", "\\\\")
             object_data.append(f'"{object}"')
         else:
             object_data.append(str(object))
