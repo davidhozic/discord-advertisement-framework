@@ -13,6 +13,12 @@ The Discord advertisement framework is a Python based **shilling framework** tha
     :width: 15cm
 
 
+----------------
+Guide / Usage
+----------------
+Instructions can be found [here](https://daf.davidhozic.com/en/stable/guide/GUI/quickstart.html).
+
+
 ----------------------
 Key features
 ----------------------
@@ -24,11 +30,6 @@ Key features
 - Easy to setup
 - Much more
    
-----------------
-Guide / Usage
-----------------
-Instructions can be found [here](https://daf.davidhozic.com/en/stable/guide/GUI/quickstart.html).
-
 ----------------------
 Installation
 ----------------------
