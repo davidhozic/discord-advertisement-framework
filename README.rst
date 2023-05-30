@@ -16,17 +16,18 @@ The Discord advertisement framework is a Python based **shilling framework** tha
 ----------------------
 Key features
 ----------------------
-- Periodic and scheduled advertisements,
+- Automatic periodic and scheduled messages to multiple servers and channels,
+- Error checking and recovery,
 - Message logging, invite link tracking & statistics
 - Multi-account support
 - Graphical Interface (GUI) / Console (script)
 - Easy to setup
-- Asynchronous
-
-.. caution::
-
-    While running this on user accounts is possible, it is against Discord's ToS.
-    I am not responsible if your account get's disabled for using self-bots!
+- Much more
+   
+----------------
+Guide / Usage
+----------------
+Instructions can be found [here](https://daf.davidhozic.com/en/stable/guide/GUI/quickstart.html).
 
 ----------------------
 Installation
