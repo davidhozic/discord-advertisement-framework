@@ -16,7 +16,7 @@ The Discord advertisement framework is a Python based **shilling framework** tha
 ----------------
 Guide / Usage
 ----------------
-Instructions can be found [here](https://daf.davidhozic.com/en/stable/guide/GUI/quickstart.html).
+Instructions can be found `here <https://daf.davidhozic.com/en/stable/guide/GUI/quickstart.html>`_.
 
 
 ----------------------
