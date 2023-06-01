@@ -96,17 +96,25 @@ def gui_except(parent = None):
     return decorator
 
 
-def gui_confirm_action(fnc: Callable):
-    """
-    Decorator that asks the user to confirm the action before calling the
-    targeted function (fnc).
-    """
-    def wrapper(*args, **kwargs):
-        result = tkdiag.Messagebox.show_question("Are you sure?", "Confirm")
-        if result == "Yes":
-            return fnc(*args, **kwargs)
+def gui_confirm_action(self_parent = False):
+    def _gui_confirm_action(fnc: Callable):
+        """
+        Decorator that asks the user to confirm the action before calling the
+        targeted function (fnc).
+        """
+        def wrapper(self = None, *args, **kwargs):
+            result = tkdiag.Messagebox.show_question("Are you sure?", "Confirm", parent=self if self_parent else None)
+            if result == "Yes":
+                return fnc(self, *args, **kwargs)
 
-    return wrapper
+        return wrapper
+
+    if callable(self_parent):  # Function used as the decorator
+        fnc = self_parent
+        self_parent = None
+        return _gui_confirm_action(fnc)
+
+    return _gui_confirm_action
 
 
 async def dummy_task():

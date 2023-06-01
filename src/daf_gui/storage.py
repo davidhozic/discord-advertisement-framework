@@ -78,7 +78,7 @@ class ListBoxObjects(tk.Listbox):
 
         pass
 
-    @gui_confirm_action
+    @gui_confirm_action(True)
     def delete_selected(self):
         selection = self.curselection()
         if len(selection):
