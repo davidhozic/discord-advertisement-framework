@@ -1,7 +1,7 @@
 =========================================================
 Discord Advertisement Framework (Shiller)
 =========================================================
-The Discord advertisement framework is a Python based **shilling framework** that allows easy advertising on Discord.
+The Discord advertisement framework is a Python based **shilling application** that allows automatic advertising (and much more) on Discord.
 
 
 .. image:: ./docs/images/daf-gui-front.png
