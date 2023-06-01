@@ -5,7 +5,8 @@ The Discord advertisement framework is a Python based **shilling application** t
 
 
 .. image:: ./docs/images/daf-gui-front.png
-    :width: 20cm
+    
+.. image:: ./docs/images/daf-gui-front-edit-msg.png
 
 ---------------
 Help
