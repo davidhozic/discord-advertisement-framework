@@ -1,33 +1,36 @@
 =========================================================
 Discord Advertisement Framework (Shiller)
 =========================================================
-The Discord advertisement framework is a Python based **shilling framework** that allows easy advertising on Discord.
-
-**Documentation** can be found `here <https://daf.davidhozic.com>`_.
+The Discord advertisement framework is a Python based **shilling application** that allows automatic advertising (and much more) on Discord.
 
 
 .. image:: ./docs/images/daf-gui-front.png
-    :width: 15cm
+    
+.. image:: ./docs/images/daf-gui-front-edit-msg.png
 
-.. image:: ./docs/images/daf-console-run.png
-    :width: 15cm
+---------------
+Help
+---------------
+Need help? Contact me in my `Discord server <https://discord.gg/DEnvahb2Sw>`_.
+
+
+----------------
+Guide / Usage
+----------------
+Instructions can be found `here <https://daf.davidhozic.com/en/stable/guide/GUI/quickstart.html>`_.
 
 
 ----------------------
 Key features
 ----------------------
-- Periodic and scheduled advertisements,
+- Automatic periodic and scheduled messages to multiple servers and channels,
+- Error checking and recovery,
 - Message logging, invite link tracking & statistics
 - Multi-account support
 - Graphical Interface (GUI) / Console (script)
 - Easy to setup
-- Asynchronous
-
-.. caution::
-
-    While running this on user accounts is possible, it is against Discord's ToS.
-    I am not responsible if your account get's disabled for using self-bots!
-
+- Much more
+   
 ----------------------
 Installation
 ----------------------
