@@ -405,8 +405,10 @@ class ACCOUNT:
         Signals the tasks of this account to finish and
         waits for them.
         """
-        trace(f"Logging out of {self.client.user.display_name}...")
-        self._running = False
+        if self.running:
+            trace(f"Logging out of {self.client.user.display_name}...")
+            self._running = False
+
         for exc in await asyncio.gather(*self.tasks, return_exceptions=True):
             if exc is not None:
                 trace(

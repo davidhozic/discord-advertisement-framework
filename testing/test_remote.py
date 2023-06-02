@@ -29,9 +29,3 @@ async def test_http(accounts):
     # Test get_accounts
     new_accounts = await client.get_accounts()
     assert new_accounts == accounts
-    await client.remove_account(new_accounts[0])
-    await client.remove_account(new_accounts[1])
-
-    # Change out the old account object to prevent errors on other tests
-    for account in accounts:
-        await daf.add_object(account)
