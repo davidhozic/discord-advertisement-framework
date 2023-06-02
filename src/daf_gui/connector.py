@@ -173,13 +173,16 @@ class RemoteConnectionCLIENT(AbstractConnectionCLIENT):
         The username to login with.
     password: Optional[str].
         The password to login with.
+    verify_ssl: Optional[bool]
+        Defaults to True. If True, connection will be refused when the certificate does not match the host name.
     """
     def __init__(
         self,
         host: str,
         port: int = 80,
         username: Optional[str] = None,
-        password: Optional[str] = None
+        password: Optional[str] = None,
+        verify_ssl: Optional[bool] = True
     ) -> None:
         self.session = None
         self.connected = False
@@ -190,10 +193,16 @@ class RemoteConnectionCLIENT(AbstractConnectionCLIENT):
         if username is not None:
             self.auth = BasicAuth(username, password)
 
+        self.verify_ssl = verify_ssl
+
     async def _request(self, method: Literal["GET", "POST", "DELETE", "PATCH"], route: str, **kwargs):
         method = method.lower()
+        additional_kwargs = {}
+        if not self.verify_ssl:
+            additional_kwargs["ssl"] = False
+
         trace(f"Requesting {route} with {method}.", TraceLEVELS.DEBUG)
-        async with getattr(self.session, method)(route, json={"parameters": kwargs}) as response:
+        async with getattr(self.session, method)(route, json={"parameters": kwargs}, **additional_kwargs) as response:
             if response.status != 200:
                 raise web.HTTPException(reason=response.reason)
 
