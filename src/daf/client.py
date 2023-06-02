@@ -474,7 +474,7 @@ class ACCOUNT:
 
         selenium = self._selenium
         if "token" not in kwargs:
-            kwargs["token"] = self._token if selenium is None else None
+            kwargs["token"] = self._token if selenium is None and "username" not in kwargs else None
         if "username" not in kwargs:
             kwargs["username"] = selenium._username if selenium is not None else None
         if "password" not in kwargs:

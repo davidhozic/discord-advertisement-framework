@@ -105,7 +105,7 @@ def gui_confirm_action(self_parent = False):
         def wrapper(self = None, *args, **kwargs):
             result = tkdiag.Messagebox.show_question("Are you sure?", "Confirm", parent=self if self_parent else None)
             if result == "Yes":
-                return fnc(self, *args, **kwargs)
+                return fnc(self, *args, **kwargs) if self is not None else fnc(*args, **kwargs)
 
         return wrapper
 

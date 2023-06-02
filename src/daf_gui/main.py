@@ -173,6 +173,9 @@ class Application():
             text="Accounts", padding=(dpi_10, dpi_10), bootstyle="primary")
         frame_tab_account.pack(side="left", fill=tk.BOTH, expand=True, pady=dpi_10, padx=dpi_5)
 
+        # Accounts list. Defined here since it's needed below
+        self.lb_accounts = ListBoxScrolled(frame_tab_account)
+
         @gui_confirm_action
         def import_accounts():
             "Imports account from live view"
@@ -199,8 +202,9 @@ class Application():
             label="New ACCOUNT",
             command=lambda: self.open_object_edit_window(daf.ACCOUNT, self.lb_accounts)
         )
+
         menu.add_command(label="Edit", command=self.edit_accounts)
-        menu.add_command(label="Remove", command=self.list_del_account)
+        menu.add_command(label="Remove", command=self.lb_accounts.delete_selected)
         menu_bnt.configure(menu=menu)
         menu_bnt.pack(anchor=tk.W)
 
@@ -231,7 +235,7 @@ class Application():
         )
         t.pack(side="left", padx=dpi_5)
 
-        self.lb_accounts = ListBoxScrolled(frame_tab_account)
+
         self.lb_accounts.pack(fill=tk.BOTH, expand=True, side="left")
 
         # Object tab account tab logging tab
@@ -332,6 +336,11 @@ class Application():
         list_live_objects = ListBoxScrolled(tab_live)
         list_live_objects.pack(fill=tk.BOTH, expand=True)
         self.list_live_objects = list_live_objects
+        # The default bind is removal from list and not from actual daf.
+        list_live_objects.listbox.unbind("<BackSpace>")
+        list_live_objects.listbox.unbind("<Delete>")
+        list_live_objects.listbox.bind("<BackSpace>", lambda e: remove_account())
+        list_live_objects.listbox.bind("<Delete>", lambda e: remove_account())
 
     def init_output_tab(self):
         self.tab_output = ttk.Frame(self.tabman_mf)
@@ -612,16 +621,6 @@ class Application():
         if len(selection):
             object_: ObjectInfo = self.lb_accounts.get()[selection[0]]
             self.open_object_edit_window(daf.ACCOUNT, self.lb_accounts, old=object_)
-        else:
-            tkdiag.Messagebox.show_error("Select atleast one item!", "Empty list!")
-
-    def list_del_account(self):
-        selection = self.lb_accounts.curselection()
-        if len(selection):
-            @gui_confirm_action
-            def _():
-                self.lb_accounts.delete(*selection)
-            _()
         else:
             tkdiag.Messagebox.show_error("Select atleast one item!", "Empty list!")
 

@@ -14,6 +14,7 @@ from aiohttp.web import (
 from . import convert
 
 import asyncio
+import ssl
 
 import daf
 
@@ -84,31 +85,48 @@ class RemoteAccessCLIENT:
     Parameters
     ---------------
     host: Optional[str]
-        The host address. Defaults to ``0.0.0.0``.
+        The host address. Defaults to ``0.0.0.0`` (Listens on all network interfaces).
     port: Optional[int]
         The http port. Defaults to ``80``.
     username: Optional[str]
         The basic authorization username. Defaults to ``None``.
     password: Optional[str]
         The basic authorization password. Defaults to ``None``.
+    certificate: Optional[str]
+        Path to a certificate file. Used when HTTPS is desired instead of HTTP. (Recommended if username & password)
+    private_key: Optional[str]
+        Path to a private key file that belongs to ``certificate``.
+    private_key_pwd: Optional[str]
+        The password of ``private_key`` if it has any.
     """
     def __init__(
         self,
         host: Optional[str] = "127.0.0.1",
         port: Optional[int] = 80,
         username: Optional[str] = None,
-        password: Optional[str] = None
+        password: Optional[str] = None,
+        certificate: Optional[str] = None,
+        private_key: Optional[str] = None,
+        private_key_pwd: Optional[str] = None
     ) -> None:
         self.host = host
         self.port = port
-        self.auth = BasicAuth(username, password).encode()
+        self.auth = BasicAuth(username, password).encode() if username is not None else None
 
+        if certificate is not None:
+            # HTTPS ssl context
+            context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+            context.load_cert_chain(certificate, private_key, private_key_pwd)
+        else:
+            context = None
+
+        self.ssl_ctx = context
         self.web_app = Application()
         self.web_app.add_routes(GLOBALS.routes)
 
     async def initialize(self):
         GLOBALS.http_task = asyncio.create_task(
-            _run_app(self.web_app, host=self.host, port=self.port, print=False)
+            _run_app(self.web_app, host=self.host, port=self.port, print=False, ssl_context=self.ssl_ctx)
         )
 
     async def _close(self):

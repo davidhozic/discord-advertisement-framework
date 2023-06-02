@@ -169,7 +169,10 @@ class RemoteConnectionCLIENT(AbstractConnectionCLIENT):
     port: Optional[int]
         The HTTP port of the host.
         Defaults to 80.
-    userna
+    username: Optional[str]
+        The username to login with.
+    password: Optional[str].
+        The password to login with.
     """
     def __init__(
         self,
