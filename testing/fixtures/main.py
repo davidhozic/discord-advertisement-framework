@@ -4,6 +4,7 @@ import asyncio
 import pytest
 import pytest_asyncio
 import os
+import sys
 import daf
 
 
@@ -18,19 +19,28 @@ TEST_VOICE_CHANNEL_NUM = 2
 
 @pytest.fixture(scope="session")
 def event_loop():
-    try:
-        loop = asyncio.get_running_loop()
-    except RuntimeError:
+    if sys.version_info.minor < 10:
+        loop = asyncio.get_event_loop()
+    else:
         loop = asyncio.new_event_loop()
-    yield loop
-    loop.close()
+        asyncio.set_event_loop(loop)
+
+    return loop
 
 
 @pytest.fixture(scope="session", autouse=True)
 def start_daf(event_loop: asyncio.AbstractEventLoop):
-    event_loop.run_until_complete(daf.initialize(debug=daf.TraceLEVELS.ERROR))
-    event_loop.call_later(420, lambda: event_loop.stop()) # Auto exit tests if they don't complete in 7 minutes
-    return event_loop
+    event_loop.run_until_complete(
+        daf.initialize(
+            debug=daf.TraceLEVELS.DEBUG,
+            remote_client=daf.RemoteAccessCLIENT("127.0.0.1", 8080, "Hello", "World")
+        )
+    )
+    event_loop.call_later(420, lambda: event_loop.stop())  # Auto exit tests if they don't complete in 7 minutes
+    yield event_loop
+    event_loop.run_until_complete(daf.shutdown())
+    asyncio.set_event_loop(None)
+    event_loop.close()
 
 
 @pytest_asyncio.fixture(scope="session")
@@ -41,7 +51,7 @@ async def accounts():
     ]
     for a in accs:
         await daf.add_object(a)
-    
+
     return accs
 
 

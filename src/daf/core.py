@@ -6,7 +6,7 @@
 from typing import Callable, Coroutine, List, Optional, Union, overload
 from pathlib import Path
 
-from aiohttp import BasicAuth, web as aiohttp_web
+from aiohttp import web as aiohttp_web
 from typeguard import typechecked
 
 from .logging.tracing import TraceLEVELS, trace
@@ -75,7 +75,7 @@ async def http_get_accounts():
 
 
 @remote.register("/accounts", "POST")
-async def http_add_account(account: str):
+async def http_add_account(account: dict):
     try:
         account = convert.convert_from_semi_dict(account)
         await add_object(account)

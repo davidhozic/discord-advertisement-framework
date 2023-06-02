@@ -23,6 +23,7 @@ GUI structure
 The GUI consists of:
 
 - START and STOP buttons starting and stopping DAF's core,
+- Connection type selection (see :ref:`Remote control (GUI)`)
 - Optional modules tab - Where you can install optional functionallity
 - Schema definition tab - Where you can define accounts, guilds, messages & type of logging:
   

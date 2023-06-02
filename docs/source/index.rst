@@ -1,7 +1,10 @@
 =========================================================
-DAF (|version|)
+Discord Advertisement Framework (|version|)
 =========================================================
-The Discord advertisement framework is a Python based **shilling framework** that allows easy advertising on Discord.
+The Discord advertisement framework is a Python based automatic application that allows **easy automatic advertisement** (and much more) on Discord.
+
+.. image:: ./DEP/daf-gui-front.png
+
 
 ---------------------
 Links
@@ -22,30 +25,32 @@ Links
         - `PyCord Documentation <https://docs.pycord.dev/en/master/>`_
 
 
-.. figure:: ./DEP/daf-gui-front.png
-    :width: 15cm
+------------------
+Need help?
+------------------
 
-    Graphical interface (GUI)
+- Checkout the guides:
 
-.. figure:: ./DEP/daf-console-run.png
-    :width: 15cm
+  - :ref:`Guide (GUI)` 
+  - :ref:`Guide (core)`
 
-    Script (for running in console)
-
+- Contact me in my `Discord server <https://discord.gg/DEnvahb2Sw>`_.
 
 ----------------------
 Key features
 ----------------------
-- Periodic and scheduled advertisements,
+- Automatic periodic and scheduled messages to multiple servers and channels,
+- Error checking and recovery,
 - Message logging, invite link tracking & statistics
 - Multi-account support
 - Graphical Interface (GUI) / Console (script)
 - Easy to setup
-- Asynchronous
+- Programmatic usage
+- Much more
 
-.. caution::
-    While running this on user accounts is possible, it is against Discord's ToS.
-    I am not responsible if your account get's disabled for using self-bots!
+
+.. note::
+    Running on user accounts is against Discord ToS, however DAF still enables it.
 
 ----------------------
 Installation

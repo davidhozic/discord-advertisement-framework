@@ -249,7 +249,7 @@ class ACCOUNT:
         RuntimeError
             Unable to login to Discord.
         """
-        # Obtain token if it is not provided
+        self._deleted = False
         connector = None
         if self.proxy is not None:
             connector = ProxyConnector.from_url(self.proxy)

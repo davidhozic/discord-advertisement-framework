@@ -189,6 +189,9 @@ class RemoteConnectionCLIENT(AbstractConnectionCLIENT):
         if username is not None:
             self.auth = BasicAuth(username, password)
 
+        if verify_ssl is None:
+            verify_ssl = False
+
         self.verify_ssl = verify_ssl
 
     async def _request(self, method: Literal["GET", "POST", "DELETE", "PATCH"], route: str, **kwargs):
