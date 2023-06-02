@@ -25,7 +25,6 @@ __all__ = ("RemoteAccessCLIENT",)
 # Constants
 # ------------
 MAX_PACKET_SIZE_BYTE = 10**9
-DEFAULT_HOST = "0.0.0.0"
 
 
 class GLOBALS:
