@@ -109,7 +109,7 @@ class RemoteAccessCLIENT:
     """
     def __init__(
         self,
-        host: Optional[str] = DEFAULT_HOST,
+        host: Optional[str] = "0.0.0.0",
         port: Optional[int] = 80,
         username: Optional[str] = None,
         password: Optional[str] = None,
