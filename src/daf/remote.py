@@ -25,6 +25,7 @@ __all__ = ("RemoteAccessCLIENT",)
 # Constants
 # ------------
 MAX_PACKET_SIZE_BYTE = 10**9
+DEFAULT_HOST = "0.0.0.0"
 
 
 class GLOBALS:
@@ -108,7 +109,7 @@ class RemoteAccessCLIENT:
     """
     def __init__(
         self,
-        host: Optional[str] = "0.0.0.0",
+        host: Optional[str] = DEFAULT_HOST,
         port: Optional[int] = 80,
         username: Optional[str] = None,
         password: Optional[str] = None,
