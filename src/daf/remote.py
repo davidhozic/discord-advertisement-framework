@@ -12,13 +12,19 @@ from aiohttp.web import (
 
 
 from . import convert
+from . import misc
+from . import logging
 
 import asyncio
 import ssl
 
-import daf
 
 __all__ = ("RemoteAccessCLIENT",)
+
+
+# Constants
+# ------------
+MAX_PACKET_SIZE_BYTE = 10**9
 
 
 class GLOBALS:
@@ -78,6 +84,7 @@ def register(path: str, type: Literal["GET", "POST", "DELETE", "PATCH"]):
     return decorator
 
 
+@misc.doc_category("Clients")
 class RemoteAccessCLIENT:
     """
     Client used for processing remote requests from a GUI located on a different network.
@@ -121,7 +128,7 @@ class RemoteAccessCLIENT:
             context = None
 
         self.ssl_ctx = context
-        self.web_app = Application()
+        self.web_app = Application(client_max_size=MAX_PACKET_SIZE_BYTE)
         self.web_app.add_routes(GLOBALS.routes)
 
     async def initialize(self):
@@ -145,12 +152,12 @@ async def http_ping():
 
 @register("/logging", "GET")
 async def http_get_logger():
-    return create_json_response(logger=convert.convert_object_to_semi_dict(daf.get_logger()))
+    return create_json_response(logger=convert.convert_object_to_semi_dict(logging.get_logger()))
 
 
 @register("/object", "GET")
 async def http_get_object(object_id: int):
-    object = daf.misc.get_by_id(object_id)
+    object = misc.get_by_id(object_id)
     if object is None:
         raise HTTPInternalServerError(reason="Object not present in DAF.")
 
@@ -159,7 +166,7 @@ async def http_get_object(object_id: int):
 
 @register("/method", "POST")
 async def http_execute_method(object_id: int, method_name: str, **kwargs):
-    object = daf.misc.get_by_id(object_id)
+    object = misc.get_by_id(object_id)
     if object is None:
         raise HTTPInternalServerError(reason="Object not present in DAF.")
 

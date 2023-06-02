@@ -6,17 +6,13 @@ from typing import List, Optional, Literal
 
 from daf.logging.tracing import TraceLEVELS, trace
 
-from daf_gui.utilities import daf
-
 from .convert import *
 from .utilities import *
 
 from aiohttp import ClientSession, BasicAuth
-from urllib.parse import urljoin
 from aiohttp import web
 
 import daf
-import aiohttp
 
 
 __all__ = (

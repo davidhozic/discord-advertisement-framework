@@ -1,6 +1,8 @@
 """
 Module contains additional widgets and their setup handlers.
 """
+from contextlib import suppress
+
 from .utilities import *
 from .convert import *
 from .dpi import *
@@ -161,17 +163,15 @@ ADDITIONAL_WIDGETS = {
 
 for name in dir(daf):
     item = getattr(daf, name)
-    if isinstance(item, dict):
-        continue
+    with suppress(TypeError):
+        if hasattr(item, "update"):
+            if item not in ADDITIONAL_WIDGETS:
+                ADDITIONAL_WIDGETS[item] = []
 
-    if hasattr(item, "update"):
-        if item not in ADDITIONAL_WIDGETS:
-            ADDITIONAL_WIDGETS[item] = []
-
-        ADDITIONAL_WIDGETS[item].extend([
-            AdditionalWidget(ttk.Button, setup_additional_live_update, text="Live update"),
-            AdditionalWidget(ttk.Button, setup_additional_live_refresh, text="Refresh")
-        ])
+            ADDITIONAL_WIDGETS[item].extend([
+                AdditionalWidget(ttk.Button, setup_additional_live_update, text="Live update"),
+                AdditionalWidget(ttk.Button, setup_additional_live_refresh, text="Refresh")
+            ])
 
 
 __all__ = list(globals().keys())
