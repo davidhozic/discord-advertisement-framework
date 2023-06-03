@@ -9,7 +9,6 @@ from contextlib import suppress
 import decimal
 import importlib
 import copy
-import json
 import asyncio
 import array
 import datetime
@@ -74,6 +73,10 @@ CONVERSION_ATTRS = {
     },
     logging.LoggerCSV: {
         "attrs": []
+    },
+    discord.Embed: {
+        "custom_encoder": lambda embed: embed.to_dict(),
+        "custom_decoder": lambda value: discord.Embed.from_dict(value),
     },
     discord.Intents: {
         "custom_encoder": lambda intents: intents.value,  # Ignores other keys and calls the lambda to convert
