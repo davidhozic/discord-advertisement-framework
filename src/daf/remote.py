@@ -105,6 +105,11 @@ class RemoteAccessCLIENT:
         Path to a private key file that belongs to ``certificate``.
     private_key_pwd: Optional[str]
         The password of ``private_key`` if it has any.
+
+    Raises
+    -----------
+    ValueError
+        Private key is required with certificate.
     """
     def __init__(
         self,
@@ -121,6 +126,9 @@ class RemoteAccessCLIENT:
         self.auth = BasicAuth(username, password).encode() if username is not None else None
 
         if certificate is not None:
+            if private_key is None:
+                raise ValueError("'private_key' parameter is needed when certificate is provided.")
+
             # HTTPS ssl context
             context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
             context.load_cert_chain(certificate, private_key, private_key_pwd)
