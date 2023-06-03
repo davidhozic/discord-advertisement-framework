@@ -206,6 +206,7 @@ class TableCache:
         return key in self.data
 
 
+@misc.track_id
 @misc.doc_category("Logging reference", path="logging.sql")
 class LoggerSQL(logging.LoggerBASE):
     """
@@ -509,6 +510,7 @@ class LoggerSQL(logging.LoggerBASE):
             from ``._create_tables()``
             from ``._generate_lookup_values()``
         """
+        trace(f"{type(self).__name__} logs will be saved to {self.database}")
         # Create engine for communicating with the SQL base
         self._begin_engine()
         # Create tables and the session class bound to the engine

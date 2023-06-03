@@ -3,6 +3,7 @@ Modules contains storage container widgets.
 """
 from typing import Union, Any, List
 from .convert import ObjectInfo
+from .utilities import gui_confirm_action
 
 import ttkbootstrap as ttk
 import tkinter as tk
@@ -23,10 +24,20 @@ class ComboBoxText(ttk.Frame):
 
 
 class ListBoxObjects(tk.Listbox):
+    class NoClipBoard:
+        pass
+
+    clipboard = NoClipBoard  # Clipboard is common to all listboxes
+
     def __init__(self, *args, **kwargs):
         self._original_items = []
         super().__init__(*args, **kwargs)
         self.configure(selectmode=tk.EXTENDED)
+
+        self.bind("<Control-c>", lambda e: self.save_to_clipboard())
+        self.bind("<BackSpace>", lambda e: self.delete_selected())
+        self.bind("<Delete>", lambda e: self.delete_selected())
+        self.bind("<Control-v>", lambda e: self.paste_from_clipboard())
 
     def get(self, original = True, *args, **kwargs) -> list:
         if original:
@@ -40,23 +51,65 @@ class ListBoxObjects(tk.Listbox):
         return _ret
 
     def delete(self, *indexes: int) -> None:
+        def create_ranges() -> List[tuple]:
+            start_i = indexes[0]
+            len_indexes = len(indexes)
+            for i in range(1, len_indexes):
+                if indexes[i] > indexes[i - 1] + 1:  # Current index more than 1 bigger than previous
+                    to_yield = start_i, indexes[i - 1]
+                    yield to_yield
+
+                    # After element is erased, all items' indexes get shifted to the left
+                    # from the deleted item forward (right) -> Need to shift our list of indexes also.
+                    for j in range(i, len_indexes):
+                        indexes[j] -= (to_yield[1] - to_yield[0] + 1)
+
+                    start_i = indexes[i]
+
+            yield start_i, indexes[-1]
+
         if indexes[-1] == "end":
             indexes = range(indexes[0], len(self._original_items))
 
-        indexes = sorted(indexes, reverse=True)
-        for index in indexes:
-            super().delete(index)
-            del self._original_items[index]
+        indexes = list(indexes)
+        for range_ in create_ranges():
+            super().delete(*range_)
+            del self._original_items[range_[0]:range_[1] + 1]
+
+        pass
+
+    @gui_confirm_action(True)
+    def delete_selected(self):
+        selection = self.curselection()
+        if len(selection):
+            self.delete(*selection)
+        else:
+            tkdiag.Messagebox.show_error("Select atleast one item!", "Empty list!", parent=self)
 
     def clear(self) -> None:
         super().delete(0, tk.END)
         self._original_items.clear()
+
+    def save_to_clipboard(self):
+        selection = self.curselection()
+        if len(selection):
+            object_: Union[ObjectInfo, Any] = self.get()[min(selection):max(selection) + 1]
+            ListBoxObjects.clipboard = object_
+        else:
+            tkdiag.Messagebox.show_error("Select atleast one item!", "Empty list!", parent=self)
+
+    def paste_from_clipboard(self):
+        if ListBoxObjects.clipboard is self.NoClipBoard:
+            return  # Clipboard empty
+
+        self.insert(tk.END, *ListBoxObjects.clipboard)
 
 
 class ListBoxScrolled(ttk.Frame):
     def __init__(self, parent, *args, **kwargs):
         super().__init__(parent)
         listbox = ListBoxObjects(self, *args, **kwargs)
+        self.listbox = listbox
 
         listbox.pack(side="left", fill=tk.BOTH, expand=True)
 
@@ -66,46 +119,12 @@ class ListBoxScrolled(ttk.Frame):
 
         listbox.config(yscrollcommand=scrollbar.set)
 
-        listbox.bind("<Control-c>", lambda e: self.listbox_copy_selected())
-        listbox.bind("<BackSpace>", lambda e: self.listbox_delete_selected())
-        listbox.bind("<Delete>", lambda e: self.listbox_delete_selected())
-
-        self.listbox = listbox
-
-    def see(self, *args, **kwargs):
-        return self.listbox.see(*args, **kwargs)
-
-    def get(self, *args, **kwargs):
-        return self.listbox.get(*args, **kwargs)
-
-    def delete(self, *args, **kwargs):
-        return self.listbox.delete(*args, **kwargs)
-
-    def clear(self, *args, **kwargs):
-        return self.listbox.clear(*args, **kwargs)
-
-    def curselection(self, *args, **kwargs):
-        return self.listbox.curselection(*args, **kwargs)
-
-    def insert(self, *args, **kwargs):
-        return self.listbox.insert(*args, **kwargs)
-
-    def listbox_delete_selected(self):
-        listbox = self.listbox
-        selection = listbox.curselection()
-        if len(selection):
-            listbox.delete(*selection)
-        else:
-            tkdiag.Messagebox.show_error("Select atleast one item!", "Empty list!", parent=self)
-
-    def listbox_copy_selected(self):
-        listbox = self.listbox
-        selection = self.listbox.curselection()
-        if len(selection):
-            object_: Union[ObjectInfo, Any] = listbox.get()[selection[0]]
-            listbox.insert(tk.END, object_)
-        else:
-            tkdiag.Messagebox.show_error("Select atleast one item!", "Empty list!", parent=self)
+    def __getattr__(self, __value: str):
+        """
+        Getter method that only get's called if the current
+        implementation does not have the requested attribute.
+        """
+        return getattr(self.listbox, __value)
 
 
 class ComboBoxObjects(ttk.Combobox):
@@ -113,7 +132,7 @@ class ComboBoxObjects(ttk.Combobox):
         self._original_items = []
         super().__init__(*args, **kwargs)
 
-    def get(self, *args, **kwargs) -> list:
+    def get(self, *args, **kwargs) -> Any:
         index = self.current()
         if isinstance(index, int) and index >= 0:
             return self._original_items[index]

@@ -12,3 +12,4 @@ This section contains the guide to using the Discord Advertisement Framework ins
     live_view
     filegen
     analytics
+    remote

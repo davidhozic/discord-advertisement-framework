@@ -110,7 +110,7 @@ class BaseMESSAGE:
         "parent",
         "remove_after",
         "_created_at",
-        "_deleted"
+        "_deleted",
     )
 
     @typechecked
@@ -189,7 +189,7 @@ class BaseMESSAGE:
     def __deepcopy__(self, *args):
         "Duplicates the object (for use in AutoGUILD)"
         new = copy.copy(self)
-        for slot in list(self.__slots__) + list(BaseMESSAGE.__slots__):
+        for slot in misc.get_all_slots(type(self)):
             self_val = getattr(self, slot)
             if isinstance(self_val, (asyncio.Semaphore, asyncio.Lock)):
                 # Hack to copy semaphores since not all of it can be copied directly
@@ -391,6 +391,7 @@ class BaseMESSAGE:
         raise NotImplementedError
 
 
+@misc.track_id
 @misc.doc_category("Auto objects", path="message")
 class AutoCHANNEL:
     """
@@ -435,7 +436,7 @@ class AutoCHANNEL:
         "parent",
         "cache",
         "channel_getter",
-        "last_scan"
+        "last_scan",
     )
 
     def __init__(self,

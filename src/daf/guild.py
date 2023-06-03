@@ -77,7 +77,7 @@ class _BaseGUILD:
         "remove_after",
         "_created_at",
         "_deleted",
-        "parent"
+        "parent",
     )
 
     def __init__(
@@ -194,7 +194,6 @@ class _BaseGUILD:
         for message in self._messages:
             message._delete()
 
-    @typechecked
     async def add_message(self, message: BaseMESSAGE):
         """
         Adds a message to the message list.
@@ -397,6 +396,7 @@ class _BaseGUILD:
         }
 
 
+@misc.track_id
 @misc.doc_category("Guilds")
 @logging.sql.register_type("GuildTYPE")
 class GUILD(_BaseGUILD):
@@ -437,7 +437,6 @@ class GUILD(_BaseGUILD):
     __slots__ = (
         "update_semaphore",
         "join_count",
-        *_BaseGUILD.__slots__
     )
 
     @typechecked
@@ -515,6 +514,10 @@ class GUILD(_BaseGUILD):
                     f"Invite link {invite} not found in {self.apiobject.name}. It will not be tracked!",
                     TraceLEVELS.WARNING
                 )
+
+    @typechecked
+    async def add_message(self, message: Union[TextMESSAGE, VoiceMESSAGE]):
+        return await super().add_message(message)
 
     async def _on_member_join(self, member: discord.Member):
         counts = self.join_count
@@ -618,6 +621,7 @@ class GUILD(_BaseGUILD):
         self._messages = _messages
 
 
+@misc.track_id
 @misc.doc_category("Guilds")
 @logging.sql.register_type("GuildTYPE")
 class USER(_BaseGUILD):
@@ -646,7 +650,6 @@ class USER(_BaseGUILD):
     """
     __slots__ = (
         "update_semaphore",
-        *_BaseGUILD.__slots__
     )
 
     @typechecked
@@ -689,6 +692,10 @@ class USER(_BaseGUILD):
             parent,
             parent.client.get_or_fetch_user
         )
+
+    @typechecked
+    async def add_message(self, message: DirectMESSAGE):
+        return await super().add_message(message)
 
     @misc._async_safe("update_semaphore", 1)
     async def update(self, init_options = None, **kwargs):
@@ -738,6 +745,7 @@ class USER(_BaseGUILD):
         self._messages = _messages
 
 
+@misc.track_id
 @misc.doc_category("Auto objects")
 class AutoGUILD:
     """
@@ -821,7 +829,7 @@ class AutoGUILD:
         "guild_query_iter",
         "last_guild_join",
         "guild_join_count",
-        "invite_track"
+        "invite_track",
     )
 
     @typechecked
@@ -931,7 +939,7 @@ class AutoGUILD:
         if self.auto_join is not None:
             await self.auto_join._close()
 
-    async def add_message(self, message: BaseMESSAGE):
+    async def add_message(self, message: Union[TextMESSAGE, VoiceMESSAGE]):
         """
         Adds a copy of the passed message to each
         guild inside cache.

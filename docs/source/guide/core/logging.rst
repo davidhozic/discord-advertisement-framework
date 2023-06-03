@@ -92,13 +92,13 @@ All logs will contain keys:
     + :py:meth:`daf.message.DirectMESSAGE.generate_log_context`
 
 .. seealso::
-    :download:`Example structure <./DEP/Examples/Logging/JSON files/History/2023/04/28/David's py dungeon.json>`
+    :download:`Example structure <./DEP/David's py dungeon.json>`
 
 .. only:: html
 
     JSON code example
     -----------------
-    .. literalinclude:: ./DEP/Examples/Logging/JSON files/main_rickroll.py
+    .. literalinclude:: ./DEP/main_rickroll.py
         :language: python
         :caption: Code to produce JSON logs
         
@@ -144,14 +144,14 @@ The structure contains the following attributes:
     Attributes marked with ``(json)`` are the same as in :ref:`JSON Logging (file)`
 
 .. seealso::
-    :download:`Structure example <./DEP/Examples/Logging/CSV files/History/2023/04/28/David's py dungeon.csv>`
+    :download:`Structure example <./DEP/David's py dungeon.csv>`
 
 
 .. only:: html
 
     CSV code example
     -----------------
-    .. literalinclude:: ./DEP/Examples/Logging/CSV files/main_rickroll.py
+    .. literalinclude:: ./DEP/main_rickroll.py
         :language: python
         :caption: Code to produce JSON logs
         
@@ -183,7 +183,7 @@ For daf to use SQL logging, you need to pass the :func:`~daf.core.run` function 
 
 .. only:: html
 
-    .. literalinclude:: ./DEP/Examples/Logging/SQL Logging/rolls.py
+    .. literalinclude:: ./DEP/rolls.py
         :language: python
         
 

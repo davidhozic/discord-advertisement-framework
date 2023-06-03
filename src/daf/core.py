@@ -4,8 +4,10 @@
     as well as user function to control the framework
 """
 from typing import Callable, Coroutine, List, Optional, Union, overload
-from typeguard import typechecked
 from pathlib import Path
+
+from aiohttp import web as aiohttp_web
+from typeguard import typechecked
 
 from .logging.tracing import TraceLEVELS, trace
 from .logging import _logging as logging, tracing
@@ -15,12 +17,14 @@ from . import client
 from . import misc
 from . import message
 from . import convert
+from . import remote
 
 import asyncio
 import shutil
 import os
 import sys
 import pickle
+
 import _discord as discord
 
 
@@ -51,9 +55,44 @@ class GLOBALS:
     tasks: List[asyncio.Task] = []
     running: bool = True
     save_to_file: bool = False
+    remote_client: remote.RemoteAccessCLIENT = None
 
     cleanup_event = asyncio.Event()
     schema_backup_event = asyncio.Event()
+
+
+# -----------------------------------------------------------------------
+# HTTP tasks
+# These must be in here due to needed interactions with core functions
+# -----------------------------------------------------------------------
+@remote.register("/accounts", "GET")
+async def http_get_accounts():
+    accounts = get_accounts()
+    return remote.create_json_response(
+        message=f"Retrieved {len(accounts)} accounts",
+        accounts=convert.convert_object_to_semi_dict(accounts)
+    )
+
+
+@remote.register("/accounts", "POST")
+async def http_add_account(account: dict):
+    try:
+        account = convert.convert_from_semi_dict(account)
+        await add_object(account)
+        return remote.create_json_response(message=f"Logged in to {account.client.user.display_name}")
+    except Exception as exc:
+        raise aiohttp_web.HTTPInternalServerError(reason=str(exc))
+
+
+@remote.register("/accounts", "DELETE")
+async def http_remove_account(account_id: int):
+    account = misc.get_by_id(account_id)
+    if account is None:
+        raise aiohttp_web.HTTPInternalServerError(reason="Account not present")
+
+    name = account.client.user.display_name
+    await remove_object(account)
+    return remote.create_json_response(message=f"Removed account {name}")
 
 
 async def cleanup_accounts_task():
@@ -86,7 +125,7 @@ async def schema_backup_task():
         trace("Saving objects to file.", TraceLEVELS.DEBUG)
         try:
             with open(tmp_path, "wb") as writer:
-                pickle.dump(convert.convert_to_dict(GLOBALS.accounts), writer)
+                pickle.dump(convert.convert_object_to_semi_dict(GLOBALS.accounts), writer)
 
             shutil.copyfile(tmp_path, SHILL_LIST_BACKUP_PATH)
             os.remove(tmp_path)
@@ -103,15 +142,21 @@ async def schema_load_from_file() -> None:
 
     trace("Restoring objects from file...", TraceLEVELS.NORMAL)
     with open(SHILL_LIST_BACKUP_PATH, "rb") as reader:
-        accounts = convert.convert_from_dict(pickle.load(reader))
+        accounts = convert.convert_from_semi_dict(pickle.load(reader))
 
     trace("Updating accounts.", TraceLEVELS.DEBUG)
     for account in accounts:
         try:
             await account.update()  # Refresh without __init__ call
-            GLOBALS.accounts.append(account)
         except Exception as exc:
-            trace(f"Unable to restore account {account}", TraceLEVELS.ERROR, exc)
+            trace(
+                f"Unable to restore account {account}\n" +
+                "Account still added to list to prevent data loss.\n" +
+                "Use the GUI to edit / remove it.",
+                TraceLEVELS.ERROR, exc
+            )
+        finally:
+            GLOBALS.accounts.append(account)
 
     trace(f"Restored objects from file ({len(GLOBALS.accounts)} accounts).", TraceLEVELS.NORMAL)
 
@@ -121,7 +166,8 @@ async def initialize(user_callback: Optional[Union[Callable, Coroutine]] = None,
                      debug: Optional[Union[TraceLEVELS, int, str]] = TraceLEVELS.NORMAL,
                      logger: Optional[logging.LoggerBASE] = None,
                      accounts: List[client.ACCOUNT] = None,
-                     save_to_file: bool = False) -> None:
+                     save_to_file: bool = False,
+                     remote_client: Optional[remote.RemoteAccessCLIENT] = None) -> None:
     """
     The main initialization function.
     It initializes all the other modules, creates advertising tasks
@@ -169,17 +215,26 @@ async def initialize(user_callback: Optional[Union[Callable, Coroutine]] = None,
             trace("Unable to add account.", TraceLEVELS.ERROR, exc)
 
     # ------------------------------------------
+    # Initialize remote access
+    if remote_client is not None:
+        await remote_client.initialize()
+        remote.GLOBALS.remote_client = remote_client
+
+    # ------------------------------------------
     # Create the user callback task
     if user_callback is not None:
         trace("Starting user callback function", TraceLEVELS.NORMAL)
         user_callback = user_callback()
         if isinstance(user_callback, Coroutine):
-            loop.create_task(user_callback)
+            GLOBALS.tasks.append(loop.create_task(user_callback))
 
-    # Create account cleanup task (account self-deleted)
-    GLOBALS.tasks.append(loop.create_task(cleanup_accounts_task()))
     if save_to_file:  # Backup shilling list to pickle file
         GLOBALS.tasks.append(loop.create_task(schema_backup_task()))
+    else:
+        # Create account cleanup task (account self-deleted)
+        # Only create if state preservation is disable to prevent potential data loss due to
+        # lost connections or reset tokens. The user must use the GUI to cleanup any non-running accounts.
+        GLOBALS.tasks.append(loop.create_task(cleanup_accounts_task()))
 
     GLOBALS.running = True
     GLOBALS.save_to_file = save_to_file
@@ -377,6 +432,10 @@ async def shutdown() -> None:
     # Signal events for tasks to raise out of sleep
     GLOBALS.cleanup_event.set()
     GLOBALS.schema_backup_event.set()  # This also saves one last time, so manually saving is not needed
+    # Close remote client
+    if remote.GLOBALS.remote_client is not None:
+        await remote.GLOBALS.remote_client._close()
+
     for task in GLOBALS.tasks:  # Wait for core tasks to finish
         await task
 
@@ -407,7 +466,8 @@ def run(user_callback: Optional[Union[Callable, Coroutine]] = None,
         debug: Optional[Union[TraceLEVELS, int, str, bool]] = TraceLEVELS.NORMAL,
         logger: Optional[logging.LoggerBASE] = None,
         accounts: Optional[List[client.ACCOUNT]] = None,
-        save_to_file: bool = False) -> None:
+        save_to_file: bool = False,
+        remote_client: Optional[remote.RemoteAccessCLIENT] = None) -> None:
     """
     .. versionchanged:: 2.7
 

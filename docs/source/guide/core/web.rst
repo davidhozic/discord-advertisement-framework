@@ -117,5 +117,5 @@ Web feature example
 =====================
 The following shows an example of both previously described features.
 
-.. literalinclude:: ./DEP/Examples/Web/main_web.py
+.. literalinclude:: ./DEP/main_web.py
     :language: python
