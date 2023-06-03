@@ -205,11 +205,7 @@ class RemoteConnectionCLIENT(AbstractConnectionCLIENT):
             if response.status != 200:
                 raise web.HTTPException(reason=response.reason)
 
-            # All communicaiton is in JSON except binary types
-            if response.content_type == "application/json":
-                return await response.json()
-            else:
-                return await response.content.read()
+            return await response.json()
 
     async def initialize(self, *args, **kwargs):
         try:

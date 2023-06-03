@@ -151,7 +151,11 @@ class ObjectInfo(Generic[TClass]):
 
     def __eq__(self, __value: object) -> bool:
         if isinstance(__value, ObjectInfo):
-            return self.class_ is __value.class_ and self.real_object is __value.real_object
+            return (
+                self.class_ is __value.class_ and
+                self.real_object is __value.real_object and
+                self.data == __value.data
+            )
 
         return False
 

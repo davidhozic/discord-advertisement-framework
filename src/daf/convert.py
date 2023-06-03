@@ -5,6 +5,7 @@ It is also responsible for doing the reverse, which is converting those other fo
 
 from typing import Union, Any
 from contextlib import suppress
+from enum import Enum
 
 import decimal
 import importlib
@@ -295,6 +296,9 @@ def convert_object_to_semi_dict(object_: object) -> dict:
     if isinstance(object_, dict):
         return _convert_json_dict(object_)
 
+    if isinstance(object_, Enum):
+        return {"enum_type": f"{object_type.__module__}.{object_type.__name__}", "value": object_.value}
+
     return _convert_json_slots(object_)
 
 
@@ -310,19 +314,10 @@ def convert_from_semi_dict(d: Union[dict, list, Any], use_bound: bool = False):
     use_bound: bool
         If ``True`` and objects have the ``_daf_id`` attribute, they will not be recreated but taken from memory.
     """
-    # List conversion, keeps the list but converts the values
-    if isinstance(d, list):
-        return [convert_from_semi_dict(value, use_bound) if isinstance(value, dict) else value for value in d]
+    def __convert_to_enum():
+        return import_class(d["enum_type"])(d["value"])
 
-    # Either an object serialized to dict or a normal dictionary
-    elif isinstance(d, dict):
-        if "object_type" not in d:  # It's a normal dictionary
-            data = {}
-            for k, v in d.items():
-                data[k] = convert_from_semi_dict(v, use_bound)
-
-            return data
-
+    def __convert_to_slotted():
         # d is a object serialized to dict
         class_ = import_class(d["object_type"])
         # Get the custom decoder function
@@ -364,5 +359,26 @@ def convert_from_semi_dict(d: Union[dict, list, Any], use_bound: bool = False):
                 setattr(_return, k, v)
 
         return _return
-    # Normal dictionary or a value, no need for additional conversion
-    return d
+
+    def __convert_to_dict():
+        data = {}
+        for k, v in d.items():
+            data[k] = convert_from_semi_dict(v, use_bound)
+
+        return data
+
+    # List conversion, keeps the list but converts the values
+    if isinstance(d, list):
+        return [convert_from_semi_dict(value, use_bound) if isinstance(value, dict) else value for value in d]
+
+    # Either an object serialized to dict or a normal dictionary
+    elif isinstance(d, dict):
+        if "enum_type" in d:  # It's a JSON converted Enum
+            return __convert_to_enum()            
+
+        if "object_type" not in d:  # It's a normal dictionary
+            return __convert_to_dict()
+
+        return __convert_to_slotted()
+
+    return d  # Unsupported value, assume no conversion is necessary

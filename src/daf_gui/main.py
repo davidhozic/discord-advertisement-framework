@@ -722,6 +722,10 @@ daf.run(
             },
             "tracing": self.combo_tracing.current(),
             "accounts": convert_to_json(self.lb_accounts.get()),
+            "connection": {
+                "all": convert_to_json(self.combo_connection_edit.combo["values"]),
+                "selected_index": self.combo_connection_edit.combo.current()
+            }
         }
 
         if not filename.endswith(".json"):
@@ -744,40 +748,54 @@ daf.run(
             json_data = json.load(file)
 
             # Load accounts
-            accounts = convert_from_json(json_data["accounts"])
-            self.lb_accounts.clear()
-            self.lb_accounts.listbox.insert(tk.END, *accounts)
+            accounts = json_data.get("accounts")
+            if accounts is not None:
+                accounts = convert_from_json(accounts)
+                self.lb_accounts.clear()
+                self.lb_accounts.listbox.insert(tk.END, *accounts)
 
             # Load loggers
-            loggers = [convert_from_json(x) for x in json_data["loggers"]["all"]]
-            self.combo_logging_mgr["values"] = loggers
-            selected_index = json_data["loggers"]["selected_index"]
-            if selected_index >= 0:
-                self.combo_logging_mgr.current(selected_index)
+            logging_data = json_data.get("loggers")
+            if logging_data is not None:
+                loggers = [convert_from_json(x) for x in logging_data["all"]]
+
+                self.combo_logging_mgr["values"] = loggers
+                selected_index = logging_data["selected_index"]
+                if selected_index >= 0:
+                    self.combo_logging_mgr.current(selected_index)
 
             # Tracing
-            tracing_index = json_data["tracing"]
-            if tracing_index >= 0:
+            tracing_index = json_data.get("tracing")
+            if tracing_index is not None and tracing_index >= 0:
                 self.combo_tracing.current(json_data["tracing"])
+
+            # Remote client
+            connection_data = json_data.get("connection")
+            if connection_data is not None:
+                clients = [convert_from_json(x) for x in connection_data["all"]]
+
+                self.combo_connection_edit.combo["values"] = clients
+                selected_index = connection_data["selected_index"]
+                if selected_index >= 0:
+                    self.combo_connection_edit.combo.current(selected_index)
 
     @gui_except
     def start_daf(self):
         # Initialize connection
         connection = convert_to_objects(self.combo_connection_edit.combo.get())
         self.connection = connection
+        kwargs = {}
 
         logger = self.combo_logging_mgr.get()
-        if isinstance(logger, str) and logger == "":
-            logger = None
-        elif logger is not None:
-            logger = convert_to_objects(logger)
+        if logger is not None and not isinstance(logger, str):
+            kwargs["logger"] = convert_to_objects(logger)
 
         tracing = self.combo_tracing.get()
-        if isinstance(tracing, str) and tracing == "":
-            tracing = None
+        if not isinstance(tracing, str):
+            kwargs["debug"] = tracing
 
         async_execute(
-            connection.initialize(logger=logger, debug=tracing, save_to_file=self.save_objects_to_file_var.get()),
+            connection.initialize(**kwargs, save_to_file=self.save_objects_to_file_var.get()),
             parent_window=self.win_main
         )
 
