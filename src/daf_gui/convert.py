@@ -151,7 +151,7 @@ class ObjectInfo(Generic[TClass]):
 
     def __eq__(self, __value: object) -> bool:
         if isinstance(__value, ObjectInfo):
-            return self.class_ is __value.class_ and __value.data == self.data and self.real_object is __value.real_object
+            return self.class_ is __value.class_ and self.real_object is __value.real_object
 
         return False
 
@@ -213,7 +213,7 @@ def convert_objects_to_script(object: Union[ObjectInfo, list, tuple, set, str]):
         object_data.append(_list_data)
     else:
         if isinstance(object, str):
-            object = object.replace("\n", "\\n").replace('"', '\\"').replace("\\", "\\\\")
+            object = object.replace("\\", "\\\\").replace("\n", "\\n").replace('"', '\\"')
             object_data.append(f'"{object}"')
         else:
             object_data.append(str(object))

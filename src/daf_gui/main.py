@@ -53,7 +53,8 @@ Welcome to Discord Advertisement Framework - UI mode.
 The UI runs on top of Discord Advertisement Framework and allows easier usage for those who
 don't want to write Python code to use the software.
 
-Authors: David Hozic - Student at UL FE.
+This is written as part of my bachelor thesis as a degree finishing project
+"Framework for advertising NFT on social network Discord".
 """
 
 GITHUB_URL = "https://github.com/davidhozic/discord-advertisement-framework"
@@ -556,7 +557,7 @@ class Application():
             @gui_except
             def _installer():
                 subprocess.check_call([
-                    sys.executable, "-m", "pip", "install",
+                    sys.executable.replace("pythonw", "python"), "-m", "pip", "install",
                     f"discord-advert-framework[{optional}]=={daf.VERSION}"
                 ])
                 tkdiag.Messagebox.show_info("To apply the changes, restart the program!")
@@ -637,10 +638,13 @@ class Application():
 
         logger = self.combo_logging_mgr.get()
         tracing = self.combo_tracing.get()
+        connection_mgr = self.combo_connection_edit.combo.get()
         logger_is_present = str(logger) != ""
         tracing_is_present = str(tracing) != ""
+        remote_is_present = isinstance(connection_mgr, ObjectInfo) and connection_mgr.class_ is RemoteConnectionCLIENT
         run_logger_str = "\n    logger=logger," if logger_is_present else ""
         run_tracing_str = f"\n    debug={tracing}," if tracing_is_present else ""
+        run_remote_str = "\n    remote_client=remote_client," if remote_is_present else ""
 
         accounts: list[ObjectInfo] = self.lb_accounts.get()
 
@@ -655,6 +659,18 @@ class Application():
         else:
             logger_imports = ""
 
+        if remote_is_present:
+            connection_mgr: RemoteConnectionCLIENT = convert_to_objects(connection_mgr)
+            kwargs = {"host": "0.0.0.0", "port": connection_mgr.port}
+            if connection_mgr.auth is not None:
+                kwargs["username"] = connection_mgr.auth.login
+                kwargs["password"] = connection_mgr.auth.password
+
+            remote_str, remote_imports, _ = convert_objects_to_script(ObjectInfo(daf.RemoteAccessCLIENT, kwargs))
+            remote_imports = "\n".join(set(remote_imports))
+        else:
+            remote_str, remote_imports = "", ""
+
         _ret = f'''
 """
 Automatically generated file for Discord Advertisement Framework {daf.VERSION}.
@@ -668,6 +684,7 @@ At the bottom of the file the framework is then started with the run function.
 
 # Import the necessary items
 {logger_imports}
+{remote_imports}
 {imports}
 {f"from {tracing.__module__} import {tracing.__class__.__name__}" if tracing_is_present else ""}
 import daf{other_str}
@@ -675,12 +692,15 @@ import daf{other_str}
 # Define the logger
 {f"logger = {logger_str}" if logger_is_present else ""}
 
+# Define remote control context
+{f"remote_client = {remote_str}" if remote_is_present else ""}
+
 # Defined accounts
 accounts = {accounts_str}
 
 # Run the framework (blocking)
 daf.run(
-    accounts=accounts,{run_logger_str}{run_tracing_str}
+    accounts=accounts,{run_logger_str}{run_tracing_str}{run_remote_str}
     save_to_file={self.save_objects_to_file_var.get()}
 )
 '''
