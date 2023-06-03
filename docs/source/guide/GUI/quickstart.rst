@@ -13,7 +13,7 @@ After successful installation, DAF can be run in graphical mode by executing the
 
 This will open up (after a few seconds) a graphical display you can use to control the framework.
 
-.. image:: ./DEP/images/daf-gui-front.png
+.. image:: ./DEP/daf-gui-front.png
     :scale: 50%
     :align: center
 
@@ -23,6 +23,7 @@ GUI structure
 The GUI consists of:
 
 - START and STOP buttons starting and stopping DAF's core,
+- Connection type selection (see :ref:`Remote control (GUI)`)
 - Optional modules tab - Where you can install optional functionallity
 - Schema definition tab - Where you can define accounts, guilds, messages & type of logging:
   

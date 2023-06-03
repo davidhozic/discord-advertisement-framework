@@ -7,6 +7,7 @@ import sys
 from importlib.util import find_spec
 from pathlib import Path
 
+
 installed = find_spec("ttkbootstrap") is not None
 
 
@@ -18,6 +19,15 @@ TTKBOOSTRAP_VERSION = "1.10.1"
 if not installed:
     print("Auto installing requirements: ttkbootstrap")
     subprocess.check_call([sys.executable, "-m", "pip", "install", f"ttkbootstrap=={TTKBOOSTRAP_VERSION}"])
+
+
+from .convert import *
+from .dpi import *
+from .extra import *
+from .object import *
+from .storage import *
+from .utilities import *
+from .connector import *
 
 from PIL import Image, ImageTk
 from ttkbootstrap.tooltip import ToolTip
@@ -34,10 +44,6 @@ import os
 import daf
 import webbrowser
 
-try:
-    from .widgets import *
-except ImportError:
-    from widgets import *
 
 
 WIN_UPDATE_DELAY = 0.005
@@ -47,7 +53,8 @@ Welcome to Discord Advertisement Framework - UI mode.
 The UI runs on top of Discord Advertisement Framework and allows easier usage for those who
 don't want to write Python code to use the software.
 
-Authors: David Hozic - Student at UL FE.
+This is written as part of my bachelor thesis as a degree finishing project
+"Framework for advertising NFT on social network Discord".
 """
 
 GITHUB_URL = "https://github.com/davidhozic/discord-advertisement-framework"
@@ -63,32 +70,6 @@ OPTIONAL_MODULES = [
 
 class GLOBAL:
     app: "Application" = None
-
-
-def gui_except(fnc: Callable):
-    """
-    Decorator that catches exceptions and displays them in GUI.
-    """
-    def wrapper(*args, **kwargs):
-        try:
-            return fnc(*args, **kwargs)
-        except Exception as exc:
-            tkdiag.Messagebox.show_error(f"{exc}\n(Exception in {fnc.__name__})")
-
-    return wrapper
-
-
-def gui_confirm_action(fnc: Callable):
-    """
-    Decorator that asks the user to confirm the action before calling the
-    targeted function (fnc).
-    """
-    def wrapper(*args, **kwargs):
-        result = tkdiag.Messagebox.show_question("Are you sure?", "Confirm")
-        if result == "Yes":
-            return fnc(*args, **kwargs)
-
-    return wrapper
 
 
 def gui_daf_assert_running():
@@ -121,6 +102,17 @@ class Application():
         self.bnt_toolbar_start_daf.pack(side="left")
         self.bnt_toolbar_stop_daf = ttk.Button(self.frame_toolbar, text="Stop", state="disabled", command=self.stop_daf)
         self.bnt_toolbar_stop_daf.pack(side="left")
+
+        # Connection
+        self.combo_connection_edit = ComboEditFrame(
+            self.open_object_edit_window,
+            [
+                ObjectInfo(LocalConnectionCLIENT, {}),
+                ObjectInfo(RemoteConnectionCLIENT, {"host": "http://"}),
+            ],
+            self.frame_toolbar,
+        )
+        self.combo_connection_edit.pack(side="left", fill=ttk.X, expand=True)
 
         # Main Frame
         self.frame_main = ttk.Frame(self.win_main)
@@ -156,6 +148,9 @@ class Application():
         # On close configuration
         self.win_main.protocol("WM_DELETE_WINDOW", self.close_window)
 
+        # Connection
+        self.connection: AbstractConnectionCLIENT = None
+
     def init_schema_tab(self):
         self.objects_edit_window = None
         dpi_10 = dpi_scaled(10)
@@ -179,20 +174,25 @@ class Application():
             text="Accounts", padding=(dpi_10, dpi_10), bootstyle="primary")
         frame_tab_account.pack(side="left", fill=tk.BOTH, expand=True, pady=dpi_10, padx=dpi_5)
 
-        @gui_except
+        # Accounts list. Defined here since it's needed below
+        self.lb_accounts = ListBoxScrolled(frame_tab_account)
+
         @gui_confirm_action
         def import_accounts():
             "Imports account from live view"
-            accs = daf.get_accounts()
-            for acc in accs:
-                acc.intents = None  # Intents cannot be loaded properly
+            async def import_accounts_async():
+                accs = await self.connection.get_accounts()
+                # for acc in accs:
+                #     acc.intents = None  # Intents cannot be loaded properly
 
-            values = convert_to_object_info(accs, save_original=False)
-            if not len(values):
-                raise ValueError("Live view has no elements.")
+                values = convert_to_object_info(accs, save_original=False)
+                if not len(values):
+                    raise ValueError("Live view has no elements.")
 
-            self.lb_accounts.clear()
-            self.lb_accounts.insert(tk.END, *values)
+                self.lb_accounts.clear()
+                self.lb_accounts.insert(tk.END, *values)
+
+            async_execute(import_accounts_async(), parent_window=self.win_main)
 
         menu_bnt = ttk.Menubutton(
             frame_tab_account,
@@ -203,8 +203,9 @@ class Application():
             label="New ACCOUNT",
             command=lambda: self.open_object_edit_window(daf.ACCOUNT, self.lb_accounts)
         )
+
         menu.add_command(label="Edit", command=self.edit_accounts)
-        menu.add_command(label="Remove", command=self.list_del_account)
+        menu.add_command(label="Remove", command=self.lb_accounts.delete_selected)
         menu_bnt.configure(menu=menu)
         menu_bnt.pack(anchor=tk.W)
 
@@ -235,7 +236,7 @@ class Application():
         )
         t.pack(side="left", padx=dpi_5)
 
-        self.lb_accounts = ListBoxScrolled(frame_tab_account)
+
         self.lb_accounts.pack(fill=tk.BOTH, expand=True, side="left")
 
         # Object tab account tab logging tab
@@ -263,8 +264,11 @@ class Application():
             ObjectInfo(daf.LoggerSQL, {"database": str(Path.home().joinpath("daf/messages")), "dialect": "sqlite"}),
             ObjectInfo(daf.LoggerCSV, {"path": str(Path.home().joinpath("daf/History")), "delimiter": ";"}),
         ]
+        self.combo_logging_mgr.current(0)
 
-        self.combo_tracing["values"] = [en for en in daf.TraceLEVELS]
+        tracing_values = [en for en in daf.TraceLEVELS]
+        self.combo_tracing["values"] = tracing_values
+        self.combo_tracing.current(tracing_values.index(daf.TraceLEVELS.NORMAL))
 
     def init_live_inspect_tab(self):
         dpi_10 = dpi_scaled(10)
@@ -278,7 +282,7 @@ class Application():
                     values = list_live_objects.get()
                     for i in selection:
                         async_execute(
-                            daf.remove_object(values[i].real_object),
+                            self.connection.remove_account(values[i].real_object),
                             parent_window=self.win_main
                         )
 
@@ -294,8 +298,8 @@ class Application():
             selection = combo_add_object_edit.combo.current()
             if selection >= 0:
                 fnc: ObjectInfo = combo_add_object_edit.combo.get()
-                mapping = {k: convert_to_objects(v) for k, v in fnc.data.items()}
-                async_execute(fnc.class_(**mapping), parent_window=self.win_main)
+                fnc_data = convert_to_objects(fnc.data)
+                async_execute(self.connection.add_account(**fnc_data), parent_window=self.win_main)
             else:
                 tkdiag.Messagebox.show_error("Combobox does not have valid selection.", "Combo invalid selection")
 
@@ -317,10 +321,9 @@ class Application():
         frame_add_account.pack(fill=tk.X, pady=dpi_10)
 
         combo_add_object_edit = ComboEditFrame(
-            self,
+            self.open_object_edit_window,
             [ObjectInfo(daf.add_object, {})],
             master=frame_add_account,
-            check_parameters=False
         )
         ttk.Button(frame_add_account, text="Execute", command=add_account).pack(side="left")
         combo_add_object_edit.pack(side="left", fill=tk.X, expand=True)
@@ -334,6 +337,11 @@ class Application():
         list_live_objects = ListBoxScrolled(tab_live)
         list_live_objects.pack(fill=tk.BOTH, expand=True)
         self.list_live_objects = list_live_objects
+        # The default bind is removal from list and not from actual daf.
+        list_live_objects.listbox.unbind("<BackSpace>")
+        list_live_objects.listbox.unbind("<Delete>")
+        list_live_objects.listbox.bind("<BackSpace>", lambda e: remove_account())
+        list_live_objects.listbox.bind("<Delete>", lambda e: remove_account())
 
     def init_output_tab(self):
         self.tab_output = ttk.Frame(self.tabman_mf)
@@ -420,19 +428,13 @@ class Application():
             """
             async def analytics_load_history():
                 gui_daf_assert_running()
-                logger = daf.get_logger()
+                logger = await self.connection.get_logger()
                 if not isinstance(logger, daf.LoggerSQL):
                     raise ValueError("Analytics only allowed when using LoggerSQL")
 
                 param_object = combo_history.combo.get()
-                data = param_object.data.copy()
-                for k, v in data.items():
-                    if isinstance(v, ObjectInfo):
-                        data[k] = convert_to_objects(v)
-
-                items = await getattr(logger, getter_history)(
-                    **data
-                )
+                param_object_params = convert_to_objects(param_object.data)
+                items = await self.connection.execute_method(logger, getter_history, **param_object_params)
                 items = convert_to_object_info(items, cache=True)
                 lst_history.clear()
                 lst_history.insert(tk.END, *items)
@@ -443,10 +445,9 @@ class Application():
             frame_msg_history.pack(fill=tk.BOTH, expand=True)
 
             combo_history = ComboEditFrame(
-                self,
+                self.open_object_edit_window,
                 [ObjectInfo(getattr(daf.logging.LoggerBASE, getter_history), {})],
                 frame_msg_history,
-                check_parameters=False
             )
             combo_history.pack(fill=tk.X)
 
@@ -468,19 +469,13 @@ class Application():
             # Number of messages
             async def analytics_load_num():
                 gui_daf_assert_running()
-                logger = daf.get_logger()
+                logger = await self.connection.get_logger()
                 if not isinstance(logger, daf.LoggerSQL):
                     raise ValueError("Analytics only allowed when using LoggerSQL")
 
                 param_object = combo_count.combo.get()
-                data = param_object.data.copy()
-                for k, v in data.items():
-                    if isinstance(v, ObjectInfo):
-                        data[k] = convert_to_objects(v)
-
-                count = await getattr(logger, getter_counts)(
-                    **data
-                )
+                parameters = convert_to_objects(param_object.data)
+                count = await self.connection.execute_method(logger, getter_counts, **parameters)
 
                 tw_num.delete_rows()
                 tw_num.insert_rows(0, count)
@@ -488,10 +483,9 @@ class Application():
 
             frame_num = ttk.Labelframe(frame_message, padding=(dpi_10, dpi_10), text="Counts", bootstyle="primary")
             combo_count = ComboEditFrame(
-                self,
+                self.open_object_edit_window,
                 [ObjectInfo(getattr(daf.logging.LoggerBASE, getter_counts), {})],
                 frame_num,
-                check_parameters=False
             )
             combo_count.pack(fill=tk.X)
             tw_num = tktw.Tableview(
@@ -563,7 +557,7 @@ class Application():
             @gui_except
             def _installer():
                 subprocess.check_call([
-                    sys.executable, "-m", "pip", "install",
+                    sys.executable.replace("pythonw", "python"), "-m", "pip", "install",
                     f"discord-advert-framework[{optional}]=={daf.VERSION}"
                 ])
                 tkdiag.Messagebox.show_info("To apply the changes, restart the program!")
@@ -591,10 +585,15 @@ class Application():
             self.objects_edit_window = ObjectEditWindow()
             self.objects_edit_window.open_object_edit_frame(*args, **kwargs)
 
+    @gui_except
     def load_live_accounts(self):
-        object_infos = convert_to_object_info(daf.get_accounts(), save_original=True)
-        self.list_live_objects.clear()
-        self.list_live_objects.insert(tk.END, *object_infos)
+        async def load_accounts():
+            gui_daf_assert_running()
+            object_infos = convert_to_object_info(await self.connection.get_accounts(), save_original=True)
+            self.list_live_objects.clear()
+            self.list_live_objects.insert(tk.END, *object_infos)
+
+        async_execute(load_accounts(), parent_window=self.win_main)
 
     def show_log(self, listbox: ListBoxScrolled, type_):
         selection = listbox.curselection()
@@ -626,16 +625,6 @@ class Application():
         else:
             tkdiag.Messagebox.show_error("Select atleast one item!", "Empty list!")
 
-    def list_del_account(self):
-        selection = self.lb_accounts.curselection()
-        if len(selection):
-            @gui_confirm_action
-            def _():
-                self.lb_accounts.delete(*selection)
-            _()
-        else:
-            tkdiag.Messagebox.show_error("Select atleast one item!", "Empty list!")
-
     def generate_daf_script(self):
         """
         Converts the schema into DAF script
@@ -649,10 +638,13 @@ class Application():
 
         logger = self.combo_logging_mgr.get()
         tracing = self.combo_tracing.get()
+        connection_mgr = self.combo_connection_edit.combo.get()
         logger_is_present = str(logger) != ""
         tracing_is_present = str(tracing) != ""
+        remote_is_present = isinstance(connection_mgr, ObjectInfo) and connection_mgr.class_ is RemoteConnectionCLIENT
         run_logger_str = "\n    logger=logger," if logger_is_present else ""
         run_tracing_str = f"\n    debug={tracing}," if tracing_is_present else ""
+        run_remote_str = "\n    remote_client=remote_client," if remote_is_present else ""
 
         accounts: list[ObjectInfo] = self.lb_accounts.get()
 
@@ -667,6 +659,18 @@ class Application():
         else:
             logger_imports = ""
 
+        if remote_is_present:
+            connection_mgr: RemoteConnectionCLIENT = convert_to_objects(connection_mgr)
+            kwargs = {"host": "0.0.0.0", "port": connection_mgr.port}
+            if connection_mgr.auth is not None:
+                kwargs["username"] = connection_mgr.auth.login
+                kwargs["password"] = connection_mgr.auth.password
+
+            remote_str, remote_imports, _ = convert_objects_to_script(ObjectInfo(daf.RemoteAccessCLIENT, kwargs))
+            remote_imports = "\n".join(set(remote_imports))
+        else:
+            remote_str, remote_imports = "", ""
+
         _ret = f'''
 """
 Automatically generated file for Discord Advertisement Framework {daf.VERSION}.
@@ -680,6 +684,7 @@ At the bottom of the file the framework is then started with the run function.
 
 # Import the necessary items
 {logger_imports}
+{remote_imports}
 {imports}
 {f"from {tracing.__module__} import {tracing.__class__.__name__}" if tracing_is_present else ""}
 import daf{other_str}
@@ -687,12 +692,15 @@ import daf{other_str}
 # Define the logger
 {f"logger = {logger_str}" if logger_is_present else ""}
 
+# Define remote control context
+{f"remote_client = {remote_str}" if remote_is_present else ""}
+
 # Defined accounts
 accounts = {accounts_str}
 
 # Run the framework (blocking)
 daf.run(
-    accounts=accounts,{run_logger_str}{run_tracing_str}
+    accounts=accounts,{run_logger_str}{run_tracing_str}{run_remote_str}
     save_to_file={self.save_objects_to_file_var.get()}
 )
 '''
@@ -714,6 +722,10 @@ daf.run(
             },
             "tracing": self.combo_tracing.current(),
             "accounts": convert_to_json(self.lb_accounts.get()),
+            "connection": {
+                "all": convert_to_json(self.combo_connection_edit.combo["values"]),
+                "selected_index": self.combo_connection_edit.combo.current()
+            }
         }
 
         if not filename.endswith(".json"):
@@ -736,38 +748,57 @@ daf.run(
             json_data = json.load(file)
 
             # Load accounts
-            accounts = convert_from_json(json_data["accounts"])
-            self.lb_accounts.clear()
-            self.lb_accounts.listbox.insert(tk.END, *accounts)
+            accounts = json_data.get("accounts")
+            if accounts is not None:
+                accounts = convert_from_json(accounts)
+                self.lb_accounts.clear()
+                self.lb_accounts.listbox.insert(tk.END, *accounts)
 
             # Load loggers
-            loggers = [convert_from_json(x) for x in json_data["loggers"]["all"]]
-            self.combo_logging_mgr["values"] = loggers
-            selected_index = json_data["loggers"]["selected_index"]
-            if selected_index >= 0:
-                self.combo_logging_mgr.current(selected_index)
+            logging_data = json_data.get("loggers")
+            if logging_data is not None:
+                loggers = [convert_from_json(x) for x in logging_data["all"]]
+
+                self.combo_logging_mgr["values"] = loggers
+                selected_index = logging_data["selected_index"]
+                if selected_index >= 0:
+                    self.combo_logging_mgr.current(selected_index)
 
             # Tracing
-            tracing_index = json_data["tracing"]
-            if tracing_index >= 0:
+            tracing_index = json_data.get("tracing")
+            if tracing_index is not None and tracing_index >= 0:
                 self.combo_tracing.current(json_data["tracing"])
+
+            # Remote client
+            connection_data = json_data.get("connection")
+            if connection_data is not None:
+                clients = [convert_from_json(x) for x in connection_data["all"]]
+
+                self.combo_connection_edit.combo["values"] = clients
+                selected_index = connection_data["selected_index"]
+                if selected_index >= 0:
+                    self.combo_connection_edit.combo.current(selected_index)
 
     @gui_except
     def start_daf(self):
+        # Initialize connection
+        connection = convert_to_objects(self.combo_connection_edit.combo.get())
+        self.connection = connection
+        kwargs = {}
+
         logger = self.combo_logging_mgr.get()
-        if isinstance(logger, str) and logger == "":
-            logger = None
-        elif logger is not None:
-            logger = convert_to_objects(logger)
+        if logger is not None and not isinstance(logger, str):
+            kwargs["logger"] = convert_to_objects(logger)
 
         tracing = self.combo_tracing.get()
-        if isinstance(tracing, str) and tracing == "":
-            tracing = None
+        if not isinstance(tracing, str):
+            kwargs["debug"] = tracing
 
         async_execute(
-            daf.initialize(logger=logger, debug=tracing, save_to_file=self.save_objects_to_file_var.get()),
+            connection.initialize(**kwargs, save_to_file=self.save_objects_to_file_var.get()),
             parent_window=self.win_main
         )
+
         self._daf_running = True
         if self.load_at_start_var.get():
             self.add_accounts_daf()
@@ -776,7 +807,7 @@ daf.run(
         self.bnt_toolbar_stop_daf.configure(state="enabled")
 
     def stop_daf(self):
-        async_execute(daf.shutdown(), parent_window=self.win_main)
+        async_execute(self.connection.shutdown(), parent_window=self.win_main)
         self._daf_running = False
         self.bnt_toolbar_start_daf.configure(state="enabled")
         self.bnt_toolbar_stop_daf.configure(state="disabled")
@@ -794,7 +825,7 @@ daf.run(
             accounts = [a for i, a in enumerate(accounts) if i in indexes]
 
         for account in accounts:
-            async_execute(daf.add_object(convert_to_objects(account)), parent_window=self.win_main)
+            async_execute(self.connection.add_account(convert_to_objects(account)), parent_window=self.win_main)
 
     def close_window(self):
         resp = tkdiag.Messagebox.yesnocancel("Do you wish to save?", "Save?", alert=True, parent=self.win_main)
@@ -810,7 +841,7 @@ daf.run(
 
         async_execute(_tmp())
 
-    async def _process(self):
+    def _process(self):
         self.win_main.update()
 
 
@@ -820,13 +851,19 @@ def run():
 
     async def update_task():
         while app.opened:
-            await app._process()
+            app._process()
             await asyncio.sleep(WIN_UPDATE_DELAY)
 
-    loop = asyncio.get_event_loop()
+    if sys.version_info.minor < 10:
+        loop = asyncio.get_event_loop()
+    else:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
     async_start(loop)
     loop.run_until_complete(update_task())
     loop.run_until_complete(async_stop())
+    asyncio.set_event_loop(None)
 
 
 if __name__ == "__main__":

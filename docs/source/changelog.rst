@@ -32,6 +32,34 @@ Glossary
 Releases
 ----------------------
 
+v2.8
+=================
+
+- Remote control though HTTP access:
+
+  - The core can be started on a remote server and then connected to and controlled by the graphical interface.
+  - The GUI now has a dropdown menu where users can select between a local connection client and a remote connection client.
+    Local connection client won't use the HTTP API, but will start DAF locally and interact with it directly.
+
+- GUI:
+  
+  - Method execution
+  - Executing method status window.
+  - When editing objects, the Y size will now be set to default size every time the frame changes.
+  - When executing async blocking functions, a progress bar window will be shown to indicate something is happening.
+
+- Logging:
+
+  - :class:`daf.logging.LoggerJSON` will create a new file once the current one reaches 100 kilobytes.
+  - Improved performance of :class:`daf.logging.LoggerJSON`.
+  - Loggers will now trace their output path, so users can find the output logs more easily.
+
+- State preservation
+
+  - When using the state preservation (introduced in :ref:`v2.7`), accounts that fail to login will, from now on,
+    not be removed from list to prevent data loss.
+
+
 
 v2.7
 ================
@@ -102,7 +130,7 @@ v2.6.0
 - Graphical User Interface - **GUI** for controlling the framework,
   defining the schema (with backup and restore) and script generation!
 
-.. image:: ./DEP/images/daf-gui-front.png
+.. image:: ./DEP/daf-gui-front.png
     :align: center
     :scale: 40%
 

@@ -2,7 +2,7 @@
 Modules contains definitions related to GUI object transformations.
 """
 
-from typing import Any, Union, List, get_type_hints
+from typing import Any, Union, List, get_type_hints, Generic, TypeVar
 from contextlib import suppress
 from enum import Enum
 from inspect import signature
@@ -24,6 +24,8 @@ __all__ = (
     "ADDITIONAL_ANNOTATIONS",
     "issubclass_noexcept",
 )
+
+TClass = TypeVar("TClass")
 
 
 def issubclass_noexcept(*args):
@@ -125,7 +127,7 @@ CONVERSION_ATTR_TO_PARAM[daf.GUILD]["invite_track"] = (
 )
 
 
-class ObjectInfo:
+class ObjectInfo(Generic[TClass]):
     """
     A GUI object that represents real objects,.
     The GUI only knows how to work with ObjectInfo.
@@ -149,7 +151,11 @@ class ObjectInfo:
 
     def __eq__(self, __value: object) -> bool:
         if isinstance(__value, ObjectInfo):
-            return self.class_ is __value.class_ and __value.data == self.data and self.real_object is __value.real_object
+            return (
+                self.class_ is __value.class_ and
+                self.real_object is __value.real_object and
+                self.data == __value.data
+            )
 
         return False
 
@@ -211,7 +217,7 @@ def convert_objects_to_script(object: Union[ObjectInfo, list, tuple, set, str]):
         object_data.append(_list_data)
     else:
         if isinstance(object, str):
-            object = object.replace("\n", "\\n").replace('"', '\\"')
+            object = object.replace("\\", "\\\\").replace("\n", "\\n").replace('"', '\\"')
             object_data.append(f'"{object}"')
         else:
             object_data.append(str(object))
@@ -268,11 +274,12 @@ def convert_to_object_info(object_: object, save_original = False, cache = False
 
             attrs.update(**additional_annots)
 
+        attrs.pop("return", None)
         return attrs
 
-    with suppress(TypeError):
-        if cache and object_ in OBJECT_CONV_CACHE:
-            return OBJECT_CONV_CACHE.get(object_)
+    with suppress(KeyError, TypeError):
+        if cache:
+            return OBJECT_CONV_CACHE[object_]
 
     object_type = type(object_)
 
@@ -292,44 +299,60 @@ def convert_to_object_info(object_: object, save_original = False, cache = False
     with suppress(TypeError):
         if cache:
             OBJECT_CONV_CACHE[object_] = ret
-
-    if len(OBJECT_CONV_CACHE) > 10000:
-        OBJECT_CONV_CACHE.clear()
+            if len(OBJECT_CONV_CACHE) > 50000:
+                for k in list(OBJECT_CONV_CACHE.keys())[:10000]:
+                    del OBJECT_CONV_CACHE[k]
 
     return ret
 
 
-def convert_to_objects(d: Union[ObjectInfo, list], keep_original_object: bool = False) -> object:
+def convert_to_objects(
+    d: Union[ObjectInfo, dict, list],
+    keep_original_object: bool = False,
+    skip_real_conversion: bool = False,
+) -> Union[object, dict, List]:
     """
     Converts :class:`ObjectInfo` instances into actual objects,
     specified by the ObjectInfo.class_ attribute.
 
     Parameters
     -----------------
-    d: ObjectInfo | list[ObjectInfo]
-        The object(s) to convert.
+    d: ObjectInfo | list[ObjectInfo] | dict
+        The object(s) to convert. Can be an ObjectInfo object, a list of ObjectInfo objects or a dictionary that is a
+        mapping of ObjectInfo parameters.
     keep_original_object: bool
         If True, the returned object will be the same object (``real_object`` attribute) and will just
         copy the the attributes. Important for preserving parent-child connections across real objects.
+    skip_real_conversion: bool
+        If set to True the old real object will be returned without conversion and ``keep_original_object`` parameter
+        has no effect.
+        Defaults to False.
     """
     def convert_list():
         _ = []
         for item in d:
-            _.append(convert_to_objects(item, keep_original_object))
+            _.append(convert_to_objects(item, keep_original_object, skip_real_conversion))
 
         return _
 
     def convert_object_info():
+        # Skip conversion
+        real = d.real_object
+        if skip_real_conversion and real is not None:
+            return real
+
         data_conv = {}
         for k, v in d.data.items():
-            data_conv[k] = convert_to_objects(v, keep_original_object)
+            if isinstance(v, (list, tuple, set, ObjectInfo, dict)):
+                data_conv[k] = convert_to_objects(v, keep_original_object)
+            else:
+                data_conv[k] = v
 
         new_obj = d.class_(**data_conv)
-        if keep_original_object and d.real_object is not None:
-            real = d.real_object
+        if keep_original_object and real is not None:
             with suppress(TypeError, AttributeError):
                 # Only update old objects that are surely not built-in and have information about attributes
-                args = real.__slots__ if hasattr(real, "__slots__") else vars(real)
+                args = daf.misc.get_all_slots(type(real)) if hasattr(real, "__slots__") else vars(real)
                 for a in args:
                     setattr(real, a, getattr(new_obj, a))
 
@@ -337,10 +360,19 @@ def convert_to_objects(d: Union[ObjectInfo, list], keep_original_object: bool = 
 
         return new_obj
 
+    def convert_object_info_dict():
+        data_conv = {}
+        for k, v in d.items():
+            data_conv[k] = convert_to_objects(v, keep_original_object, skip_real_conversion)
+
+        return data_conv
+
     if isinstance(d, (list, tuple, set)):
         return convert_list()
     if isinstance(d, ObjectInfo):
         return convert_object_info()
+    if isinstance(d, dict):
+        return convert_object_info_dict()
 
     return d
 

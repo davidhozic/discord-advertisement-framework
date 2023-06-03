@@ -26,7 +26,7 @@ DAF - *Discord Advertisement Framework*
 
 
 
-.. figure:: ./DEP/images/logo.png
+.. figure:: ./DEP/logo.png
     :width: 3cm
 
     Discord Advertisement Framework logo
@@ -51,15 +51,15 @@ na strežniku, je cilj na grafičnem vmesniku implementirati možnost oddaljeneg
 oglaševalske sheme in pregled zgodovine poslanih sporočil za določitev uspešnosti oglaševanja.
 
 
-Zasnova in razvoj
-==================
-DAF je zasnovan kot Python_ knjižnica / paket, ki se jo lahko namesti preko PIP-a (*Preferred Installer Program*), ki je
+Zasnova in razvoj (jedro)
+============================
+Jedro DAF-a je zasnovan kot Python_ knjižnica / paket, ki se jo lahko namesti preko PIP-a (*Preferred Installer Program*), ki je
 vgrajen v Python_ in služi nalaganju Python paketov. Ker je DAF zasnovan kot ogrodje, ki lahko deluje neprekinjeno na strežniku,
 ali pa kot GUI se ga lahko uporabi na dva načina in sicer kot:
 
 1. Python paket, ki se ga vključi v ``.py`` Python_ skripto, v kateri se definira oglaševalsko shemo.
    
-   .. literalinclude:: ./DEP/images/shill-script-example.py
+   .. literalinclude:: ./DEP/shill-script-example.py
       :language: python
       :caption: Primer definirane skripte
 
@@ -70,7 +70,7 @@ ali pa kot GUI se ga lahko uporabi na dva načina in sicer kot:
 2. navaden program (deluje v Python_-u), ki se ga lahko zažene preko ukazne vrstice z ukazom ``daf-gui``, kar odpre
    grafični vmesnik.
 
-   .. figure:: ./DEP/images/daf-gui-front.png
+   .. figure:: ./DEP/daf-gui-front.png
       :width: 12cm
 
       Grafični vmesnik
@@ -95,7 +95,7 @@ Ti nivoji so:
 - Ovojni nivo Discord API
 
 
-.. figure:: ./DEP/images/daf_abstraction.drawio.svg
+.. figure:: ./DEP/daf_abstraction.drawio.svg
 
     Abstrakcija
 
@@ -137,7 +137,7 @@ Na koncu se za posamezen definiran ceh, da cehovskem nivoju še ukaz za iniciali
 opravilo vezano na specifičen uporabniški račun.
 
 
-.. figure:: ./DEP/images/daf-account-layer-flowchart.svg
+.. figure:: ./DEP/daf-account-layer-flowchart.svg
     :width: 500
 
     Delovanje računskega nivoja
@@ -178,7 +178,7 @@ cehovski nivo pošlje nivoju beleženja. Poleg informacij o sporočilu, prejme c
 tudi morebitno informacijo da je bil ceh zbrisan, oz. je bil uporabnik odstranjen iz ceha kar posledično pomeni da je
 potrebno |GUILD| / |USER| objekt zbrisati preko računskega nivoja.
 
-.. figure:: ./DEP/images/daf-guild-layer-flowchart.svg
+.. figure:: ./DEP/daf-guild-layer-flowchart.svg
     :width: 500
 
     Delovanje cehovskega nivoja
@@ -192,7 +192,7 @@ Vsak |GUILD| objekt podeduje parametre, ki jih je ob definiciji prejel |AutoGUIL
 vsakemu |GUILD| objektu da ukaz naj oglašuje, na enak način kot |GUILD| objektu da ta ukaz računski nivo.
 Ta del bi lahko torej, s stališča abstrakcije, postavili nekje med računski nivo in cehovski nivo.
 
-.. figure:: ./DEP/images/daf-guild-auto-layer-flowchart.svg
+.. figure:: ./DEP/daf-guild-auto-layer-flowchart.svg
     :width: 600
 
     Delovanje AutoGUILD pod nivoja
@@ -259,7 +259,7 @@ zamude sporočila, razmak med tem in naslednjim sporočilom manjši točno za to
 Prvi čas pošiljanja je določen z ``start_in`` parametrom.
 Primer časovne napake je prikazan na spodnji sliki.
 
-.. figure:: ./DEP/images/daf-message-period.svg
+.. figure:: ./DEP/daf-message-period.svg
     :width: 500
 
     Čas pošiljanja sporočila s toleranco zamud
@@ -287,7 +287,7 @@ V primeru, da ni bila dvignjena nobena napaka, se sporočilo pošlje v kanal. Č
 
 Po poslanem sporočilu se podatke sporočila in status pošiljanja pošlje :ref:`cehovskem novoju <Cehovski nivo>`.
 
-.. figure:: ./DEP/images/daf-message-process.svg
+.. figure:: ./DEP/daf-message-process.svg
     :width: 800
 
     Proces sporočilnega nivoja
@@ -319,7 +319,7 @@ reagira tako, da začasno zamenja objekt beleženja na njegov nadomestek in spet
 zmanjka nadomestkov ali pa je beleženje uspešno.
 
 
-.. figure:: ./DEP/images/daf-high-level-log.svg
+.. figure:: ./DEP/daf-high-level-log.svg
     :width: 500
 
     Višji nivo beleženja
@@ -341,7 +341,7 @@ To pot, v primeru da ne obstaja, ustvari in zatem z uporabo vgrajenega Python_ m
 datoteko. Za specifike glej :ref:`Logging (core)`.
 
 
-.. figure:: ./DEP/images/daf-logging-json.svg
+.. figure:: ./DEP/daf-logging-json.svg
     :width: 300
 
     Process JSON beleženja
@@ -375,7 +375,7 @@ teh razredov. Z ORM lahko skoraj v celoti skrijemo SQL in delamo neposredno z Py
 strukture, npr. vnosa dveh ločenih tabel lahko predstavimo z dvema ločenima instancama, kjer je ena instanca znotraj
 druge instance.
 
-.. figure:: ./DEP/images/sql_er.drawio.svg
+.. figure:: ./DEP/sql_er.drawio.svg
     :width: 500
 
     SQL entitetno-relacijski diagram
@@ -408,7 +408,7 @@ da se je zgodila kakršna koli napaka, se lahko SQL pod-nivo nivoja beleženja n
    pošiljanja zabeleži z nadomestim objektom beleženja, vendar le enkrat - naslednjič bo spet poizkusil z beleženjem SQL.
 
 
-.. figure:: ./DEP/images/daf-logging-sql.svg
+.. figure:: ./DEP/daf-logging-sql.svg
     :width: 500
 
     Proces beleženja z SQL podatkovno bazo
@@ -489,4 +489,161 @@ Več o tem nivoju se lahko izve na https://docs.pycord.dev/en/stable/.
 
 
 
+Zasnova in razvoj (grafični vmesnik [GUI])
+============================================
+DAF lahko deluje popolnoma brez grafičnega vmesnika, a ta način zahteva pisanje *.py* datotek oz. Python skript, kar
+ja marskikomu težje, sploh če se še nikoli niso srečali s Python jezikom.
 
+V namen enostavnejše izkušnje pri uporabi ogrodja, obstaja grafični vmesnik, ki deluje ločeno od samega ogrodja, z njim pa
+komunicira preko njegovih kontrolnih funkcij, ki se nahajajo v :ref:`jedrnem nivoju <Jedrni nivo>`.
+
+.. figure:: ./DEP/daf-gui-front.png
+    :width: 15cm
+
+    Grafični vmesnik (privzet prikaz)
+
+.. raw:: latex
+
+    \newpage
+
+Kot je razvidno iz gornje slike, je za dizajn vmesnika izbran svetel dizajn z modrimi odtenki za posamezne elemente.
+
+
+Tkinter
+------------------
+Za izdelavo grafičnega vmesnika je bila uporabljena knjižnica `ttkboostrap <https://ttkbootstrap.readthedocs.io/en/latest/>`_, ki je razširitev
+vgrajene Python_ knjižnice :mod:`tkinter`.
+
+Tkinter knjižnica je v osnovi vmesnik na Tcl/Tk orodja za izdelavo grafičnih vmesnikov, doda pa tudi nekaj svojih nivojev,
+ki še dodatno razširijo delovanje knjižnice.
+
+Tkinter omogoča definicijo različnih pripomočkov (angl. *widgets*), ki se jih da dodatno razširiti in shraniti pod nove
+pripomočke, katere lahko večkrat uporabimo. Ti pripomočki so naprimer :class:`ttk.Combobox`, ki je neke vrste 
+(angl.) "drop-down" meni, :class:`ttk.Spinbox` za vnašanje številkških vrednosti, gumbi :class:`ttk.Button`, itd.
+Posamezne pripomočke se da tudi znatno konfigurirati, kjer lahko spreminjamo stile, velikost, pisavo, ipd.
+
+Več o Tkinter knjižnici si lahko preberete na uradni Python dokumentaciji :mod:`tukaj <tkinter>`.
+
+
+Zavihki
+----------------------
+Grafični vmesnik DAF je razdeljen na več zavihkov, kjer je vsak namenjen svoji stvari.
+
+
+*Optional modules* zavihek
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Ta zavihek omogoča namestitev dodatnih funkcionalnosti, ki v osnovem DAF paketu niso prisotni (za hitrejši zagon in namestitveni čas).
+Sestavljen je iz statusnih panelov, ki če so rdeči (modul ni nameščen) vsebuje še gumb za namestitev.
+Gumb bo namestil potrebne pakete, potem pa bo vmesnik uporabniku sporočil, da mora za spremembe ponovno odpreti vmesnik.
+Ob ponovnem odprtju po namestitvi bo statusni panel za posamezen modul obarvan zelen.
+
+*Schema definition* zavihek
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Zavihek omogoča definicijo uporabniških računov (in v njih cehov, sporočil, ...), definicijo upravljalnika za beleženje.
+Omogoča tudi shrambo teh definicij v JSON datoteko, braje definicij iz JSON datoteke in pa generacijo ekvivalentne
+*.py* datoteke, ki deluje v samem jedru DAF (brez grafičnega vmesnika - :ref:`Zasnova in razvoj (jedro)`).
+
+.. figure:: ./DEP/images/gui-schema-restore-bnt.png
+    :width: 15cm
+
+    Zavihek za definicijo sheme
+
+Omogoča tudi dinamično branje in pretvorbo objektov v že zagnanem vmesniku preko gumbov, ki vsebujejo besedo *live*.
+
+Uporabniške račune se lahko definira tako, da ob kliku na opcijski meni *Object options*, uporabniki izberejo opcijo *New ACCOUNT*.
+Ob kliku se nam odpre novo okno, ki je avtomatično in dinamično generirano iz podatkov o podatkovnih tipih (anotacije), ki jih sprejme
+razred ob definiciji. V oknu se za vsak parameter generira labela, opcijski meni in pa opcijski gumb, v katerem lahko urejamo izbrano vrednost
+oz. definiramo novo vrednost.
+
+.. figure:: ./DEP/images/gui-new-item-define.png
+
+    Definicija uporabiškega računa
+
+.. raw:: latex
+
+    \newpage
+
+Na zgornji sliki je mogoče opaziti tudi 3 gumbe, ki so prisotni v definicijskem oknu vedno, ne glede na to katere objekte definiramo.
+Ti so *Save*, *Close* in *Keep on top*. *Save* gumb bo shranil vrednosti okna v abstrakten objekt ObjectInfo in ga shranil v prejšen GUI pripomoček (*Listbox* ali Opcijski meni).
+*Close* gumb bo poskušal zapreti okno in če je bila v oknu narejena sprememba, okno vpraša uporabnika, če želi shraniti trenutne vrednosti.
+*Keep on top* gumb pa prisili, da bo okno vedno prikazano na vrhu ostalih oken v operacijskem sistemu.
+Opazimo pa tudi gumb *Help*. Ta gumb ni vedno prisoten, ampak je na voljo le če urejamo objekte, ki so del DAF ogrodja, PyCord ogrodja ali pa del
+vgrajene Python_ knjižnice. Klik na ta gumb bo v brskalniku odprl dokumentacijo pripadajočega modula objekta in v iskalnik dokumentacije vpisal ime objekta.
+Na tak način lahko uporabniki zelo hitro najdejo objekt v dokumentaciji brez dolgočasnega branja le te.
+
+
+.. figure:: ./DEP/images/gui-help-search.png
+    :width: 15cm
+
+    Primer odprte dokumentacije ob kliku na gumb *Help* znotraj okna za definicijo
+    :class:`~daf.client.ACCOUNT` objekta.
+
+
+.. note::
+
+    Za nekatere objekte, bodo prikazani tudi dodatni gumbi. Te gumbi so npr. gumb, ki odpre pripomoček za izbiro barve (:class:`discord.Colour`),
+    pripomoček za izbiro datoteke oz. mape (:class:`~daf.dtypes.FILE`, :class:`~daf.dtypes.AUDIO`, :class:`~daf.logging.LoggerJSON`, :class:`~daf.logging.LoggerCSV`) ipd.
+
+
+Upravljalnik za beleženje definiramo tako, da v desnem okvirju zavihka v meniju izberemo vrsto upravljalnika 
+za logiranje in za spremembo parametrov kliknemo na gumb *Edit*. Odpre se definicijsko okno, ki deluje na enak način kot za definicijo
+uporabniških računov.
+
+
+.. figure:: ./DEP/images/gui-logger-definition-edit-json.png
+    :width: 15cm
+
+    Definicija upravljalnika beleženja
+
+
+Pod izbiro za upravljalnik se nahaja tudi opcijski meni za izbiro nivoja izpisov v *Output* zavihku.
+
+
+*Live view* zavihek
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Medtem, ko je :ref:`*Schema definition* zavihek` namenjen definiciji v naprej definirane sheme oz. predloge objektov,
+*Live view* zavihek omogoča direktno manipulacijo z objekti, ki so dejansko dodani in delujejo v DAF in predstavljajo prave objekte.
+
+Na začetku zavihka se nahaja opcijski meni, v katerem je *add_object* funkcija, kateri lahko definiramo nov račun.
+Ob kliku na gumb *Execute* bo definiran račun takoj dodan v DAF in začel z oglaševanjem.
+
+Pod opcijskem menijem se nahajajo 3 gumbi. *Refresh* posodobi spodnji seznam z računi, ki oglašujejo v DAF, *Edit*
+gumb odpre okno za definiranje računov, kjer se vanj naložijo obstoječe vrednosti iz uporabniškega računa, ki ga urejamo.
+Okno poleg gumbov oz. pripomočkov, ki jih ima pri urejanju :ref:`Schema definition zavihku <*Schema definition* zavihek>`, vsebuje
+tudi 2 dodatna gumba. Ta gumba sta *Refresh* gumb, ki v okno naloži osvežene vrednosti iz dejanskega objekta dodanega v DAF in 
+*Live update* gumb, ki dejanski objekt v DAF, na novo inicializira z vrednostnimi definiranimi v oknu.
+
+
+*Output* zavihek
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Vse kar se nahaja v tem zavihku, je seznam izpisov, ki se izpišejo na standardnem izhodu stdout.
+Uporabi se ga lahko za bolj podroben pregled kaj se dogaja z jedrom DAF.
+
+
+*Analytics* zavihek
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Zavihek omogoča analizo poslanih sporočil in njihovo statistiko. Prav tako omogoča analizo pridruževanj preko sledenja
+cehovskih povezav (angl. *Invite links*) in njihovo statistiko.
+
+Za pridobitev vnosov, se uporabi gumb *Get logs*, ki na podlagi parametrov definiranih v zgornjem opcijskem meniju, vrne
+v spodnji seznam filtrirane elemente. Te elemente se lahko vsakega posebej pregleda z gumbom *View log*, ki 
+odpre okno za urejanje objektov.
+
+Za pridobitev statistike se uporabi gumb *Calculate*, ki na podlagi opcijskega meniji nad gumbom, v spodnjo tabelo vrne podatke.
+
+
+.. figure:: ./DEP/images/gui-analytics-message-frame-view-log.png
+    :height: 10cm
+
+    Prikaz vnosa o poslanem sporočilu.
+
+
+.. figure:: ./DEP/images/gui-analytics-tab.png
+    :width: 15cm
+
+    Zavihek z analitiko / statistiko
+
+
+.. raw:: latex
+
+    \newpage

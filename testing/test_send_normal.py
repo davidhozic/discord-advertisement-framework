@@ -7,7 +7,7 @@ import asyncio
 
 # CONFIGURATION
 TEST_USER_ID = 145196308985020416
-VOICE_MESSAGE_TEST_LENGTH = 3 # Test if entire message is played
+VOICE_MESSAGE_TEST_LENGTH = 3  # Test if entire message is played
 
 
 @pytest.mark.asyncio
@@ -18,7 +18,6 @@ async def test_text_message_send(channels: Tuple[daf.discord.ChannelType], guild
     text_channels, _ = channels
     TEXT_MESSAGE_TEST_MESSAGE = "Hello world", daf.discord.Embed(title="Hello world")
 
-    
     guild = daf.GUILD(dc_guild)
     user = daf.USER(TEST_USER_ID)
     text_message = daf.message.TextMESSAGE(None, timedelta(seconds=5), TEXT_MESSAGE_TEST_MESSAGE, text_channels,

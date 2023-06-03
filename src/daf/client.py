@@ -44,6 +44,7 @@ except ImportError:
 # -------------------------------------------- #
 
 
+@misc.track_id
 @misc.doc_category("Clients")
 class ACCOUNT:
     """
@@ -106,20 +107,20 @@ class ACCOUNT:
     )
 
     @typechecked
-    def __init__(self,
-                 token: Optional[str] = None,
-                 is_user: Optional[bool] = False,
-                 intents: Optional[discord.Intents] = None,
-                 proxy: Optional[str] = None,
-                 servers: Optional[List[Union[guild.GUILD, guild.USER, guild.AutoGUILD]]] = None,
-                 username: Optional[str] = None,
-                 password: Optional[str] = None) -> None:
-        connector = None
+    def __init__(
+        self,
+        token: Optional[str] = None,
+        is_user: Optional[bool] = False,
+        intents: Optional[discord.Intents] = None,
+        proxy: Optional[str] = None,
+        servers: Optional[List[Union[guild.GUILD, guild.USER, guild.AutoGUILD]]] = None,
+        username: Optional[str] = None,
+        password: Optional[str] = None,
+    ) -> None:
+
         if proxy is not None:
             if not GLOBALS.proxy_installed:
                 raise ModuleNotFoundError("Install extra requirements: pip install discord-advert-framework[proxy]")
-
-            connector = ProxyConnector.from_url(proxy)
 
         if token is not None and username is not None:  # Only one parameter of these at a time
             raise ValueError("'token' parameter not allowed if 'username' is given.")
@@ -151,7 +152,7 @@ class ACCOUNT:
         update method from re-initializing initializes objects.
         This gets deleted in the initialize method"""
 
-        self._client = discord.Client(intents=intents, connector=connector)
+        self._client = None
         self._deleted = False
         misc._write_attr_once(self, "_update_sem", asyncio.Semaphore(1))
 
@@ -167,13 +168,11 @@ class ACCOUNT:
     def __deepcopy__(self, *args):
         "Duplicates the object (for use in AutoGUILD)"
         new = copy.copy(self)
-        for slot in list(self.__slots__):
+        for slot in misc.get_all_slots(type(self)):
             self_val = getattr(self, slot)
             if isinstance(self_val, (asyncio.Semaphore, asyncio.Lock)):
                 # Hack to copy semaphores since not all of it can be copied directly
                 copied = type(self_val)(self_val._value)
-            elif isinstance(self_val, discord.Client):
-                copied = discord.Client(intents=self_val.intents, connector=self_val.http.connector)
             else:
                 copied = copy.deepcopy((self_val))
 
@@ -250,7 +249,13 @@ class ACCOUNT:
         RuntimeError
             Unable to login to Discord.
         """
-        # Obtain token if it is not provided
+        self._deleted = False
+        connector = None
+        if self.proxy is not None:
+            connector = ProxyConnector.from_url(self.proxy)
+
+        self._client = discord.Client(intents=self.intents, connector=connector)
+
         if self._selenium is not None:
             trace("Logging in thru browser and obtaining token")
             self._token = await self._selenium.initialize()
@@ -353,9 +358,18 @@ class ACCOUNT:
         """
         if isinstance(server, guild._BaseGUILD):
             server._delete()
-            self._servers.remove(server)
+            # Remove by ID
+            ids = [id(s) for s in self._servers]
+            try:
+                index = ids.index(id(server))
+            except ValueError:
+                raise ValueError(f"{server} is not in list")
+
+            del self._servers[index]
         else:
             self._autoguilds.remove(server)
+
+        trace(f"Server {server} has been removed from account {self}", TraceLEVELS.NORMAL)
 
     @typechecked
     def get_server(
@@ -386,13 +400,15 @@ class ACCOUNT:
 
         return None
 
-    async def _close(self):
+    async def _close(self, _delete = True):
         """
         Signals the tasks of this account to finish and
         waits for them.
         """
-        trace(f"Logging out of {self.client.user.display_name}...")
-        self._running = False
+        if self.running:
+            trace(f"Logging out of {self.client.user.display_name}...")
+            self._running = False
+
         for exc in await asyncio.gather(*self.tasks, return_exceptions=True):
             if exc is not None:
                 trace(
@@ -401,6 +417,7 @@ class ACCOUNT:
                     exc
                 )
 
+        self.tasks.clear()
         selenium = self.selenium
         if selenium is not None:
             selenium._close()
@@ -409,7 +426,10 @@ class ACCOUNT:
             await guild_._close()
 
         await self._client.close()
-        self._delete()
+        self.client.clear()
+
+        if _delete:
+            self._delete()
 
     async def _loop(self):
         """
@@ -423,18 +443,18 @@ class ACCOUNT:
             @misc._async_safe(self._update_sem)
             async def __loop():
                 to_remove = []
-                to_await = []
+                to_advert: List[guild._BaseGUILD, guild.AutoGUILD] = []
                 for server in self.servers:
                     if server._check_state():
                         to_remove.append(server)
                     else:
-                        to_await.append(server._advertise())
+                        to_advert.append(server)
 
                 for server in to_remove:
                     self.remove_server(server)
 
-                for coro in to_await:
-                    status = await coro
+                for server in to_advert:
+                    status = await server._advertise()
                     if status == guild.GUILD_ADVERT_STATUS_ERROR_REMOVE_ACCOUNT:
                         self._running = False
                     # If loop stop has been requested, stop asap
@@ -444,37 +464,22 @@ class ACCOUNT:
             await __loop()
             await asyncio.sleep(TASK_SLEEP_DELAY_S)
 
-    async def update(self, _init = True, **kwargs):
+    async def update(self, **kwargs):
         """
         Updates the object with new parameters and afterwards updates all lower layers (GUILD->MESSAGE->CHANNEL).
 
         .. WARNING::
             After calling this method the entire object is reset.
         """
-        @misc._async_safe("_update_sem", 1)
-        async def _update(self_):
-            servers = kwargs.pop("servers", self.servers)
-            kwargs["servers"] = []  # Servers are updated at the end
-            await misc._update(self, _init=_init, **kwargs)
-
-            guilds = []
-            autoguilds = []
-            for server in servers:
-                await server.update(init_options={"parent": self}, _init=_init)
-                if isinstance(server, guild.AutoGUILD):
-                    autoguilds.append(server)
-                else:
-                    guilds.append(server)
-
-            self._servers = guilds
-            self._autoguilds = autoguilds
+        if self._deleted:
+            raise ValueError("Account has been removed from the framework!")
 
         if self._running:
-            await self._close()
+            await self._close(False)
 
         selenium = self._selenium
         if "token" not in kwargs:
-            kwargs["token"] = self._token if selenium is None else None
+            kwargs["token"] = self._token if selenium is None and "username" not in kwargs else None
         if "username" not in kwargs:
             kwargs["username"] = selenium._username if selenium is not None else None
         if "password" not in kwargs:
@@ -485,9 +490,29 @@ class ACCOUNT:
             if isinstance(intents, discord.Intents) and intents.value == 0:
                 kwargs["intents"] = None
 
+        servers = kwargs.pop("servers", self.servers + self._uiservers)
+
+        @misc._async_safe("_update_sem")
+        async def update_servers(self_):
+            _servers = []
+            _autoguilds = []
+            for server in servers:
+                try:
+                    await server.update(init_options={"parent": self})
+                    if isinstance(server, guild._BaseGUILD):
+                        _servers.append(server)
+                    else:
+                        _autoguilds.append(server)
+                except Exception as exc:
+                    trace(f"Could not update {server} after updating {self} - Skipping server.", TraceLEVELS.ERROR, exc)
+
+            self._servers = _servers
+            self._autoguilds = _autoguilds
+
         try:
-            await _update(self)
-        except Exception as exc:
-            trace(f"Unable to update account {self}, restoring old data.", TraceLEVELS.ERROR, exc)
-            await self.update()
+            await misc._update(self, **kwargs)
+            await update_servers(self)
+        except Exception:
+            await self.initialize()  # re-login
+            await update_servers(self)
             raise

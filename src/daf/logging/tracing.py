@@ -122,7 +122,7 @@ def trace(message: str,
             print(TRACE_COLOR_MAP[level] + msg + "\033[0m")
 
 
-def initialize(level: Union[TraceLEVELS, int, str]):
+def initialize(level: Union[TraceLEVELS, int, str] = TraceLEVELS.NORMAL):
     """
     Initializes the tracing module
 

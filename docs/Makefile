@@ -9,8 +9,10 @@ SOURCEDIR     ?= source
 BUILDDIR      ?= build
 USE_LANGUAGE  ?= en
 
+export LANGUAGE=$(USE_LANGUAGE)
 
 _BUILD_DIR = $(BUILDDIR)/$(SOURCEDIR)
+
 
 # Put it first so that "make" without argument is like "make help".
 help:
@@ -30,8 +32,6 @@ pdf: latex
 	mkdir -p $(CURDIR)/$(_BUILD_DIR)/pdf/
 	cp $(CURDIR)/$(_BUILD_DIR)/latex/*.pdf $(CURDIR)/$(_BUILD_DIR)/pdf/
 
-
-export LANGUAGE=$(USE_LANGUAGE)
 
 %: Makefile
 	python3 ./setup.py

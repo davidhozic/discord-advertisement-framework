@@ -29,6 +29,7 @@ __all__ = (
 C_VC_CONNECT_TIMEOUT = 3  # Timeout of voice channels
 
 
+@misc.track_id
 @misc.doc_category("Messages", path="message")
 @sql.register_type("MessageTYPE")
 class VoiceMESSAGE(BaseMESSAGE):
@@ -104,7 +105,6 @@ class VoiceMESSAGE(BaseMESSAGE):
         "end_period",
         "volume",
         "channels",
-        *BaseMESSAGE.__slots__
     )
 
     @typechecked
@@ -387,7 +387,7 @@ class VoiceMESSAGE(BaseMESSAGE):
 
     @typechecked
     @misc._async_safe("update_semaphore")
-    async def update(self, _init_options: Optional[dict] = None, _init = True, **kwargs):
+    async def update(self, _init_options: Optional[dict] = None, **kwargs):
         """
         .. versionadded:: v2.0
 
@@ -417,14 +417,13 @@ class VoiceMESSAGE(BaseMESSAGE):
         if "data" not in kwargs:
             kwargs["data"] = self._data
 
-        channels = kwargs.get("channels", self.channels)
+        kwargs["channels"] = channels = kwargs.get("channels", self.channels)
         if isinstance(channels, AutoCHANNEL):
-            kwargs["channels"] = channels
-            await channels.update(_init=_init)
-        else:
+            await channels.update(init_options={"parent": self, "channel_type": "voice_channels"})
+        elif not isinstance(self.channels[0], int):  # Not initialized (newly created):
             kwargs["channels"] = [x.id for x in self.channels]
 
         if _init_options is None:
             _init_options = {"parent": self.parent}
 
-        await misc._update(self, init_options=_init_options, _init=_init, **kwargs)
+        await misc._update(self, init_options=_init_options, **kwargs)

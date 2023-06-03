@@ -9,7 +9,7 @@ from enum import Enum
 
 from .convert import *
 from .dpi import *
-from .async_util import *
+from .utilities import *
 
 from .storage import *
 from .extra import *
@@ -44,7 +44,35 @@ HELP_URLS = {
     "builtins": "https://docs.python.org/3/search.html?q={}"
 }
 
+# Mapping which tells the frame which methods can be executed on live objects
+EXECUTABLE_METHODS = {
+    daf.guild.GUILD: [daf.guild.GUILD.add_message, daf.guild.GUILD.remove_message],
+    daf.guild.USER: [daf.guild.USER.add_message, daf.guild.USER.remove_message],
+    daf.guild.AutoGUILD: [daf.guild.AutoGUILD.add_message, daf.guild.AutoGUILD.remove_message],
+    daf.client.ACCOUNT: [daf.client.ACCOUNT.add_server, daf.client.ACCOUNT.remove_server]
+}
+
+ADDITIONAL_PARAMETER_VALUES = {
+    daf.GUILD.remove_message: {
+        # GUILD.messages
+        "message": lambda old_info: convert_to_object_info(old_info.real_object.messages, save_original=True)
+    },
+    daf.USER.remove_message: {
+        # GUILD.messages
+        "message": lambda old_info: convert_to_object_info(old_info.real_object.messages, save_original=True)
+    },
+    daf.AutoGUILD.remove_message: {
+        # GUILD.messages
+        "message": lambda old_info: convert_to_object_info(old_info.real_object.messages, save_original=True)
+    },
+    daf.ACCOUNT.remove_server: {
+        # ACCOUNT.servers
+        "server": lambda old_info: convert_to_object_info(old_info.real_object.servers, save_original=True)
+    }
+}
+
 TEXT_MAX_UNDO = 20
+LAMBDA_TYPE = type(lambda x: None)
 
 
 class ObjectEditWindow(ttk.Toplevel):
@@ -101,6 +129,8 @@ class ObjectEditWindow(ttk.Toplevel):
         if prev_frame is not None:
             prev_frame.pack_forget()
 
+        self.set_default_size_y()
+
     def close_object_edit_frame(self):
         self.opened_frames[-1].close_frame()
 
@@ -115,9 +145,15 @@ class ObjectEditWindow(ttk.Toplevel):
             frame = self.opened_frames[-1]
             frame.pack(fill=tk.BOTH, expand=True)  # (row=0, column=0)
             frame.update_window_title()
+            self.set_default_size_y()
         else:
             self._closed = True
             self.destroy()
+
+    def set_default_size_y(self):
+        "Sets window Y size to default"
+        self.update()
+        self.geometry(f"{self.winfo_width()}x{self.winfo_reqheight()}")
 
 
 class NewObjectFrame(ttk.Frame):
@@ -137,10 +173,23 @@ class NewObjectFrame(ttk.Frame):
         The old ObjectInfo object to edit.
     check_parameters: bool
         Check parameters (by creating the real object) upon saving.
+        This is ignored if editing a function instead of a class.
     allow_save: bool
         If False, will open in read-only mode.
+    additional_values: Dict[str, Any]
+        A mapping of additional values to be inserted into corresponding field.
     """
     origin_window: ObjectEditWindow = None
+
+    TYPE_INIT_MAP = {
+        str: "init_str",
+        float: "init_int_float",
+        int: "init_int_float",
+        list: "init_iterable",
+        Iterable: "init_iterable",
+        ABCIterable: "init_iterable",
+        tuple: "init_iterable"
+    }
 
     def __init__(
         self,
@@ -150,6 +199,7 @@ class NewObjectFrame(ttk.Frame):
         old: ObjectInfo = None,
         check_parameters: bool = True,
         allow_save = True,
+        additional_values: dict = {},
     ):
         self.class_ = class_
         self.return_widget = return_widget
@@ -159,53 +209,47 @@ class NewObjectFrame(ttk.Frame):
         self.old_object_info = old  # Edit requested
         self.check_parameters = check_parameters  # At save time
         self.allow_save = allow_save  # Allow save or not allow (eg. viewing SQL data)
+        self.method_exec_frame = None  # Frame within current frame for executing methods
+        self.additional_values = additional_values
 
         super().__init__(master=parent)
+        annotations = self.get_annotations(class_)
+        if (
+            class_ not in self.TYPE_INIT_MAP and get_origin(class_) not in self.TYPE_INIT_MAP and
+            (not annotations or old is not None and not isinstance(old, ObjectInfo))
+        ):
+            tkdiag.Messagebox.show_error("This object cannot be edited.", "Load error", parent=self.origin_window)
+            self.origin_window.after_idle(self._cleanup)  # Can not clean the object before it has been added to list
+            return
 
         self.init_toolbar_frame(class_)
-        if not self.init_main_frame(class_):
-            return
+        self.init_main_frame(class_, annotations)
+        self.init_method_frame(class_)
 
         if old is not None:  # Edit
             self.load()
 
         self.save_gui_values()
 
-    def init_main_frame(self, class_) -> bool:
+    def init_main_frame(self, class_, annotations: dict) -> bool:
         frame_main = ttk.Frame(self)
         frame_main.pack(expand=True, fill=tk.BOTH)
         self.frame_main = frame_main
 
-        annotations = {}
-        with suppress(AttributeError):
-            if inspect.isclass(class_):
-                annotations = class_.__init__.__annotations__
-            else:
-                annotations = class_.__annotations__
+        method = self.TYPE_INIT_MAP.get(class_)
+        if method is None:
+            method = self.TYPE_INIT_MAP.get(get_origin(class_))  # Try with origin
 
-        additional_annotations = ADDITIONAL_ANNOTATIONS.get(class_)
-        if additional_annotations is not None:
-            annotations = {**annotations, **additional_annotations}
-
-        if class_ is str:
-            self.init_str()
-        elif class_ in {int, float}:
-            self.init_int_float(class_)
-        elif get_origin(class_) in {list, Iterable, ABCIterable, tuple}:
-            self.init_iterable(class_)
-        elif annotations:
-            self.init_structured(annotations)
+        if method is not None:
+            getattr(self, method)()
         else:
-            tkdiag.Messagebox.show_error("This object cannot be edited.", "Load error", parent=self.origin_window)
-            self.origin_window.after_idle(self._cleanup)  # Can not clean the object before it has been added to list
-            return False
-
-        return True
+            self.init_structured(annotations)
 
     def init_toolbar_frame(self, class_):
         frame_toolbar = ttk.Frame(self)
         self.frame_toolbar = frame_toolbar
 
+        # Help button
         package = class_.__module__.split(".", 1)[0]
         help_url = HELP_URLS.get(package)
         if help_url is not None:
@@ -214,6 +258,7 @@ class NewObjectFrame(ttk.Frame):
 
             ttk.Button(frame_toolbar, text="Help", command=cmd).pack(side="left")
 
+        # Additional widgets
         add_widgets = ADDITIONAL_WIDGETS.get(class_)
         if add_widgets is not None:
             for add_widg in add_widgets:
@@ -223,27 +268,65 @@ class NewObjectFrame(ttk.Frame):
 
         frame_toolbar.pack(fill=tk.X)
 
+    def init_method_frame(self, class_):
+        # Method execution
+        if (
+            self.old_object_info is None or
+            # getattr since class_ can also be non ObjectInfo
+            getattr(self.old_object_info, "real_object", None) is None or
+            (available_methods := EXECUTABLE_METHODS.get(class_)) is None
+        ):
+            return
+
+        def execute_method():
+            async def runner():
+                method = frame_execute_method.combo.get()
+                if not isinstance(method, ObjectInfo):  # String typed in that doesn't match any names
+                    tkdiag.Messagebox.show_error("No method selected!", "Selection error")
+                    return
+
+                method_param = convert_to_objects(method.data, skip_real_conversion=True)
+                connection = get_connection()
+                # Call the method though the connection manager
+                await connection.execute_method(
+                    self.old_object_info.real_object,
+                    method.class_.__name__,
+                    **method_param,
+                )
+
+            async_execute(runner(), parent_window=self.origin_window)
+
+        dpi_5, dpi_10 = dpi_scaled(5), dpi_scaled(10)
+        frame_method = ttk.LabelFrame(self, text="Method execution", padding=(dpi_5, dpi_10), bootstyle=ttk.INFO)
+        ttk.Button(frame_method, text="Execute", command=execute_method).pack(side="left")
+        combo_values = []
+        for unbound_meth in available_methods:
+            combo_values.append(ObjectInfo(unbound_meth, {}))
+
+        def new_object_frame_with_values(class_, widget, *args, **kwargs):
+            """
+            Middleware method for opening a new object frame, that fills in additional
+            values for the specific method (class_) we are editing.
+            """
+            extra_values = ADDITIONAL_PARAMETER_VALUES.get(class_, {}).copy()
+            for k, v in extra_values.items():
+                extra_values[k] = v(self.old_object_info)
+
+            return self.new_object_frame(class_, widget, *args, **kwargs, additional_values=extra_values)
+
+        frame_execute_method = ComboEditFrame(
+            new_object_frame_with_values,
+            combo_values,
+            master=frame_method
+        )
+        frame_execute_method.pack(side="right", fill=tk.X, expand=True)
+        frame_method.pack(fill=tk.X)
+
     def init_structured(self, annotations: dict):
         dpi_5 = dpi_scaled(5)
-        annotations.pop("return", None)
 
-        for (k, v) in annotations.items():
-            frame_annotated = ttk.Frame(self.frame_main)
-            frame_annotated.pack(fill=tk.BOTH, expand=True)
-
-            entry_types = v
-            ttk.Label(frame_annotated, text=k, width=15).pack(side="left")
-
-            entry_types = self.convert_types(entry_types)
-
-            bnt_menu = ttk.Menubutton(frame_annotated)
-            menu = tk.Menu(bnt_menu)
-            bnt_menu.configure(menu=menu)
-
-            w = combo = ComboBoxObjects(frame_annotated)
-            bnt_menu.pack(side="right")
-            combo.pack(fill=tk.X, side="right", expand=True, padx=dpi_5, pady=dpi_5)
-
+        def fill_values(k: str, entry_types: list, menu: ttk.Menu, combo: ComboBoxObjects):
+            "Fill ComboBox values based on types in ``entry_types`` and create New <object_type> buttons"
             last_list_type = None
             for entry_type in entry_types:
                 if get_origin(entry_type) is Literal:
@@ -266,13 +349,40 @@ class NewObjectFrame(ttk.Frame):
                             command=self._lambda(self.new_object_frame, entry_type, combo)
                         )
 
+            # Additional values to be inserted into ComboBox
+            for value in self.additional_values.get(k, []):
+                combo.insert(tk.END, value)
+
+            # The class of last list like type. Needed when "Edit selected" is used
+            # since we don't know what type it was
+            return last_list_type
+
+        for (k, v) in annotations.items():
+            # Init widgets
+            entry_types = self.convert_types(v)
+            frame_annotated = ttk.Frame(self.frame_main)
+            frame_annotated.pack(fill=tk.BOTH, expand=True)
+            ttk.Label(frame_annotated, text=k, width=15).pack(side="left")
+
+            bnt_menu = ttk.Menubutton(frame_annotated)
+            menu = tk.Menu(bnt_menu)
+            bnt_menu.configure(menu=menu)
+            bnt_menu.pack(side="right")
+
+            w = combo = ComboBoxObjects(frame_annotated)
+            combo.pack(fill=tk.X, side="right", expand=True, padx=dpi_5, pady=dpi_5)
+
+            # Fill values
+            last_list_type = fill_values(k, entry_types, menu, combo)
+
+            # Edit / view command button
             menu.add_command(
-                label=f"{'Edit' if self.allow_save else 'View'} selected", 
+                label=f"{'Edit' if self.allow_save else 'View'} selected",
                 command=self.combo_edit_selected(w, last_list_type)
             )
             self._map[k] = (w, entry_types)
 
-    def init_iterable(self, class_):
+    def init_iterable(self):
         w = ListBoxScrolled(self.frame_main, height=20)
         self._map[None] = (w, [list])
         frame_edit_remove = ttk.Frame(self.frame_main)
@@ -282,10 +392,9 @@ class NewObjectFrame(ttk.Frame):
             menu = tk.Menu(menubtn)
             menubtn.configure(menu=menu)
             menubtn.pack()
-            ttk.Button(frame_edit_remove, text="Remove", command=w.listbox_delete_selected).pack(fill=tk.X)
+            ttk.Button(frame_edit_remove, text="Remove", command=w.delete_selected).pack(fill=tk.X)
             ttk.Button(frame_edit_remove, text="Edit", command=self.listbox_edit_selected(w)).pack(fill=tk.X)
-            ttk.Button(frame_edit_remove, text="Copy", command=w.listbox_copy_selected).pack(fill=tk.X)
-            args = get_args(class_)
+            args = get_args(self.class_)
             args = self.convert_types(args)
             if get_origin(args[0]) is Union:
                 args = get_args(args[0])
@@ -297,15 +406,15 @@ class NewObjectFrame(ttk.Frame):
 
         w.pack(side="left", fill=tk.BOTH, expand=True)
 
-    def init_int_float(self, class_):
+    def init_int_float(self):
         w = ttk.Spinbox(self.frame_main, from_=-9999, to=9999)
         w.pack(fill=tk.X)
-        self._map[None] = (w, [class_])
+        self._map[None] = (w, [self.class_])
 
     def init_str(self):
         w = Text(self.frame_main, undo=True, maxundo=TEXT_MAX_UNDO)
         w.pack(fill=tk.BOTH, expand=True)
-        self._map[None] = (w, [str])
+        self._map[None] = (w, [self.class_])
 
     def _read_gui_values(self) -> dict:
         """
@@ -327,7 +436,7 @@ class NewObjectFrame(ttk.Frame):
         Saves the original GUI values for change check at save.
         """
         self._original_gui_data = self._read_gui_values()
-    
+
     @property
     def modified(self) -> bool:
         """
@@ -345,6 +454,23 @@ class NewObjectFrame(ttk.Frame):
         else:
             return cls
 
+    @staticmethod
+    def get_annotations(class_):
+        annotations = {}
+        with suppress(AttributeError):
+            if inspect.isclass(class_):
+                annotations = class_.__init__.__annotations__
+            else:
+                annotations = class_.__annotations__
+
+        additional_annotations = ADDITIONAL_ANNOTATIONS.get(class_, {})
+        annotations = {**annotations, **additional_annotations}
+
+        if "return" in annotations:
+            del annotations["return"]
+
+        return annotations
+
     @classmethod
     def set_origin_window(cls, window: ObjectEditWindow):
         cls.origin_window = window
@@ -360,13 +486,7 @@ class NewObjectFrame(ttk.Frame):
             else:
                 types_in = [types_in, ]
 
-        subtypes = []
-        for t in types_in:
-            if hasattr(t, "__subclasses__") and t.__module__.split('.', 1)[0] in {"_discord", "daf"}:
-                for st in t.__subclasses__():
-                    subtypes.extend(cls.convert_types(st))
-
-        return types_in + subtypes
+        return types_in
 
     def update_window_title(self):
         self.origin_window.title(f"{'New' if self.old_object_info is None else 'Edit'} {self.get_cls_name(self.class_)} object")
@@ -422,6 +542,7 @@ class NewObjectFrame(ttk.Frame):
         self,
         class_,
         widget,
+        check_parameters = None,
         *args,
         **kwargs
     ):
@@ -430,8 +551,11 @@ class NewObjectFrame(ttk.Frame):
         Parameters are the same as in :class:`NewObjectFrame` (current class) with the exception
         of ``check_parameters`` and ``allow_save`` - These are inherited from current frame.
         """
+        if check_parameters is None:
+            check_parameters = self.check_parameters
+
         return self.origin_window.open_object_edit_frame(
-            class_, widget, check_parameters=self.check_parameters, allow_save=self.allow_save, *args, **kwargs
+            class_, widget, check_parameters=check_parameters, allow_save=self.allow_save, *args, **kwargs
         )
 
     def listbox_edit_selected(self, lb: ListBoxScrolled):
@@ -457,9 +581,6 @@ class NewObjectFrame(ttk.Frame):
             if isinstance(selection, ObjectInfo):
                 return self.new_object_frame(selection.class_, combo, old=selection)
             else:
-                if isinstance(selection, str) and not len(selection):
-                    selection = None
-
                 return self.new_object_frame(type(selection), combo, old=selection)
 
         return __
@@ -476,30 +597,31 @@ class NewObjectFrame(ttk.Frame):
                 if not len(value):
                     continue
 
-                # Iterate all valid types until conversion is successful                        
-                for type_ in types_:
+                # Iterate all valid types until conversion is successful
+                for type_ in filter(lambda t: self.get_cls_name(t) in __builtins__, types_):
                     with suppress(Exception):
                         value = type_(value)
                         break
 
             map_[attr] = value
 
-        single_value = map_.get(None)
-        if single_value is not None:
+        single_value = map_.get(None, ...)
+        if single_value is not Ellipsis:
             object_ = single_value
         else:
-            object_ = ObjectInfo(self.class_, map_)
-            if self.check_parameters:
+            object_ = ObjectInfo(
+                self.class_,
+                map_,
+                # Don't erase the bind to the real object in case this is an edit of an existing ObjectInfo
+                None if self.old_object_info is None else self.old_object_info.real_object
+            )
+            if self.check_parameters and inspect.isclass(self.class_):  # Only check objects
                 convert_to_objects(object_)  # Tries to create instances to check for errors
 
         return object_
 
     def _update_old_object(self, new: Union[ObjectInfo, Any]):
         if self.old_object_info is not None:
-            old = self.old_object_info
-            if isinstance(old, ObjectInfo):
-                new.real_object = old.real_object
-
             ret_widget = self.return_widget
             if isinstance(ret_widget, ListBoxScrolled):
                 ind = ret_widget.get().index(self.old_object_info)
@@ -517,8 +639,6 @@ class NewObjectFrame(ttk.Frame):
     def save(self):
         """
         Saves the GUI data into ObjectInfo and place it in the return widget.
-        If the real object is linked to ObjectInfo, also execute update metho of the
-        real object if it has one.
         """
         try:
             if not self.allow_save:

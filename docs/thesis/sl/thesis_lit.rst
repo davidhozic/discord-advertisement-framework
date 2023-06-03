@@ -1,9 +1,4 @@
 
-..
-      AUTOMATICALLY GENERATED 
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!
-    !       DO NOT EDIT       !
-
 ===============
 Sources
 ===============
@@ -40,14 +35,14 @@ Sources
 
     | Title: Discord API Reference
     | Author: Discord
-    | Source: https://discord.com/developers/docs/reference - 
+    | Source: https://discord.com/developers/docs/reference
     | Last checked: jan. 2023
 
 [6]
 
     | Title: Discord rate limits
     | Author: Discord
-    | Source: https://discord.com/developers/docs/topics/rate-limits - 
+    | Source: https://discord.com/developers/docs/topics/rate-limits
     | Last checked: jan. 2023
 
 [7]
@@ -91,4 +86,11 @@ Sources
     | Author: Shaheer Shahid Malik
     | Source: https://medium.com/codex/why-use-pytest-to-test-your-software-project-7758ac9970ba
     | Last checked: jan. 2023
+
+[13]
+
+    | Title: tkinter — Python interface to Tcl/Tk
+    | Author: Python Software Foundation
+    | Source: https://docs.python.org/3/library/tkinter.html#module-tkinter
+    | Last checked: may. 2023
 

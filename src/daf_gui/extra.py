@@ -1,9 +1,12 @@
 """
 Module contains additional widgets and their setup handlers.
 """
-from .async_util import *
+from contextlib import suppress
+
+from .utilities import *
 from .convert import *
 from .dpi import *
+from .connector import get_connection
 
 import _discord as discord
 import daf
@@ -97,19 +100,22 @@ def setup_additional_live_update(w: ttk.Button, frame):
     # Don't have a bound object instance
     if (
         (oi := frame.old_object_info) is None or
-        (ro := oi.real_object) is None or
-        getattr(ro, "parent", False) is None
+        oi.real_object is None
     ):
         return
 
     def _callback(*args):
-        old = frame.old_object_info
-        values = {
-            k: convert_to_objects(v, True)
-            for k, v in frame._read_gui_values().items()
-            if not isinstance(v, str) or v != ''
-        }
-        async_execute(old.real_object.update(**values), parent_window=frame.origin_window)
+        async def update():
+            old = frame.old_object_info
+            values = {
+                k: convert_to_objects(v)
+                for k, v in frame._read_gui_values().items()
+                if not isinstance(v, str) or v != ''
+            }
+            connector = get_connection()
+            await connector.execute_method(old.real_object, "update", **values)
+
+        async_execute(update(), parent_window=frame.origin_window)
 
     w.configure(command=_callback)
     ToolTip(w, "Update the actual object with new parameters (taken from this window)", topmost=True)
@@ -120,21 +126,25 @@ def setup_additional_live_refresh(w: ttk.Button, frame):
     # Don't have a bound object instance
     if (
         (oi := frame.old_object_info) is None or
-        (ro := oi.real_object) is None or
-        getattr(ro, "parent", False) is None
+        oi.real_object is None
     ):
         return
 
     def _callback(*args):
-        opened_frames = frame.origin_window.opened_frames
-        # Need to do this on all previous frames, otherwise we would have wrong data
-        for frame_ in reversed(opened_frames):
-            if not isinstance(frame_.old_object_info, list):
-                real = frame_.old_object_info.real_object
-                frame_._update_old_object(convert_to_object_info(real, True))
-                frame_.load()
+        async def refresh():
+            opened_frames = frame.origin_window.opened_frames
+            connection = get_connection()
+            # Need to do this on all previous frames, otherwise we would have wrong data
+            for frame_ in reversed(opened_frames):
+                old_object_info = frame_.old_object_info
+                if not isinstance(old_object_info, list) and hasattr(old_object_info.real_object, "_daf_id"):
+                    real = await connection.refresh(old_object_info.real_object)  # Get refresh object from DAF
+                    frame_._update_old_object(convert_to_object_info(real, True))
+                    frame_.load()
 
-            frame_.save_gui_values()
+                frame_.save_gui_values()
+
+        async_execute(refresh(), parent_window=frame.origin_window)
 
     w.configure(command=_callback)
     ToolTip(w, "Load updated values from the object into the window", topmost=True)
@@ -153,18 +163,15 @@ ADDITIONAL_WIDGETS = {
 
 for name in dir(daf):
     item = getattr(daf, name)
-    if isinstance(item, dict):
-        continue
+    with suppress(TypeError):
+        if hasattr(item, "update"):
+            if item not in ADDITIONAL_WIDGETS:
+                ADDITIONAL_WIDGETS[item] = []
 
-    if hasattr(item, "update"):
-        if item not in ADDITIONAL_WIDGETS:
-            ADDITIONAL_WIDGETS[item] = []
-
-        ADDITIONAL_WIDGETS[item].extend([
-            AdditionalWidget(ttk.Button, setup_additional_live_update, text="Live update"),
-            AdditionalWidget(ttk.Button, setup_additional_live_refresh, text="Refresh")
-        ])
+            ADDITIONAL_WIDGETS[item].extend([
+                AdditionalWidget(ttk.Button, setup_additional_live_update, text="Live update"),
+                AdditionalWidget(ttk.Button, setup_additional_live_refresh, text="Refresh")
+            ])
 
 
 __all__ = list(globals().keys())
-__all__.append("ADDITIONAL_WIDGETS")

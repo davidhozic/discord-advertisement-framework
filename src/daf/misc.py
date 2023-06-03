@@ -7,12 +7,17 @@ from asyncio import Semaphore
 from functools import wraps
 from inspect import getfullargspec
 from copy import copy
-from typeguard import typechecked
 from os import environ
+from itertools import chain
+from contextlib import suppress
+
+from typeguard import typechecked
+
+import weakref
 
 
 ###############################
-# Safe access functions
+# Attributes
 ###############################
 def _write_attr_once(obj: Any, name: str, value: Any):
     """
@@ -37,7 +42,28 @@ def _write_attr_once(obj: Any, name: str, value: Any):
         setattr(obj, name, value)
 
 
-async def _update(obj: Any, *, init_options: dict = None, _init = True, **kwargs):
+def get_all_slots(cls) -> list:
+    """
+    Returns slots of current class and it's bases. Skips the __weakref__ slot.
+    Also returns internal_daf_id descriptor for tracked objects
+    """
+    ret = list(chain.from_iterable(getattr(class_, '__slots__', []) for class_ in cls.__mro__))
+
+    with suppress(ValueError):
+        ret.remove("__weakref__")
+
+    return ret
+
+
+###############################
+# Update
+###############################
+async def _update(
+    obj: object,
+    *,
+    init_options: dict = {},
+    **kwargs
+):
     """
     .. versionadded:: v2.0
 
@@ -54,14 +80,12 @@ async def _update(obj: Any, *, init_options: dict = None, _init = True, **kwargs
 
     Parameters
     -------------
-    obj: Any
+    obj: object
         The object that contains a .update() method.
     init_options: dict
         Contains the initialization options used in
         .initialize() method for re-initializing certain objects.
         This is implementation specific and not necessarily available.
-    _init: bool
-        If True, calls the __init__ and initialize, otherwise only calls initialize.
     Other:
         Other allowed parameters are the initialization parameters,
         first used on creation of the object.
@@ -73,9 +97,6 @@ async def _update(obj: Any, *, init_options: dict = None, _init = True, **kwargs
     Other
         Raised from .initialize() method.
     """
-    if init_options is None:
-        init_options = {}
-
     # Retrieves list of call args
     init_keys = getfullargspec(obj.__init__.__wrapped__ if hasattr(obj.__init__, "__wrapped__") else obj.__init__).args
     init_keys.remove("self")
@@ -93,14 +114,13 @@ async def _update(obj: Any, *, init_options: dict = None, _init = True, **kwargs
         # into the `updated_params` dictionary and
         # then calls the __init__ method with the same parameters,
         # with the exception of start_period, end_period and start_now
-        if _init:
-            updated_params = {}
-            for k in init_keys:
-                updated_params[k] = kwargs[k] if k in kwargs else getattr(obj, k)
+        updated_params = {}
+        for k in init_keys:
+            updated_params[k] = kwargs[k] if k in kwargs else getattr(obj, k)
 
-            # Call the implementation __init__ function and
-            # then initialize API related things
-            obj.__init__(**updated_params)
+        # Call the implementation __init__ function and
+        # then initialize API related things
+        obj.__init__(**updated_params)
 
         # Call additional initialization function (if it has one)
         if hasattr(obj, "initialize"):
@@ -108,8 +128,9 @@ async def _update(obj: Any, *, init_options: dict = None, _init = True, **kwargs
 
     except Exception:
         # In case of failure, restore to original attributes
-        for k in type(obj).__slots__:
-            setattr(obj, k, getattr(current_state, k))
+        for k in get_all_slots(type(obj)):
+            with suppress(Exception):
+                setattr(obj, k, getattr(current_state, k))
 
         raise
 
@@ -216,3 +237,42 @@ def doc_category(cat: str,
             doc_titles[cat] = []
 
     return _category
+
+
+#######################################
+# ID of different objects ID
+#######################################
+OBJECT_ID_MAP = weakref.WeakValueDictionary()
+
+
+def get_by_id(id_: int):
+    """
+    Returns an object from it's id().
+    """
+    return OBJECT_ID_MAP.get(id_)
+
+
+def track_id(cls):
+    """
+    Decorator which replaces the __new__ method with a function that keeps a weak reference.
+    """
+    @wraps(cls, updated=[])
+    class TrackedClass(cls):
+        if hasattr(cls, "__slots__"):  # Don't break classes without slots
+            __slots__ = ("__weakref__", "_daf_id")
+
+        async def initialize(self, *args, **kwargs):
+            _r = await super().initialize(*args, **kwargs)
+            # Update weakref dictionary
+            value = id(self)
+            self._daf_id = value
+            OBJECT_ID_MAP[value] = self
+            return _r
+
+        def __getattr__(self, __key: str):
+            if __key == "_daf_id":
+                return -1
+
+            raise AttributeError(__key)
+
+    return TrackedClass

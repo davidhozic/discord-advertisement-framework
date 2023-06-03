@@ -20,15 +20,12 @@ class ORMBase(DeclarativeBase):
 
     def __eq__(self, value: object) -> bool:
         try:
-            return self.id == value.id and type(self) is type(value)
-        except AttributeError:
-            return super().__eq__(value)
+            return self.__dict__["id"] == value.__dict__["id"]
+        except KeyError:
+            return False
 
     def __hash__(self):
-        try:
-            return self.id << 4 | id(type(self)) >> 8
-        except AttributeError:
-            return super().__hash__()
+        return hash(type(self)) << 4 | self.__dict__.get("id", id(self))
 
 
 class MessageTYPE(ORMBase):
