@@ -219,9 +219,6 @@ CONVERSION_ATTRS[message.DirectMESSAGE] = {
         "previous_message": None,
         "dm_channel": None
     },
-    "attrs_convert": {
-        "channels": CHANNEL_LAMBDA
-    },
 }
 
 
@@ -240,7 +237,7 @@ def convert_object_to_semi_dict(object_: object) -> dict:
         if attrs is None:
             # No custom rules defined, try to convert normally with either vars or __slots__
             try:
-                attrs = {"attrs": object_.__slots__ if hasattr(object_, "__slots__") else vars(object_)}
+                attrs = {"attrs": misc.get_all_slots(type_object) if hasattr(object_, "__slots__") else vars(object_)}
             except TypeError:
                 return object_  # Not structured object or does not have overrides defined, return the object itself
 

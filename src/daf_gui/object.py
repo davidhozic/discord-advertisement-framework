@@ -111,8 +111,6 @@ class ObjectEditWindow(ttk.Toplevel):
         NewObjectFrame.set_origin_window(self)
         self.protocol("WM_DELETE_WINDOW", self.close_object_edit_frame)
 
-        self.grab_set()  # Act like a pop up
-
     @property
     def closed(self) -> bool:
         return self._closed
@@ -488,13 +486,7 @@ class NewObjectFrame(ttk.Frame):
             else:
                 types_in = [types_in, ]
 
-        subtypes = []
-        for t in types_in:
-            if hasattr(t, "__subclasses__") and t.__module__.split('.', 1)[0] in {"_discord", "daf"}:
-                for st in t.__subclasses__():
-                    subtypes.extend(cls.convert_types(st))
-
-        return types_in + subtypes
+        return types_in
 
     def update_window_title(self):
         self.origin_window.title(f"{'New' if self.old_object_info is None else 'Edit'} {self.get_cls_name(self.class_)} object")

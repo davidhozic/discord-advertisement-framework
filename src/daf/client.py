@@ -471,6 +471,9 @@ class ACCOUNT:
         .. WARNING::
             After calling this method the entire object is reset.
         """
+        if self._deleted:
+            raise ValueError("Account has been removed from the framework!")
+
         if self._running:
             await self._close(False)
 
