@@ -32,6 +32,12 @@ Glossary
 Releases
 ----------------------
 
+v2.8.1
+=================
+- Fixed bug ``timezone required argument 'offset' when trying to save TextMESSAGE`` #325
+- Fixed bug ``AutoGUILD incorrect type hints`` #326
+
+
 v2.8
 =================
 

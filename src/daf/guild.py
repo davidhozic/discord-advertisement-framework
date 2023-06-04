@@ -837,7 +837,7 @@ class AutoGUILD:
                  include_pattern: str,
                  exclude_pattern: Optional[str] = None,
                  remove_after: Optional[Union[timedelta, datetime]] = None,
-                 messages: Optional[List[BaseMESSAGE]] = None,
+                 messages: Optional[List[Union[TextMESSAGE, VoiceMESSAGE]]] = None,
                  logging: Optional[bool] = False,
                  interval: Optional[timedelta] = timedelta(minutes=1),
                  auto_join: Optional[web.GuildDISCOVERY] = None,
