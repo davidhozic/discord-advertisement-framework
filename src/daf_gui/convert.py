@@ -53,7 +53,6 @@ ADDITIONAL_ANNOTATIONS = {
         "minute": int,
         "second": int,
         "microsecond": int,
-        "tzinfo": Union[dt.tzinfo, None],
         "fold": int
     },
     discord.Embed: {
@@ -90,6 +89,10 @@ CONVERSION_ATTR_TO_PARAM = {
     daf.AUDIO: {
         "filename": "orig"
     },
+    dt.timezone: {
+        "offset": "_offset",
+        "name": "_name",
+    }
 }
 
 OBJECT_CONV_CACHE = {}
@@ -98,6 +101,7 @@ CONVERSION_ATTR_TO_PARAM[daf.client.ACCOUNT] = {k: k for k in daf.client.ACCOUNT
 CONVERSION_ATTR_TO_PARAM[daf.client.ACCOUNT]["token"] = "_token"
 CONVERSION_ATTR_TO_PARAM[daf.client.ACCOUNT]["username"] = lambda account: account.selenium._username if account.selenium is not None else None
 CONVERSION_ATTR_TO_PARAM[daf.client.ACCOUNT]["password"] = lambda account: account.selenium._password if account.selenium is not None else None
+
 
 if daf.sql.SQL_INSTALLED:
     sql_ = daf.sql
@@ -117,7 +121,7 @@ for item in {daf.TextMESSAGE, daf.VoiceMESSAGE, daf.DirectMESSAGE}:
 
 
 CONVERSION_ATTR_TO_PARAM[daf.TextMESSAGE]["channels"] = (
-    lambda message_: [x.id for x in message_.channels] if not isinstance(message_.channels, daf.AutoCHANNEL) else message_.channels
+    lambda message_: [x if isinstance(x, int) else x.id for x in message_.channels] if not isinstance(message_.channels, daf.AutoCHANNEL) else message_.channels
 )
 CONVERSION_ATTR_TO_PARAM[daf.VoiceMESSAGE]["channels"] = CONVERSION_ATTR_TO_PARAM[daf.TextMESSAGE]["channels"]
 
@@ -295,7 +299,6 @@ def convert_to_object_info(object_: object, save_original = False, cache = False
 
     attrs = get_conversion_map(object_type)
     ret = _convert_object_info(object_, save_original, object_type, attrs)
-
     with suppress(TypeError):
         if cache:
             OBJECT_CONV_CACHE[object_] = ret
