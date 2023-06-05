@@ -31,6 +31,10 @@ Glossary
 ----------------------
 Releases
 ----------------------
+v2.8.2
+=================
+- Fixed auto installation of ttkboostrap not opening the main window at the end.
+
 
 v2.8.1
 =================
