@@ -18,7 +18,7 @@ TTKBOOSTRAP_VERSION = "1.10.1"
 
 if not installed:
     print("Auto installing requirements: ttkbootstrap")
-    subprocess.check_call([sys.executable, "-m", "pip", "install", f"ttkbootstrap=={TTKBOOSTRAP_VERSION}"])
+    subprocess.check_call([sys.executable.replace("pythonw", "python"), "-m", "pip", "install", f"ttkbootstrap=={TTKBOOSTRAP_VERSION}"])
 
 
 from .convert import *
