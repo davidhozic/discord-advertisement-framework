@@ -287,7 +287,7 @@ def convert_to_object_info(object_: object, save_original = False, cache = False
 
     object_type = type(object_)
 
-    if object_type in {int, float, str, bool, decimal.Decimal, type(None)}:
+    if object_type in {int, float, str, bool, decimal.Decimal, type(None)} or isinstance(object_, Enum):
         if object_type is decimal.Decimal:
             object_ = float(object_)
 
