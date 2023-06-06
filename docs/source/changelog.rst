@@ -31,6 +31,15 @@ Glossary
 ----------------------
 Releases
 ----------------------
+
+v2.8.3
+=================
+- Fixed new guilds being added whenever :class:`daf.client.ACCOUNT`'s update method failed.
+- Fixed error if passing ``None`` inside update method of account for the ``servers`` parameter.
+- Removed unneded check in object serialization (for remote) which slightly increases performance.
+- Fixed Enum values being converted to objects when viewing live items / importing schema from live view.
+
+
 v2.8.2
 =================
 - Fixed auto installation of ttkboostrap not opening the main window at the end.

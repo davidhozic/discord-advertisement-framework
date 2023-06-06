@@ -1119,5 +1119,7 @@ class AutoGUILD:
             return await misc._update(self, init_options=init_options, **kwargs)
         except Exception:
             self.cache.clear()
-            await self.initialize(self.parent)  # Reopen any async related connections
+            if self.parent is not None:  # Only if it were previously initialized
+                await self.initialize(self.parent)  # Reopen any async related connections
+
             raise

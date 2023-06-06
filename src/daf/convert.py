@@ -353,10 +353,8 @@ def convert_from_semi_dict(d: Union[dict, list, Any], use_bound: bool = False):
                 if isinstance(v, LAMBDA_TYPE):
                     v = v(_return)
 
-                if not isinstance(v, discord.Client):  # For some reason it fails to logging when copied.
-                    v = copy.copy(v)  # Prevent external modifications since it's passed by reference
-
-                setattr(_return, k, v)
+                # copy.copy prevents external modifications since it's passed by reference
+                setattr(_return, k, copy.copy(v))
 
         return _return
 
