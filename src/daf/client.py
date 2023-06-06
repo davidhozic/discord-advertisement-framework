@@ -491,6 +491,8 @@ class ACCOUNT:
                 kwargs["intents"] = None
 
         servers = kwargs.pop("servers", self.servers + self._uiservers)
+        if servers is None:
+            servers = []
 
         @misc._async_safe("_update_sem")
         async def update_servers(self_):
@@ -514,5 +516,6 @@ class ACCOUNT:
             await update_servers(self)
         except Exception:
             await self.initialize()  # re-login
+            servers = self.servers  # Only return initialized servers
             await update_servers(self)
             raise
