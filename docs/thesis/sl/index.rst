@@ -9,6 +9,4 @@ Front page of the thesis
     introduction
     discord
     discord-advert-framework
-    documenting
-    testing
     thesis_lit

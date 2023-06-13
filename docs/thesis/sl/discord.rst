@@ -126,9 +126,11 @@ prevelikega in hitrega oglaševanja v direktna sporočila, lahko Discord ukine v
 
     Discord direktna sporočila
 
+
 .. raw:: latex
 
     \newpage
+
 
 Oglaševanje v Discord
 ==========================
@@ -190,10 +192,10 @@ uporabimo akronim "NFT" in spletna stran nam bo vrnila cehe povezane z NFT.
 
 Tem cehom se lahko potem pridružimo in v primerne kanale oglašujemo našo vsebino. Cehi na temo NFT in kripto valut
 imajo ponavadi namenske kanale, ki so namenjeni oglaševanju in v te lahko oglašujemo brez posledic, medtem ko nas
-oglaševanje lahko privede do izključitve iz strežnika.
+oglaševanje v drugih kanalih lahko privede do izključitve iz strežnika.
 
 .. figure:: ./DEP/topgg_find_servers.png
-    :width: 400
+    :width: 15cm
 
     Iskanje cehov na Top.GG
 
