@@ -477,6 +477,16 @@ class NewObjectFrame(ttk.Frame):
 
     @classmethod
     def convert_types(cls, types_in):
+        def remove_wrapped(types: list):
+            r = types.copy()
+            for type_ in types:
+                # It's a wrapper of some class -> remove the wrapped class
+                if hasattr(type_, "__wrapped__"):
+                    if type_.__wrapped__ in r:
+                        r.remove(type_.__wrapped__)
+
+            return r
+
         while get_origin(types_in) is Union:
             types_in = get_args(types_in)
 
@@ -486,7 +496,15 @@ class NewObjectFrame(ttk.Frame):
             else:
                 types_in = [types_in, ]
 
-        return types_in
+        # Also include inherited objects
+        subtypes = []
+        for t in types_in:
+            if hasattr(t, "__subclasses__") and t.__module__.split('.', 1)[0] in {"_discord", "daf"}:
+                for st in t.__subclasses__():
+                    subtypes.extend(cls.convert_types(st))
+
+        # Remove wrapped classes (eg. wrapped by decorator)
+        return remove_wrapped(types_in + subtypes)
 
     def update_window_title(self):
         self.origin_window.title(f"{'New' if self.old_object_info is None else 'Edit'} {self.get_cls_name(self.class_)} object")
@@ -623,12 +641,16 @@ class NewObjectFrame(ttk.Frame):
     def _update_old_object(self, new: Union[ObjectInfo, Any]):
         if self.old_object_info is not None:
             ret_widget = self.return_widget
-            if isinstance(ret_widget, ListBoxScrolled):
-                ind = ret_widget.get().index(self.old_object_info)
-            else:
-                ind = ret_widget["values"].index(self.old_object_info)
+            # Ignore if not in list (Combobox allows to type values directly in instead of inserting them)
+            # thus when edit is clicked, the old information is loaded into the object edit info, howver the actual
+            # value while it was writen inside the combobox is not actually present in the list of it's values
+            with suppress(ValueError):
+                if isinstance(ret_widget, ListBoxScrolled):
+                    ind = ret_widget.get().index(self.old_object_info)
+                else:
+                    ind = ret_widget["values"].index(self.old_object_info)
 
-            ret_widget.delete(ind)
+                ret_widget.delete(ind)
 
         self.return_widget.insert(tk.END, new)
         if isinstance(self.return_widget, ComboBoxObjects):

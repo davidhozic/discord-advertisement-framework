@@ -32,6 +32,14 @@ Glossary
 Releases
 ----------------------
 
+v2.8.4
+=================
+- Fixed web browser waiting time being too little when searching invite links
+- Fixed web browser could not create directory (username had a new line after it, now it auto strips that)
+- Fix GUI not allowing to define inherited classes (eg. logging manager's fallback that inherits LoggerBASE)
+- Fix item not in list error upon saving if an item was written inside a GUI's dropdown menu directly and then edited.
+
+
 v2.8.3
 =================
 - Fixed new guilds being added whenever :class:`daf.client.ACCOUNT`'s update method failed.
