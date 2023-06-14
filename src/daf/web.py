@@ -61,7 +61,7 @@ __all__ = (
 
 
 WD_TIMEOUT_SHORT = 5
-WD_TIMEOUT_MED = 30
+WD_TIMEOUT_MED = 15
 WD_TIMEOUT_LONG = 90
 WD_RD_CLICK_UPPER_N = 5
 WD_RD_CLICK_LOWER_N = 2
@@ -119,8 +119,8 @@ class SeleniumCLIENT:
                 "Install them with: pip install discord-advert-framework[web]"
             )
 
-        self._username = username
-        self._password = password
+        self._username = username.strip()
+        self._password = password.strip()
         self._proxy = proxy
         self.driver = None
         self._token = None
@@ -262,7 +262,7 @@ class SeleniumCLIENT:
         await self.random_sleep(0.5, 1)
         try:
             await self.async_execute(
-                WebDriverWait(driver, WD_TIMEOUT_SHORT).until,
+                WebDriverWait(driver, WD_TIMEOUT_MED).until,
                 url_contains("discord.com")
             )
             await self.await_load()
@@ -681,6 +681,7 @@ QueryMembers_MAP = {
     QueryMembers.ALL: (None, None),
     QueryMembers.SUB_100: (None, 100),
     QueryMembers.B100_1k: (100, 1000),
+    QueryMembers.B1k_10k: (1000, 10000),
     QueryMembers.ABV_10k: (10000, None),
 }
 
