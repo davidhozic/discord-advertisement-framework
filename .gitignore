@@ -9,7 +9,7 @@ build**
 docs/build
 docs/source/reference/
 
-docs/thesis/thesis_lit.rst
+docs/thesis/*/thesis_lit.rst
 docs/thesis/reference/
 
 docs/common/reference
