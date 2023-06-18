@@ -53,7 +53,7 @@ preko lastnega programskega vmesnika oz. preko HTTP vmesnika (API). Lahko bi rek
 Služi tudi za odstranjevanje neuporabljenih objektov in tudi shranjevanje vseh računov v morebitno datoteko, če je to zaželjeno.
 
 Ko zaženemo ogrodje, ta v jedrnem nivoju sproži inicializacijo nivoja beleženja in zatem uporabniškega nivoja,
-kjer za vsak definiran uporabniški račun, (v `računskem nivoju <Računski nivo>`) ustvari lastno :mod:`asyncio` opravilo,
+kjer za vsak definiran uporabniški račun, (v :ref:`računskem nivoju <Računski nivo>`) ustvari lastno :mod:`asyncio` opravilo,
 ki omogoča simultano oglaševanje po več računih hkrati.
 Na koncu pokliče funkcijo, ki je bila dana ob klicu zaganjalne funkcije :func:`daf.core.run`.
 
@@ -81,7 +81,7 @@ v JSON formatu (kompresiranem z :mod:`gzip`). Osnoven koncept je prikazan na spo
 
 .. figure:: ./DEP/daf-core-http-api.drawio.svg
     
-    API control
+    Upravljanje z vmesnikom
 
 
 Računski nivo

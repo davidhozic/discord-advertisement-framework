@@ -117,116 +117,32 @@ ustvarila ``function`` direktive ter vsebino prekopirala in pretvorila direktno 
         ...
 
 
-Generirane ``autofunction`` / ``autoclass`` direktive so del Sphinx-ove vgrajene razširitve :mod:`sphinx.ext.autodoc`.
+Iz :func:`~daf.misc.doc_category` generirane ``autofunction`` / ``autoclass`` direktive so del Sphinx-ove vgrajene razširitve :mod:`sphinx.ext.autodoc`.
 Razširitev vključi pakete in izbrska *docstring*-e funkcij in razredov, zatem pa ustvari lep opis o funkciji oz. razredu.
 V primeru da je v ``autoclass`` direktivi uporabljena ``:members:`` opcija, bo :mod:`~sphinx.ext.autodoc` razširitev
 vključila tudi dokumentirane metode in atribute, ki so del razreda.
 
 .. code-block:: restructuredText
-    :caption: Avtomatično generirana API referenca
+    :caption: Iz :func:`~daf.misc.doc_category` generirana direktiva
 
-    ============================
-    Dynamic mod.
-    ============================
-
-    ------------------------
-    add_object
-    ------------------------
-    
-    .. Uporabljen je bil manual parameter v doc_category
-    .. function:: daf.core.add_object(obj: <class 'daf.client.ACCOUNT'>) -> None
-        
-        Adds an account to the framework.
-        
-        
-        :param obj: The account object to add
-        :type obj: client.ACCOUNT
-        
-        
-        :raises ValueError: The account has already been added to the list.
-        :raises TypeError: ``obj`` is of invalid type.
-
-
-    ============================
-    Clients
-    ============================
-
-    ------------------------
-    ACCOUNT
-    ------------------------
-
-    .. autoclass:: daf.client.ACCOUNT
+    .. autoclass:: daf.logging.sql.LoggerSQL
         :members:
 
 
-Rezultat gornje vsebine:
-
+.. _auto_doc_example:
 .. figure:: ./DEP/autodoc_example.png
-    :height: 140mm
+    :width: 10cm
 
-    Izhod avtomatično generirane API reference.
+    Rezultat autoclass direktive
 
-Iz gornje slike vidimo, da ima :class:`~daf.client.ACCOUNT` dodatno vsebino, ki je ni imel v ``autoclass`` direktivi.
-Ta vsebina je bila vzeta iz kode projekta DAF, ki ima sledečo definicijo:
 
-.. code-block:: python
-    :caption: Del definicije razreda :class:`~daf.client.ACCOUNT`
+.. raw:: latex
 
-    class ACCOUNT:
-        """
-        .. versionadded:: v2.4
+    \newpage
 
-        Represents an individual Discord account.
-        
-        Each ACCOUNT instance runs it's own shilling task.
 
-        Parameters
-        ----------
-        token : str
-            The Discord account's token
-        is_user : Optional[bool] =False
-            Declares that the ``token`` is a user account token
-            ("self-bot")
-        intents: Optional[discord.Intents]=discord.Intents.default()
-            Discord Intents
-            (settings of events that the client will subscribe to)
-        ...
-        """
-        ...
-
-        @property
-        def running(self) -> bool:
-            """
-            Is the account still running?
-
-            Returns
-            -----------
-            True
-                The account is logged in and shilling is active.
-            False
-                The shilling has ended or not begun.
-            """
-            ...
-
-        ...
-
-        @typechecked
-        def get_server(
-            self,
-            snowflake: Union[int, discord.Guild, discord.User, discord.Object]
-        ) -> Union[guild.GUILD, guild.USER, None]:
-            """
-            Retrieves the server based on the snowflake id or discord API object.
-
-            Parameters
-            -------------
-            snowflake: Union[int, discord.Guild, discord.User, discord.Object]
-                Snowflake ID or Discord API object"
-            ...
-            """
-            ...
-
-        ...
+Iz slike :numref:`auto_doc_example` lahko vidimo, da ima :class:`~daf.logging.sql.LoggerSQL` dodatno vsebino, ki je ni imel v ``autoclass`` direktivi.
+Ta vsebina je bila vzeta iz same kode razreda.
 
 
 Dokumentacija projekta DAF je na voljo na spletni strani `Read the Docs (RTD) <RTD_>`_.

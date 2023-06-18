@@ -14,7 +14,7 @@ DAF can run either locally or it can connect to a remote server that is running 
 DAF core. Users can choose between these two options by changing the connection client as
 shown in picture:
 
-.. image:: ./images/connection-select.png
+.. image:: ./images/gui-connection-select.png
     :width: 1000px
 
 Using ``LocalConnectionCLIENT`` will start DAF locally and anything the users do will be done locally.
