@@ -39,20 +39,24 @@ Poleg tega imata pogodba in tehnologija veriženja blokov, na katerih temeljijo 
 V prihodnjih letih se pričakuje, da bodo podjetja vse pogosteje uporabljala NFT za oglaševanje, ustvarjanje honorarjev in druge vidike svojih poslovnih modelov.
 
 
-Shilling
-===================
-Čeprav ste morda že slišali za NFT, morda še niste slišali za postopek, ki se imenuje *shilling*.
-Shilling je izraz za promocijo/oglaševanje NFT po socialnih omrežjih.
+Marketinški pristopi za promoviranje nezamenljivih žetonov
+===========================================================
+Obstaja več načinov oglaševanja, ki se jih lahko uporabi tudi za oglaševanje nezamenljivih žetonov. Ti so naprimer
+uporaba Google Ads platforme (oglaševanje po Google iskalniku, YouTube aplikaciji), uporaba forumov in drugi načini.
+Ena izmed teh drugih načinov je morda še najbolj uveljavljena na tem področju in sicer se temu načinu oglaševanju reče
+angl. *shilling* (ni slovenskega prevoda).
+
+*Shilling* je izraz za promocijo/oglaševanje NFT po socialnih omrežjih.
 Vendar ne gre le za kakršno koli oglaševanje, kot je na primer postavitev promocijskega gradiva na spletno stran ali
 stojnico v javnosti za promocijo, temveč gre za bolj kontroverzno metodo trženja, ki je 
-bolj angažirano. 
-Shilling vključuje nenehno objavljanje o izdelku po socialnih omrežjih, kot so Instagram, Telegram, Discord itd,
+bolj angažirano, agresivno.
+*Shilling* vključuje nenehno objavljanje o izdelku po socialnih omrežjih, kot so Instagram, Telegram, Discord ipd.,
 omenjanje izdelka in deljenje povezav do njega povsod, kjer je to mogoče. Gre za vsiljivo metodo oglaševanja.
 
-Te dni NFT prodajalci pogosto ne oglašujejo svojega izdelka z lastnimi rokami, temveč najamejo ljudi, ki to delo 
+Te dni NFT prodajalci pogosto ne oglašujejo svojega izdelka samostojno, temveč najamejo ljudi, ki to delo 
 opravljajo namesto njih. Obstaja veliko ponudb za taka dela, ki so lahko zelo profitabilna, še posebej če imate
 orodje, ki lahko oglašuje namesto človeka, avtomatično brez da bi bil ta prisoten.
 
 To diplomsko delo se ne osredotoča na same NFT, ampak se fokusira na process oglaševanja in sicer po socialnem
-omrežju Discord. Delo govori o projektu Ogrodje za oglaševanje po Discord-u (Discord Advertisement Framework), ki je
+omrežju Discord. Delo navezuje na projekt Ogrodje za oglaševanje po Discord-u (Discord Advertisement Framework), ki je
 ogrodje za oglaševanje napisano v programskem jeziku `Python <https://www.python.org>`_.

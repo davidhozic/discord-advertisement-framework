@@ -12,23 +12,24 @@ vsebuje nekaj informacij o Discord-u - Osnovne informacije, kako je nastal in ka
 Kaj je Discord
 ==================
 Discord je bil ustvarjen leta 2015 s strani Discord Inc (prej znan kot Hammer & Chisel), studia za razvoj iger, ki sta ga ustanovila Jason Citron in Stanislav Vishnevskiy.
-Platforma je bila zasnovana kot orodje za komunikacijo med igralci, posebej kot način, da se lahko igralci med seboj pogovarjajo med igranjem iger na spletu.
+Platforma je bila zasnovana kot orodje za komunikacijo med igralci video iger.
 
-Zamisel za Discord je izvirala iz Citronove osebne izkušnje kot igralca računalniških igric.
+Zamisel za Discord je izvirala iz Citronove osebne izkušnje v vlogi igralca računalniških igric.
 Opazil je, da so mnoga obstoječa orodja za komunikacijo (Skype, TeamSpeak) za igralce zastarela in težko uporabna,
 in želel je ustvariti bolj uporabniku prijazno platformo, ki bi igralcem omogočila enostavno komuniciranje med seboj med igranjem iger.
 
-Discord se je od takrat razvil v več kot samo orodje za komunikacijo med igralci in postal priljubljena platforma za skupnosti vseh vrst, da se povežejo in komunicirajo.
+Discord se je od takrat razvil v več kot samo orodje za komunikacijo med igralci video iger in postal
+priljubljena platforma za skupnosti vseh vrst, da se povežejo in komunicirajo.
 Uporabljajo ga milijoni po vsem svetu za vse od igranja iger do izobraževanja in druženja.
 
 Discord je priljubljena komunikacijska platforma, ki uporabnikom omogoča komuniciranje preko glasovnega, video in besedilnega klepeta.
-Discord se pogosto uporablja za različne namene, vključno z razpravljanjem o umetniških projektih, načrtovanjem družinskih izletov, iskanjem pomoči pri domačih nalogah in nudenjem podpore za duševno zdravje.
+Discord se pogosto uporablja za različne namene, vključno z razpravljanjem o umetniških projektih, načrtovanjem družinskih izletov, iskanjem pomoči pri domačih nalogah.
 Prav tako ima dobro funkcijo iskanja za iskanje vsebine, ki je bila nekoč objavljena, kar je koristno, na primer, pri iskanju roka izpita, ki ga je nekdo objavil pred mesecem dni.
 
 Čeprav lahko Discord služi kot dom skupnostim vseh velikosti, je še posebej priljubljen med manjšimi, aktivnimi skupinami, ki med seboj pogosto komunicirajo.
 Večina strežnikov Discord je zasebnih in zahtevajo povabilo za vstop, kar omogoča prijateljem in skupnostim, da ostanejo povezani.
 Vendar pa obstajajo tudi večje, bolj javne skupnosti, osredotočene na določene teme, kot so priljubljene videoigre
-ali pa, kot v primeru te naloge, stvari, kot so blockchain in NFT.
+ali pa, v primeru te naloge, stvari kot so blockchain in NFT.
 Uporablja se lahko tudi kot skupnost fakultete / šole, kjer študenti lahko govorijo preko glasovnih kanalov, delijo študijske materiale
 in postavljajo vprašanja o gradivu, ki ga ne razumejo.
 Nekaj primerov skupnosti Discord, povezanih s Univerzo v Ljubljani:
@@ -134,7 +135,7 @@ prevelikega in hitrega oglaševanja v direktna sporočila, lahko Discord ukine v
 
 Oglaševanje v Discord
 ==========================
-Kot je bilo razloženo v :ref:`Shilling`, je *shilling* vrsta oglaševanja.
+Kot je bilo razloženo v :ref:`Marketinški pristopi za promoviranje nezamenljivih žetonov`, je *shilling* vrsta oglaševanja.
 V Discord se lahko oglašuje ročno ali pa avtomatično z primernim orodjem.
 
 
@@ -147,14 +148,14 @@ sporočil v kanale oz. v direktna sporočila posameznih uporabnikov.
 Generiranje vsebine
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 Oglaševalsko vsebino se lahko napiše na pamet iz glave ali pa se uporabi malo bolj sofisticirana orodja, kot je to 
-GPT (*Generative pretrained transformer*).
+GPT (*Generative pretrained transformers*).
 
 GPT-3 je najsodobnejši jezikovni model umetne inteligence, ki ga je razvilo podjetje OpenAI.
 Ima sposobnost generiranja besedila, ki se zdi človeško in opravljanja različnih nalog, kot so prevajanje, povzemanje in odgovarjanje na vprašanja.
 GPT-3 je največji in najmočnejši jezikovni model do danes, s kapaciteto 175 milijard parametrov.
 Prislužil si je pozornost tako raziskovalcev kot industrijskih strokovnjakov zaradi svojih impresivnih sposobnosti in potencialnih aplikacij.
 
-Za referenco, zgornji odstavek je zgeneriral GPT-3 sam.
+Za referenco, prejšnji odstavek je zgeneriral GPT-3 sam.
 
 
 Za generacijo oglaševalske vsebina lahko npr. GPT-ju podamo slednjo zahtevo:
