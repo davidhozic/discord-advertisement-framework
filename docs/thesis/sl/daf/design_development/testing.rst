@@ -1,5 +1,6 @@
+
 =============================
-Testiranje projekta
+Avtomatično testiranje
 =============================
 
 .. _PyTest: https://docs.pytest.org/
@@ -11,12 +12,7 @@ Vsi avtomatični testi so pisani znotraj ogrodja za testiranje z imenom Pytest_.
 
 
 PyTest - ogrodje za testiranje
-=================================
-
-Like the name suggests, PyTest is a powerful, feature-rich testing framework for Python.
-It is used to write and run tests for software projects,
-and is considered to be one of the best testing frameworks available for Python.
-
+-------------------------------------
 Kot že ime namiguje, je PyTest orodje za testiranje na Python platformi.
 PyTest-ova sintaksa je enostavna za razumevanje in uporabo, tudi za tiste ki se s avtomatičnim testiranjem
 še niso ukvarjali.
@@ -99,6 +95,8 @@ PyTest je bolj pameten, kot to in sicer nam bo izpisal točno kateri elementi se
     test.py:6: AssertionError
 
 
+Testiranje ogrodja
+---------------------
 Testi so v ogrodju DAF razdeljeni po posameznih nivojih in funkcionalnosti. Skoraj vsi testi delujejo sinhrono,
 tako da se v testu kliče notranje funkcije posameznih objektov, ki bi jih ogrodje
 samo klicalo v primeru navadnega delovanja. To je zato ker je testiranje v navadnem načinu, kjer se vse
@@ -116,6 +114,3 @@ nove funkcionalnosti, temveč se na GitHub platformi avtomatično zaženejo ob v
 iz stranske git veje prenesti na glavno. Dokler se vsi testi ne izvedejo pravilno (in avtomatičen *linter* vrača lepotne napaka),
 GitHub ne bo pustil da se funkcionalnost prenese na glavno vejo.
 
-.. literalinclude:: ./DEP/test_period_dynamic.py
-    :caption: Testi za testiranje periode
-    :language: python

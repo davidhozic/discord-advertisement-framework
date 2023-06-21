@@ -1,3 +1,4 @@
+
 =========================
 Dokumentacija
 =========================
@@ -12,13 +13,13 @@ Dokumentacija
 .. |RTD| replace:: Read The Docs
 
 
-Celoten DAF projekt je odlično dokumentiran. Dokumentacija je na voljo v spletni različici (HTML), kot tudi
+Za projekt obstaja obsežna dokumentacija. Na voljo je v spletni obliki (HTML), kot tudi
 lokalni (PDF).
 
 Za vsako novo verzijo projekta, se dokumentacija samodejno zgradi in objavi na `spletni strani <https://daf.davidhozic.com>`_.
 
 Sphinx
-=====================
+----------------
 Sistem, ki se uporablja za dokumentiranje projekta se imenuje Sphinx.
 Sphinx je popularno orodje med Python_ razvijalci za generiranje dokumentacije v več formatih.
 Razvijalcem omogoča ustvarjanje profesionalne dokumentacije za lastne projekte, kar je nuja pri javnih projektih.
@@ -34,11 +35,11 @@ dodatnih razširitev. Enačbe se lahko piše v jeziku Latex.
 .. admonition:: Zanimivost
     :class: hint
 
-    Ta diplomska naloge je pisana ravno s sistemom Sphinx.
+    To diplomsko delo je pisano ravno s sistemom Sphinx.
 
 
 reStructuredText
-=====================
+----------------
 
 restructuredText je jezik na katerem deluje :ref:`Sphinx`.
 Je priljubljen *markup* jezik, ki se uporablja za dokumentacijo.
@@ -46,7 +47,7 @@ Oblikovan je za enostavnost branja, z fokusom na preprostost in moč.
 Ena ključnih značilnosti reStructuredTexta je njegova razširljivost, kar omogoča prilagajanje za specifična aplikacijska področja.
 
 Znotraj sintakse reStructuredTexta so na voljo različne vloge in direktive, ki se uporabljajo za dodajanje oblikovanja in strukture dokumentom.
-Vloge se uporabljajo za aplikacijo oblikovanja na določene beseda in stavke,
+Vloge se uporabljajo za aplikacijo oblikovanja na določene besede in stavke,
 direktive pa so uporabljene za dodajanje nove vsebine v dokument.
 Uporabnikom omogočajo ustvarjanje bolj zapletenih in dokumentov,
 pri tem pa ohranjajo preprostost in berljivost sintakse.
@@ -76,8 +77,8 @@ pri tem pa ohranjajo preprostost in berljivost sintakse.
     is a bit harder.
 
 
-Dokumentiranje projekta
-========================
+Dokumentacija projekta
+--------------------------------
 Projekt DAF je v celoti dokumentiran s Sphinx sistemom.
 Na prvem nivoju je dokumentacija razdeljena na:
 
@@ -116,124 +117,40 @@ ustvarila ``function`` direktive ter vsebino prekopirala in pretvorila direktno 
         ...
 
 
-Generirane ``autofunction`` / ``autoclass`` direktive so del Sphinx-ove vgrajene razširitve :mod:`sphinx.ext.autodoc`.
+Iz :func:`~daf.misc.doc_category` generirane ``autofunction`` / ``autoclass`` direktive so del Sphinx-ove vgrajene razširitve :mod:`sphinx.ext.autodoc`.
 Razširitev vključi pakete in izbrska *docstring*-e funkcij in razredov, zatem pa ustvari lep opis o funkciji oz. razredu.
 V primeru da je v ``autoclass`` direktivi uporabljena ``:members:`` opcija, bo :mod:`~sphinx.ext.autodoc` razširitev
 vključila tudi dokumentirane metode in atribute, ki so del razreda.
 
 .. code-block:: restructuredText
-    :caption: Avtomatično generirana API referenca
+    :caption: Iz :func:`~daf.misc.doc_category` generirana direktiva
 
-    ============================
-    Dynamic mod.
-    ============================
-
-    ------------------------
-    add_object
-    ------------------------
-    
-    .. Uporabljen je bil manual parameter v doc_category
-    .. function:: daf.core.add_object(obj: <class 'daf.client.ACCOUNT'>) -> None
-        
-        Adds an account to the framework.
-        
-        
-        :param obj: The account object to add
-        :type obj: client.ACCOUNT
-        
-        
-        :raises ValueError: The account has already been added to the list.
-        :raises TypeError: ``obj`` is of invalid type.
-
-
-    ============================
-    Clients
-    ============================
-
-    ------------------------
-    ACCOUNT
-    ------------------------
-
-    .. autoclass:: daf.client.ACCOUNT
+    .. autoclass:: daf.logging.sql.LoggerSQL
         :members:
 
 
-Rezultat gornje vsebine:
-
+.. _auto_doc_example:
 .. figure:: ./DEP/autodoc_example.png
-    :height: 140mm
+    :width: 10cm
 
-    Izhod avtomatično generirane API reference.
-
-Iz gornje slike vidimo, da ima :class:`~daf.client.ACCOUNT` dodatno vsebino, ki je ni imel v ``autoclass`` direktivi.
-Ta vsebina je bila vzeta iz kode projekta DAF, ki ima sledečo definicijo:
-
-.. code-block:: python
-    :caption: Del definicije razreda :class:`~daf.client.ACCOUNT`
-
-    class ACCOUNT:
-        """
-        .. versionadded:: v2.4
-
-        Represents an individual Discord account.
-        
-        Each ACCOUNT instance runs it's own shilling task.
-
-        Parameters
-        ----------
-        token : str
-            The Discord account's token
-        is_user : Optional[bool] =False
-            Declares that the ``token`` is a user account token
-            ("self-bot")
-        intents: Optional[discord.Intents]=discord.Intents.default()
-            Discord Intents
-            (settings of events that the client will subscribe to)
-        ...
-        """
-        ...
-
-        @property
-        def running(self) -> bool:
-            """
-            Is the account still running?
-
-            Returns
-            -----------
-            True
-                The account is logged in and shilling is active.
-            False
-                The shilling has ended or not begun.
-            """
-            ...
-
-        ...
-
-        @typechecked
-        def get_server(
-            self,
-            snowflake: Union[int, discord.Guild, discord.User, discord.Object]
-        ) -> Union[guild.GUILD, guild.USER, None]:
-            """
-            Retrieves the server based on the snowflake id or discord API object.
-
-            Parameters
-            -------------
-            snowflake: Union[int, discord.Guild, discord.User, discord.Object]
-                Snowflake ID or Discord API object"
-            ...
-            """
-            ...
-
-        ...
+    Rezultat autoclass direktive
 
 
-Dokumentacija projekta DAF je na voljo na spletni strani RTD_.
+.. raw:: latex
+
+    \newpage
+
+
+Iz slike :numref:`auto_doc_example` lahko vidimo, da ima :class:`~daf.logging.sql.LoggerSQL` dodatno vsebino, ki je ni imel v ``autoclass`` direktivi.
+Ta vsebina je bila vzeta iz same kode razreda.
+
+
+Dokumentacija projekta DAF je na voljo na spletni strani `Read the Docs (RTD) <RTD_>`_.
 
 RTD_ je spletna platforma za dokumentacijo, ki razvijalcem programske opreme zagotavlja enostaven način za gostovanje,
 objavljanje in vzdrževanje dokumentacije za njihove projekte.
-Platforma uporabnikom omogoča ustvarjanje profesionalno izgledajoče dokumentacije s preprostostjo in jo ponuja javnosti.
-Je odprtokodna in zgrajena na Sphinx-u, močnem orodju za generiranje dokumentacije.
+Platforma uporabnikom omogoča ustvarjanje profesionalno izgledajoče dokumentacije, ki je odprta javnosti.
+Je odprtokodna in zgrajena na že prej omenjenem Sphinx-u.
 
 Poleg gostovanja dokumentacije RTD_ ponuja razna orodja, kot so orodje za nadzor različic in napredna funkcionalnost iskanja.
 To uporabnikom olajša lažji pregled dokumentacije in zagotavlja, da dokumentacija ostane ažurna.

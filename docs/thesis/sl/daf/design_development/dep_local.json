@@ -1,0 +1,10 @@
+{
+    "copy": [
+        {"from": "../../../../images/*", "to": "./DEP/"},
+        {"from": "../../../../source/dep_local.json", "to": "./DEP/_dep_local.json"},
+        {"from": "../../../../source/guide/GUI/images/gui-*", "to": "./DEP/images"},
+        {"from": "../../../images/*", "to": "./DEP/"},
+        {"from": "../../../../../testing/test_period_dynamic.py", "to": "./DEP/test_period_dynamic.py"}
+    ],
+    "scripts": []
+}

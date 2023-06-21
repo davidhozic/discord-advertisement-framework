@@ -16,4 +16,4 @@ build:
   jobs:
     pre_build:
       - pip install .[all] .[docs]
-      - python3 ./docs/setup.py
+      - python3 ./docs/setup.py --start-dir source
