@@ -24,6 +24,7 @@ import ttkbootstrap.dialogs.dialogs as tkdiag
 import webbrowser
 import inspect
 import copy
+import json
 
 
 __all__ = (
@@ -325,6 +326,48 @@ class NewObjectFrame(ttk.Frame):
     def init_structured(self, annotations: dict):
         dpi_5 = dpi_scaled(5)
 
+        # Template
+        @gui_except(parent=self)
+        def save_template():
+            filename = tkfile.asksaveasfilename(filetypes=[("JSON", "*.json")], parent=self)
+            if filename == "":
+                return
+
+            json_data = convert_to_json(self._gui_to_object(ignore_checks=True))
+
+            if not filename.endswith(".json"):
+                filename += ".json"
+
+            with open(filename, "w", encoding="utf-8") as file:
+                json.dump(json_data, file, indent=2)
+
+            tkdiag.Messagebox.show_info(f"Saved to {filename}", "Finished", self)
+
+        @gui_except(parent=self)
+        def load_template():
+            filename = tkfile.askopenfilename(filetypes=[("JSON", "*.json")], parent=self)
+            if filename == "":
+                return
+
+            with open(filename, "r", encoding="utf-8") as file:
+                json_data: dict = json.load(file)
+                object_info = convert_from_json(json_data)
+                # Get class_ attribute if we have the ObjectInfo type, if not just compare the actual type
+                if object_info.class_ is not self.class_:
+                    raise TypeError(
+                        f"The selected template is not a {self.class_.__name__} template.\n"
+                        f"The requested template is for type: {object_info.class_.__name__}!"
+                    )
+
+                self.load(object_info)
+                
+        bnt_menu_template = ttk.Menubutton(self.frame_toolbar, text="Template")
+        menu = ttk.Menu(bnt_menu_template)
+        menu.add_command(label="Load template", command=load_template)
+        menu.add_command(label="Save template", command=save_template)
+        bnt_menu_template.configure(menu=menu)
+        bnt_menu_template.pack(side="left")
+
         def fill_values(k: str, entry_types: list, menu: ttk.Menu, combo: ComboBoxObjects):
             "Fill ComboBox values based on types in ``entry_types`` and create New <object_type> buttons"
             last_list_type = None
@@ -520,19 +563,28 @@ class NewObjectFrame(ttk.Frame):
         else:
             self._cleanup()
 
-    def load(self):
+    def load(self, object_info: ObjectInfo = None):
         """
         Loads the old object info data into the GUI.
+
+        Parameters
+        -------------
+        object_info: ObjectInfo
+            The ObjectInfo abstraction object to load. If None, it loads self.old_object_info.
         """
-        object_ = self.old_object_info.data if self._map.get(None) is None else self.old_object_info
+        if object_info is None:
+            object_info = self.old_object_info
+
+        data = object_info.data if self._map.get(None) is None else object_info
+
         for attr, (widget, types_) in self._map.items():
             if attr is not None:
-                if attr not in object_:
+                if attr not in data:
                     continue
 
-                val = object_[attr]
+                val = data[attr]
             else:
-                val = object_  # Single value type
+                val = data  # Single value type
 
             if isinstance(widget, ComboBoxObjects):
                 if val not in widget["values"]:
@@ -541,13 +593,13 @@ class NewObjectFrame(ttk.Frame):
                 widget.current(widget["values"].index(val))
 
             elif isinstance(widget, ListBoxScrolled):
-                widget.insert(tk.END, *object_)
+                widget.insert(tk.END, *data)
 
             elif isinstance(widget, tk.Text):
-                widget.insert(tk.END, object_)
+                widget.insert(tk.END, data)
 
             elif isinstance(widget, ttk.Spinbox):
-                widget.set(object_)
+                widget.set(data)
 
     @staticmethod
     def _lambda(method, *args, **kwargs):
@@ -606,7 +658,7 @@ class NewObjectFrame(ttk.Frame):
     def _cleanup(self):
         self.origin_window.clean_object_edit_frame()
 
-    def _gui_to_object(self):
+    def _gui_to_object(self, *, ignore_checks = False):
         map_ = {}
         for attr, (widget, types_) in self._map.items():
             value = widget.get()
@@ -633,7 +685,7 @@ class NewObjectFrame(ttk.Frame):
                 # Don't erase the bind to the real object in case this is an edit of an existing ObjectInfo
                 None if self.old_object_info is None else self.old_object_info.real_object
             )
-            if self.check_parameters and inspect.isclass(self.class_):  # Only check objects
+            if not ignore_checks and self.check_parameters and inspect.isclass(self.class_):  # Only check objects
                 convert_to_objects(object_)  # Tries to create instances to check for errors
 
         return object_
