@@ -12,15 +12,12 @@ These buttons are called **START** and **STOP** respectively.
     :align: center
 
 
-**Start** button will, like the name suggest, start the framework.
-If the **Load all at start** checkbox inside *Schema definition* tab is checked, it will also load all of the
-defined accounts into DAF.
+**Start** button will, like the name suggest, start the framework (or connect to a remote server, see :ref:`Remote control (GUI)`).
+If the **Load all at start** checkbox inside *Schema definition* tab, Accounts frame, is checked, it will also load all of the
+defined account templates into DAF. Additionally the selected logger inside the Logging frame is set to be used to log messages
+and invites links and it cannot be changed unless the framework is restarted (the same goes for remote).
 
-You can tell the framework is running when the buttons change colors:
-
-Additionally you can see the framework reporting successful initialization inside the *Output* tab.
+Inside the *Output* tab, the core's output can be viewed reporting any runtime errors.
 
 .. image:: images/gui-started-output-defined-accounts.png
-    :width: 20cm
     :align: center
-

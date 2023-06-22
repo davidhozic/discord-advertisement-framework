@@ -24,7 +24,7 @@ to the list.
 
 .. image:: ./images/gui-live-view-edit-account.png
     :align: center
-    :width: 10cm
+    :width: 15cm
 
 
 At the top of the *Live view* tab, there's also an *Execute* button with a dropdown menu. It allows you to define a new
