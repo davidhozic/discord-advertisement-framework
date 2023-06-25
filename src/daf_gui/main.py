@@ -177,6 +177,7 @@ class Application():
         # Accounts list. Defined here since it's needed below
         self.lb_accounts = ListBoxScrolled(frame_tab_account)
 
+        @gui_except
         @gui_confirm_action
         def import_accounts():
             "Imports account from live view"
@@ -192,6 +193,7 @@ class Application():
                 self.lb_accounts.clear()
                 self.lb_accounts.insert(tk.END, *values)
 
+            gui_daf_assert_running()
             async_execute(import_accounts_async(), parent_window=self.win_main)
 
         menu_bnt = ttk.Menubutton(

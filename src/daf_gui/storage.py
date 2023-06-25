@@ -47,7 +47,12 @@ class ListBoxObjects(tk.Listbox):
 
     def insert(self, index: Union[str, int], *elements: Union[str, float]) -> None:
         _ret = super().insert(index, *elements)
-        self._original_items.extend(elements)
+        if isinstance(index, str):
+            index = len(self._original_items) if index == "end" else 0
+
+        old_data = self._original_items[index:]
+        self._original_items[index:] = list(elements) + old_data
+
         return _ret
 
     def delete(self, *indexes: int) -> None:
@@ -76,13 +81,11 @@ class ListBoxObjects(tk.Listbox):
             super().delete(*range_)
             del self._original_items[range_[0]:range_[1] + 1]
 
-        pass
-
     @gui_confirm_action(True)
     def delete_selected(self):
-        selection = self.curselection()
-        if len(selection):
-            self.delete(*selection)
+        sel: List[int] = self.curselection()
+        if len(sel):
+            self.delete(*sel)
         else:
             tkdiag.Messagebox.show_error("Select atleast one item!", "Empty list!", parent=self)
 
@@ -103,6 +106,25 @@ class ListBoxObjects(tk.Listbox):
             return  # Clipboard empty
 
         self.insert(tk.END, *ListBoxObjects.clipboard)
+
+    def move(self, index: int, direction: int):
+        if direction == -1 and index == 0 or direction == 1 and index == len(self._original_items) - 1:
+            return
+
+        value = self._original_items[index]
+        self.delete(index)
+        index += direction
+        self.insert(index, value)
+        self.selection_set(index)
+
+    def move_selection(self, direction: int):
+        """
+        Moves the selected element up inside the listbox.
+        """
+        if len(selection := self.curselection()) == 1:
+            self.move(selection[0], direction)
+        else:
+            tkdiag.Messagebox.show_error("Select ONE item!", "Selection error", parent=self)
 
 
 class ListBoxScrolled(ttk.Frame):

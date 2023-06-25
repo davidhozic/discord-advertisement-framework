@@ -2,7 +2,7 @@
 Module contains interface to run async tasks from GUI.
 """
 from typing import Coroutine, Callable
-from asyncio import Queue, Task, Semaphore, Lock
+from asyncio import Queue, Task
 
 from daf import trace, TraceLEVELS
 

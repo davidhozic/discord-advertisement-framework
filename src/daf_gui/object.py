@@ -158,7 +158,6 @@ class ObjectEditWindow(ttk.Toplevel):
 
 
 class NewObjectFrame(ttk.Frame):
-
     """
     Frame for inside the :class:`ObjectEditWindow` that allows object definition.
 
@@ -427,8 +426,9 @@ class NewObjectFrame(ttk.Frame):
 
     def init_iterable(self):
         w = ListBoxScrolled(self.frame_main, height=20)
+        dpi_5 = dpi_scaled(5)
         self._map[None] = (w, [list])
-        frame_edit_remove = ttk.Frame(self.frame_main)
+        frame_edit_remove = ttk.Frame(self.frame_main, padding=(dpi_5, 0))
         frame_edit_remove.pack(side="right")
         if self.allow_save:
             menubtn = ttk.Menubutton(frame_edit_remove, text="Add object")
@@ -437,6 +437,12 @@ class NewObjectFrame(ttk.Frame):
             menubtn.pack()
             ttk.Button(frame_edit_remove, text="Remove", command=w.delete_selected).pack(fill=tk.X)
             ttk.Button(frame_edit_remove, text="Edit", command=self.listbox_edit_selected(w)).pack(fill=tk.X)
+
+            frame_up_down = ttk.Frame(frame_edit_remove)
+            frame_up_down.pack(fill=tk.X, expand=True, pady=dpi_5)
+            ttk.Button(frame_up_down, text="Up", command=lambda: w.move_selection(-1)).pack(side="left", fill=tk.X, expand=True)
+            ttk.Button(frame_up_down, text="Down", command=lambda: w.move_selection(1)).pack(side="left", fill=tk.X, expand=True)
+
             args = get_args(self.class_)
             args = self.convert_types(args)
             if get_origin(args[0]) is Union:
@@ -704,7 +710,7 @@ class NewObjectFrame(ttk.Frame):
 
                 ret_widget.delete(ind)
 
-        self.return_widget.insert(tk.END, new)
+        self.return_widget.insert(ind, new)
         if isinstance(self.return_widget, ComboBoxObjects):
             self.return_widget.current(self.return_widget["values"].index(new))
 
