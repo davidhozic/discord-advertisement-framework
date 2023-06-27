@@ -32,6 +32,13 @@ Glossary
 Releases
 ----------------------
 
+v2.9
+=================
+GUI:
+
+  - Template backups for each structured objects.
+  - Rearanging of list items inside GUI listboxes
+
 v2.8.4
 =================
 - Fixed web browser waiting time being too little when searching invite links

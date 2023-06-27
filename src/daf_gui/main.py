@@ -312,7 +312,7 @@ class Application():
                 self.open_object_edit_window(
                     daf.ACCOUNT,
                     list_live_objects,
-                    old=object_
+                    old_data=object_
                 )
             else:
                 tkdiag.Messagebox.show_error("Select one item!", "Empty list!")
@@ -604,7 +604,7 @@ class Application():
             self.open_object_edit_window(
                 type_,
                 listbox,
-                old=object_,
+                old_data=object_,
                 check_parameters=False,
                 allow_save=False
             )
@@ -615,7 +615,7 @@ class Application():
         selection = self.combo_logging_mgr.current()
         if selection >= 0:
             object_: ObjectInfo = self.combo_logging_mgr.get()
-            self.open_object_edit_window(object_.class_, self.combo_logging_mgr, old=object_)
+            self.open_object_edit_window(object_.class_, self.combo_logging_mgr, old_data=object_)
         else:
             tkdiag.Messagebox.show_error("Select atleast one item!", "Empty list!")
 
@@ -623,7 +623,7 @@ class Application():
         selection = self.lb_accounts.curselection()
         if len(selection):
             object_: ObjectInfo = self.lb_accounts.get()[selection[0]]
-            self.open_object_edit_window(daf.ACCOUNT, self.lb_accounts, old=object_)
+            self.open_object_edit_window(daf.ACCOUNT, self.lb_accounts, old_data=object_)
         else:
             tkdiag.Messagebox.show_error("Select atleast one item!", "Empty list!")
 
@@ -866,7 +866,3 @@ def run():
     loop.run_until_complete(update_task())
     loop.run_until_complete(async_stop())
     asyncio.set_event_loop(None)
-
-
-if __name__ == "__main__":
-    run()

@@ -39,11 +39,9 @@ class ListBoxObjects(tk.Listbox):
         self.bind("<Delete>", lambda e: self.delete_selected())
         self.bind("<Control-v>", lambda e: self.paste_from_clipboard())
 
-    def get(self, original = True, *args, **kwargs) -> list:
-        if original:
-            return self._original_items
-
-        return super().get(*args, **kwargs)
+    def get(self, first: int = 0, last: int = None) -> list:
+        slice_range = slice(first, last)
+        return self._original_items[slice_range]
 
     def insert(self, index: Union[str, int], *elements: Union[str, float]) -> None:
         _ret = super().insert(index, *elements)
@@ -81,7 +79,7 @@ class ListBoxObjects(tk.Listbox):
             super().delete(*range_)
             del self._original_items[range_[0]:range_[1] + 1]
 
-    def size(self) -> int:
+    def count(self) -> int:
         return len(self._original_items)
 
     @gui_confirm_action(True)
@@ -130,13 +128,26 @@ class ListBoxObjects(tk.Listbox):
             tkdiag.Messagebox.show_error("Select ONE item!", "Selection error", parent=self)
 
 
-class ListBoxScrolled(ListBoxObjects):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+class ListBoxScrolled(ttk.Frame):
+    def __init__(self, parent, *args, **kwargs):
+        super().__init__(parent)
+        listbox = ListBoxObjects(self, *args, **kwargs)
+        self.listbox = listbox
+
+        listbox.pack(side="left", fill=tk.BOTH, expand=True)
+
         scrollbar = ttk.Scrollbar(self)
         scrollbar.pack(side=tk.RIGHT, fill=tk.BOTH)
-        scrollbar.config(command=self.yview)
-        self.config(yscrollcommand=scrollbar.set)
+        scrollbar.config(command=listbox.yview)
+
+        listbox.config(yscrollcommand=scrollbar.set)
+
+    def __getattr__(self, name: str):
+        """
+        Getter method that only get's called if the current
+        implementation does not have the requested attribute.
+        """
+        return getattr(self.listbox, name)
 
 
 class ComboBoxObjects(ttk.Combobox):
@@ -165,7 +176,7 @@ class ComboBoxObjects(ttk.Combobox):
 
         self["values"] = self._original_items
 
-    def size(self) -> int:
+    def count(self) -> int:
         "Returns number of elements inside the ComboBox"
         return len(self._original_items)
 
@@ -185,12 +196,12 @@ class ComboBoxObjects(ttk.Combobox):
 
 class ComboEditFrame(ttk.Frame):
     def __init__(
-            self,
-            edit_method: Any,
-            values: List[ObjectInfo] = [],
-            master=None,
-            *args,
-            **kwargs
+        self,
+        edit_method: Any,
+        values: List[ObjectInfo] = [],
+        master=None,
+        *args,
+        **kwargs
     ):
         super().__init__(*args, master=master, **kwargs)
         combo = ComboBoxObjects(self)
@@ -211,7 +222,7 @@ class ComboEditFrame(ttk.Frame):
             self.edit_method(
                 object_.class_,
                 self.combo,
-                old=object_,
+                old_data=object_,
             )
         else:
             tkdiag.Messagebox.show_error("Select atleast one item!", "Empty list!")

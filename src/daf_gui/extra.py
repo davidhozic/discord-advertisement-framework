@@ -139,10 +139,9 @@ def setup_additional_live_refresh(w: ttk.Button, frame):
                 old_gui_data = frame_.old_gui_data
                 if not isinstance(old_gui_data, list) and hasattr(old_gui_data.real_object, "_daf_id"):
                     real = await connection.refresh(old_gui_data.real_object)  # Get refresh object from DAF
-                    frame_._update_old_object(convert_to_object_info(real, True))
-                    frame_.load()
+                    frame_.load(convert_to_object_info(real, True))
 
-                frame_.save_gui_values()
+                frame_.remember_gui_data()
 
         async_execute(refresh(), parent_window=frame.origin_window)
 
