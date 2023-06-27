@@ -340,18 +340,18 @@ class Application():
         list_live_objects.pack(fill=tk.BOTH, expand=True)
         self.list_live_objects = list_live_objects
         # The default bind is removal from list and not from actual daf.
-        list_live_objects.listbox.unbind("<BackSpace>")
-        list_live_objects.listbox.unbind("<Delete>")
-        list_live_objects.listbox.bind("<BackSpace>", lambda e: remove_account())
-        list_live_objects.listbox.bind("<Delete>", lambda e: remove_account())
+        list_live_objects.unbind("<BackSpace>")
+        list_live_objects.unbind("<Delete>")
+        list_live_objects.bind("<BackSpace>", lambda e: remove_account())
+        list_live_objects.bind("<Delete>", lambda e: remove_account())
 
     def init_output_tab(self):
         self.tab_output = ttk.Frame(self.tabman_mf)
         self.tabman_mf.add(self.tab_output, text="Output")
         text_output = ListBoxScrolled(self.tab_output)
-        text_output.listbox.unbind("<Control-c>")
-        text_output.listbox.unbind("<BackSpace>")
-        text_output.listbox.unbind("<Delete>")
+        text_output.unbind("<Control-c>")
+        text_output.unbind("<BackSpace>")
+        text_output.unbind("<Delete>")
         text_output.pack(fill=tk.BOTH, expand=True)
 
         class STDIOOutput:
@@ -754,7 +754,7 @@ daf.run(
             if accounts is not None:
                 accounts = convert_from_json(accounts)
                 self.lb_accounts.clear()
-                self.lb_accounts.listbox.insert(tk.END, *accounts)
+                self.lb_accounts.insert(tk.END, *accounts)
 
             # Load loggers
             logging_data = json_data.get("loggers")

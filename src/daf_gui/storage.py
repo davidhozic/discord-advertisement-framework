@@ -81,6 +81,9 @@ class ListBoxObjects(tk.Listbox):
             super().delete(*range_)
             del self._original_items[range_[0]:range_[1] + 1]
 
+    def size(self) -> int:
+        return len(self._original_items)
+
     @gui_confirm_action(True)
     def delete_selected(self):
         sel: List[int] = self.curselection()
@@ -127,26 +130,13 @@ class ListBoxObjects(tk.Listbox):
             tkdiag.Messagebox.show_error("Select ONE item!", "Selection error", parent=self)
 
 
-class ListBoxScrolled(ttk.Frame):
-    def __init__(self, parent, *args, **kwargs):
-        super().__init__(parent)
-        listbox = ListBoxObjects(self, *args, **kwargs)
-        self.listbox = listbox
-
-        listbox.pack(side="left", fill=tk.BOTH, expand=True)
-
+class ListBoxScrolled(ListBoxObjects):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         scrollbar = ttk.Scrollbar(self)
         scrollbar.pack(side=tk.RIGHT, fill=tk.BOTH)
-        scrollbar.config(command=listbox.yview)
-
-        listbox.config(yscrollcommand=scrollbar.set)
-
-    def __getattr__(self, __value: str):
-        """
-        Getter method that only get's called if the current
-        implementation does not have the requested attribute.
-        """
-        return getattr(self.listbox, __value)
+        scrollbar.config(command=self.yview)
+        self.config(yscrollcommand=scrollbar.set)
 
 
 class ComboBoxObjects(ttk.Combobox):
@@ -174,6 +164,10 @@ class ComboBoxObjects(ttk.Combobox):
             self._original_items.insert(index, element)
 
         self["values"] = self._original_items
+
+    def size(self) -> int:
+        "Returns number of elements inside the ComboBox"
+        return len(self._original_items)
 
     def __setitem__(self, key: str, value) -> None:
         if key == "values":
