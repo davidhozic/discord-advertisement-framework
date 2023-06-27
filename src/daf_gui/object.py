@@ -149,9 +149,18 @@ class NewObjectFrameBase(ttk.Frame):
         TypeError
             Could not convert into any type.
         """
+
+        CAST_FUNTIONS = {
+            dict: lambda v: convert_dict_to_object_info(json.loads(v))
+        }
+
         for type_ in filter(lambda t: cls.get_cls_name(t) in __builtins__, types):
             with suppress(Exception):
-                value = type_(value)
+                cast_funct = CAST_FUNTIONS.get(type_)
+                if cast_funct is None:
+                    value = type_(value)
+                else:
+                    value = cast_funct(value)
                 break
         else:
             raise TypeError(f"Could not convert '{value}' to any of accepted types.\nAccepted types: '{types}'")
@@ -290,7 +299,7 @@ class NewObjectFrameBase(ttk.Frame):
             self._cleanup()
         except Exception as exc:
             tkdiag.Messagebox.show_error(
-                f"Could not save the object.\n\n{exc}",
+                f"Could not save the object.\n{exc}",
                 "Saving error",
                 parent=self.origin_window
             )
@@ -470,18 +479,18 @@ class NewObjectFrameStruct(NewObjectFrameBase):
         def edit_selected(key: str, combo: ComboBoxObjects, original_type = None):
             selection = combo.get()
 
+            # Convert selection to any of the allowed types.
+            # This is used for casting manually typed values (which are strings) into appropriate types
+            # Eg. if a number is manually typed in and Edit button is clicked, this would result in a string type
+            # edit request, which is not really the intend. The intend is to edit a number in this example.
+            if isinstance(selection, str):
+                selection = self.cast_type(selection, self._map[key][1])
+
             if isinstance(selection, list):
                 return self.new_object_frame(original_type, combo, old_data=selection)
             if isinstance(selection, ObjectInfo):
                 return self.new_object_frame(selection.class_, combo, old_data=selection)
             else:
-                # Convert selection to any of the allowed types.
-                # This is used for casting manually typed values (which are strings) into appropriate types
-                # Eg. if a number is manually typed in and Edit button is clicked, this would result in a string type
-                # edit request, which is not really the intend. The intend is to edit a number in this example.
-                if isinstance(selection, str):
-                    selection = self.cast_type(selection, self._map[key][1])
-
                 return self.new_object_frame(type(selection), combo, old_data=selection)
 
         for (k, v) in annotations.items():
@@ -589,11 +598,13 @@ class NewObjectFrameStruct(NewObjectFrameBase):
         widget: ComboBoxObjects
         for attr, (widget, types_) in self._map.items():
             value = widget.get()
-            if isinstance(value, str):  # Ignore empty values
-                if not len(value):
+            # Either it's a string needing conversion or a Literal constant not to be converted
+            if isinstance(value, str):
+                if not len(value):  # Ignore empty values
                     continue
 
-                value = self.cast_type(value, types_)
+                if Literal is not get_origin(types_[0]):
+                    value = self.cast_type(value, types_)
 
             map_[attr] = value
 
@@ -688,7 +699,7 @@ class NewObjectFrameIterable(NewObjectFrameBase):
             for arg in args:
                 menu.add_command(label=self.get_cls_name(arg), command=self._lambda(self.new_object_frame, arg, w))
         else:
-            ttk.Button(frame_edit_remove, text="View", command=edit_selected(w)).pack(fill=tk.X)
+            ttk.Button(frame_edit_remove, text="View", command=lambda: edit_selected(w)).pack(fill=tk.X)
 
         w.pack(side="left", fill=tk.BOTH, expand=True)
 
