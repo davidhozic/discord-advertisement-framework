@@ -30,7 +30,7 @@ __all__ = (
 GUILD_ADVERT_STATUS_SUCCESS = 0
 GUILD_ADVERT_STATUS_ERROR_REMOVE_ACCOUNT = None
 
-GUILD_JOIN_INTERVAL = timedelta(seconds=15)
+GUILD_JOIN_INTERVAL = timedelta(seconds=25)
 GUILD_MAX_AMOUNT = 100
 
 globals_ = globals()
@@ -1047,43 +1047,57 @@ class AutoGUILD:
         ):
             return
 
-        try:
-            # Get next result from top.gg
-            yielded: web.QueryResult = await self.guild_query_iter.__anext__()
-            if (
-                re.search(self.include_pattern, yielded.name) is None or
-                (
-                    self.exclude_pattern is not None and
-                    re.search(self.exclude_pattern, yielded.name) is not None
-                )
-            ):
-                return
-
-            # Not already joined in the guild
-            try:
-                if client.get_guild(yielded.id) is None:
-                    await selenium.random_server_click()
-                    await selenium.join_guild(yielded.invite)
-                    await asyncio.sleep(1)
-                    if client.get_guild(yielded.id) is None:
-                        raise RuntimeError(
-                            "No error detected in browser,"
-                            "but the guild can not be seen by the API wrapper."
+        async def get_next_guild():
+            for i in range(2):
+                try:
+                    # Get next result from top.gg
+                    yielded: web.QueryResult = await self.guild_query_iter.__anext__()
+                    if (
+                        re.search(self.include_pattern, yielded.name) is None or
+                        (
+                            self.exclude_pattern is not None and
+                            re.search(self.exclude_pattern, yielded.name) is not None
                         )
+                    ):
+                        return None
+
+                    return yielded
+                except StopAsyncIteration:
+                    self.guild_query_iter = discovery._query_request()
+                    trace("Iterated though all found guilds -> repeating iteration.", TraceLEVELS.DEBUG)
+                    await asyncio.sleep(3)
+
+        if (yielded := await get_next_guild()) is None:
+            return
+
+        no_error = True
+        # Not already joined in the guild
+        if client.get_guild(yielded.id) is None:
+            try:
+                if (invite_url := await selenium.fetch_invite_link(yielded.url)) is None:
+                    raise RuntimeError("Fetching invite link failed")
+
+                await selenium.random_server_click()
+                await selenium.join_guild(invite_url)
+                await asyncio.sleep(1)
+                if client.get_guild(yielded.id) is None:
+                    raise RuntimeError(
+                        "No error detected in browser,"
+                        "but the guild can not be seen by the API wrapper."
+                    )
             except Exception as exc:
+                no_error = False
                 trace(
                     f"Joining guild raised an error. (Guild '{yielded.name}')",
                     TraceLEVELS.ERROR,
                     exc
                 )
-            else:
-                # Increase the join count if there was no exception (what 'else' does after a try clause),
-                # regardless if the user was already inside the guild or not.
-                self.guild_join_count += 1
-                self.last_guild_join = datetime.now()
 
-        except StopAsyncIteration:
-            self.guild_query_iter = discovery._query_request()
+            self.last_guild_join = datetime.now()
+
+        if no_error:
+            # Don't count errored joins but count guilds we are already joined if they match the pattern
+            self.guild_join_count += 1
 
     @misc._async_safe("_safe_sem", 1)
     async def _advertise(self):

@@ -68,7 +68,6 @@ WD_RD_CLICK_LOWER_N = 2
 WD_OUTPUT_PATH = pathlib.Path.home().joinpath("daf/daf_web_data")
 WD_TOKEN_PATH = WD_OUTPUT_PATH.joinpath("tokens.json")
 WD_PROFILES_PATH = WD_OUTPUT_PATH.joinpath("chrome_profiles")
-WD_QUERY_SLEEP_S = 5
 
 HOVER_CLICK_ACTION_TIME_MS = 500
 
@@ -693,19 +692,13 @@ class QueryResult:
     __slots__ = (
         "id",
         "name",
-        "invite",
-        "updated",
+        "url",
     )
 
-    def __init__(self, id: int, name: str, invite: str) -> None:
+    def __init__(self, id: int, name: str, url: str) -> None:
         self.id = id
         self.name = name
-        self.invite = invite
-        self.updated = datetime.now()
-
-    @property
-    def pending_refresh(self):
-        return datetime.now() - self.updated > TOP_GG_REFRESH_TIME
+        self.url = url
 
 
 @misc.doc_category("Web")
@@ -726,7 +719,6 @@ class GuildDISCOVERY:
         The maximum amount of servers to query.
         Defaults to 15 servers.
     """
-    query_cache: Dict[Tuple[str, QuerySortBy, int], QueryResult] = {}
 
     __slots__ = (
         "prompt",
@@ -776,21 +768,8 @@ class GuildDISCOVERY:
         List[QueryResult]
             List of guilds found.
         """
-        cache_key = (self.prompt, self.sort_by, self.total_members, self.limit)
-        cache_result: List[QueryResult] = self.query_cache.get(cache_key, None)
-        # List[ { 'id': int, 'name': str, 'invite': str } ]"
-        if not (cache_result is None or (len(cache_result) and cache_result[0].pending_refresh)):
-            for cached in cache_result:
-                yield cached
-
-            return
-
-        # Update result
-        result_list = []
-        self.query_cache[cache_key] = result_list
-
         params = {
-            "amount": 10,
+            "amount": 50,
             "nsfwLevel": "1",
             "platform": "discord",
             "entityType": "server",
@@ -806,7 +785,7 @@ class GuildDISCOVERY:
         if max_users is not None:
             params["maxUsers"] = max_users
 
-        for i in range(0, 1000, 10):
+        for i in range(0, 1000, 50):
             params["skip"] = i
             async with self.session.get(TOP_GG_SEARCH_URL, params=params) as result:
                 if result.status != 200:
@@ -823,12 +802,5 @@ class GuildDISCOVERY:
             for item in data["results"]:
                 id_ = int(item["id"])
                 name = item["name"]
-                url = await self.browser.fetch_invite_link(
-                    TOP_GG_SERVER_JOIN_URL.format(id=id_)
-                )
-                if url is not None:
-                    qr = QueryResult(id_, name, url)
-                    result_list.append(qr)
-                    yield qr
-                else:
-                    await asyncio.sleep(WD_QUERY_SLEEP_S)
+                url = TOP_GG_SERVER_JOIN_URL.format(id=id_)
+                yield QueryResult(id_, name, url)
