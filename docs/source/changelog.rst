@@ -32,6 +32,17 @@ Glossary
 Releases
 ----------------------
 
+v2.9
+=================
+GUI:
+
+  - Template backups for each structured objects.
+  - Rearanging of list items inside GUI listboxes
+  - Connection timeout to a remote core is now 10 minutes for large datasets.
+  - Dictionary editing - GUI nows allows to edit / view dictionary types (JSON). This could eg. be used
+    to view SQL log's content which is saved to the database into JSON format.
+
+
 v2.8.4
 =================
 - Fixed web browser waiting time being too little when searching invite links

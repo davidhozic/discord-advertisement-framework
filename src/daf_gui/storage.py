@@ -39,15 +39,18 @@ class ListBoxObjects(tk.Listbox):
         self.bind("<Delete>", lambda e: self.delete_selected())
         self.bind("<Control-v>", lambda e: self.paste_from_clipboard())
 
-    def get(self, original = True, *args, **kwargs) -> list:
-        if original:
-            return self._original_items
-
-        return super().get(*args, **kwargs)
+    def get(self, first: int = 0, last: int = None) -> list:
+        slice_range = slice(first, last)
+        return self._original_items[slice_range]
 
     def insert(self, index: Union[str, int], *elements: Union[str, float]) -> None:
         _ret = super().insert(index, *elements)
-        self._original_items.extend(elements)
+        if isinstance(index, str):
+            index = len(self._original_items) if index == "end" else 0
+
+        old_data = self._original_items[index:]
+        self._original_items[index:] = list(elements) + old_data
+
         return _ret
 
     def delete(self, *indexes: int) -> None:
@@ -76,13 +79,14 @@ class ListBoxObjects(tk.Listbox):
             super().delete(*range_)
             del self._original_items[range_[0]:range_[1] + 1]
 
-        pass
+    def count(self) -> int:
+        return len(self._original_items)
 
     @gui_confirm_action(True)
     def delete_selected(self):
-        selection = self.curselection()
-        if len(selection):
-            self.delete(*selection)
+        sel: List[int] = self.curselection()
+        if len(sel):
+            self.delete(*sel)
         else:
             tkdiag.Messagebox.show_error("Select atleast one item!", "Empty list!", parent=self)
 
@@ -104,6 +108,25 @@ class ListBoxObjects(tk.Listbox):
 
         self.insert(tk.END, *ListBoxObjects.clipboard)
 
+    def move(self, index: int, direction: int):
+        if direction == -1 and index == 0 or direction == 1 and index == len(self._original_items) - 1:
+            return
+
+        value = self._original_items[index]
+        self.delete(index)
+        index += direction
+        self.insert(index, value)
+        self.selection_set(index)
+
+    def move_selection(self, direction: int):
+        """
+        Moves the selected element up inside the listbox.
+        """
+        if len(selection := self.curselection()) == 1:
+            self.move(selection[0], direction)
+        else:
+            tkdiag.Messagebox.show_error("Select ONE item!", "Selection error", parent=self)
+
 
 class ListBoxScrolled(ttk.Frame):
     def __init__(self, parent, *args, **kwargs):
@@ -119,12 +142,12 @@ class ListBoxScrolled(ttk.Frame):
 
         listbox.config(yscrollcommand=scrollbar.set)
 
-    def __getattr__(self, __value: str):
+    def __getattr__(self, name: str):
         """
         Getter method that only get's called if the current
         implementation does not have the requested attribute.
         """
-        return getattr(self.listbox, __value)
+        return getattr(self.listbox, name)
 
 
 class ComboBoxObjects(ttk.Combobox):
@@ -153,6 +176,10 @@ class ComboBoxObjects(ttk.Combobox):
 
         self["values"] = self._original_items
 
+    def count(self) -> int:
+        "Returns number of elements inside the ComboBox"
+        return len(self._original_items)
+
     def __setitem__(self, key: str, value) -> None:
         if key == "values":
             self._original_items = list(value)
@@ -169,12 +196,12 @@ class ComboBoxObjects(ttk.Combobox):
 
 class ComboEditFrame(ttk.Frame):
     def __init__(
-            self,
-            edit_method: Any,
-            values: List[ObjectInfo] = [],
-            master=None,
-            *args,
-            **kwargs
+        self,
+        edit_method: Any,
+        values: List[ObjectInfo] = [],
+        master=None,
+        *args,
+        **kwargs
     ):
         super().__init__(*args, master=master, **kwargs)
         combo = ComboBoxObjects(self)
@@ -195,7 +222,7 @@ class ComboEditFrame(ttk.Frame):
             self.edit_method(
                 object_.class_,
                 self.combo,
-                old=object_,
+                old_data=object_,
             )
         else:
             tkdiag.Messagebox.show_error("Select atleast one item!", "Empty list!")

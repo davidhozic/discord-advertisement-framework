@@ -172,6 +172,8 @@ class RemoteConnectionCLIENT(AbstractConnectionCLIENT):
     verify_ssl: Optional[bool]
         Defaults to True. If True, connection will be refused when the certificate does not match the host name.
     """
+    TIMEOUT = 10 * 60  # * seconds / minute
+
     def __init__(
         self,
         host: str,
@@ -201,7 +203,7 @@ class RemoteConnectionCLIENT(AbstractConnectionCLIENT):
             additional_kwargs["ssl"] = False
 
         trace(f"Requesting {route} with {method}.", TraceLEVELS.DEBUG)
-        async with getattr(self.session, method)(route, json={"parameters": kwargs}, **additional_kwargs) as response:
+        async with getattr(self.session, method)(route, json={"parameters": kwargs}, timeout=self.TIMEOUT, **additional_kwargs) as response:
             if response.status != 200:
                 raise web.HTTPException(reason=response.reason)
 
