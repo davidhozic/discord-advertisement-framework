@@ -1,12 +1,38 @@
-=========================
-Schema tab (GUI)
-=========================
+=========================================
+Account definition / schema tab (GUI)
+=========================================
 
-We can define the schema (accounts, guilds, messages) inside the *Schema definition* tab.
-The tab allows us to define:
+The *Schema* tab allows users to define a fixed schema **template** that can then be saved (loaded) to (from) file. or
+converted into a Python ``.py`` script that runs exactly the same as it would inside the GUI.
+
+-----
+
+Some **important terms** that users need to know if they wish to define objects:
+
+.. glossary::
+
+    Token
+        Refers to the Discord account token, which can be obtained for bots though the
+        `developer tab <https://discordgsm.com/guide/how-to-get-a-discord-bot-token>`_ or
+        though a browser for `user accounts <https://www.androidauthority.com/get-discord-token-3149920/>`_.
+
+    Snowflake (ID)
+        The snowflake ID is Discord's unique identifier that each user, channel, guild, etc. has. It is never duplicated
+        and it only represents a single Discord object. It is often needed inside DAF.
+        To obtain it, first enable `developer mode <https://beebom.com/how-enable-disable-developer-mode-discord/>`_.
+        Then you can right click on the wanted resource (eg. channel) and left click on *Copy ID*.
+
+        .. image:: ./DEP/copy-snowflake-id.png
+            :height: 300
+
+
+-----
+
+In the schema tab we can define:
 
 1. Accounts
 2. Logging & tracing
+3. Connection manager, however this is not inside the schema tab but rather on the top of the GUI.
 
 
 .. image:: ./DEP/daf-gui-front.png
@@ -17,69 +43,75 @@ The tab allows us to define:
 Defining ACCOUNT objects
 ==========================
 
-Basic information
-------------------
-We can define :class:`~daf.client.ACCOUNT` objects by clicking on ``Add ACCOUNT`` button which opens a new window.
+We can define :class:`~daf.client.ACCOUNT` objects by clicking on *Object options* -> *New ACCOUNT*.
+This opens a new object definition window.
 
-.. image:: images/gui-new-account-window.png
+.. figure:: images/gui-new-account-window.png
     :align: center
-    :scale: 70%
+    :height: 300
 
-The window is automatically generated based on the :class:`~daf.client.ACCOUNT`'s parameter annotations and contains exactly the same
-parameters like the core object :class:`~daf.client.ACCOUNT`.
+    Object definition window
+
+
+Basic information about the object definition window
+---------------------------------------------------
 
 In the toolbar (top) we can observe 3 buttons and one toggle. The **Close** button closes the window and asks the user
-if they want to save the object, while the **Save** does the same thing except it saves the object without user
-confirmation. The toggle **Keep on top** will prevent other windows from covering our definition window.
+if they want to save the object to the previous widget, while the **Save** does the same thing except it saves the object without user
+confirmation. The toggle **Keep on top** will prevent other windows from covering the definition window.
 
 The **Help** button opens up the documentation and searches for the corresponding object, in our case, the
-:class:`~daf.client.ACCOUNT` object. You can use this button to gain knowledge about what each **parameter does**
-and which **types it accepts**.
+:class:`~daf.client.ACCOUNT` object. You can use this button to gain knowledge about what each parameter means.
 
-.. image:: images/gui-help-search.png
-    :align: center
-
+When defining structured data there is an additional **Template** button which allows users to save (or load) the current
+parameters to (from) a JSON file. This is simillar to :ref:`Schema backup & Script generation (GUI)` except it only
+backups the current object.
 
 .. note:: Some data types will have additional widgets, such as Color Picker or Datetime select.
 
-In the main frame (below the toolbar) we can see different labels and dropdown menus with one button on the right side.
-These represent the **parameters** of the corresponding objects.
 
-Defining object parameters
----------------------------
 Depending on the datatype each parameter accepts, we can either:
 
 1. Select a value from a predefined list by clicking the little arrow in the dropdown menu:
 
 .. image:: images/gui-predefined-value-select.png
     :align: center
-    :width: 10cm
+    :height: 300
 
 2. Create new value by clicking on the button on the right side of the dropdown and clicking *New <datatype>*,
-   which will open another definition window.
+   which will open another definition frame.
 
-.. image:: images/gui-new-item-define.png
-    :align: center
-    :width: 10cm
+.. grid:: 2
 
-.. image:: images/gui-new-item-define-string-window.png
-    :align: center
-    :width: 10cm
+    .. grid-item::
+
+        .. image:: images/gui-new-item-define.png
+            :height: 300
+
+
+    .. grid-item::
+
+        .. image:: images/gui-new-item-define-string-window.png
+            :height: 300
 
 
 
 3. Edit a value (selected in the dropdown) by clicking on the button on the right side of the dropdown and clicking
-   *Edit selected*, which will open a new definition window for the specific datatype and load in the previously defined
+   *Edit selected*, which will open a new definition frame for the specific datatype and load in the previously defined
    values.
 
-.. image:: images/gui-new-item-edit.png
-    :align: center
-    :scale: 40%
 
+.. grid:: 2
 
-.. image:: images/gui-new-item-edit-string-window.png
-    :align: center
-    :scale: 40%
+    .. grid-item::
+
+        .. image:: images/gui-new-item-edit.png
+            :height: 300
+
+    .. grid-item::
+
+        .. image:: images/gui-new-item-edit-string-window.png
+            :height: 300
 
 
 
@@ -115,7 +147,7 @@ To define an account we can choose from various parameters, the important ones f
 
 
 After defining the ``token`` and other normal parameters, we can define the servers. Defining servers will open up a new
-definition window which allows you to define multiple GUILD objects.
+definition frame which allows you to define multiple GUILD objects.
 
 
 .. figure:: images/gui-new-server-list.png

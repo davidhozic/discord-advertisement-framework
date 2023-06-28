@@ -99,17 +99,17 @@ def setup_additional_widget_file_chooser_logger(w: ttk.Button, frame):
 def setup_additional_live_update(w: ttk.Button, frame):
     # Don't have a bound object instance
     if (
-        (oi := frame.old_object_info) is None or
+        (oi := frame.old_gui_data) is None or
         oi.real_object is None
     ):
         return
 
     def _callback(*args):
         async def update():
-            old = frame.old_object_info
+            old = frame.old_gui_data
             values = {
                 k: convert_to_objects(v)
-                for k, v in frame._read_gui_values().items()
+                for k, v in frame.get_gui_data().items()
                 if not isinstance(v, str) or v != ''
             }
             connector = get_connection()
@@ -125,7 +125,7 @@ def setup_additional_live_update(w: ttk.Button, frame):
 def setup_additional_live_refresh(w: ttk.Button, frame):
     # Don't have a bound object instance
     if (
-        (oi := frame.old_object_info) is None or
+        (oi := frame.old_gui_data) is None or
         oi.real_object is None
     ):
         return
@@ -136,13 +136,12 @@ def setup_additional_live_refresh(w: ttk.Button, frame):
             connection = get_connection()
             # Need to do this on all previous frames, otherwise we would have wrong data
             for frame_ in reversed(opened_frames):
-                old_object_info = frame_.old_object_info
-                if not isinstance(old_object_info, list) and hasattr(old_object_info.real_object, "_daf_id"):
-                    real = await connection.refresh(old_object_info.real_object)  # Get refresh object from DAF
-                    frame_._update_old_object(convert_to_object_info(real, True))
-                    frame_.load()
+                old_gui_data = frame_.old_gui_data
+                if not isinstance(old_gui_data, list) and hasattr(old_gui_data.real_object, "_daf_id"):
+                    real = await connection.refresh(old_gui_data.real_object)  # Get refresh object from DAF
+                    frame_.load(convert_to_object_info(real, True))
 
-                frame_.save_gui_values()
+                frame_.remember_gui_data()
 
         async_execute(refresh(), parent_window=frame.origin_window)
 
