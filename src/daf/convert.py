@@ -6,6 +6,7 @@ It is also responsible for doing the reverse, which is converting those other fo
 from typing import Union, Any
 from contextlib import suppress
 from enum import Enum
+from inspect import isclass
 
 import decimal
 import importlib
@@ -299,6 +300,9 @@ def convert_object_to_semi_dict(object_: object) -> dict:
     if isinstance(object_, Enum):
         return {"enum_type": f"{object_type.__module__}.{object_type.__name__}", "value": object_.value}
 
+    if isclass(object_):
+        return {"class_path": f"{object_.__module__}.{object_.__name__}"}
+
     return _convert_json_slots(object_)
 
 
@@ -372,7 +376,10 @@ def convert_from_semi_dict(d: Union[dict, list, Any], use_bound: bool = False):
     # Either an object serialized to dict or a normal dictionary
     elif isinstance(d, dict):
         if "enum_type" in d:  # It's a JSON converted Enum
-            return __convert_to_enum()            
+            return __convert_to_enum()
+
+        if "class_path" in d:
+            return import_class(d["class_path"])
 
         if "object_type" not in d:  # It's a normal dictionary
             return __convert_to_dict()

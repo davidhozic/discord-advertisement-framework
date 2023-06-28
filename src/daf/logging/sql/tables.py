@@ -197,7 +197,7 @@ class MessageChannelLOG(ORMBase):
 
     __tablename__ = "MessageChannelLOG"
 
-    log_id: Mapped[int] = mapped_column(Integer, ForeignKey("MessageLOG.id"), primary_key=True)
+    log_id: Mapped[int] = mapped_column(Integer, ForeignKey("MessageLOG.id", ondelete="cascade"), primary_key=True)
     channel_id: Mapped[int] = mapped_column(Integer, ForeignKey("CHANNEL.id"), primary_key=True)
     reason = mapped_column(String(3072))
 

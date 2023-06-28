@@ -441,6 +441,36 @@ class Application():
                 lst_history.clear()
                 lst_history.insert(tk.END, *items)
 
+            def show_log(listbox: ListBoxScrolled, type_):
+                selection = listbox.curselection()
+                if len(selection) == 1:
+                    object_: ObjectInfo = listbox.get()[selection[0]]
+                    self.open_object_edit_window(
+                        type_,
+                        listbox,
+                        old_data=object_,
+                        check_parameters=False,
+                        allow_save=False
+                    )
+                else:
+                    tkdiag.Messagebox.show_error("Select ONE item!", "Empty list!")
+
+            async def delete_logs_async(logs: List[int]):
+                logger = await self.connection.get_logger()
+                if not isinstance(logger, daf.LoggerSQL):
+                    raise ValueError("Analytics only allowed when using LoggerSQL")
+
+                await self.connection.execute_method(logger, "delete_logs", table=log_class, primary_keys=logs)
+
+            @gui_confirm_action
+            def delete_logs(listbox: ListBoxScrolled):
+                selection = listbox.curselection()
+                if len(selection):
+                    all_ = listbox.get()
+                    async_execute(delete_logs_async([all_[i].data["id"] for i in selection]))
+                else:
+                    tkdiag.Messagebox.show_error("Select atlest one item!", "Selection error.")
+
             frame_message = ttk.Frame(tab_analytics, padding=(dpi_5, dpi_5))
             tab_analytics.add(frame_message, text=tab_name)
             frame_msg_history = ttk.Labelframe(frame_message, padding=(dpi_10, dpi_10), text="Logs", bootstyle="primary")
@@ -462,10 +492,19 @@ class Application():
             ).pack(side="left", fill=tk.X)
             ttk.Button(
                 frame_msg_history_bnts,
-                command=lambda: self.show_log(lst_history, log_class),
+                command=lambda: show_log(lst_history, log_class),
                 text="View log"
             ).pack(side="left", fill=tk.X)
+            ttk.Button(
+                frame_msg_history_bnts,
+                command=lambda: delete_logs(lst_history),
+                text="Delete selected"
+            ).pack(side="left", fill=tk.X)
             lst_history = ListBoxScrolled(frame_msg_history)
+            lst_history.listbox.unbind_all("<Delete>")
+            lst_history.listbox.unbind_all("<BackSpace>")
+            lst_history.listbox.bind("<Delete>", lambda e: delete_logs(lst_history))
+            lst_history.listbox.bind("<BackSpace>", lambda e: delete_logs(lst_history))
             lst_history.pack(expand=True, fill=tk.BOTH)
 
             # Number of messages
@@ -596,20 +635,6 @@ class Application():
             self.list_live_objects.insert(tk.END, *object_infos)
 
         async_execute(load_accounts(), parent_window=self.win_main)
-
-    def show_log(self, listbox: ListBoxScrolled, type_):
-        selection = listbox.curselection()
-        if len(selection) == 1:
-            object_: ObjectInfo = listbox.get()[selection[0]]
-            self.open_object_edit_window(
-                type_,
-                listbox,
-                old_data=object_,
-                check_parameters=False,
-                allow_save=False
-            )
-        else:
-            tkdiag.Messagebox.show_error("Select ONE item!", "Empty list!")
 
     def edit_logger(self):
         selection = self.combo_logging_mgr.current()
