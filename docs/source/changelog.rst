@@ -34,7 +34,7 @@ Releases
 
 v2.9
 =================
-GUI:
+- GUI:
 
   - Template backups for each structured objects.
   - Rearanging of list items inside GUI listboxes
@@ -42,7 +42,7 @@ GUI:
   - Dictionary editing - GUI nows allows to edit / view dictionary types (JSON). This could eg. be used
     to view SQL log's content which is saved to the database into JSON format.
 
-Web (browser) layer:
+- Web (browser) layer:
 
   - Time between guild joins increased to 25 seconds to prevent rate limits.
   - Searching for invite links will be ignored if the user is already joined into the belonging guild.
