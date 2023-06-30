@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    runs-on: ${{matrix.buildplat[0]}}
+    runs-on: ${{matrix.os[0]}}
 
     strategy:
       matrix:
