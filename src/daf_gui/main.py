@@ -45,7 +45,6 @@ import daf
 import webbrowser
 
 
-
 WIN_UPDATE_DELAY = 0.005
 CREDITS_TEXT = \
 """
@@ -65,6 +64,12 @@ OPTIONAL_MODULES = [
     ("SQL logging", "sql", daf.logging.sql.SQL_INSTALLED),
     ("Voice messages", "voice", daf.dtypes.GLOBALS.voice_installed),
     ("Web features (Chrome)", "web", daf.web.GLOBALS.selenium_installed),
+]
+
+
+STARTUP_MESSAGES = [
+    ("Welcome to DAF!", "If you need help please refer the 'About' tab."),
+    ("Deprecation notice [Youtube]", "Youtube streaming will be removed in version v2.10 in favor of faster loading times."),
 ]
 
 
@@ -139,14 +144,13 @@ class Application():
         # Credits tab
         self.init_credits_tab()
 
-        self.tabman_mf.select(1)
-
         # Status variables
         self._daf_running = False
         self._window_opened = True
 
-        # On close configuration
+        # Window config
         self.win_main.protocol("WM_DELETE_WINDOW", self.close_window)
+        self.tabman_mf.select(1)
 
         # Connection
         self.connection: AbstractConnectionCLIENT = None
@@ -393,6 +397,11 @@ class Application():
             text="Documentation",
             command=lambda: webbrowser.open(DOC_URL)
         ).grid(row=0, column=1)
+        ttk.Button(
+            info_bnts_frame,
+            text="My Discord server",
+            command=lambda: webbrowser.open(DOC_URL)
+        ).grid(row=0, column=2)
         ttk.Label(self.tab_info, text="Like the app? Give it a star :) on GitHub (^)").pack(pady=dpi_10)
         ttk.Label(self.tab_info, text=CREDITS_TEXT).pack()
         label_logo = ttk.Label(self.tab_info, image=logo)
