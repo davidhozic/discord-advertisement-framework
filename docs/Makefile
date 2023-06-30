@@ -7,7 +7,7 @@ SPHINXOPTS    ?=
 SPHINXBUILD   ?= sphinx-build
 SOURCEDIR     ?= source
 BUILDDIR      ?= build
-USE_LANGUAGE  ?= en
+USE_LANGUAGE  ?= sl
 
 export LANGUAGE=$(USE_LANGUAGE)
 
@@ -24,7 +24,7 @@ help:
 # "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).
 
 clean:
-	python3 ./setup.py --clean
+	python3 ./setup.py --clean --start-dir $(SOURCEDIR)
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
 pdf: latex
@@ -34,5 +34,5 @@ pdf: latex
 
 
 %: Makefile
-	python3 ./setup.py
+	python3 ./setup.py --start-dir $(SOURCEDIR)
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(_BUILD_DIR)" $(SPHINXOPTS) $(O)

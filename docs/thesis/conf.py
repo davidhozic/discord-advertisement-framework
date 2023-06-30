@@ -75,14 +75,13 @@ autodoc_default_options = {
 }
 
 
-
 # Intersphinx
 intersphinx_mapping = {
     'PyCord': ("https://docs.pycord.dev/en/stable/", None),
-    "DAF" : ("https://daf.davidhozic.com/en/stable/", None),
-    "Python" : ("https://docs.python.org/3/", None),
-    "Sphinx" : ("https://www.sphinx-doc.org/en/master", None),
-    "SQLAlchemy" : ("https://docs.sqlalchemy.org/en/20/", None)
+    "DAF": ("https://daf.davidhozic.com/en/stable/", None),
+    "Python": ("https://docs.python.org/3/", None),
+    "Sphinx": ("https://www.sphinx-doc.org/en/master", None),
+    "SQLAlchemy": ("https://docs.sqlalchemy.org/en/20/", None)
 }
 
 # ----------- HTML ----------- #
@@ -112,11 +111,14 @@ with open(f"./{language}/titlepage.tex", "r", encoding="utf-8") as reader:
     latex_title_page = reader.read()
 
 # latex_engine = 'xelatex'
-literal_block_str =  {
+literal_block_str = {
     "en": r"\listof{literalblock}{List of literal blocks}",
     "sl": r"\listof{literalblock}{Seznam literalnih blokov}"
 }
 latex_elements = {
+    "sphinxsetup": r"""
+        verbatimwithframe=false,
+    """,
     "tableofcontents": r"""
         \tableofcontents
         \listoffigures
@@ -128,8 +130,8 @@ latex_elements = {
     #     \setromanfont{Times New Roman}
     #     \setsansfont{Arial}
     #     """,
-    "papersize" : "a4paper",
-    "pointsize" : "12pt",
+    "papersize": "a4paper",
+    "pointsize": "12pt",
     'preamble': r'''
         \usepackage{afterpage}
 

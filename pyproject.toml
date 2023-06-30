@@ -3,8 +3,12 @@ requires = [
     "setuptools>=62.6,<66",
     "setuptools-scm>=6.2,<8",
     "wheel",
+    "nuitka",
+    "toml"
 ]
-build-backend = "setuptools.build_meta"
+
+build-backend = "nuitka.distutils.Build"
+
 
 [project]
 name = "discord-advert-framework"

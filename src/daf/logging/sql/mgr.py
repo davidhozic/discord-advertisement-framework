@@ -46,7 +46,7 @@ try:
     from .tables import *
 
     from sqlalchemy import (
-        Integer, String, select, text, func, case
+        Integer, String, select, text, func, case, delete, event, Engine
     )
     from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
     from sqlalchemy.engine import URL as SQLURL, create_engine
@@ -56,6 +56,7 @@ try:
         Session,
     )
     import sqlalchemy as sqa
+    import aiosqlite
 
     SQL_INSTALLED = True
 except ImportError:
@@ -471,6 +472,14 @@ class LoggerSQL(logging.LoggerBASE):
             )
 
             self.engine = create_engine_(sqlurl, echo=SQL_ENABLE_DEBUG)
+
+            if dialect == "sqlite":  # Enable foreign keys for SQLite to allow cascades
+                def on_connect(dbapi_conn, conn_record):
+                    cursor = dbapi_conn.cursor()
+                    cursor.execute("PRAGMA foreign_keys=ON")
+
+                event.listen(self.engine.sync_engine if self.is_async else self.engine, "connect", on_connect)
+
             self._run_async = _run_async
 
             class SessionWrapper(session_class):
@@ -1230,6 +1239,21 @@ class LoggerSQL(logging.LoggerBASE):
                 select(select_items).where(*conditions).order_by(order_by).limit(limit)
             )
             return list(*zip(*logs.unique().all()))
+
+    async def delete_logs(self, table: type, primary_keys: List[int]):
+        """
+        Method used to delete log objects objects.
+
+        Parameters
+        ------------
+        table: MessageLOG | InviteLOG
+            The logging table to delete from.
+        primary_keys: List[int]
+            List of Primary Key IDs that match the rows of the table to delete.
+        """
+        async with self.session_maker() as session:
+            await self._run_async(session.execute, delete(table).where(table.id.in_(primary_keys)))
+            await self._run_async(session.commit)
 
     @misc._async_safe("safe_sem", 1)
     async def update(self, **kwargs):

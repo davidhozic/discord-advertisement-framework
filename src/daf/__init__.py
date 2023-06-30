@@ -11,7 +11,7 @@ from .logging import *
 from .web import *
 from .convert import *
 from .remote import *
-
+from pathlib import Path as __Path
 
 
 from .misc import DOCUMENTATION_MODE
@@ -19,4 +19,4 @@ if DOCUMENTATION_MODE:
     from .misc import *
 
 
-VERSION = "2.8.3"
+VERSION = "2.9.0"

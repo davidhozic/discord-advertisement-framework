@@ -7,6 +7,7 @@ from typeguard import typechecked
 from urllib.parse import urlparse
 
 from . import misc
+from .logging.tracing import *
 
 
 T = TypeVar("T")
@@ -200,17 +201,12 @@ class AUDIO:
 
         url_info = urlparse(filename)  # Check if it's youtube
         if "www.youtube.com" == url_info.hostname:
-            try:
-                self.is_stream = True
-                youtube_dl = yt_dlp.YoutubeDL(params=self.ytdl_options)
-                data = youtube_dl.extract_info(filename, download=False)
-                if "entries" in data:
-                    data = data["entries"][0]  # Is a playlist, get the first entry
-
-                self.title = data["title"]
-
-            except yt_dlp.DownloadError:
-                raise ValueError(f'The audio from "{self.orig}" could not be streamed')
+            trace(
+                "Youtube streaming is deprecated in favor of faster loading times! Scheduled for removal in v2.10.",
+                TraceLEVELS.DEPRECATED
+            )
+            self.is_stream = True
+            self._get_yt_stream()
         else:
             try:
                 with open(self.url):
@@ -218,23 +214,26 @@ class AUDIO:
             except FileNotFoundError:
                 raise ValueError(f"The file {self.url} could not be found.")
 
+    def _get_yt_stream(self):
+        try:
+            youtube_dl = yt_dlp.YoutubeDL(params=self.ytdl_options)
+            data = youtube_dl.extract_info(self.orig, download=False)
+            if "entries" in data:
+                data = data["entries"][0]  # Is a playlist, get the first entry
+
+            self.title = data["title"]
+            return data["url"]
+
+        except Exception:
+            raise ValueError(f'The audio from "{self.orig}" could not be streamed')
+
     def __str__(self):
         return f"AUDIO({str(self.to_dict())})"
 
     @property
     def url(self):
         if self.is_stream:
-            try:
-                youtube_dl = yt_dlp.YoutubeDL(params=self.ytdl_options)
-                data = youtube_dl.extract_info(self.orig, download=False)
-                if "entries" in data:
-                    data = data["entries"][0]  # Is a playlist, get the first entry
-
-                self.title = data["title"]
-                return data["url"]
-
-            except yt_dlp.DownloadError:
-                raise ValueError(f'The audio from "{self.orig}" could not be streamed')
+            return self._get_yt_stream()
         else:
             return self.orig
 

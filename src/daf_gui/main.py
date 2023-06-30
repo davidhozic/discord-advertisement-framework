@@ -45,7 +45,6 @@ import daf
 import webbrowser
 
 
-
 WIN_UPDATE_DELAY = 0.005
 CREDITS_TEXT = \
 """
@@ -65,6 +64,12 @@ OPTIONAL_MODULES = [
     ("SQL logging", "sql", daf.logging.sql.SQL_INSTALLED),
     ("Voice messages", "voice", daf.dtypes.GLOBALS.voice_installed),
     ("Web features (Chrome)", "web", daf.web.GLOBALS.selenium_installed),
+]
+
+
+STARTUP_MESSAGES = [
+    ("Welcome to DAF!", "If you need help please refer the 'About' tab."),
+    ("Deprecation notice [Youtube]", "Youtube streaming will be removed in version v2.10 in favor of faster loading times."),
 ]
 
 
@@ -139,14 +144,13 @@ class Application():
         # Credits tab
         self.init_credits_tab()
 
-        self.tabman_mf.select(1)
-
         # Status variables
         self._daf_running = False
         self._window_opened = True
 
-        # On close configuration
+        # Window config
         self.win_main.protocol("WM_DELETE_WINDOW", self.close_window)
+        self.tabman_mf.select(1)
 
         # Connection
         self.connection: AbstractConnectionCLIENT = None
@@ -177,6 +181,7 @@ class Application():
         # Accounts list. Defined here since it's needed below
         self.lb_accounts = ListBoxScrolled(frame_tab_account)
 
+        @gui_except
         @gui_confirm_action
         def import_accounts():
             "Imports account from live view"
@@ -192,6 +197,7 @@ class Application():
                 self.lb_accounts.clear()
                 self.lb_accounts.insert(tk.END, *values)
 
+            gui_daf_assert_running()
             async_execute(import_accounts_async(), parent_window=self.win_main)
 
         menu_bnt = ttk.Menubutton(
@@ -310,7 +316,7 @@ class Application():
                 self.open_object_edit_window(
                     daf.ACCOUNT,
                     list_live_objects,
-                    old=object_
+                    old_data=object_
                 )
             else:
                 tkdiag.Messagebox.show_error("Select one item!", "Empty list!")
@@ -338,18 +344,18 @@ class Application():
         list_live_objects.pack(fill=tk.BOTH, expand=True)
         self.list_live_objects = list_live_objects
         # The default bind is removal from list and not from actual daf.
-        list_live_objects.listbox.unbind("<BackSpace>")
-        list_live_objects.listbox.unbind("<Delete>")
-        list_live_objects.listbox.bind("<BackSpace>", lambda e: remove_account())
-        list_live_objects.listbox.bind("<Delete>", lambda e: remove_account())
+        list_live_objects.unbind("<BackSpace>")
+        list_live_objects.unbind("<Delete>")
+        list_live_objects.bind("<BackSpace>", lambda e: remove_account())
+        list_live_objects.bind("<Delete>", lambda e: remove_account())
 
     def init_output_tab(self):
         self.tab_output = ttk.Frame(self.tabman_mf)
         self.tabman_mf.add(self.tab_output, text="Output")
         text_output = ListBoxScrolled(self.tab_output)
-        text_output.listbox.unbind("<Control-c>")
-        text_output.listbox.unbind("<BackSpace>")
-        text_output.listbox.unbind("<Delete>")
+        text_output.unbind("<Control-c>")
+        text_output.unbind("<BackSpace>")
+        text_output.unbind("<Delete>")
         text_output.pack(fill=tk.BOTH, expand=True)
 
         class STDIOOutput:
@@ -391,6 +397,11 @@ class Application():
             text="Documentation",
             command=lambda: webbrowser.open(DOC_URL)
         ).grid(row=0, column=1)
+        ttk.Button(
+            info_bnts_frame,
+            text="My Discord server",
+            command=lambda: webbrowser.open(DOC_URL)
+        ).grid(row=0, column=2)
         ttk.Label(self.tab_info, text="Like the app? Give it a star :) on GitHub (^)").pack(pady=dpi_10)
         ttk.Label(self.tab_info, text=CREDITS_TEXT).pack()
         label_logo = ttk.Label(self.tab_info, image=logo)
@@ -439,6 +450,36 @@ class Application():
                 lst_history.clear()
                 lst_history.insert(tk.END, *items)
 
+            def show_log(listbox: ListBoxScrolled, type_):
+                selection = listbox.curselection()
+                if len(selection) == 1:
+                    object_: ObjectInfo = listbox.get()[selection[0]]
+                    self.open_object_edit_window(
+                        type_,
+                        listbox,
+                        old_data=object_,
+                        check_parameters=False,
+                        allow_save=False
+                    )
+                else:
+                    tkdiag.Messagebox.show_error("Select ONE item!", "Empty list!")
+
+            async def delete_logs_async(logs: List[int]):
+                logger = await self.connection.get_logger()
+                if not isinstance(logger, daf.LoggerSQL):
+                    raise ValueError("Analytics only allowed when using LoggerSQL")
+
+                await self.connection.execute_method(logger, "delete_logs", table=log_class, primary_keys=logs)
+
+            @gui_confirm_action
+            def delete_logs(listbox: ListBoxScrolled):
+                selection = listbox.curselection()
+                if len(selection):
+                    all_ = listbox.get()
+                    async_execute(delete_logs_async([all_[i].data["id"] for i in selection]))
+                else:
+                    tkdiag.Messagebox.show_error("Select atlest one item!", "Selection error.")
+
             frame_message = ttk.Frame(tab_analytics, padding=(dpi_5, dpi_5))
             tab_analytics.add(frame_message, text=tab_name)
             frame_msg_history = ttk.Labelframe(frame_message, padding=(dpi_10, dpi_10), text="Logs", bootstyle="primary")
@@ -460,10 +501,19 @@ class Application():
             ).pack(side="left", fill=tk.X)
             ttk.Button(
                 frame_msg_history_bnts,
-                command=lambda: self.show_log(lst_history, log_class),
+                command=lambda: show_log(lst_history, log_class),
                 text="View log"
             ).pack(side="left", fill=tk.X)
+            ttk.Button(
+                frame_msg_history_bnts,
+                command=lambda: delete_logs(lst_history),
+                text="Delete selected"
+            ).pack(side="left", fill=tk.X)
             lst_history = ListBoxScrolled(frame_msg_history)
+            lst_history.listbox.unbind_all("<Delete>")
+            lst_history.listbox.unbind_all("<BackSpace>")
+            lst_history.listbox.bind("<Delete>", lambda e: delete_logs(lst_history))
+            lst_history.listbox.bind("<BackSpace>", lambda e: delete_logs(lst_history))
             lst_history.pack(expand=True, fill=tk.BOTH)
 
             # Number of messages
@@ -595,25 +645,11 @@ class Application():
 
         async_execute(load_accounts(), parent_window=self.win_main)
 
-    def show_log(self, listbox: ListBoxScrolled, type_):
-        selection = listbox.curselection()
-        if len(selection) == 1:
-            object_: ObjectInfo = listbox.get()[selection[0]]
-            self.open_object_edit_window(
-                type_,
-                listbox,
-                old=object_,
-                check_parameters=False,
-                allow_save=False
-            )
-        else:
-            tkdiag.Messagebox.show_error("Select ONE item!", "Empty list!")
-
     def edit_logger(self):
         selection = self.combo_logging_mgr.current()
         if selection >= 0:
             object_: ObjectInfo = self.combo_logging_mgr.get()
-            self.open_object_edit_window(object_.class_, self.combo_logging_mgr, old=object_)
+            self.open_object_edit_window(object_.class_, self.combo_logging_mgr, old_data=object_)
         else:
             tkdiag.Messagebox.show_error("Select atleast one item!", "Empty list!")
 
@@ -621,7 +657,7 @@ class Application():
         selection = self.lb_accounts.curselection()
         if len(selection):
             object_: ObjectInfo = self.lb_accounts.get()[selection[0]]
-            self.open_object_edit_window(daf.ACCOUNT, self.lb_accounts, old=object_)
+            self.open_object_edit_window(daf.ACCOUNT, self.lb_accounts, old_data=object_)
         else:
             tkdiag.Messagebox.show_error("Select atleast one item!", "Empty list!")
 
@@ -752,7 +788,7 @@ daf.run(
             if accounts is not None:
                 accounts = convert_from_json(accounts)
                 self.lb_accounts.clear()
-                self.lb_accounts.listbox.insert(tk.END, *accounts)
+                self.lb_accounts.insert(tk.END, *accounts)
 
             # Load loggers
             logging_data = json_data.get("loggers")
@@ -864,7 +900,3 @@ def run():
     loop.run_until_complete(update_task())
     loop.run_until_complete(async_stop())
     asyncio.set_event_loop(None)
-
-
-if __name__ == "__main__":
-    run()

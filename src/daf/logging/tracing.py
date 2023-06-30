@@ -64,10 +64,10 @@ class TraceLEVELS(Enum):
 
 TRACE_COLOR_MAP = {
     TraceLEVELS.DEPRECATED: "\u001b[30m",
-    TraceLEVELS.ERROR:  "\u001b[31m",
-    TraceLEVELS.WARNING:  "\u001b[33m",
-    TraceLEVELS.NORMAL:  "\u001b[37m",
-    TraceLEVELS.DEBUG:  "\u001b[36m",
+    TraceLEVELS.ERROR: "\u001b[31m",
+    TraceLEVELS.WARNING: "\u001b[33m",
+    TraceLEVELS.NORMAL: "\u001b[37m",
+    TraceLEVELS.DEBUG: "\u001b[36m",
 }
 
 

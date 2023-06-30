@@ -1,29 +1,32 @@
 """
 Script that setups the environment before build.
-
-Input
------------
---setup-file
-    The file that contains information about what to copy where
---scripts-to-run
-    The scripts to run.
 """
+
 from pathlib import Path
+from argparse import ArgumentParser
 
 import subprocess
 import re
 import os
+import sys
 import glob
 import shutil
 import json
-import sys
 
-CLEAN = "--clean" in sys.argv
+
+parse = ArgumentParser()
+parse.add_argument("--clean", action="store_true", default=False, help="If given, it will only clean instead of copy and run")
+parse.add_argument("--start-dir", default="./", dest="start_dir", help="Where to start looking for dep_local.json")
+args = parse.parse_args()
+
+
+CLEAN_ARG: bool = args.clean
+START_DIR_ARG: str = args.start_dir
 
 # Work relatively to the setup script location
 os.chdir(os.path.dirname(__file__))
 
-for path, dirs, files in os.walk("./"):
+for path, dirs, files in os.walk(START_DIR_ARG):
     for file in files:
         if file == "dep_local.json":
             file = os.path.join(path, file)
@@ -49,7 +52,7 @@ for path, dirs, files in os.walk("./"):
 
                 srcdest = zip(_src, _dest)
                 for fromf, tof in srcdest:
-                    if CLEAN:
+                    if CLEAN_ARG:
                         if os.path.exists(tof):
                             os.remove(tof)
                     else:
@@ -58,7 +61,7 @@ for path, dirs, files in os.walk("./"):
                         shutil.copy2(fromf, tof)
 
             # Run scripts
-            if CLEAN:
+            if CLEAN_ARG:
                 os.chdir(cwd)
                 continue
 

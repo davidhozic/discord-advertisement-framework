@@ -2,7 +2,7 @@
 Modules contains definitions related to GUI object transformations.
 """
 
-from typing import Any, Union, List, get_type_hints, Generic, TypeVar
+from typing import Any, Union, List, get_type_hints, Generic, TypeVar, Iterable
 from contextlib import suppress
 from enum import Enum
 from inspect import signature
@@ -21,6 +21,7 @@ __all__ = (
     "convert_to_json",
     "convert_from_json",
     "convert_objects_to_script",
+    "convert_dict_to_object_info",
     "ADDITIONAL_ANNOTATIONS",
     "issubclass_noexcept",
 )
@@ -451,3 +452,37 @@ def convert_from_json(d: Union[dict, List[dict], Any]) -> ObjectInfo:
         return ObjectInfo(type_, data)
     else:
         return d
+
+
+def convert_dict_to_object_info(data: Union[dict, Iterable, Any]):
+    """
+    Method that converts a dict JSON into
+    It's object representation inside the GUI, that is ObjectInfo.
+
+    Parameters
+    -----------
+    data: str
+        The JSON data to convert.
+    """
+    class DictView:
+        def __init__(self) -> None:
+            raise NotImplementedError
+
+    annotations = {}
+    object_info_data = {}
+
+    for k, v in data.items():
+        if isinstance(v, dict):
+            v = convert_dict_to_object_info(v)
+            type_v = type(v)
+        elif isinstance(v, Iterable) and not isinstance(v, str):
+            v = [convert_dict_to_object_info(item) for item in v]
+            type_v = List[Any]
+        else:
+            type_v = type(v)
+
+        annotations[k] = type_v
+        object_info_data[k] = v
+
+    DictView.__init__.__annotations__ = annotations
+    return ObjectInfo(DictView, object_info_data)

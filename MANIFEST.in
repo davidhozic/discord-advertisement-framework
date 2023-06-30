@@ -1,4 +1,4 @@
-include README_pypi.rst
-include LICENSE
+include README.rst
+include LICENSE.md
 include *.txt
 include src/_discord/bin/*.dll

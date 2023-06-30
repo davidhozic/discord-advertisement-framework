@@ -32,6 +32,42 @@ Glossary
 Releases
 ----------------------
 
+v2.9
+=================
+- GUI:
+
+  - Template backups for each structured objects.
+  - Rearanging of list items inside GUI listboxes
+  - Connection timeout to a remote core is now 10 minutes for large datasets.
+  - Dictionary editing - GUI nows allows to edit / view dictionary types (JSON). This could eg. be used
+    to view SQL log's content which is saved to the database into JSON format.
+  - Deprecation notices when creating a new object.
+  - When opening color chooser and datetime select, the window now opens next to the button instead of window.
+
+- Deprecation:
+  
+  - Deprecated Youtube streaming in :class:`~daf.dtypes.AUDIO` in favor of faster loading times.
+    (Scheduled for removal in v2.10)
+
+- Logging:
+  
+  - SQL logs can now be deleted though the :py:meth:`~daf.logging.sql.LoggerSQL.delete_logs`.
+
+
+- Web (browser) layer:
+
+  - Time between guild joins increased to 25 seconds to prevent rate limits.
+  - Searching for invite links will be ignored if the user is already joined into the belonging guild.
+
+
+v2.8.4
+=================
+- Fixed web browser waiting time being too little when searching invite links
+- Fixed web browser could not create directory (username had a new line after it, now it auto strips that)
+- Fix GUI not allowing to define inherited classes (eg. logging manager's fallback that inherits LoggerBASE)
+- Fix item not in list error upon saving if an item was written inside a GUI's dropdown menu directly and then edited.
+
+
 v2.8.3
 =================
 - Fixed new guilds being added whenever :class:`daf.client.ACCOUNT`'s update method failed.
