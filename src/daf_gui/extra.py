@@ -33,7 +33,7 @@ class AdditionalWidget:
 
 def setup_additional_widget_datetime(w: ttk.Button, frame):
     def _callback(*args):
-        date = tkdiag.Querybox.get_date(frame, title="Select the date")
+        date = tkdiag.Querybox.get_date(w, title="Select the date")
         for attr in {"year", "month", "day"}:
             widget, types_ = frame._map.get(attr)
             value = getattr(date, attr)
@@ -49,7 +49,7 @@ def setup_additional_widget_datetime(w: ttk.Button, frame):
 def setup_additional_widget_color_picker(w: ttk.Button, frame):
     def _callback(*args):
         widget, types = frame._map.get("value")
-        _ = tkdiag.Querybox.get_color(frame, "Choose color")
+        _ = tkdiag.Querybox.get_color(w, "Choose color")
         if _ is None:
             return
 

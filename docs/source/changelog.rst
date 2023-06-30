@@ -41,6 +41,18 @@ v2.9
   - Connection timeout to a remote core is now 10 minutes for large datasets.
   - Dictionary editing - GUI nows allows to edit / view dictionary types (JSON). This could eg. be used
     to view SQL log's content which is saved to the database into JSON format.
+  - Deprecation notices when creating a new object.
+  - When opening color chooser and datetime select, the window now opens next to the button instead of window.
+
+- Deprecation:
+  
+  - Deprecated Youtube streaming in :class:`~daf.dtypes.AUDIO` in favor of faster loading times.
+    (Scheduled for removal in v2.10)
+
+- Logging:
+  
+  - SQL logs can now be deleted though the :py:meth:`~daf.logging.sql.LoggerSQL.delete_logs`.
+
 
 - Web (browser) layer:
 

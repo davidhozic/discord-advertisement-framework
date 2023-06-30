@@ -7,6 +7,7 @@ from typeguard import typechecked
 from urllib.parse import urlparse
 
 from . import misc
+from .logging.tracing import *
 
 
 T = TypeVar("T")
@@ -200,6 +201,10 @@ class AUDIO:
 
         url_info = urlparse(filename)  # Check if it's youtube
         if "www.youtube.com" == url_info.hostname:
+            trace(
+                "Youtube streaming is deprecated in favor of faster loading times! Scheduled for removal in v2.10.",
+                TraceLEVELS.DEPRECATED
+            )
             self.is_stream = True
             self._get_yt_stream()
         else:

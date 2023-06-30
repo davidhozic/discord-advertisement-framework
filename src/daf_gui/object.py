@@ -72,6 +72,11 @@ ADDITIONAL_PARAMETER_VALUES = {
     }
 }
 
+DEPRECATION_NOTICES = {
+    daf.AUDIO: [("Youtube streaming", "2.10", "Faster loading times.")]
+}
+
+
 TEXT_MAX_UNDO = 20
 LAMBDA_TYPE = type(lambda x: None)
 
@@ -118,6 +123,16 @@ class NewObjectFrameBase(ttk.Frame):
         super().__init__(master=parent)
         self.init_toolbar_frame(class_)
         self.init_main_frame()
+
+        # Deprecation notices
+        if not len(notices := DEPRECATION_NOTICES.get(class_, [])):
+            return
+
+        tkdiag.Messagebox.show_warning(
+            f"\n{'-'*30}\n".join(f"[{title}] Scheduled for removal in v{version}.\nReason: '{reason}'" for title, version, reason in notices),
+            "Deprecation notice",
+            self
+        )
 
     @staticmethod
     def get_cls_name(cls):
