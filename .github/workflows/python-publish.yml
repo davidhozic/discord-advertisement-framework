@@ -47,7 +47,7 @@ jobs:
       uses: actions/cache@v3
       with:
         path: dist/*
-        key: ${{matrix.python}}-${{matrix.os[0]}}-${{hashFiles('dist/*')}}
+        key: ${{matrix.python}}-${{matrix.os[0]}}-${{hashFiles('**/daf/__init__.py')}}
 
   # Publish job
   publish:
@@ -65,7 +65,7 @@ jobs:
         uses: actions/cache/restore@v3
         with:
           path: dist/*
-          key: ${{matrix.python}}-${{matrix.os[0]}}-${{hashFiles('dist/*')}}
+          key: ${{matrix.python}}-${{matrix.os[0]}}-${{hashFiles('**/daf/__init__.py')}}
 
       - name: Publish package
         uses: pypa/gh-action-pypi-publish@f5622bde02b04381239da3573277701ceca8f6a0
