@@ -58,6 +58,7 @@ This is written as part of my bachelor thesis as a degree finishing project
 
 GITHUB_URL = "https://github.com/davidhozic/discord-advertisement-framework"
 DOC_URL = f"https://daf.davidhozic.com/en/v{daf.VERSION}"
+DISCORD_URL = "https://discord.gg/DEnvahb2Sw"
 
 OPTIONAL_MODULES = [
     # Label, optional name, installed var
@@ -400,7 +401,7 @@ class Application():
         ttk.Button(
             info_bnts_frame,
             text="My Discord server",
-            command=lambda: webbrowser.open(DOC_URL)
+            command=lambda: webbrowser.open(DISCORD_URL)
         ).grid(row=0, column=2)
         ttk.Label(self.tab_info, text="Like the app? Give it a star :) on GitHub (^)").pack(pady=dpi_10)
         ttk.Label(self.tab_info, text=CREDITS_TEXT).pack()
