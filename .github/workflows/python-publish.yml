@@ -34,7 +34,7 @@ jobs:
         python -m build --wheel
 
     - name: Build source
-      if: ${{matrix.python-version == 3.8}} and ${{matrix.os == ubuntu-latest}}
+      if: ${{matrix.python-version == 3.8}} and ${{matrix.os == 'ubuntu-latest'}}
       run: |
         python -m build --sdist
 
