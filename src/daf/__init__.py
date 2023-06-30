@@ -20,4 +20,3 @@ if DOCUMENTATION_MODE:
 
 
 VERSION = "2.9.0"
-DAF_HOME_PATH = __Path.home().joinpath("./daf/")
