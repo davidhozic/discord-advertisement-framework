@@ -19,4 +19,4 @@ if DOCUMENTATION_MODE:
     from .misc import *
 
 
-VERSION = "2.9.0.3"
+VERSION = "2.9.0.4"
