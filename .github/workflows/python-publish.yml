@@ -19,6 +19,11 @@ jobs:
         python: ["cp38", "cp39", "cp310"]
 
     steps:
+    - name: Change file endings.
+      run: |
+        git config --global core.autocrlf false
+        git config --global core.eol lf
+
     - name: Checkout code
       uses: actions/checkout@v2
 
@@ -47,9 +52,8 @@ jobs:
     - name: Cache dist
       uses: actions/cache@v3
       with:
-        path: dist/*
+        path: dist/
         key: ${{matrix.python}}-${{matrix.os[0]}}-${{hashFiles('**/daf/__init__.py')}}
-
 
   # Publish job
   publish:
@@ -63,13 +67,18 @@ jobs:
         - [windows-2019, win_amd64]
         python: ["cp38", "cp39", "cp310"]
     steps:
+      - name: Change file endings.
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+
       - name: Checkout code
         uses: actions/checkout@v2
 
       - name: Restore dist
         uses: actions/cache/restore@v3
         with:
-          path: dist/*
+          path: dist/
           key: ${{matrix.python}}-${{matrix.os[0]}}-${{hashFiles('**/daf/__init__.py')}}
 
       - name: Publish package
