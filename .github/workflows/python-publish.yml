@@ -54,6 +54,7 @@ jobs:
       with:
         path: dist/
         key: ${{matrix.python}}-${{matrix.os[0]}}-${{hashFiles('**/daf/__init__.py')}}
+        enableCrossOsArchive: true
 
   # Publish job
   publish:
@@ -80,6 +81,7 @@ jobs:
         with:
           path: dist/
           key: ${{matrix.python}}-${{matrix.os[0]}}-${{hashFiles('**/daf/__init__.py')}}
+          enableCrossOsArchive: true
 
       - name: Publish package
         uses: pypa/gh-action-pypi-publish@f5622bde02b04381239da3573277701ceca8f6a0
