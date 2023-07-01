@@ -63,6 +63,9 @@ jobs:
         - [windows-2019, win_amd64]
         python: ["cp38", "cp39", "cp310"]
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
       - name: Restore dist
         uses: actions/cache/restore@v3
         with:
