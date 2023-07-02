@@ -50,7 +50,7 @@ class AbstractConnectionCLIENT:
         """
         raise NotImplementedError
 
-    async def add_account(self, obj: ObjectInfo[daf.client.ACCOUNT]):
+    async def add_account(self, obj: daf.client.ACCOUNT):
         """
         Adds and initializes a new account into DAF.
 
@@ -130,8 +130,8 @@ class LocalConnectionCLIENT(AbstractConnectionCLIENT):
         await daf.shutdown()
         self.connected = False
 
-    def add_account(self, obj: ObjectInfo[daf.client.ACCOUNT]):
-        return daf.add_object(convert_to_objects(obj))
+    def add_account(self, obj: daf.client.ACCOUNT):
+        return daf.add_object(obj)
 
     def remove_account(self, account: daf.client.ACCOUNT):
         return daf.remove_object(account)
@@ -228,11 +228,11 @@ class RemoteConnectionCLIENT(AbstractConnectionCLIENT):
         await self.session.close()
         self.connected = False
 
-    async def add_account(self, obj: ObjectInfo[daf.client.ACCOUNT]):
+    async def add_account(self, obj: daf.client.ACCOUNT):
         trace("Logging in.")
         response = await self._request(
             "POST", "/accounts",
-            account=daf.convert.convert_object_to_semi_dict(convert_to_objects(obj, cached=True))
+            account=daf.convert.convert_object_to_semi_dict(obj)
         )
         trace(response["message"])
 
