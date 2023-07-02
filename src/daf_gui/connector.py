@@ -50,13 +50,13 @@ class AbstractConnectionCLIENT:
         """
         raise NotImplementedError
 
-    async def add_account(self, obj: daf.client.ACCOUNT):
+    async def add_account(self, obj: ObjectInfo[daf.client.ACCOUNT]):
         """
         Adds and initializes a new account into DAF.
 
         Parameters
         --------------
-        account: daf.client.ACCOUNT
+        account: obj: ObjectInfo[daf.client.ACCOUNT]
             The account to add.
         """
         raise NotImplementedError
@@ -130,8 +130,8 @@ class LocalConnectionCLIENT(AbstractConnectionCLIENT):
         await daf.shutdown()
         self.connected = False
 
-    def add_account(self, obj: daf.client.ACCOUNT):
-        return daf.add_object(obj)
+    def add_account(self, obj: ObjectInfo[daf.client.ACCOUNT]):
+        return daf.add_object(convert_to_objects(obj))
 
     def remove_account(self, account: daf.client.ACCOUNT):
         return daf.remove_object(account)
@@ -174,6 +174,8 @@ class RemoteConnectionCLIENT(AbstractConnectionCLIENT):
     """
     TIMEOUT = 10 * 60  # * seconds / minute
 
+    __passwords__ = ("password", )
+
     def __init__(
         self,
         host: str,
@@ -207,7 +209,7 @@ class RemoteConnectionCLIENT(AbstractConnectionCLIENT):
             if response.status != 200:
                 raise web.HTTPException(reason=response.reason)
 
-            return await response.json()
+            return daf.misc.FrozenDict(await response.json())
 
     async def initialize(self, *args, **kwargs):
         try:
@@ -226,9 +228,12 @@ class RemoteConnectionCLIENT(AbstractConnectionCLIENT):
         await self.session.close()
         self.connected = False
 
-    async def add_account(self, obj: daf.client.ACCOUNT):
+    async def add_account(self, obj: ObjectInfo[daf.client.ACCOUNT]):
         trace("Logging in.")
-        response = await self._request("POST", "/accounts", account=daf.convert.convert_object_to_semi_dict(obj))
+        response = await self._request(
+            "POST", "/accounts",
+            account=daf.convert.convert_object_to_semi_dict(convert_to_objects(obj, cached=True))
+        )
         trace(response["message"])
 
     async def remove_account(self, account: daf.client.ACCOUNT):

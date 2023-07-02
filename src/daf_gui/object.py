@@ -440,7 +440,7 @@ class NewObjectFrameStruct(NewObjectFrameBase):
                 return
 
             with open(filename, "r", encoding="utf-8") as file:
-                json_data: dict = json.load(file)
+                json_data: dict = json.load(file, cls=daf.misc.FrozenDictDecoder)
                 object_info = convert_from_json(json_data)
                 # Get class_ attribute if we have the ObjectInfo type, if not just compare the actual type
                 if object_info.class_ is not self.class_:
@@ -631,7 +631,8 @@ class NewObjectFrameStruct(NewObjectFrameBase):
             None if self.old_gui_data is None else self.old_gui_data.real_object
         )
         if not ignore_checks and self.check_parameters and inspect.isclass(self.class_):  # Only check objects
-            convert_to_objects(object_)  # Tries to create instances to check for errors
+            # Cache the object created for faster
+            convert_to_objects(object_, cached=True)  # Tries to create instances to check for errors
 
         return object_
 

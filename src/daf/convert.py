@@ -3,7 +3,7 @@ The conversion module is responsible for converting Python objects into differen
 It is also responsible for doing the reverse, which is converting those other forms back into Python objects.
 """
 
-from typing import Union, Any
+from typing import Union, Any, Mapping
 from contextlib import suppress
 from enum import Enum
 from inspect import isclass
@@ -141,11 +141,11 @@ if logging.sql.SQL_INSTALLED:
         Function returns the decoder function which uses the ``cls`` parameter.
         It cannot be passed directly since for loop would update the ``cls`` parameter.
         """
-        def decoder_func(data: dict):
-            def _decode_object_type(cls, data: dict):
+        def decoder_func(data: Mapping):
+            def _decode_object_type(cls, data: Mapping):
                 new_object = cls.__new__(cls)
                 for k, v in data.items():
-                    if isinstance(v, (dict, list)):
+                    if isinstance(v, (Mapping, list)):
                         v = convert_from_semi_dict(v)
 
                     new_object.__dict__[k] = v
@@ -224,9 +224,9 @@ CONVERSION_ATTRS[message.DirectMESSAGE] = {
 }
 
 
-def convert_object_to_semi_dict(object_: object) -> dict:
+def convert_object_to_semi_dict(object_: object) -> Mapping:
     """
-    Converts an object into ObjectInfo.
+    Converts an object into dict.
 
     Parameters
     ---------------
@@ -276,7 +276,7 @@ def convert_object_to_semi_dict(object_: object) -> dict:
 
         return {"object_type": f"{type_object.__module__}.{type_object.__name__}", "data": data_conv}
 
-    def _convert_json_dict(object_: dict):
+    def _convert_json_dict(object_: Mapping):
         data_conv = {}
         for k, v in object_.items():
             data_conv[k] = convert_object_to_semi_dict(v)
@@ -294,7 +294,7 @@ def convert_object_to_semi_dict(object_: object) -> dict:
         object_ = [convert_object_to_semi_dict(value) for value in object_]
         return object_
 
-    if isinstance(object_, dict):
+    if isinstance(object_, Mapping):
         return _convert_json_dict(object_)
 
     if isinstance(object_, Enum):
@@ -306,7 +306,7 @@ def convert_object_to_semi_dict(object_: object) -> dict:
     return _convert_json_slots(object_)
 
 
-def convert_from_semi_dict(d: Union[dict, list, Any], use_bound: bool = False):
+def convert_from_semi_dict(d: Union[Mapping, list, Any], use_bound: bool = False):
     """
     Function that converts the ``d`` parameter which is a semi-dict back to the object
     representation.
@@ -344,7 +344,7 @@ def convert_from_semi_dict(d: Union[dict, list, Any], use_bound: bool = False):
         # Change the setattr function to default Python, since we just want to directly set attributes
         # Set saved attributes
         for k, v in d["data"].items():
-            if isinstance(v, (dict, list)):
+            if isinstance(v, (Mapping, list)):
                 v = convert_from_semi_dict(v, use_bound)
 
             setattr(_return, k, v)
@@ -371,10 +371,10 @@ def convert_from_semi_dict(d: Union[dict, list, Any], use_bound: bool = False):
 
     # List conversion, keeps the list but converts the values
     if isinstance(d, list):
-        return [convert_from_semi_dict(value, use_bound) if isinstance(value, dict) else value for value in d]
+        return [convert_from_semi_dict(value, use_bound) if isinstance(value, Mapping) else value for value in d]
 
     # Either an object serialized to dict or a normal dictionary
-    elif isinstance(d, dict):
+    elif isinstance(d, Mapping):
         if "enum_type" in d:  # It's a JSON converted Enum
             return __convert_to_enum()
 

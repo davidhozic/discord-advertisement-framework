@@ -2,9 +2,11 @@
     This module contains definitions regarding miscellaneous
     items that can appear in multiple modules
 """
-from typing import Coroutine, Callable, Any, Dict, Optional, Union
+from collections.abc import Callable
+from typing import Coroutine, Callable, Any, Dict, Optional, Union, Iterator
+from collections import Mapping
 from asyncio import Semaphore
-from functools import wraps
+from functools import wraps, lru_cache
 from inspect import getfullargspec
 from copy import copy
 from os import environ
@@ -14,6 +16,7 @@ from contextlib import suppress
 from typeguard import typechecked
 
 import weakref
+import json
 
 
 ###############################
@@ -270,9 +273,84 @@ def track_id(cls):
             return _r
 
         def __getattr__(self, __key: str):
+            "Method that gets called whenever an attribute is not found."
             if __key == "_daf_id":
                 return -1
 
             raise AttributeError(__key)
 
     return TrackedClass
+
+
+def cache_wrapper(size: int = 128, typed: bool = False):
+    def _cache_decor(fnc):
+        lru_wrapper = lru_cache(maxsize=size, typed=typed)(fnc)
+
+        @wraps(fnc)
+        def wrapper(object_, *args, **kwargs):
+            """
+            Wrapper that allows the function results to be obtained from cache,
+            if the *enable_cache* parameter is True.
+            """
+            with suppress(Exception):
+                return lru_wrapper(object_, *args, **kwargs)
+
+            return fnc(object_, *args, **kwargs)
+
+        return wrapper
+
+    return _cache_decor
+
+
+# Caching
+class FrozenDict(Mapping):
+    def __init__(self, *args, **kwargs) -> None:
+        dict_ = dict(*args, **kwargs)
+        data = {}
+        for k, v in dict_.items():
+            if isinstance(v, dict):
+                v = FrozenDict(v)
+
+            data[k] = v
+
+        self.dict = data.copy()
+        _hash = 0
+        for k, v in sorted(self.items()):
+            try:
+                _hash ^= hash((k, v))
+            except TypeError:  # Unhashables -> use id for hash
+                _hash ^= hash((k, id(v)))
+
+        self._hash = _hash
+
+    def __hash__(self) -> int:
+        return self._hash
+
+    def __eq__(self, __other: "FrozenDict") -> bool:
+        if isinstance(__other, FrozenDict):
+            return self.dict == __other.dict
+
+        return False
+
+    def __len__(self) -> int:
+        return len(self.dict)
+
+    def __getitem__(self, name: str):
+        return self.dict[name]
+
+    def __iter__(self) -> Iterator:
+        return iter(self.dict)
+
+
+class FrozenDictDecoder(json.JSONDecoder):
+    def decode(self, *args, **kwargs) -> Any:
+        return self._convert(super().decode(*args, **kwargs))
+
+    def _convert(self, item: Any):
+        if isinstance(item, dict):
+            return FrozenDict({k: self._convert(v) for k, v in item.items()})
+
+        if isinstance(item, list):
+            return [self._convert(a) for a in item]
+
+        return item

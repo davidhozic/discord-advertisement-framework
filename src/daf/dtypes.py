@@ -2,15 +2,13 @@
     The module contains definitions regarding the data types
     you can send using the xxxMESSAGE objects.
 """
-from typing import Any, Callable, TypeVar, Coroutine
+from typing import Any, Callable, Coroutine
 from typeguard import typechecked
 from urllib.parse import urlparse
 
 from . import misc
 from .logging.tracing import *
 
-
-T = TypeVar("T")
 
 __all__ = (
     "data_function",

@@ -304,9 +304,8 @@ class Application():
             gui_daf_assert_running()
             selection = combo_add_object_edit.combo.current()
             if selection >= 0:
-                fnc: ObjectInfo = combo_add_object_edit.combo.get()
-                fnc_data = convert_to_objects(fnc.data)
-                async_execute(self.connection.add_account(**fnc_data), parent_window=self.win_main)
+                account_oi: ObjectInfo = combo_add_object_edit.combo.get()
+                async_execute(self.connection.add_account(account_oi), parent_window=self.win_main)
             else:
                 tkdiag.Messagebox.show_error("Combobox does not have valid selection.", "Combo invalid selection")
 
@@ -447,7 +446,7 @@ class Application():
                 param_object = combo_history.combo.get()
                 param_object_params = convert_to_objects(param_object.data)
                 items = await self.connection.execute_method(logger, getter_history, **param_object_params)
-                items = convert_to_object_info(items, cache=True)
+                items = convert_to_object_info(items)
                 lst_history.clear()
                 lst_history.insert(tk.END, *items)
 
@@ -782,7 +781,7 @@ daf.run(
             return
 
         with open(filename, "r", encoding="utf-8") as file:
-            json_data = json.load(file)
+            json_data = json.load(file, cls=daf.misc.FrozenDictDecoder)
 
             # Load accounts
             accounts = json_data.get("accounts")
