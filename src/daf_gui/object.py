@@ -627,7 +627,7 @@ class NewObjectFrameStruct(NewObjectFrameBase):
         # Abstraction of the underlaying object
         object_ = ObjectInfo(
             self.class_,
-            daf.misc.FrozenDict(map_),
+            map_,
             # Don't erase the bind to the real object in case this is an edit of an existing ObjectInfo
             None if self.old_gui_data is None else self.old_gui_data.real_object
         )

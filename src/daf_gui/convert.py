@@ -160,7 +160,7 @@ class ObjectInfo(Generic[TClass]):
 
     def __init__(self, class_, data: Mapping, real_object: object = None) -> None:
         self.class_ = class_
-        self.data = data
+        self.data = daf.misc.FrozenDict(data)
         self.real_object = real_object
         self.__hash = 0
 
@@ -446,47 +446,24 @@ def convert_to_json(d: Union[ObjectInfo, List[ObjectInfo], Any]):
     return d
 
 
+@daf.misc.cache_wrapper(10000, True)
 def convert_from_json(d: Union[dict, List[dict], Any]) -> ObjectInfo:
     """
     Converts previously converted JSON back to ObjectInfo.
     """
-    if type(d) is list:
-        result = []
-        for item in d:
-            result.append(convert_from_json(item) if type(item) in {dict, list} else item)
-
+    if isinstance(d, list):
+        result = [convert_from_json(item) for item in d]
         return result
 
-    elif type(d) is dict:
-        type_: str = d["type"]
-        type_ = import_class(type_)
-        # type_split = type_.split('.')
-        # module = type_split[:len(type_split) - 1]
-        # type_ = type_split[-1]
-        # if module[0] == __name__.split(".")[-1]:
-        #     type_ = globals()[type_]
-        # else:
-        #     module_ = __import__(module[0])
-        #     module.pop(0)
-        #     for i, m in enumerate(module):
-        #         module_ = getattr(module_, module[i])
+    if isinstance(d, dict):
+        type_ = import_class(d["type"])
 
-        #     type_ = getattr(module_, type_)
-
-        # Simple object (or enum)
-        if "value" in d:
+        if "value" in d:  # Enum type or a single value type
             return type_(d["value"])
 
-        # ObjectInfo
-        data = dict(d["data"])
-        for k, v in data.items():
-            # List or dictionary and dictionary is a object representation of an object
-            if type(v) is list or type(v) is dict and d.get("type") is not None:
-                data[k] = convert_from_json(v)
+        return ObjectInfo(type_, {k: convert_from_json(v) for k, v in d["data"].items()})
 
-        return ObjectInfo(type_, data)
-    else:
-        return d
+    return d
 
 
 def convert_dict_to_object_info(data: Union[dict, Iterable, Any]):

@@ -303,39 +303,42 @@ def cache_wrapper(size: int = 128, typed: bool = False):
 
 
 class FrozenDict(Mapping):
-    def __init__(self, *args, **kwargs) -> None:
-        dict_ = dict(*args, **kwargs)
-        data = {}
-        for k, v in dict_.items():
-            if isinstance(v, dict):
-                v = FrozenDict(v)
+    def __init__(self, data):
+        if not isinstance(data, dict):
+            raise TypeError("Input must be a dictionary")
 
-            data[k] = v
+        self._data = {}
+        for key, value in data.items():
+            if isinstance(value, dict):
+                value = FrozenDict(value)
+            elif isinstance(value, list):
+                value = HashableList(value)
 
-        self.dict = data.copy()
-        _hash = 0
-        for k, v in sorted(self.items()):
-            try:
-                _hash ^= hash((k, v))
-            except TypeError:  # Unhashables -> use id for hash
-                _hash ^= hash((k, id(v)))
+            self._data[key] = value
 
-        self._hash = _hash
+        self._hash = None
 
-    def __hash__(self) -> int:
+    def __getitem__(self, key):
+        return self._data[key]
+
+    def __iter__(self):
+        return iter(self._data)
+
+    def __len__(self):
+        return len(self._data)
+
+    def __hash__(self):
+        if self._hash is None:
+            self._hash = hash(frozenset(self._data.items()))
         return self._hash
 
-    def __eq__(self, __other: "FrozenDict") -> bool:
-        if isinstance(__other, FrozenDict):
-            return self.dict == __other.dict
+    def __repr__(self):
+        return repr(self._data)
 
-        return False
+    def __str__(self):
+        return str(self._data)
 
-    def __len__(self) -> int:
-        return len(self.dict)
 
-    def __getitem__(self, name: str):
-        return self.dict[name]
-
-    def __iter__(self) -> Iterator:
-        return iter(self.dict)
+class HashableList(list):
+    def __hash__(self):
+        return hash(tuple(self))

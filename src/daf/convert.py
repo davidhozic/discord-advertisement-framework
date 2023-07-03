@@ -33,7 +33,11 @@ __all__ = (
 LAMBDA_TYPE = type(lambda x: x)
 
 
+@misc.cache_wrapper(typed=True)
 def import_class(path: str):
+    """
+    Imports the class provided by it's ``path``.
+    """
     path = path.split(".")
     module_path, class_name = '.'.join(path[:-1]), path[-1]
     module = importlib.import_module(module_path)
