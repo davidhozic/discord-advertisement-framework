@@ -12,7 +12,6 @@ import decimal
 import importlib
 import copy
 import asyncio
-import array
 import datetime
 
 import _discord as discord
@@ -280,13 +279,6 @@ def convert_object_to_semi_dict(object_: object) -> Mapping:
 
         return {"object_type": f"{type_object.__module__}.{type_object.__name__}", "data": data_conv}
 
-    def _convert_json_dict(object_: Mapping):
-        data_conv = {}
-        for k, v in object_.items():
-            data_conv[k] = convert_object_to_semi_dict(v)
-
-        return data_conv
-
     object_type = type(object_)
     if object_type in {int, float, str, bool, decimal.Decimal, type(None)}:
         if object_type is decimal.Decimal:
@@ -299,12 +291,12 @@ def convert_object_to_semi_dict(object_: object) -> Mapping:
         return object_
 
     if isinstance(object_, Mapping):
-        return _convert_json_dict(object_)
+        return {k: convert_object_to_semi_dict(v) for k, v in object_.items()}
 
     if isinstance(object_, Enum):
         return {"enum_type": f"{object_type.__module__}.{object_type.__name__}", "value": object_.value}
 
-    if isclass(object_):
+    if isclass(object_):  # Class itself, not an actual isntance
         return {"class_path": f"{object_.__module__}.{object_.__name__}"}
 
     return _convert_json_slots(object_)
@@ -322,8 +314,6 @@ def convert_from_semi_dict(d: Union[Mapping, list, Any], use_bound: bool = False
     use_bound: bool
         If ``True`` and objects have the ``_daf_id`` attribute, they will not be recreated but taken from memory.
     """
-    def __convert_to_enum():
-        return import_class(d["enum_type"])(d["value"])
 
     def __convert_to_slotted():
         # d is a object serialized to dict
@@ -338,12 +328,7 @@ def convert_from_semi_dict(d: Union[Mapping, list, Any], use_bound: bool = False
             return bound
 
         # No custom decoder function, normal conversion is used
-        if issubclass(class_, array.array):
-            _return = array.array.__new__(cls, 'Q')
-        else:
-            _return = object.__new__(class_)
-        # Use object.__new__ instead of class.__new__
-        # to prevent any objects who have IDs tracked from updating the weakref dictionary (in misc module)
+        _return = class_.__new__(class_)
 
         # Change the setattr function to default Python, since we just want to directly set attributes
         # Set saved attributes
@@ -366,13 +351,6 @@ def convert_from_semi_dict(d: Union[Mapping, list, Any], use_bound: bool = False
 
         return _return
 
-    def __convert_to_dict():
-        data = {}
-        for k, v in d.items():
-            data[k] = convert_from_semi_dict(v, use_bound)
-
-        return data
-
     # List conversion, keeps the list but converts the values
     if isinstance(d, list):
         return [convert_from_semi_dict(value, use_bound) if isinstance(value, Mapping) else value for value in d]
@@ -380,13 +358,13 @@ def convert_from_semi_dict(d: Union[Mapping, list, Any], use_bound: bool = False
     # Either an object serialized to dict or a normal dictionary
     elif isinstance(d, Mapping):
         if "enum_type" in d:  # It's a JSON converted Enum
-            return __convert_to_enum()
+            return import_class(d["enum_type"])(d["value"])
 
-        if "class_path" in d:
+        if "class_path" in d:  # A class was directly send (not an instance)
             return import_class(d["class_path"])
 
         if "object_type" not in d:  # It's a normal dictionary
-            return __convert_to_dict()
+            return {k: convert_from_semi_dict(v, use_bound) for k, v in d.items()}
 
         return __convert_to_slotted()
 
