@@ -16,6 +16,7 @@ from contextlib import suppress
 from typeguard import typechecked
 
 import weakref
+import pickle
 
 
 ###############################
@@ -282,63 +283,38 @@ def track_id(cls):
 
 
 # Caching
-def cache_wrapper(size: int = 128, typed: bool = False):
-    def _cache_decor(fnc):
-        lru_wrapper = lru_cache(maxsize=size, typed=typed)(fnc)
+def cache_result(max: int = 256):
+    """
+    Caching function that also allows dictionary and lists to be used as a key.
+
+    Parameters
+    --------------
+    max: int
+        The maximum number of items inside the cache.
+    """
+    def _decorator(fnc: Callable):
+        cache_dict = {}
 
         @wraps(fnc)
-        def wrapper(object_, *args, **kwargs):
-            """
-            Wrapper that allows the function results to be obtained from cache,
-            if the *enable_cache* parameter is True.
-            """
-            with suppress(Exception):
-                return lru_wrapper(object_, *args, **kwargs)
+        def wrapper(*args, **kwargs):
+            try:
+                key = pickle.dumps((*args, kwargs))  # json.dumps()
+            except TypeError:
+                return fnc(*args, **kwargs)
 
-            return fnc(object_, *args, **kwargs)
+            if (result := cache_dict.get(key, ...)) is not ...:
+                return result
+
+            result = fnc(*args, **kwargs)
+            cache_dict[key] = result
+
+            if len(cache_dict) > max:
+                items = list(cache_dict.items())[:max // 2]
+                cache_dict.clear()
+                cache_dict.update(items)
+
+            return result
 
         return wrapper
 
-    return _cache_decor
-
-
-class FrozenDict(Mapping):
-    def __init__(self, data):
-        if not isinstance(data, dict):
-            raise TypeError("Input must be a dictionary")
-
-        self._data = {}
-        for key, value in data.items():
-            if isinstance(value, dict):
-                value = FrozenDict(value)
-            elif isinstance(value, list):
-                value = HashableList(value)
-
-            self._data[key] = value
-
-        self._hash = None
-
-    def __getitem__(self, key):
-        return self._data[key]
-
-    def __iter__(self):
-        return iter(self._data)
-
-    def __len__(self):
-        return len(self._data)
-
-    def __hash__(self):
-        if self._hash is None:
-            self._hash = hash(frozenset(self._data.items()))
-        return self._hash
-
-    def __repr__(self):
-        return repr(self._data)
-
-    def __str__(self):
-        return str(self._data)
-
-
-class HashableList(list):
-    def __hash__(self):
-        return hash(tuple(self))
+    return _decorator

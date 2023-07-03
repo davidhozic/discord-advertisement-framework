@@ -160,7 +160,7 @@ class ObjectInfo(Generic[TClass]):
 
     def __init__(self, class_, data: Mapping, real_object: object = None) -> None:
         self.class_ = class_
-        self.data = daf.misc.FrozenDict(data)
+        self.data = data
         self.real_object = real_object
         self.__hash = 0
 
@@ -214,6 +214,7 @@ class ObjectInfo(Generic[TClass]):
         return _ret
 
 
+@daf.misc.cache_result(max=1024)
 def convert_objects_to_script(object: Union[ObjectInfo, list, tuple, set, str]):
     """
     Converts ObjectInfo objects into equivalent Python code.
@@ -224,7 +225,7 @@ def convert_objects_to_script(object: Union[ObjectInfo, list, tuple, set, str]):
 
     if isinstance(object, ObjectInfo):
         object_str = f"{object.class_.__name__}(\n    "
-        attr_str = ""
+        attr_str = []
         for attr, value in object.data.items():
             if isinstance(value, (ObjectInfo, list, tuple, set)):
                 value, import_data_, other_str = convert_objects_to_script(value)
@@ -237,25 +238,24 @@ def convert_objects_to_script(object: Union[ObjectInfo, list, tuple, set, str]):
                 if other_str != "":
                     other_data.append(other_str)
 
-            attr_str += f"{attr}={value},\n"
+            attr_str.append(f"{attr}={value},\n")
             if issubclass(type(value), Enum):
                 import_data.append(f"from {type(value).__module__} import {type(value).__name__}")
 
         import_data.append(f"from {object.class_.__module__} import {object.class_.__name__}")
 
-        object_str += "    ".join(attr_str.splitlines(True)) + ")"
+        object_str += "    ".join(''.join(attr_str).splitlines(True)) + ")"
         object_data.append(object_str)
 
     elif isinstance(object, (list, tuple, set)):
-        _list_data = "[\n"
+        _list_data = ["[\n"]
         for element in object:
             object_str, import_data_, other_str = convert_objects_to_script(element)
-            _list_data += object_str + ",\n"
+            _list_data.append(object_str + ",\n")
             import_data.extend(import_data_)
             other_data.append(other_str)
 
-        _list_data = "    ".join(_list_data.splitlines(keepends=True))
-        _list_data += "]"
+        _list_data = "    ".join(''.join(_list_data).splitlines(keepends=True)) + "]"
         object_data.append(_list_data)
     else:
         if isinstance(object, str):
@@ -267,7 +267,7 @@ def convert_objects_to_script(object: Union[ObjectInfo, list, tuple, set, str]):
     return ",".join(object_data).strip(), import_data, "\n".join(other_data).strip()
 
 
-@daf.misc.cache_wrapper(20000, True)
+@daf.misc.cache_result(16_384)
 def convert_to_object_info(object_: object, save_original = False):
     """
     Converts an object into ObjectInfo.
@@ -334,7 +334,7 @@ def convert_to_object_info(object_: object, save_original = False):
     return _convert_object_info(object_, save_original, object_type, attrs)
 
 
-@daf.misc.cache_wrapper(2000, True)
+@daf.misc.cache_result()
 def _convert_to_objects_cached(*args, **kwargs):
     return convert_to_objects(*args, **kwargs)
 
@@ -415,38 +415,25 @@ def convert_to_objects(
     return d
 
 
-@daf.misc.cache_wrapper(1000, True)
+@daf.misc.cache_result()
 def convert_to_json(d: Union[ObjectInfo, List[ObjectInfo], Any]):
     """
     Converts ObjectInfo into JSON representation.
     """
-    def _convert_to_json_oi(d: ObjectInfo):
-        data_conv = {}
-        for k, v in d.data.items():
-            data_conv[k] = convert_to_json(v)
-
+    if isinstance(d, ObjectInfo):
+        data_conv = {k: convert_to_json(v) for k, v in d.data.items()}
         return {"type": f"{d.class_.__module__}.{d.class_.__name__}", "data": data_conv}
 
-    def _convert_to_json_list(d: List[ObjectInfo]):
-        d = d.copy()
-        for i, element in enumerate(d):
-            d[i] = convert_to_json(element)
+    if isinstance(d, list):
+        return [convert_to_json(x) for x in d]
 
-        return d
-
-    if isinstance(d, ObjectInfo):
-        return _convert_to_json_oi(d)
-
-    elif isinstance(d, list):
-        return _convert_to_json_list(d)
-
-    elif issubclass((type_d := type(d)), Enum):
+    if issubclass((type_d := type(d)), Enum):
         return {"type": f"{type_d.__module__}.{type_d.__name__}", "value": d.value}
 
     return d
 
 
-@daf.misc.cache_wrapper(10000, True)
+@daf.misc.cache_result()
 def convert_from_json(d: Union[dict, List[dict], Any]) -> ObjectInfo:
     """
     Converts previously converted JSON back to ObjectInfo.

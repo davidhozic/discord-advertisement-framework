@@ -441,7 +441,7 @@ class NewObjectFrameStruct(NewObjectFrameBase):
                 return
 
             with open(filename, "r", encoding="utf-8") as file:
-                json_data: dict = json.load(file)
+                json_data: dict = json.loads(file.read())
                 object_info = convert_from_json(json_data)
                 # Get class_ attribute if we have the ObjectInfo type, if not just compare the actual type
                 if object_info.class_ is not self.class_:
