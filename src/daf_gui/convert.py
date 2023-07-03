@@ -158,7 +158,7 @@ class ObjectInfo(Generic[TClass]):
     """
     CHARACTER_LIMIT = 150
 
-    def __init__(self, class_, data: Mapping, real_object: object = None) -> None:
+    def __init__(self, class_, data: Mapping, real_object: daf.misc.ObjectReference = None) -> None:
         self.class_ = class_
         self.data = data
         self.real_object = real_object
@@ -169,8 +169,8 @@ class ObjectInfo(Generic[TClass]):
             cond = (
                 self.class_ is _value.class_ and
                 (   # Compare internal daf IDs for trackable objects (@track_id) in case a remote connection is present
-                    getattr(self.real_object, "_daf_id", None) ==
-                    getattr(_value.real_object, "_daf_id", None)
+                    getattr(self.real_object, "ref", None) ==
+                    getattr(_value.real_object, "ref", None)
                 ) and
                 self.data == _value.data
             )
@@ -302,7 +302,8 @@ def convert_to_object_info(object_: object, save_original = False):
 
         ret = ObjectInfo(object_type, data_conv)
         if save_original:
-            ret.real_object = object_
+            ret.real_object = daf.misc.ObjectReference(daf.misc.get_object_id(object_))
+
         return ret
 
     def get_conversion_map(object_type):
@@ -341,7 +342,6 @@ def _convert_to_objects_cached(*args, **kwargs):
 
 def convert_to_objects(
     d: Union[ObjectInfo, dict, list],
-    keep_original_object: bool = False,
     skip_real_conversion: bool = False,
     cached: bool = False
 ) -> Union[object, dict, List]:
@@ -354,24 +354,13 @@ def convert_to_objects(
     d: ObjectInfo | list[ObjectInfo] | dict
         The object(s) to convert. Can be an ObjectInfo object, a list of ObjectInfo objects or a dictionary that is a
         mapping of ObjectInfo parameters.
-    keep_original_object: bool
-        If True, the returned object will be the same object (``real_object`` attribute) and will just
-        copy the the attributes. Important for preserving parent-child connections across real objects.
     skip_real_conversion: bool
-        If set to True the old real object will be returned without conversion and ``keep_original_object`` parameter
-        has no effect.
+        If set to True the old real object will be returned without conversion has no effect.
         Defaults to False.
     cached: bool
         If True items will be returned from cache. ONLY USE FOR IMMUTABLE USE.
     """
     convert_func = _convert_to_objects_cached if cached else convert_to_objects
-
-    def convert_list():
-        _ = []
-        for item in d:
-            _.append(convert_func(item, keep_original_object, skip_real_conversion, cached))
-
-        return _
 
     def convert_object_info():
         # Skip conversion
@@ -379,38 +368,22 @@ def convert_to_objects(
         if skip_real_conversion and real is not None:
             return real
 
-        data_conv = {}
-        for k, v in d.data.items():
-            if isinstance(v, (list, tuple, set, ObjectInfo, dict)):
-                data_conv[k] = convert_func(v, keep_original_object, skip_real_conversion, cached)
-            else:
-                data_conv[k] = v
+        data_conv = {
+            k:
+            convert_func(v, skip_real_conversion, cached)
+            if isinstance(v, (list, tuple, set, ObjectInfo, dict)) else v
+            for k, v in d.data.items()
+        }
 
         new_obj = d.class_(**data_conv)
-        if keep_original_object and real is not None:
-            with suppress(TypeError, AttributeError):
-                # Only update old objects that are surely not built-in and have information about attributes
-                args = daf.misc.get_all_slots(type(real)) if hasattr(real, "__slots__") else vars(real)
-                for a in args:
-                    setattr(real, a, getattr(new_obj, a))
-
-                new_obj = real
-
         return new_obj
 
-    def convert_object_info_dict():
-        data_conv = {}
-        for k, v in d.items():
-            data_conv[k] = convert_func(v, keep_original_object, skip_real_conversion, cached)
-
-        return data_conv
-
     if isinstance(d, (list, tuple, set)):
-        return convert_list()
+        return [convert_func(item, skip_real_conversion, cached) for item in d]
     if isinstance(d, ObjectInfo):
         return convert_object_info()
     if isinstance(d, dict):
-        return convert_object_info_dict()
+        return {k: convert_func(v, skip_real_conversion, cached) for k, v in d.items()}
 
     return d
 

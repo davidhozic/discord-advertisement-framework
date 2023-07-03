@@ -255,6 +255,20 @@ def get_by_id(id_: int):
     return OBJECT_ID_MAP.get(id_)
 
 
+def get_object_id(obj: object) -> int:
+    "Returns either internal daf's ID if it exist otherwise just the regular id()"
+    return getattr(obj, "_daf_id", id(obj))
+
+
+class ObjectReference:
+    """
+    Descriptive class that describes a reference to an object
+    instead of the object itself. Useful for reducing unneeded storage.
+    """
+    def __init__(self, ref: int) -> None:
+        self.ref = ref
+
+
 def track_id(cls):
     """
     Decorator which replaces the __new__ method with a function that keeps a weak reference.

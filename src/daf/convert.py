@@ -227,7 +227,7 @@ CONVERSION_ATTRS[message.DirectMESSAGE] = {
 }
 
 
-def convert_object_to_semi_dict(object_: object) -> Mapping:
+def convert_object_to_semi_dict(object_: object, only_ref: bool = False) -> Mapping:
     """
     Converts an object into dict.
 
@@ -235,6 +235,8 @@ def convert_object_to_semi_dict(object_: object) -> Mapping:
     ---------------
     object_: object
         The object to convert.
+    only_ref: bool
+        If True, the object_ will be replaced with a ObjectReference instance containing only the object_id.
     """
     def _convert_json_slots(object_):
         type_object = type(object_)
@@ -299,10 +301,15 @@ def convert_object_to_semi_dict(object_: object) -> Mapping:
     if isclass(object_):  # Class itself, not an actual isntance
         return {"class_path": f"{object_.__module__}.{object_.__name__}"}
 
+    if only_ref:
+        # Don't serialize object completly, only ID is requested.
+        # This prevents unnecessarily large data to be encoded
+        object_ = misc.ObjectReference(misc.get_object_id(object_))
+
     return _convert_json_slots(object_)
 
 
-def convert_from_semi_dict(d: Union[Mapping, list, Any], use_bound: bool = False):
+def convert_from_semi_dict(d: Union[Mapping, list, Any]):
     """
     Function that converts the ``d`` parameter which is a semi-dict back to the object
     representation.
@@ -311,8 +318,6 @@ def convert_from_semi_dict(d: Union[Mapping, list, Any], use_bound: bool = False
     ---------------
     d: Union[dict, list, Any]
         The semi-dict / list to convert.
-    use_bound: bool
-        If ``True`` and objects have the ``_daf_id`` attribute, they will not be recreated but taken from memory.
     """
 
     def __convert_to_slotted():
@@ -323,9 +328,9 @@ def convert_from_semi_dict(d: Union[Mapping, list, Any], use_bound: bool = False
             # Custom decoder function is used
             return decoder_func(d["data"])
 
-        # If a bound object is found, don't try to recreate but obtain by ID
-        if use_bound and "_daf_id" in d["data"] and (bound := misc.get_by_id(d["data"]["_daf_id"])) is not None:
-            return bound
+        # Only object's ID reference was encoded -> restore by ID
+        if class_ is misc.ObjectReference:
+            return misc.get_by_id(d["data"]["ref"])
 
         # No custom decoder function, normal conversion is used
         _return = class_.__new__(class_)
@@ -334,7 +339,7 @@ def convert_from_semi_dict(d: Union[Mapping, list, Any], use_bound: bool = False
         # Set saved attributes
         for k, v in d["data"].items():
             if isinstance(v, (Mapping, list)):
-                v = convert_from_semi_dict(v, use_bound)
+                v = convert_from_semi_dict(v)
 
             setattr(_return, k, v)
 
@@ -353,7 +358,7 @@ def convert_from_semi_dict(d: Union[Mapping, list, Any], use_bound: bool = False
 
     # List conversion, keeps the list but converts the values
     if isinstance(d, list):
-        return [convert_from_semi_dict(value, use_bound) if isinstance(value, Mapping) else value for value in d]
+        return [convert_from_semi_dict(value) if isinstance(value, Mapping) else value for value in d]
 
     # Either an object serialized to dict or a normal dictionary
     elif isinstance(d, Mapping):
@@ -364,7 +369,7 @@ def convert_from_semi_dict(d: Union[Mapping, list, Any], use_bound: bool = False
             return import_class(d["class_path"])
 
         if "object_type" not in d:  # It's a normal dictionary
-            return {k: convert_from_semi_dict(v, use_bound) for k, v in d.items()}
+            return {k: convert_from_semi_dict(v) for k, v in d.items()}
 
         return __convert_to_slotted()
 
