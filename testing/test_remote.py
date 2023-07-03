@@ -17,11 +17,11 @@ async def test_http(accounts):
     # Test get_logger
     assert await client.get_logger() is not None
     # Test object retrieval
-    new_object = await client.refresh(daf.misc.ObjectReference(daf.get_object_id(accounts[0])))
+    new_object = await client.refresh(daf.misc.ObjectReference(daf.misc.get_object_id(accounts[0])))
     assert new_object._daf_id == accounts[0]._daf_id
     # Test account removal
-    await client.remove_account(daf.misc.ObjectReference(daf.get_object_id(accounts[0])))
-    await client.remove_account(daf.misc.ObjectReference(daf.get_object_id(accounts[1])))
+    await client.remove_account(daf.misc.ObjectReference(daf.misc.get_object_id(accounts[0])))
+    await client.remove_account(daf.misc.ObjectReference(daf.misc.get_object_id(accounts[1])))
     # Test account addition
     await client.add_account(accounts[0])
     await client.add_account(accounts[1])
