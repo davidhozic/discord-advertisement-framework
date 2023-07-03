@@ -28,6 +28,7 @@ import copy
 import json
 
 
+
 __all__ = (
     "Text",
     "ListBoxObjects",
@@ -440,7 +441,7 @@ class NewObjectFrameStruct(NewObjectFrameBase):
                 return
 
             with open(filename, "r", encoding="utf-8") as file:
-                json_data: dict = json.load(file, cls=daf.misc.FrozenDictDecoder)
+                json_data: dict = json.load(file)
                 object_info = convert_from_json(json_data)
                 # Get class_ attribute if we have the ObjectInfo type, if not just compare the actual type
                 if object_info.class_ is not self.class_:
@@ -626,7 +627,7 @@ class NewObjectFrameStruct(NewObjectFrameBase):
         # Abstraction of the underlaying object
         object_ = ObjectInfo(
             self.class_,
-            map_,
+            daf.misc.FrozenDict(map_),
             # Don't erase the bind to the real object in case this is an edit of an existing ObjectInfo
             None if self.old_gui_data is None else self.old_gui_data.real_object
         )

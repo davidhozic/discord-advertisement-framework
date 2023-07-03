@@ -4,7 +4,7 @@
 """
 from collections.abc import Callable
 from typing import Coroutine, Callable, Any, Dict, Optional, Union, Iterator
-from collections import Mapping
+from collections.abc import Mapping
 from asyncio import Semaphore
 from functools import wraps, lru_cache
 from inspect import getfullargspec
@@ -16,7 +16,6 @@ from contextlib import suppress
 from typeguard import typechecked
 
 import weakref
-import json
 
 
 ###############################
@@ -282,6 +281,7 @@ def track_id(cls):
     return TrackedClass
 
 
+# Caching
 def cache_wrapper(size: int = 128, typed: bool = False):
     def _cache_decor(fnc):
         lru_wrapper = lru_cache(maxsize=size, typed=typed)(fnc)
@@ -302,7 +302,6 @@ def cache_wrapper(size: int = 128, typed: bool = False):
     return _cache_decor
 
 
-# Caching
 class FrozenDict(Mapping):
     def __init__(self, *args, **kwargs) -> None:
         dict_ = dict(*args, **kwargs)
@@ -340,17 +339,3 @@ class FrozenDict(Mapping):
 
     def __iter__(self) -> Iterator:
         return iter(self.dict)
-
-
-class FrozenDictDecoder(json.JSONDecoder):
-    def decode(self, *args, **kwargs) -> Any:
-        return self._convert(super().decode(*args, **kwargs))
-
-    def _convert(self, item: Any):
-        if isinstance(item, dict):
-            return FrozenDict({k: self._convert(v) for k, v in item.items()})
-
-        if isinstance(item, list):
-            return [self._convert(a) for a in item]
-
-        return item

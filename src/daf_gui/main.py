@@ -781,7 +781,7 @@ daf.run(
             return
 
         with open(filename, "r", encoding="utf-8") as file:
-            json_data = json.load(file, cls=daf.misc.FrozenDictDecoder)
+            json_data = json.load(file)
 
             # Load accounts
             accounts = json_data.get("accounts")

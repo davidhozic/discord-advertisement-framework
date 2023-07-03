@@ -7,6 +7,8 @@ from contextlib import suppress
 from enum import Enum
 from inspect import signature
 
+from daf.convert import import_class
+
 import decimal
 import datetime as dt
 
@@ -154,14 +156,13 @@ class ObjectInfo(Generic[TClass]):
         Actual object that ObjectInfo represents inside GUI. Used whenever update
         of the real object is needed upon saving inside the GUI.
     """
-    CHARACTER_LIMIT = 100
+    CHARACTER_LIMIT = 150
 
-    def __init__(self, class_, data: dict, real_object: object = None) -> None:
+    def __init__(self, class_, data: Mapping, real_object: object = None) -> None:
         self.class_ = class_
-        self.data = daf.misc.FrozenDict(data)
+        self.data = data
         self.real_object = real_object
-
-        self.__hash = hash(self.data)
+        self.__hash = 0
 
     def __eq__(self, _value: object) -> bool:
         if isinstance(_value, ObjectInfo):
@@ -178,6 +179,12 @@ class ObjectInfo(Generic[TClass]):
         return False
 
     def __hash__(self) -> int:
+        if not self.__hash:
+            try:
+                self.__hash = hash(self.data)
+            except TypeError:
+                self.__hash = -1
+
         return self.__hash
 
     def __repr__(self) -> str:
@@ -260,7 +267,7 @@ def convert_objects_to_script(object: Union[ObjectInfo, list, tuple, set, str]):
     return ",".join(object_data).strip(), import_data, "\n".join(other_data).strip()
 
 
-@daf.misc.cache_wrapper(10000, True)
+@daf.misc.cache_wrapper(20000, True)
 def convert_to_object_info(object_: object, save_original = False):
     """
     Converts an object into ObjectInfo.
@@ -327,7 +334,7 @@ def convert_to_object_info(object_: object, save_original = False):
     return _convert_object_info(object_, save_original, object_type, attrs)
 
 
-@daf.misc.cache_wrapper(500, True)
+@daf.misc.cache_wrapper(2000, True)
 def _convert_to_objects_cached(*args, **kwargs):
     return convert_to_objects(*args, **kwargs)
 
@@ -408,6 +415,7 @@ def convert_to_objects(
     return d
 
 
+@daf.misc.cache_wrapper(1000, True)
 def convert_to_json(d: Union[ObjectInfo, List[ObjectInfo], Any]):
     """
     Converts ObjectInfo into JSON representation.
@@ -438,51 +446,49 @@ def convert_to_json(d: Union[ObjectInfo, List[ObjectInfo], Any]):
     return d
 
 
-@daf.misc.cache_wrapper(500, True)
-def convert_from_json(d: Union[Mapping, List[dict], Any]) -> ObjectInfo:
+def convert_from_json(d: Union[dict, List[dict], Any]) -> ObjectInfo:
     """
     Converts previously converted JSON back to ObjectInfo.
     """
-    if isinstance(d, list):
+    if type(d) is list:
         result = []
         for item in d:
-            result.append(convert_from_json(item))
+            result.append(convert_from_json(item) if type(item) in {dict, list} else item)
 
         return result
 
-    elif isinstance(d, Mapping):
+    elif type(d) is dict:
         type_: str = d["type"]
-        type_split = type_.split('.')
-        module = type_split[:len(type_split) - 1]
-        type_ = type_split[-1]
-        if module[0] == __name__.split(".")[-1]:
-            type_ = globals()[type_]
-        else:
-            module_ = __import__(module[0])
-            module.pop(0)
-            for i, m in enumerate(module):
-                module_ = getattr(module_, module[i])
+        type_ = import_class(type_)
+        # type_split = type_.split('.')
+        # module = type_split[:len(type_split) - 1]
+        # type_ = type_split[-1]
+        # if module[0] == __name__.split(".")[-1]:
+        #     type_ = globals()[type_]
+        # else:
+        #     module_ = __import__(module[0])
+        #     module.pop(0)
+        #     for i, m in enumerate(module):
+        #         module_ = getattr(module_, module[i])
 
-            type_ = getattr(module_, type_)
+        #     type_ = getattr(module_, type_)
 
         # Simple object (or enum)
         if "value" in d:
             return type_(d["value"])
 
         # ObjectInfo
-        data: dict = dict(d["data"])
+        data = dict(d["data"])
         for k, v in data.items():
             # List or dictionary and dictionary is a object representation of an object
-            if isinstance(v, list) or isinstance(v, Mapping) and d.get("type") is not None:
-                v = convert_from_json(v)
-                data[k] = v
+            if type(v) is list or type(v) is dict and d.get("type") is not None:
+                data[k] = convert_from_json(v)
 
-        return ObjectInfo(type_, type(d)(data))
+        return ObjectInfo(type_, data)
     else:
         return d
 
 
-@daf.misc.cache_wrapper(500, True)
 def convert_dict_to_object_info(data: Union[dict, Iterable, Any]):
     """
     Method that converts a dict JSON into

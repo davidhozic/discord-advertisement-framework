@@ -209,7 +209,7 @@ class RemoteConnectionCLIENT(AbstractConnectionCLIENT):
             if response.status != 200:
                 raise web.HTTPException(reason=response.reason)
 
-            return daf.misc.FrozenDict(await response.json())
+            return await response.json()
 
     async def initialize(self, *args, **kwargs):
         try:
