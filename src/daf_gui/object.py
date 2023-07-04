@@ -56,24 +56,26 @@ EXECUTABLE_METHODS = {
 ADDITIONAL_PARAMETER_VALUES = {
     daf.GUILD.remove_message: {
         # GUILD.messages
-        "message": lambda old_info: convert_to_object_info(old_info.real_object.messages, save_original=True)
+        "message": lambda old_info: old_info.data["messages"]
     },
     daf.USER.remove_message: {
         # GUILD.messages
-        "message": lambda old_info: convert_to_object_info(old_info.real_object.messages, save_original=True)
+        "message": lambda old_info: old_info.data["messages"]
     },
     daf.AutoGUILD.remove_message: {
         # GUILD.messages
-        "message": lambda old_info: convert_to_object_info(old_info.real_object.messages, save_original=True)
+        "message": lambda old_info: old_info.data["messages"]
     },
     daf.ACCOUNT.remove_server: {
         # ACCOUNT.servers
-        "server": lambda old_info: convert_to_object_info(old_info.real_object.servers, save_original=True)
+        "server": lambda old_info: old_info.data["servers"]
     }
 }
 
 DEPRECATION_NOTICES = {
-    daf.AUDIO: [("Youtube streaming", "2.10", "Faster loading times.")]
+    daf.AUDIO: [("Youtube streaming", "2.10", "Faster loading times.")],
+    daf.AutoCHANNEL: [("Interval parameter", "2.11", "Event based refresh.")],
+    daf.AutoGUILD: [("Interval parameter", "2.11", "Event based refresh.")],
 }
 
 
@@ -123,16 +125,6 @@ class NewObjectFrameBase(ttk.Frame):
         super().__init__(master=parent)
         self.init_toolbar_frame(class_)
         self.init_main_frame()
-
-        # Deprecation notices
-        if not len(notices := DEPRECATION_NOTICES.get(class_, [])):
-            return
-
-        tkdiag.Messagebox.show_warning(
-            f"\n{'-'*30}\n".join(f"[{title}] Scheduled for removal in v{version}.\nReason: '{reason}'" for title, version, reason in notices),
-            "Deprecation notice",
-            self
-        )
 
     @staticmethod
     def get_cls_name(cls):
@@ -220,6 +212,7 @@ class NewObjectFrameBase(ttk.Frame):
 
     def init_toolbar_frame(self, class_):
         frame_toolbar = ttk.Frame(self)
+        frame_toolbar.pack(fill=tk.X)
         self.frame_toolbar = frame_toolbar
 
         # Help button
@@ -231,6 +224,19 @@ class NewObjectFrameBase(ttk.Frame):
 
             ttk.Button(frame_toolbar, text="Help", command=cmd).pack(side="left")
 
+        # Deprecation notices
+        if len(notices := DEPRECATION_NOTICES.get(class_, [])):
+            dep_frame = ttk.Frame(self)
+            dep_frame.pack(fill=tk.X, pady=dpi_scaled(5))
+
+            def show_deprecations():
+                tkdiag.Messagebox.show_warning(
+                    f"\n{'-'*30}\n".join(f"'{title}' is scheduled for removal in v{version}.\nReason: '{reason}'" for title, version, reason in notices),
+                    "Deprecation notice",
+                    self
+                )
+            ttk.Button(dep_frame, text="Deprecation notices", bootstyle="dark", command=show_deprecations).pack(side="left")
+
         # Additional widgets
         add_widgets = ADDITIONAL_WIDGETS.get(class_)
         if add_widgets is not None:
@@ -238,8 +244,6 @@ class NewObjectFrameBase(ttk.Frame):
                 setup_cmd = add_widg.setup_cmd
                 add_widg = add_widg.widget_class(frame_toolbar, *add_widg.args, **add_widg.kwargs)
                 setup_cmd(add_widg, self)
-
-        frame_toolbar.pack(fill=tk.X)
 
     @property
     def modified(self) -> bool:
@@ -279,14 +283,9 @@ class NewObjectFrameBase(ttk.Frame):
             class_, widget, allow_save=self.allow_save, *args, **kwargs
         )
 
-    def to_object(self, *, ignore_checks = False):
+    def to_object(self):
         """
         Creates an object from the GUI data.
-
-        Parameters
-        ------------
-        ignore_checks: bool
-            Don't check data validity.
         """
         raise NotImplementedError
 
@@ -440,7 +439,7 @@ class NewObjectFrameStruct(NewObjectFrameBase):
                 return
 
             with open(filename, "r", encoding="utf-8") as file:
-                json_data: dict = json.load(file)
+                json_data: dict = json.loads(file.read())
                 object_info = convert_from_json(json_data)
                 # Get class_ attribute if we have the ObjectInfo type, if not just compare the actual type
                 if object_info.class_ is not self.class_:
@@ -608,7 +607,15 @@ class NewObjectFrameStruct(NewObjectFrameBase):
 
         self.old_gui_data = old_data
 
-    def to_object(self, *, ignore_checks=False):
+    def to_object(self, *, ignore_checks = False) -> ObjectInfo:
+        """
+        Converts GUI data into an ObjectInfo abstraction object.
+
+        Parameters
+        ------------
+        ignore_checks: bool
+            Don't check the correctness of given parameters.
+        """
         map_ = {}
         widget: ComboBoxObjects
         for attr, (widget, types_) in self._map.items():
@@ -628,10 +635,11 @@ class NewObjectFrameStruct(NewObjectFrameBase):
             self.class_,
             map_,
             # Don't erase the bind to the real object in case this is an edit of an existing ObjectInfo
-            None if self.old_gui_data is None else self.old_gui_data.real_object
+            self.old_gui_data.real_object if self.old_gui_data is not None else None
         )
         if not ignore_checks and self.check_parameters and inspect.isclass(self.class_):  # Only check objects
-            convert_to_objects(object_)  # Tries to create instances to check for errors
+            # Cache the object created for faster
+            convert_to_objects(object_, cached=True)  # Tries to create instances to check for errors
 
         return object_
 
@@ -665,7 +673,7 @@ class NewObjectFrameNumber(NewObjectFrameBase):
     def get_gui_data(self) -> Union[int, float]:
         return self.return_widget.get()
 
-    def to_object(self, **kwargs):
+    def to_object(self):
         return self.cast_type(self.storage_widget.get(), [self.class_])
 
 
@@ -730,7 +738,7 @@ class NewObjectFrameIterable(NewObjectFrameBase):
     def get_gui_data(self) -> Any:
         return self.storage_widget.get()
 
-    def to_object(self, **kwargs):
+    def to_object(self):
         return self.get_gui_data()  # List items are not to be converted
 
 
@@ -752,7 +760,7 @@ class NewObjectFrameString(NewObjectFrameBase):
     def get_gui_data(self) -> Any:
         return self.storage_widget.get()
 
-    def to_object(self, **kwargs):
+    def to_object(self):
         return self.get_gui_data()
 
 

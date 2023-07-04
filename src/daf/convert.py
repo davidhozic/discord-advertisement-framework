@@ -3,7 +3,7 @@ The conversion module is responsible for converting Python objects into differen
 It is also responsible for doing the reverse, which is converting those other forms back into Python objects.
 """
 
-from typing import Union, Any
+from typing import Union, Any, Mapping
 from contextlib import suppress
 from enum import Enum
 from inspect import isclass
@@ -12,7 +12,6 @@ import decimal
 import importlib
 import copy
 import asyncio
-import array
 import datetime
 
 import _discord as discord
@@ -33,7 +32,11 @@ __all__ = (
 LAMBDA_TYPE = type(lambda x: x)
 
 
+@misc.cache_result()
 def import_class(path: str):
+    """
+    Imports the class provided by it's ``path``.
+    """
     path = path.split(".")
     module_path, class_name = '.'.join(path[:-1]), path[-1]
     module = importlib.import_module(module_path)
@@ -141,11 +144,11 @@ if logging.sql.SQL_INSTALLED:
         Function returns the decoder function which uses the ``cls`` parameter.
         It cannot be passed directly since for loop would update the ``cls`` parameter.
         """
-        def decoder_func(data: dict):
-            def _decode_object_type(cls, data: dict):
+        def decoder_func(data: Mapping):
+            def _decode_object_type(cls, data: Mapping):
                 new_object = cls.__new__(cls)
                 for k, v in data.items():
-                    if isinstance(v, (dict, list)):
+                    if isinstance(v, (Mapping, list)):
                         v = convert_from_semi_dict(v)
 
                     new_object.__dict__[k] = v
@@ -224,14 +227,16 @@ CONVERSION_ATTRS[message.DirectMESSAGE] = {
 }
 
 
-def convert_object_to_semi_dict(object_: object) -> dict:
+def convert_object_to_semi_dict(object_: object, only_ref: bool = False) -> Mapping:
     """
-    Converts an object into ObjectInfo.
+    Converts an object into dict.
 
     Parameters
     ---------------
     object_: object
         The object to convert.
+    only_ref: bool
+        If True, the object_ will be replaced with a ObjectReference instance containing only the object_id.
     """
     def _convert_json_slots(object_):
         type_object = type(object_)
@@ -276,13 +281,6 @@ def convert_object_to_semi_dict(object_: object) -> dict:
 
         return {"object_type": f"{type_object.__module__}.{type_object.__name__}", "data": data_conv}
 
-    def _convert_json_dict(object_: dict):
-        data_conv = {}
-        for k, v in object_.items():
-            data_conv[k] = convert_object_to_semi_dict(v)
-
-        return data_conv
-
     object_type = type(object_)
     if object_type in {int, float, str, bool, decimal.Decimal, type(None)}:
         if object_type is decimal.Decimal:
@@ -294,19 +292,24 @@ def convert_object_to_semi_dict(object_: object) -> dict:
         object_ = [convert_object_to_semi_dict(value) for value in object_]
         return object_
 
-    if isinstance(object_, dict):
-        return _convert_json_dict(object_)
+    if isinstance(object_, Mapping):
+        return {k: convert_object_to_semi_dict(v) for k, v in object_.items()}
 
     if isinstance(object_, Enum):
         return {"enum_type": f"{object_type.__module__}.{object_type.__name__}", "value": object_.value}
 
-    if isclass(object_):
+    if isclass(object_):  # Class itself, not an actual isntance
         return {"class_path": f"{object_.__module__}.{object_.__name__}"}
+
+    if only_ref:
+        # Don't serialize object completly, only ID is requested.
+        # This prevents unnecessarily large data to be encoded
+        object_ = misc.ObjectReference(misc.get_object_id(object_))
 
     return _convert_json_slots(object_)
 
 
-def convert_from_semi_dict(d: Union[dict, list, Any], use_bound: bool = False):
+def convert_from_semi_dict(d: Union[Mapping, list, Any]):
     """
     Function that converts the ``d`` parameter which is a semi-dict back to the object
     representation.
@@ -315,11 +318,7 @@ def convert_from_semi_dict(d: Union[dict, list, Any], use_bound: bool = False):
     ---------------
     d: Union[dict, list, Any]
         The semi-dict / list to convert.
-    use_bound: bool
-        If ``True`` and objects have the ``_daf_id`` attribute, they will not be recreated but taken from memory.
     """
-    def __convert_to_enum():
-        return import_class(d["enum_type"])(d["value"])
 
     def __convert_to_slotted():
         # d is a object serialized to dict
@@ -329,23 +328,18 @@ def convert_from_semi_dict(d: Union[dict, list, Any], use_bound: bool = False):
             # Custom decoder function is used
             return decoder_func(d["data"])
 
-        # If a bound object is found, don't try to recreate but obtain by ID
-        if use_bound and "_daf_id" in d["data"] and (bound := misc.get_by_id(d["data"]["_daf_id"])) is not None:
-            return bound
+        # Only object's ID reference was encoded -> restore by ID
+        if class_ is misc.ObjectReference:
+            return misc.get_by_id(d["data"]["ref"])
 
         # No custom decoder function, normal conversion is used
-        if issubclass(class_, array.array):
-            _return = array.array.__new__(cls, 'Q')
-        else:
-            _return = object.__new__(class_)
-        # Use object.__new__ instead of class.__new__
-        # to prevent any objects who have IDs tracked from updating the weakref dictionary (in misc module)
+        _return = class_.__new__(class_)
 
         # Change the setattr function to default Python, since we just want to directly set attributes
         # Set saved attributes
         for k, v in d["data"].items():
-            if isinstance(v, (dict, list)):
-                v = convert_from_semi_dict(v, use_bound)
+            if isinstance(v, (Mapping, list)):
+                v = convert_from_semi_dict(v)
 
             setattr(_return, k, v)
 
@@ -362,27 +356,20 @@ def convert_from_semi_dict(d: Union[dict, list, Any], use_bound: bool = False):
 
         return _return
 
-    def __convert_to_dict():
-        data = {}
-        for k, v in d.items():
-            data[k] = convert_from_semi_dict(v, use_bound)
-
-        return data
-
     # List conversion, keeps the list but converts the values
     if isinstance(d, list):
-        return [convert_from_semi_dict(value, use_bound) if isinstance(value, dict) else value for value in d]
+        return [convert_from_semi_dict(value) if isinstance(value, Mapping) else value for value in d]
 
     # Either an object serialized to dict or a normal dictionary
-    elif isinstance(d, dict):
+    elif isinstance(d, Mapping):
         if "enum_type" in d:  # It's a JSON converted Enum
-            return __convert_to_enum()
+            return import_class(d["enum_type"])(d["value"])
 
-        if "class_path" in d:
+        if "class_path" in d:  # A class was directly send (not an instance)
             return import_class(d["class_path"])
 
         if "object_type" not in d:  # It's a normal dictionary
-            return __convert_to_dict()
+            return {k: convert_from_semi_dict(v) for k, v in d.items()}
 
         return __convert_to_slotted()
 

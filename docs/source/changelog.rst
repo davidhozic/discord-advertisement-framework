@@ -32,6 +32,15 @@ Glossary
 Releases
 ----------------------
 
+v2.10
+==================
+- GUI:
+  
+  - Password fields are now masked with the \* character whenever not in edit mode.
+  - Significant optimizations when saving schema, loading schema, generating equivalent script, creating objects.
+
+
+
 v2.9
 =================
 - GUI:

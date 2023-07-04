@@ -2,9 +2,11 @@
     This module contains definitions regarding miscellaneous
     items that can appear in multiple modules
 """
-from typing import Coroutine, Callable, Any, Dict, Optional, Union
+from collections.abc import Callable
+from typing import Coroutine, Callable, Any, Dict, Optional, Union, Iterator
+from collections.abc import Mapping
 from asyncio import Semaphore
-from functools import wraps
+from functools import wraps, lru_cache
 from inspect import getfullargspec
 from copy import copy
 from os import environ
@@ -14,6 +16,7 @@ from contextlib import suppress
 from typeguard import typechecked
 
 import weakref
+import pickle
 
 
 ###############################
@@ -252,6 +255,20 @@ def get_by_id(id_: int):
     return OBJECT_ID_MAP.get(id_)
 
 
+def get_object_id(obj: object) -> int:
+    "Returns either internal daf's ID if it exist otherwise just the regular id()"
+    return getattr(obj, "_daf_id", id(obj))
+
+
+class ObjectReference:
+    """
+    Descriptive class that describes a reference to an object
+    instead of the object itself. Useful for reducing unneeded storage.
+    """
+    def __init__(self, ref: int) -> None:
+        self.ref = ref
+
+
 def track_id(cls):
     """
     Decorator which replaces the __new__ method with a function that keeps a weak reference.
@@ -270,9 +287,48 @@ def track_id(cls):
             return _r
 
         def __getattr__(self, __key: str):
+            "Method that gets called whenever an attribute is not found."
             if __key == "_daf_id":
                 return -1
 
             raise AttributeError(__key)
 
     return TrackedClass
+
+
+# Caching
+def cache_result(max: int = 256):
+    """
+    Caching function that also allows dictionary and lists to be used as a key.
+
+    Parameters
+    --------------
+    max: int
+        The maximum number of items inside the cache.
+    """
+    def _decorator(fnc: Callable):
+        cache_dict = {}
+
+        @wraps(fnc)
+        def wrapper(*args, **kwargs):
+            try:
+                key = pickle.dumps((*args, kwargs))  # json.dumps()
+            except TypeError:
+                return fnc(*args, **kwargs)
+
+            if (result := cache_dict.get(key, ...)) is not ...:
+                return result
+
+            result = fnc(*args, **kwargs)
+            cache_dict[key] = result
+
+            if len(cache_dict) > max:
+                items = list(cache_dict.items())[:max // 2]
+                cache_dict.clear()
+                cache_dict.update(items)
+
+            return result
+
+        return wrapper
+
+    return _decorator

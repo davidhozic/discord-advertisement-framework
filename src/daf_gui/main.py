@@ -304,9 +304,8 @@ class Application():
             gui_daf_assert_running()
             selection = combo_add_object_edit.combo.current()
             if selection >= 0:
-                fnc: ObjectInfo = combo_add_object_edit.combo.get()
-                fnc_data = convert_to_objects(fnc.data)
-                async_execute(self.connection.add_account(**fnc_data), parent_window=self.win_main)
+                account: daf.client.ACCOUNT = convert_to_objects(combo_add_object_edit.combo.get())
+                async_execute(self.connection.add_account(account), parent_window=self.win_main)
             else:
                 tkdiag.Messagebox.show_error("Combobox does not have valid selection.", "Combo invalid selection")
 
@@ -446,8 +445,8 @@ class Application():
 
                 param_object = combo_history.combo.get()
                 param_object_params = convert_to_objects(param_object.data)
-                items = await self.connection.execute_method(logger, getter_history, **param_object_params)
-                items = convert_to_object_info(items, cache=True)
+                items = await self.connection.execute_method(daf.misc.ObjectReference(daf.misc.get_object_id(logger)), getter_history, **param_object_params)
+                items = convert_to_object_info(items)
                 lst_history.clear()
                 lst_history.insert(tk.END, *items)
 
@@ -470,7 +469,11 @@ class Application():
                 if not isinstance(logger, daf.LoggerSQL):
                     raise ValueError("Analytics only allowed when using LoggerSQL")
 
-                await self.connection.execute_method(logger, "delete_logs", table=log_class, primary_keys=logs)
+                await self.connection.execute_method(
+                    daf.misc.get_object_id(logger),
+                    "delete_logs",
+                    table=log_class, primary_keys=logs
+                )
 
             @gui_confirm_action
             def delete_logs(listbox: ListBoxScrolled):
@@ -526,7 +529,7 @@ class Application():
 
                 param_object = combo_count.combo.get()
                 parameters = convert_to_objects(param_object.data)
-                count = await self.connection.execute_method(logger, getter_counts, **parameters)
+                count = await self.connection.execute_method(daf.misc.ObjectReference(daf.misc.get_object_id(logger)), getter_counts, **parameters)
 
                 tw_num.delete_rows()
                 tw_num.insert_rows(0, count)

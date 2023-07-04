@@ -179,7 +179,7 @@ async def http_execute_method(object_id: int, method_name: str, **kwargs):
         raise HTTPInternalServerError(reason="Object not present in DAF.")
 
     try:
-        result = getattr(object, method_name)(**convert.convert_from_semi_dict(kwargs, True))
+        result = getattr(object, method_name)(**convert.convert_from_semi_dict(kwargs))
         if isinstance(result, Coroutine):
             result = await result
 

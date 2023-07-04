@@ -426,6 +426,10 @@ class AutoCHANNEL:
             excluded from match.
 
     interval: Optional[timedelta] = timedelta(minutes=5)
+        .. deprecated:: v2.10
+
+            Scheduled for removal in v2.11
+
         Interval at which to scan for new channels.
     """
 

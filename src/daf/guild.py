@@ -804,7 +804,11 @@ class AutoGUILD:
         Set to True if you want the guilds generated to log
         sent messages.
     interval: Optional[timedelta] = timedelta(minutes=1)
-        Interval at which to scan for new guilds
+        .. deprecated:: v2.10
+
+            Scheduled for removal in v2.11
+
+        Interval at which to scan for new guilds.
     auto_join: Optional[web.GuildDISCOVERY] = None
         .. versionadded:: v2.5
 
