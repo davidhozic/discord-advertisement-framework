@@ -163,6 +163,7 @@ class ObjectInfo(Generic[TClass]):
         self.data = data
         self.real_object = real_object
         self.__hash = 0
+        self.__repr = None
 
     def __eq__(self, _value: object) -> bool:
         if isinstance(_value, ObjectInfo):
@@ -188,6 +189,9 @@ class ObjectInfo(Generic[TClass]):
         return self.__hash
 
     def __repr__(self) -> str:
+        if self.__repr is not None:
+            return self.__repr
+
         _ret: str = self.class_.__name__ + "("
         private_params = PASSWORD_PARAMS.get(self.class_, set())
         if hasattr(self.class_, "__passwords__"):
@@ -211,6 +215,7 @@ class ObjectInfo(Generic[TClass]):
         if len(_ret) > self.CHARACTER_LIMIT:
             _ret = _ret[:self.CHARACTER_LIMIT] + "...)"
 
+        self.__repr = _ret
         return _ret
 
 
