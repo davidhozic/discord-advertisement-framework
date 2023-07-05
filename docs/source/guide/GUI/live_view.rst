@@ -29,7 +29,7 @@ to the list.
 
 At the top of the *Live view* tab, there's also an *Execute* button with a dropdown menu. It allows you to define a new
 :class:`~daf.client.ACCOUNT` object by clicking *Edit* and load the object into the framework directly.
-However it is recommended that accounts are defined inside the :ref:`Schema tab (GUI)` and loaded by clicking the
+However it is recommended that accounts are defined inside the :ref:`Account definition / schema tab (GUI)` and loaded by clicking the
 *Load selection to live* button (see :ref:`Loading schema into DAF (GUI)`).
 
 .. image:: ./images/gui-live-view-add-object.png

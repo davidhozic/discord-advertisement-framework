@@ -39,6 +39,9 @@ v2.10
   - Password fields are now masked with the \* character whenever not in edit mode.
   - Significant optimizations when saving schema, loading schema, generating equivalent script, creating objects.
 
+- Dev:
+  
+  - ``misc`` module broken down to submodules.
 
 
 v2.9

@@ -8,6 +8,7 @@ from enum import Enum
 from inspect import signature
 
 from daf.convert import import_class
+from daf.misc import instance_track as it
 
 import decimal
 import datetime as dt
@@ -158,7 +159,7 @@ class ObjectInfo(Generic[TClass]):
     """
     CHARACTER_LIMIT = 150
 
-    def __init__(self, class_, data: Mapping, real_object: daf.misc.ObjectReference = None) -> None:
+    def __init__(self, class_, data: Mapping, real_object: it.ObjectReference = None) -> None:
         self.class_ = class_
         self.data = data
         self.real_object = real_object
@@ -219,7 +220,7 @@ class ObjectInfo(Generic[TClass]):
         return _ret
 
 
-@daf.misc.cache_result(max=1024)
+@daf.misc.cache.cache_result(max=1024)
 def convert_objects_to_script(object: Union[ObjectInfo, list, tuple, set, str]):
     """
     Converts ObjectInfo objects into equivalent Python code.
@@ -272,7 +273,7 @@ def convert_objects_to_script(object: Union[ObjectInfo, list, tuple, set, str]):
     return ",".join(object_data).strip(), import_data, "\n".join(other_data).strip()
 
 
-@daf.misc.cache_result(16_384)
+@daf.misc.cache.cache_result(16_384)
 def convert_to_object_info(object_: object, save_original = False):
     """
     Converts an object into ObjectInfo.
@@ -307,7 +308,7 @@ def convert_to_object_info(object_: object, save_original = False):
 
         ret = ObjectInfo(object_type, data_conv)
         if save_original:
-            ret.real_object = daf.misc.ObjectReference(daf.misc.get_object_id(object_))
+            ret.real_object = it.ObjectReference(it.get_object_id(object_))
 
         return ret
 
@@ -340,7 +341,7 @@ def convert_to_object_info(object_: object, save_original = False):
     return _convert_object_info(object_, save_original, object_type, attrs)
 
 
-@daf.misc.cache_result()
+@daf.misc.cache.cache_result()
 def _convert_to_objects_cached(*args, **kwargs):
     return convert_to_objects(*args, **kwargs)
 
@@ -393,7 +394,7 @@ def convert_to_objects(
     return d
 
 
-@daf.misc.cache_result()
+@daf.misc.cache.cache_result()
 def convert_to_json(d: Union[ObjectInfo, List[ObjectInfo], Any]):
     """
     Converts ObjectInfo into JSON representation.
@@ -411,7 +412,7 @@ def convert_to_json(d: Union[ObjectInfo, List[ObjectInfo], Any]):
     return d
 
 
-@daf.misc.cache_result()
+@daf.misc.cache.cache_result()
 def convert_from_json(d: Union[dict, List[dict], Any]) -> ObjectInfo:
     """
     Converts previously converted JSON back to ObjectInfo.

@@ -10,9 +10,8 @@ from aiohttp.web import (
     HTTPException, HTTPInternalServerError, HTTPUnauthorized
 )
 
-
+from .misc import doc, instance_track as it
 from . import convert
-from . import misc
 from . import logging
 
 import asyncio
@@ -84,7 +83,7 @@ def register(path: str, type: Literal["GET", "POST", "DELETE", "PATCH"]):
     return decorator
 
 
-@misc.doc_category("Clients")
+@doc.doc_category("Clients")
 class RemoteAccessCLIENT:
     """
     Client used for processing remote requests from a GUI located on a different network.
@@ -165,7 +164,7 @@ async def http_get_logger():
 
 @register("/object", "GET")
 async def http_get_object(object_id: int):
-    object = misc.get_by_id(object_id)
+    object = it.get_by_id(object_id)
     if object is None:
         raise HTTPInternalServerError(reason="Object not present in DAF.")
 
@@ -174,7 +173,7 @@ async def http_get_object(object_id: int):
 
 @register("/method", "POST")
 async def http_execute_method(object_id: int, method_name: str, **kwargs):
-    object = misc.get_by_id(object_id)
+    object = it.get_by_id(object_id)
     if object is None:
         raise HTTPInternalServerError(reason="Object not present in DAF.")
 

@@ -6,8 +6,9 @@ from typing import Any, Callable, Coroutine
 from typeguard import typechecked
 from urllib.parse import urlparse
 
-from . import misc
+
 from .logging.tracing import *
+from .misc import doc
 
 
 __all__ = (
@@ -45,7 +46,7 @@ class _FunctionBaseCLASS:
     """
 
 
-@misc.doc_category("Message data types")
+@doc.doc_category("Message data types")
 def data_function(fnc: Callable):
     """
     Decorator used for wrapping a function that will return data to send when the message is ready.
@@ -130,7 +131,7 @@ def data_function(fnc: Callable):
 # Other
 #######################################################################
 @typechecked
-@misc.doc_category("Message data types")
+@doc.doc_category("Message data types")
 class FILE:
     """
     FILE object used as a data parameter to the MESSAGE objects.
@@ -156,7 +157,7 @@ class FILE:
 
 
 @typechecked
-@misc.doc_category("Message data types")
+@doc.doc_category("Message data types")
 class AUDIO:
     """
     Used for streaming audio from file or YouTube.

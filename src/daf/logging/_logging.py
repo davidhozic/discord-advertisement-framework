@@ -6,7 +6,8 @@ from datetime import datetime, date
 from typing import Optional, Literal, Union, Tuple, List
 
 from .tracing import trace, TraceLEVELS
-from .. import misc
+from ..misc import doc, async_util
+
 
 import json
 import csv
@@ -32,7 +33,7 @@ class GLOBAL:
     logger = None
 
 
-@misc.doc_category("Logging reference", path="logging")
+@doc.doc_category("Logging reference", path="logging")
 class LoggerBASE:
     """
     .. versionchanged:: v2.7
@@ -155,10 +156,10 @@ class LoggerBASE:
         Other
             Other exceptions raised from ``.initialize`` method (if it exists).
         """
-        await misc._update(self, **kwargs)
+        await async_util.update_obj_param(self, **kwargs)
 
 
-@misc.doc_category("Logging reference", path="logging")
+@doc.doc_category("Logging reference", path="logging")
 class LoggerCSV(LoggerBASE):
     """
     .. versionadded:: v2.2
@@ -257,7 +258,7 @@ class LoggerCSV(LoggerBASE):
                 raise OSError(*exc.args) from exc  # Raise OSError for any type of exceptions
 
 
-@misc.doc_category("Logging reference", path="logging")
+@doc.doc_category("Logging reference", path="logging")
 class LoggerJSON(LoggerBASE):
     """
     .. versionchanged:: v2.8
@@ -415,7 +416,7 @@ async def initialize(logger: LoggerBASE) -> None:
     GLOBAL.logger = logger
 
 
-@misc.doc_category("Logging reference", path="logging")
+@doc.doc_category("Logging reference", path="logging")
 def get_logger() -> LoggerBASE:
     """
     Returns

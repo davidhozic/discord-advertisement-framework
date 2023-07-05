@@ -10,7 +10,7 @@ from ..dtypes import *
 from ..logging.tracing import trace, TraceLEVELS
 
 from ..logging import sql
-from .. import misc
+from ..misc import doc, instance_track, async_util
 
 import asyncio
 import _discord as discord
@@ -32,8 +32,8 @@ sql.register_type("MessageMODE", "edit")
 sql.register_type("MessageMODE", "clear-send")
 
 
-@misc.track_id
-@misc.doc_category("Messages", path="message")
+@instance_track.track_id
+@doc.doc_category("Messages", path="message")
 @sql.register_type("MessageTYPE")
 class TextMESSAGE(BaseMESSAGE):
     """
@@ -482,7 +482,7 @@ class TextMESSAGE(BaseMESSAGE):
                 if not await self._handle_error(channel, ex):
                     return {"success": False, "reason": ex}
 
-    @misc._async_safe("update_semaphore")
+    @async_util.with_semaphore("update_semaphore")
     async def _send(self) -> MessageSendResult:
         """
         Sends the data into the channels.
@@ -524,7 +524,7 @@ class TextMESSAGE(BaseMESSAGE):
         return MessageSendResult(None, MSG_SEND_STATUS_NO_MESSAGE_SENT)
 
     @typechecked
-    @misc._async_safe("update_semaphore")
+    @async_util.with_semaphore("update_semaphore")
     async def update(self, _init_options: Optional[dict] = None, **kwargs: Any):
         """
         .. versionadded:: v2.0
@@ -564,11 +564,11 @@ class TextMESSAGE(BaseMESSAGE):
         if _init_options is None:
             _init_options = {"parent": self.parent}
 
-        await misc._update(self, init_options=_init_options, **kwargs)
+        await async_util.update_obj_param(self, init_options=_init_options, **kwargs)
 
 
-@misc.track_id
-@misc.doc_category("Messages", path="message")
+@instance_track.track_id
+@doc.doc_category("Messages", path="message")
 @sql.register_type("MessageTYPE")
 class DirectMESSAGE(BaseMESSAGE):
     """
@@ -847,7 +847,7 @@ class DirectMESSAGE(BaseMESSAGE):
                 if await self._handle_error(ex) is False or tries == 2:
                     return {"success": False, "reason": ex}
 
-    @misc._async_safe("update_semaphore")
+    @async_util.with_semaphore("update_semaphore")
     async def _send(self) -> MessageSendResult:
         """
         Sends the data into the channels
@@ -876,7 +876,7 @@ class DirectMESSAGE(BaseMESSAGE):
         return MessageSendResult(None, MSG_SEND_STATUS_NO_MESSAGE_SENT)
 
     @typechecked
-    @misc._async_safe("update_semaphore")
+    @async_util.with_semaphore("update_semaphore")
     async def update(self, _init_options: Optional[dict] = None, **kwargs):
         """
         .. versionadded:: v2.0
@@ -910,4 +910,4 @@ class DirectMESSAGE(BaseMESSAGE):
         if _init_options is None:
             _init_options = {"parent": self.parent}
 
-        await misc._update(self, init_options=_init_options, **kwargs)
+        await async_util.update_obj_param(self, init_options=_init_options, **kwargs)

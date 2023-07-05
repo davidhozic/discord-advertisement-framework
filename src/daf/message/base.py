@@ -9,7 +9,8 @@ from dataclasses import dataclass
 
 from ..dtypes import *
 from ..logging.tracing import trace, TraceLEVELS
-from .. import misc
+from ..misc import doc, attributes, async_util, instance_track
+
 
 import random
 import re
@@ -160,9 +161,9 @@ class BaseMESSAGE:
         self._deleted = False
         # Attributes created with this function will not be re-referenced to a different object
         # if the function is called again, ensuring safety (.update_method)
-        misc._write_attr_once(self, "update_semaphore", asyncio.Semaphore(1))
+        attributes.write_non_exist(self, "update_semaphore", asyncio.Semaphore(1))
         # For comparing copies of the object (prevents .update from overwriting)
-        misc._write_attr_once(self, "_id", id(self))
+        attributes.write_non_exist(self, "_id", id(self))
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}(data={self._data})"
@@ -189,7 +190,7 @@ class BaseMESSAGE:
     def __deepcopy__(self, *args):
         "Duplicates the object (for use in AutoGUILD)"
         new = copy.copy(self)
-        for slot in misc.get_all_slots(type(self)):
+        for slot in attributes.get_all_slots(type(self)):
             self_val = getattr(self, slot)
             if isinstance(self_val, (asyncio.Semaphore, asyncio.Lock)):
                 # Hack to copy semaphores since not all of it can be copied directly
@@ -391,8 +392,8 @@ class BaseMESSAGE:
         raise NotImplementedError
 
 
-@misc.track_id
-@misc.doc_category("Auto objects", path="message")
+@instance_track.track_id
+@doc.doc_category("Auto objects", path="message")
 class AutoCHANNEL:
     """
     .. versionadded:: v2.3
@@ -554,6 +555,4 @@ class AutoCHANNEL:
             init_options["parent"] = self.parent
             init_options["channel_type"] = self.channel_getter
 
-        return await misc._update(self,
-                                  init_options=init_options,
-                                  **kwargs)
+        return await async_util.update_obj_param(self, init_options=init_options, **kwargs)

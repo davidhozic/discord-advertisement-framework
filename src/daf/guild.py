@@ -8,11 +8,10 @@ from typeguard import typechecked
 from datetime import timedelta, datetime
 from copy import deepcopy
 
-from .logging.tracing import TraceLEVELS, trace
 from .message import *
-
+from .logging.tracing import TraceLEVELS, trace
+from .misc import async_util, instance_track, doc, attributes
 from . import logging
-from . import misc
 from . import web
 
 import _discord as discord
@@ -328,7 +327,7 @@ class _BaseGUILD:
         """
         raise NotImplementedError
 
-    @misc._async_safe("update_semaphore", 1)
+    @async_util.with_semaphore("update_semaphore", 1)
     async def _advertise(self) -> int:
         """
         Common to all messages, function responsible for sending all the
@@ -396,8 +395,8 @@ class _BaseGUILD:
         }
 
 
-@misc.track_id
-@misc.doc_category("Guilds")
+@instance_track.track_id
+@doc.doc_category("Guilds")
 @logging.sql.register_type("GuildTYPE")
 class GUILD(_BaseGUILD):
     """
@@ -452,7 +451,7 @@ class GUILD(_BaseGUILD):
 
         # Auto strip any url parts and keep only ID by splitting
         self.join_count = {invite.split("/")[-1]: 0 for invite in invite_track}
-        misc._write_attr_once(self, "update_semaphore", asyncio.Semaphore(1))
+        attributes.write_non_exist(self, "update_semaphore", asyncio.Semaphore(1))
 
     def _check_state(self) -> bool:
         """
@@ -570,7 +569,7 @@ class GUILD(_BaseGUILD):
             }
         }
 
-    @misc._async_safe("update_semaphore", 1)
+    @async_util.with_semaphore("update_semaphore", 1)
     async def update(self, init_options = None, **kwargs):
         """
         Used for changing the initialization parameters,
@@ -608,7 +607,7 @@ class GUILD(_BaseGUILD):
         if init_options is None:
             init_options = {"parent": self.parent}
 
-        await misc._update(self, init_options=init_options, **kwargs)
+        await async_util.update_obj_param(self, init_options=init_options, **kwargs)
 
         _messages = []
         for message in messages:
@@ -621,8 +620,8 @@ class GUILD(_BaseGUILD):
         self._messages = _messages
 
 
-@misc.track_id
-@misc.doc_category("Guilds")
+@instance_track.track_id
+@doc.doc_category("Guilds")
 @logging.sql.register_type("GuildTYPE")
 class USER(_BaseGUILD):
     """
@@ -661,7 +660,7 @@ class USER(_BaseGUILD):
         remove_after: Optional[Union[timedelta, datetime]] = None
     ) -> None:
         super().__init__(snowflake, messages, logging, remove_after)
-        misc._write_attr_once(self, "update_semaphore", asyncio.Semaphore(1))
+        attributes.write_non_exist(self, "update_semaphore", asyncio.Semaphore(1))
 
     def _check_state(self) -> bool:
         """
@@ -697,7 +696,7 @@ class USER(_BaseGUILD):
     async def add_message(self, message: DirectMESSAGE):
         return await super().add_message(message)
 
-    @misc._async_safe("update_semaphore", 1)
+    @async_util.with_semaphore("update_semaphore", 1)
     async def update(self, init_options = None, **kwargs):
         """
         .. versionadded:: v2.0
@@ -732,7 +731,7 @@ class USER(_BaseGUILD):
         if init_options is None:
             init_options = {"parent": self.parent}
 
-        await misc._update(self, init_options=init_options, **kwargs)
+        await async_util.update_obj_param(self, init_options=init_options, **kwargs)
 
         _messages = []
         for message in messages:
@@ -745,8 +744,8 @@ class USER(_BaseGUILD):
         self._messages = _messages
 
 
-@misc.track_id
-@misc.doc_category("Auto objects")
+@instance_track.track_id
+@doc.doc_category("Auto objects")
 class AutoGUILD:
     """
     .. versionchanged:: v2.7
@@ -863,7 +862,7 @@ class AutoGUILD:
         self.guild_query_iter = None
         self.last_guild_join = datetime.min
         self.guild_join_count = 0
-        misc._write_attr_once(self, "_safe_sem", asyncio.Semaphore(2))
+        attributes.write_non_exist(self, "_safe_sem", asyncio.Semaphore(2))
 
     @property
     def guilds(self) -> List[GUILD]:
@@ -1103,7 +1102,7 @@ class AutoGUILD:
             # Don't count errored joins but count guilds we are already joined if they match the pattern
             self.guild_join_count += 1
 
-    @misc._async_safe("_safe_sem", 1)
+    @async_util.with_semaphore("_safe_sem", 1)
     async def _advertise(self):
         """
         Advertises thru all the GUILDs.
@@ -1120,7 +1119,7 @@ class AutoGUILD:
 
         return GUILD_ADVERT_STATUS_SUCCESS
 
-    @misc._async_safe("_safe_sem", 1)
+    @async_util.with_semaphore("_safe_sem", 1)
     async def update(self, init_options = None, **kwargs):
         """
         Updates the object with new initialization parameters.
@@ -1134,7 +1133,7 @@ class AutoGUILD:
 
         await self._close()
         try:
-            return await misc._update(self, init_options=init_options, **kwargs)
+            return await async_util.update_obj_param(self, init_options=init_options, **kwargs)
         except Exception:
             self.cache.clear()
             if self.parent is not None:  # Only if it were previously initialized

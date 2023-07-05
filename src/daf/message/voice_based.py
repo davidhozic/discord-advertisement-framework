@@ -10,9 +10,9 @@ from typeguard import typechecked
 from .base import *
 from ..dtypes import *
 from ..logging.tracing import *
-
 from ..logging import sql
-from .. import misc
+from ..misc import doc, instance_track, async_util
+
 from .. import dtypes
 
 import asyncio
@@ -29,8 +29,8 @@ __all__ = (
 C_VC_CONNECT_TIMEOUT = 3  # Timeout of voice channels
 
 
-@misc.track_id
-@misc.doc_category("Messages", path="message")
+@instance_track.track_id
+@doc.doc_category("Messages", path="message")
 @sql.register_type("MessageTYPE")
 class VoiceMESSAGE(BaseMESSAGE):
     """
@@ -347,7 +347,7 @@ class VoiceMESSAGE(BaseMESSAGE):
 
                 await asyncio.sleep(1)  # Avoid sudden disconnect and connect to a new channel
 
-    @misc._async_safe("update_semaphore")
+    @async_util.with_semaphore("update_semaphore")
     async def _send(self) -> MessageSendResult:
         """
         Sends the data into each channel.
@@ -386,7 +386,7 @@ class VoiceMESSAGE(BaseMESSAGE):
         return MessageSendResult(None, MSG_SEND_STATUS_NO_MESSAGE_SENT)
 
     @typechecked
-    @misc._async_safe("update_semaphore")
+    @async_util.with_semaphore("update_semaphore")
     async def update(self, _init_options: Optional[dict] = None, **kwargs):
         """
         .. versionadded:: v2.0
@@ -426,4 +426,4 @@ class VoiceMESSAGE(BaseMESSAGE):
         if _init_options is None:
             _init_options = {"parent": self.parent}
 
-        await misc._update(self, init_options=_init_options, **kwargs)
+        await async_util.update_obj_param(self, init_options=_init_options, **kwargs)

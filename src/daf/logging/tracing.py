@@ -8,7 +8,8 @@ from threading import Lock
 from datetime import datetime
 from sys import _getframe
 
-from .. import misc
+from ..misc import doc
+
 
 try:
     from enum_tools.documentation import document_enum
@@ -26,7 +27,7 @@ C_TRACE_FORMAT = "[{date}] ({level}) | {module}: {message} ({reason})"
 
 
 @document_enum
-@misc.doc_category("Logging reference")
+@doc.doc_category("Logging reference")
 class TraceLEVELS(Enum):
     """
     Levels of trace for debug.
@@ -77,7 +78,7 @@ class GLOBALS:
     lock = Lock()  # For print thread safety
 
 
-@misc.doc_category("Logging reference")
+@doc.doc_category("Logging reference")
 def trace(message: str,
           level: Union[TraceLEVELS, int] = TraceLEVELS.NORMAL,
           reason: Optional[Exception] = None):

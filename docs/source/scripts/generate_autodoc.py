@@ -1,25 +1,18 @@
-from __future__ import annotations
-from contextlib import suppress
 from enum import EnumMeta
 import inspect
 import os
 import sys
 import re
 import pathlib
-from typing import List
 
 OUTPUT_PATH = "../reference"
 
 # Set current working directory to scripts folder
 os.chdir(os.path.dirname(__file__))
-
-
 sys.path.append(os.path.abspath("../../../src"))
 os.environ["DOCUMENTATION"] = "True"
 
-
-import daf
-
+import daf.misc.doc as doc
 
 CATEGORY_TEMPLATE = \
 """
@@ -66,7 +59,7 @@ MANUAL_FUNCTION_TEMPLATE = \
     {docstring}
 """
 
-titles = daf.misc.doc_titles
+titles = doc.cat_map
 output_dir = pathlib.Path(OUTPUT_PATH)
 output_dir.mkdir(parents=True, exist_ok=True)
 with open(os.path.join(OUTPUT_PATH, "index.rst"), "w", encoding="utf-8") as tocwriter:
@@ -105,13 +98,13 @@ with open(os.path.join(OUTPUT_PATH, "index.rst"), "w", encoding="utf-8") as tocw
                             type_desc = split_[0]
                             type_, desc = [x.strip() for x in type_desc.split('\n')]
                             numpy_list.append(f":raises {type_}: {desc}")
-                    
+
                     for title in doc_str_titles:
                         doc_str = doc_str.replace(title, "")
 
                     for i, numpy in enumerate(numpy_found):
                         doc_str = doc_str.replace(numpy, numpy_list[i])
-                        
+
                     export_f_items += MANUAL_FUNCTION_TEMPLATE.format(object_name=object_name,
                                                                       _async_=_async_,
                                                                       annotations=",".join(f"{k}: {v}" for k, v in annotations.items()),
@@ -121,12 +114,11 @@ with open(os.path.join(OUTPUT_PATH, "index.rst"), "w", encoding="utf-8") as tocw
                 else:
                     export_f_items += AUTO_FUNCTION_TEMPLATE.format(object_name=object_name, object_path=object_path,) + "\n"
             elif inspect.isclass(item):
-                # Fill properties 
+                # Fill properties
                 if isinstance(item, EnumMeta):
                     export_c_items += AUTO_ENUM_TEMPLATE.format(object_name=object_name, object_path=object_path) + "\n"
                 else:
                     export_c_items += AUTO_CLASS_TEMPLATE.format(object_name=object_name, object_path=object_path) + "\n"
-
 
         if export_f_items or export_c_items:
             toc_entry = f"{category.lower().replace(' ', '_')}"
@@ -136,6 +128,5 @@ with open(os.path.join(OUTPUT_PATH, "index.rst"), "w", encoding="utf-8") as tocw
                 writer.write(CATEGORY_TEMPLATE.format(category_name=category))
                 writer.write(export_f_items)
                 writer.write(export_c_items)
-            
+
             tocwriter.write(toc_entry)
-   
