@@ -32,7 +32,8 @@ def cache_result(max: int = 256):
             except TypeError:
                 return fnc(*args, **kwargs)
 
-            if (result := cache_dict.get(key, Ellipsis)) is not Ellipsis:
+            result = cache_dict.get(key, Ellipsis)            
+            if result is not Ellipsis:
                 return result
 
             result = fnc(*args, **kwargs)

@@ -307,7 +307,8 @@ class VoiceMESSAGE(BaseMESSAGE):
         try:
             # Check if client has permissions before attempting to join
             client_: discord.Client = self.parent.parent.client
-            if (member := channel.guild.get_member(client_.user.id)) is None:
+            member = channel.guild.get_member(client_.user.id)
+            if member is None:
                 raise self._generate_exception(
                     404, -1, "Client user could not be found in guild members", discord.NotFound
                 )

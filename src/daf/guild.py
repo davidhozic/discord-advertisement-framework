@@ -1077,7 +1077,8 @@ class AutoGUILD:
         # Not already joined in the guild
         if client.get_guild(yielded.id) is None:
             try:
-                if (invite_url := await selenium.fetch_invite_link(yielded.url)) is None:
+                invite_url = await selenium.fetch_invite_link(yielded.url)
+                if invite_url is None:
                     raise RuntimeError("Fetching invite link failed")
 
                 await selenium.random_server_click()
