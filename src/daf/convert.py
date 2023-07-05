@@ -16,10 +16,11 @@ import datetime
 
 import _discord as discord
 
+from .misc import cache, attributes
+from .misc.instance_track import *
 from . import client
 from . import guild
 from . import message
-from . import misc
 from . import logging
 
 
@@ -32,7 +33,7 @@ __all__ = (
 LAMBDA_TYPE = type(lambda x: x)
 
 
-@misc.cache_result()
+@cache.cache_result()
 def import_class(path: str):
     """
     Imports the class provided by it's ``path``.
@@ -46,7 +47,7 @@ def import_class(path: str):
 
 CONVERSION_ATTRS = {
     client.ACCOUNT: {
-        "attrs": misc.get_all_slots(client.ACCOUNT),
+        "attrs": attributes.get_all_slots(client.ACCOUNT),
         "attrs_restore": {
             "tasks": [],
             "_update_sem": asyncio.Semaphore(1),
@@ -55,7 +56,7 @@ CONVERSION_ATTRS = {
         },
     },
     guild.AutoGUILD: {
-        "attrs": misc.get_all_slots(guild.AutoGUILD),
+        "attrs": attributes.get_all_slots(guild.AutoGUILD),
         "attrs_restore": {
             "_safe_sem": asyncio.Semaphore(1),
             "parent": None,
@@ -64,7 +65,7 @@ CONVERSION_ATTRS = {
         },
     },
     message.AutoCHANNEL: {
-        "attrs": misc.get_all_slots(message.AutoCHANNEL),
+        "attrs": attributes.get_all_slots(message.AutoCHANNEL),
         "attrs_restore": {
             "parent": None,
             "cache": set()
@@ -125,7 +126,7 @@ These are:
 
 # Guilds
 CONVERSION_ATTRS[guild.GUILD] = {
-    "attrs": misc.get_all_slots(guild.GUILD),
+    "attrs": attributes.get_all_slots(guild.GUILD),
     "attrs_restore": {
         "update_semaphore": asyncio.Semaphore(1),
         "parent": None
@@ -136,7 +137,7 @@ CONVERSION_ATTRS[guild.GUILD] = {
 }
 
 CONVERSION_ATTRS[guild.USER] = CONVERSION_ATTRS[guild.GUILD].copy()
-CONVERSION_ATTRS[guild.USER]["attrs"] = misc.get_all_slots(guild.USER)
+CONVERSION_ATTRS[guild.USER]["attrs"] = attributes.get_all_slots(guild.USER)
 
 if logging.sql.SQL_INSTALLED:
     def create_decoder(cls):
@@ -193,7 +194,7 @@ CHANNEL_LAMBDA = (
 )
 
 CONVERSION_ATTRS[message.TextMESSAGE] = {
-    "attrs": misc.get_all_slots(message.TextMESSAGE),
+    "attrs": attributes.get_all_slots(message.TextMESSAGE),
     "attrs_restore": {
         "update_semaphore": asyncio.Semaphore(1),
         "parent": None,
@@ -205,7 +206,7 @@ CONVERSION_ATTRS[message.TextMESSAGE] = {
 }
 
 CONVERSION_ATTRS[message.VoiceMESSAGE] = {
-    "attrs": misc.get_all_slots(message.VoiceMESSAGE),
+    "attrs": attributes.get_all_slots(message.VoiceMESSAGE),
     "attrs_restore": {
         "update_semaphore": asyncio.Semaphore(1),
         "parent": None,
@@ -217,7 +218,7 @@ CONVERSION_ATTRS[message.VoiceMESSAGE] = {
 
 
 CONVERSION_ATTRS[message.DirectMESSAGE] = {
-    "attrs": misc.get_all_slots(message.DirectMESSAGE),
+    "attrs": attributes.get_all_slots(message.DirectMESSAGE),
     "attrs_restore": {
         "update_semaphore": asyncio.Semaphore(1),
         "parent": None,
@@ -244,7 +245,7 @@ def convert_object_to_semi_dict(object_: object, only_ref: bool = False) -> Mapp
         if attrs is None:
             # No custom rules defined, try to convert normally with either vars or __slots__
             try:
-                attrs = {"attrs": misc.get_all_slots(type_object) if hasattr(object_, "__slots__") else vars(object_)}
+                attrs = {"attrs": attributes.get_all_slots(type_object) if hasattr(object_, "__slots__") else vars(object_)}
             except TypeError:
                 return object_  # Not structured object or does not have overrides defined, return the object itself
 
@@ -304,7 +305,7 @@ def convert_object_to_semi_dict(object_: object, only_ref: bool = False) -> Mapp
     if only_ref:
         # Don't serialize object completly, only ID is requested.
         # This prevents unnecessarily large data to be encoded
-        object_ = misc.ObjectReference(misc.get_object_id(object_))
+        object_ = ObjectReference(get_object_id(object_))
 
     return _convert_json_slots(object_)
 
@@ -329,8 +330,8 @@ def convert_from_semi_dict(d: Union[Mapping, list, Any]):
             return decoder_func(d["data"])
 
         # Only object's ID reference was encoded -> restore by ID
-        if class_ is misc.ObjectReference:
-            return misc.get_by_id(d["data"]["ref"])
+        if class_ is ObjectReference:
+            return get_by_id(d["data"]["ref"])
 
         # No custom decoder function, normal conversion is used
         _return = class_.__new__(class_)

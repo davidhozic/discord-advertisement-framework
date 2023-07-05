@@ -26,18 +26,14 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
         cache: 'pip'
-
-    - name: Disable initramfs update
-      run: sudo sed -i 's/yes/no/g' /etc/initramfs-tools/update-initramfs.conf
-    - name: Disable man-db update
-      run: sudo rm -f /var/lib/man-db/auto-update
     - name: Patch pyproject.toml (remove nuitka build)
       run: python setup-universal.py
     - name: Install APT dependencies
       uses: awalsh128/cache-apt-pkgs-action@latest
       with:
         packages: ffmpeg
-        version: 1.0
+        version: 1.1
+        execute_install_scripts: true
     - name: Install Python dependencies
       run: |
         python -m pip install --upgrade pip

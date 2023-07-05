@@ -7,6 +7,8 @@ import sys
 from importlib.util import find_spec
 from pathlib import Path
 
+from daf.misc import instance_track as it
+
 
 installed = find_spec("ttkbootstrap") is not None
 
@@ -445,7 +447,7 @@ class Application():
 
                 param_object = combo_history.combo.get()
                 param_object_params = convert_to_objects(param_object.data)
-                items = await self.connection.execute_method(daf.misc.ObjectReference(daf.misc.get_object_id(logger)), getter_history, **param_object_params)
+                items = await self.connection.execute_method(it.ObjectReference(it.get_object_id(logger)), getter_history, **param_object_params)
                 items = convert_to_object_info(items)
                 lst_history.clear()
                 lst_history.insert(tk.END, *items)
@@ -470,7 +472,7 @@ class Application():
                     raise ValueError("Analytics only allowed when using LoggerSQL")
 
                 await self.connection.execute_method(
-                    daf.misc.get_object_id(logger),
+                    it.get_object_id(logger),
                     "delete_logs",
                     table=log_class, primary_keys=logs
                 )
@@ -529,7 +531,7 @@ class Application():
 
                 param_object = combo_count.combo.get()
                 parameters = convert_to_objects(param_object.data)
-                count = await self.connection.execute_method(daf.misc.ObjectReference(daf.misc.get_object_id(logger)), getter_counts, **parameters)
+                count = await self.connection.execute_method(it.ObjectReference(it.get_object_id(logger)), getter_counts, **parameters)
 
                 tw_num.delete_rows()
                 tw_num.insert_rows(0, count)

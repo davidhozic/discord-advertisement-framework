@@ -112,7 +112,7 @@ ustvarila ``function`` direktive ter vsebino prekopirala in pretvorila direktno 
 .. code-block:: python
     :caption: Uporaba :func:`~misc.doc_category` dekoratorja.
 
-    @misc.doc_category("Logging reference", path="logging.sql")
+    @doc.doc_category("Logging reference", path="logging.sql")
     class LoggerSQL(logging.LoggerBASE):
         ...
 

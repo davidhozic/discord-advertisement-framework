@@ -3,11 +3,12 @@
 """
 from typing import Optional, Union, List, Dict
 
-from . import misc
+
 from . import guild
 from . import web
 
 from .logging.tracing import TraceLEVELS, trace
+from .misc import async_util, instance_track, doc, attributes
 
 from typeguard import typechecked
 
@@ -44,8 +45,8 @@ except ImportError:
 # -------------------------------------------- #
 
 
-@misc.track_id
-@misc.doc_category("Clients")
+@instance_track.track_id
+@doc.doc_category("Clients")
 class ACCOUNT:
     """
     .. versionadded:: v2.4
@@ -154,7 +155,7 @@ class ACCOUNT:
 
         self._client = None
         self._deleted = False
-        misc._write_attr_once(self, "_update_sem", asyncio.Semaphore(1))
+        attributes.write_non_exist(self, "_update_sem", asyncio.Semaphore(1))
 
     def __str__(self) -> str:
         return f"{type(self).__name__}(token={self._token}, is_user={self.is_user}, selenium={self._selenium})"
@@ -168,7 +169,7 @@ class ACCOUNT:
     def __deepcopy__(self, *args):
         "Duplicates the object (for use in AutoGUILD)"
         new = copy.copy(self)
-        for slot in misc.get_all_slots(type(self)):
+        for slot in attributes.get_all_slots(type(self)):
             self_val = getattr(self, slot)
             if isinstance(self_val, (asyncio.Semaphore, asyncio.Lock)):
                 # Hack to copy semaphores since not all of it can be copied directly
@@ -440,7 +441,7 @@ class ACCOUNT:
         """
         while self._running:
             ###############################################################
-            @misc._async_safe(self._update_sem)
+            @async_util.with_semaphore(self._update_sem)
             async def __loop():
                 to_remove = []
                 to_advert: List[guild._BaseGUILD, guild.AutoGUILD] = []
@@ -494,7 +495,7 @@ class ACCOUNT:
         if servers is None:
             servers = []
 
-        @misc._async_safe("_update_sem")
+        @async_util.with_semaphore("_update_sem")
         async def update_servers(self_):
             _servers = []
             _autoguilds = []
@@ -512,7 +513,7 @@ class ACCOUNT:
             self._autoguilds = _autoguilds
 
         try:
-            await misc._update(self, **kwargs)
+            await async_util.update_obj_param(self, **kwargs)
             await update_servers(self)
         except Exception:
             await self.initialize()  # re-login

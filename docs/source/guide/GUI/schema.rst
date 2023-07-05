@@ -54,7 +54,7 @@ This opens a new object definition window.
 
 
 Basic information about the object definition window
----------------------------------------------------
+--------------------------------------------------------
 
 In the toolbar (top) we can observe 3 buttons and one toggle. The **Close** button closes the window and asks the user
 if they want to save the object to the previous widget, while the **Save** does the same thing except it saves the object without user

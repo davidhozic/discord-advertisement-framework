@@ -9,7 +9,7 @@ from .dpi import *
 from .connector import get_connection
 
 import _discord as discord
-import daf
+from daf.misc import instance_track as it
 
 import ttkbootstrap as ttk
 import tkinter as tk
@@ -137,7 +137,7 @@ def setup_additional_live_refresh(w: ttk.Button, frame):
             # Need to do this on all previous frames, otherwise we would have wrong data
             for frame_ in reversed(opened_frames):
                 old_gui_data = frame_.old_gui_data
-                if not isinstance(old_gui_data, list) and isinstance(old_gui_data.real_object, daf.misc.ObjectReference):
+                if not isinstance(old_gui_data, list) and isinstance(old_gui_data.real_object, it.ObjectReference):
                     real = await connection.refresh(old_gui_data.real_object)  # Get refresh object from DAF
                     frame_.load(convert_to_object_info(real, True))
 

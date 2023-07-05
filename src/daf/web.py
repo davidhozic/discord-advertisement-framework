@@ -4,15 +4,14 @@ It contains definitions related to the Selenium integration
 and definitions responsible for making HTTP requests to find servers
 the user might want to shill into.
 """
-from typing import Dict, Tuple, Callable, List, Optional, Any
+from typing import Callable, Optional, Any
 from contextlib import suppress
 from enum import auto, Enum
-
-from datetime import datetime, timedelta
+from datetime import timedelta
 from typeguard import typechecked
 
-from . import misc
 from .logging.tracing import trace, TraceLEVELS
+from .misc import doc
 
 import asyncio
 import pathlib
@@ -78,7 +77,7 @@ TOP_GG_SERVER_JOIN_URL = "https://top.gg/servers/{id}/join"
 TOP_GG_REFRESH_TIME = timedelta(hours=1)
 
 
-@misc.doc_category("Clients")
+@doc.doc_category("Clients")
 class SeleniumCLIENT:
     """
     .. versionadded:: v2.5
@@ -650,7 +649,7 @@ class SeleniumCLIENT:
             ) from exc
 
 
-@misc.doc_category("Web")
+@doc.doc_category("Web")
 class QuerySortBy(Enum):
     """
     Enumerated options that can be passed to the ``sort_by``
@@ -663,7 +662,7 @@ class QuerySortBy(Enum):
     TOTAL_USERS = auto()
 
 
-@misc.doc_category("Web")
+@doc.doc_category("Web")
 class QueryMembers(Enum):
     """
     Enumerated options that can be passed to the ``total_members``
@@ -701,7 +700,7 @@ class QueryResult:
         self.url = url
 
 
-@misc.doc_category("Web")
+@doc.doc_category("Web")
 class GuildDISCOVERY:
     """
     Client used for searching servers.
