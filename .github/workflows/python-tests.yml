@@ -7,6 +7,10 @@ on:
     branches: [ "master" , "develop"]
   workflow_dispatch:
 
+concurrency:
+    group: "selftest-cg"
+    cancel-in-progress: false
+
 jobs:
   pytest:
     runs-on: ubuntu-latest
@@ -27,12 +31,14 @@ jobs:
       run: sudo sed -i 's/yes/no/g' /etc/initramfs-tools/update-initramfs.conf
     - name: Disable man-db update
       run: sudo rm -f /var/lib/man-db/auto-update
+    - name: Patch pyproject.toml (remove nuitka build)
+      run: python setup-universal.py
     - name: Install dependencies
       run: |
         sudo apt update
         sudo apt install -y ffmpeg
         python -m pip install --upgrade pip
-        pip install -r requirements/mandatory.txt -r requirements/sql.txt -r requirements/web.txt -r requirements/voice.txt -r requirements/testing.txt
+        pip install .[all]
     - name: Test version compatibility
       env:
         DISCORD_TOKEN: ${{secrets.DATT}}
