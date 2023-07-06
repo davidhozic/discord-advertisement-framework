@@ -1,29 +1,88 @@
-name: Upload Python Package
+name: (todo) Nuitka build and publish to PyPi
 
 on:
-  release:
-    types: [published]
   workflow_dispatch:
 
 jobs:
-  deploy:
-
-    runs-on: ubuntu-latest
+  # Build job
+  build:
+    runs-on: ${{matrix.os[0]}}
+    strategy:
+      matrix:
+        os: 
+        - [ubuntu-latest, manylinux_x86_64]
+        - [macos-12, macosx_x86_64]
+        - [windows-2019, win_amd64]
+        python: ["cp38", "cp39", "cp310"]
 
     steps:
-    - uses: actions/checkout@v3
+    - name: Change file endings.
+      run: |
+        git config --global core.autocrlf false
+        git config --global core.eol lf
+
+    - name: Checkout code
+      uses: actions/checkout@v3
+
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.x'
+        python-version: "3.x"
+        cache: 'pip'
+
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install build
-    - name: Build package
-      run: python3 -m build
-    - name: Publish package
-      uses: pypa/gh-action-pypi-publish@f5622bde02b04381239da3573277701ceca8f6a0
+        pip install build cibuildwheel==2.13.1
+
+    - name: Build wheels
+      run: |
+        python -m cibuildwheel --output-dir dist
+      env:
+        CIBW_BUILD: ${{ matrix.python }}-${{ matrix.os[1] }}
+
+    - name: Build sdist and universal wheel
+      if: ${{matrix.python == 'cp38' && matrix.os[0] == 'ubuntu-latest'}}
+      run: |
+        python setup-universal.py
+        python -m build
+
+    - name: Cache dist
+      uses: actions/cache@v3
       with:
-        user: __token__
-        password: ${{ secrets.PYPI_API_TOKEN }}
+        path: dist/
+        key: ${{matrix.python}}-${{matrix.os[0]}}-${{hashFiles('**/daf/__init__.py')}}
+        enableCrossOsArchive: true
+
+  # Publish job
+  publish:
+    runs-on: ubuntu-latest
+    needs: build
+    strategy:
+      matrix:  # Same as in build job
+        os: 
+        - [ubuntu-latest, manylinux_x86_64]
+        - [macos-12, macosx_x86_64]
+        - [windows-2019, win_amd64]
+        python: ["cp38", "cp39", "cp310"]
+    steps:
+      - name: Change file endings.
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Restore dist
+        uses: actions/cache/restore@v3
+        with:
+          path: dist/
+          key: ${{matrix.python}}-${{matrix.os[0]}}-${{hashFiles('**/daf/__init__.py')}}
+          enableCrossOsArchive: true
+
+      - name: Publish package
+        uses: pypa/gh-action-pypi-publish@f5622bde02b04381239da3573277701ceca8f6a0
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_API_TOKEN }}
