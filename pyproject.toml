@@ -3,7 +3,7 @@ requires = [
     "setuptools>=62.6,<66",
     "setuptools-scm>=6.2,<8",
     "wheel",
-    "nutika",
+    "nuitka",
     "toml",
 ]
 
