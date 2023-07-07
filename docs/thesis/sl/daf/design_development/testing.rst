@@ -29,19 +29,19 @@ v primeru da je naš test definiran kot
     async def test_moje_testiranje(ime_fixture):
         ...
 
-bo naš test prejel vrednost, ki jo je fixture ``ime_fixture`` vrnil. Fixture ima lahko različno dolgo življensko dobo,
-kar pomeni da bo lahko več testov prejelo isto vrednost, ki jo je fixture vrnil dokler se življenska doba ne izteče.
+bo naš test prejel vrednost, ki jo je fixture ``ime_fixture`` vrnil. Fixture ima lahko različno dolgo življensko dobo / obseg
+(npr. globalen obseg, obseg modula, obseg funkcije), kar pomeni da bo lahko več testov prejelo isto vrednost, ki jo je fixture vrnil dokler se življenska doba ne izteče.
 Fixture je lahko tudi `Python generator <https://wiki.python.org/moin/Generators>`_, kar nam omogoča inicializacijo testov in 
 čiščenje na koncu na sledeč način:
 
 .. code-block:: python
-    :caption: PyTest fixture, ki obstaja življenjsko dobo vseh testov.
+    :caption: PyTest fixture z inicializacijo in čiščenjem (po koncu testne seje). 
     
     @pytest_asyncio.fixture(scope="session")
     def ime_fixture(ime_nek_drug_fixture):
         # Inicializacija
         database = DataBaseConnector()
-        database.connect("svet.fe.uni-lj.si/api/database")
+        database.connect("discord.svet.fe.uni-lj.si/api/database")
 
         yield database  # Vrednost, ki jo dobijo testi
 
@@ -54,7 +54,7 @@ Fixture je lahko tudi `Python generator <https://wiki.python.org/moin/Generators
 Preverjanje ali je test uspel se izvede s stavkom ``assert``, ki dvigne :class:`AssertionError` napako, v primeru
 da njegova vhodna vrednost ni enaka ``True``.
 V primeru da je dvignjen :class:`AssertionError`, PyTest zabeleži test kot neuspel in izpiše napako.
-In izpiše kaj je šlo narobe. Kako podroben bo izpis, se lahko nastavi ob zaganjanju testa, npr.
+Kako podroben bo izpis, se lahko nastavi ob zaganjanju testa, npr.
 ``pytest -vv``, kjer ``-vv`` nastavi podrobnost. Kot primer si poglejmo kaj bo izpisal, če v assert stavek
 kot vhod damo primerjavo dveh seznamov.
 
@@ -64,9 +64,9 @@ kot vhod damo primerjavo dveh seznamov.
     assert [1, 2, 3] == [1, 2, 3, 4, 5, 6]
 
 
-Iz zgornjega testa je očitno da to ne drži in da bo test neuspel, ampak v assertu nimamo nobenega
-izpisa, ki kaj izpisal, tako da bi pričakovali da PyTest vrne samo informacijo da test ni uspel.
-PyTest je bolj pameten, kot to in sicer nam bo izpisal točno kateri elementi se v seznamu razlikujejo.
+Iz zgornjega testa je očitno da to ne drži in da bo test neuspel, ampak v assertu nimamo nobene
+:func:`print` funkcije, ki bi izpisala kaj je šlo narobe, tako da bi pričakovali da PyTest vrne samo informacijo da test ni uspel.
+PyTest je bolj pameten kot to, in sicer nam bo izpisal točno kateri elementi se v seznamu razlikujejo.
 
 .. code-block::
     :caption: PyTest izpis ob neuspelem testu pri primerjavi dveh :class:`seznamov <list>`.

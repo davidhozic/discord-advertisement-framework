@@ -16,9 +16,9 @@ Zasnova in razvoj jedra
 .. |TOPGG| replace:: https://top.gg
 
 
-To poglavje govori o jedru samega ogrodja, kjer je jedro vse vsega kar ni del grafičnegega vmesnika.
+To poglavje govori o jedru samega ogrodja, kjer je jedro vse vsega kar ni del grafičnega vmesnika.
 
-Jedro DAF-a je zasnovan kot Python_ knjižnica / paket, ki se jo lahko namesti preko PIP-a (*Preferred Installer Program*), ki je
+Jedro DAF-a je zasnovano kot Python_ knjižnica / paket, ki se ga lahko namesti preko PIP-a (*Preferred Installer Program*), ki je
 vgrajen v Python_ in služi nalaganju Python paketov. Za uporabo jedra mora uporabniki ustvariti ``.py`` datoteko in definirati
 ustrezno konfiguracijo. To zahteva nekaj osnovnega znanja Python jezika, obstaja pa tudi možnost, da se to datoteko
 generira iz grafičnega vmesnika (:ref:`Zasnova in razvoj grafičnega vmesnika`)
@@ -26,7 +26,7 @@ generira iz grafičnega vmesnika (:ref:`Zasnova in razvoj grafičnega vmesnika`)
 Za lažjo implementacijo in kasnejši razvoj, je jedro DAF ogrodja razdeljeno na več nivojev abstrakcije oziroma plasti.
 Ti nivoji so:
 
-- Jedrni nadzorni nivo
+- Nadzorni nivo
 - Uporabniški nivo
 - Cehovski (strežniški) nivo
 - Sporočilni nivo
@@ -40,24 +40,19 @@ Ti nivoji so:
     Abstrakcija
 
 
-Jedrni nadzorni nivo
+Nadzorni nivo
 ---------------------
-.. note::
+Nadzorni nivo skrbi za zagon samega ogrodja ter njegovo zaustavitev. Skrbi tudi za procesiranje ukazov, ki jih DAF ponuja
+preko lastnega programskega vmesnika oz. preko HTTP vmesnika (API), kjer se programski vmesnik navezuje na kontrolne Python
+funkcije za neposredno upravljanje ogrodja na isti napravi, HTTP vmesnik pa na upravljanje na daljavo.
+Nivo služi tudi za odstranjevanje neuporabljenih objektov, kot tudi shranjevanje vseh računov v morebitno datoteko, če je to zaželjeno.
 
-    Jedro in jedrni nivo sta dve različni stvari. Zveza *jedro ogrodja* označuje vse kar ni del grafičnega vmesnika,
-    medtem ko *jedrni nivo* označuje le enega izmed nivojev vsega kar ni grafični vmesnik.
-
-
-Jedrni nivo skrbi za zagon samega ogrodja ter njegovo zaustavitev. Skrbi tudi za procesiranje ukazov, ki jih DAF ponuja
-preko lastnega programskega vmesnika oz. preko HTTP vmesnika (API). Lahko bi rekli da je vstopna točka API vmesnika.
-Služi tudi za odstranjevanje neuporabljenih objektov in tudi shranjevanje vseh računov v morebitno datoteko, če je to zaželjeno.
-
-Ko zaženemo ogrodje, ta v jedrnem nivoju sproži inicializacijo nivoja beleženja in zatem uporabniškega nivoja,
+Ko zaženemo ogrodje, ta v nadzornem nivoju sproži inicializacijo nivoja beleženja in zatem uporabniškega nivoja,
 kjer za vsak definiran uporabniški račun, (v :ref:`računskem nivoju <Računski nivo>`) ustvari lastno :mod:`asyncio` opravilo,
 ki omogoča simultano oglaševanje po več računih hkrati.
 Na koncu pokliče funkcijo, ki je bila dana ob klicu zaganjalne funkcije :func:`daf.core.run`.
 
-Jedrni nivo ima vedno vsaj eno opravilo, in sicer je to tisto, ki skrbi za čiščenje uporabniških računov, v primeru napak.
+Nadzorni nivo ima vedno vsaj eno opravilo, in sicer je to tisto, ki skrbi za čiščenje uporabniških računov v primeru napak.
 V primeru da napake ni, se račune dodaja preko :func:`daf.core.add_object` in
 briše preko :func:`daf.core.remove_object` funkcij
 
@@ -65,23 +60,22 @@ Drugo opravilo se zažene le v primeru, da je vklopljeno shranjevanje objektov v
 Ogrodje samo po sebi deluje, tako da ima vse objekte (računov, cehov, sporočil, ipd.) shranjene kar neposredno v RAM pomnilniku.
 Že od samega začetka je ogrodje narejeno na tak način da se željene objekte definira kar preko Python skripte in je zato shranjevanje v RAM
 ob taki definiciji neproblematično, problem pa je nastopil, ko je bilo dodano dinamično dodajanje in brisanje objektov, kar
-dejansko uporabnikom omogoča da ogrodje dinamično uporavljajo in v tem primeru je bilo potrebno dodati neke vrste permanetno shrambo.
+dejansko uporabnikom omogoča da ogrodje dinamično uporavljajo in v tem primeru je bilo potrebno dodati neke vrste permanentno shrambo.
 Razmišljalo se je o več alternativah, ena izmed njih je bila da bi se vse objekte shranjevalo v neko bazo podatkov, ki bi omogočala
-mapiranje podatkov v bazi na Python objekte, kar bi z vidika robustnosti bila zelo dobra izbira, a to bi zahtevalo ogromno prenovo
+mapiranje podatkov v bazi, kar bi z vidika robustnosti bila zelo dobra izbira, a to bi zahtevalo ogromno prenovo
 vseh nivojev, zato se je na koncu izbrala preprosta opcija shranjevanja objektov, ki preko :mod:`pickle` modula shrani vse račune
 ob vsakem normalnem izklopu ogrodja ali pa v vsakem primeru na dve minuti v primeru neprimerne ustavitve. V prihodnosti, so
 še vedno načrti za izboljšanje tega mehanizma in se ne izključuje opcija uporabe prej omenjene podatkovne baze.
 
-V tem nivoju se poleg osnovnega programskega vmesnika nahaja tudi HTTP API vmesnik, ki je namenjen sprejemanju zahtevkov
-iz grafičnega vmesnika. HTTP vmesnik ne služi za nič drugega kot podpora za oddaljen dostop v primeru, da bi jedro delovalo
-na ločeni napravi, kot grafični vmesnik (v tem primeru se uporalja osnoven programski API). HTTP API je v resnici zelo preprost, 
-in sicer deluje tako da ob neki HTTP zahtevi kliče le funkcijo programskega API vmesnika in vrne rezultat, kar pomeni da dejansko
-daje enake rezultate kot da bi uporabniški vmesnik in jedro delovala na isti napravi. Vsi podatki se sprejemajo in vračajo
-v JSON formatu (kompresiranem z :mod:`gzip`). Osnoven koncept je prikazan na spodnji sliki.
+V tem nivoju se poleg osnovnega programskega vmesnika nahaja tudi HTTP API vmesnik, ki ne služi za nič drugega kot
+podpora za oddaljen dostop v primeru, da bi jedro delovalo na tuji napravi namesto na napravi, kjer deluje grafični vmesnik.
+HTTP API je v resnici zelo preprost, in sicer deluje tako, da ob neki HTTP zahtevi kliče le funkcijo programskega API vmesnika (Python funkcije na oddaljeni napravi)
+in vrne rezultat, kar pomeni da dejansko da je enake rezultate kot da bi uporabniški vmesnik in jedro delovala na isti napravi.
+Vsi podatki se sprejemajo in vračajo v JSON formatu (kompresiranem z :mod:`gzip`). Osnoven koncept je prikazan na spodnji sliki.
 
 .. figure:: ./DEP/daf-core-http-api.drawio.svg
-    
-    Upravljanje z vmesnikom
+
+    Povezava do jedra (barve puščic prikazujejo ločen potek)
 
 
 Računski nivo
@@ -148,19 +142,6 @@ v primeru logiranja (vsaj v primeru JSON datotek), kjer je vse razdeljeno po raz
     Delovanje cehovskega nivoja
 
 
-V cehovskem nivoju, bi lahko definirali tudi podnivo - nivo avtomatičnih cehov (|AutoGUILD|), kjer se v tem podnivoju cehi samodejno
-ustvarjajo na podlagi imena cehov v katerem je uporabnik že pridužen - v tem primeru se ta podnivo obnasa podobno kot :ref:`računski nivo <Računski nivo>`.
-Omogoča pa tudi samodejno pridruževanje novih cehov
-in njihovo najdbo na podlagi določenih parametrov in sicer to stori s pomočjo :ref:`nivoja brskalnika <Nivo brskalnika (Selenium)>` in |TOPGG|
-iskalnikom cehov - Več o tem v :ref:`Nivo brskalnika (Selenium)`.
-
-
-.. figure:: ./DEP/daf-guild-auto-layer-flowchart.svg
-    :width: 600
-
-    Delovanje AutoGUILD pod nivoja
-
-
 .. raw:: latex
 
     \newpage
@@ -212,13 +193,6 @@ Glede na to da je ogrodje mišljeno kot neko ogrodje za oglaševanje sporočil, 
 .. V cehovskem nivoju se od sporočilnega nivoja preko :py:meth:`~daf.message.TextMESSAGE._is_ready` metode preverja ali
 .. je sporočilo pripravljeno za pošiljanje v slednjem primeru začne s procesom pošiljanja sporočila.
 
-Na začetku je bil sporočilni nivo mišljen le za hrambo podatkov o sporočilu in definiranje časa pošiljanja,
-vsa ostala logika pa je bila pristotna v cehovksem nivoju, in sicer se je dejansko tam definiralo kanale za pošiljanje.
-Po nekaj premislekih, preizkušanju in mnenj uporabnikov pa je bila logika pošiljanja v kanal prestavljena v sporočilni nivo,
-kar omogoča tudi, da se sporočilo pošlje v več različnih kanalov (v istem cehu) brez ustvarjanja novih sporočilnih objektov
-kot ob prejšnji implementaciji, kjer se je kanale definiralo v cehovskih objektih.
-Med možnostmi je bila tudi, da bi se za same kanale ustvarilo ločen nivo, a bi to zahtevalo še več
-pisanja ob definiciji oglaševalske skripte brez neke dodane vrednosti in posledično je bila ta ideja zavržena.
 
 Kdaj je sporočilo pripravljeno za pošiljanje določa notranji atribut objekta, ki predstavlja točno specifičen čas naslednjega
 pošiljanja sporočila. V primeru da je trenutni čas večji od tega atributa, je sporočilo pripravljeno za pošiljanje.
@@ -229,41 +203,18 @@ zahtev na API v ovojnem API nivoju (pri pošiljanju vsakega sporočila in ostali
 To je še posebno pomembno v primeru da imamo definiranih veliko sporočil v enem računu, kar je zagotovilo da se sporočilo ne bo
 poslalo točno ob določenem času. Ker se čas prišteva od prejšnjega časa pošiljanja, posledično to pomeni da bo v primeru
 zamude sporočila, razmak med tem in naslednjim sporočilom manjši točno za to časovno napako (če privzamemo da ne bo ponovne zakasnitve).
-Prvi čas pošiljanja je določen z ``start_in`` parametrom.
+
 Pred tem algoritmom, je za določanje časa pošiljanja bil v rabi preprost časovnik, ki se je ponastavil ob vsakem pošiljanju, a se je zaradi Discord-ove
 omejitve API zahtevkov in tudi drugih Discord API zakasnitev, čas pošiljanja vedno pomikal malo naprej, kar je pomenilo, da če je uporabnik
 ogrodje konfiguriral da se neko sporočilo pošlje vsak dan in definiral čas začetka naslednje jutro ob 10tih (torej pošiljanje vsak dan ob tej uri),
 potem je po (sicer veliko) pošiljanjih namesto ob 10tih uporabnik opazil, da se sporočilo pošlje ob 10.01, 10.02, itd.
 Primer računanja časa in odpravo časovne napake je prikazan na spodnji sliki.
 
-V prejšnjih odstavkih je bila omenjena zavržena ideja o nivoju dodatnih kanalov. Ta ideja je bila res zavržena, a z eno izjemo.
-Ta izjema je avtomatična definicija kanalov na podlagi RegEx vzorca, kjer lahko namesto identifikatorjev kanalov, kanale
-definiramo z RegEx vzorcem, in sicer se to zgodi znotraj |AutoCHANNEL| objektov. Deluje podobno kot
-|AutoGUILD| v :ref:`cehovskem nivoju <Cehovski nivo>`.
-
-
 .. figure:: ./DEP/daf-message-period.svg
     :width: 500
 
     Čas pošiljanja sporočila s toleranco zamud
 
-
-.. Proces pošiljanja sporočila poteka tako, da sporočilni nivo najprej pridobi podatke za pošiljanje. Ti podatki so lahko
-.. fiksni podatki podani ob kreaciji sporočilnega objekta, lahko pa se jih pridobi tudi dinamično v primeru, da je bila
-.. ob kreaciji objekta podana funkcija. V slednjem primeru se funkcijo pokliče in v primeru da vrne veljaven tip podatka za
-.. vrsto sporočilnega objekta, se ta podatek uporabi pri pošiljanju sporočila - glej :func:`daf.dtypes.data_function`.
-.. Po pridobivanju podatkov, sporočilni objekt za vsak svoj kanal preveri ali je uporabnik:
-
-.. - še pridružen cehu,
-.. - ima pravice za pošiljanje,
-.. - kanal še obstaja.
-
-.. Če karkoli od zgornjega ni res, se dvigne ustrezna Python_ napaka, ki simulira napako ovojnega API nivoja.
-.. Tip dvignjene napake je podedovan iz :class:`discord.HTTPException`.
-.. V primeru, da ni bila dvignjena nobena napaka, se sporočilo pošlje v kanal. Če je sporočilni objekt tipa
-.. .. |TextMESSAGE| ali |DirectMESSAGE|, se lahko na podlagi ``mode`` parametra sporočilo pošlje na različne načine.
-
-.. Po poslanem sporočilu se podatke sporočila in status pošiljanja pošlje :ref:`cehovskem novoju <Cehovski nivo>`.
 
 .. figure:: ./DEP/daf-message-process.svg
     :width: 800
@@ -289,8 +240,8 @@ DAF omogoča beleženje v tri različne formate, kjer vsakemu pripada lasten obj
 3. SQL (*Structured Query Language*) - :class:`~daf.logging.sql.LoggerSQL`
 
 
-Ob inicializaciji, se v jedrnem nivoju poda željen objekt beleženja, ki se inicializira in shrani v nivo beleženja.
-V postopku inicializaciji po svoji lastni inicializaciji, inicializira še njegov nadomestni (``fallback`` parameter)
+Ob inicializaciji, se v nadzornem nivoju poda željen objekt beleženja, ki se inicializira in shrani v nivo beleženja.
+Po svoji lastni inicializaciji, se inicializira še njegov nadomestni (``fallback`` parameter)
 objekt, ki se uporabi v primeru kakršne koli napake pri beleženju (bolj pomembno pri SQL beleženju na oddaljen strežnik).
 
 Po vsakem poslanem sporočilu se iz cehovskega nivoja naredi zahteva, ki vsebuje podatke o cehu, poslanem sporočilu oz.
@@ -349,8 +300,8 @@ formata, tu ni več slojnih struktur.
 
 SQL beleženje
 ~~~~~~~~~~~~~~~~~~
-SQL beleženja pa deluje precej drugače kot :ref:`JSON beleženje` in :ref:`CSV beleženje`. Medtem ko sicer omogoča tudi shranjevanje
-v datoteke, so te datoteke dejansko baze podatkov SQLite.
+SQL beleženje pa deluje precej drugače kot :ref:`JSON beleženje` in :ref:`CSV beleženje`, saj se podatki shranjujejo
+v podatkovno bazo, ki je v primeru uporabe SQLite dialekta sicer lahko tudi datoteka.
 
 DAF omogoča beleženje v 4 dialekte:
 
@@ -373,43 +324,43 @@ je bila ta vrsta logiranja možna le ob uporabi Microsoft SQL Server baze.
 Kasneje se je postopoma celotno SQL kodo zamenjalo z ekvivalentno Python kodo, ki preko SQLAlchemy knjižnice dinamično
 generira potrebne SQL stavke, zaradi česar so bile odstranjene določene uporabne originalne funkcionalnosti implementirane
 na nivoju same SQL baze kot so npr. prožilci (angl. *trigger*). Je pa zaradi tega možno uporabljati bazo na večih dialektih,
-tudi v SQLite, ki vse shranjuje lokalno v datoteki, dodatno pa je tudi konfiguracija precej lažja.
+dodatno pa je tudi konfiguracija precej lažja.
 
-
-Spodnja slika prikazuje povezavo relacij (tabel) med seboj.
-Celoten opis pa je na voljo v :ref:`dokumentaciji ogrodja <SQL Tables>`.
 
 .. figure:: ./DEP/sql_er.drawio.svg
-    :width: 500
 
-    SQL entitetno-relacijski diagram
+    :ref:`SQL entitetno-relacijski diagram <SQL Tables>`
 
 
-.. figure:: ./DEP/daf-logging-sql.svg
-    :width: 500
+.. raw:: latex
 
-    Proces beleženja z SQL podatkovno bazo
+    \newpage
+
 
 
 Nivo brskalnika (Selenium)
 -------------------------------
 Velika večina DAF deluje na podlagi ovojnega API nivoja, kjer direktno komunicira z Discord API.
-Določenih stvari se pa neposredno z API ne da narediti ali pa prek API
-obstaja velika možnost, da Discord suspendira uporabnikov račun (npr. pridruževanje cehom), saj je po Discord ToS
-uporaba avtomatiziranih računov prepovedana.
+Določenih stvari pa se neposredno z Discord API ne da narediti ali obstaja velika možnost,
+da Discord suspendira uporabnikov račun, saj je po Discord ToS uporaba avtomatiziranih računov prepovedana.
 
-Za ta namen je bil ustvarjen nivo brskalnika, kjer DAF namesto komuniciranja z Discord API, komunicira z brskalnikom
+Za ta namen je bil ustvarjen nivo brskalnika, kjer DAF namesto z Discord API, komunicira z brskalnikom
 Google Chrome. To opravlja s knjižnico `Selenium <https://www.selenium.dev/>`_, ki je namenjena avtomatizaciji brskalnikov
-in se posledično uporablja tudi kot orodje za preizkušanje spletnih vmesnikov.
+in se posledično uporablja tudi kot orodje za avtomatično testiranje spletnih vmesnikov.
 
-V DAF projektu, se ta knjižnica ne uporablja za testiranje, ampak za avtomatično prijavljanje v Discord z uporabniškim
-imenom in geslom, ter tudi za pridruževanje cehom. Za to da bo ta nivo uporabljen, je potrebno ob ustvarjanju :class:`~daf.client.ACCOUNT`
+V DAF projektu Selenium ni uporabljen za testiranje, temveč za avtomatično prijavljanje v Discord z uporabniškim
+imenom in geslom in tudi za pol avtomatično pridruževanje cehom. Za to da bo ta nivo uporabljen, je potrebno ob ustvarjanju :class:`~daf.client.ACCOUNT`
 objekta podati uporabniško ime in geslo namesto žetona. Znotraj :class:`~daf.client.ACCOUNT` objekta se bo potem samodejno
 ustvaril nanj vezanj objekt :class:`~daf.web.SeleniumCLIENT`.
 
 .. figure:: ./DEP/daf-selenium-layer.svg
 
     Delovanje brskalniškega nivoja
+
+
+.. raw:: latex
+
+    \newpage
 
 
 Ovojni Discord API nivo
@@ -425,10 +376,10 @@ Ogrodje PyCord skoraj popolnoma zakrije Discord API z raznimi objekti, ki jih DA
 
 Če bi si ogledali izvirno kodo DAF, bi opazili da je poleg ``daf`` paketa zraven tudi paket z imenom ``_discord``.
 To ni nič drugega, kot PyCord ogrodje, le da je modificirano za možnost rabe na osebnih uporabniških računih.
-Poleg lokalnih modifikacij, sem tudi na uradni verziji PyCord ogrodja naredil nekaj, z namenom izboljšanje nekaterih
+Poleg lokalnih modifikacij, sem tudi na uradni verziji PyCord ogrodja naredil nekaj modifikacij, z namenom izboljšanje nekaterih
 funkcionalnosti na DAF ogrodju.
 Da bi PyCord ogrodje bilo možno posodabljati, so z ukazom ``git diff`` ustvarjene GIT datoteke za krpanje (*patch*),
-kar pravzaprav omogoča da se novo verzijo PyCord ogrodja preprosto kopira v mapo in z ``git apply`` uvozi spremembe v
-datotekah za krpanje.
+kar pravzaprav omogoča da se novo verzijo PyCord ogrodja preprosto kopira v mapo in z ``git apply`` ukazom uvozi spremembe iz
+datotek za krpanje.
 
 Več je na voljo v `uradni PyCord dokumentaciji <https://docs.pycord.dev/en/stable/>`_.

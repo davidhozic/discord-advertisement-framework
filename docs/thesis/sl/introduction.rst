@@ -18,7 +18,7 @@ Najpogosteje predstavljajo digitalna umetniška dela.
 
 NFT se od stvari, kot je Etherium, razlikujejo po tem, da niso zamenljivi.
 Nezamenljivost pomeni, da posameznega sredstva NFT ni mogoče preprosto zamenjati za drugo, kot se lahko menja
-sod olja za drug sod olja ali en evo za drug evro.
+sod olja za drug sod olja ali en evro za drug evro.
 
 Najbližji primer NFT v fizični obliki je bejzbolska kartica. Na primer, lahko imate zelo redko 
 bejzbolsko kartico nekega igralca bejzbola in je ne morete enakovredno zamenjati za kakšno drugo običajno bejzbolsko kartico.

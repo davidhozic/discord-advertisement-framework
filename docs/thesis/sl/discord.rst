@@ -138,15 +138,12 @@ Oglaševanje v Discord
 Kot je bilo razloženo v :ref:`Marketinški pristopi za promoviranje nezamenljivih žetonov`, je *shilling* vrsta oglaševanja.
 V Discord se lahko oglašuje ročno ali pa avtomatično z primernim orodjem.
 
-
-Ročno oglaševanje
----------------------
-Ročno oglaševanje vključuje pisanje vašega oglasa, ustvarjanje računov, iskanje cehov in večkratno periodično pošiljanje
+Oglaševanje vključuje pisanje vašega oglasa, ustvarjanje računov, iskanje cehov in večkratno periodično pošiljanje
 sporočil v kanale oz. v direktna sporočila posameznih uporabnikov.
 
 
 Generiranje vsebine
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+---------------------------
 Oglaševalsko vsebino se lahko napiše na pamet iz glave ali pa se uporabi malo bolj sofisticirana orodja, kot je to 
 GPT (*Generative pretrained transformers*).
 
@@ -158,7 +155,7 @@ Prislužil si je pozornost tako raziskovalcev kot industrijskih strokovnjakov za
 Za referenco, prejšnji odstavek je zgeneriral GPT-3 sam.
 
 
-Za generacijo oglaševalske vsebina lahko npr. GPT-ju podamo slednjo zahtevo:
+Za generacijo oglaševalske vsebine lahko npr. GPT-ju podamo slednjo zahtevo:
 
 *"Write advertisement for my White Rabbit NFT project which came out in 2023. 
 We have over 9000 different NFT available for purchase. Talk about the limited Gray Rabbit NFT (only 50 available). Get additional information here www.mynft.domain"*
@@ -171,20 +168,18 @@ Don't miss out on the opportunity to own a piece of digital art history. These G
 But act fast - there are only 50 available, and once they're gone, they're gone for good.
 For more information and to purchase your own Gray Rabbit NFT, visit www.mynft.domain. Don't wait - add one of these rare and valuable NFTs to your collection today!"*
 
-Ko imate oglaševalsko vsebino jo samo prepošiljate po vseh kanalih.
 
-.. figure:: ./DEP/chatgpt.png
-    :width: 400
+.. raw:: latex
 
-    Primer Chat-GPT
+    \newpage
 
 
 Iskanje cehov za oglaševanje
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Ko enkrat imate oglaševalsko vsebino, rabite najti cehe kamor boste to vsebino pošiljali.
+------------------------------
+Ko je oglaševalska vsebina napisana, je potrebo najti cehe se bo to vsebino pošiljalo.
 Dober kraj za začetek je kar nek spletni iskalnik.
 Nabor cehov ponuja tudi kar Discord sam, ampak za to da nek ceh pride na njihov seznam mora imeti zagotovljenih kar
-nekaj pogojev med katerimi je tudi ta da mora imeti ceh vsaj 1000 uporabnikov. To posledično pomeni da ima ceh verjetno
+nekaj pogojev med katerimi je tudi ta, da mora imeti ceh vsaj 1000 uporabnikov. To posledično pomeni da ima ceh verjetno
 politiko proti pretiranem oglaševanju, za to morda ta seznam ni najbolj primeren za to rabo.
 
 Na srečo obstajajo tudi drugi strani za iskanje cehov, kot je na primer spletna stran `Top.GG <https://top.gg>`_.
@@ -197,6 +192,7 @@ oglaševanje v drugih kanalih lahko privede do izključitve iz strežnika.
 
 .. figure:: ./DEP/topgg_find_servers.png
     :width: 15cm
+    :align: center
 
     Iskanje cehov na Top.GG
 
