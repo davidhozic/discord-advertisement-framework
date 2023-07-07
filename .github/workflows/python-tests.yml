@@ -29,11 +29,9 @@ jobs:
     - name: Patch pyproject.toml (remove nuitka build)
       run: python setup-universal.py
     - name: Install APT dependencies
-      uses: awalsh128/cache-apt-pkgs-action@latest
-      with:
-        packages: ffmpeg
-        version: 1.2
-        execute_install_scripts: true
+      run: |
+        sudo apt-get update
+        sudo apt install ffmpeg
     - name: Install Python dependencies
       run: |
         python -m pip install --upgrade pip
