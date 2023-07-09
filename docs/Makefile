@@ -29,7 +29,7 @@ clean:
 
 pdf: latex
 	docker run --rm -v $(CURDIR)/$(_BUILD_DIR)/latex:/home/ -w /home/ texlive/texlive make all-pdf
-	mkdir -p $(CURDIR)/$(_BUILD_DIR)/pdf/
+	mkdir $(CURDIR)/$(_BUILD_DIR)/pdf/
 	cp $(CURDIR)/$(_BUILD_DIR)/latex/*.pdf $(CURDIR)/$(_BUILD_DIR)/pdf/
 
 

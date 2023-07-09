@@ -77,8 +77,8 @@ autodoc_default_options = {
 
 # Intersphinx
 intersphinx_mapping = {
-    'PyCord': ("https://docs.pycord.dev/en/stable/", None),
-    "DAF": ("https://daf.davidhozic.com/en/stable/", None),
+    'PyCord': ("https://docs.pycord.dev/en/v2.4.x/", None),
+    "DAF": ("https://daf.davidhozic.com/en/v2.9.1/", None),
     "Python": ("https://docs.python.org/3/", None),
     "Sphinx": ("https://www.sphinx-doc.org/en/master", None),
     "SQLAlchemy": ("https://docs.sqlalchemy.org/en/20/", None)
@@ -116,9 +116,7 @@ literal_block_str = {
     "sl": r"\listof{literalblock}{Seznam literalnih blokov}"
 }
 latex_elements = {
-    "sphinxsetup": r"""
-        verbatimwithframe=false,
-    """,
+    "sphinxsetup": r"VerbatimColor={rgb}{1,1,1}",
     "tableofcontents": r"""
         \tableofcontents
         \listoffigures
@@ -126,21 +124,9 @@ latex_elements = {
         {}
     """.format(literal_block_str.get(language)),
     'fncychap': r'',
-    # 'fontpkg': r"""
-    #     \setromanfont{Times New Roman}
-    #     \setsansfont{Arial}
-    #     """,
     "papersize": "a4paper",
     "pointsize": "12pt",
     'preamble': r'''
-        \usepackage{afterpage}
-
-        \newcommand\blankpage{%
-        \null
-        \thispagestyle{empty}%
-        \addtocounter{page}{-1}%
-        \newpage}
-
         \oddsidemargin 1.4cm
         \evensidemargin 0.35cm
         \textwidth 14cm
@@ -157,4 +143,5 @@ latex_elements = {
         \fancyfoot{}
     ''',
     "maketitle": latex_title_page,
+    "printindex": ''
 }

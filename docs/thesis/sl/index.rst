@@ -11,3 +11,4 @@ Front page of the thesis
     discord
     daf/index
     thesis_lit
+    appendix

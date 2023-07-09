@@ -1,85 +1,88 @@
-
-"""
-Automatically generated file for Discord Advertisement Framework v2.6.0.
-This can be run eg. 24/7 on a server without graphical interface.
-
-The file has the required classes and functions imported, then the logger is defined and the
-accounts list is defined.
-
-At the bottom of the file the framework is then started with the run function.
-"""
-
-# Import the necessary items
 from daf.logging._logging import LoggerJSON
-from daf.logging.tracing import TraceLEVELS
-from _discord.embeds import Embed
-from daf.client import ACCOUNT
-from datetime import timedelta
+from daf.remote import RemoteAccessCLIENT
+from daf.message.text_based import TextMESSAGE
 from datetime import datetime
 from daf.guild import GUILD
+from _discord.embeds import Embed
+from daf.client import ACCOUNT
+from _discord.embeds import EmbedField
 from daf.message.base import AutoCHANNEL
 from _discord.colour import Colour
-from _discord.embeds import EmbedField
-from daf.message.text_based import TextMESSAGE
-
+from daf.logging.tracing import TraceLEVELS
 import daf
 
-
 # Define the logger
-logger = LoggerJSON(path="./OutputPath/")
+logger = LoggerJSON(
+  path="C:\\Users\\David\\daf\\History",
+)
+
+# Define remote control context
+remote_client = RemoteAccessCLIENT(
+  host="0.0.0.0",
+  port=80,
+)
 
 # Defined accounts
 accounts = [
-    ACCOUNT(
-        token="DSNDASDJHSAKJDHASIKLJHDASKJLGDASJKHDFGAKSJHDFGKJAHSFDAKSJH",
-        is_user=False,
-        servers=[
-            GUILD(
-                snowflake=863071397207212052,
-                messages=[
-                    TextMESSAGE(
-                        start_period=None,
-                        end_period=timedelta(
-                            seconds=10.0,
-                        ),
-                        data=Embed(
-                            color=Colour(
-                                value=16711680,
-                            ),
-                            title="Test Embed Title",
-                            type="rich",
-                            description="This is a test embedded message description.",
-                            timestamp=datetime(
-                                year=2023,
-                                month=4,
-                                day=2,
-                            ),
-                            fields=[
-                                EmbedField(
-                                    name="Field1",
-                                    value="Value1",
-                                ),
-                            ],
-                        ),
-                        channels=AutoCHANNEL(
-                            include_pattern="shill",
-                            interval=timedelta(
-                                seconds=5.0,
-                            ),
-                        ),
-                        mode="send",
-                    ),
+  ACCOUNT(
+    token="OTKMSMDASKNKLSADHJASJDHASLJ..."
+    servers=[
+      GUILD(
+        snowflake=1038102918714372206,
+        messages=[
+          TextMESSAGE(
+            start_period=None,
+            end_period=999999999,
+            data=[
+              Embed(
+                color=Colour(
+                  value=15519507,
+                ),
+                title="[Delo] Poletni tabot...",
+                url="https://fe.uni-lj.si/solarji...",
+                description="Na Fakulteti za Elek...",
+                fields=[
+                  EmbedField(
+                    name="Kdaj",
+                    value="21. 8. do 25. 8. na FE.",
+                    inline=True,
+                  ),
+                  EmbedField(
+                    name="Plačilo",
+                    value="Urna postavka je 10 € bruto.",
+                    inline=True,
+                  ),
+                  EmbedField(
+                    name="Prijave",
+                    value="Če te to delo zanima, jim ...",
+                  ),
                 ],
-                logging=True,
+              ),
+            ],
+            channels=AutoCHANNEL(
+              include_pattern="obvestila",
             ),
+            start_in=datetime(
+              year=2023,
+              month=7,
+              day=12,
+              hour=10,
+              minute=0,
+            ),
+            remove_after=1,
+          ),
         ],
-    ),
+        logging=True,
+      ),
+    ],
+  ),
 ]
-
 
 # Run the framework (blocking)
 daf.run(
-    accounts=accounts,
-    logger=logger,
-    debug=TraceLEVELS.NORMAL
+  accounts=accounts,
+  logger=logger,
+  debug=TraceLEVELS.NORMAL,
+  remote_client=remote_client,
+  save_to_file=False
 )

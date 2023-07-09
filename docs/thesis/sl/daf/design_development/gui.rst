@@ -49,8 +49,8 @@ Ob ponovnem odprtju po namestitvi bo statusni panel za posamezen modul obarvan z
 *Schema definition* zavihek
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Zavihek omogoča definicijo uporabniških računov (in v njih cehov, sporočil, ...), definicijo upravljalnika za beleženje.
-Omogoča tudi shrambo teh definicij v JSON datoteko, braje definicij iz JSON datoteke in pa generacijo ekvivalentne
-*.py* datoteke, ki deluje v samem jedru DAF (brez grafičnega vmesnika - :ref:`Zasnova in razvoj jedra`).
+Omogoča tudi shrambo teh definicij v JSON datoteko, braje definicij iz JSON datoteke in pa :ref:`generacijo ekvivalentne
+Python datoteke <equivalent_script>`, ki deluje v samem jedru DAF (brez grafičnega vmesnika - :ref:`Zasnova in razvoj jedra`).
 Pravzaprav je ta zavihek namenjen definiciji nekege predloge, ki jo lahko potem uvozimo v jedro ogrodja.
 
 Omogoča tudi dinamično branje in pretvorbo objektov v že zagnanem vmesniku preko gumbov, ki vsebujejo besedo *live*.
