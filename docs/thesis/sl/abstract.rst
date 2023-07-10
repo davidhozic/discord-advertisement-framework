@@ -2,6 +2,7 @@
 .. raw:: latex
 
     \newpage
+    \pagenumbering{roman}
 
 
 .. only:: html
@@ -11,9 +12,10 @@
     =============
 
 .. Prevent inclusion of this "title" into index
-.. only:: latex
+.. raw:: latex
 
-    .. rubric:: Povzetek
+    \section*{Povzetek}
+
 
 To je testni povzetek
 

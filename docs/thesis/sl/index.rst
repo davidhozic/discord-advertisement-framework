@@ -1,6 +1,8 @@
-================================
-Front page of the thesis
-================================
+.. only:: html
+
+    ================================
+    Front page of the thesis
+    ================================
 
 
 .. toctree::
@@ -12,3 +14,4 @@ Front page of the thesis
     daf/index
     thesis_lit
     appendix
+

@@ -27,7 +27,7 @@ exclude_patterns = ["sl/**", "en/**"]
 exclude_patterns.remove(f"{language}/**")
 
 # -- Project information -----------------------------------------------------
-project = 'Discord Advertisement Framework'
+project = "Ogrodje za oglaševanje NFT po socialnem omrežju Discord"
 copyright = '2023, David Hozic'
 author = 'David Hozic'
 version = VERSION
@@ -110,7 +110,7 @@ html_theme_options = {
 with open(f"./{language}/titlepage.tex", "r", encoding="utf-8") as reader:
     latex_title_page = reader.read()
 
-# latex_engine = 'xelatex'
+
 literal_block_str = {
     "en": r"\listof{literalblock}{List of literal blocks}",
     "sl": r"\listof{literalblock}{Seznam literalnih blokov}"
@@ -120,13 +120,15 @@ latex_elements = {
     "tableofcontents": r"""
         \tableofcontents
         \listoffigures
-        \listoftables
         {}
     """.format(literal_block_str.get(language)),
     'fncychap': r'',
     "papersize": "a4paper",
     "pointsize": "12pt",
+    "extraclassoptions": "openany",
+    "babel": r"\usepackage[slovene]{babel}",
     'preamble': r'''
+        \usepackage{fancyhdr}
         \oddsidemargin 1.4cm
         \evensidemargin 0.35cm
         \textwidth 14cm
@@ -135,13 +137,17 @@ latex_elements = {
         \headsep 1.5cm
         \textheight 20cm
         \pagestyle{fancy}
-        \fancyhead{}
-        \renewcommand{\sectionmark}[1]{\markright{\textsf{\thesection\  #1}}{}}
-        \fancyhead[RE]{\leftmark}
-        \fancyhead[LO]{\rightmark}
-        \fancyhead[LE,RO]{\thepage}
-        \fancyfoot{}
+
+        \fancypagestyle{normal}{
+            \fancyfoot[RE]{{\nouppercase{\leftmark}}}
+        }
     ''',
     "maketitle": latex_title_page,
     "printindex": ''
+}
+
+
+latex_docclass = {
+    'howto': 'book',
+    'manual': 'book',
 }

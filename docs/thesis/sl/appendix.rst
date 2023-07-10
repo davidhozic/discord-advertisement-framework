@@ -4,6 +4,9 @@ Priloge
 ==================
 
 
+Ekvivalentna skripta
+==============================
+
 .. _equivalent_script:
 .. literalinclude:: ./DEP/shill-script-example.py
     :linenos:

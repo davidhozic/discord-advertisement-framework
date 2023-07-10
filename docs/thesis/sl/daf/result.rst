@@ -1,8 +1,8 @@
-================
+====================
 Rezultat
-================
+====================
 
-Zdaj ko vemo kako je vse zasnovano in razvito, pa si povemimo še skupen rezultat.
+Zdaj ko vemo kako je vse zasnovano in razvito, pa povzemimo še skupen rezultat.
 
 V končni fazi je ogrodje je sposobno oglaševati na več računih na enkrat, kjer ima vsak račun lahko več cehov in sporočil.
 Cehom se da nastaviti sledenje povezav za pridružitev (angl. *invite links*), vklopiti beleženje sporočil in definicijo le teh.
@@ -23,26 +23,24 @@ Rezulatati analize so na voljo preko grafičnega vmesnika ali pa preko metod :cl
 ime se začne na ``analytic_``.
 
 S pomočjo Google Chrome brskalnika je v ogrodje implementirano samodjeno prijavljanje z uporabniškim imenom in geslom,
-kot tudi samodejno iskanje novih cehov (v katere uporabnik še ni pridružen) in napol-samodejno (CAPTCHA) pridruževanje v le te.
+kot tudi samodejno iskanje novih cehov (v katere uporabnik še ni pridružen) in napol-samodejno pridruževanje v le te.
 
 
-Vse zgoraj omenjeno je na voljo v samem jedru ogrodja - torej brez GUI, zdaj pa si poglejmo še nekaj stvari prisotnih le na GUI.
+Vse zgoraj omenjeno je na voljo v samem jedru ogrodja - kjer ne potrebujemo grafičnega vmesnika, zdaj pa povzemimo še funkcionalnost specifično na grafični vmesnik.
 
 Znotraj grafičnega vmesnika je mogoče definirati shemo vseh računov, upravljalcev beleženja in povezovalnega konektorja na oddaljeno jedro.
 Shemo se potem lahko uvozi v delujoče jedro ogrodja, lahko pa se jo kot predlogo shrani v JSON datoteke oz. iz nje izdela
 :ref:`ekvivalentno Python skripto <equivalent_script>`, ki deluje popolnoma enako kot bi v grafičnem vmesniku.
-Pravzaprav vse kar grafilčni vmesnik naredi iz sheme, ko jo uvozimo v jedro, je da jo pretvori v ustrezno obliki in posreduje
-jedru, kar posledično pomeni, da grafični vmesnik vedno deluje na enak način kot jedro. Shemo se seveda lahko prebere iz JSON datoteke.
-Poleg definicije sheme, je možna tudi direkto spremnljanje objektov v ogrodju in modifikacija le teh.
+Pravzaprav vse kar grafilčni vmesnik naredi iz sheme, ko jo uvozimo v jedro, je da jo pretvori v ustrezno obliki in le to posreduje
+jedru, kar posledično pomeni, da grafični vmesnik vedno deluje na enak način kot jedro. Shemo se seveda tudi lahko prebere in uvozi iz JSON datoteke.
+Poleg definicije sheme, je možno tudi direkto spremnljanje objektov v ogrodju in modifikacija le teh.
 
 Grafični vmesnik lahko deluje lokalno, kjer jedro ogrodja zažene na isti napravi, lahko pa se poveže na oddaljeno
 jedro preko HTTP API vmesnika. Z uporabniškega vidika uporabe ni nobene razlike med lokalnim delovanjem ali pa oddaljenim,
 razen te, da se upravljalnik beleženja sporočil lahko definira le ob zagonu ogrodja in ga posledično tudi iz grafičnega vmesnika
 na daljavo ni možno spreminjati.
 
-:download:`./DEP/daf-davidhozic-com-en-v2.9.1.pdf`
+Preko grafičnega vmesnika je možno tabelarno prikazati statistiko poslanih sporočil in prikazati vsebino vsakega preteklega sporočla.
+To deluje enako kot v jedru, razlika je le v prikazu podatkov.
 
-
-
-
-
+To je konec povzetka celotnega rezultata, bolj podrobno uporabo pa je možno razbrati iz uradne :ref:`dokumentacije <Quickstart (GUI)>`.

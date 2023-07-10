@@ -3,6 +3,11 @@ Uvod
 ====================
 
 
+.. raw:: latex
+
+    \pagenumbering{arabic}
+
+
 Nezamenljivi žetoni (NFT)
 ===========================
 Nezamenljivi žetoni (Non fungible tokens, NFT) so edinstvena digitalna sredstva, ki živijo na 
