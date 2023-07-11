@@ -12,6 +12,7 @@
     introduction
     discord
     daf/index
+    conclusion
     thesis_lit
     appendix
 

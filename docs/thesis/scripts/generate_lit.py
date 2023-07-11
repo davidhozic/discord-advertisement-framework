@@ -21,7 +21,7 @@ if LANGUAGE == "en":
     OUTPUT_HEADER = \
 """
 ===============
-Sources
+Literature
 ===============
 """
 
@@ -38,7 +38,7 @@ else:
     OUTPUT_HEADER = \
 """
 ===============
-Bibliografija
+Literatura
 ===============
 """
 

@@ -1,3 +1,7 @@
+.. raw:: latex
+
+    \newpage
+
 ============================================
 Zasnova in razvoj grafičnega vmesnika
 ============================================
@@ -10,10 +14,12 @@ je marskikomu težje, sploh če se še nikoli niso srečali s Python jezikom.
 V namen enostavnejše izkušnje pri uporabi ogrodja, obstaja grafični vmesnik, ki deluje ločeno od samega ogrodja, z njim pa
 lahko komunicira lokalno preko programskega vmesnika (Python funkcij) ali pa na daljavo preko HTTP vmesnika.
 
-Za dizajn vmesnika je izbran svetel dizajn, z modrimi odtenki za posamezne elemente.
+Za dizajn vmesnika je izbran svetel dizajn, z modrimi odtenki za posamezne elemente, kot je to prikazano na :numref:`sliki %s <fig-gui-front>`.
+
+
 
 Tkinter
-------------------
+=============================
 Za izdelavo grafičnega vmesnika je bila uporabljena knjižnica `ttkboostrap <https://ttkbootstrap.readthedocs.io/en/latest/>`_, ki je razširitev
 vgrajene Python_ knjižnice :mod:`tkinter`.
 
@@ -35,29 +41,29 @@ vmesnika.
 
 
 Zavihki
-----------------------
+=============================
 Grafični vmesnik DAF je razdeljen na več zavihkov, kjer je vsak namenjen ločenim funkcionalnostim.
 
 
 *Optional modules* zavihek
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-----------------------------
 Ta zavihek omogoča namestitev dodatnih funkcionalnosti, ki v osnovem DAF paketu niso prisotni (za hitrejši zagon in namestitveni čas).
 Sestavljen je iz statusnih panelov, ki če so rdeči (modul ni nameščen) vsebuje še gumb za namestitev.
 Gumb bo namestil potrebne pakete, potem pa bo vmesnik uporabniku sporočil, da mora za spremembe ponovno odpreti vmesnik.
 Ob ponovnem odprtju po namestitvi bo statusni panel za posamezen modul obarvan zelen.
 
 *Schema definition* zavihek
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-----------------------------
 Zavihek omogoča definicijo uporabniških računov (in v njih cehov, sporočil, ...), definicijo upravljalnika za beleženje.
-Omogoča tudi shrambo teh definicij v JSON datoteko, braje definicij iz JSON datoteke in pa :ref:`generacijo ekvivalentne
-Python datoteke <equivalent_script>`, ki deluje v samem jedru DAF (brez grafičnega vmesnika - :ref:`Zasnova in razvoj jedra`).
+Omogoča tudi shrambo teh definicij v :term:`JSON` datoteko, braje definicij iz JSON datoteke in pa generacijo ekvivalentne
+Python datoteke, ki ogrodje požene le :ref:`jedro orodja <Zasnova in razvoj jedra>` (torej brez grafičnega vmesnika).
 Pravzaprav je ta zavihek namenjen definiciji nekege predloge, ki jo lahko potem uvozimo v jedro ogrodja.
 
 Omogoča tudi dinamično branje in pretvorbo objektov v že zagnanem vmesniku preko gumbov, ki vsebujejo besedo *live*.
 
 Uporabniške račune (in ostale objekte) se lahko definira z klikom na opcijski meni *Object options*, in opcijo *New ACCOUNT*.
 Ob kliku se odpre novo okno, ki je avtomatično in dinamično generirano iz podatkov o podatkovnih tipih (anotacij), ki jih sprejme
-razred ob definiciji. Za vsak parameter generira labela, opcijski meni in opcijski gumb, v katerem lahko urejamo izbrano vrednost
+razred ob definiciji. Za vsak parameter se generira labela, opcijski meni in opcijski gumb, v katerem lahko urejamo izbrano vrednost
 oz. definiramo novo vrednost. 
 
 .. figure:: ./DEP/images/gui-new-item-define.png
@@ -65,10 +71,6 @@ oz. definiramo novo vrednost.
     :align: center
 
     Definicija uporabiškega računa
-
-.. raw:: latex
-
-    \newpage
 
 Imel sem veliko srečo, da sem si za izdelavo te aplikacije že na začetku izbral ravno jezik Python_, saj ta jezik omoča dinamično preverjanje in
 spreminjanje podatkovnih tipov posameznih spremenljivk oz. atributov (dejansko se menjajo reference na objekte), brez česar bi bila avtomatična generacija definicijskega
@@ -94,11 +96,15 @@ Preko *Schema* menija je možno ustvariti tudi ekvavilentno Python datoteko, ki 
 dejanskega grafičnega vmesnika. Ob kliku na gumb *Generate script* se definira Python koda, ki na vrhu vključi vse potrebne
 razrede in funkcije, zatem pa se definira upravljalnik za beleženje. Če je bila izbrana opcija oddaljenega dostopa, se
 definira še objekt za oddaljen dostop. Na koncu se se definirata še tabela uporabniških računov in vse skupaj se požene
-s funckijo :func:`~daf.core.run`.
+s funckijo :func:`~daf.core.run`. Primer skripte je prikazan v :numref:`equivalent_script`.
 
+
+.. raw:: latex
+
+    \newpage
 
 *Live view* zavihek
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-----------------------------
 Medtem, ko je :ref:`*Schema definition* zavihek` namenjen definiciji v naprej definirane sheme oz. predloge objektov,
 *Live view* zavihek omogoča direktno manipulacijo z objekti, ki so dodani v delujoče ogrodje.
 
@@ -119,19 +125,14 @@ vijoličnega okvirja možno izvajanje metod (funkcij) na objektu.
 
 
 
-.. raw:: latex
-
-    \newpage
-
-
 *Output* zavihek
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-----------------------------
 Vse kar se nahaja v tem zavihku, je seznam izpisov, ki se izpišejo na standardnem izhodu stdout.
 Uporabi se ga lahko za bolj podroben pregled kaj se dogaja z jedrom DAF.
 
 
 *Analytics* zavihek
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-----------------------------
 Zavihek omogoča analizo poslanih sporočil in njihovo statistiko. Prav tako omogoča analizo pridruževanj preko sledenja
 cehovskih povezav (angl. *Invite links*) in njihovo statistiko.
 
@@ -148,22 +149,23 @@ Za pridobitev statistike se uporabi gumb *Calculate*, ki na podlagi opcijskega m
     Prikaz vnosa o poslanem sporočilu.
 
 
-.. raw:: latex
-
-    \newpage
-
-
 
 Povezava grafičnega vmesnika z jedrom ogrodja
----------------------------------------------------
+=====================================================
 Grafični vmesnik lahko s stališča lokacije delovanja deluje na dva načina. Prvi je lokalen način, kjer grafični vmesnik
-z klikom na *Start* gumb zažene jedro ogrodja na istem računalniku, kot deluje grafični vmesnik. Drugi pa je oddaljen
-način delovanja, kjer se grafični vmesnik poveže na HTTP strežnik, kateri deluje znotraj jedra ogrodja in na ta strežnik
-pošilja HTTP ukaze, ki se v jedru mapirajo na programski vmesnik (na Python funkcije).
+z klikom na *Start* gumb zažene jedro ogrodja na istem računalniku, kjer deluje grafični vmesnik. Drugi način pa je oddaljen
+režim delovanja, kjer se grafični vmesnik poveže na HTTP strežnik, kateri deluje znotraj jedra ogrodja in na ta strežnik
+pošilja HTTP ukaze, ki se v jedru mapirajo na programski vmesnik (na Python funkcije). Koncept je prikazan na :numref:`sliki %s <gui-core-connection>`
 
-Za upravljanje z povezavo je bil ustvarjen ločen povezovalni nivo, ki sestoji iz dveh različnih objektov za povezovanje,
-med katerimi lahko uporabnik izbira na vrhu grafičnega vmesnika.
+V primeru oddaljenega dostopa se podatki serializirajo v :term:`JSON` reprezentacijo, kjer so navadne vrednosti neposredno serializirane v JSON format,
+večina objektov pa v slovar (:class:`dict`), kjer je sta slovarju zapisana pot do podatkovnega tipa (razreda) objekta in njegovi attributi.
+Obstaja nekaj izjem pri serializaciji objektov, kjer je ena izmed teh :class:`~datetime.datetime` tip objekta, ki se serializira v besedilo po standardu ISO 8601.
+Pretvorbo v končno JSON reprezentacijo opravlja vgrajena knjižnica :mod:`json`, medtem ko pretvorbo objektov v slovar
+opravlja funkcija :func:`daf.convert.convert_object_to_semi_dict`. Serializacijo in deserializacijo opravljata grafični vmesnik in
+jedro oba enako. Včasih se pri pošiljanju podatkov iz grafičnega vmesnika na jedro sploh ne serializira (kot objekte),
+temveč se pošlje le referenco (identifikator) objekta, kjer se na strežniku (jedru DAF) objekt pridobi iz spomina prek reference. 
 
+.. autofunction:: daf.convert.convert_object_to_semi_dict
 
 Za konfiguracijo oddaljenega dostopa je potrebno na vrhu vmesnika izbrati :class:`~daf_gui.connector.RemoteConnectionCLIENT`
 in nastaviti parametre. Prav tako je potrebno ustrezno konfigurirati jedro. Več o konfiguraciji je na voljo v

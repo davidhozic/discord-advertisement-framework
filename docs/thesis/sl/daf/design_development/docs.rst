@@ -32,7 +32,7 @@ kurzor premakne levo spodaj strani nad verzijo dokumentacije in zatem klikne na 
 
 Sphinx
 ----------------
-Sistem, ki se uporablja za dokumentiranje projekta se imenuje Sphinx.
+Sistem, uporabljen za grajenje dokumentacije projekta, se imenuje Sphinx.
 Sphinx je popularno orodje med Python_ razvijalci za generiranje dokumentacije v več formatih.
 Razvijalcem omogoča ustvarjanje profesionalne dokumentacije za lastne projekte, kar je nuja pri javnih projektih.
 
@@ -140,7 +140,7 @@ vključila tudi dokumentirane metode in atribute, ki so del razreda.
 
 .. _auto_doc_example:
 .. figure:: ./DEP/autodoc_example.png
-    :width: 10cm
+    :height: 12cm
 
     Rezultat autoclass direktive
 

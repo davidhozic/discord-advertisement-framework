@@ -7,4 +7,3 @@ Ogrodje za oglaševanje v Discord
 
     base
     design_development/index
-    result

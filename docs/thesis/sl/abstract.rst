@@ -2,7 +2,6 @@
 .. raw:: latex
 
     \newpage
-    \pagenumbering{roman}
 
 
 .. only:: html

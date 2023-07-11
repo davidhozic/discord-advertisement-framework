@@ -71,8 +71,10 @@ V tem nivoju se poleg osnovnega programskega vmesnika nahaja tudi HTTP API vmesn
 podpora za oddaljen dostop v primeru, da bi jedro delovalo na tuji napravi namesto na napravi, kjer deluje grafični vmesnik.
 HTTP API je v resnici zelo preprost, in sicer deluje tako, da ob neki HTTP zahtevi kliče le funkcijo programskega API vmesnika (Python funkcije na oddaljeni napravi)
 in vrne rezultat, kar pomeni da dejansko da je enake rezultate kot da bi uporabniški vmesnik in jedro delovala na isti napravi.
-Vsi podatki se sprejemajo in vračajo v JSON formatu (kompresiranem z :mod:`gzip`). Osnoven koncept je prikazan na spodnji sliki.
+Vsi podatki se sprejemajo in vračajo v :term:`JSON` formatu (kompresiranem z :mod:`gzip`). Osnoven koncept je prikazan na spodnji sliki.
 
+
+.. _gui-core-connection:
 .. figure:: ./DEP/daf-core-http-api.drawio.svg
 
     Povezava do jedra (barve puščic prikazujejo ločen potek)

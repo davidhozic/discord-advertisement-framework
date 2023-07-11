@@ -25,7 +25,7 @@ help:
 
 clean:
 	python3 ./setup.py --clean --start-dir $(SOURCEDIR)
-	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(_BUILD_DIR)" $(SPHINXOPTS) $(O)
 
 pdf: latex
 	docker run --rm -v $(CURDIR)/$(_BUILD_DIR)/latex:/home/ -w /home/ texlive/texlive make all-pdf

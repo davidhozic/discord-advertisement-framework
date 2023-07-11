@@ -34,6 +34,12 @@ version = VERSION
 
 
 # -- General configuration ---------------------------------------------------
+rst_epilog = r"""
+.. raw:: latex
+
+    \newpage
+"""
+
 
 numfig = True
 # Add any Sphinx extension module names here, as strings. They can be
@@ -115,6 +121,8 @@ literal_block_str = {
     "en": r"\listof{literalblock}{List of literal blocks}",
     "sl": r"\listof{literalblock}{Seznam literalnih blokov}"
 }
+
+
 latex_elements = {
     "sphinxsetup": r"VerbatimColor={rgb}{1,1,1}",
     "tableofcontents": r"""
@@ -129,17 +137,24 @@ latex_elements = {
     "babel": r"\usepackage[slovene]{babel}",
     'preamble': r'''
         \usepackage{fancyhdr}
-        \oddsidemargin 1.4cm
-        \evensidemargin 0.35cm
-        \textwidth 14cm
-        \topmargin 0.26cm
-        \headheight 0.6cm
-        \headsep 1.5cm
-        \textheight 20cm
+        \textheight 215mm
+        \textwidth 145mm
+        \oddsidemargin  13mm
+        \topmargin -5mm
+        \headsep 20mm
+        \headheight 6mm
+        \evensidemargin 0mm
+        \linespread{1.2}
         \pagestyle{fancy}
-
         \fancypagestyle{normal}{
             \fancyfoot[RE]{{\nouppercase{\leftmark}}}
+        }
+
+        \usepackage{afterpage}
+        \newcommand\blankpage{
+            \thispagestyle{empty}
+            \addtocounter{page}{-1}
+            \newpage
         }
     ''',
     "maketitle": latex_title_page,
@@ -151,3 +166,4 @@ latex_docclass = {
     'howto': 'book',
     'manual': 'book',
 }
+
