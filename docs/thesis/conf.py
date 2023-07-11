@@ -127,8 +127,10 @@ latex_elements = {
     "sphinxsetup": r"VerbatimColor={rgb}{1,1,1}",
     "tableofcontents": r"""
         \tableofcontents
+        \blankpage
         \listoffigures
         {}
+        \blankpage
     """.format(literal_block_str.get(language)),
     'fncychap': r'',
     "papersize": "a4paper",
@@ -136,7 +138,7 @@ latex_elements = {
     "extraclassoptions": "openany",
     "babel": r"\usepackage[slovene]{babel}",
     'preamble': r'''
-        \usepackage{fancyhdr}
+        % Spacing
         \textheight 215mm
         \textwidth 145mm
         \oddsidemargin  13mm
@@ -145,15 +147,19 @@ latex_elements = {
         \headheight 6mm
         \evensidemargin 0mm
         \linespread{1.2}
+
+        % Header and footer
+        \usepackage{fancyhdr}
         \pagestyle{fancy}
         \fancypagestyle{normal}{
             \fancyfoot[RE]{{\nouppercase{\leftmark}}}
         }
 
-        \usepackage{afterpage}
+        % New commands
         \newcommand\blankpage{
+            \newpage
             \thispagestyle{empty}
-            \addtocounter{page}{-1}
+            \mbox{}
             \newpage
         }
     ''',
@@ -166,4 +172,3 @@ latex_docclass = {
     'howto': 'book',
     'manual': 'book',
 }
-

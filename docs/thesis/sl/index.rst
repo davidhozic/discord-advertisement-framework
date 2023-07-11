@@ -7,6 +7,7 @@
 
 .. toctree::
 
+    acronyms
     acknowledgements
     abstract
     introduction

@@ -30,35 +30,29 @@ Prav tako ima dobro funkcijo iskanja za iskanje vsebine, ki je bila nekoč objav
 Večina strežnikov Discord je zasebnih in zahtevajo povabilo za vstop, kar omogoča prijateljem in skupnostim, da ostanejo povezani.
 Vendar pa obstajajo tudi večje, bolj javne skupnosti, osredotočene na določene teme, kot so priljubljene videoigre
 ali pa, v primeru te naloge, stvari kot so blockchain in NFT.
-Uporablja se lahko tudi kot skupnost fakultete / šole, kjer študenti lahko govorijo preko glasovnih kanalov, delijo študijske materiale
+Uporablja se lahko tudi kot skupnost fakultete, kjer študenti lahko govorijo preko glasovnih kanalov, delijo študijske materiale
 in postavljajo vprašanja o gradivu, ki ga ne razumejo.
 Nekaj primerov skupnosti Discord, povezanih s Univerzo v Ljubljani:
 
-- :ref:`Student council of Faculty of Electrical Engineering (ŠSFE) <ssfe-community-fig>`,
-- :ref:`FE UNI <fe-uni-community-fig>` ,
+- :numref:`Študentski svet FE (slika %s) <ssfe-community-fig>`,
+- :numref:`FE UNI (slika %s) <fe-uni-community-fig>` ,
 - FE VSŠ,
 - FRI UNI,
-- ...
-
-
-.. figure:: ./DEP/discord_logo.svg
-    :width: 400
-
-    Discord brand
+- in druge
 
 
 .. _ssfe-community-fig:
 .. figure:: ./DEP/ssfe_discord.png
-    :width: 400
+    :width: 12cm
 
-    ŠSFE Discord community
+    ŠSFE Discord ceh
 
 
 .. _fe-uni-community-fig:
 .. figure:: ./DEP/feuni_discord.png
-    :width: 400
+    :width: 12cm 
 
-    FE UNI Discord community
+    FE UNI Discord ceh
 
 
 .. raw:: latex
@@ -71,7 +65,7 @@ Discordova struktura
 
 .. figure:: ./DEP/discord_client_struct.drawio.png
 
-    Struktura aplikacije
+    Struktura Discord aplikacije
 
 Discord klient je aplikacija, prek katere lahko uporabniki komunicirajo.
 V jedru je sestavljena iz gumba za direktna (osebna) sporočila, seznama cehov, seznama kanalov in seznama uporabnikov,

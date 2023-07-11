@@ -13,7 +13,7 @@
 .. Prevent inclusion of this "title" into index
 .. raw:: latex
 
-    \section*{Povzetek}
+    \chapter*{Povzetek}
 
 
 To je testni povzetek

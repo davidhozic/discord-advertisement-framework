@@ -27,12 +27,9 @@ Literature
 
     OUTPUT_FORMAT = \
 """
-[{ind}]
+.. _{id}:
 
-    | Title: {title}
-    | Author: {author}
-    | Source: {source}
-    | Last checked: {updated}
+:[{ind}]: {author}. "{title}". Available: {source} [Last checked: {updated}]
 """
 else:
     OUTPUT_HEADER = \
@@ -44,12 +41,9 @@ Literatura
 
     OUTPUT_FORMAT = \
 """
-[{ind}]
+.. _{id}:
 
-    | Naslov: {title}
-    | Avtor: {author}
-    | Vir: {source}
-    | Zadnji dostop: {updated}
+:[{ind}]: {author}. "{title}". Dostopno: {source} [Dostopano: {updated}]
 """
 
 OUTPUT_FOOTER = "\n"
@@ -67,6 +61,7 @@ for i, item in enumerate(source_data, 1):
     title = item["title"].replace(":", r"\:")
     source = item["source"]
     updated = item["updated"]
+    id_ = item["id"]
 
     source_output += OUTPUT_FORMAT.format(
         ind=i,
@@ -74,6 +69,7 @@ for i, item in enumerate(source_data, 1):
         title=title,
         source=source,
         updated=updated,
+        id=id_
     )
 
 source_output += OUTPUT_FOOTER
