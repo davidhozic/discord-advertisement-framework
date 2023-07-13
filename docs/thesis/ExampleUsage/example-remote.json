@@ -1,0 +1,46 @@
+{
+  "loggers": {
+    "all": [
+      {
+        "type": "daf.logging._logging.LoggerJSON",
+        "data": {
+          "path": "C:\\Users\\David\\daf\\History"
+        }
+      },
+      {
+        "type": "daf.logging.sql.mgr.LoggerSQL",
+        "data": {
+          "database": "C:\\Users\\David\\daf\\messages",
+          "dialect": "sqlite"
+        }
+      },
+      {
+        "type": "daf.logging._logging.LoggerCSV",
+        "data": {
+          "path": "C:\\Users\\David\\daf\\History",
+          "delimiter": ";"
+        }
+      }
+    ],
+    "selected_index": 0
+  },
+  "tracing": 3,
+  "accounts": [],
+  "connection": {
+    "all": [
+      {
+        "type": "daf_gui.connector.LocalConnectionCLIENT",
+        "data": {}
+      },
+      {
+        "type": "daf_gui.connector.RemoteConnectionCLIENT",
+        "data": {
+          "host": "https://discord.svet.fe.uni-lj.si",
+          "username": "ime",
+          "password": "geslo"
+        }
+      }
+    ],
+    "selected_index": 1
+  }
+}

@@ -11,7 +11,7 @@ Zasnova in razvoj grafičnega vmesnika
 DAF lahko deluje samostojno popolnoma brez grafičnega vmesnika, a ta način zahteva pisanje *.py* datotek oz. Python skript, kar
 je marskikomu težje, sploh če se še nikoli niso srečali s Python jezikom.
 
-V namen enostavnejše izkušnje pri uporabi ogrodja, obstaja grafični vmesnik, ki deluje ločeno od samega ogrodja, z njim pa
+V namen enostavnejše izkušnje pri uporabi ogrodja je izdelan grafični vmesnik, ki deluje ločeno od samega ogrodja, z njim pa
 lahko komunicira lokalno preko programskega vmesnika (Python funkcij) ali pa na daljavo preko HTTP vmesnika.
 
 Za dizajn vmesnika je izbran svetel dizajn, z modrimi odtenki za posamezne elemente, kot je to prikazano na :numref:`sliki %s <fig-gui-front>`.
@@ -33,7 +33,7 @@ Posamezne pripomočke se da tudi znatno konfigurirati, kjer lahko spreminjamo st
 
 Več o Tkinter knjižnici si lahko preberete :mod:`na uradni Python dokumentaciji <tkinter>`.
 
-Pred izbiro te knjižnice je bila ena izmed možnosti tudi knjižnica PySide (QT), a na koncu je bila vseeno obnesla Tkinter
+Pred izbiro te knjižnice je bila ena izmed možnosti tudi knjižnica PySide (QT), a na koncu se je vseeno obnesla Tkinter
 oz. ttkboostrap knjižnica, saj je že osnovni paket PySide6 knjižnice velik 70 MB, z dodatki pa skoraj 200 MB, medtem ko je Tkinter
 na veliko platformah že pristona kar v sami Python distribuciji in ne zahteva nobene dodatne namestitve, torej je
 ttkboostrap edina dodatna zunanja knjižnica, ki jo je potrebno namesti, in sicer se namesti kar sama ob prvem zagonu grafičnega
@@ -47,23 +47,25 @@ Grafični vmesnik DAF je razdeljen na več zavihkov, kjer je vsak namenjen loče
 
 *Optional modules* zavihek
 -----------------------------
-Ta zavihek omogoča namestitev dodatnih funkcionalnosti, ki v osnovem DAF paketu niso prisotni (za hitrejši zagon in namestitveni čas).
+Ta zavihek omogoča namestitev dodatnih funkcionalnosti, ki v osnovem DAF paketu niso prisotni (zaradi hitrejšega zagona).
 Sestavljen je iz statusnih panelov, ki če so rdeči (modul ni nameščen) vsebuje še gumb za namestitev.
 Gumb bo namestil potrebne pakete, potem pa bo vmesnik uporabniku sporočil, da mora za spremembe ponovno odpreti vmesnik.
-Ob ponovnem odprtju po namestitvi bo statusni panel za posamezen modul obarvan zelen.
+Po ponovnem zagonu bo statusni panel za posamezen modul obarvan zeleno.
+
 
 *Schema definition* zavihek
 -----------------------------
-Zavihek omogoča definicijo uporabniških računov (in v njih cehov, sporočil, ...), definicijo upravljalnika za beleženje.
+Zavihek omogoča definicijo uporabniških računov (in v njih cehov, sporočil, ...), definicijo upravljalnika za beleženje,
+izbiro globine izpisov na konzoli in konfiguracijo povezave do jedra ogrodja.
 Omogoča tudi shrambo teh definicij v :term:`JSON` datoteko, braje definicij iz JSON datoteke in pa generacijo ekvivalentne
-Python datoteke, ki ogrodje požene le :ref:`jedro orodja <Zasnova in razvoj jedra>` (torej brez grafičnega vmesnika).
+Python datoteke, ki požene le :ref:`jedro orodja <Zasnova in razvoj jedra>` (brez grafičnega vmesnika).
 Pravzaprav je ta zavihek namenjen definiciji nekege predloge, ki jo lahko potem uvozimo v jedro ogrodja.
 
 Omogoča tudi dinamično branje in pretvorbo objektov v že zagnanem vmesniku preko gumbov, ki vsebujejo besedo *live*.
 
 Uporabniške račune (in ostale objekte) se lahko definira z klikom na opcijski meni *Object options*, in opcijo *New ACCOUNT*.
 Ob kliku se odpre novo okno, ki je avtomatično in dinamično generirano iz podatkov o podatkovnih tipih (anotacij), ki jih sprejme
-razred ob definiciji. Za vsak parameter se generira labela, opcijski meni in opcijski gumb, v katerem lahko urejamo izbrano vrednost
+razred ob definiciji. Za vsak parameter se generirajo labela, opcijski meni in opcijski gumb, v katerem lahko urejamo izbrano vrednost
 oz. definiramo novo vrednost. 
 
 .. figure:: ./DEP/images/gui-new-item-define.png
@@ -72,31 +74,21 @@ oz. definiramo novo vrednost.
 
     Definicija uporabiškega računa
 
-Imel sem veliko srečo, da sem si za izdelavo te aplikacije že na začetku izbral ravno jezik Python_, saj ta jezik omoča dinamično preverjanje in
-spreminjanje podatkovnih tipov posameznih spremenljivk oz. atributov (dejansko se menjajo reference na objekte), brez česar bi bila avtomatična generacija definicijskega
-okna precej težja, če ne skoraj nemogoča brez, da bi se strukturo za posamezne podatkovne tipe nekje (morda v JSON datoteki) ročno
-definiralo. Python ima namreč v :mod:`typing` modulu, oz. že neposredno v jezku, vgrajene funkcije za dinamično preverjanje,
-manipulacijo in disekcijo podatkovnih tipov.
-Podobno se definira tudi upravljalnik za beleženje.
-Pod izbiro za upravljalnik se nahaja tudi opcijski meni za izbiro nivoja izpisov v *Output* zavihku.
-
 Shranjevanje sheme (predloge) v datoteko in nalaganje sheme iz datoteke in generiranje ekvivalentne Python_ datoteke
 je možno preko opcijskega menija *Schema*. Datoteka, kamor se shrani shema je datoteka formata JSON in vsebuje
 definirane račune, beležne upravljalnike, objekte za povezovanje z jedrom ipd.
 Vsi objekti znotaj grafičnega vmesnika, pravzaprav niso pravi Python objekti ampak so dodaten nivo abstrakcije, ki je sestavljen
 iz samega podatkovnega tipa (razreda) definiranega objekta in pa parametrov, ki so shanjeni pod slovar (:class:`dict`).
-Pretvorba v JSON poteka rekurzivno tako da se za vsak objekt v JSON naredi nov pod slovar, kjer je kot besedilo shranjen
-podatkovni tip in pa parametri, ki so že v slovarnem formatu in se preprosto le prepišejo v JSON datoteko.
+Pretvorba v JSON poteka rekurzivno tako, da se za vsak objekt, v JSON naredi nov podslovar, kjer sta noter zapisana
+podatkovni tip (kot besedilo) in pa parametri objekta.
 
 Nalaganje sheme (predloge) iz JSON datoteke je možno preko *Schema* menija in poteka rekurzivno tako, da se za vsak vnos najprej na podlagi celotne poti
 do razreda naloži (angl. *import*) Python modul, potem pa iz modula še podatkovni tip (razred). Za tem se
 ustvari abstraktni objekt na enak način kot je bil ustvarjen pred shranjevanjem v JSON shemo.    
 
 Preko *Schema* menija je možno ustvariti tudi ekvavilentno Python datoteko, ki bo oglaševala na enak način kot v grafičnem vmesniku, brez
-dejanskega grafičnega vmesnika. Ob kliku na gumb *Generate script* se definira Python koda, ki na vrhu vključi vse potrebne
-razrede in funkcije, zatem pa se definira upravljalnik za beleženje. Če je bila izbrana opcija oddaljenega dostopa, se
-definira še objekt za oddaljen dostop. Na koncu se se definirata še tabela uporabniških računov in vse skupaj se požene
-s funckijo :func:`~daf.core.run`. Primer skripte je prikazan v :numref:`equivalent_script`.
+dejanskega grafičnega vmesnika. Ob kliku na gumb *Generate script* se definira Python koda, ki na vrhu
+definira vse potrebno in zatem zažene ogrodje. Primer skripte je prikazan v :numref:`example-text-message-randomized-period`.
 
 
 .. raw:: latex
@@ -106,9 +98,9 @@ s funckijo :func:`~daf.core.run`. Primer skripte je prikazan v :numref:`equivale
 *Live view* zavihek
 -----------------------------
 Medtem, ko je :ref:`*Schema definition* zavihek` namenjen definiciji v naprej definirane sheme oz. predloge objektov,
-*Live view* zavihek omogoča direktno manipulacijo z objekti, ki so dodani v delujoče ogrodje.
+*Live view* zavihek omogoča direktno manipulacijo z objekti, ki so dodani v delujoče jedro ogrodja. Izgled zavihka je prikazan na :numref:`sliki %s <fig-gui-live-view>`
 
-Na začetku zavihka se nahaja opcijski meni, v katerem je *add_object* funkcija, kateri lahko definiramo nov račun.
+Na začetku zavihka se nahaja opcijski meni, v katerem je *add_object* funkcija, kateri znotraj lahko definiramo nov račun.
 Ob kliku na gumb *Execute* bo definiran račun takoj dodan v DAF in začel z oglaševanjem.
 
 Pod opcijskem menijem se nahajajo 3 gumbi. *Refresh* posodobi spodnji seznam z računi, ki oglašujejo v DAF, *Edit*
@@ -153,7 +145,7 @@ Za pridobitev statistike se uporabi gumb *Calculate*, ki na podlagi opcijskega m
 Povezava grafičnega vmesnika z jedrom ogrodja
 =====================================================
 Grafični vmesnik lahko s stališča lokacije delovanja deluje na dva načina. Prvi je lokalen način, kjer grafični vmesnik
-z klikom na *Start* gumb zažene jedro ogrodja na istem računalniku, kjer deluje grafični vmesnik. Drugi način pa je oddaljen
+jedro ogrodja zažene na istem računalniku, kjer deluje grafični vmesnik. Drugi način pa je oddaljen
 režim delovanja, kjer se grafični vmesnik poveže na HTTP strežnik, kateri deluje znotraj jedra ogrodja in na ta strežnik
 pošilja HTTP ukaze, ki se v jedru mapirajo na programski vmesnik (na Python funkcije). Koncept je prikazan na :numref:`sliki %s <gui-core-connection>`
 

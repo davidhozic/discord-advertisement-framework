@@ -36,13 +36,13 @@ Sistem, uporabljen za grajenje dokumentacije projekta, se imenuje Sphinx.
 Sphinx je popularno orodje med Python_ razvijalci za generiranje dokumentacije v več formatih.
 Razvijalcem omogoča ustvarjanje profesionalne dokumentacije za lastne projekte, kar je nuja pri javnih projektih.
 
-Sphinx omogoča enostavno dokumentiranje z berljivo sintakso (restructuredText) z veliko funkcionalnostmi, kjer je ena izmed njih
+Sphinx omogoča enostavno dokumentiranje z berljivo sintakso (reStructuredText) z veliko funkcionalnostmi, kjer je ena izmed njih
 možnost branja t.i *docstring* besedila iz kode projekta in vključevanju te vsebine v dokumentacijo.
 Je zelo konfigurabilno orodje, kjer se konfiguracijo izvede preko ``.py`` datoteke, kamor lahko dodajamo tudi svojo
 Python_ kodo.
 
 Primarno Sphinx podpira restructuredText_ za pisanje dokumentov, podpira pa tudi ostale formate, npr. Markdown preko
-dodatnih razširitev. Enačbe se lahko piše v jeziku Latex.
+dodatnih razširitev. Enačbe se lahko piše v jeziku LaTex.
 
 .. admonition:: Zanimivost
     :class: hint
@@ -53,7 +53,7 @@ dodatnih razširitev. Enačbe se lahko piše v jeziku Latex.
 reStructuredText
 ----------------
 
-restructuredText je jezik na katerem deluje :ref:`Sphinx`.
+reStructuredText je jezik na katerem deluje :ref:`Sphinx`.
 Je priljubljen *markup* jezik, ki se uporablja za dokumentacijo.
 Oblikovan je za enostavnost branja, z fokusom na preprostost in moč.
 Ena ključnih značilnosti reStructuredTexta je njegova razširljivost, kar omogoča prilagajanje za specifična aplikacijska področja.
@@ -61,8 +61,6 @@ Ena ključnih značilnosti reStructuredTexta je njegova razširljivost, kar omog
 Znotraj sintakse reStructuredTexta so na voljo različne vloge in direktive, ki se uporabljajo za dodajanje oblikovanja in strukture dokumentom.
 Vloge se uporabljajo za aplikacijo oblikovanja na določene besede in stavke,
 direktive pa so uporabljene za dodajanje nove vsebine v dokument.
-Uporabnikom omogočajo ustvarjanje bolj zapletenih in dokumentov,
-pri tem pa ohranjajo preprostost in berljivost sintakse.
 
 
 .. code-block:: reStructuredText
@@ -131,7 +129,7 @@ Razširitev vključi pakete in izbrska *docstring*-e funkcij in razredov, zatem 
 V primeru da je v ``autoclass`` direktivi uporabljena ``:members:`` opcija, bo :mod:`~sphinx.ext.autodoc` razširitev
 vključila tudi dokumentirane metode in atribute, ki so del razreda.
 
-.. code-block:: restructuredText
+.. code-block:: reStructuredText
     :caption: Iz :func:`~daf.misc.doc.doc_category` generirana direktiva
 
     .. autoclass:: daf.logging.sql.LoggerSQL
@@ -161,9 +159,9 @@ objavljanje in vzdrževanje dokumentacije za njihove projekte.
 Platforma uporabnikom omogoča ustvarjanje profesionalno izgledajoče dokumentacije, ki je odprta javnosti.
 Je odprtokodna in zgrajena na že prej omenjenem Sphinx-u.
 
-Poleg gostovanja dokumentacije RTD_ ponuja razna orodja, kot so orodje za nadzor različic in napredna funkcionalnost iskanja.
+Poleg gostovanja dokumentacije RTD_ ponuja razna orodja, kot sta sistem za nadzor verzij (angl. *version control*) in napredna funkcionalnost iskanja.
 To uporabnikom olajša lažji pregled dokumentacije in zagotavlja, da dokumentacija ostane ažurna.
 
-RTD_ je za DAF projekt konfiguriran, da za vsako novo izdajo verzije preko platforme GitHub, avtomatično zgradi dokumentacijo,
-aktivira verzijo in jo nastavi kot privzeto. Na tak način je dokumentacija pripravljena za uporabo praktično takoj ob izdaji verzije.
+RTD_ je za DAF projekt konfiguriran, da za vsako verzijo preko platforme GitHub, avtomatično zgradi dokumentacijo,
+aktivira verzijo in jo nastavi kot privzeto. Na tak način je dokumentacija pripravljena za uporabo praktično takoj ob izdaji nove verzije.
 RTD_ dokumentacijo prav tako zgradi vsakem GitHub zahtevku za zružitev vej (angl. Pull request).

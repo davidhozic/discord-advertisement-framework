@@ -16,7 +16,7 @@ Zasnova in razvoj jedra
 .. |TOPGG| replace:: https://top.gg
 
 
-To poglavje govori o jedru samega ogrodja, kjer je jedro vse vsega kar ni del grafičnega vmesnika.
+To poglavje govori o jedru samega ogrodja, kjer jedro obsega vse, kar ni del grafičnega vmesnika.
 
 Jedro DAF-a je zasnovano kot Python_ knjižnica / paket, ki se ga lahko namesti preko PIP-a (*Preferred Installer Program*), ki je
 vgrajen v Python_ in služi nalaganju Python paketov. Za uporabo jedra mora uporabniki ustvariti ``.py`` datoteko in definirati
@@ -40,29 +40,33 @@ Ti nivoji so:
     Abstrakcija
 
 
+.. raw:: latex
+
+    \newpage
+
+
 Nadzorni nivo
 ---------------------
 Nadzorni nivo skrbi za zagon samega ogrodja ter njegovo zaustavitev. Skrbi tudi za procesiranje ukazov, ki jih DAF ponuja
-preko lastnega programskega vmesnika oz. preko HTTP vmesnika (API), kjer se programski vmesnik navezuje na kontrolne Python
-funkcije za neposredno upravljanje ogrodja na isti napravi, HTTP vmesnik pa na upravljanje na daljavo.
+preko lastnega programskega vmesnika oz. preko HTTP vmesnika, kjer v programski vmesnik spadajo Python funkcije ogrodja in metode objektov
+za neposredno upravljanje ogrodja na isti napravi, v HTTP vmesnik pa spletne HTTP poti za upravljanje na daljavo.
 Nivo služi tudi za odstranjevanje neuporabljenih objektov, kot tudi shranjevanje vseh računov v morebitno datoteko, če je to zaželjeno.
 
 Ko zaženemo ogrodje, ta v nadzornem nivoju sproži inicializacijo nivoja beleženja in zatem uporabniškega nivoja,
 kjer za vsak definiran uporabniški račun, (v :ref:`računskem nivoju <Računski nivo>`) ustvari lastno :mod:`asyncio` opravilo,
 ki omogoča simultano oglaševanje po več računih hkrati.
-Na koncu pokliče funkcijo, ki je bila dana ob klicu zaganjalne funkcije :func:`daf.core.run`.
+Na koncu pokliče (s strani uporabnika definirano) funkcijo, ki je bila podana kot parameter ob klicu zaganjalne funkcije :func:`daf.core.run`.
 
 Nadzorni nivo ima vedno vsaj eno opravilo, in sicer je to tisto, ki skrbi za čiščenje uporabniških računov v primeru napak.
-V primeru da napake ni, se račune dodaja preko :func:`daf.core.add_object` in
-briše preko :func:`daf.core.remove_object` funkcij
+Ob normalnem delovanju se račune dodaja preko programskega vmesnika.
 
 Drugo opravilo se zažene le v primeru, da je vklopljeno shranjevanje objektov v datoteko (preko :func:`~daf.core.run` funkcije).
 Ogrodje samo po sebi deluje, tako da ima vse objekte (računov, cehov, sporočil, ipd.) shranjene kar neposredno v RAM pomnilniku.
 Že od samega začetka je ogrodje narejeno na tak način da se željene objekte definira kar preko Python skripte in je zato shranjevanje v RAM
 ob taki definiciji neproblematično, problem pa je nastopil, ko je bilo dodano dinamično dodajanje in brisanje objektov, kar
-dejansko uporabnikom omogoča da ogrodje dinamično uporavljajo in v tem primeru je bilo potrebno dodati neke vrste permanentno shrambo.
+dejansko uporabnikom omogoča da ogrodje dinamično uporabljajo in v tem primeru je bilo potrebno dodati neke vrste permanentno shrambo.
 Razmišljalo se je o več alternativah, ena izmed njih je bila da bi se vse objekte shranjevalo v neko bazo podatkov, ki bi omogočala
-mapiranje podatkov v bazi, kar bi z vidika robustnosti bila zelo dobra izbira, a to bi zahtevalo ogromno prenovo
+mapiranje podatkov v bazi, kar bi z vidika robustnosti bila zelo dobra izbira, a to bi zahtevalo veliko prenovo
 vseh nivojev, zato se je na koncu izbrala preprosta opcija shranjevanja objektov, ki preko :mod:`pickle` modula shrani vse račune
 ob vsakem normalnem izklopu ogrodja ali pa v vsakem primeru na dve minuti v primeru neprimerne ustavitve. V prihodnosti, so
 še vedno načrti za izboljšanje tega mehanizma in se ne izključuje opcija uporabe prej omenjene podatkovne baze.
@@ -85,13 +89,12 @@ Računski nivo
 Računski nivo je zadolžen za upravljanjem z uporabniškimi računi. Vse kar se dogaja v tem nivoju se zgodi preko
 :class:`daf.client.ACCOUNT` objekta.
 
-Računski nivo skrbi za inicializacijo nivoja, ki ovija Discord API (vsak račun ima svojo ločeno instanco ovojnega nivojo)
-in za upravljanje opravila, ki komunicira z cehovskim nivojem.
+Računski nivo skrbi za inicializacijo nivoja, ki ovija Discord API in za upravljanje opravila, ki komunicira z cehovskim nivojem.
 
 
-Možnost rabe večih uporabniških računov je na voljo od verzije 2.4 naprej, pred tem pa je bila možnost rabe le enega računa,
-je bilo pa mogoče več računov definirati preprosto tako da se je ustvarilo več skript z različnimi uporabniškimi žetoni (alternativa geslu),
-in zagnalo nov proces v operacijskem sistemu. Zagon v večih procesih je bil morda z performančnega vidika bolje,
+Možnost rabe večih uporabniških računov je na voljo od verzije 2.4 naprej, pred tem pa je bila možnost rabe le enega računa.
+Bilo pa je mogoče več računov definirati preprosto tako, da se je ustvarilo več skript z različnimi Discordovimi uporabniškimi žetoni (angl. tokens)
+in zagnalo več procesov v operacijskem sistemu. Zagon v večih procesih je bil morda s performančnega vidika bolje,
 saj je bilo posledično za delovanje uporabljenih tudi več procesorskih jedr. Glede da ogrodjo za svoje delovanje dejansko
 ne potrebuje skoraj nobene moči in bi ga lahko zaganjali tudi na vgrajenih napravah, pa dejansko to ni noben problem.
 
@@ -115,7 +118,7 @@ ne potrebuje skoraj nobene moči in bi ga lahko zaganjali tudi na vgrajenih napr
 Cehovski nivo
 ---------------
 Cehovski nivo je primarno zadolžen za upravljanje s cehi in komuniciranje s sporočilnim nivojem. V primeru
-naprednejših funkcionalnostih, kot je avtomatično pridruževanje cehom, komunicira tudi z nivojem brskalnika.
+naprednejših funkcionalnosti, kot je avtomatično pridruževanje cehom, komunicira tudi z nivojem brskalnika.
 
 Nivoju pripadajo trije razredi:
 
@@ -164,7 +167,7 @@ je v kanalih, ki jih |DirectMESSAGE| nima, temveč ta pošilja sporočila v dire
 |VoiceMESSAGE| in |TextMESSAGE|, sta si po vrsti podatkov sicer različna, vendar pa oba pošiljata sporočila v kanale, ki
 pripadata nekemu cehu in imata praktično enako inicializacijo.
 
-Glede na to da je ogrodje mišljeno kot neko ogrodje za oglaševanje sporočil, ta nivo nekako velja za najbolj glavnega.
+Glede na to da je ogrodje mišljeno za oglaševanje sporočil, ta nivo nekako velja za najbolj glavnega.
 
 .. Inicializacija |TextMESSAGE| in |VoiceMESSAGE| objektov poteka na sledeč način. Najprej preveri se podatkovni tip parametra
 .. ``channels``, ki predstavlja kanale kamor se bo sporočila pošiljalo in sicer obstajajo 2 možnosti podatkovnega tipa:
@@ -196,12 +199,12 @@ Glede na to da je ogrodje mišljeno kot neko ogrodje za oglaševanje sporočil, 
 .. je sporočilo pripravljeno za pošiljanje v slednjem primeru začne s procesom pošiljanja sporočila.
 
 
-Kdaj je sporočilo pripravljeno za pošiljanje določa notranji atribut objekta, ki predstavlja točno specifičen čas naslednjega
+Pripravljenost sporočila za pošiljanje določa notranji atribut objekta, ki predstavlja točno specifičen čas naslednjega
 pošiljanja sporočila. V primeru da je trenutni čas večji od tega atributa, je sporočilo pripravljeno za pošiljanje.
 Ob ponastavitvi "časovnika" se ta atribut prišteje za konfigurirano periodo.
 Torej dejanski čas pošiljanja ni relativen na prejšnji čas pošiljanja, temveč je relativen na predvideni čas pošiljanja.
 Taka vrsta računanja časa omogoča določeno toleranco pri pošiljanju sporočila, saj se zaradi raznih zakasnitev in omejitev
-zahtev na API v ovojnem API nivoju (pri pošiljanju vsakega sporočila in ostalih zahtev) dejansko sporočilo lahko pošlje kasneje kot predvideno.
+zahtev (angl. *Rate limiting*) na Discord API dejansko sporočilo lahko pošlje kasneje kot predvideno.
 To je še posebno pomembno v primeru da imamo definiranih veliko sporočil v enem računu, kar je zagotovilo da se sporočilo ne bo
 poslalo točno ob določenem času. Ker se čas prišteva od prejšnjega časa pošiljanja, posledično to pomeni da bo v primeru
 zamude sporočila, razmak med tem in naslednjim sporočilom manjši točno za to časovno napako (če privzamemo da ne bo ponovne zakasnitve).
@@ -268,19 +271,19 @@ z JSON logiranjem.
 
 JSON beleženje
 ~~~~~~~~~~~~~~~~~
-Kot že prej omenjeno, je bilo JSON beleženje zamenja za Markdown format beleženja. Razlog za zamenjavo je morebitna
+Kot že prej omenjeno, je JSON beleženje zamenjava za Markdown format beleženja. Razlog za zamenjavo je morebitna
 implementacija analitike, kar bi se v Markdown formatu težko implementiralo. V času pisanja je analitika na voljo le v
-primeru SQL logiranja.
+primeru SQL beleženja.
 
 JSON beleženje je implementirano z objektom beleženja :class:`~daf.logging.LoggerJSON`.
 Ta vrsta beleženja nima nobene specifične inicializacije, kliče se le inicializacijska metoda njegovega morebitnega
 nadomestka.
 
 Ob zahtevi beleženja objekt :class:`~daf.logging.LoggerJSON` najprej pogleda trenuten datum, iz katerega tvori
-končno pot do datoteke od v parametrih podane osnovne poti. Končna pot je določena kot ``Leto/Mesec/Dan/<Ime Ceha>.json``.
+končno pot do datoteke od (v parametrih) konfigurirane osnovne poti. Končna pot je določena kot ``Leto/Mesec/Dan/<Ime Ceha>.json``.
 
 To pot, v primeru da ne obstaja, ustvari in zatem z uporabo vgrajenega Python_ modula :mod:`json` podatke shrani v
-datoteko. Za specifike glej :ref:`Logging (core)`.
+datoteko. Specifike so opisane v :ref:`Logging (core)`.
 
 
 .. figure:: ./DEP/daf-logging-json.svg
@@ -297,32 +300,32 @@ CSV beleženje
 CSV beleženje deluje na enak način kot :ref:`JSON beleženje`. Edina razlika je v formatu, kjer je format tu CSV.
 Lokacija datotek je enaka kot pri :ref:`JSON beleženje`. Za shranjevanje je uporabljen vgrajen Python_ modul :mod:`csv`.
 Za sam pregled poslanih sporočil to ni najbolj primren format, saj se vse shrani v eni datoteki, kjer za razliko od JSON
-formata, tu ni več slojnih struktur.
+formata, tu ni več-slojnih strukture.
 
 
 SQL beleženje
 ~~~~~~~~~~~~~~~~~~
-SQL beleženje pa deluje precej drugače kot :ref:`JSON beleženje` in :ref:`CSV beleženje`, saj se podatki shranjujejo
+SQL beleženje pa deluje precej drugače kot delujeta :ref:`JSON beleženje` in :ref:`CSV beleženje`, saj se podatki shranjujejo
 v podatkovno bazo, ki je v primeru uporabe SQLite dialekta sicer lahko tudi datoteka.
 
-DAF omogoča beleženje v 4 dialekte:
+Beleženje omogočeno v štirih dialektih:
 
 1. SQLite
-2. Microsoft SQL Server (mssql)
+2. Microsoft SQL Server
 3. PostgreSQL
 4. MySQL / MariaDB
 
 Za čim bolj univerzalno implementacijo na vseh dialektih, je bila pri razvoju uporabljena knjižnica :mod:`SQLAlchemy`.
-Celoten sistem SQL beleženja je implementiran s pomočjo ORM (*Object relational mapping*), kar med drugim omogoča tudi
+Celoten sistem SQL beleženja je implementiran s pomočjo :term:`ORM`, kar med drugim omogoča tudi
 da SQL tabele predstavimo z Python_ razredi, posamezne vnose v bazo podatkov oz. vrstice pa predstavimo z instancami
 teh razredov. Z ORM lahko skoraj v celoti skrijemo SQL in delamo neposredno z Python_ objekti, ki so lahko tudi gnezdene
 strukture, npr. vnosa dveh ločenih tabel lahko predstavimo z dvema ločenima instancama, kjer je ena instanca znotraj
 druge instance.
 
-Ta vrsta beleženja je bila pravzaprav narejena v okviru zaključne naloge za izbirni predmet Informacijski sistemi v 2. letniku.
-Ker smo morali pri predmetu izpolnjevati neke zahteve, je bilo dosti stvari pisanih neposredno v SQL jeziku, a vseeno je bila že takrat
-uporabljena že prej omenjena knjižnica :mod:`SQLAlchemy`. Zaradi določenih SQL zahtev (funkcije, procedure, prožilci, ipd.),
-je bila ta vrsta logiranja možna le ob uporabi Microsoft SQL Server baze.
+Ta vrsta beleženja je bila pravzaprav narejena v okviru zaključnega projekta, pri izbirnem predmetu Informacijski sistemi v 2. letniku.
+Ker smo morali pri predmetu izpolnjevati določene zahteve, je bilo veliko stvari pisanih neposredno v SQL jeziku, a vseeno je bila že takrat
+uporabljena knjižnica :mod:`SQLAlchemy`. Zaradi določenih SQL zahtev (funkcije, procedure, prožilci, ipd.),
+je bila ta vrsta logiranja možna le ob uporabi Microsoft SQL Server dialekta.
 Kasneje se je postopoma celotno SQL kodo zamenjalo z ekvivalentno Python kodo, ki preko SQLAlchemy knjižnice dinamično
 generira potrebne SQL stavke, zaradi česar so bile odstranjene določene uporabne originalne funkcionalnosti implementirane
 na nivoju same SQL baze kot so npr. prožilci (angl. *trigger*). Je pa zaradi tega možno uporabljati bazo na večih dialektih,
@@ -350,9 +353,9 @@ Za ta namen je bil ustvarjen nivo brskalnika, kjer DAF namesto z Discord API, ko
 Google Chrome. To opravlja s knjižnico `Selenium <https://www.selenium.dev/>`_, ki je namenjena avtomatizaciji brskalnikov
 in se posledično uporablja tudi kot orodje za avtomatično testiranje spletnih vmesnikov.
 
-V DAF projektu Selenium ni uporabljen za testiranje, temveč za avtomatično prijavljanje v Discord z uporabniškim
-imenom in geslom in tudi za pol avtomatično pridruževanje cehom. Za to da bo ta nivo uporabljen, je potrebno ob ustvarjanju :class:`~daf.client.ACCOUNT`
-objekta podati uporabniško ime in geslo namesto žetona. Znotraj :class:`~daf.client.ACCOUNT` objekta se bo potem samodejno
+V DAF projektu Selenium ni uporabljen za testiranje, temveč je uporabljen za avtomatično prijavljanje v Discord z uporabniškim
+imenom in geslom, in pa za pol-avtomatično pridruževanje cehom. Za uporabo tega nivoja, je potrebno objektu :class:`~daf.client.ACCOUNT`
+ob ustvarjanju podati uporabniško ime in geslo namesto žetona. Znotraj :class:`~daf.client.ACCOUNT` objekta se bo potem samodejno
 ustvaril nanj vezanj objekt :class:`~daf.web.SeleniumCLIENT`.
 
 .. figure:: ./DEP/daf-selenium-layer.svg
@@ -381,7 +384,7 @@ To ni nič drugega, kot PyCord ogrodje, le da je modificirano za možnost rabe n
 Poleg lokalnih modifikacij, sem tudi na uradni verziji PyCord ogrodja naredil nekaj modifikacij, z namenom izboljšanje nekaterih
 funkcionalnosti na DAF ogrodju.
 Da bi PyCord ogrodje bilo možno posodabljati, so z ukazom ``git diff`` ustvarjene GIT datoteke za krpanje (*patch*),
-kar pravzaprav omogoča da se novo verzijo PyCord ogrodja preprosto kopira v mapo in z ``git apply`` ukazom uvozi spremembe iz
+kar pravzaprav omogoča, da se novo verzijo PyCord ogrodja preprosto kopira v mapo in z ``git apply`` ukazom uvozi spremembe iz
 datotek za krpanje.
 
 Več je na voljo v `uradni PyCord dokumentaciji <https://docs.pycord.dev/en/stable/>`_.

@@ -15,7 +15,33 @@
 
     JSON
         JavaScript Object Notation
+
+    CSV
+
+        Comma-Separated Values
+
+    SQL
+
+        Structured Query Language
+
     DAF
         Discord Advertisement Framework
+
     NFT
-        Non-fungible token
+        Non-Fungible Token
+
+    GUI
+
+        Graphical User Interface
+
+    PIP
+
+        Preferred Installer Program
+
+    API
+
+        Application Programming Interface
+
+    ORM
+
+        Object Relational Mapping

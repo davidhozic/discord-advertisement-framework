@@ -11,7 +11,7 @@ DAF - *Discord Advertisement Framework*
 
     Discord Advertisement Framework logo
 
-    (Narejeno z DALL-E & Adobe Photoshop)
+    (Narejen z DALL-E & Adobe Photoshop)
 
 
 Namen projekta
@@ -24,8 +24,8 @@ Cilj projekta je izdelati ogrodje, ki lahko deluje 24 ur na dan in samodejno ogl
 pa tudi dinamično vsebino, omogoča pregled poslanih sporočil in poročanje o uspešnosti preko beleženja zgodovine
 poslanih sporočil.
 Ker naj bi to ogrodje delovalo brez prekinitev je cilj ogrodje narediti, da bo delovalo kot demonski proces v ozadju
-brez grafičnega vmesnika. Vendar je pa definicija brez grafičnega vmesnika težja in zahteva malo več dela, zato je cilj izdelati
-tudi grafični vmesnik, ki bo deloval kot dodaten nivo nad samim ogrodjem ter omogočal :ref:`generacijo oglaševalske skripte <equivalent_script>`, 
+brez grafičnega vmesnika. Ker je pa definicija brez grafičnega vmesnika težja in zahteva malo več dela, je cilj izdelati
+tudi grafični vmesnik, ki bo deloval kot dodaten nivo nad samim ogrodjem ter omogočal :ref:`generacijo oglaševalske skripte <Pošiljanje sporočila z naključno periodo>`, 
 ki se jo lahko potem zažene na strežniku brez grafičnega vmesnika za neprekinjeno oglaševanje. Za lažji pregled dogajanja
 na strežniku, je cilj na grafičnem vmesniku implementirati možnost oddaljenega dostopa, ki bo omogočal direktno manipulacijo
 oglaševalske sheme in pregled zgodovine poslanih sporočil za določitev uspešnosti oglaševanja.

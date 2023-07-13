@@ -54,7 +54,7 @@ extensions = [
     "enum_tools.autoenum",
     "sphinx_design",
     "sphinx_search.extension",
-    "sphinxcontrib.inkscapeconverter"
+    "sphinxcontrib.inkscapeconverter",
 ]
 
 
@@ -138,6 +138,7 @@ latex_elements = {
     "extraclassoptions": "openany",
     "babel": r"\usepackage[slovene]{babel}",
     'preamble': r'''
+
         % Spacing
         \textheight 215mm
         \textwidth 145mm

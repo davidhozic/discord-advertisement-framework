@@ -573,7 +573,7 @@ class TextMESSAGE(BaseMESSAGE):
 @sql.register_type("MessageTYPE")
 class DirectMESSAGE(BaseMESSAGE):
     """
-    This class is used for creating objects that represent messages which will be sent to Discord's TEXT CHANNELS.
+    This class is used for creating objects that represent messages which will be sent to user's private messages.
 
     .. deprecated:: v2.1
 
