@@ -16,6 +16,16 @@ lahko komunicira lokalno preko programskega vmesnika (Python funkcij) ali pa na 
 
 Za dizajn vmesnika je izbran svetel dizajn, z modrimi odtenki za posamezne elemente, kot je to prikazano na :numref:`sliki %s <fig-gui-front>`.
 
+.. _fig-gui-front:
+.. figure:: ./DEP/daf-gui-front-rotated.png
+    :height: 20.5cm
+
+    Grafični vmesnik (*Schema definition* zavihek)
+
+
+.. raw:: latex
+
+    \newpage
 
 
 Tkinter
@@ -52,6 +62,16 @@ Sestavljen je iz statusnih panelov, ki če so rdeči (modul ni nameščen) vsebu
 Gumb bo namestil potrebne pakete, potem pa bo vmesnik uporabniku sporočil, da mora za spremembe ponovno odpreti vmesnik.
 Po ponovnem zagonu bo statusni panel za posamezen modul obarvan zeleno.
 
+.. figure:: ./DEP/daf-gui-modules-tab.png
+
+    Izgled *Optional Modules* zavihka
+
+
+.. raw:: latex
+
+    \newpage
+
+
 
 *Schema definition* zavihek
 -----------------------------
@@ -60,6 +80,7 @@ izbiro globine izpisov na konzoli in konfiguracijo povezave do jedra ogrodja.
 Omogoča tudi shrambo teh definicij v :term:`JSON` datoteko, braje definicij iz JSON datoteke in pa generacijo ekvivalentne
 Python datoteke, ki požene le :ref:`jedro orodja <Zasnova in razvoj jedra>` (brez grafičnega vmesnika).
 Pravzaprav je ta zavihek namenjen definiciji nekege predloge, ki jo lahko potem uvozimo v jedro ogrodja.
+Izgled je prikazan na :numref:`sliki %s <fig-gui-front>`.
 
 Omogoča tudi dinamično branje in pretvorbo objektov v že zagnanem vmesniku preko gumbov, ki vsebujejo besedo *live*.
 
@@ -95,10 +116,11 @@ definira vse potrebno in zatem zažene ogrodje. Primer skripte je prikazan v :nu
 
     \newpage
 
+
 *Live view* zavihek
 -----------------------------
 Medtem, ko je :ref:`*Schema definition* zavihek` namenjen definiciji v naprej definirane sheme oz. predloge objektov,
-*Live view* zavihek omogoča direktno manipulacijo z objekti, ki so dodani v delujoče jedro ogrodja. Izgled zavihka je prikazan na :numref:`sliki %s <fig-gui-live-view>`
+*Live view* zavihek omogoča direktno manipulacijo z objekti, ki so dodani v delujoče jedro ogrodja.
 
 Na začetku zavihka se nahaja opcijski meni, v katerem je *add_object* funkcija, kateri znotraj lahko definiramo nov račun.
 Ob kliku na gumb *Execute* bo definiran račun takoj dodan v DAF in začel z oglaševanjem.
@@ -116,11 +138,31 @@ vijoličnega okvirja možno izvajanje metod (funkcij) na objektu.
     Prikaz parametrov in metod delujočega računa
 
 
+.. figure:: ./DEP/daf-gui-live-view-rotated.png
+    :height: 20.5cm
+
+    *Live view* zavihek
+
+
+.. raw:: latex
+
+    \newpage
+
+
 
 *Output* zavihek
 -----------------------------
-Vse kar se nahaja v tem zavihku, je seznam izpisov, ki se izpišejo na standardnem izhodu stdout.
+Vse kar se nahaja v tem zavihku, je seznam izpisov, ki se izpišejo na standardnem izhodu STDOUT.
 Uporabi se ga lahko za bolj podroben pregled kaj se dogaja z jedrom DAF.
+
+.. figure:: ./DEP/daf-gui-output-tab.png
+
+    *Output tab* zavihek
+
+
+.. raw:: latex
+
+    \newpage
 
 
 *Analytics* zavihek
@@ -140,6 +182,16 @@ Za pridobitev statistike se uporabi gumb *Calculate*, ki na podlagi opcijskega m
 
     Prikaz vnosa o poslanem sporočilu.
 
+
+.. figure:: ./DEP/daf-gui-analytics-tab-rotated.png
+    :height: 20.5cm
+
+    Zavihek *Analytics*
+
+
+.. raw:: latex
+
+    \newpage
 
 
 Povezava grafičnega vmesnika z jedrom ogrodja

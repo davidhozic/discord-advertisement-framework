@@ -388,3 +388,9 @@ kar pravzaprav omogoča, da se novo verzijo PyCord ogrodja preprosto kopira v ma
 datotek za krpanje.
 
 Več je na voljo v `uradni PyCord dokumentaciji <https://docs.pycord.dev/en/stable/>`_.
+
+.. raw:: latex
+
+    \blankpage
+
+

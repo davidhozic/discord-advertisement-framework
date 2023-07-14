@@ -76,22 +76,4 @@ Jedro DAF (Python skripta), ki postavi HTTP strežnik, in GUI shema za povezovan
 
 
 
-Grafične priloge
-------------------
-
-Izgled grafičnega vmesnika
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. _fig-gui-front:
-.. figure:: ./DEP/daf-gui-front-rotated.png
-
-    Grafični vmesnik (*Schema definition* zavihek)
-
-
-Izgled *Live view* zavihka
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. _fig-gui-live-view:
-.. figure:: ./DEP/daf-gui-live-view-rotated.png
-
-    *Live view* zavihek
 
