@@ -93,10 +93,10 @@ Projekt DAF je v celoti dokumentiran s Sphinx sistemom.
 Na prvem nivoju je dokumentacija razdeljena na:
 
 1. Vodnik - Voden opis kako uporabljati DAF.
-2. API referenco - Opis vseh razredov in funkcij, ki jih lahko uporabniki uporabijo v primeru, da pišejo
+2. API referenco - Opis vseh razredov in funkcij programskega vmesnika, ki jih lahko uporabniki uporabijo v primeru, da pišejo
    svojo kodo, ki uporablja DAF kot paket.
 
-Vodnik je pisan v ``.rst`` datotekah, ki so nastanjene v ``docs/source/guide`` mapi. Dodatno se deli še na vodnik za
+Vodnik je pisan v ``.rst`` datotekah, ki so nastanjene v ``/project root/docs/source/guide`` mapi. Dodatno se deli še na vodnik za
 GUI in vodnik za jedro.
 
 V nekaterih direktorijah so prisotne datoteke ``dep_local.json``. To so pred-gradne konfiguracijske datoteke, ki dajejo
@@ -153,15 +153,11 @@ Ta vsebina je bila vzeta iz same kode razreda.
 
 
 Dokumentacija projekta DAF je gostovana na spletni strani `Read the Docs (RTD) <RTD_>`_.
-
 RTD_ je spletna platforma za dokumentacijo, ki razvijalcem programske opreme zagotavlja enostaven način za gostovanje,
 objavljanje in vzdrževanje dokumentacije za njihove projekte.
-Platforma uporabnikom omogoča ustvarjanje profesionalno izgledajoče dokumentacije, ki je odprta javnosti.
-Je odprtokodna in zgrajena na že prej omenjenem Sphinx-u.
-
+Je odprtokodna platforma in zgrajena na že prej omenjenem Sphinx-u.
 Poleg gostovanja dokumentacije RTD_ ponuja razna orodja, kot sta sistem za nadzor verzij (angl. *version control*) in napredna funkcionalnost iskanja.
 To uporabnikom olajša lažji pregled dokumentacije in zagotavlja, da dokumentacija ostane ažurna.
-
 RTD_ je za DAF projekt konfiguriran, da za vsako verzijo preko platforme GitHub, avtomatično zgradi dokumentacijo,
 aktivira verzijo in jo nastavi kot privzeto. Na tak način je dokumentacija pripravljena za uporabo praktično takoj ob izdaji nove verzije.
 RTD_ dokumentacijo prav tako zgradi vsakem GitHub zahtevku za zružitev vej (angl. Pull request).
