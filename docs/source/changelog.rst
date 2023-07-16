@@ -31,10 +31,18 @@ Glossary
 ----------------------
 Releases
 ----------------------
+v2.9.2
+=================
+- Fixed viewing dictionaries inside the GUI
+- Other bug fixes present in :ref:`v2.8.5`
+
 v2.9.1
 =================
 - Security update for yt-dlp
 
+v2.8.5
+=================
+- Fixed "Object not added to DAF" when accessing broken accounts from remote
 
 v2.9
 =================
