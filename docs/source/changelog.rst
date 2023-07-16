@@ -32,6 +32,11 @@ Glossary
 Releases
 ----------------------
 
+v2.8.5
+=================
+- Fixed "Object not added to DAF" when accessing broken accounts from remote
+
+
 v2.8.4
 =================
 - Fixed web browser waiting time being too little when searching invite links
