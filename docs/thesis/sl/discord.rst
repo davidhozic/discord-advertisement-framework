@@ -22,7 +22,7 @@ Discord se je od takrat razvil v več kot samo orodje za komunikacijo med igralc
 priljubljena platforma za skupnosti vseh vrst, da se povežejo in komunicirajo.
 Je priljubljena komunikacijska platforma, ki uporabnikom omogoča komuniciranje preko glasovnega, video in besedilnega klepeta.
 Pogosto se uporablja za različne namene, vključno z razpravljanjem o umetniških projektih, načrtovanjem družinskih izletov, iskanjem pomoči pri domačih nalogah.
-Prav tako ima dobro funkcijo iskanja vsebine, ki je bila nekoč objavljena, ki je je naprimer uporabna za iskanje primera dispozicije diplomske naloge, ki ga je nekdo objavil pred tremi meseci.
+Prav tako ima dobro funkcijo iskanja vsebine, ki je bila nekoč objavljena, ki je je na primer uporabna za iskanje primera dispozicije diplomske naloge, ki ga je nekdo objavil pred tremi meseci.
 
 Čeprav lahko Discord služi kot dom skupnostim vseh velikosti, je še posebej priljubljen med manjšimi, aktivnimi skupinami, ki med seboj pogosto komunicirajo.
 Večina strežnikov Discord je zasebnih in zahtevajo povabilo za vstop, kar omogoča prijateljem in skupnostim, da ostanejo povezani.
@@ -65,8 +65,7 @@ Discordova struktura
 
     Struktura Discord aplikacije
 
-Discord klient je aplikacija, prek katere lahko uporabniki komunicirajo.
-V jedru je sestavljena iz gumba za direktna (osebna) sporočila, seznama cehov, seznama kanalov in seznama uporabnikov,
+Discord aplikacija je v osnovi sestavljena iz gumba za direktna (osebna) sporočila, seznama cehov, seznama kanalov in seznama uporabnikov,
 ki so pridruženi v ceh.
 Obstajata dve vrsti računov, ki sta lahko v cehu:
 
@@ -127,7 +126,7 @@ prevelikega in hitrega oglaševanja v direktna sporočila, lahko Discord ukine v
 
 Oglaševanje v Discord
 ==========================
-V Discord se lahko oglašuje ročno ali pa avtomatično z primernim orodjem.
+V Discord se lahko oglašuje ročno ali pa avtomatično s primernim orodjem.
 Oglaševanje vključuje pisanje vsebine oglasa, ustvarjanje računov, iskanje cehov in večkratno periodično pošiljanje
 sporočil v kanale oz. v direktna sporočila posameznih uporabnikov.
 
@@ -168,11 +167,11 @@ Iskanje cehov za oglaševanje
 ------------------------------
 Ko je oglaševalska vsebina napisana, je potrebo najti cehe, kamor se bo to vsebino pošiljalo.
 Dober kraj za začetek je kar nek spletni iskalnik.
-Nabor cehov ponuja tudi kar Discord sam, ampak za to da nek ceh pride na njihov seznam, mora imeti zagotovljenih kar
+Nabor cehov ponuja tudi Discord sam, ampak za to da nek ceh pride na njihov seznam, mora imeti zagotovljenih kar
 nekaj pogojev med katerimi je tudi ta, da mora imeti ceh vsaj 1000 uporabnikov. To posledično pomeni da ima ceh verjetno
 politiko proti pretiranem oglaševanju, za to morda ta seznam ni najbolj primeren za to rabo.
 
-Na srečo obstajajo tudi drugi strani za iskanje cehov, kot je na primer spletna stran `Top.GG <https://top.gg>`_.
+Na srečo obstajajo tudi druge strani za iskanje cehov, kot je na primer spletna stran `Top.GG <https://top.gg>`_.
 Na tej strani lahko v vgrajen iskalnik dodamo določene parametre, med katerimi je tudi imenska poizvedba, kjer lahko
 uporabimo akronim "NFT" in spletna stran nam bo vrnila cehe povezane z NFT.
 

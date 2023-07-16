@@ -148,7 +148,7 @@ vključila tudi dokumentirane metode in atribute, ki so del razreda.
     \newpage
 
 
-Iz slike :numref:`auto_doc_example` lahko vidimo, da ima :class:`~daf.logging.sql.LoggerSQL` dodatno vsebino, ki je ni imel v ``autoclass`` direktivi.
+Iz :numref:`slike %s <auto_doc_example>` lahko vidimo, da ima :class:`~daf.logging.sql.LoggerSQL` dodatno vsebino, ki je ni imel v ``autoclass`` direktivi.
 Ta vsebina je bila vzeta iz same kode razreda.
 
 
@@ -156,8 +156,7 @@ Dokumentacija projekta DAF je gostovana na spletni strani `Read the Docs (RTD) <
 RTD_ je spletna platforma za dokumentacijo, ki razvijalcem programske opreme zagotavlja enostaven način za gostovanje,
 objavljanje in vzdrževanje dokumentacije za njihove projekte.
 Je odprtokodna platforma in zgrajena na že prej omenjenem Sphinx-u.
-Poleg gostovanja dokumentacije RTD_ ponuja razna orodja, kot sta sistem za nadzor verzij (angl. *version control*) in napredna funkcionalnost iskanja.
-To uporabnikom olajša lažji pregled dokumentacije in zagotavlja, da dokumentacija ostane ažurna.
-RTD_ je za DAF projekt konfiguriran, da za vsako verzijo preko platforme GitHub, avtomatično zgradi dokumentacijo,
-aktivira verzijo in jo nastavi kot privzeto. Na tak način je dokumentacija pripravljena za uporabo praktično takoj ob izdaji nove verzije.
-RTD_ dokumentacijo prav tako zgradi vsakem GitHub zahtevku za zružitev vej (angl. Pull request).
+Poleg gostovanja dokumentacije RTD_ ponuja tudi nadzor verzij (angl. *version* control) in določeno avtomatizacijo.
+RTD_ je za DAF projekt konfiguriran, da za izdajo vsake nove verzije projekta avtomatično zgradi dokumentacijo,
+aktivira verzijo in jo nastavi kot privzeto. Na tak način je dokumentacija pripravljena za uporabo praktično takoj ob izdaji.
+Prav tako se dokumentacija zgradi ob vsakem zahtevku za združitev vej (angl. Pull request) na GitHub platformi.

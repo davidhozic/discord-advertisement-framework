@@ -16,17 +16,6 @@ lahko komunicira lokalno preko programskega vmesnika ali pa na daljavo preko HTT
 
 Za dizajn vmesnika je izbran svetel dizajn, z modrimi odtenki za posamezne elemente, kot je to prikazano na :numref:`sliki %s <fig-gui-front>`.
 
-.. _fig-gui-front:
-.. figure:: ./DEP/daf-gui-front-rotated.png
-    :height: 20.5cm
-
-    Grafični vmesnik (*Schema definition* zavihek)
-
-
-.. raw:: latex
-
-    \newpage
-
 
 Tkinter
 =============================
@@ -165,25 +154,19 @@ Uporabi se ga lahko za bolj podroben pregled kaj se dogaja z jedrom DAF.
 *Analytics* zavihek
 -----------------------------
 *Analytics* zavihek omogoča analizo poslanih sporočil in njihovo statistiko. Prav tako omogoča analizo pridruževanj preko sledenja
-cehovskih povezav (angl. *Invite links*).
+cehovskih povezav (angl. *Invite links*). Izgled je prikazan na :numref:`sliki %s <daf-gui-analytics-tab-rotated>`
 
 Za pridobitev vnosov, se uporabi gumb *Get logs*, ki na podlagi parametrov definiranih v zgornjem opcijskem meniju, vrne
 v spodnji seznam filtrirane elemente. Te elemente se lahko vsakega posebej pregleda z gumbom *View log*, ki 
 odpre okno za urejanje objektov.
 
-Za pridobitev statistike se uporabi gumb *Calculate*, ki na podlagi opcijskega meniji nad gumbom, v spodnjo tabelo vrne podatke.
+Za pridobitev statistike se uporabi gumb *Calculate*, ki na podlagi opcijskega menija nad gumbom, v spodnjo tabelo vrne podatke.
 
 
 .. figure:: ./DEP/images/gui-analytics-message-frame-view-log.png
     :height: 8cm
 
     Prikaz vnosa o poslanem sporočilu.
-
-
-.. figure:: ./DEP/daf-gui-analytics-tab-rotated.png
-    :height: 20.5cm
-
-    Zavihek *Analytics*
 
 
 .. raw:: latex

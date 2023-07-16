@@ -87,7 +87,7 @@ intersphinx_mapping = {
     "DAF": ("https://daf.davidhozic.com/en/v2.9.1/", None),
     "Python": ("https://docs.python.org/3/", None),
     "Sphinx": ("https://www.sphinx-doc.org/en/master", None),
-    "SQLAlchemy": ("https://docs.sqlalchemy.org/en/20/", None)
+    "SQLAlchemy": ("https://docs.sqlalchemy.org/en/20/", None),
 }
 
 # ----------- HTML ----------- #
@@ -122,9 +122,14 @@ literal_block_str = {
     "sl": r"\listof{literalblock}{Seznam literalnih blokov}"
 }
 
+latex_theme = "manual"  # latex class => report
 
 latex_elements = {
     "sphinxsetup": r"VerbatimColor={rgb}{1,1,1}",
+
+    "papersize": "a4paper",
+    "pointsize": "12pt",
+    "extraclassoptions": "openright",
     "tableofcontents": r"""
         \tableofcontents
         \blankpage
@@ -133,12 +138,8 @@ latex_elements = {
         \blankpage
     """.format(literal_block_str.get(language)),
     'fncychap': r'',
-    "papersize": "a4paper",
-    "pointsize": "12pt",
-    "extraclassoptions": "openany",
     "babel": r"\usepackage[slovene]{babel}",
     'preamble': r'''
-
         % Spacing
         \textheight 215mm
         \textwidth 145mm
@@ -166,10 +167,4 @@ latex_elements = {
     ''',
     "maketitle": latex_title_page,
     "printindex": ''
-}
-
-
-latex_docclass = {
-    'howto': 'book',
-    'manual': 'book',
 }

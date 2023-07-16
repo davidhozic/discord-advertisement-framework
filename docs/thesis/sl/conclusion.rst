@@ -18,7 +18,7 @@ Vse zgoraj omenjeno je omogočeno v jedru ogrodja (preko Python skripte) oziroma
 z ogrodjem, definicijo objektov (računov, cehov, sporočil, ipd.) ter prikaz statistike in vsebine poslanih sporočil.
 Omogočen je tudi oddaljen dostop do jedra ogrodja, kjer lahko jedro in grafični vmesnik delujeta samostojno in komunicirata
 na daljavo preko HTTP vmesnika, kar pomeni da lahko jedro deluje na nekem oddaljenem strežniku 24/7, grafični vmesnik pa uporabniki
-zaženejo ob poljubnem času in se potem povežejo na jedro ogrodja. V :ref:`prilogah <Priloge>` najdete primere definicij in uporabe.
+zaženejo ob poljubnem času in se potem povežejo na jedro ogrodja. V :ref:`prilogah <Priloge>` se nahajajo primeri definicij in uporabe.
 
 
 Z delovanjem ogrodja sem v končni fazi zadovoljen. Zdi se mi zdi da sem izpolnil vse željene

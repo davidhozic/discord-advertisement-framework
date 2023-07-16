@@ -4,11 +4,32 @@ Priloge
 ==================
 
 
+Dodatne slike
+--------------
+
+.. _daf-gui-analytics-tab-rotated:
+.. figure:: ./DEP/daf-gui-analytics-tab-rotated.png
+    :height: 20.5cm
+
+    Zavihek *Analytics*
+
+
+.. _fig-gui-front:
+.. figure:: ./DEP/daf-gui-front-rotated.png
+    :height: 20.5cm
+
+    Grafični vmesnik (*Schema definition* zavihek)
+
+
+.. raw:: latex
+
+    \newpage
+
 
 Primeri uporabe
 -----------------------
 
-.. |PY_EXAMPLE| replace:: jedra ogrodja
+.. |PY_EXAMPLE| replace:: jedro ogrodja
 .. |SCHEMA_EXAMPLE| replace:: GUI shema
 
 
