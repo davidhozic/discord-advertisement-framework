@@ -31,22 +31,19 @@ Glossary
 ----------------------
 Releases
 ----------------------
+
+v2.9.2
+=================
+- Fixed viewing dictionaries inside the GUI
+- Other bug fixes present in :ref:`v2.8.5`
+
 v2.9.1
 =================
 - Security update for yt-dlp
 
-
-v2.10
-==================
-- GUI:
-  
-  - Password fields are now masked with the \* character whenever not in edit mode.
-  - Significant optimizations when saving schema, loading schema, generating equivalent script, creating objects.
-
-- Dev:
-  
-  - ``misc`` module broken down to submodules.
-
+v2.8.5
+=================
+- Fixed "Object not added to DAF" when accessing broken accounts from remote
 
 v2.9
 =================
@@ -382,5 +379,6 @@ v1.8.1
 v1.7.9
 ===========
 - :class:`daf.DirectMESSAGE` and :class:`daf.USER` classes created for direct messaging.
+
 
 
