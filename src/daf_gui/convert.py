@@ -471,18 +471,23 @@ def convert_dict_to_object_info(data: Union[dict, Iterable, Any]):
     annotations = {}
     object_info_data = {}
 
-    for k, v in data.items():
-        if isinstance(v, dict):
-            v = convert_dict_to_object_info(v)
-            type_v = type(v)
-        elif isinstance(v, Iterable) and not isinstance(v, str):
-            v = [convert_dict_to_object_info(item) for item in v]
-            type_v = List[Any]
-        else:
-            type_v = type(v)
+    if isinstance(data, dict):
+        for k, v in data.items():
+            if isinstance(v, dict):
+                v = convert_dict_to_object_info(v)
+                type_v = type(v)
+            elif isinstance(v, (list, tuple, set)):
+                v = convert_dict_to_object_info(v)
+                type_v = List[Any]
+            else:
+                type_v = type(v)
 
-        annotations[k] = type_v
-        object_info_data[k] = v
+            annotations[k] = type_v
+            object_info_data[k] = v
 
-    DictView.__init__.__annotations__ = annotations
-    return ObjectInfo(DictView, object_info_data)
+        DictView.__init__.__annotations__ = annotations
+        return ObjectInfo(DictView, object_info_data)
+    elif isinstance(data, (list, tuple, set)):
+        return [convert_dict_to_object_info(x) for x in data]
+    else:
+        return data

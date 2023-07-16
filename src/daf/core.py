@@ -142,7 +142,7 @@ async def schema_load_from_file() -> None:
 
     trace("Restoring objects from file...", TraceLEVELS.NORMAL)
     with open(SHILL_LIST_BACKUP_PATH, "rb") as reader:
-        accounts = convert.convert_from_semi_dict(pickle.load(reader))
+        accounts: List[client.ACCOUNT] = convert.convert_from_semi_dict(pickle.load(reader))
 
     trace("Updating accounts.", TraceLEVELS.DEBUG)
     for account in accounts:
@@ -156,6 +156,8 @@ async def schema_load_from_file() -> None:
                 TraceLEVELS.ERROR, exc
             )
         finally:
+            # Save ID regardless if we failed result otherwise we cannot access though remote
+            account._update_tracked_id()
             GLOBALS.accounts.append(account)
 
     trace(f"Restored objects from file ({len(GLOBALS.accounts)} accounts).", TraceLEVELS.NORMAL)

@@ -261,12 +261,15 @@ def track_id(cls):
         if hasattr(cls, "__slots__"):  # Don't break classes without slots
             __slots__ = ("__weakref__", "_daf_id")
 
-        async def initialize(self, *args, **kwargs):
-            _r = await super().initialize(*args, **kwargs)
-            # Update weakref dictionary
+        def _update_tracked_id(self):
+            "Saves ID to the tracked dictionary"
             value = id(self)
             self._daf_id = value
             OBJECT_ID_MAP[value] = self
+
+        async def initialize(self, *args, **kwargs):
+            _r = await super().initialize(*args, **kwargs)
+            self._update_tracked_id()
             return _r
 
         def __getattr__(self, __key: str):
