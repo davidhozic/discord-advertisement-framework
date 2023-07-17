@@ -32,18 +32,12 @@ Nezamenljivi žetoni se ustvarijo s kovanjem, kar je postopek, v katerem se info
 vnesejo v verigo blokov. V verigi blokov se ustvari nov blok in pogosto se za podpis uporabi pametna pogodba,
 ki določa prenosljivost in NFT dodeli lastnika.
 
-Nezamenljivo hitro pridobivajo na priljubljenosti kot način hrambe kripto valut in kot potencialna finančna naložba.
-Uporabljajo se lahko tudi kot zavarovanje za posojila ali predstavljajo finančne produkte,
-s katerimi se lahko trguje na sekundarnih trgih.
-Priljubljenost nezamenljivih žetonov odraža vse večje zanimanje za digitalno premoženje v digitalnem svetu.
-Verjetno bodo igrali pomembno vlogo tudi pri razvoju oglaševanja in trženja, saj bodo blagovne znamke morda začele preizkušati izdelke v digitalni obliki, preden se bodo odločile za njihovo izdelavo v fizični obliki.
-
 
 Marketinški pristopi za promoviranje nezamenljivih žetonov
 ===========================================================
 Obstaja več načinov oglaševanja, ki se jih lahko uporabi tudi za oglaševanje nezamenljivih žetonov. Ti so na primer
 uporaba Google Ads platforme (oglaševanje po Google iskalniku, YouTube aplikaciji), uporaba forumov in drugi načini.
-Ena izmed teh drugih načinov je morda še najbolj uveljavljena na tem področju in sicer se temu načinu oglaševanju reče
+Ena izmed teh drugih načinov je morda še najbolj uveljavljena na tem področju, in sicer se temu načinu oglaševanju reče
 šiling (angl. *shilling*).
 
 Šiling je izraz za promocijo/oglaševanje NFT po socialnih omrežjih.
@@ -57,5 +51,5 @@ opravljajo namesto njih. Obstaja veliko ponudb za taka dela, ki so lahko zelo pr
 orodje, ki lahko oglašuje namesto človeka, avtomatično brez da bi bil ta prisoten.
 
 To diplomsko delo se ne osredotoča na same nezamenljive žetone, temveč se fokusira na proces oglaševanja in sicer po socialnem
-omrežju Discord. Delo se navezuje na projekt Ogrodje za oglaševanje po Discord-u (angl. *Discord Advertisement Framework*), ki je
+omrežju Discord. Delo se navezuje na projekt Ogrodje za oglaševanje po Discordu (angl. *Discord Advertisement Framework*), ki je
 ogrodje za oglaševanje napisano v programskem jeziku `Python <https://www.python.org>`_.

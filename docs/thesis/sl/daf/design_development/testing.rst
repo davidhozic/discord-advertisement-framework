@@ -101,7 +101,7 @@ bi dejansko testirali to kar želimo.
 Kljub temu, obstajata dva testa, ki ogrodje poženeta v navadnem načinu, in sicer to sta testa, ki testirata če
 je perioda pošiljanja prava in vzporedno preverjata tudi delovanje dinamičnega pridobivanja podatkov.
 Kot sem že prej omenil, je pri teh dveh testih potrebno uloviti pravi čas, zato se včasih pojavijo problemi
-z Discord-ovim omejevanjem hitrosti na API klice, kar lahko povzroči, da bo pri pošiljanju sporočila ovojni API nivo
+z Discordovim omejevanjem hitrosti na API klice, kar lahko povzroči, da bo pri pošiljanju sporočila ovojni API nivo
 rabil več časa, da naredi zahtevo na API, saj bo čakal, da se omejitev izteče. V tem primeru bo pytest izpisal, da test
 ni uspel in je test potrebno ponoviti. Vsi testi se nahajajo v mapi ``./testing`` relativno na dom projekta.
 

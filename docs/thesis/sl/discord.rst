@@ -7,11 +7,11 @@ Discord
 .. _`API Reference`: https://discord.com/developers/docs/topics/opcodes-and-status-codes
 
 Projekt se fokusira na oglaševanje po Discordu-u in za to da bi bil preostanek diplomskega dela bolj razumljiv, to poglavje
-vsebuje nekaj informacij o Discord-u (osnovne informacije, kako je nastal in kako deluje).
+vsebuje nekaj informacij o Discordu (osnovne informacije, kako je nastal in kako deluje).
 
 Kaj je Discord
 ==================
-Discord je bil ustvarjen leta 2015 s strani Discord Inc (prej znan kot Hammer & Chisel), studia za razvoj iger, ki sta ga ustanovila Jason Citron in Stanislav Vishnevskiy.
+Discord je bil ustvarjen leta 2015 s strani Discord Inc. (prej znan kot Hammer & Chisel), studia za razvoj iger, ki sta ga ustanovila Jason Citron in Stanislav Vishnevskiy.
 Platforma je bila zasnovana kot orodje za komunikacijo med igralci video iger.
 
 Zamisel za Discord je izvirala iz Citronove osebne izkušnje v vlogi igralca računalniških igric.
@@ -99,7 +99,7 @@ znotraj okrašene škatle.
     Discord tekstovni kanal
 
 Tako kot se tekstovni kanali lahko uporabljajo za pošiljanje tekstovnih sporočil, se analogno lahko v glasovne kanale
-pošilja glasovna sporočila oz. se lahko v njih pogovarja preko mikrofona ali pa predvaja glasbo.
+pošilja glasovna sporočila, oz. se lahko v njih pogovarja preko mikrofona ali pa predvaja glasbo.
 Za samo oglaševanja te kanali niso tako aktualni, saj bi vaše oglase lahko prejeli le uporabniki, ki so v času
 oglaševanja v kanalu.
 
@@ -111,7 +111,7 @@ oglaševanja v kanalu.
 
 Direktna oz. osebna sporočila so za razliko od zgornjih kanalov, namenjena komuniciranju z enim samin uporabnikom.
 Sem noter sta všteta tekstovni kanal uporabnika ter tudi glasovna komunikacija. Pošiljanje v te bi sicer prineslo veliko dosega uporabnikov,
-vendar je oglaševanje v direktna sporočila na vsiljiv način prepovedano v pogojih uporabe Discord-a in v primeru
+vendar je oglaševanje v direktna sporočila na vsiljiv način prepovedano v pogojih uporabe Discorda in v primeru
 prevelikega in hitrega oglaševanja v direktna sporočila, lahko Discord ukine vaš račun.
 
 .. figure:: ./DEP/discord_direct_message_channel.png
@@ -134,7 +134,7 @@ sporočil v kanale oz. v direktna sporočila posameznih uporabnikov.
 Generiranje vsebine
 ---------------------------
 Oglaševalsko vsebino se lahko napiše na pamet iz glave ali pa se uporabi malo bolj sofisticirana orodja, kot je to 
-GPT (*Generative pretrained transformers*).
+GPT (*Generative pretrained transformer*).
 
 GPT-3 je najsodobnejši jezikovni model umetne inteligence, ki ga je razvilo podjetje OpenAI.
 Ima sposobnost generiranja besedila, ki se zdi človeško in opravljanja različnih nalog, kot so prevajanje, povzemanje in odgovarjanje na vprašanja.

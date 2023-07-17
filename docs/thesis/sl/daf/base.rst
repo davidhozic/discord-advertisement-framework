@@ -18,7 +18,7 @@ Namen projekta
 =================
 Pobudo za projekt sem prejel od kolega,
 ki je za svoj projekt povezan z nezamenljivimi žetoni potreboval orodje, ki bi po več dni v tednu lahko
-neprestano samodejno oglaševal njegov projekt po različnih cehih.
+neprestano samodejno oglaševalo njegov projekt po različnih cehih.
 
 Cilj projekta je izdelati ogrodje, ki lahko deluje 24 ur na dan in samodejno oglašuje v naprej definirano vsebino ali
 pa tudi dinamično vsebino, omogoča pregled poslanih sporočil in poročanje o uspešnosti preko beleženja zgodovine

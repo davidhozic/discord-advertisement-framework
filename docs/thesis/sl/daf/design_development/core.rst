@@ -19,7 +19,7 @@ Zasnova in razvoj jedra
 To poglavje govori o jedru samega ogrodja, kjer jedro obsega vse, kar ni del grafičnega vmesnika.
 
 Jedro DAF-a je zasnovano kot Python_ knjižnica / paket, ki se ga lahko namesti preko PIP-a (*Preferred Installer Program*), ki je
-vgrajen v Python_ in služi nalaganju Python paketov. Za uporabo jedra mora uporabniki ustvariti ``.py`` datoteko in definirati
+vgrajen v Python_ in služi nalaganju Python paketov. Za uporabo jedra morajo uporabniki ustvariti ``.py`` datoteko in definirati
 ustrezno konfiguracijo. To zahteva nekaj osnovnega znanja Python jezika, obstaja pa tudi možnost, da se to datoteko
 generira iz grafičnega vmesnika (:ref:`Zasnova in razvoj grafičnega vmesnika`)
 
@@ -60,13 +60,13 @@ Na koncu pokliče (s strani uporabnika definirano) funkcijo, ki je bila podana k
 Nadzorni nivo ima vedno vsaj eno opravilo (poleg opravil v ostalih nivojih), in sicer je to tisto, ki skrbi za čiščenje uporabniških računov v primeru napak.
 Drugo opravilo se zažene le v primeru, da je vklopljeno shranjevanje objektov v datoteko (preko :func:`~daf.core.run` funkcije).
 Ogrodje samo po sebi deluje, tako da ima vse objekte (računov, cehov, sporočil, ipd.) shranjene kar neposredno v RAM pomnilniku.
-Že od samega začetka je ogrodje narejeno na tak način da se željene objekte definira kar preko Python skripte in je zato shranjevanje v RAM
+Že od samega začetka je ogrodje narejeno na način, da se željene objekte definira kar preko Python skripte in je zato shranjevanje v RAM
 ob taki definiciji neproblematično, problem pa je nastopil, ko je bilo dodano dinamično dodajanje in brisanje objektov, kar
 dejansko uporabnikom omogoča, da ogrodje dinamično uporabljajo in v tem primeru je bilo potrebno dodati neke vrste permanentno shrambo.
 Razmišljalo se je o več alternativah, ena izmed njih je bila da bi se vse objekte shranjevalo v neko bazo podatkov, ki bi omogočala
 mapiranje podatkov v bazi, kar bi z vidika robustnosti bila zelo dobra izbira, a to bi zahtevalo veliko prenovo
 vseh nivojev, zato se je na koncu izbrala preprosta opcija shranjevanja objektov, ki preko :mod:`pickle` modula shrani vse račune
-ob vsakem normalnem izklopu ogrodja ali pa v vsakem primeru na dve minuti periodično. V prihodnosti, so
+ob vsakem normalnem izklopu ogrodja, ali pa v vsakem primeru na dve minuti periodično. V prihodnosti so
 še vedno načrti za izboljšanje tega mehanizma in ne izključuje se uporabe prej omenjene podatkovne baze.
 
 V nadzornem novoju se (poleg programskega vmesnika) nahaja tudi tudi HTTP vmesnik, ki služi kot
@@ -138,7 +138,7 @@ v primeru logiranja (vsaj v primeru :term:`JSON` datotek), kjer je vse razdeljen
 
 Sporočilni nivo
 -----------------
-Sporočilni nivo je zadolžen za pošiljanje dejanskih sporočil v posamezne kanale na Discord-u.
+Sporočilni nivo je zadolžen za pošiljanje dejanskih sporočil v posamezne kanale na Discordu.
 V tem nivoju so na voljo trije glavni razredi za ustvarjanje različnih vrst sporočil:
 
 1. |TextMESSAGE| - pošiljanje tekstovnih sporočil v cehovske kanale
@@ -163,7 +163,7 @@ To je še posebno pomembno v primeru da imamo definiranih veliko sporočil v ene
 poslalo točno ob določenem času. Ker se čas prišteva od prejšnjega predvidenega časa pošiljanja, to pomeni, da bo v primeru
 zamude sporočila razmak med tem in naslednjim sporočilom manjši točno za to časovno napako (če privzamemo da ne bo ponovne zakasnitve).
 
-Pred tem algoritmom, je za določanje časa pošiljanja bil v rabi preprost časovnik, ki se je ponastavil ob vsakem pošiljanju, a se je zaradi Discord-ove
+Pred tem algoritmom, je za določanje časa pošiljanja bil v rabi preprost časovnik, ki se je ponastavil ob vsakem pošiljanju, a se je zaradi Discordove
 omejitve API zahtevkov in tudi drugih Discord API zakasnitev, čas pošiljanja vedno pomikal malo naprej, kar je pomenilo, da če je uporabnik
 ogrodje konfiguriral da se neko sporočilo pošlje vsak dan in definiral čas začetka naslednje jutro ob 10tih (torej pošiljanje vsak dan ob tej uri),
 potem je po (sicer veliko) pošiljanjih namesto ob 10tih uporabnik opazil, da se sporočilo pošlje ob 10.01, 10.02, itd.
