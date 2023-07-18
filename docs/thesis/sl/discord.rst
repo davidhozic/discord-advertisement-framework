@@ -27,7 +27,7 @@ Prav tako ima dobro funkcijo iskanja vsebine, ki je bila nekoč objavljena, ki j
 Čeprav lahko Discord služi kot dom skupnostim vseh velikosti, je še posebej priljubljen med manjšimi, aktivnimi skupinami, ki med seboj pogosto komunicirajo.
 Večina strežnikov Discord je zasebnih in zahtevajo povabilo za vstop, kar omogoča prijateljem in skupnostim, da ostanejo povezani.
 Vendar pa obstajajo tudi večje, bolj javne skupnosti, osredotočene na določene teme, kot so priljubljene videoigre
-ali pa, v primeru te naloge, stvari kot sta blockchain in NFT.
+ali pa, v primeru te naloge, stvari kot sta veriga blokov (angl. *blockchain*) in NFT.
 Uporablja se lahko tudi kot skupnost fakultete, kjer študenti lahko govorijo preko glasovnih kanalov, delijo študijske materiale
 in postavljajo vprašanja o gradivu, ki ga ne razumejo.
 Nekaj primerov Discord skupnosti, povezanih s Univerzo v Ljubljani:
@@ -70,15 +70,9 @@ ki so pridruženi v ceh.
 Obstajata dve vrsti računov, ki sta lahko v cehu:
 
 1. Uporabniški računi
-2. Avtomatizirani (robotski) računi
+2. Robotski (avtomatizirani) računi
 
 Discordovi pogoji uporabe prepovedujejo avtomatiziranje uporabniških računov.
-
-
-Vloge
---------------
-Discord ima pravice narejene po principu vlog, kjer vsaka vloga določa katere pravice bo posamezen uporabnik imel v
-cehu in kanalu. Uporabne so npr. za skrivanje šolskih kanalov tretjih letnikov, v primeru da je nek uporabnik drugi letnik.
 
 
 Kanali
@@ -90,9 +84,9 @@ Discord ima tri vrste kanalov:
 3. Direktna sporočila - Kanali za pogovor (tekstovno ali glasovno) z enim samim uporabnikom.
 
 Tekstovni kanali se nahajo v cehih in se jih lahko prepozna glede na simbol *#*, ki se nahaja pred imenom vsakega
-kanala. Sem lahko pošiljate navaden tekst, emotikone, nalepke in darila ter, v primeru da imate avtomatiziran (angl. *bot*) račun,
+kanala. Sem lahko pošiljate navaden tekst, emotikone, nalepke in darila ter, v primeru da imate robotski (angl. *bot*) račun,
 tudi tako imenovana vgrajena sporočila (angl. *Embedded messages* oz. *Embeds*), ki so malo bolj formatirana sporočila
-znotraj okrašene škatle.
+znotraj okrašene škatle (primer na :numref:`sliki %s <ssfe-community-fig>`).
 
 .. figure:: ./DEP/discord_text_channel.png
 
@@ -110,7 +104,7 @@ oglaševanja v kanalu.
 
 
 Direktna oz. osebna sporočila so za razliko od zgornjih kanalov, namenjena komuniciranju z enim samin uporabnikom.
-Sem noter sta všteta tekstovni kanal uporabnika ter tudi glasovna komunikacija. Pošiljanje v te bi sicer prineslo veliko dosega uporabnikov,
+Sem noter sta všteta tekstovni kanal uporabnika, ter tudi glasovna komunikacija. Pošiljanje v te bi sicer prineslo veliko dosega uporabnikov,
 vendar je oglaševanje v direktna sporočila na vsiljiv način prepovedano v pogojih uporabe Discorda in v primeru
 prevelikega in hitrega oglaševanja v direktna sporočila, lahko Discord ukine vaš račun.
 
@@ -128,8 +122,7 @@ Oglaševanje v Discord
 ==========================
 V Discord se lahko oglašuje ročno ali pa avtomatično s primernim orodjem.
 Oglaševanje vključuje pisanje vsebine oglasa, ustvarjanje računov, iskanje cehov in večkratno periodično pošiljanje
-sporočil v kanale oz. v direktna sporočila posameznih uporabnikov.
-
+sporočil v kanale.
 
 Generiranje vsebine
 ---------------------------

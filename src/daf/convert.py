@@ -228,16 +228,16 @@ CONVERSION_ATTRS[message.DirectMESSAGE] = {
 }
 
 
-def convert_object_to_semi_dict(object_: object, only_ref: bool = False) -> Mapping:
+def convert_object_to_semi_dict(to_convert: Any, only_ref: bool = False) -> Mapping:
     """
     Converts an object into dict.
 
     Parameters
     ---------------
-    object_: object
+    to_convert: Any
         The object to convert.
     only_ref: bool
-        If True, the object_ will be replaced with a ObjectReference instance containing only the object_id.
+        If True, the object will be replaced with a ObjectReference instance containing only the object_id.
     """
     def _convert_json_slots(object_):
         type_object = type(object_)

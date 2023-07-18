@@ -24,15 +24,14 @@ Diplomsko delo se fokusira na proces oglaševanja in se navezuje na projekt Ogro
 ki je implementirano v programskem jeziku Python.
 
 Najprej so v delu opisani nezamenljivi žetoni, oziroma pristopi k njihovem oglaševanju.
-Zatem je predstavljeno socialno omrežje Discord in pristop oglaševanja na tem omrežju,
-kjer je predstavljena struktura Discord aplikacije in omrežja. Predstavljene so tudi vrste uporabniških računov, in vrste kanalov kamor lahko oglašujemo.
+Zatem je predstavljeno socialno omrežje Discord in pristop oglaševanja na tem omrežju.
 Sledi predstavitev samega projekta diplomske naloge, kjer je cilj naloge izdelava ogrodja za oglaševanje po Discordu,
 ki lahko deluje samodejno brez nadzora uporabnika, se ustrezno odziva na napake, nudi beleženje sporočil in je konfigurabilno,
 da lahko deluje na več načinov.
 
 V poglavju vezanem na projekt diplomskega dela so predstavljeni zasnova in razvoj projekta, njegova dokumentacija in avtomatično testiranje.
 
-Ogrodje se deli na najvišjem nivoju na jedro in grafični vmesnik, kjer jedro lahko deluje neprekinjeno na strežniku in
+Ogrodje se na najvišjem nivoju deli na jedro in grafični vmesnik, kjer jedro lahko deluje neprekinjeno na strežniku in
 je sposobno na daljavo procesirati ukaze iz grafičnega vmesnika. Oglaševalske podatke in parametre se v jedru
 nastavi kar preko Python skripte / programa, kjer je potrebno minimalno znanje Python jezika.
 Jedro se deli na več abstrakcijsih nivojev za lažji razvoj in nadgrajevanje.
@@ -48,7 +47,7 @@ preko platforme GitHub. Opis vseh javnih razredov in funkcij (programskega vmesn
 
 Na koncu poglavja o projektu diplomskega dela je opisan še proces avtomatičnega testiranja, kjer je ta implementiran z ogrodjem za
 avtomatično testiranje pytest. Ogrodje se, ob vsakem zahtevku za združitev vej na GitHubu, avtomatično testira in zavrne združitev veje, če
-katerikoli od testov ne uspe. Z avtomatičnem testiranjem se zmanjšajo možnosti za izdajo nove verzije ogrodja s napakami v delovanju.
+katerikoli od testov ne uspe. Z avtomatičnem testiranjem se zmanjšajo možnosti za izdajo nove verzije ogrodja z napakami v delovanju.
 
 Zaključim lahko da je ogrodje izjemno uporabno ne le za oglaševanje NFT, a tudi za oglaševanje katere koli druge vsebine.
 Ker v času pisanja ne obstaja skoraj nobeno brezplačno oglaševalsko ogrodje, ki bi bilo sposobno vsega kar je sposobno to ogrodje,
@@ -83,7 +82,7 @@ Next, it presents the social network Discord and the advertisement approach on t
 The presentation then moves on to the project itself, which aims to create a framework for advertising on Discord,
 capable of operating automatically without user supervision, responding appropriately to errors, logging messages, and being configurable to function in multiple ways.
 
-In the chapter related to the thesises project, the design and development of the project, its documentation and automatic testing are all presented.
+In the chapter related to the thesis's project, the design and development of the project, its documentation and automatic testing are all presented.
 
 At the highest level, the framework is divided into a core and a graphical interface, where the core can run continuously on a server and
 is capable of remotely processing commands from the graphical interface. Advertisement data and parameters are set in the core
@@ -99,7 +98,7 @@ After describing the development and design of framework's core and graphical in
 The documentation is created using the Sphinx system and is automatically built and published with each project release
 through the GitHub platform. The description of all public classes and functions (the program's interface) is automatically generated from the project's source code.
 
-Finally, the chapter on the thesises project describes the process of automated testing (unit testing), which is implemented using the pytest testing framework.
+Finally, the chapter on the thesis's project describes the process of automated testing (unit testing), which is implemented using the pytest testing framework.
 Upon a pull request on the GitHub platform, the framework is automatically tested, and the branch merge is rejected if any of the tests fail.
 Automated testing reduces the chances of a new version release being published with bugs being present.
 
@@ -108,7 +107,7 @@ Considering that, at the time of writing, there are almost no free advertising f
 it is reasonable to conclude that the project is of significant practical value.
 
 **Keywords:** Non-fungible tokens, automatic advertising, shilling, Python, graphical interface, remote access,
-saving to file, documentation, automatic testing, advertising framework, message logging, design and development.
+saving to file, documentation, automatic testing, advertisement framework, message logging, design and development.
 
 .. raw:: latex
 

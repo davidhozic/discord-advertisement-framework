@@ -8,7 +8,7 @@ Zasnova in razvoj grafičnega vmesnika
 
 .. _Python: https://www.python.org
 
-DAF lahko deluje samostojno popolnoma brez grafičnega vmesnika, a ta način zahteva pisanje *.py* datotek oz. Python skript, kar
+DAF lahko v celoti deluje brez grafičnega vmesnika, a ta način zahteva pisanje *.py* datotek oz. Python skript, kar
 je marskikomu težje, sploh če se še nikoli niso srečali s Python jezikom.
 
 V namen enostavnejše rabe ogrodja je izdelan grafični vmesnik, ki deluje ločeno od samega jedra ogrodja, z njim pa
@@ -139,7 +139,7 @@ vijoličnega okvirja možno izvajanje metod (funkcij) na objektu.
 *Output* zavihek
 -----------------------------
 Vse kar se nahaja v *Output* zavihku, je seznam izpisov, ki se izpišejo na standardnem izhodu STDOUT.
-Uporabi se ga lahko za bolj podroben pregled kaj se dogaja z jedrom DAF.
+Uporabi se ga lahko za bolj podroben pregled kaj se dogaja z jedrom ogrodja.
 
 .. figure:: ./DEP/daf-gui-output-tab.png
 

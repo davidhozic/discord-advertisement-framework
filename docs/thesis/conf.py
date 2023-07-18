@@ -27,7 +27,7 @@ exclude_patterns = ["sl/**", "en/**"]
 exclude_patterns.remove(f"{language}/**")
 
 # -- Project information -----------------------------------------------------
-project = "Ogrodje za oglaševanje NFT po socialnem omrežju Discord"
+project = "daf-thesis"
 copyright = '2023, David Hozic'
 author = 'David Hozic'
 version = VERSION
@@ -84,7 +84,7 @@ autodoc_default_options = {
 # Intersphinx
 intersphinx_mapping = {
     'PyCord': ("https://docs.pycord.dev/en/v2.4.x/", None),
-    "DAF": ("https://daf.davidhozic.com/en/v2.9.1/", None),
+    "DAF": ("https://daf.davidhozic.com/en/v2.9.2/", None),
     "Python": ("https://docs.python.org/3/", None),
     "Sphinx": ("https://www.sphinx-doc.org/en/master", None),
     "SQLAlchemy": ("https://docs.sqlalchemy.org/en/20/", None),

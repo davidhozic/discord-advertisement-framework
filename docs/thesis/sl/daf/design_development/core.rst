@@ -37,7 +37,7 @@ Ti nivoji so:
 
 .. figure:: ./DEP/daf_abstraction.drawio.svg
 
-    Abstrakcija
+    Abstrakcija jedra ogrodja
 
 
 .. raw:: latex
@@ -50,16 +50,16 @@ Nadzorni nivo
 Nadzorni nivo skrbi za zagon samega ogrodja ter njegovo zaustavitev. Skrbi tudi za procesiranje ukazov, ki jih DAF ponuja
 preko lastnega programskega vmesnika ali preko HTTP vmesnika, kjer v programski vmesnik spadajo Python funkcije ogrodja in metode objektov
 za neposredno upravljanje ogrodja na isti napravi, v HTTP vmesnik pa spletne HTTP poti za upravljanje na daljavo.
-Nivo služi tudi odstranjevanju neuporabljenih objektov in tudi skrbi za shranjevanje vseh računov v morebitno datoteko, če je to zaželjeno.
+Nivo služi tudi odstranjevanju neuporabljenih objektov in skrbi za prezervacijo uporabniških računov ob izklopu.
 
 Ko zaženemo ogrodje, ta v nadzornem nivoju sproži inicializacijo nivoja beleženja in zatem uporabniškega nivoja,
-kjer za vsak definiran uporabniški račun, ustvari lastno :mod:`asyncio` opravilo,
+kjer za vsak definiran uporabniški račun ustvari lastno :mod:`asyncio` opravilo,
 kar omogoča asinhrono sočasno oglaševanje po več računih hkrati.
 Na koncu pokliče (s strani uporabnika definirano) funkcijo, ki je bila podana kot parameter ob klicu zaganjalne funkcije :func:`daf.core.run`.
 
 Nadzorni nivo ima vedno vsaj eno opravilo (poleg opravil v ostalih nivojih), in sicer je to tisto, ki skrbi za čiščenje uporabniških računov v primeru napak.
 Drugo opravilo se zažene le v primeru, da je vklopljeno shranjevanje objektov v datoteko (preko :func:`~daf.core.run` funkcije).
-Ogrodje samo po sebi deluje, tako da ima vse objekte (računov, cehov, sporočil, ipd.) shranjene kar neposredno v RAM pomnilniku.
+Ogrodje samo po sebi deluje tako, da ima vse objekte (račune, cehe, sporočila, ipd.) shranjene kar neposredno v RAM pomnilniku.
 Že od samega začetka je ogrodje narejeno na način, da se željene objekte definira kar preko Python skripte in je zato shranjevanje v RAM
 ob taki definiciji neproblematično, problem pa je nastopil, ko je bilo dodano dinamično dodajanje in brisanje objektov, kar
 dejansko uporabnikom omogoča, da ogrodje dinamično uporabljajo in v tem primeru je bilo potrebno dodati neke vrste permanentno shrambo.
@@ -67,7 +67,7 @@ Razmišljalo se je o več alternativah, ena izmed njih je bila da bi se vse obje
 mapiranje podatkov v bazi, kar bi z vidika robustnosti bila zelo dobra izbira, a to bi zahtevalo veliko prenovo
 vseh nivojev, zato se je na koncu izbrala preprosta opcija shranjevanja objektov, ki preko :mod:`pickle` modula shrani vse račune
 ob vsakem normalnem izklopu ogrodja, ali pa v vsakem primeru na dve minuti periodično. V prihodnosti so
-še vedno načrti za izboljšanje tega mehanizma in ne izključuje se uporabe prej omenjene podatkovne baze.
+še vedno načrti za izboljšanje tega mehanizma in ne izključuje se uporaba prej omenjene podatkovne baze.
 
 V nadzornem novoju se (poleg programskega vmesnika) nahaja tudi tudi HTTP vmesnik, ki služi kot
 podpora za oddaljen dostop grafičnega vmesnika do jedra. Deluje na knjižnici `aiohttp <https://docs.aiohttp.org/en/stable/index.html>`_, ki je asinhrona
@@ -126,7 +126,7 @@ v primeru logiranja (vsaj v primeru :term:`JSON` datotek), kjer je vse razdeljen
 
 
 .. figure:: ./DEP/daf-guild-layer-flowchart.svg
-    :width: 500
+    :width: 20cm
 
     Delovanje cehovskega nivoja
 
@@ -156,7 +156,7 @@ Glede na to da je ogrodje mišljeno za oglaševanje sporočil, ta nivo nekako ve
 Pripravljenost sporočila za pošiljanje določa notranji atribut objekta, ki predstavlja točno specifičen čas naslednjega
 pošiljanja sporočila. V primeru da je trenutni čas večji od tega atributa, je sporočilo pripravljeno za pošiljanje.
 Ob ponastavitvi "časovnika" se ta atribut prišteje za konfigurirano periodo.
-Torej dejanski čas pošiljanja ni relativen na prejšnji čas pošiljanja, temveč je relativen na predvideni čas pošiljanja.
+Torej čas pošiljanja ni relativen na dejanski prejšnji čas pošiljanja, temveč je relativen na predvideni prejšnji čas pošiljanja.
 Taka vrsta računanja časa omogoča določeno toleranco pri pošiljanju sporočila, saj se zaradi raznih zakasnitev in omejitev
 zahtev (angl. *Rate limiting*) na Discord API dejansko sporočilo lahko pošlje kasneje kot predvideno.
 To je še posebno pomembno v primeru da imamo definiranih veliko sporočil v enem računu, kar je zagotovilo da se sporočilo ne bo
@@ -167,7 +167,7 @@ Pred tem algoritmom, je za določanje časa pošiljanja bil v rabi preprost čas
 omejitve API zahtevkov in tudi drugih Discord API zakasnitev, čas pošiljanja vedno pomikal malo naprej, kar je pomenilo, da če je uporabnik
 ogrodje konfiguriral da se neko sporočilo pošlje vsak dan in definiral čas začetka naslednje jutro ob 10tih (torej pošiljanje vsak dan ob tej uri),
 potem je po (sicer veliko) pošiljanjih namesto ob 10tih uporabnik opazil, da se sporočilo pošlje ob 10.01, 10.02, itd.
-Primer računanja časa in odpravo časovne napake je prikazan na spodnji sliki.
+Primer računanja časa in odprave časovne napake je prikazan na spodnji sliki.
 
 .. figure:: ./DEP/daf-message-period.svg
     :width: 500
@@ -258,10 +258,10 @@ formata, tu ni več-slojnih strukture.
 
 SQL beleženje
 ~~~~~~~~~~~~~~~~~~
-:term:`SQL` beleženje pa deluje precej drugače kot delujeta :ref:`JSON beleženje` in :ref:`CSV beleženje`, saj se podatki shranjujejo
-v podatkovno bazo, ki je v primeru uporabe SQLite dialekta sicer lahko tudi datoteka.
+:term:`SQL` beleženje pa deluje precej drugače, kot delujeta :ref:`JSON beleženje` in :ref:`CSV beleženje`, saj se podatki shranjujejo
+v podatkovno bazo, ki je v primeru uporabe SQLite dialekta lahko tudi datoteka.
 
-Beleženje je omogočeno v štirih dialektih:
+Beleženje je omogočeno v štirih SQL dialektih:
 
 1. SQLite
 2. Microsoft SQL Server
@@ -272,17 +272,18 @@ Za čim bolj univerzalno implementacijo na vseh dialektih, je bila pri razvoju u
 Celoten sistem SQL beleženja je implementiran s pomočjo :term:`ORM`, kar med drugim omogoča tudi
 da SQL tabele predstavimo z Python_ razredi, posamezne vnose v bazo podatkov oz. vrstice pa predstavimo z instancami
 teh razredov. Z ORM lahko skoraj v celoti skrijemo SQL in delamo neposredno z Python_ objekti, ki so lahko tudi gnezdene
-strukture, npr. vnosa dveh ločenih tabel lahko predstavimo z dvema ločenima instancama, kjer je ena instanca znotraj
-druge instance.
+strukture, npr. vnosa dveh ločenih tabel lahko predstavimo z dvema ločenima instancama, kjer je ena instanca 
+gnezdena znotraj druge instance.
 
-Ta vrsta beleženja je bila pravzaprav narejena v okviru zaključnega projekta, pri predmetu Informacijski sistemi v 2. letniku.
+Ta vrsta beleženja je bila pravzaprav narejena v okviru zaključnega projekta, pri predmetu Informacijski sistemi v 2.letniku.
 Ker smo morali pri predmetu izpolnjevati določene zahteve, je bilo veliko stvari pisanih neposredno v SQL jeziku, a vseeno je bila že takrat
-uporabljena knjižnica :mod:`SQLAlchemy`. Zaradi določenih SQL zahtev (funkcije, procedure, prožilci, ipd.),
+uporabljena knjižnica SQLAlchemy. Zaradi določenih SQL zahtev (funkcije, procedure, prožilci, ipd.),
 je bila ta vrsta beleženja možna le ob uporabi Microsoft SQL Server dialekta.
 Kasneje se je postopoma celotno SQL kodo zamenjalo z ekvivalentno Python kodo, ki preko SQLAlchemy knjižnice dinamično
 generira potrebne SQL stavke, zaradi česar so bile odstranjene določene uporabne originalne funkcionalnosti implementirane
-na nivoju same SQL baze kot so npr. prožilci (angl. *trigger*). Je pa zaradi tega možno uporabljati bazo na večih dialektih,
-dodatno pa je tudi konfiguracija precej lažja.
+na nivoju same SQL baze, kot so npr. prožilci (angl. *trigger*), ki se jih da predstavljati kot neke odzivne funckije na dogodke.
+Je pa zaradi tega možno uporabljati bazo na večih dialektih, dodatno pa je bilo veliko stvari lažje implementirati, saj se ni
+potrebno zanašati na specifike dialekta.
 
 
 .. figure:: ./DEP/sql_er.drawio.svg
@@ -298,8 +299,8 @@ dodatno pa je tudi konfiguracija precej lažja.
 Nivo brskalnika (Selenium)
 -------------------------------
 Velika večina DAF deluje na podlagi ovojnega API nivoja, kjer ta direktno komunicira z Discord API.
-Določenih stvari pa se neposredno z Discord API ne da narediti ali obstaja velika možnost,
-da Discord suspendira uporabnikov račun, saj je po Discord ToS uporaba avtomatiziranih računov prepovedana.
+Določenih stvari pa se neposredno z Discord API ne da narediti ali pa za izvedbo neke operacije (prepovedane v pogojih uporabe)
+obstaja velika možnost, da Discord suspendira uporabnikov račun.
 
 Za ta namen je bil ustvarjen nivo brskalnika, kjer DAF namesto z Discord API, komunicira z brskalnikom
 Google Chrome. To opravlja s knjižnico `Selenium <https://www.selenium.dev/>`_, ki je namenjena avtomatizaciji brskalnikov

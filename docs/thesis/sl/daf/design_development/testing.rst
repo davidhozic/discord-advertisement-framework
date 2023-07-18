@@ -6,7 +6,7 @@ Avtomatično testiranje
 .. _pytest: https://docs.pytest.org/
 
 Za zagotavljanje, da ob novih verzijah projekta ne pride do napak, je za preverjanje delovanja
-implementirano avtomatično testiranje (angl. *Unit testing*).
+implementirano avtomatično testiranje.
 
 Vsi avtomatični testi so pisani znotraj ogrodja za testiranje z imenom pytest_.
 
@@ -15,8 +15,8 @@ pytest - ogrodje za testiranje
 -------------------------------------
 Kot že ime namiguje, je pytest ogrodje za testiranje na Python platformi.
 
-Avtomatične teste se pri pytest-u implementira s Python funkcijami, katerih ime se začne s "test".
-Testi lahko sprejmejo tudi parametere, kjer so ti lahko tudi pritrditve (angl. *fixture*), ki jih lahko lahko uporabimo kot inicializacijske funkcije.
+Avtomatične teste se pri pytestu implementira s Python funkcijami, katerih ime se začne s "test".
+Testi lahko sprejmejo tudi parametere, kjer so ti lahko tudi pritrditve (angl. *fixture*), katere lahko lahko uporabimo kot inicializacijske funkcije.
 V pritrditvi lahko npr. povežemo podatkovno bazo, konektor na bazo vrnemo iz pritrditve, in 
 v primeru da je naš test definiran kot
 
@@ -98,15 +98,13 @@ tako da se v testu kliče notranje funkcije posameznih objektov, ki bi jih ogrod
 klicalo v primeru navadnega delovanja. Na tak način so izvedeni, saj je testiranje v navadnem  (asinhronem) načinu, kjer se vse
 zgodi v :mod:`asyncio` opravilih precej težje, saj bi namreč morali loviti ogrodje ob točno določenih časih, da
 bi dejansko testirali to kar želimo.
-Kljub temu, obstajata dva testa, ki ogrodje poženeta v navadnem načinu, in sicer to sta testa, ki testirata če
+Kljub temu obstajata dva testa, ki ogrodje poženeta v navadnem načinu, in sicer to sta testa, ki testirata če
 je perioda pošiljanja prava in vzporedno preverjata tudi delovanje dinamičnega pridobivanja podatkov.
 Kot sem že prej omenil, je pri teh dveh testih potrebno uloviti pravi čas, zato se včasih pojavijo problemi
 z Discordovim omejevanjem hitrosti na API klice, kar lahko povzroči, da bo pri pošiljanju sporočila ovojni API nivo
 rabil več časa, da naredi zahtevo na API, saj bo čakal, da se omejitev izteče. V tem primeru bo pytest izpisal, da test
 ni uspel in je test potrebno ponoviti. Vsi testi se nahajajo v mapi ``./testing`` relativno na dom projekta.
 
-Avtomatičnih testov običajno ne zaganjam ročno na osebnem računalniku, razen tistih, ki so preverjajo delovanje neke
-nove funkcionalnosti, temveč se na GitHub platformi avtomatično zaženejo ob vsakem zahtevku za združitev vej (*Pull request*), ko hočem funkcionalnost
-iz stranske git veje prenesti na glavno. Dokler se vsi testi ne izvedejo pravilno (in avtomatičen *linter* vrača lepotne napaka),
-GitHub ne bo pustil da se funkcionalnost prenese na glavno vejo.
-
+Avtomatičnih testov običajno ne zaganjam ročno na osebnem računalniku (razen tistih, ki preverjajo delovanje neke
+nove funkcionalnosti), temveč se na GitHub platformi avtomatično zaženejo ob vsakem zahtevku za združitev vej (*Pull request*), ko hočem funkcionalnost
+iz stranske git veje prenesti na glavno. Dokler se vsi testi ne izvedejo, GitHub ne bo pustil da se funkcionalnost prenese na glavno vejo.

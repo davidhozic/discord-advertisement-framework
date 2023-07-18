@@ -3,7 +3,7 @@ DAF - *Discord Advertisement Framework*
 .. note:: 
 
     Sledeča vsebina se včasih nanaša na objekte, ki niso podrobno
-    opisani v diplomskem delu, so pa na voljo v `uradni spletni dokumentaciji projekta <https://daf.davidhozic.com>`_.
+    opisani v diplomskem delu, so pa na voljo v `uradni spletni dokumentaciji projekta <https://daf.davidhozic.com/en/v2.9.2/>`_.
 
 
 .. figure:: ./DEP/logo.png
