@@ -239,19 +239,19 @@ def convert_object_to_semi_dict(to_convert: Any, only_ref: bool = False) -> Mapp
     only_ref: bool
         If True, the object will be replaced with a ObjectReference instance containing only the object_id.
     """
-    def _convert_json_slots(object_):
-        type_object = type(object_)
+    def _convert_json_slots(to_convert):
+        type_object = type(to_convert)
         attrs = CONVERSION_ATTRS.get(type_object)
         if attrs is None:
             # No custom rules defined, try to convert normally with either vars or __slots__
             try:
-                attrs = {"attrs": attributes.get_all_slots(type_object) if hasattr(object_, "__slots__") else vars(object_)}
+                attrs = {"attrs": attributes.get_all_slots(type_object) if hasattr(to_convert, "__slots__") else vars(to_convert)}
             except TypeError:
-                return object_  # Not structured object or does not have overrides defined, return the object itself
+                return to_convert  # Not structured object or does not have overrides defined, return the object itself
 
         # Check if custom conversion function is requested
         if (encoder_func := attrs.get("custom_encoder")) is not None:
-            data_conv = encoder_func(object_)
+            data_conv = encoder_func(to_convert)
         else:
             # No custom conversion function provided, use the normal rules
             data_conv = {}
@@ -274,40 +274,40 @@ def convert_object_to_semi_dict(to_convert: Any, only_ref: bool = False) -> Mapp
                 if k in attrs_convert:
                     value = attrs_convert[k]
                     if isinstance(value, LAMBDA_TYPE):
-                        value = value(object_)
+                        value = value(to_convert)
                 else:
-                    value = getattr(object_, k)
+                    value = getattr(to_convert, k)
 
                 data_conv[k] = convert_object_to_semi_dict(value)
 
         return {"object_type": f"{type_object.__module__}.{type_object.__name__}", "data": data_conv}
 
-    object_type = type(object_)
+    object_type = type(to_convert)
     if object_type in {int, float, str, bool, decimal.Decimal, type(None)}:
         if object_type is decimal.Decimal:
-            object_ = float(object_)
+            to_convert = float(to_convert)
 
-        return object_
+        return to_convert
 
-    if isinstance(object_, (set, list, tuple)):
-        object_ = [convert_object_to_semi_dict(value) for value in object_]
-        return object_
+    if isinstance(to_convert, (set, list, tuple)):
+        to_convert = [convert_object_to_semi_dict(value) for value in to_convert]
+        return to_convert
 
-    if isinstance(object_, Mapping):
-        return {k: convert_object_to_semi_dict(v) for k, v in object_.items()}
+    if isinstance(to_convert, Mapping):
+        return {k: convert_object_to_semi_dict(v) for k, v in to_convert.items()}
 
-    if isinstance(object_, Enum):
-        return {"enum_type": f"{object_type.__module__}.{object_type.__name__}", "value": object_.value}
+    if isinstance(to_convert, Enum):
+        return {"enum_type": f"{object_type.__module__}.{object_type.__name__}", "value": to_convert.value}
 
-    if isclass(object_):  # Class itself, not an actual isntance
-        return {"class_path": f"{object_.__module__}.{object_.__name__}"}
+    if isclass(to_convert):  # Class itself, not an actual isntance
+        return {"class_path": f"{to_convert.__module__}.{to_convert.__name__}"}
 
     if only_ref:
         # Don't serialize object completly, only ID is requested.
         # This prevents unnecessarily large data to be encoded
-        object_ = ObjectReference(get_object_id(object_))
+        to_convert = ObjectReference(get_object_id(to_convert))
 
-    return _convert_json_slots(object_)
+    return _convert_json_slots(to_convert)
 
 
 def convert_from_semi_dict(d: Union[Mapping, list, Any]):
