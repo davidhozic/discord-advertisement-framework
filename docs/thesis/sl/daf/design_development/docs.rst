@@ -1,4 +1,3 @@
-
 =========================
 Dokumentacija
 =========================
@@ -6,31 +5,44 @@ Dokumentacija
 .. _Python: https://www.python.org
 
 
-.. _restructuredText: https://docutils.sourceforge.io/rst.html
+.. _reStructuredText: https://docutils.sourceforge.io/rst.html
 
 .. _RTD: https://readthedocs.org/projects/discord-advertisement-framework/
 
 .. |RTD| replace:: Read The Docs
 
 
-Za projekt obstaja obsežna dokumentacija. Na voljo je v spletni obliki (HTML), kot tudi
-lokalni (PDF).
+Za projekt obstaja obsežna dokumentacija, ki se samodejno zgradi ob vsaki novi verziji ogrodja in zatem objavi 
+na `spletni strani <https://daf.davidhozic.com/en/v2.9.2/>`_.
 
-Za vsako novo verzijo projekta, se dokumentacija samodejno zgradi in objavi na `spletni strani <https://daf.davidhozic.com>`_.
+Na voljo je v spletni obliki (HTML), kot tudi lokalni obliki (PDF), ki se jo lahko prenese tako, da se na spletni strani dokumentacije
+kurzor premakne levo spodaj strani nad verzijo dokumentacije in zatem klikne na *PDF*.
+
+
+.. figure:: ./DEP/doc-pdf-download.png
+    :height: 8cm
+
+    Prenos PDF dokumentacije
+
+
+.. raw:: latex
+
+    \newpage
+
 
 Sphinx
 ----------------
-Sistem, ki se uporablja za dokumentiranje projekta se imenuje Sphinx.
+Sistem, uporabljen za grajenje dokumentacije projekta, se imenuje Sphinx.
 Sphinx je popularno orodje med Python_ razvijalci za generiranje dokumentacije v več formatih.
 Razvijalcem omogoča ustvarjanje profesionalne dokumentacije za lastne projekte, kar je nuja pri javnih projektih.
 
-Sphinx omogoča enostavno dokumentiranje z berljivo sintakso (restructuredText) z veliko funkcionalnostmi, kjer je ena izmed njih
-možnost branja t.i *docstring* :class:`str` objektov iz kode projekta in vključevanju te vsebine v dokumentacijo.
+Sphinx omogoča enostavno dokumentiranje z berljivo sintakso (reStructuredText) z veliko funkcionalnostmi, kjer je ena izmed njih
+možnost branja t.i *docstring* besedila iz izvorne kode (angl. *source code*) projekta in vključevanje te vsebine v dokumentacijo.
 Je zelo konfigurabilno orodje, kjer se konfiguracijo izvede preko ``.py`` datoteke, kamor lahko dodajamo tudi svojo
-Python_ kodo.
+Python kodo.
 
-Primarno Sphinx podpira restructuredText_ za pisanje dokumentov, podpira pa tudi ostale formate, npr. Markdown preko
-dodatnih razširitev. Enačbe se lahko piše v jeziku Latex.
+Primarno Sphinx podpira reStructuredText_ za pisanje dokumentov, podpira pa tudi ostale formate, npr. Markdown preko
+dodatnih razširitev. Enačbe se lahko piše v jeziku LaTex.
 
 .. admonition:: Zanimivost
     :class: hint
@@ -41,16 +53,11 @@ dodatnih razširitev. Enačbe se lahko piše v jeziku Latex.
 reStructuredText
 ----------------
 
-restructuredText je jezik na katerem deluje :ref:`Sphinx`.
-Je priljubljen *markup* jezik, ki se uporablja za dokumentacijo.
-Oblikovan je za enostavnost branja, z fokusom na preprostost in moč.
-Ena ključnih značilnosti reStructuredTexta je njegova razširljivost, kar omogoča prilagajanje za specifična aplikacijska področja.
+reStructuredText je jezik na katerem deluje :ref:`Sphinx`, ki je priljubljen *markup* jezik za dokumentacijo projektov.
 
 Znotraj sintakse reStructuredTexta so na voljo različne vloge in direktive, ki se uporabljajo za dodajanje oblikovanja in strukture dokumentom.
-Vloge se uporabljajo za aplikacijo oblikovanja na določene besede in stavke,
-direktive pa so uporabljene za dodajanje nove vsebine v dokument.
-Uporabnikom omogočajo ustvarjanje bolj zapletenih in dokumentov,
-pri tem pa ohranjajo preprostost in berljivost sintakse.
+Vloge se uporabljajo za aplikacijo oblikovanja na določene besede in stavke v isti vrstici,
+direktive pa so uporabljene za dodajanje nove vsebine v dokument ali za aplikacijo oblikovanja na večvrstično vsebino.
 
 
 .. code-block:: reStructuredText
@@ -83,47 +90,44 @@ Projekt DAF je v celoti dokumentiran s Sphinx sistemom.
 Na prvem nivoju je dokumentacija razdeljena na:
 
 1. Vodnik - Voden opis kako uporabljati DAF.
-2. API referenco - Opis vseh razredov in funkcij, ki jih lahko uporabniki uporabijo v primeru, da pišejo
-   svojo kodo, ki uporablja DAF kot paket.
+2. API referenco - Opis vseh razredov in funkcij programskega vmesnika, ki jih lahko uporabniki uporabijo v primeru, da pišejo
+   svojo kodo, ki uporablja jedro ogrodja DAF.
 
-Vodnik je pisan v ``.rst`` datotekah, ki so nastanjene v ``docs/source/guide`` mapi. Dodatno se deli še na vodnik za
-GUI in vodnik za jedro.
+Vodnik je pisan v ročno ``.rst`` datotekah, ki so nastanjene v ``/project root/docs/source/guide`` mapi. Dodatno se deli še na vodnik za
+GUI in vodnik za jedro, medtem ko je API referenca avtomatično generirana iz komentarjev v izvorni kodi DAF ogrodja.
 
-V nekaterih direktorijah so prisotne datoteke ``dep_local.json``. To so pred-gradne konfiguracijske datoteke, ki dajejo
+V nekaterih direktorijah so prisotne datoteke ``dep_local.json``. To so predgradne konfiguracijske datoteke, ki dajejo
 informacijo o tem iz kje in kam naj se kopirajo dodatne datoteke (ki so skupne drugim delom dokumentacije) in katere
 ``.py`` skripte naj se izvedejo po kopiranju.
 Na primer ``/project root/docs/source/dep_local.json`` datoteka ima sledečo vsebino:
 
 .. literalinclude:: DEP/_dep_local.json
-    :caption: Pred-gradna konfiguracijska datoteka
+    :caption: Predgradna konfiguracijska datoteka
 
 Na podlagi zgornje definicije, se bo bodo v ./DEP mape skopirale slike iz neke zgornje direktorje. Prav tako
 se bodo kopirali primeri uporabe jedra DAF. Na koncu se bo izvedla skripta ``generate_autodoc.py``, ki bo na podlagi
-:func:`~daf.misc.doc_category` Python_ dekoratorja generirala ``autofunction`` in ``autoclass`` Sphinx direktive, ki bodo
+:func:`~daf.misc.doc.doc_category` Python dekoratorja generirala ``autofunction`` in ``autoclass`` Sphinx direktive, katere bodo
 ob gradnji dokumentacije prebrale vsebino *docstring*-ov posameznih razredov in funkcij, ter jo vstavile v dokument.
-V primeru da bo ``manual`` parameter nastavljen na ``True`` v 
-:func:`~daf.misc.doc_category` dekoratorski funkciji, ne bodo generirane ``autofunction`` direktive, temveč bo skripta
-ustvarila ``function`` direktive ter vsebino prekopirala in pretvorila direktno v ``.rst`` datoteko.
 
 
-.. autofunction:: daf.misc.doc_category
+.. autofunction:: daf.misc.doc.doc_category
 
 
 .. code-block:: python
-    :caption: Uporaba :func:`~misc.doc_category` dekoratorja.
+    :caption: Uporaba :func:`~daf.misc.doc.doc_category` dekoratorja.
 
     @doc.doc_category("Logging reference", path="logging.sql")
     class LoggerSQL(logging.LoggerBASE):
         ...
 
 
-Iz :func:`~daf.misc.doc_category` generirane ``autofunction`` / ``autoclass`` direktive so del Sphinx-ove vgrajene razširitve :mod:`sphinx.ext.autodoc`.
+Iz :func:`~daf.misc.doc.doc_category` generirane ``autofunction`` / ``autoclass`` direktive so del Sphinx-ove vgrajene razširitve :mod:`sphinx.ext.autodoc`.
 Razširitev vključi pakete in izbrska *docstring*-e funkcij in razredov, zatem pa ustvari lep opis o funkciji oz. razredu.
 V primeru da je v ``autoclass`` direktivi uporabljena ``:members:`` opcija, bo :mod:`~sphinx.ext.autodoc` razširitev
 vključila tudi dokumentirane metode in atribute, ki so del razreda.
 
-.. code-block:: restructuredText
-    :caption: Iz :func:`~daf.misc.doc_category` generirana direktiva
+.. code-block:: reStructuredText
+    :caption: Iz :func:`~daf.misc.doc.doc_category` generirana direktiva
 
     .. autoclass:: daf.logging.sql.LoggerSQL
         :members:
@@ -131,7 +135,7 @@ vključila tudi dokumentirane metode in atribute, ki so del razreda.
 
 .. _auto_doc_example:
 .. figure:: ./DEP/autodoc_example.png
-    :width: 10cm
+    :height: 12cm
 
     Rezultat autoclass direktive
 
@@ -141,19 +145,15 @@ vključila tudi dokumentirane metode in atribute, ki so del razreda.
     \newpage
 
 
-Iz slike :numref:`auto_doc_example` lahko vidimo, da ima :class:`~daf.logging.sql.LoggerSQL` dodatno vsebino, ki je ni imel v ``autoclass`` direktivi.
-Ta vsebina je bila vzeta iz same kode razreda.
+Iz :numref:`slike %s <auto_doc_example>` lahko vidimo, da ima :class:`~daf.logging.sql.LoggerSQL` dodatno vsebino, ki je ni imel v ``autoclass`` direktivi.
+Ta vsebina je bila vzeta iz same izvorne kode razreda.
 
 
-Dokumentacija projekta DAF je na voljo na spletni strani `Read the Docs (RTD) <RTD_>`_.
-
-RTD_ je spletna platforma za dokumentacijo, ki razvijalcem programske opreme zagotavlja enostaven način za gostovanje,
+Dokumentacija projekta DAF je gostovana na spletni strani `Read the Docs (RTD) <RTD_>`_.
+RTD je spletna platforma za dokumentacijo, ki razvijalcem programske opreme zagotavlja enostaven način za gostovanje,
 objavljanje in vzdrževanje dokumentacije za njihove projekte.
-Platforma uporabnikom omogoča ustvarjanje profesionalno izgledajoče dokumentacije, ki je odprta javnosti.
-Je odprtokodna in zgrajena na že prej omenjenem Sphinx-u.
-
-Poleg gostovanja dokumentacije RTD_ ponuja razna orodja, kot so orodje za nadzor različic in napredna funkcionalnost iskanja.
-To uporabnikom olajša lažji pregled dokumentacije in zagotavlja, da dokumentacija ostane ažurna.
-
-RTD_ je za DAF projekt konfiguriran, da za vsako novo izdajo verzije preko platforme GitHub, avtomatično zgradi dokumentacijo,
-aktivira verzijo in jo nastavi kot privzeto. Na tak način je dokumentacija pripravljena za uporabo praktično takoj ob izdaji verzije.
+Je odprtokodna platforma in zgrajena na že prej omenjenem Sphinx-u.
+Poleg gostovanja dokumentacije, RTD ponuja tudi nadzor verzij (angl. *version* control) in določeno avtomatizacijo.
+RTD je za DAF projekt konfiguriran, da za vsako izdajo nove verzije projekta avtomatično zgradi dokumentacijo,
+aktivira verzijo in jo nastavi kot privzeto. Na tak način je dokumentacija pripravljena za uporabo praktično takoj ob izdaji.
+Prav tako se dokumentacija zgradi ob vsakem zahtevku za združitev vej (angl. Pull request) na GitHub platformi.

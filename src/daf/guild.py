@@ -789,6 +789,10 @@ class AutoGUILD:
     include_pattern: str
         Regex pattern to use for searching guild names that are to be included.
         This is also checked before joining a new guild if ``auto_guild`` is given.
+
+        For example you can do write ``.*`` to match ALL guilds you are joined into or specify
+        (parts of) guild names separated with ``|`` like so: "name1|name2|name3|name4"
+
     exclude_pattern: Optional[str] = None
         Regex pattern to use for searching guild names that are
         **NOT** to be excluded.

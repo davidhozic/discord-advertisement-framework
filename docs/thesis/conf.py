@@ -27,13 +27,19 @@ exclude_patterns = ["sl/**", "en/**"]
 exclude_patterns.remove(f"{language}/**")
 
 # -- Project information -----------------------------------------------------
-project = 'Discord Advertisement Framework'
+project = "daf-thesis"
 copyright = '2023, David Hozic'
 author = 'David Hozic'
 version = VERSION
 
 
 # -- General configuration ---------------------------------------------------
+rst_epilog = r"""
+.. raw:: latex
+
+    \newpage
+"""
+
 
 numfig = True
 # Add any Sphinx extension module names here, as strings. They can be
@@ -48,7 +54,7 @@ extensions = [
     "enum_tools.autoenum",
     "sphinx_design",
     "sphinx_search.extension",
-    "sphinxcontrib.inkscapeconverter"
+    "sphinxcontrib.inkscapeconverter",
 ]
 
 
@@ -77,11 +83,11 @@ autodoc_default_options = {
 
 # Intersphinx
 intersphinx_mapping = {
-    'PyCord': ("https://docs.pycord.dev/en/stable/", None),
-    "DAF": ("https://daf.davidhozic.com/en/stable/", None),
+    'PyCord': ("https://docs.pycord.dev/en/v2.4.x/", None),
+    "DAF": ("https://daf.davidhozic.com/en/v2.9.2/", None),
     "Python": ("https://docs.python.org/3/", None),
     "Sphinx": ("https://www.sphinx-doc.org/en/master", None),
-    "SQLAlchemy": ("https://docs.sqlalchemy.org/en/20/", None)
+    "SQLAlchemy": ("https://docs.sqlalchemy.org/en/20/", None),
 }
 
 # ----------- HTML ----------- #
@@ -110,51 +116,55 @@ html_theme_options = {
 with open(f"./{language}/titlepage.tex", "r", encoding="utf-8") as reader:
     latex_title_page = reader.read()
 
-# latex_engine = 'xelatex'
+
 literal_block_str = {
     "en": r"\listof{literalblock}{List of literal blocks}",
     "sl": r"\listof{literalblock}{Seznam literalnih blokov}"
 }
+
+latex_theme = "manual"  # latex class => report
+
 latex_elements = {
-    "sphinxsetup": r"""
-        verbatimwithframe=false,
-    """,
-    "tableofcontents": r"""
-        \tableofcontents
-        \listoffigures
-        \listoftables
-        {}
-    """.format(literal_block_str.get(language)),
-    'fncychap': r'',
-    # 'fontpkg': r"""
-    #     \setromanfont{Times New Roman}
-    #     \setsansfont{Arial}
-    #     """,
+    "sphinxsetup": r"VerbatimColor={rgb}{1,1,1}",
+
     "papersize": "a4paper",
     "pointsize": "12pt",
+    "extraclassoptions": "openright",
+    "tableofcontents": r"""
+        \tableofcontents
+        \blankpage
+        \listoffigures
+        {}
+        \blankpage
+    """.format(literal_block_str.get(language)),
+    'fncychap': r'',
+    "babel": r"\usepackage[slovene]{babel}",
     'preamble': r'''
-        \usepackage{afterpage}
+        % Spacing
+        \textheight 215mm
+        \textwidth 145mm
+        \oddsidemargin  13mm
+        \topmargin -5mm
+        \headsep 20mm
+        \headheight 6mm
+        \evensidemargin 0mm
+        \linespread{1.2}
 
-        \newcommand\blankpage{%
-        \null
-        \thispagestyle{empty}%
-        \addtocounter{page}{-1}%
-        \newpage}
-
-        \oddsidemargin 1.4cm
-        \evensidemargin 0.35cm
-        \textwidth 14cm
-        \topmargin 0.26cm
-        \headheight 0.6cm
-        \headsep 1.5cm
-        \textheight 20cm
+        % Header and footer
+        \usepackage{fancyhdr}
         \pagestyle{fancy}
-        \fancyhead{}
-        \renewcommand{\sectionmark}[1]{\markright{\textsf{\thesection\  #1}}{}}
-        \fancyhead[RE]{\leftmark}
-        \fancyhead[LO]{\rightmark}
-        \fancyhead[LE,RO]{\thepage}
-        \fancyfoot{}
+        \fancypagestyle{normal}{
+            \fancyfoot[RE]{{\nouppercase{\leftmark}}}
+        }
+
+        % New commands
+        \newcommand\blankpage{
+            \newpage
+            \thispagestyle{empty}
+            \mbox{}
+            \newpage
+        }
     ''',
     "maketitle": latex_title_page,
+    "printindex": ''
 }

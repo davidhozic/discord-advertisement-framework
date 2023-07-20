@@ -4,7 +4,8 @@
         {"from": "../../source/guide/GUI/images/gui-*", "to": "./DEP/images"},
         {"from": "../scripts/*", "to": "./DEP/"},
         {"from": "../sources.json", "to": "./DEP/sources.json"},
-        {"from": "../images/*", "to": "./DEP/"}
+        {"from": "../images/*", "to": "./DEP/"},
+        {"from": "../ExampleUsage/*", "to": "./DEP/Examples/"}
     ],
     "scripts": ["./DEP/generate_lit.py"]
 }

@@ -418,6 +418,9 @@ class AutoCHANNEL:
     --------------
     include_pattern: str
         Regex pattern to match for the channel to be considered.
+
+        For example you can do write ``.*`` to match ALL channels you are joined into or specify
+        (parts of) channel names separated with ``|`` like so: "name1|name2|name3|name4"
     exclude_pattern: str
         Regex pattern to match for the channel to be excluded
         from the consideration.

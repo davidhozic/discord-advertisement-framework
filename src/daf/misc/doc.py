@@ -19,23 +19,19 @@ def doc_category(cat: str,
                  manual: Optional[bool] = False,
                  path: Optional[str] = None):
     """
-    Used for marking under which category this should
-    be put when auto generating documentation.
+    Used to mark the object for documentation.
+    Objects marked with this decorator function will
+    have :mod:`sphinx.ext.autodoc` directives generated automatically.
 
     Parameters
     ------------
     cat: str
         The name of the category to put this in.
     manual: Optional[bool]
-        Should documentation be manually generated
+        Generate ``function`` directives instead of ``autofunction``.
+        Should be used when dealing with overloads.
     path: Optional[str]
         Custom path to the object.
-
-    Returns
-    ----------
-    Decorator
-        Returns decorator which marks the object
-        to the category.
     """
     def _category(item):
         if DOCUMENTATION_MODE:
