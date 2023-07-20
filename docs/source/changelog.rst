@@ -32,18 +32,24 @@ Glossary
 Releases
 ----------------------
 
+v2.10
+====================
+- Moderation timeout handling (messages resume one minute after moderation timeout expiry)
+- GUI:
+
+  - deprecation notices are now a button
+
+
 v2.9.2
 =================
 - Fixed viewing dictionaries inside the GUI
 - Other bug fixes present in :ref:`v2.8.5`
 
+
 v2.9.1
 =================
 - Security update for yt-dlp
 
-v2.8.5
-=================
-- Fixed "Object not added to DAF" when accessing broken accounts from remote
 
 v2.9
 =================
@@ -71,6 +77,11 @@ v2.9
 
   - Time between guild joins increased to 25 seconds to prevent rate limits.
   - Searching for invite links will be ignored if the user is already joined into the belonging guild.
+
+
+v2.8.5
+=================
+- Fixed "Object not added to DAF" when accessing broken accounts from remote
 
 
 v2.8.4

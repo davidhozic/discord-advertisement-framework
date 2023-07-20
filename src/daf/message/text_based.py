@@ -1,8 +1,8 @@
 """
 Contains definitions for message classes that are text based."""
 
-from typing import Any, Dict, List, Iterable, Optional, Union, Literal
-from datetime import datetime, timedelta
+from typing import Any, Dict, List, Iterable, Optional, Union, Literal, Tuple
+from datetime import datetime, timedelta, timezone
 from typeguard import typechecked
 
 from .base import *
@@ -176,6 +176,10 @@ class TextMESSAGE(BaseMESSAGE):
                     reason.status == 403 or  # Forbidden
                     reason.code in {50007, 10003}  # Not Forbidden, but bad error codes
                 ):
+                    trace(
+                        f"Removing channel '{channel.name}' ({channel.id}) [Guild '{channel.guild.name}' ({channel.guild.id})], because user '{self.parent.parent.client.user.name}' lacks permissions.",
+                        TraceLEVELS.WARNING
+                    )
                     self.channels.remove(channel)
 
     def _check_period(self):
@@ -366,7 +370,7 @@ class TextMESSAGE(BaseMESSAGE):
         # Increase period to slow mode delay if it is lower
         self._check_period()
 
-    async def _handle_error(self, channel: Union[discord.TextChannel, discord.Thread], ex: Exception) -> bool:
+    async def _handle_error(self, channel: Union[discord.TextChannel, discord.Thread], ex: Exception) -> Tuple[bool, bool]:
         """
         This method handles the error that occurred during the execution of the function.
         Returns `True` if error was handled.
@@ -377,11 +381,33 @@ class TextMESSAGE(BaseMESSAGE):
             The channel where the exception occurred.
         ex: Exception
             The exception that occurred during a send attempt.
+
+        Returns
+        -----------
+        Tuple[bool, bool]
+            Tuple containing (error_handled, skip_other_channels)
         """
         handled = False
+        skip_other_channels = False
         if isinstance(ex, discord.HTTPException):
-            if ex.status == 429:  # Rate limit
-                retry_after = int(ex.response.headers["Retry-After"]) + 1
+            if ex.status == 403:
+                # Timeout handling
+                guild = channel.guild
+                member = guild.get_member(self.parent.parent.client.user.id)
+                if member is not None and member.timed_out:
+                    self.next_send_time = member.communication_disabled_until.astimezone().replace(tzinfo=None) + timedelta(minutes=1)
+                    trace(
+                        f"User '{member.name}' has been timed-out in guild '{guild.name}'.\n"
+                        f"Retrying after {self.next_send_time} (1 minute after expiry)",
+                        TraceLEVELS.WARNING
+                    )
+                    # Prevent channel removal by the cleanup process
+                    ex.status = 429
+                    ex.code = 0
+                    skip_other_channels = True  # Don't try to send to other channels as it would yield the same result.
+
+            elif ex.status == 429:  # Rate limit
+                retry_after = int(ex.response.headers["Retry-After"]) + 5
                 if ex.code == 20016:    # Slow Mode
                     self.next_send_time = datetime.now() + timedelta(seconds=retry_after)
                     trace(f"{channel.name} is in slow mode, retrying in {retry_after} seconds", TraceLEVELS.WARNING)
@@ -392,7 +418,7 @@ class TextMESSAGE(BaseMESSAGE):
                     self.sent_messages[channel.id] = None
                     handled = True
 
-        return handled
+        return handled, skip_other_channels
 
     def _reset_timer(self) -> None:
         """
@@ -480,8 +506,9 @@ class TextMESSAGE(BaseMESSAGE):
                 return {"success": True}
 
             except Exception as ex:
-                if not await self._handle_error(channel, ex):
-                    return {"success": False, "reason": ex}
+                handled, skip_others = await self._handle_error(channel, ex)
+                if not handled:
+                    return {"success": False, "reason": ex, "skip_others": skip_others}
 
     @async_util.with_semaphore("update_semaphore")
     async def _send(self) -> MessageSendResult:
@@ -515,6 +542,9 @@ class TextMESSAGE(BaseMESSAGE):
                             ),
                             MSG_SEND_STATUS_ERROR_REMOVE_ACCOUNT
                         )
+
+                    if context["skip_others"]:  # Don't try to send to other channels
+                        break
 
             self._update_state(errored_channels)
             return MessageSendResult(
