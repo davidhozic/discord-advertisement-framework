@@ -6,6 +6,7 @@ from typing import Any, Set, List, Iterable, Union, TypeVar, Optional, Dict
 from datetime import timedelta, datetime
 from typeguard import check_type, typechecked
 from dataclasses import dataclass
+from enum import Enum, auto
 
 from ..dtypes import *
 from ..logging.tracing import trace, TraceLEVELS
@@ -23,6 +24,7 @@ __all__ = (
     "BaseMESSAGE",
     "AutoCHANNEL",
     "MessageSendResult",
+    "ChannelErrorAction",
     "MSG_SEND_STATUS_SUCCESS",
     "MSG_SEND_STATUS_NO_MESSAGE_SENT",
     "MSG_SEND_STATUS_ERROR_REMOVE_GUILD",
@@ -61,6 +63,14 @@ class MessageSendResult:
     """
     message_context: Optional[Dict[str, Any]]
     result_code: int
+
+
+class ChannelErrorAction(Enum):
+    """
+    Used as a message's channel send error action
+    """
+    REMOVE_ACCOUNT = 0
+    SKIP_CHANNELS = auto()
 
 
 class BaseMESSAGE:

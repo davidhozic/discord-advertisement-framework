@@ -236,10 +236,9 @@ class VoiceMESSAGE(BaseMESSAGE):
                     _data_to_send["audio"] = element
         return _data_to_send
 
-    async def _handle_error(self, channel: discord.VoiceChannel, ex: Exception) -> Tuple[bool, bool]:
+    async def _handle_error(self, channel: discord.VoiceChannel, ex: Exception) -> Tuple[bool, ChannelErrorAction]:
         """
         This method handles the error that occurred during the execution of the function.
-        Returns `True` if error was handled.
 
         Parameters
         -----------
@@ -250,15 +249,22 @@ class VoiceMESSAGE(BaseMESSAGE):
 
         Returns
         -----------
-        Tuple[bool, bool]
-            Tuple containing (error_handled, skip_other_channels)
+        Tuple[bool, ChannelErrorAction]
+            Tuple containing (error_handled, ChannelErrorAction),
+            where the ChannelErrorAction is a enum telling upper part of the message layer how to proceed.
         """
         handled = False
-        skip_other_channels = False
-        # Timeout handling
+        action = None
+
         guild = channel.guild
         member = guild.get_member(self.parent.parent.client.user.id)
-        if member is not None and member.timed_out:
+
+        # Acount token invalidated
+        if isinstance(ex, discord.HTTPException) and ex.status == 401:  # Acount token invalidated
+            action = ChannelErrorAction.REMOVE_ACCOUNT
+
+        # Timeout handling
+        elif member is not None and member.timed_out:
             self.next_send_time = member.communication_disabled_until.astimezone().replace(tzinfo=None) + timedelta(minutes=1)
             trace(
                 f"User '{member.name}' has been timed-out in guild '{guild.name}'.\n"
@@ -271,9 +277,9 @@ class VoiceMESSAGE(BaseMESSAGE):
                 ex.status = 429
                 ex.code = 0
 
-            skip_other_channels = True  # Don't try to send to other channels as it would yield the same result.
+            action = ChannelErrorAction.SKIP_CHANNELS
 
-        return handled, skip_other_channels
+        return handled, action
 
     async def initialize(self, parent: Any):
         """
@@ -383,8 +389,8 @@ class VoiceMESSAGE(BaseMESSAGE):
                 await asyncio.sleep(1)
             return {"success": True}
         except Exception as ex:
-            handled, skip_others = await self._handle_error(channel, ex)
-            return {"success": False, "reason": ex, "skip_others": skip_others}
+            handled, action = await self._handle_error(channel, ex)
+            return {"success": False, "reason": ex, "action": action}
         finally:
             if voice_client is not None:
                 with suppress(ConnectionResetError):
@@ -413,17 +419,17 @@ class VoiceMESSAGE(BaseMESSAGE):
                     succeeded_channels.append(channel)
                 else:
                     errored_channels.append({"channel": channel, "reason": context["reason"]})
-                    reason = context["reason"]
-                    if isinstance(reason, discord.HTTPException) and reason.status == 401:  # Token deleted?
+                    action = context["action"]
+                    if action is ChannelErrorAction.SKIP_CHANNELS:  # Don't try to send to other channels
+                        break
+
+                    elif action is ChannelErrorAction.REMOVE_ACCOUNT:
                         return MessageSendResult(
                             self.generate_log_context(
                                 **_data_to_send, succeeded_ch=succeeded_channels, failed_ch=errored_channels
                             ),
                             MSG_SEND_STATUS_ERROR_REMOVE_ACCOUNT
                         )
-
-                    if context["skip_others"]:  # Don't try to send to other channels
-                        break
 
             self._update_state(errored_channels)
             return MessageSendResult(
