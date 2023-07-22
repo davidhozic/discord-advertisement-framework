@@ -35,9 +35,18 @@ Releases
 v2.10
 ====================
 - Moderation timeout handling (messages resume one minute after moderation timeout expiry)
+- :class:`~daf.message.TextMESSAGE` and :class:`~daf.message.VoiceMESSAGE`'s ``remove_after`` parameter:
+
+  - If integer, it will now work independently for each channel and will only decrement on successful sends.
+  - If :class:`~datetime.datetime` or :class:`~datetime.timedelta`, it will work the same as before.
+
+- New property: :py:attr:`~daf.message.TextMESSAGE.remaining_before_removal`, :py:attr:`~daf.message.VoiceMESSAGE.remaining_before_removal`,
+  :py:attr:`~daf.message.DirectMESSAGE.remaining_before_removal`
+
 - GUI:
 
-  - deprecation notices are now a button
+  - deprecation notices are now a button.
+  - Certain fields are now masked with '*' when not editing the object.
 
 
 v2.9.2
