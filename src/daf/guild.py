@@ -233,6 +233,7 @@ class _BaseGUILD:
         ValueError
             Raised when the message is not present in the list.
         """
+        trace(f"Removing message {message} from {self}", TraceLEVELS.DEBUG)
         message._delete()
         self._messages.remove(message)
 

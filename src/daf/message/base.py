@@ -213,6 +213,16 @@ class BaseMESSAGE:
         return new
 
     @property
+    def remaining_before_removal(self) -> Any:
+        """
+        Returns the remaining send counts / date after which
+        the message will be removed from the sending list.
+
+        .. versionadded:: v2.10
+        """
+        raise NotImplementedError
+
+    @property
     def created_at(self) -> datetime:
         "Returns the datetime of when the object was created"
         return self._created_at
@@ -255,7 +265,6 @@ class BaseMESSAGE:
         type_ = type(self.remove_after)
         return (
             self.deleted or
-            type_ is int and self.remove_after == 0 or
             type_ is timedelta and datetime.now() - self._created_at > self.remove_after or
             type_ is datetime and datetime.now() > self.remove_after
         )
@@ -265,8 +274,7 @@ class BaseMESSAGE:
         Updates the internal counter for auto-removal
         This is extended in subclasses.
         """
-        if type(self.remove_after) is int:
-            self.remove_after -= 1
+        raise NotImplementedError
 
     def _generate_exception(self,
                             status: int,
@@ -408,6 +416,11 @@ class AutoCHANNEL:
     """
     .. versionadded:: v2.3
 
+    .. versionchanged:: v2.10
+
+        :py:meth:`daf.message.AutoCHANNEL.remove` will now
+        prevent the channel from being readded again.
+
     Used for creating instances of automatically managed channels.
     The objects created with this will automatically add new channels
     at creation and dynamically while the framework is already running,
@@ -453,6 +466,7 @@ class AutoCHANNEL:
         "interval",
         "parent",
         "cache",
+        "removed_channels",
         "channel_getter",
         "last_scan",
     )
@@ -460,19 +474,34 @@ class AutoCHANNEL:
     def __init__(self,
                  include_pattern: str,
                  exclude_pattern: Optional[str] = None,
-                 interval: Optional[timedelta] = timedelta(minutes=5)) -> None:
+                 interval: Optional[timedelta] = None) -> None:
+
+        if interval is not None:
+            trace(
+                f"Paramter '{interval}' inside AutoCHANNEL is scheduled for removal is deprecated since\n"
+                f"v2.10 and deprecated and scheduled for removal in v2.10.",
+                TraceLEVELS.DEPRECATED
+            )
+        else:
+            interval = timedelta(seconds=5)
+
         self.include_pattern = include_pattern
         self.exclude_pattern = exclude_pattern
         self.interval = interval
         self.parent = None
         self.channel_getter: Callable = None
         self.cache: Set[ChannelType] = set()
+        self.removed_channels: Set[int] = set()
         self.last_scan = datetime.min
 
     def __iter__(self):
         "Returns the channel iterator."
         self._process()
         return iter(self.channels)
+
+    def __len__(self):
+        "Returns number of channels found."
+        return len(self.cache)
 
     def __bool__(self) -> bool:
         "Prevents removal of xMESSAGE by always returning True"
@@ -515,19 +544,18 @@ class AutoCHANNEL:
         if stamp - self.last_scan > self.interval:
             self.last_scan = stamp
             guild: discord.Guild = self.parent.parent.apiobject
-            client_: discord.Client = self.parent.parent.parent.client
-            member = guild.get_member(client_.user.id)
+            member = guild.me
 
             # Possible intents bug?
             if member is None:
                 return
 
             # User has not verified / has not completed rules
-            if guild.me.pending:
+            if member.pending:
                 return
 
             for channel in self.channel_getter():
-                if channel not in self.cache:
+                if channel.id not in self.removed_channels and channel not in self.cache:
                     perms = channel.permissions_for(member)
                     name = channel.name
                     if (
@@ -552,6 +580,7 @@ class AutoCHANNEL:
             The channel is not in cache.
         """
         self.cache.remove(channel)
+        self.removed_channels.add(channel.id)
 
     async def update(self, init_options = None, **kwargs):
         """
@@ -577,9 +606,15 @@ class AutoCHANNEL:
 
 
 class BaseChannelMessage(BaseMESSAGE):
+    """
+    .. versionadded:: v2.10
+
+    Message base for message types that have channels.
+    """
     __slots__ = (
         "channels",
         "channel_getter",
+        "remove_after_by_channel"
     )
 
     @typechecked
@@ -595,23 +630,40 @@ class BaseChannelMessage(BaseMESSAGE):
         super().__init__(start_period, end_period, data, start_in, remove_after)
         self.channels = channels
         self.channel_getter = None
+        # Override the default remove_after logic if it's an integer.
+        self.remove_after_by_channel = {}
+
+    @property
+    def remaining_before_removal(self) -> Union[Dict[int, int], timedelta, datetime, int]:
+        # Return the counts dictionary or the original remove_after parameter if dictionary is empty
+        return self.remove_after_by_channel or self.remove_after
 
     def _check_state(self) -> bool:
-        """
-        Checks if the message is ready to be deleted.
+        return (
+            super()._check_state() or
+            # 'or [True]' assures this evaluates to False if the map is empty (no channels were ever advertised)
+            type(self.remove_after) is int and not any(self.remove_after_by_channel.values() or [True]) or
+            not bool(self.channels)
+        )
 
-        Returns
-        ----------
-        True
-            The message should be deleted.
-        False
-            The message is in proper state, do not delete.
-        """
-        return super()._check_state() or not bool(self.channels)
+    def _update_state(self, succeeded_channels: List[ChannelType], err_channels: List[dict]):
+        "Updates internal remove_after counter and checks if any channels need to be remove."
 
-    def _update_state(self, err_channels: List[dict]):
-        "Updates the state of the object based on errored channels."
-        super()._update_state()
+        # Override the default counter remove_after behaviour to act independant on separate channels.
+        if isinstance(self.remove_after, int):
+            for channel in succeeded_channels:
+                snowflake = channel.id
+                if snowflake not in self.remove_after_by_channel:
+                    self.remove_after_by_channel[snowflake] = self.remove_after
+
+                self.remove_after_by_channel[snowflake] -= 1
+                if not self.remove_after_by_channel[snowflake]:  # No more tries left
+                    trace(
+                        f"Removing channel '{channel.name}' ({channel.id}) [Guild '{channel.guild.name}' ({channel.guild.id})] from {self} - 'remove_after' sends reached.",
+                        TraceLEVELS.NORMAL,
+                    )
+                    self.channels.remove(channel)
+
         # Remove any channels that returned with code status 404 (They no longer exist)
         for data in err_channels:
             reason = data["reason"]
@@ -730,7 +782,7 @@ class BaseChannelMessage(BaseMESSAGE):
                             MSG_SEND_STATUS_ERROR_REMOVE_ACCOUNT
                         )
 
-            self._update_state(errored_channels)
+            self._update_state(succeeded_channels, errored_channels)
             return MessageSendResult(
                 self.generate_log_context(**data_to_send, succeeded_ch=succeeded_channels, failed_ch=errored_channels),
                 MSG_SEND_STATUS_SUCCESS if succeeded_channels or errored_channels else MSG_SEND_STATUS_NO_MESSAGE_SENT

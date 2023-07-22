@@ -2,7 +2,7 @@
 Contains definitions for message classes that are text based."""
 
 from typing import Any, Dict, List, Iterable, Optional, Union, Literal, Tuple
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from typeguard import typechecked
 
 from .base import *
@@ -21,10 +21,6 @@ __all__ = (
     "DirectMESSAGE"
 )
 
-# Configuration
-# ---------------------------
-RLIM_USER_WAIT_TIME = 20
-
 
 # Register message modes
 sql.register_type("MessageMODE", "send")
@@ -38,16 +34,6 @@ sql.register_type("MessageMODE", "clear-send")
 class TextMESSAGE(BaseChannelMessage):
     """
     This class is used for creating objects that represent messages which will be sent to Discord's TEXT CHANNELS.
-
-    .. versionchanged:: v2.7
-
-        *start_in* now accepts datetime object
-
-    .. note::
-
-        Slow mode period handling:
-            If the advertisement period is set less than the biggest slow-mode delay of the given channels,
-            the period will be automatically set slightly above the slow-mode delay.
 
     Parameters
     ------------
@@ -87,15 +73,19 @@ class TextMESSAGE(BaseChannelMessage):
             - str (normal text),
             - :class:`discord.Embed`,
             - :ref:`FILE`,
-            - List/Tuple containing any of the above arguments (There can up to 1 string, up to 1 :class:`discord.Embed`
-              and up to 10 :ref:`FILE` objects.
-            - Function that accepts any amount of parameters and returns any of the above types. To pass a function,
-              YOU MUST USE THE :ref:`data_function` decorator on the function before passing the function to the daf.
+            - List/Tuple containing any of the above arguments (There can up to 1 string, up to 1 :class:`discord.Embed` and up to 10 :ref:`FILE` objects.
+            - Function that accepts any amount of parameters and returns any of the above types. To pass a function, YOU MUST USE THE :ref:`data_function` decorator on the function before passing the function to the daf.
+
     channels: Union[Iterable[Union[int, discord.TextChannel, discord.Thread]], daf.message.AutoCHANNEL]
+        Channels that it will be advertised into (Can be snowflake ID or channel objects from PyCord).
+
         .. versionchanged:: v2.3
             Can also be :class:`~daf.message.AutoCHANNEL`
 
-        Channels that it will be advertised into (Can be snowflake ID or channel objects from PyCord).
+        .. note::
+
+            If no channels are left, the message is automatically removed, unless AutoCHANNEL is used.
+
     mode: Optional[str]
         Parameter that defines how message will be sent to a channel.
         It can be:
@@ -109,9 +99,14 @@ class TextMESSAGE(BaseChannelMessage):
     remove_after: Optional[Union[int, timedelta, datetime]]
         Deletes the message after:
 
-        * int - provided amounts of sends
+        * int - provided amounts of successful sends to seperate channels.
         * timedelta - the specified time difference
         * datetime - specific date & time
+
+        .. versionchanged:: v2.10
+
+            Parameter ``remove_after`` of int type will now work at a channel level and
+            it nows means the SUCCESSFUL number of sends into each channel.
     """
 
     __slots__ = (
@@ -520,7 +515,7 @@ class DirectMESSAGE(BaseMESSAGE):
     remove_after: Optional[Union[int, timedelta, datetime]]
         Deletes the guild after:
 
-        * int - provided amounts of sends
+        * int - provided amounts of successful sends
         * timedelta - the specified time difference
         * datetime - specific date & time
     """
@@ -529,6 +524,7 @@ class DirectMESSAGE(BaseMESSAGE):
         "mode",
         "previous_message",
         "dm_channel",
+        "_remove_after"
     )
 
     @typechecked
@@ -543,6 +539,27 @@ class DirectMESSAGE(BaseMESSAGE):
         self.mode = mode
         self.dm_channel: discord.DMChannel = None
         self.previous_message: discord.Message = None
+
+        # Use a different attribute, to prevent inconsistensy with TextMESSAGE and VoiceMESSAGE.
+        # The counter there is split per channel and the remove_after attribute does not change.
+        self._remove_after = remove_after
+
+    @property
+    def remaining_before_removal(self) -> Union[timedelta, datetime, int]:
+        return self._remove_after
+
+    def _check_state(self) -> bool:
+        return (
+            super()._check_state() or
+            type(self._remove_after) is int and self._remove_after == 0
+        )
+
+    def _update_state(self) -> bool:
+        """
+        Updates internal remove_after counter.
+        """
+        if type(self._remove_after) is int:
+            self._remove_after -= 1
 
     def generate_log_context(self,
                              success_context: Dict[str, Union[bool, Optional[Exception]]],

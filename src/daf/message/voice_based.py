@@ -79,13 +79,14 @@ class VoiceMESSAGE(BaseChannelMessage):
         The data types of this parameter can be:
 
             - AUDIO object.
-            - Function that accepts any amount of parameters and returns an AUDIO object.
-              To pass a function, YOU MUST USE THE :ref:`data_function` decorator on the function.
+            - Function that accepts any amount of parameters and returns an AUDIO object. To pass a function, YOU MUST USE THE :ref:`data_function` decorator on the function.
+
     channels: Union[Iterable[Union[int, discord.VoiceChannel]], daf.message.AutoCHANNEL]
+        Channels that it will be advertised into (Can be snowflake ID or channel objects from PyCord).
+
         .. versionchanged:: v2.3
             Can also be :class:`~daf.message.AutoCHANNEL`
 
-        Channels that it will be advertised into (Can be snowflake ID or channel objects from PyCord).
     volume: Optional[int]
         The volume (0-100%) at which to play the audio. Defaults to 50%. This was added in v2.0.0
     start_in: Optional[timedelta | datetime]
@@ -94,9 +95,14 @@ class VoiceMESSAGE(BaseChannelMessage):
     remove_after: Optional[Union[int, timedelta, datetime]]
         Deletes the message after:
 
-        * int - provided amounts of sends
+        * int - provided amounts of successful sends to seperate channels.
         * timedelta - the specified time difference
         * datetime - specific date & time
+
+        .. versionchanged:: v2.10
+
+            Parameter ``remove_after`` of int type will now work at a channel level and
+            it nows means the SUCCESSFUL number of sends into each channel.
     """
 
     __slots__ = (
