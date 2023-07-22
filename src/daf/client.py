@@ -158,7 +158,7 @@ class ACCOUNT:
         attributes.write_non_exist(self, "_update_sem", asyncio.Semaphore(1))
 
     def __str__(self) -> str:
-        return f"{type(self).__name__}(token={self._token}, is_user={self.is_user}, selenium={self._selenium})"
+        return f"{type(self).__name__}(token={self._token[:10] if self._token is not None else None}, is_user={self.is_user}, selenium={self._selenium})"
 
     def __eq__(self, other):
         if isinstance(other, ACCOUNT):
@@ -457,7 +457,10 @@ class ACCOUNT:
                 for server in to_advert:
                     status = await server._advertise()
                     if status == guild.GUILD_ADVERT_STATUS_ERROR_REMOVE_ACCOUNT:
+                        trace(f"Removing account {self} because token was invalidated! Username: '{self._client.user.name}')", TraceLEVELS.ERROR)
                         self._running = False
+                        self._deleted = True
+
                     # If loop stop has been requested, stop asap
                     if not self._running:
                         return
