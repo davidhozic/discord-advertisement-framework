@@ -1,9 +1,6 @@
 """
 Module contains definitions for automatic scaling over different DPI displays.
 """
-import platform
-
-
 DPI_ORIGINAL = 96
 
 
@@ -22,8 +19,4 @@ def dpi_scaled(px: int) -> int:
 
 
 def set_dpi(new_dpi: int):
-    if platform.system() == "Windows":
-        import ctypes
-        ctypes.windll.shcore.SetProcessDpiAwareness(2)
-    else:
-        GLOBALS.current_dpi = new_dpi
+    GLOBALS.current_dpi = new_dpi
