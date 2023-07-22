@@ -47,7 +47,7 @@ async def test_autochannel(guilds, channels, accounts):
             "testpy-[0-9]", "testpy-[5-9]")
         auto_channel2 = daf.message.AutoCHANNEL(
         "testpy-[0-9]", "testpy-[5-9]")
-        
+
         daf_guild = daf.GUILD(
             guild,
             messages=[

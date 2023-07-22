@@ -32,7 +32,7 @@ C_VC_CONNECT_TIMEOUT = 3  # Timeout of voice channels
 @instance_track.track_id
 @doc.doc_category("Messages", path="message")
 @sql.register_type("MessageTYPE")
-class VoiceMESSAGE(BaseMESSAGE):
+class VoiceMESSAGE(BaseChannelMessage):
     """
     This class is used for creating objects that represent messages which will be streamed to voice channels.
 
@@ -100,11 +100,7 @@ class VoiceMESSAGE(BaseMESSAGE):
     """
 
     __slots__ = (
-        "period",
-        "start_period",
-        "end_period",
         "volume",
-        "channels",
     )
 
     @typechecked
@@ -122,40 +118,8 @@ class VoiceMESSAGE(BaseMESSAGE):
                 "You need to install extra requirements: pip install discord-advert-framework[voice]"
             )
 
-        super().__init__(start_period, end_period, data, start_in, remove_after)
+        super().__init__(start_period, end_period, data, channels, start_in, remove_after)
         self.volume = max(0, min(100, volume))  # Clamp the volume to 0-100 %
-        self.channels = channels
-
-    def _check_state(self) -> bool:
-        """
-        Checks if the message is ready to be deleted.
-
-        Returns
-        ----------
-        True
-            The message should be deleted.
-        False
-            The message is in proper state, do not delete.
-        """
-        return super()._check_state() or not bool(self.channels)
-
-    def _update_state(self, err_channels: List[dict]):
-        "Updates the state of the object based on errored channels."
-        super()._update_state()
-        # Remove any channels that returned with code status 404 (They no longer exist)
-        for data in err_channels:
-            reason = data["reason"]
-            channel = data["channel"]
-            if isinstance(reason, discord.HTTPException):
-                if (
-                    reason.status == 403 or  # Forbidden
-                    reason.code in {50007, 10003}  # Not Forbidden, but bad error codes
-                ):
-                    trace(
-                        f"Removing channel '{channel.name}' ({channel.id}) [Guild '{channel.guild.name}' ({channel.guild.id})], because user '{self.parent.parent.client.user.name}' lacks permissions.",
-                        TraceLEVELS.WARNING
-                    )
-                    self.channels.remove(channel)
 
     def generate_log_context(self,
                              audio: AUDIO,
@@ -281,7 +245,7 @@ class VoiceMESSAGE(BaseMESSAGE):
 
         return handled, action
 
-    async def initialize(self, parent: Any):
+    def initialize(self, parent: Any):
         """
         This method initializes the implementation specific API objects
         and checks for the correct channel input context.
@@ -300,39 +264,7 @@ class VoiceMESSAGE(BaseMESSAGE):
         ValueError
             No valid channels were passed to object"
         """
-        if parent is None:
-            return
-
-        ch_i = 0
-        self.parent = parent
-        cl = parent.parent.client
-        _guild = parent.apiobject
-        to_remove = []
-
-        if isinstance(self.channels, AutoCHANNEL):
-            await self.channels.initialize(self, "voice_channels")
-        else:
-            for ch_i, channel in enumerate(self.channels):
-                if isinstance(channel, discord.abc.GuildChannel):
-                    channel_id = channel.id
-                else:
-                    # Snowflake IDs provided
-                    channel_id = channel
-                    channel = self.channels[ch_i] = cl.get_channel(channel_id)
-
-                if channel is None:
-                    trace(f"Unable to get channel from ID {channel_id}", TraceLEVELS.WARNING)
-                    to_remove.append(channel)
-                elif type(channel) is not discord.VoiceChannel:
-                    raise TypeError(f"VoiceMESSAGE object received invalid channel type of {type(channel).__name__}")
-                elif channel.guild != _guild:
-                    raise ValueError(f"{channel.name}(ID: {channel_id}) not in guild {_guild.name}(ID: {_guild.id})")
-
-            for channel in to_remove:
-                self.channels.remove(channel)
-
-        if not self.channels:
-            raise ValueError(f"No valid channels were passed to {self} object")
+        return super().initialize(parent, {discord.VoiceChannel}, lambda: parent.apiobject.voice_channels)
 
     async def _send_channel(self,
                             channel: discord.VoiceChannel,
@@ -397,87 +329,3 @@ class VoiceMESSAGE(BaseMESSAGE):
                     await voice_client.disconnect()
 
                 await asyncio.sleep(1)  # Avoid sudden disconnect and connect to a new channel
-
-    @async_util.with_semaphore("update_semaphore")
-    async def _send(self) -> MessageSendResult:
-        """
-        Sends the data into each channel.
-
-        Returns
-        ----------
-        MessageSendResult
-            The result of a message send attempt.
-        """
-        _data_to_send = await self._get_data()
-        if any(_data_to_send.values()):
-            errored_channels = []
-            succeeded_channels = []
-
-            for channel in self.channels:
-                context = await self._send_channel(channel, **_data_to_send)
-                if context["success"]:
-                    succeeded_channels.append(channel)
-                else:
-                    errored_channels.append({"channel": channel, "reason": context["reason"]})
-                    action = context["action"]
-                    if action is ChannelErrorAction.SKIP_CHANNELS:  # Don't try to send to other channels
-                        break
-
-                    elif action is ChannelErrorAction.REMOVE_ACCOUNT:
-                        return MessageSendResult(
-                            self.generate_log_context(
-                                **_data_to_send, succeeded_ch=succeeded_channels, failed_ch=errored_channels
-                            ),
-                            MSG_SEND_STATUS_ERROR_REMOVE_ACCOUNT
-                        )
-
-            self._update_state(errored_channels)
-            return MessageSendResult(
-                self.generate_log_context(**_data_to_send, succeeded_ch=succeeded_channels, failed_ch=errored_channels),
-                MSG_SEND_STATUS_SUCCESS if succeeded_channels or errored_channels else MSG_SEND_STATUS_NO_MESSAGE_SENT
-            )
-
-        return MessageSendResult(None, MSG_SEND_STATUS_NO_MESSAGE_SENT)
-
-    @typechecked
-    @async_util.with_semaphore("update_semaphore")
-    async def update(self, _init_options: Optional[dict] = None, **kwargs):
-        """
-        .. versionadded:: v2.0
-
-        Used for changing the initialization parameters the object was initialized with.
-
-        .. warning::
-            Upon updating, the internal state of objects get's reset,
-            meaning you basically have a brand new created object.
-
-        Parameters
-        -------------
-        **kwargs: Any
-            Custom number of keyword parameters which you want to update,
-            these can be anything that is available during the object creation.
-
-        Raises
-        -----------
-        TypeError
-            Invalid keyword argument was passed
-        Other
-            Raised from .initialize() method
-        """
-        if "start_in" not in kwargs:
-            # This parameter does not appear as attribute, manual setting necessary
-            kwargs["start_in"] = self.next_send_time
-
-        if "data" not in kwargs:
-            kwargs["data"] = self._data
-
-        kwargs["channels"] = channels = kwargs.get("channels", self.channels)
-        if isinstance(channels, AutoCHANNEL):
-            await channels.update(init_options={"parent": self, "channel_type": "voice_channels"})
-        elif not isinstance(self.channels[0], int):  # Not initialized (newly created):
-            kwargs["channels"] = [x.id for x in self.channels]
-
-        if _init_options is None:
-            _init_options = {"parent": self.parent}
-
-        await async_util.update_obj_param(self, init_options=_init_options, **kwargs)
