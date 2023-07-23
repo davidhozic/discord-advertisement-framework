@@ -122,6 +122,12 @@ class NewObjectFrameBase(ttk.Frame):
         self.allow_save = allow_save  # Allow save or not allow (eg. viewing SQL data)
         self.old_gui_data = old_data  # Set in .load
 
+        editing_index = self.return_widget.current()
+        if editing_index == -1:
+            editing_index = None
+
+        self.editing_index = editing_index  # The index of old_gui_data inside the return widget
+
         super().__init__(master=parent)
         self.init_toolbar_frame(class_)
         self.init_main_frame()
@@ -337,15 +343,8 @@ class NewObjectFrameBase(ttk.Frame):
         ind = self.return_widget.count()
         if self.old_gui_data is not None:
             ret_widget = self.return_widget
-            # Ignore if not in list (Combobox allows to type values directly in instead of inserting them)
-            # thus when edit is clicked, the old information is loaded into the object edit info, howver the actual
-            # value while it was writen inside the combobox is not actually present in the list of it's values
-            with suppress(ValueError):
-                if isinstance(ret_widget, ListBoxScrolled):
-                    ind = ret_widget.get().index(self.old_gui_data)
-                else:
-                    ind = ret_widget["values"].index(self.old_gui_data)
-
+            if self.editing_index is not None:  # The index of edited item inside return widget
+                ind = self.editing_index
                 ret_widget.delete(ind)
 
         self.return_widget.insert(ind, new)
