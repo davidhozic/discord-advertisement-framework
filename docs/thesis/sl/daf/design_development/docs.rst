@@ -145,7 +145,7 @@ vključila tudi dokumentirane metode in atribute, ki so del razreda.
     \newpage
 
 
-Iz :numref:`slike %s <auto_doc_example>` lahko vidimo, da ima :class:`~daf.logging.sql.LoggerSQL` dodatno vsebino, ki je ni imel v ``autoclass`` direktivi.
+Iz :numref:`auto_doc_example` lahko vidimo, da ima :class:`~daf.logging.sql.LoggerSQL` dodatno vsebino, ki je ni imel v ``autoclass`` direktivi.
 Ta vsebina je bila vzeta iz same izvorne kode razreda.
 
 

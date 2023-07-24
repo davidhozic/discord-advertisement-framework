@@ -21,7 +21,6 @@ Najpogosteje predstavljajo digitalna umetniška dela.
     Primer nezameljivega žetona (ustvaril `DALL-E <https://openai.com/dall-e-2/>`_)
 
 
-Nezamenljivi žetoni se od stvari, kot je Etherium, razlikujejo po tem, da niso zamenljivi.
 Nezamenljivost pomeni, da posameznega žetona ni mogoče preprosto zamenjati za drugo, kot se lahko menja
 sod olja za drug sod olja ali en evro za drug evro.
 

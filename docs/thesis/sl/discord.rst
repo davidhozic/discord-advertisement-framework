@@ -32,8 +32,8 @@ Uporablja se lahko tudi kot skupnost fakultete, kjer študenti lahko govorijo pr
 in postavljajo vprašanja o gradivu, ki ga ne razumejo.
 Nekaj primerov Discord skupnosti, povezanih s Univerzo v Ljubljani:
 
-- :numref:`Študentski svet FE (slika %s) <ssfe-community-fig>`,
-- :numref:`FE UNI (slika %s) <fe-uni-community-fig>` ,
+- Študentski svet FE (:numref:`ssfe-community-fig`),
+- FE UNI (:numref:`fe-uni-community-fig`),
 - FE VSŠ,
 - FRI UNI,
 - in druge
@@ -86,7 +86,7 @@ Discord ima tri vrste kanalov:
 Tekstovni kanali se nahajo v cehih in se jih lahko prepozna glede na simbol *#*, ki se nahaja pred imenom vsakega
 kanala. Sem lahko pošiljate navaden tekst, emotikone, nalepke in darila ter, v primeru da imate robotski (angl. *bot*) račun,
 tudi tako imenovana vgrajena sporočila (angl. *Embedded messages* oz. *Embeds*), ki so malo bolj formatirana sporočila
-znotraj okrašene škatle (primer na :numref:`sliki %s <ssfe-community-fig>`).
+znotraj okrašene škatle (primer na :numref:`ssfe-community-fig`).
 
 .. figure:: ./DEP/discord_text_channel.png
 

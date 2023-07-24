@@ -14,7 +14,7 @@ je marskikomu težje, sploh če se še nikoli niso srečali s Python jezikom.
 V namen enostavnejše rabe ogrodja je izdelan grafični vmesnik, ki deluje ločeno od samega jedra ogrodja, z njim pa
 lahko komunicira lokalno preko programskega vmesnika ali pa na daljavo preko HTTP vmesnika.
 
-Za dizajn vmesnika je izbran svetel dizajn, z modrimi odtenki za posamezne elemente, kot je to prikazano na :numref:`sliki %s <fig-gui-front>`.
+Za dizajn vmesnika je izbran svetel dizajn, z modrimi odtenki za posamezne elemente, kot je to prikazano na :numref:`fig-gui-front`.
 
 
 Tkinter
@@ -67,7 +67,7 @@ izbiro globine izpisov na konzoli in konfiguracijo povezave do jedra ogrodja.
 Omogoča tudi shrambo teh definicij v :term:`JSON` datoteko, braje definicij iz JSON datoteke in pa generacijo ekvivalentne
 Python datoteke, ki požene le :ref:`jedro orodja <Zasnova in razvoj jedra>` (brez grafičnega vmesnika).
 Pravzaprav je ta zavihek namenjen definiciji nekege predloge, ki jo lahko potem uvozimo v jedro ogrodja.
-Izgled je prikazan na :numref:`sliki %s <fig-gui-front>`.
+Izgled je prikazan na :numref:`fig-gui-front`.
 
 Omogoča tudi dinamično branje in pretvorbo objektov v že zagnanem vmesniku preko gumbov, ki vsebujejo besedo *live*.
 
@@ -154,7 +154,7 @@ Uporabi se ga lahko za bolj podroben pregled kaj se dogaja z jedrom ogrodja.
 *Analytics* zavihek
 -----------------------------
 *Analytics* zavihek omogoča analizo poslanih sporočil in njihovo statistiko. Prav tako omogoča analizo pridruževanj preko sledenja
-cehovskih povezav (angl. *Invite links*). Izgled je prikazan na :numref:`sliki %s <daf-gui-analytics-tab-rotated>`
+cehovskih povezav (angl. *Invite links*). Izgled je prikazan na :numref:`daf-gui-analytics-tab-rotated`
 
 Za pridobitev vnosov, se uporabi gumb *Get logs*, ki na podlagi parametrov definiranih v zgornjem opcijskem meniju, vrne
 v spodnji seznam filtrirane elemente. Te elemente se lahko vsakega posebej pregleda z gumbom *View log*, ki 
@@ -179,7 +179,7 @@ Povezava grafičnega vmesnika z jedrom ogrodja
 Grafični vmesnik lahko s stališča lokacije delovanja deluje na dva načina. Prvi je lokalen način, kjer grafični vmesnik
 jedro ogrodja zažene na istem računalniku, kjer deluje grafični vmesnik. Drugi način pa je oddaljen
 režim delovanja, kjer se grafični vmesnik poveže na HTTP strežnik, kateri deluje znotraj jedra ogrodja in na ta strežnik
-pošilja HTTP ukaze, ki se v jedru mapirajo na programski vmesnik. Koncept je prikazan na :numref:`sliki %s <gui-core-connection>`
+pošilja HTTP ukaze, ki se v jedru mapirajo na programski vmesnik. Koncept je prikazan na :numref:`gui-core-connection`
 
 V primeru oddaljenega dostopa se podatki serializirajo v :term:`JSON` reprezentacijo, kjer so navadne vrednosti neposredno serializirane v JSON format,
 večina objektov pa v slovar (:class:`dict`), kjer je sta slovarju zapisana pot do podatkovnega tipa (razreda) objekta in njegovi attributi.

@@ -14,7 +14,7 @@ beleženje, kar omogoča analitiko oziroma statistiko poslanih sporočil in tudi
 sledenje pridružnih povezav (angl. *invite link*) za pozamezen ceh in s tem spremljanje dosega uporabnikov s določenimi sporočili.
 Za iskanje novih cehov je na podlagi brskalnika Google Chrome implementirano iskanje in pridruževanje se novim cehom, kjer
 se za iskanje lahko nastavi poljubne parametre in s tem konfigurira točno katerim cehom se bo ogrodje pridružilo.
-Vse zgoraj omenjeno je omogočeno v jedru ogrodja (preko Python skripte) oziroma konzole, je pa na vrh izdelan grafičen vmesnik (:numref:`slika %s <fig-gui-front>`) za lažje upravljanje
+Vse zgoraj omenjeno je omogočeno v jedru ogrodja (preko Python skripte) oziroma konzole, je pa na vrh izdelan grafičen vmesnik (:numref:`fig-gui-front`) za lažje upravljanje
 z ogrodjem, definicijo objektov (računov, cehov, sporočil, ipd.) ter prikaz statistike in vsebine poslanih sporočil.
 Omogočen je tudi oddaljen dostop do jedra ogrodja, kjer lahko jedro in grafični vmesnik delujeta samostojno in komunicirata
 na daljavo preko HTTP vmesnika, kar pomeni da lahko jedro deluje na nekem oddaljenem strežniku 24/7, grafični vmesnik pa uporabniki

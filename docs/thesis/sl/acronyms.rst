@@ -13,35 +13,29 @@
 
 .. glossary::
 
-    JSON
-        JavaScript Object Notation
+    API
+        Application Programming Interface
 
     CSV
-
         Comma-Separated Values
-
-    SQL
-
-        Structured Query Language
 
     DAF
         Discord Advertisement Framework
 
+    GUI
+        Graphical User Interface
+
+    JSON
+        JavaScript Object Notation
+
     NFT
         Non-Fungible Token
 
-    GUI
-
-        Graphical User Interface
+    ORM
+        Object Relational Mapping
 
     PIP
-
         Preferred Installer Program
 
-    API
-
-        Application Programming Interface
-
-    ORM
-
-        Object Relational Mapping
+    SQL
+        Structured Query Language
