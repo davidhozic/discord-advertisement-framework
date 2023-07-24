@@ -169,7 +169,7 @@ for name in dir(daf):
 
             ADDITIONAL_WIDGETS[item].extend([
                 AdditionalWidget(ttk.Button, setup_additional_live_update, text="Live update"),
-                AdditionalWidget(ttk.Button, setup_additional_live_refresh, text="Refresh")
+                AdditionalWidget(ttk.Button, setup_additional_live_refresh, text="Refresh"),
             ])
 
 
