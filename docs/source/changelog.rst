@@ -31,6 +31,12 @@ Glossary
 ----------------------
 Releases
 ----------------------
+
+v2.9.3
+=================
+- Fixed :class:`AutoGUILD` and :class:`AutoCHANNEL` regex patterns. Users can now seperate names with "name1 | name2",
+  instead of "name1|name2". `#380 <https://github.com/davidhozic/discord-advertisement-framework/issues/380>`_
+
 v2.9.2
 =================
 - Fixed viewing dictionaries inside the GUI
