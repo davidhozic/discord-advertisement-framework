@@ -850,8 +850,9 @@ class AutoGUILD:
                  interval: Optional[timedelta] = timedelta(minutes=1),
                  auto_join: Optional[web.GuildDISCOVERY] = None,
                  invite_track: Optional[List[str]] = None) -> None:
-        self.include_pattern = include_pattern
-        self.exclude_pattern = exclude_pattern
+        # Remove spaces around OR
+        self.include_pattern = re.sub(r"\s*\|\s*", '|', include_pattern) if include_pattern else None
+        self.exclude_pattern = re.sub(r"\s*\|\s*", '|', exclude_pattern) if exclude_pattern else None
         self.remove_after = remove_after
         self.invite_track = invite_track
         # Uninitialized template messages that get copied for each found guild.

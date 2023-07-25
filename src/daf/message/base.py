@@ -474,7 +474,7 @@ class AutoCHANNEL:
     def __init__(self,
                  include_pattern: str,
                  exclude_pattern: Optional[str] = None,
-                 interval: Optional[timedelta] = None) -> None:
+                 interval: Optional[timedelta] = timedelta(minutes=5)) -> None:
 
         if interval is not None:
             trace(
@@ -485,8 +485,9 @@ class AutoCHANNEL:
         else:
             interval = timedelta(seconds=5)
 
-        self.include_pattern = include_pattern
-        self.exclude_pattern = exclude_pattern
+        # Remove spaces around OR
+        self.include_pattern = re.sub(r"\s*\|\s*", '|', include_pattern) if include_pattern else None
+        self.exclude_pattern = re.sub(r"\s*\|\s*", '|', exclude_pattern) if exclude_pattern else None
         self.interval = interval
         self.parent = None
         self.channel_getter: Callable = None
