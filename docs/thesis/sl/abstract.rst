@@ -17,6 +17,29 @@
 
     \chapter*{Povzetek}
 
+.. 
+    .. sourcelist::
+
+        .. source:: Test title
+            :id: id_david
+            :author: David Hozic
+            :url: https://daf.davidhozic.com
+            :last_checked: 01. 2023
+
+        .. source:: Test title
+            :id: id_david
+            :author: David Hozic
+            :url: https://daf.davidhozic.com
+            :last_checked: 01. 2023
+
+        .. source:: Test title
+            :id: id_david
+            :author: David Hozic
+            :url: https://daf.davidhozic.com
+            :last_checked: 01. 2023
+
+
+
 
 Nezamenljivi žetoni (angl. Non fungible tokens - NFT) so edinstvena digitalna sredstva, ki živijo na verigi blokov brez možnosti replikacije.
 Obstaj več pristopov za njihovo oglaševanje, kjer je eden izmed teh oglaševanje po socialnem omrežju Discord s pristopom šilinga.

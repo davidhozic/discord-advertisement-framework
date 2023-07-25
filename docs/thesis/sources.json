@@ -1,9 +1,16 @@
 [
     {
-        "id": "discord_self_bots",
+        "id": "nft_what_is",
+        "author": "investopedia (RAKESH SHARMA)",
+        "title": "Non-Fungible Token (NFT): What It Means and How It Works",
+        "source": "https://www.investopedia.com/non-fungible-tokens-nft-5115211",
+        "updated": "01. 2023"
+    },
+    {
+        "id": "discord_what_is",
         "author": "Discord",
-        "title" : "Automated user accounts (self-bots)",
-        "source": "https://support.discord.com/hc/en-us/articles/115002192352-Automated-user-accounts-self-bots-",
+        "title" : "WHAT IS DISCORD?",
+        "source": "https://support.discord.com/hc/en-us/categories/200404398",
         "updated": "01. 2023"
     },
     {
@@ -14,10 +21,10 @@
         "updated": "01. 2023"
     },
     {
-        "id": "discord_what_is",
+        "id": "discord_self_bots",
         "author": "Discord",
-        "title" : "WHAT IS DISCORD?",
-        "source": "https://support.discord.com/hc/en-us/categories/200404398",
+        "title" : "Automated user accounts (self-bots)",
+        "source": "https://support.discord.com/hc/en-us/articles/115002192352-Automated-user-accounts-self-bots-",
         "updated": "01. 2023"
     },
     {
@@ -40,20 +47,6 @@
         "title" : "Primer oglaševalske vsebine",
         "source" : "https://chat.openai.com/chat",
         "updated" : "01. 2023"
-    },
-    {
-        "id": "nft_working_meaning",
-        "author": "investopedia (RAKESH SHARMA)",
-        "title": "Non-Fungible Token (NFT): What It Means and How It Works",
-        "source": "https://www.investopedia.com/non-fungible-tokens-nft-5115211",
-        "updated": "01. 2023"
-    },
-    {
-        "id": "what_are_nfts",
-        "author": "rwkgoodman (Jack Pestill)",
-        "title": "What are NFTs? And why are they important?",
-        "source": "https://www.rwkgoodman.com/info-hub/what-are-nfts-and-why-are-they-important/",
-        "updated": "01. 2023"
     },
     {
         "id": "rst_docutils",

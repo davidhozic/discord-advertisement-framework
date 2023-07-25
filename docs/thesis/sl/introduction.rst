@@ -12,7 +12,7 @@ Nezamenljivi žetoni
 ===========================
 Nezamenljivi žetoni (angl. *Non fungible tokens* - NFT) so edinstvena digitalna sredstva, ki živijo na 
 verigi blokov brez možnosti replikacije.
-Najpogosteje predstavljajo digitalna umetniška dela.
+Najpogosteje predstavljajo digitalna umetniška dela :ref:`nft_what_is`.
 
 
 .. figure:: ./DEP/example_bunny_nft.png
@@ -26,10 +26,6 @@ sod olja za drug sod olja ali en evro za drug evro.
 
 Najbližji primer nezamenljivega žetona v fizični obliki je bejzbolska kartica. Na primer, lahko imate zelo redko
 bejzbolsko kartico nekega igralca bejzbola in je ne morete enakovredno zamenjati za kakšno drugo običajno bejzbolsko kartico.
-
-Nezamenljivi žetoni se ustvarijo s kovanjem, kar je postopek, v katerem se informacije žetona
-vnesejo v verigo blokov. V verigi blokov se ustvari nov blok in pogosto se za podpis uporabi pametna pogodba,
-ki določa prenosljivost in NFT dodeli lastnika.
 
 
 Marketinški pristopi za promoviranje nezamenljivih žetonov

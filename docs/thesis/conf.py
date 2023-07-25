@@ -15,6 +15,7 @@ import os
 
 sys.path.insert(0, os.path.abspath('../../src/'))
 sys.path.insert(0, os.path.abspath('.'))
+sys.path.append(os.path.abspath("./ext/"))
 
 from daf import VERSION
 
@@ -165,6 +166,9 @@ latex_elements = {
             \mbox{}
             \newpage
         }
+
+        % Citations
+        \newenvironment{fieldlist}{\description[labelwidth=1em]}{\enddescription}
     ''',
     "maketitle": latex_title_page,
     "printindex": ''

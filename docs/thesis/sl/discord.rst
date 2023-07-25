@@ -29,7 +29,8 @@ Večina strežnikov Discord je zasebnih in zahtevajo povabilo za vstop, kar omog
 Vendar pa obstajajo tudi večje, bolj javne skupnosti, osredotočene na določene teme, kot so priljubljene videoigre
 ali pa, v primeru te naloge, stvari kot sta veriga blokov (angl. *blockchain*) in NFT.
 Uporablja se lahko tudi kot skupnost fakultete, kjer študenti lahko govorijo preko glasovnih kanalov, delijo študijske materiale
-in postavljajo vprašanja o gradivu, ki ga ne razumejo.
+in postavljajo vprašanja o gradivu, ki ga ne razumejo :ref:`discord_what_is`.
+
 Nekaj primerov Discord skupnosti, povezanih s Univerzo v Ljubljani:
 
 - Študentski svet FE (:numref:`ssfe-community-fig`),
@@ -65,14 +66,17 @@ Discordova struktura
 
     Struktura Discord aplikacije
 
+
 Discord aplikacija je v osnovi sestavljena iz gumba za direktna (osebna) sporočila, seznama cehov, seznama kanalov in seznama uporabnikov,
-ki so pridruženi v ceh.
+ki so pridruženi v ceh :ref:`discord_interface`.
 Obstajata dve vrsti računov, ki sta lahko v cehu:
 
 1. Uporabniški računi
 2. Robotski (avtomatizirani) računi
 
-Discordovi pogoji uporabe prepovedujejo avtomatiziranje uporabniških računov.
+Discordovi pogoji uporabe [#terms]_ prepovedujejo avtomatiziranje uporabniških računov :ref:`discord_self_bots`.
+
+.. [#terms] Na voljo na https://discord.com/terms.
 
 
 Kanali
