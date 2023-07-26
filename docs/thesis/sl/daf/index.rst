@@ -5,5 +5,5 @@ Ogrodje za oglaševanje v Discord
 
 .. toctree::
 
-    base
+    purpose
     design_development/index

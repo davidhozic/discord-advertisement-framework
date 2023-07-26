@@ -13,7 +13,7 @@ Dokumentacija
 
 
 Za projekt obstaja obsežna dokumentacija, ki se samodejno zgradi ob vsaki novi verziji ogrodja in zatem objavi 
-na `spletni strani <https://daf.davidhozic.com/en/v2.9.2/>`_.
+na `spletni strani <https://daf.davidhozic.com/en/v2.9.x/>`_.
 
 Na voljo je v spletni obliki (HTML), kot tudi lokalni obliki (PDF), ki se jo lahko prenese tako, da se na spletni strani dokumentacije
 kurzor premakne levo spodaj strani nad verzijo dokumentacije in zatem klikne na *PDF*.
@@ -33,7 +33,7 @@ kurzor premakne levo spodaj strani nad verzijo dokumentacije in zatem klikne na 
 Sphinx
 ----------------
 Sistem, uporabljen za grajenje dokumentacije projekta, se imenuje Sphinx.
-Sphinx je popularno orodje med Python_ razvijalci za generiranje dokumentacije v več formatih.
+Sphinx je popularno orodje med Python razvijalci za generiranje dokumentacije v več formatih.
 Razvijalcem omogoča ustvarjanje profesionalne dokumentacije za lastne projekte, kar je nuja pri javnih projektih.
 
 Sphinx omogoča enostavno dokumentiranje z berljivo sintakso (reStructuredText) z veliko funkcionalnostmi, kjer je ena izmed njih

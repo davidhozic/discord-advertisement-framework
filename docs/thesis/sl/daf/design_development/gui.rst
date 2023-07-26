@@ -20,7 +20,7 @@ Za dizajn vmesnika je izbran svetel dizajn, z modrimi odtenki za posamezne eleme
 Tkinter
 =============================
 Za izdelavo grafičnega vmesnika je bila uporabljena knjižnica `ttkboostrap <https://ttkbootstrap.readthedocs.io/en/latest/>`_, ki je razširitev
-vgrajene Python_ knjižnice :mod:`tkinter`.
+vgrajene Python knjižnice :mod:`tkinter`.
 
 Tkinter knjižnica je v osnovi vmesnik na Tcl/Tk orodja za izdelavo grafičnih vmesnikov, doda pa tudi nekaj svojih nivojev,
 ki še dodatno razširijo delovanje knjižnice.
@@ -82,7 +82,7 @@ oz. definiramo novo vrednost.
 
     Definicija uporabiškega računa
 
-Shranjevanje sheme (predloge) v datoteko in nalaganje sheme iz datoteke in generiranje ekvivalentne Python_ datoteke
+Shranjevanje sheme (predloge) v datoteko in nalaganje sheme iz datoteke in generiranje ekvivalentne Python datoteke
 je možno preko opcijskega menija *Schema*. Datoteka, kamor se shrani shema je datoteka formata JSON in vsebuje
 definirane račune, objekte za beleženje sporočil, objekte za povezovanje z jedrom ipd.
 Vsi objekti znotaj grafičnega vmesnika, pravzaprav niso pravi Python objekti ampak so dodaten nivo abstrakcije, ki je sestavljen

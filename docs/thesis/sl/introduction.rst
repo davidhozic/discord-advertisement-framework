@@ -33,7 +33,7 @@ Marketinški pristopi za promoviranje nezamenljivih žetonov
 Obstaja več načinov oglaševanja, ki se jih lahko uporabi tudi za oglaševanje nezamenljivih žetonov. Ti so na primer
 uporaba Google Ads platforme (oglaševanje po Google iskalniku, YouTube aplikaciji), uporaba forumov in drugi načini.
 Ena izmed teh drugih načinov je morda še najbolj uveljavljena na tem področju, in sicer se temu načinu oglaševanju reče
-šiling (angl. *shilling*).
+šiling (angl. *shilling*) :ref:`nft_shilling`.
 
 Šiling je izraz za promocijo/oglaševanje NFT po socialnih omrežjih.
 Vendar ne gre le za kakršno koli oglaševanje, kot je na primer postavitev promocijskega gradiva na spletno stran ali

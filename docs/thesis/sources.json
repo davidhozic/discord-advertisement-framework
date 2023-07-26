@@ -7,6 +7,13 @@
         "updated": "01. 2023"
     },
     {
+        "id" : "nft_shilling",
+        "author": "NFTing",
+        "title": "What is NFT Shilling",
+        "source": "https://nfting.medium.com/what-is-nft-shilling-192bec98429c",
+        "updated": "07. 2023"
+    },
+    {
         "id": "discord_what_is",
         "author": "Discord",
         "title" : "WHAT IS DISCORD?",
@@ -21,11 +28,18 @@
         "updated": "01. 2023"
     },
     {
-        "id": "discord_self_bots",
-        "author": "Discord",
-        "title" : "Automated user accounts (self-bots)",
-        "source": "https://support.discord.com/hc/en-us/articles/115002192352-Automated-user-accounts-self-bots-",
-        "updated": "01. 2023"
+        "id": "gpt3_content_generation",
+        "author" : "GPT-3 (Open-AI)",
+        "title" : "Primer oglaševalske vsebine",
+        "source" : "https://openai.com/blog/gpt-3-apps",
+        "updated" : "07. 2023"
+    },
+    {
+        "id": "top_gg_site",
+        "author": "Top.GG",
+        "source": "https://top.gg/",
+        "title": "Top.GG webpage",
+        "updated": "07. 2023"
     },
     {
         "id": "discord_api_ref",
@@ -40,13 +54,6 @@
         "title" : "Discord rate limits",
         "source": "https://discord.com/developers/docs/topics/rate-limits",
         "updated": "01. 2023"
-    },
-    {
-        "id": "gpt3_refactoring",
-        "author" : "GPT-3 (Open-AI)",
-        "title" : "Primer oglaševalske vsebine",
-        "source" : "https://chat.openai.com/chat",
-        "updated" : "01. 2023"
     },
     {
         "id": "rst_docutils",
@@ -75,12 +82,5 @@
         "source" : "https://docs.python.org/3/library/tkinter.html#module-tkinter",
         "title": "tkinter — Python interface to Tcl/Tk",
         "updated": "05. 2023"
-    },
-    {
-        "id": "top_gg_site",
-        "author": "Top.GG",
-        "source": "https://top.gg/",
-        "title": "Top.GG webpage",
-        "updated": "07. 2023"
     }
 ]

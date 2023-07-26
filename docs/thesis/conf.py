@@ -85,7 +85,7 @@ autodoc_default_options = {
 # Intersphinx
 intersphinx_mapping = {
     'PyCord': ("https://docs.pycord.dev/en/v2.4.x/", None),
-    "DAF": ("https://daf.davidhozic.com/en/v2.9.2/", None),
+    "DAF": ("https://daf.davidhozic.com/en/v2.9.x/", None),
     "Python": ("https://docs.python.org/3/", None),
     "Sphinx": ("https://www.sphinx-doc.org/en/master", None),
     "SQLAlchemy": ("https://docs.sqlalchemy.org/en/20/", None),
@@ -186,3 +186,6 @@ if language == "en":
     del numfig_format
 else:
     numfig_format = numfig_format[language]
+
+
+figure_align = "H"  # Disable floating

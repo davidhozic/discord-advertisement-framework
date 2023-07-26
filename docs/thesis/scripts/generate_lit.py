@@ -29,7 +29,7 @@ Literature
 """
 .. _{id}:
 
-:[{ind}]: {author}. "{title}". Available: {source} [Last checked: {updated}]
+:[{ind}]: {author}, "{title}", Available: {source} [Last checked: {updated}]
 """
 else:
     OUTPUT_HEADER = \
@@ -43,7 +43,7 @@ Literatura
 """
 .. _{id}:
 
-:[{ind}]: {author}. "{title}". Dostopno: {source} [Dostopano: {updated}]
+:[{ind}]: {author}, "{title}", Dostopno: {source} [Dostopano: {updated}]
 """
 
 OUTPUT_FOOTER = "\n"

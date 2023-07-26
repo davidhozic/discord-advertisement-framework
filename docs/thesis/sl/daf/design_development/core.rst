@@ -2,8 +2,6 @@
 Zasnova in razvoj jedra
 =========================
 
-.. _Python: https://www.python.org
-
 .. |USER| replace:: :class:`~daf.guild.USER`
 .. |GUILD| replace:: :class:`~daf.guild.GUILD`
 .. |AutoGUILD| replace:: :class:`~daf.guild.AutoGUILD`
@@ -18,31 +16,27 @@ Zasnova in razvoj jedra
 
 To poglavje govori o jedru samega ogrodja, kjer jedro obsega vse, kar ni del grafičnega vmesnika.
 
-Jedro DAF-a je zasnovano kot Python_ knjižnica / paket, ki se ga lahko namesti preko PIP-a (*Preferred Installer Program*), ki je
-vgrajen v Python_ in služi nalaganju Python paketov. Za uporabo jedra morajo uporabniki ustvariti ``.py`` datoteko in definirati
+Jedro DAF-a je zasnovano kot Python knjižnica / paket, ki se ga lahko namesti preko PIP-a (*Preferred Installer Program*), ki je
+vgrajen v Python in služi nalaganju Python paketov. Za uporabo jedra morajo uporabniki ustvariti oglaševalsko ``.py`` datoteko in definirati
 ustrezno konfiguracijo. To zahteva nekaj osnovnega znanja Python jezika, obstaja pa tudi možnost, da se to datoteko
 generira iz grafičnega vmesnika (:ref:`Zasnova in razvoj grafičnega vmesnika`)
 
-Za lažjo implementacijo in kasnejši razvoj, je jedro DAF ogrodja razdeljeno na več nivojev abstrakcije oziroma plasti.
-Ti nivoji so:
+Za lažjo implementacijo in kasnejši razvoj, je jedro DAF ogrodja razdeljeno na več modulov oz. sklopov.
+Ti so:
 
-- Nadzorni nivo
-- Uporabniški nivo
-- Cehovski (strežniški) nivo
-- Sporočilni nivo
-- Nivo beleženja zgodovine
-- Nivo brskalnika (Selenium)
-- Ovojni nivo Discord API
+- Nadzorni modul
+- Uporabniški modul
+- Cehovski (strežniški) modul
+- Sporočilni modul
+- Modul beleženja zgodovine sporočil
+- Modul brskalnika (Selenium)
+- Ovojni Discord API modul
 
 
 .. figure:: ./DEP/daf_abstraction.drawio.svg
 
-    Abstrakcija jedra ogrodja
+    Sestava jedra ogrodja
 
-
-.. raw:: latex
-
-    \newpage
 
 
 Nadzorni nivo
@@ -204,7 +198,7 @@ objekt, ki se uporabi v primeru kakršne koli napake pri beleženju.
 
 Po vsakem poslanem sporočilu se iz cehovskega nivoja naredi zahteva, ki vsebuje podatke o cehu, poslanem sporočilu oz.
 poskusu pošiljanja ter podatki o uporabniškem računu, ki je sporočilo poslal. Nivo beleženja posreduje zahtevo
-izbranem objektu beleženja, ki v primeru napake dvigne Python_ napako (*exception*), na kar nivo beleženja 
+izbranem objektu beleženja, ki v primeru napake dvigne Python napako (*exception*), na kar nivo beleženja 
 reagira tako, da začasno zamenja objekt beleženja na njegov nadomestek in spet poskusi. Poskuša dokler mu ne
 zmanjka nadomestkov ali pa je beleženje uspešno.
 
@@ -234,7 +228,7 @@ nadomestka.
 Ob zahtevi beleženja objekt :class:`~daf.logging.LoggerJSON` najprej pogleda trenuten datum, iz katerega tvori
 končno pot do datoteke od (v parametrih) konfigurirane osnovne poti. Končna pot je določena kot ``Leto/Mesec/Dan/<Ime Ceha>.json``.
 
-To pot, v primeru da ne obstaja, ustvari in zatem z uporabo vgrajenega Python_ modula :mod:`json` podatke shrani v
+To pot, v primeru da ne obstaja, ustvari in zatem z uporabo vgrajenega Python modula :mod:`json` podatke shrani v
 datoteko. Specifike so opisane v :ref:`Logging (core)`.
 
 
@@ -250,7 +244,7 @@ datoteko. Specifike so opisane v :ref:`Logging (core)`.
 CSV beleženje
 ~~~~~~~~~~~~~~~~~~
 :term:`CSV` beleženje deluje na enak način kot :ref:`JSON beleženje`. Edina razlika je v formatu, kjer je format tu CSV.
-Lokacija datotek je enaka kot pri :ref:`JSON beleženje`. Za shranjevanje je uporabljen vgrajen Python_ modul :mod:`csv`.
+Lokacija datotek je enaka kot pri :ref:`JSON beleženje`. Za shranjevanje je uporabljen vgrajen Python modul :mod:`csv`.
 
 Za sam pregled poslanih sporočil to ni najbolj primren format, saj se vse shrani v eni datoteki, kjer za razliko od JSON
 formata, tu ni več-slojnih strukture.
@@ -270,8 +264,8 @@ Beleženje je omogočeno v štirih SQL dialektih:
 
 Za čim bolj univerzalno implementacijo na vseh dialektih, je bila pri razvoju uporabljena knjižnica :mod:`SQLAlchemy`.
 Celoten sistem SQL beleženja je implementiran s pomočjo :term:`ORM`, kar med drugim omogoča tudi
-da SQL tabele predstavimo z Python_ razredi, posamezne vnose v bazo podatkov oz. vrstice pa predstavimo z instancami
-teh razredov. Z ORM lahko skoraj v celoti skrijemo SQL in delamo neposredno z Python_ objekti, ki so lahko tudi gnezdene
+da SQL tabele predstavimo z Python razredi, posamezne vnose v bazo podatkov oz. vrstice pa predstavimo z instancami
+teh razredov. Z ORM lahko skoraj v celoti skrijemo SQL in delamo neposredno z Python objekti, ki so lahko tudi gnezdene
 strukture, npr. vnosa dveh ločenih tabel lahko predstavimo z dvema ločenima instancama, kjer je ena instanca 
 gnezdena znotraj druge instance.
 
