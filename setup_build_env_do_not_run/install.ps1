@@ -17,4 +17,4 @@ scoop bucket add extras
 scoop install mingw ffmpeg inkscape
 
 # Install TexLive inside WSL
-wsl sudo apt install -y texlive-latex-base texlive-latex-extra texlive-lang-european
+wsl sudo apt install -y texlive-latex-base texlive-latex-extra texlive-lang-european latexmk

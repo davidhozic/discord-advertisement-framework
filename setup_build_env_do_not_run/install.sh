@@ -8,4 +8,4 @@ python3 -m pip install --editable .[docs]
 python3 -m pip install --editable .[testing]
 
 sudo apt-get update
-sudo apt-get install -y texlive-latex-base texlive-latex-extra texlive-lang-european inkscape ffmpeg
+sudo apt-get install -y texlive-latex-base texlive-latex-extra texlive-lang-european latexmk inkscape ffmpeg
