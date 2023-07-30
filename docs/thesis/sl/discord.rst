@@ -32,7 +32,7 @@ in postavljajo vprašanja o gradivu, ki ga ne razumejo :ref:`discord_what_is`.
 Nekaj primerov Discord skupnosti, povezanih s Univerzo v Ljubljani:
 
 - Študentski svet FE (:numref:`ssfe-community-fig`),
-- FE UNI (:numref:`fe-uni-community-fig`),
+- FE UNI,
 - FE VSŠ,
 - FRI UNI,
 - in druge
@@ -44,12 +44,6 @@ Nekaj primerov Discord skupnosti, povezanih s Univerzo v Ljubljani:
     ŠSFE Discord skupnost (strežnik oz. ceh)
 
 
-.. _fe-uni-community-fig:
-.. figure:: ./DEP/feuni_discord.png
-
-    FE UNI Discord skupnost
-
-
 .. raw:: latex
 
     \newpage
@@ -58,12 +52,13 @@ Nekaj primerov Discord skupnosti, povezanih s Univerzo v Ljubljani:
 Discordova struktura
 ======================
 
-Discord aplikacija je v osnovi sestavljena iz gumba za direktna (osebna) sporočila, seznama cehov / strežnikov, seznama kanalov in seznama uporabnikov,
-ki so pridruženi v ceh. :ref:`discord_interface`
+Discord aplikacija je v osnovi sestavljena iz gumba za direktna (osebna) sporočila, seznama cehov / strežnikov, seznama kanalov
+in seznama uporabnikov (uporabniških računov), ki so pridruženi v ceh. :ref:`discord_interface`.
 
 .. figure:: ./DEP/discord_client_struct.drawio.png
 
     Struktura Discord aplikacije
+
 
 
 Uporabniški računi
@@ -84,12 +79,17 @@ Discord ima tri vrste kanalov:
 
 1. Tekstovni kanali - kanali za pisanje besedila v cehu,
 2. Glasovni kanali - kanali za govor in predvajanje glasbe
-3. Direktna sporočila - Kanali za pogovor (tekstovno ali glasovno) z enim samim uporabnikom.
+3. Direktna sporočila - Kanali za pogovor (tekstovno ali glasovno) med dvema uporabnikoma.
 
 Tekstovni kanali se nahajo v cehih in se jih lahko prepozna glede na simbol *#*, ki se nahaja pred imenom vsakega
-kanala. Sem lahko pošiljate navaden tekst, emotikone, binarne datoteke, nalepke in darila ter, v primeru da imate robotski (angl. *bot*) račun,
+kanala. Sem lahko pošiljate navaden tekst, emotikone, binarne datoteke, nalepke ter, v primeru da imate robotski (angl. *bot*) račun,
 tudi tako imenovana vgrajena sporočila (angl. *Embedded messages* oz. *Embeds*), ki so malo bolj formatirana sporočila
 znotraj okrašene škatle (:numref:`discord-embedded-message`).
+
+
+.. figure:: ./DEP/discord_text_channel.png
+
+    Discordov tekstovni kanal
 
 
 .. _discord-embedded-message:
@@ -98,20 +98,15 @@ znotraj okrašene škatle (:numref:`discord-embedded-message`).
     Vgrajeno sporočilo
 
 
-.. figure:: ./DEP/discord_text_channel.png
-
-    Discord tekstovni kanal
-
-
 Tako kot se tekstovni kanali lahko uporabljajo za pošiljanje tekstovnih sporočil, se analogno lahko v glasovne kanale
 pošilja glasovna sporočila, oz. se lahko v njih pogovarja preko mikrofona ali pa predvaja glasbo.
-Za samo oglaševanja ti kanali niso tako aktualni, saj bi vaše oglase lahko prejeli le uporabniki, ki so v času
+Za samo oglaševanje ti kanali niso tako aktualni, saj bi vaše oglase lahko prejeli le uporabniki, ki so v času
 oglaševanja prisotni v kanalu.
 
 
 .. figure:: ./DEP/discord_voice_channel.png
 
-    Discord glasovni kanal
+    Discordov glasovni kanal
 
 
 Direktna oz. osebna sporočila so namenjena komunikaciji ena na ena med dvema uporabnikoma.
@@ -120,20 +115,25 @@ vsiljiv način prepovedano v Discordovih pogojih uporabe, kar pomeni da lahko v 
 
 .. figure:: ./DEP/discord_direct_message_channel.png
 
-    Discord direktna sporočila
+    Discordova direktna sporočila
 
 
 
-Oglaševanje v Discord
+Oglaševanje po Discordu
 ==========================
-V Discord se lahko oglašuje ročno ali pa avtomatično s primernim orodjem.
-Oglaševanje vključuje pisanje vsebine oglasa, ustvarjanje računov, iskanje cehov in večkratno periodično pošiljanje
-sporočil v kanale.
+Po Discordu se lahko oglašuje širok nabor tem, med katerimi so
+video igre, kreativni projekti, produkti, usluge, ipd. Ne sme pa se oglaševati nelegalnih vsebin oz. vsebin,
+ki spodbujajo kršenje zakona in vsebin, ki bi lahko povzročijo škodo posameznikom :ref:`discord_guidelines`.
+V okviru te diplomske naloge je fokus oglaševanje nezamenljivih žetonov.
+
+Oglašuje se lahko ročno ali pa avtomatično s primernim orodjem.
+Oglaševanje vključuje pisanje vsebine oglasa, ustvarjanje uporabniških računov, iskanje cehov kamor se z uporabiškimi računi pridruži,
+in večkratno periodično pošiljanje sporočil v kanale cehov. Najpogosteje se za oglaševanje uporabljajo tekstovni kanali.
 
 
 Generiranje vsebine
 ---------------------------
-Oglaševalsko vsebino se lahko napiše na pamet iz glave ali pa se za to uporabi malo bolj sofisticirana orodja, kot je to
+Oglaševalsko vsebino se lahko napiše na pamet iz glave ali pa se za to uporabi orodja, kot je na primer
 GPT (*Generative pretrained transformer*) :ref:`gpt3_content_generation`.
 
 GPT-3 je najsodobnejši jezikovni model umetne inteligence, ki ga je razvilo podjetje OpenAI.
@@ -158,9 +158,7 @@ But act fast - there are only 50 available, and once they're gone, they're gone 
 For more information and to purchase your own Gray Rabbit NFT, visit www.mynft.domain. Don't wait - add one of these rare and valuable NFTs to your collection today!"*
 
 
-.. raw:: latex
 
-    \newpage
 
 
 Iskanje cehov za oglaševanje
@@ -169,7 +167,7 @@ Ko je oglaševalska vsebina napisana, je potrebo najti cehe, kamor se bo to vseb
 Dober kraj za začetek je kar nek spletni iskalnik.
 Nabor cehov ponuja tudi Discord sam, ampak za to da nek ceh pride na njihov seznam, mora imeti zagotovljenih kar
 nekaj pogojev med katerimi je tudi ta da mora imeti vsaj 1000 članov. To je v redu če želimo oglaševati v večje cehe,
-v primeru manjših cehov pa moramo cehe najti drugje.
+v primeru manjših cehov pa moramo te najti drugje.
 
 Na srečo obstajajo tudi druge strani za iskanje cehov, kot je na primer spletna stran `Top.GG <https://top.gg>`_.
 Na tej strani lahko v vgrajen iskalnik dodamo določene parametre, med katerimi je tudi imenska poizvedba, kjer lahko
@@ -184,3 +182,8 @@ oglaševanje v drugih kanalih lahko privede do izključitve iz strežnika.
     :align: center
 
     Iskanje cehov na Top.GG :ref:`top_gg_site`
+
+
+.. raw:: latex
+
+    \blankpage

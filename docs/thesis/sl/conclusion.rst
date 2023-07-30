@@ -31,4 +31,4 @@ samodejno odgovorjanje na vprašanja v direktnih / privatnih sporočilih, ki bi 
 Zaključim lahko, da je projekt izjemno uporaben za oglaševanje po Discordu, saj je zaradi Discordove strukture na platformi
 pristotno ogromno povezanih cehov, kamor lahko oglašujemo in s tem orodjem to lahko počnemo avtomatično in preprosto.
 Prav tako v času začetka izdelave ogrodja in tudi ob času pisanja te diplomske naloge, ni na vidiku nobenega bolj razširjenega in za uporabo
-preprostega ogrodja (vsaj ne brezplačnega), kar daje DAF ogrodju še dodatno vrednost.
+preprostega ogrodja (vsaj ne brezplačnega), kar daje ogrodju še dodatno vrednost.

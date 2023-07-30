@@ -28,11 +28,13 @@ v primeru da je naš test definiran kot
 
 bo naš test prejel vrednost, ki jo je pritrditev vrnila. Pritrditev ima lahko različno dolgo življensko dobo / obseg
 (npr. globalen obseg, obseg modula, obseg funkcije), kar pomeni da bo lahko več testov prejelo isto vrednost, ki jo je pritrditev vrnila dokler se življenska doba ne izteče.
-Pritrditev je lahko tudi `Python generator <https://wiki.python.org/moin/Generators>`_, kar nam omogoča inicializacijo testov in
+Pritrditev je lahko tudi Python generator [#py_generator]_, kar nam omogoča inicializacijo testov in
 čiščenje na koncu na sledeč način:
 
+.. [#py_generator] https://wiki.python.org/moin/Generators
+
 .. code-block:: python
-    :caption: pytest pritrditev z inicializacijo in čiščenjem (po koncu testne seje). 
+    :caption: pytest pritrditev z inicializacijo in čiščenjem
     
     @pytest_asyncio.fixture(scope="session")
     def example_fixture(some_other_fixture):
@@ -55,14 +57,14 @@ Kako podroben bo izpis, se lahko nastavi ob zaganjanju testa, npr.
 kot vhod damo primerjavo dveh seznamov.
 
 .. code-block:: python
-    :caption: Primerjava dveh :class:`seznamov <list>`, ki nista enaka
+    :caption: Primerjava dveh seznamov, ki nista enaka
 
     assert [1, 2, 3] == [1, 2, 3, 4, 5, 6]
 
 
 Iz zgornjega testa je očitno da to ne drži in da bo test neuspel, ampak v assertu nimamo nobene
 :func:`print` funkcije, ki bi izpisala kaj je šlo narobe, tako da bi pričakovali da pytest vrne samo informacijo da test ni uspel.
-pytest je bolj pameten kot to, in sicer nam bo izpisal točno kateri elementi se v seznamu razlikujejo.
+Izkaže se, da nam bo pytest izpisal točno kateri elementi se v seznamu razlikujejo.
 
 .. code-block::
     :caption: pytest izpis ob neuspelem testu pri primerjavi dveh :class:`seznamov <list>`.
@@ -93,7 +95,7 @@ pytest je bolj pameten kot to, in sicer nam bo izpisal točno kateri elementi se
 
 Testiranje ogrodja
 ---------------------
-Testi so v ogrodju DAF razdeljeni po posameznih nivojih in funkcionalnostih. Skoraj vsi testi delujejo sinhrono,
+Testi so v ogrodju razdeljeni po posameznih nivojih in funkcionalnostih. Skoraj vsi testi delujejo sinhrono,
 tako da se v testu kliče notranje funkcije posameznih objektov, ki bi jih ogrodje
 klicalo v primeru navadnega delovanja. Na tak način so izvedeni, saj je testiranje v navadnem  (asinhronem) načinu, kjer se vse
 zgodi v :mod:`asyncio` opravilih precej težje, saj bi namreč morali loviti ogrodje ob točno določenih časih, da

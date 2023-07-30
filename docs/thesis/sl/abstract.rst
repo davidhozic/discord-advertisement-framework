@@ -1,9 +1,4 @@
 
-.. raw:: latex
-
-    \newpage
-
-
 .. only:: html
 
     =============
@@ -82,11 +77,6 @@ je smiselno sklepati da je projekt izjemno uporabne narave.
 shranjevanje v datoteko, dokumentacija, avtomatično testiranje, ogrodje za oglaševanje, beleženje sporočil, zasnova in razvoj.
 
 
-.. raw:: latex
-
-    \newpage
-
-
 .. only:: html
 
     .. rubric:: Abstract
@@ -132,6 +122,3 @@ it is reasonable to conclude that the project is of significant practical value.
 **Keywords:** Non-fungible tokens, automatic advertising, shilling, Python, graphical interface, remote access,
 saving to file, documentation, automatic testing, advertisement framework, message logging, design and development.
 
-.. raw:: latex
-
-    \newpage

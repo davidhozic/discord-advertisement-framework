@@ -19,9 +19,6 @@
     CSV
         Comma-Separated Values
 
-    DAF
-        Discord Advertisement Framework
-
     GUI
         Graphical User Interface
 

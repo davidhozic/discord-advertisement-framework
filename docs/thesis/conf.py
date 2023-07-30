@@ -35,14 +35,14 @@ version = VERSION
 
 
 # -- General configuration ---------------------------------------------------
+numfig = True
+
 rst_epilog = r"""
 .. raw:: latex
 
     \newpage
 """
 
-
-numfig = True
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
@@ -91,6 +91,8 @@ intersphinx_mapping = {
     "SQLAlchemy": ("https://docs.sqlalchemy.org/en/20/", None),
 }
 
+
+
 # ----------- HTML ----------- #
 html_title = project
 html_logo = "./DEP/logo.png"
@@ -118,12 +120,13 @@ with open(f"./{language}/titlepage.tex", "r", encoding="utf-8") as reader:
     latex_title_page = reader.read()
 
 literal_block_str = {
-    "en": r"\listof{literalblock}{List of literal blocks}",
-    "sl": r"\listof{literalblock}{Seznam blokov kode}"
+    "en": r"\listof{literalblock}{Literal blocks}",
+    "sl": r"\listof{literalblock}{Bloki kode}"
 }
 
 latex_theme = "manual"  # latex class => report
 latex_elements = {
+    "figure_align": "H",
     "sphinxsetup": r"VerbatimColor={rgb}{1,1,1},verbatimhintsturnover=false",
     "papersize": "a4paper",
     "pointsize": "12pt",
@@ -166,9 +169,6 @@ latex_elements = {
             \mbox{}
             \newpage
         }
-
-        % Citations
-        \newenvironment{fieldlist}{\description[labelwidth=1em]}{\enddescription}
     ''',
     "maketitle": latex_title_page,
     "printindex": ''
@@ -188,4 +188,7 @@ else:
     numfig_format = numfig_format[language]
 
 
-figure_align = "H"  # Disable floating
+# ----------- Docx ----------- #
+docx_documents = [
+    (f'{language}/index', 'docxbuilder.docx', {}, True),
+]

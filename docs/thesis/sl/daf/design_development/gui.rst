@@ -1,6 +1,4 @@
-.. raw:: latex
 
-    \newpage
 
 ============================================
 Zasnova in razvoj grafičnega vmesnika
@@ -8,13 +6,14 @@ Zasnova in razvoj grafičnega vmesnika
 
 .. _Python: https://www.python.org
 
-DAF lahko v celoti deluje brez grafičnega vmesnika, a ta način zahteva pisanje *.py* datotek oz. Python skript, kar
-je marskikomu težje, sploh če se še nikoli niso srečali s Python jezikom.
+Ogrodje lahko v celoti deluje brez grafičnega vmesnika, a ta način zahteva pisanje ``.py`` datotek oz. Python skript, kar
+je marsikomu težje, sploh če se še nikoli niso srečali s Python jezikom.
 
 V namen enostavnejše rabe ogrodja je izdelan grafični vmesnik, ki deluje ločeno od samega jedra ogrodja, z njim pa
 lahko komunicira lokalno preko programskega vmesnika ali pa na daljavo preko HTTP vmesnika.
 
-Za dizajn vmesnika je izbran svetel dizajn, z modrimi odtenki za posamezne elemente, kot je to prikazano na :numref:`fig-gui-front`.
+Za dizajn vmesnika je izbran svetel dizajn, z modrimi odtenki za posamezne elemente (:numref:`fig-gui-front`).
+
 
 
 Tkinter
@@ -28,7 +27,6 @@ Omogoča definicijo različnih pripomočkov (angl. *widgets*), ki se jih da doda
 pripomočke, katere lahko večkrat uporabimo. Ti pripomočki so na primer :class:`~tkinter.ttk.Combobox`, ki je neke vrste 
 (angl.) "drop-down" meni, :class:`~tkinter.ttk.Spinbox` za vnašanje številskih vrednosti, gumbi :class:`~tkinter.ttk.Button`, itd.
 Posamezne pripomočke se da tudi znatno konfigurirati, kjer lahko spreminjamo stile, velikost, pisavo, ipd.
-Več o Tkinter knjižnici si lahko preberete :mod:`na uradni Python dokumentaciji <tkinter>`.
 
 Pred izbiro Tkinter knjižnice je bila ena izmed možnosti tudi knjižnica PySide (QT), a na koncu se je vseeno obnesla Tkinter
 oz. ttkboostrap knjižnica, saj je že osnovni paket PySide6 knjižnice velik 70 MB, z dodatki pa skoraj 200 MB, medtem ko je Tkinter
@@ -39,12 +37,12 @@ vmesnika.
 
 Zavihki
 =============================
-Grafični vmesnik DAF je razdeljen na več zavihkov, kjer je vsak namenjen ločenim funkcionalnostim.
+Grafični vmesnik ogrodja je razdeljen na več zavihkov, kjer je vsak namenjen ločenim funkcionalnostim.
 
 
 *Optional modules* zavihek
 -----------------------------
-*Optional modules* zavihek omogoča namestitev dodatnih modulov, ki v osnovem DAF paketu niso prisotni (zaradi hitrejšega zagona).
+*Optional modules* zavihek omogoča namestitev dodatnih modulov, ki v osnovem paketu ogrodja niso prisotni (zaradi hitrejšega zagona).
 Sestavljen je iz statusnih panelov, ki če so rdeči (modul ni nameščen) vsebuje še gumb za namestitev.
 Gumb bo namestil potrebne pakete, potem pa bo uporabniku sporočeno, da mora za spremembe ponovno odpreti vmesnik.
 Po ponovnem zagonu bo statusni panel za posamezen modul obarvan zeleno.
@@ -54,9 +52,7 @@ Po ponovnem zagonu bo statusni panel za posamezen modul obarvan zeleno.
     Izgled *Optional Modules* zavihka
 
 
-.. raw:: latex
 
-    \newpage
 
 
 
@@ -99,9 +95,7 @@ dejanskega grafičnega vmesnika. Ob kliku na gumb *Generate script* se definira 
 definira vse potrebno in zatem zažene ogrodje. Primer skripte je prikazan v :numref:`example-text-message-randomized-period`.
 
 
-.. raw:: latex
 
-    \newpage
 
 
 *Live view* zavihek
@@ -110,13 +104,13 @@ Medtem, ko je :ref:`*Schema definition* zavihek` namenjen definiciji v naprej de
 *Live view* zavihek omogoča direktno manipulacijo z objekti, ki so dodani v delujoče jedro ogrodja.
 
 Na začetku zavihka se nahaja opcijski meni, v katerem je *add_object* funkcija, kateri znotraj lahko definiramo nov račun.
-Ob kliku na gumb *Execute* bo definiran račun takoj dodan v DAF in začel z oglaševanjem.
+Ob kliku na gumb *Execute* bo definiran račun takoj dodan v ogrodje in začel z oglaševanjem.
 
-Pod opcijskem menijem se nahajajo 3 gumbi. *Refresh* posodobi spodnji seznam z računi, ki oglašujejo v DAF, *Edit*
+Pod opcijskem menijem se nahajajo 3 gumbi. *Refresh* posodobi spodnji seznam z uporabniškimi računi, ki oglašujejo, *Edit*
 gumb odpre okno za definiranje računov, kjer se vanj naložijo obstoječe vrednosti iz uporabniškega računa, ki ga urejamo.
 Okno poleg gumbov oz. pripomočkov, ki jih ima pri urejanju v :ref:`Schema definition zavihku <*Schema definition* zavihek>`, vsebuje
-tudi 2 dodatna gumba. Ta gumba sta *Refresh* gumb, ki v okno naloži osvežene vrednosti iz dejanskega objekta dodanega v DAF in 
-*Live update* gumb, ki dejanski objekt v DAF, na novo inicializira z vrednostnimi definiranimi v oknu. Na dnu okna je znotraj
+tudi 2 dodatna gumba. Ta gumba sta *Refresh* gumb, ki v okno naloži osvežene vrednosti iz dejanskega objekta dodanega v ogrodje in 
+*Live update* gumb, ki dejanski objekt v ogrodju na novo inicializira z vrednostnimi definiranimi v oknu. Na dnu okna je znotraj
 vijoličnega okvirja možno izvajanje metod (funkcij) na objektu.
 
 .. figure:: ./DEP/images/gui-live-view-edit-account.png
@@ -130,9 +124,7 @@ vijoličnega okvirja možno izvajanje metod (funkcij) na objektu.
     *Live view* zavihek
 
 
-.. raw:: latex
 
-    \newpage
 
 
 
@@ -146,9 +138,7 @@ Uporabi se ga lahko za bolj podroben pregled kaj se dogaja z jedrom ogrodja.
     *Output tab* zavihek
 
 
-.. raw:: latex
 
-    \newpage
 
 
 *Analytics* zavihek
@@ -169,9 +159,7 @@ Za pridobitev statistike se uporabi gumb *Calculate*, ki na podlagi opcijskega m
     Prikaz vnosa o poslanem sporočilu.
 
 
-.. raw:: latex
 
-    \newpage
 
 
 Povezava grafičnega vmesnika z jedrom ogrodja
@@ -187,7 +175,7 @@ Obstaja nekaj izjem pri serializaciji objektov, kjer je ena izmed teh :class:`~d
 Pretvorbo v končno JSON reprezentacijo opravlja vgrajena knjižnica :mod:`json`, medtem ko pretvorbo objektov v slovar
 opravlja funkcija :func:`daf.convert.convert_object_to_semi_dict`. Serializacijo in deserializacijo opravljata grafični vmesnik in
 jedro oba enako. Včasih se pri pošiljanju podatkov iz grafičnega vmesnika na jedro sploh ne serializira (kot objekte),
-temveč se pošlje le referenco (identifikator) objekta, kjer se na strežniku (jedru DAF) objekt pridobi iz spomina prek reference. 
+temveč se pošlje le referenco (identifikator) objekta, kjer se na strežniku (jedru ogrodja) objekt pridobi iz spomina prek reference. 
 
 .. autofunction:: daf.convert.convert_object_to_semi_dict
 

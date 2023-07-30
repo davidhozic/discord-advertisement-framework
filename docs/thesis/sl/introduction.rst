@@ -48,3 +48,7 @@ orodje, ki lahko oglašuje namesto človeka, avtomatično brez da bi bil ta pris
 To diplomsko delo se ne osredotoča na same nezamenljive žetone, temveč se fokusira na proces oglaševanja in sicer po socialnem
 omrežju Discord. Delo se navezuje na projekt Ogrodje za oglaševanje po Discordu (angl. *Discord Advertisement Framework*), ki je
 ogrodje za oglaševanje napisano v programskem jeziku `Python <https://www.python.org>`_.
+
+.. raw:: latex
+
+    \newpage

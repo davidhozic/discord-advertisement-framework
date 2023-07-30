@@ -13,6 +13,13 @@ export LANGUAGE=$(USE_LANGUAGE)
 
 _BUILD_DIR = $(BUILDDIR)/$(SOURCEDIR)
 
+# OS specific commands
+ifeq ($(OS), Windows_NT)
+LATEX_CMD := wsl --cd $(CURDIR)/$(_BUILD_DIR)/latex make all-pdf
+else
+LATEX_CMD := cd $(CURDIR)/$(_BUILD_DIR)/latex && make all-pdf
+endif
+
 
 # Put it first so that "make" without argument is like "make help".
 help:
@@ -28,10 +35,9 @@ clean:
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(_BUILD_DIR)" $(SPHINXOPTS) $(O)
 
 pdf: latex
-	docker run --rm -v $(CURDIR)/$(_BUILD_DIR)/latex:/home/ -w /home/ texlive/texlive make all-pdf
-	mkdir $(CURDIR)/$(_BUILD_DIR)/pdf/
+	mkdir -p $(CURDIR)/$(_BUILD_DIR)/pdf/
+	$(LATEX_CMD)
 	cp $(CURDIR)/$(_BUILD_DIR)/latex/*.pdf $(CURDIR)/$(_BUILD_DIR)/pdf/
-
 
 %: Makefile
 	python3 ./setup.py --start-dir $(SOURCEDIR)
