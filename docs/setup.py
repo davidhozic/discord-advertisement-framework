@@ -5,10 +5,9 @@ Script that setups the environment before build.
 from pathlib import Path
 from argparse import ArgumentParser
 
-import subprocess
+import runpy
 import re
 import os
-import sys
 import glob
 import shutil
 import json
@@ -67,8 +66,7 @@ for path, dirs, files in os.walk(START_DIR_ARG):
 
             scripts = setup_file_data["scripts"]
             for script in scripts:
-                process = subprocess.Popen([sys.executable, script], universal_newlines=True)
-                process.communicate()
+                runpy.run_path(script)
 
             # Change cwd back to original
             os.chdir(cwd)
