@@ -1,6 +1,6 @@
 **/__pycache__/**
 dist/**
-build**
+build/**
 **egg-info**
 
 .vscode

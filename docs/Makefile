@@ -16,7 +16,8 @@ _BUILD_DIR = $(BUILDDIR)/$(SOURCEDIR)
 # OS specific commands
 ifeq ($(OS), Windows_NT)
 LATEX_CMD := \
-	wsl --cd $(CURDIR)/$(_BUILD_DIR)/latex make all-pdf
+	cp $(CURDIR)/build-latex-win.sh $(CURDIR)/$(_BUILD_DIR)/latex/ &&\
+	wsl --cd $(CURDIR)/$(_BUILD_DIR)/latex sh build-latex-win.sh
 
 else
 LATEX_CMD := cd $(CURDIR)/$(_BUILD_DIR)/latex && make all-pdf
