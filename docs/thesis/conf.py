@@ -15,6 +15,7 @@ import os
 
 sys.path.insert(0, os.path.abspath('../../src/'))
 sys.path.insert(0, os.path.abspath('.'))
+sys.path.append(os.path.abspath("./ext/"))
 
 from daf import VERSION
 
@@ -34,14 +35,14 @@ version = VERSION
 
 
 # -- General configuration ---------------------------------------------------
+numfig = True
+
 rst_epilog = r"""
 .. raw:: latex
 
     \newpage
 """
 
-
-numfig = True
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
@@ -84,11 +85,13 @@ autodoc_default_options = {
 # Intersphinx
 intersphinx_mapping = {
     'PyCord': ("https://docs.pycord.dev/en/v2.4.x/", None),
-    "DAF": ("https://daf.davidhozic.com/en/v2.9.2/", None),
+    "DAF": ("https://daf.davidhozic.com/en/v2.9.x/", None),
     "Python": ("https://docs.python.org/3/", None),
     "Sphinx": ("https://www.sphinx-doc.org/en/master", None),
     "SQLAlchemy": ("https://docs.sqlalchemy.org/en/20/", None),
 }
+
+
 
 # ----------- HTML ----------- #
 html_title = project
@@ -116,30 +119,29 @@ html_theme_options = {
 with open(f"./{language}/titlepage.tex", "r", encoding="utf-8") as reader:
     latex_title_page = reader.read()
 
-
 literal_block_str = {
-    "en": r"\listof{literalblock}{List of literal blocks}",
-    "sl": r"\listof{literalblock}{Seznam literalnih blokov}"
+    "en": r"\listof{literalblock}{Literal blocks}",
+    "sl": r"\listof{literalblock}{Bloki kode}"
 }
 
 latex_theme = "manual"  # latex class => report
-
 latex_elements = {
-    "sphinxsetup": r"VerbatimColor={rgb}{1,1,1}",
-
+    "figure_align": "H",
+    "sphinxsetup": r"VerbatimColor={rgb}{1,1,1},verbatimhintsturnover=false",
     "papersize": "a4paper",
     "pointsize": "12pt",
     "extraclassoptions": "openright",
     "tableofcontents": r"""
         \tableofcontents
-        \blankpage
+        \newpage
         \listoffigures
+        \newpage
         {}
-        \blankpage
     """.format(literal_block_str.get(language)),
-    'fncychap': r'',
+    "fncychap": "",
     "babel": r"\usepackage[slovene]{babel}",
-    'preamble': r'''
+    'preamble':
+        r'''
         % Spacing
         \textheight 215mm
         \textwidth 145mm
@@ -149,6 +151,9 @@ latex_elements = {
         \headheight 6mm
         \evensidemargin 0mm
         \linespread{1.2}
+
+        % Titles (titlesec)
+        \titleformat{\chapter}[hang]{\normalfont\Huge\bfseries}{\thechapter}{0.5cm}{}
 
         % Header and footer
         \usepackage{fancyhdr}
@@ -168,3 +173,22 @@ latex_elements = {
     "maketitle": latex_title_page,
     "printindex": ''
 }
+
+numfig_format = {
+    "sl": {
+        "figure": "Slika %s",
+        "table": "Tabela %s",
+        "code-block": "Blok kode %s"
+    },
+}
+
+if language == "en":
+    del numfig_format
+else:
+    numfig_format = numfig_format[language]
+
+
+# ----------- Docx ----------- #
+docx_documents = [
+    (f'{language}/index', 'docxbuilder.docx', {}, True),
+]

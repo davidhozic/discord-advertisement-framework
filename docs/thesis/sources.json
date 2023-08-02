@@ -1,80 +1,52 @@
 [
     {
-        "id": "discord_self_bots",
-        "author": "Discord",
-        "title" : "Automated user accounts (self-bots)",
-        "source": "https://support.discord.com/hc/en-us/articles/115002192352-Automated-user-accounts-self-bots-",
-        "updated": "01. 2023"
-    },
-    {
-        "id": "discord_interface",
-        "author": "Discord",
-        "title" : "Discord Interface",
-        "source": "https://discord.com/safety/360044149331-what-is-discord",
-        "updated": "01. 2023"
-    },
-    {
-        "id": "discord_what_is",
-        "author": "Discord",
-        "title" : "WHAT IS DISCORD?",
-        "source": "https://support.discord.com/hc/en-us/categories/200404398",
-        "updated": "01. 2023"
-    },
-    {
-        "id": "discord_api_ref",
-        "author": "Discord",
-        "title" : "Discord API Reference",
-        "source": "https://discord.com/developers/docs/reference",
-        "updated": "01. 2023"
-    },
-    {
-        "id": "discord_api_rl",
-        "author": "Discord",
-        "title" : "Discord rate limits",
-        "source": "https://discord.com/developers/docs/topics/rate-limits",
-        "updated": "01. 2023"
-    },
-    {
-        "id": "gpt3_refactoring",
-        "author" : "GPT-3 (Open-AI)",
-        "title" : "Primer oglaševalske vsebine",
-        "source" : "https://chat.openai.com/chat",
-        "updated" : "01. 2023"
-    },
-    {
-        "id": "nft_working_meaning",
+        "id": "nft_what_is",
         "author": "investopedia (RAKESH SHARMA)",
         "title": "Non-Fungible Token (NFT): What It Means and How It Works",
         "source": "https://www.investopedia.com/non-fungible-tokens-nft-5115211",
         "updated": "01. 2023"
     },
     {
-        "id": "what_are_nfts",
-        "author": "rwkgoodman (Jack Pestill)",
-        "title": "What are NFTs? And why are they important?",
-        "source": "https://www.rwkgoodman.com/info-hub/what-are-nfts-and-why-are-they-important/",
+        "id" : "nft_shilling",
+        "author": "NFTing",
+        "title": "What is NFT Shilling",
+        "source": "https://nfting.medium.com/what-is-nft-shilling-192bec98429c",
+        "updated": "07. 2023"
+    },
+    {
+        "id": "discord_company",
+        "author": "Discord",
+        "title": "Discord Company",
+        "source": "https://discord.com/company",
+        "updated":"07. 2023"
+    },
+    {
+        "id": "discord_interface",
+        "author": "Discord",
+        "title" : "Discord Interface",
+        "source": "https://support.discord.com/hc/en-us/categories/200404398",
         "updated": "01. 2023"
     },
     {
-        "id": "rst_docutils",
-        "author": "Docutils",
-        "title": "Docutils: Documentation Utilities",
-        "source": "https://docutils.sourceforge.io/",
-        "updated": "01. 2023"
+        "id": "discord_guidelines",
+        "author": "Discord",
+        "title": "Discord community guidelines",
+        "source": "https://discord.com/guidelines",
+        "updated": "07. 2023"
     },
     {
-        "id": "rst_docutils_directives",
-        "author": "Docutils",
-        "title": "reStructuredText Directives",
-        "source": "https://docutils.sourceforge.io/docs/ref/rst/directives.html",
-        "updated": "01. 2023"
+        "id": "gpt3_content_generation",
+        "author" : "GPT-3 (Open-AI)",
+        "title" : "Uporaba GPT za generiranje oglaševalske vsebine",
+        "source" : "https://openai.com/blog/gpt-3-apps",
+        "updated" : "07. 2023"
     },
     {
-        "id" : "pytest_desc",
-        "author": "Shaheer Shahid Malik",
-        "source" : "https://medium.com/codex/why-use-pytest-to-test-your-software-project-7758ac9970ba",
-        "title": "Why Use Pytest to Test Your Software Project?",
-        "updated": "01. 2023"
+        "id": "top_gg_site",
+        "author": "Top.GG",
+        "source": "https://top.gg/",
+        "title": "Top.GG webpage",
+        "updated": "07. 2023"
     },
     {
         "id" : "tkinter_py_docs",
@@ -84,10 +56,17 @@
         "updated": "05. 2023"
     },
     {
-        "id": "top_gg_site",
-        "author": "Top.GG",
-        "source": "https://top.gg/",
-        "title": "Top.GG webpage",
-        "updated": "07. 2023"
+        "id": "rst_docutils",
+        "author": "Docutils",
+        "title": "Docutils: Documentation Utilities",
+        "source": "https://docutils.sourceforge.io/",
+        "updated": "01. 2023"
+    },
+    {
+        "id" : "pytest_desc",
+        "author": "Shaheer Shahid Malik",
+        "source" : "https://medium.com/codex/why-use-pytest-to-test-your-software-project-7758ac9970ba",
+        "title": "Why Use Pytest to Test Your Software Project?",
+        "updated": "01. 2023"
     }
 ]

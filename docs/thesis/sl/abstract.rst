@@ -1,10 +1,5 @@
 
-.. raw:: latex
-
-    \newpage
-
-
-.. only:: html
+.. only:: not latex
 
     =============
     Povzetek
@@ -12,18 +7,17 @@
 
     .. rubric:: Povzetek
 
-.. Prevent inclusion of this "title" into index
 .. raw:: latex
 
     \chapter*{Povzetek}
 
 
-Nezamenljivi žetoni (angl. Non fungible tokens - NFT) so edinstvena digitalna sredstva, ki živijo na verigi blokov brez možnosti replikacije.
+Nezamenljivi žetoni (angl. *Non fungible tokens*) so edinstvena digitalna sredstva, ki živijo na verigi blokov brez možnosti replikacije.
 Obstaj več pristopov za njihovo oglaševanje, kjer je eden izmed teh oglaševanje po socialnem omrežju Discord s pristopom šilinga.
 Diplomsko delo se fokusira na proces oglaševanja in se navezuje na projekt Ogrodje za oglaševanje po Discordu (angl. Discord Advertisement Framework),
 ki je implementirano v programskem jeziku Python.
 
-Najprej so v delu opisani nezamenljivi žetoni, oziroma pristopi k njihovem oglaševanju.
+Najprej so v delu opisani nezamenljivi žetoni oziroma pristopi k njihovem oglaševanju.
 Zatem je predstavljeno socialno omrežje Discord in pristop oglaševanja na tem omrežju.
 Sledi predstavitev samega projekta diplomske naloge, kjer je cilj naloge izdelava ogrodja za oglaševanje po Discordu,
 ki lahko deluje samodejno brez nadzora uporabnika, se ustrezno odziva na napake, nudi beleženje sporočil in je konfigurabilno,
@@ -59,16 +53,10 @@ je smiselno sklepati da je projekt izjemno uporabne narave.
 shranjevanje v datoteko, dokumentacija, avtomatično testiranje, ogrodje za oglaševanje, beleženje sporočil, zasnova in razvoj.
 
 
-.. raw:: latex
-
-    \newpage
-
-
-.. only:: html
+.. only:: not latex
 
     .. rubric:: Abstract
 
-.. Prevent inclusion of this "title" into index
 .. raw:: latex
 
     \chapter*{Abstract}
@@ -111,4 +99,4 @@ saving to file, documentation, automatic testing, advertisement framework, messa
 
 .. raw:: latex
 
-    \newpage
+    \blankpage

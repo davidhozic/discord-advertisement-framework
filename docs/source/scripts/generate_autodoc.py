@@ -1,7 +1,6 @@
 from enum import EnumMeta
 import inspect
 import os
-import sys
 import re
 import pathlib
 
@@ -9,7 +8,6 @@ OUTPUT_PATH = "../reference"
 
 # Set current working directory to scripts folder
 os.chdir(os.path.dirname(__file__))
-sys.path.append(os.path.abspath("../../../src"))
 os.environ["DOCUMENTATION"] = "True"
 
 import daf.misc.doc as doc

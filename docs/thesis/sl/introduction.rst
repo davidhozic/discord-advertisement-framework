@@ -10,9 +10,9 @@ Uvod
 
 Nezamenljivi žetoni
 ===========================
-Nezamenljivi žetoni (angl. *Non fungible tokens* - NFT) so edinstvena digitalna sredstva, ki živijo na 
+Nezamenljivi žetoni (angl. *Non fungible tokens*) so edinstvena digitalna sredstva, ki živijo na 
 verigi blokov brez možnosti replikacije.
-Najpogosteje predstavljajo digitalna umetniška dela.
+Najpogosteje predstavljajo digitalna umetniška dela :ref:`nft_what_is`.
 
 
 .. figure:: ./DEP/example_bunny_nft.png
@@ -21,26 +21,21 @@ Najpogosteje predstavljajo digitalna umetniška dela.
     Primer nezameljivega žetona (ustvaril `DALL-E <https://openai.com/dall-e-2/>`_)
 
 
-Nezamenljivi žetoni se od stvari, kot je Etherium, razlikujejo po tem, da niso zamenljivi.
 Nezamenljivost pomeni, da posameznega žetona ni mogoče preprosto zamenjati za drugo, kot se lahko menja
 sod olja za drug sod olja ali en evro za drug evro.
 
 Najbližji primer nezamenljivega žetona v fizični obliki je bejzbolska kartica. Na primer, lahko imate zelo redko
 bejzbolsko kartico nekega igralca bejzbola in je ne morete enakovredno zamenjati za kakšno drugo običajno bejzbolsko kartico.
 
-Nezamenljivi žetoni se ustvarijo s kovanjem, kar je postopek, v katerem se informacije žetona
-vnesejo v verigo blokov. V verigi blokov se ustvari nov blok in pogosto se za podpis uporabi pametna pogodba,
-ki določa prenosljivost in NFT dodeli lastnika.
-
 
 Marketinški pristopi za promoviranje nezamenljivih žetonov
 ===========================================================
 Obstaja več načinov oglaševanja, ki se jih lahko uporabi tudi za oglaševanje nezamenljivih žetonov. Ti so na primer
 uporaba Google Ads platforme (oglaševanje po Google iskalniku, YouTube aplikaciji), uporaba forumov in drugi načini.
-Ena izmed teh drugih načinov je morda še najbolj uveljavljena na tem področju, in sicer se temu načinu oglaševanju reče
-šiling (angl. *shilling*).
+Eden izmed teh drugih načinov je morda še najbolj uveljavljen na tem področju, in sicer se temu načinu oglaševanju reče
+šiling (angl. *shilling*) :ref:`nft_shilling`.
 
-Šiling je izraz za promocijo/oglaševanje NFT po socialnih omrežjih.
+Šiling je izraz za promocijo / oglaševanje NFT po socialnih omrežjih.
 Vendar ne gre le za kakršno koli oglaševanje, kot je na primer postavitev promocijskega gradiva na spletno stran ali
 stojnico v javnosti, temveč gre za bolj agresivno metodo trženja.
 Vključuje nenehno objavljanje o izdelku po socialnih omrežjih, kot so Instagram, Telegram, Discord ipd.,
@@ -53,3 +48,7 @@ orodje, ki lahko oglašuje namesto človeka, avtomatično brez da bi bil ta pris
 To diplomsko delo se ne osredotoča na same nezamenljive žetone, temveč se fokusira na proces oglaševanja in sicer po socialnem
 omrežju Discord. Delo se navezuje na projekt Ogrodje za oglaševanje po Discordu (angl. *Discord Advertisement Framework*), ki je
 ogrodje za oglaševanje napisano v programskem jeziku `Python <https://www.python.org>`_.
+
+.. raw:: latex
+
+    \newpage

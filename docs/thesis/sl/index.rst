@@ -1,4 +1,4 @@
-.. only:: html
+.. only:: not latex
 
     ================================
     Front page of the thesis
@@ -7,7 +7,7 @@
 
 .. toctree::
 
-    acronyms
+    glossary
     acknowledgements
     abstract
     introduction
