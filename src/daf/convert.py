@@ -95,6 +95,10 @@ CONVERSION_ATTRS = {
     datetime.timedelta: {
         "custom_encoder": lambda object: object.total_seconds(),
         "custom_decoder": lambda seconds: datetime.timedelta(seconds=seconds)
+    },
+    bytes: {
+        "custom_encoder": lambda data: data.hex(),
+        "custom_decoder": lambda hex_str: bytes.fromhex(hex_str)
     }
 }
 """

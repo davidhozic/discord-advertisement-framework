@@ -90,9 +90,6 @@ if daf.logging.sql.SQL_INSTALLED:
 
 
 CONVERSION_ATTR_TO_PARAM = {
-    daf.AUDIO: {
-        "filename": "orig"
-    },
     dt.timezone: {
         "offset": "_offset",
         "name": "_name",
@@ -104,6 +101,9 @@ CONVERSION_ATTR_TO_PARAM[daf.client.ACCOUNT] = {k: k for k in daf.client.ACCOUNT
 CONVERSION_ATTR_TO_PARAM[daf.client.ACCOUNT]["token"] = "_token"
 CONVERSION_ATTR_TO_PARAM[daf.client.ACCOUNT]["username"] = lambda account: account.selenium._username if account.selenium is not None else None
 CONVERSION_ATTR_TO_PARAM[daf.client.ACCOUNT]["password"] = lambda account: account.selenium._password if account.selenium is not None else None
+
+CONVERSION_ATTR_TO_PARAM[daf.dtypes.FILE] = {k: k for k in daf.dtypes.FILE.__init__.__annotations__}
+CONVERSION_ATTR_TO_PARAM[daf.dtypes.FILE]["data"] = "hex"
 
 
 if daf.sql.SQL_INSTALLED:

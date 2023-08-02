@@ -36,11 +36,16 @@ class VoiceMESSAGE(BaseChannelMessage):
     """
     This class is used for creating objects that represent messages which will be streamed to voice channels.
 
-    .. deprecated:: v2.1
+    .. deprecated:: 2.1
 
         - start_period, end_period - Using int values, use ``timedelta`` object instead.
 
-    .. versionchanged:: v2.7
+    .. versionchanged:: 2.10
+
+        'data' parameter no longer accepets :class:`daf.dtypes.AUDIO` and no longer allows YouTube streaming.
+        Instead it accepts :class:`daf.dtypes.FILE`.
+
+    .. versionchanged:: 2.7
 
         *start_in* now accepts datetime object
 
@@ -74,12 +79,12 @@ class VoiceMESSAGE(BaseChannelMessage):
                 start_period=None, end_period=timedelta(seconds=10), data=daf.AUDIO("msg.mp3"),
                 channels=[12345], start_in=timedelta(seconds=0), volume=50
             )
-    data: AUDIO
+    data: FILE
         The data parameter is the actual data that will be sent using discord's API.
         The data types of this parameter can be:
 
-            - AUDIO object.
-            - Function that accepts any amount of parameters and returns an AUDIO object. To pass a function, YOU MUST USE THE :ref:`data_function` decorator on the function.
+            - FILE object.
+            - Function that accepts any amount of parameters and returns an FILE object. To pass a function, YOU MUST USE THE :ref:`data_function` decorator on the function.
 
     channels: Union[Iterable[Union[int, discord.VoiceChannel]], daf.message.AutoCHANNEL]
         Channels that it will be advertised into (Can be snowflake ID or channel objects from PyCord).
@@ -113,7 +118,7 @@ class VoiceMESSAGE(BaseChannelMessage):
     def __init__(self,
                  start_period: Union[int, timedelta, None],
                  end_period: Union[int, timedelta],
-                 data: Union[AUDIO, Iterable[AUDIO], _FunctionBaseCLASS],
+                 data: Union[FILE, Iterable[FILE], _FunctionBaseCLASS],
                  channels: Union[Iterable[Union[int, discord.VoiceChannel]], AutoCHANNEL],
                  volume: Optional[int] = 50,
                  start_in: Optional[Union[timedelta, datetime]] = timedelta(seconds=0),
@@ -123,6 +128,9 @@ class VoiceMESSAGE(BaseChannelMessage):
             raise ModuleNotFoundError(
                 "You need to install extra requirements: pip install discord-advert-framework[voice]"
             )
+
+        if isinstance(data, Iterable) and len(data) > 1:
+            raise ValueError("Iterable was passed to 'data', which has length greater than 1. Only a single FILE object is allowed inside.")
 
         super().__init__(start_period, end_period, data, channels, start_in, remove_after)
         self.volume = max(0, min(100, volume))  # Clamp the volume to 0-100 %
@@ -202,8 +210,10 @@ class VoiceMESSAGE(BaseChannelMessage):
             if not isinstance(data, (list, tuple, set)):
                 data = (data,)
             for element in data:
-                if isinstance(element, AUDIO):
+                if isinstance(element, FILE):
                     _data_to_send["audio"] = element
+                    break
+
         return _data_to_send
 
     async def _handle_error(self, channel: discord.VoiceChannel, ex: Exception) -> Tuple[bool, ChannelErrorAction]:
@@ -318,9 +328,11 @@ class VoiceMESSAGE(BaseChannelMessage):
                 raise self._generate_exception(404, 10003, "Channel was deleted", discord.NotFound)
 
             voice_client = await channel.connect(timeout=C_VC_CONNECT_TIMEOUT)
+
             stream = discord.PCMVolumeTransformer(
-                discord.FFmpegPCMAudio(audio.url, options="-loglevel fatal"), volume=self.volume / 100
+                discord.FFmpegPCMAudio(audio.stream, pipe=True, options="-loglevel fatal"), volume=self.volume / 100
             )
+
             voice_client.play(stream)
 
             while voice_client.is_playing():

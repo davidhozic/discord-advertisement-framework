@@ -428,7 +428,7 @@ class TextMESSAGE(BaseChannelMessage):
                     self.sent_messages[channel.id] = await channel.send(
                         text,
                         embed=embed,
-                        files=[discord.File(fwFILE.filename) for fwFILE in files]
+                        files=[discord.File(file.stream, file.filename) for file in files]
                     )
                 # Mode is edit and message was already send to this channel
                 elif self.mode == "edit":
