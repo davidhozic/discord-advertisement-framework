@@ -13,19 +13,18 @@ Dokumentacija
 
 
 Za projekt obstaja obsežna dokumentacija, ki se samodejno zgradi ob vsaki novi verziji ogrodja in zatem objavi 
-na `spletni strani <https://daf.davidhozic.com/en/v2.9.x/>`_.
+na spletni strani [#daf_web_page]_.
+
+.. [#daf_web_page] Na voljo na: https://daf.davidhozic.com/en/v2.9.x/.
 
 Na voljo je v spletni obliki (HTML), kot tudi lokalni obliki (PDF), ki se jo lahko prenese tako, da se na spletni strani dokumentacije
-kurzor premakne levo spodaj strani nad verzijo dokumentacije in zatem klikne na *PDF*.
+kurzor premakne levo spodaj strani nad verzijo dokumentacije in zatem klikne *PDF*.
 
 
 .. figure:: ./DEP/doc-pdf-download.png
     :height: 8cm
 
     Prenos PDF dokumentacije
-
-
-
 
 
 Sphinx
@@ -68,6 +67,11 @@ direktive pa so uporabljene za dodajanje nove vsebine v dokument ali za aplikaci
         (f(g_2(y), y)\cdot g_2(y)'{dy} - f(g_1(y), y)\cdot g_1(y)')
 
 
+.. raw:: latex
+
+    \newpage
+
+
 .. code-block:: reStructuredText
     :caption: reStructuredText vloga
 
@@ -87,12 +91,20 @@ Na prvem nivoju je dokumentacija razdeljena na:
    svojo kodo, ki uporablja jedro ogrodja.
 
 Vodnik je pisan v ročno ``.rst`` datotekah, ki so nastanjene v ``/project root/docs/source/guide`` mapi. Dodatno se deli še na vodnik za
-GUI in vodnik za jedro, medtem ko je API referenca avtomatično generirana iz komentarjev v izvorni kodi ogrodja.
+GUI in vodnik za jedro.
+
+API referenca je avtomatično generirana iz komentarjev v izvorni kodi ogrodja in dodatno deli pod različne kategorije.
 
 V nekaterih direktorijah so prisotne datoteke ``dep_local.json``. To so predgradne konfiguracijske datoteke, ki dajejo
 informacijo o tem iz kje in kam naj se kopirajo dodatne datoteke (ki so skupne drugim delom dokumentacije) in katere
 ``.py`` skripte naj se izvedejo po kopiranju.
 Na primer ``/project root/docs/source/dep_local.json`` datoteka ima sledečo vsebino:
+
+
+.. raw:: latex
+
+    \newpage
+
 
 .. literalinclude:: DEP/_dep_local.json
     :caption: Predgradna konfiguracijska datoteka

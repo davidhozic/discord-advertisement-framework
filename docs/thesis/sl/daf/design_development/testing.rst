@@ -16,7 +16,7 @@ pytest - ogrodje za testiranje
 Kot že ime namiguje, je pytest ogrodje za testiranje na Python platformi.
 
 Avtomatične teste se pri pytestu implementira s Python funkcijami, katerih ime se začne s "test".
-Testi lahko sprejmejo tudi parametere, kjer so ti lahko tudi pritrditve (angl. *fixture*), katere lahko lahko uporabimo kot inicializacijske funkcije.
+Testi lahko sprejmejo tudi parametere, kjer so ti lahko tudi pritrditve (angl. *fixture*), katere lahko lahko uporabimo kot inicializacijske funkcije :ref:`pytest_desc`.
 V pritrditvi lahko npr. povežemo podatkovno bazo, konektor na bazo vrnemo iz pritrditve, in 
 v primeru da je naš test definiran kot
 
@@ -27,11 +27,17 @@ v primeru da je naš test definiran kot
         ...
 
 bo naš test prejel vrednost, ki jo je pritrditev vrnila. Pritrditev ima lahko različno dolgo življensko dobo / obseg
-(npr. globalen obseg, obseg modula, obseg funkcije), kar pomeni da bo lahko več testov prejelo isto vrednost, ki jo je pritrditev vrnila dokler se življenska doba ne izteče.
+(npr. globalen obseg, obseg modula, obseg funkcije), kar pomeni, da bo lahko več testov prejelo isto vrednost, ki jo je pritrditev vrnila, dokler se življenska doba ne izteče.
 Pritrditev je lahko tudi Python generator [#py_generator]_, kar nam omogoča inicializacijo testov in
 čiščenje na koncu na sledeč način:
 
 .. [#py_generator] https://wiki.python.org/moin/Generators
+
+
+.. raw:: latex
+
+    \newpage
+
 
 .. code-block:: python
     :caption: pytest pritrditev z inicializacijo in čiščenjem
@@ -51,7 +57,7 @@ Pritrditev je lahko tudi Python generator [#py_generator]_, kar nam omogoča ini
 
 
 Preverjanje ali je test uspel se izvede s stavkom ``assert``, ki dvigne :class:`AssertionError` napako, če vrednost v ``assert`` stavku ni enaka ``True``.
-V primeru da je dvignjen :class:`AssertionError`, pytest zabeleži test kot neuspel in izpiše napako.
+V primeru da je dvignjen AssertionError, pytest zabeleži test kot neuspel in izpiše napako.
 Kako podroben bo izpis, se lahko nastavi ob zaganjanju testa, npr.
 ``pytest -vv``, kjer ``-vv`` nastavi podrobnost. Kot primer si poglejmo kaj bo izpisal, če v assert stavek
 kot vhod damo primerjavo dveh seznamov.
@@ -62,12 +68,16 @@ kot vhod damo primerjavo dveh seznamov.
     assert [1, 2, 3] == [1, 2, 3, 4, 5, 6]
 
 
-Iz zgornjega testa je očitno da to ne drži in da bo test neuspel, ampak v assertu nimamo nobene
+Iz zgornjega testa je očitno, da to ne drži in da bo test neuspel, ampak v assertu nimamo nobene
 :func:`print` funkcije, ki bi izpisala kaj je šlo narobe, tako da bi pričakovali da pytest vrne samo informacijo da test ni uspel.
 Izkaže se, da nam bo pytest izpisal točno kateri elementi se v seznamu razlikujejo.
 
+.. raw:: latex
+
+    \newpage
+
 .. code-block::
-    :caption: pytest izpis ob neuspelem testu pri primerjavi dveh :class:`seznamov <list>`.
+    :caption: pytest izpis ob neuspelem testu pri primerjavi dveh seznamov.
 
     ==================== test session starts ===================
     platform win32 -- Python 3.8.10, pytest-7.2.0, pluggy
@@ -105,7 +115,7 @@ je perioda pošiljanja prava in vzporedno preverjata tudi delovanje dinamičnega
 Kot sem že prej omenil, je pri teh dveh testih potrebno uloviti pravi čas, zato se včasih pojavijo problemi
 z Discordovim omejevanjem hitrosti na API klice, kar lahko povzroči, da bo pri pošiljanju sporočila ovojni API nivo
 rabil več časa, da naredi zahtevo na API, saj bo čakal, da se omejitev izteče. V tem primeru bo pytest izpisal, da test
-ni uspel in je test potrebno ponoviti. Vsi testi se nahajajo v mapi ``./testing`` relativno na dom projekta.
+ni uspel in ga je potrebno ponoviti. Vsi testi se nahajajo v mapi ``./testing`` relativno na dom projekta.
 
 Avtomatičnih testov običajno ne zaganjam ročno na osebnem računalniku (razen tistih, ki preverjajo delovanje neke
 nove funkcionalnosti), temveč se na GitHub platformi avtomatično zaženejo ob vsakem zahtevku za združitev vej (*Pull request*), ko hočem funkcionalnost

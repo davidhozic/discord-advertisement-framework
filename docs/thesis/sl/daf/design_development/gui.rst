@@ -6,8 +6,8 @@ Zasnova in razvoj grafičnega vmesnika
 
 .. _Python: https://www.python.org
 
-Ogrodje lahko v celoti deluje brez grafičnega vmesnika, a ta način zahteva pisanje ``.py`` datotek oz. Python skript, kar
-je marsikomu težje, sploh če se še nikoli niso srečali s Python jezikom.
+Ogrodje lahko v celoti deluje brez grafičnega vmesnika, a ta način zahteva pisanje konfiguracijskih ``.py`` datotek
+oz. Python skript, kar je marsikomu težje, sploh če se še nikoli niso srečali s Python jezikom.
 
 V namen enostavnejše rabe ogrodja je izdelan grafični vmesnik, ki deluje ločeno od samega jedra ogrodja, z njim pa
 lahko komunicira lokalno preko programskega vmesnika ali pa na daljavo preko HTTP vmesnika.
@@ -26,7 +26,7 @@ ki še dodatno razširijo delovanje knjižnice.
 Omogoča definicijo različnih pripomočkov (angl. *widgets*), ki se jih da dodatno razširiti in shraniti pod nove
 pripomočke, katere lahko večkrat uporabimo. Ti pripomočki so na primer :class:`~tkinter.ttk.Combobox`, ki je neke vrste 
 (angl.) "drop-down" meni, :class:`~tkinter.ttk.Spinbox` za vnašanje številskih vrednosti, gumbi :class:`~tkinter.ttk.Button`, itd.
-Posamezne pripomočke se da tudi znatno konfigurirati, kjer lahko spreminjamo stile, velikost, pisavo, ipd.
+Posamezne pripomočke se da tudi znatno konfigurirati, kjer lahko spreminjamo stile, velikost, pisavo, ipd :ref:`tkinter_py_docs`.
 
 Pred izbiro Tkinter knjižnice je bila ena izmed možnosti tudi knjižnica PySide (QT), a na koncu se je vseeno obnesla Tkinter
 oz. ttkboostrap knjižnica, saj je že osnovni paket PySide6 knjižnice velik 70 MB, z dodatki pa skoraj 200 MB, medtem ko je Tkinter
@@ -58,14 +58,14 @@ Po ponovnem zagonu bo statusni panel za posamezen modul obarvan zeleno.
 
 *Schema definition* zavihek
 -----------------------------
-*Schema definition* omogoča definicijo uporabniških računov (in v njih cehov, sporočil, ...), definicijo upravljalnika za beleženje,
+*Schema definition* omogoča definicijo uporabniških računov (in v njih cehov, sporočil, ipd.), definicijo upravljalnika za beleženje,
 izbiro globine izpisov na konzoli in konfiguracijo povezave do jedra ogrodja.
-Omogoča tudi shrambo teh definicij v :term:`JSON` datoteko, braje definicij iz JSON datoteke in pa generacijo ekvivalentne
-Python datoteke, ki požene le :ref:`jedro orodja <Zasnova in razvoj jedra>` (brez grafičnega vmesnika).
+Omogoča tudi shrambo teh definicij v JSON datoteko, braje definicij iz JSON datoteke in pa generacijo ekvivalentne
+Python datoteke, ki požene le jedro orodja (brez grafičnega vmesnika).
 Pravzaprav je ta zavihek namenjen definiciji nekege predloge, ki jo lahko potem uvozimo v jedro ogrodja.
 Izgled je prikazan na :numref:`fig-gui-front`.
 
-Omogoča tudi dinamično branje in pretvorbo objektov v že zagnanem vmesniku preko gumbov, ki vsebujejo besedo *live*.
+Omogoča tudi dinamično branje in dodajanje objektov v že zagnanem vmesniku preko gumbov, ki vsebujejo besedo *live*.
 
 Uporabniške račune (in ostale objekte) se lahko definira z klikom na opcijski meni *Object options*, in opcijo *New ACCOUNT*.
 Ob kliku se odpre novo okno, ki je avtomatično in dinamično generirano iz podatkov o podatkovnih tipih (anotacij), ki jih sprejme
@@ -144,7 +144,7 @@ Uporabi se ga lahko za bolj podroben pregled kaj se dogaja z jedrom ogrodja.
 *Analytics* zavihek
 -----------------------------
 *Analytics* zavihek omogoča analizo poslanih sporočil in njihovo statistiko. Prav tako omogoča analizo pridruževanj preko sledenja
-cehovskih povezav (angl. *Invite links*). Izgled je prikazan na :numref:`daf-gui-analytics-tab-rotated`
+cehovskih pridružnih povezav (angl. *Invite links*). Izgled je prikazan na :numref:`daf-gui-analytics-tab-rotated`
 
 Za pridobitev vnosov, se uporabi gumb *Get logs*, ki na podlagi parametrov definiranih v zgornjem opcijskem meniju, vrne
 v spodnji seznam filtrirane elemente. Te elemente se lahko vsakega posebej pregleda z gumbom *View log*, ki 
@@ -169,7 +169,7 @@ jedro ogrodja zažene na istem računalniku, kjer deluje grafični vmesnik. Drug
 režim delovanja, kjer se grafični vmesnik poveže na HTTP strežnik, kateri deluje znotraj jedra ogrodja in na ta strežnik
 pošilja HTTP ukaze, ki se v jedru mapirajo na programski vmesnik. Koncept je prikazan na :numref:`gui-core-connection`
 
-V primeru oddaljenega dostopa se podatki serializirajo v :term:`JSON` reprezentacijo, kjer so navadne vrednosti neposredno serializirane v JSON format,
+V primeru oddaljenega dostopa se podatki serializirajo v JSON reprezentacijo, kjer so navadne vrednosti neposredno serializirane v JSON format,
 večina objektov pa v slovar (:class:`dict`), kjer je sta slovarju zapisana pot do podatkovnega tipa (razreda) objekta in njegovi attributi.
 Obstaja nekaj izjem pri serializaciji objektov, kjer je ena izmed teh :class:`~datetime.datetime` tip objekta, ki se serializira v besedilo po standardu ISO 8601.
 Pretvorbo v končno JSON reprezentacijo opravlja vgrajena knjižnica :mod:`json`, medtem ko pretvorbo objektov v slovar
@@ -180,6 +180,6 @@ temveč se pošlje le referenco (identifikator) objekta, kjer se na strežniku (
 .. autofunction:: daf.convert.convert_object_to_semi_dict
 
 Za konfiguracijo oddaljenega dostopa je potrebno na vrhu vmesnika izbrati :class:`~daf_gui.connector.RemoteConnectionCLIENT`
-in nastaviti parametre. Prav tako je potrebno ustrezno konfigurirati jedro. Več o konfiguraciji je na voljo v
-:ref:`dokumentaciji ogrodja <Remote control (GUI)>`.
+in nastaviti parametre. Prav tako je potrebno ustrezno konfigurirati jedro [#extra_remote_conf]_.
 
+.. [#extra_remote_conf] Več o konfiguraciji je na voljo v :ref:`dokumentaciji ogrodja <Remote control (GUI)>`.

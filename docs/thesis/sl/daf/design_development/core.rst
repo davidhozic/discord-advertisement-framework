@@ -17,9 +17,9 @@ Zasnova in razvoj jedra
 To poglavje govori o jedru samega ogrodja, kjer jedro obsega vse, kar ni del grafičnega vmesnika.
 
 Jedro je zasnovano kot Python knjižnica / paket, ki se ga lahko namesti preko PIP-a (*Preferred Installer Program*), ki je
-vgrajen v Python in služi nalaganju Python paketov. Za uporabo jedra morajo uporabniki ustvariti oglaševalsko ``.py`` datoteko in definirati
-ustrezno konfiguracijo. To zahteva nekaj osnovnega znanja Python jezika, obstaja pa tudi možnost, da se to datoteko
-generira iz grafičnega vmesnika (:ref:`Zasnova in razvoj grafičnega vmesnika`)
+vgrajen v Python in služi nalaganju Python paketov. Za uporabo jedra morajo uporabniki ustvariti oglaševalsko (konfiguracijsko)
+``.py`` datoteko in definirati ustrezno konfiguracijo. To zahteva nekaj osnovnega znanja Python jezika, obstaja pa tudi možnost, 
+da se to datoteko generira iz grafičnega vmesnika (:ref:`Zasnova in razvoj grafičnega vmesnika`)
 
 
 Asyncio
@@ -30,7 +30,7 @@ AsyncIO omogoča ustvarjanje ``async`` funkcij, ki vrnejo korutine. Te korutine 
 med katerimi bo program preklopil vsakič, ko v trenutnem opravilu z ``await`` besedo na primer čakamo:
 
 - na konec neke asinhrone komunikacije (angl. *Async I/O*)
-- se trenutno opravilo zbudi iz spanja
+- da se trenutno opravilo zbudi iz spanja
 - da se nek semafor odklene [#asyncio_semaphore]_
 - ipd.
 
@@ -42,42 +42,6 @@ med katerimi bo program preklopil vsakič, ko v trenutnem opravilu z ``await`` b
 
     \newpage
 
-
-.. code-block:: python
-    :caption: Primer asyncio opravil
-
-    async def balance_topper(iban: str):
-        while True:
-            print(f"Topping up balance for {iban}")
-            parameters = {
-                "IBAN": iban
-            }
-            balance = await connector.top_balance(500, **parameters)
-            await asyncio.sleep(10)
-
-
-    async def balance_checker(iban: str):
-        while True:
-            print(f"Getting balance for {iban}")
-            parameters = {
-                "IBAN": iban
-            }
-            new = await connector.wait_for_topup(**parameters)
-            print(f"Balance for {iban} is {new} EUR")
-            await asyncio.sleep(5)
-
-
-    loop = asyncio.new_event_loop()
-    tasks = set()
-    tasks.update(
-        loop.create_task(
-            balance_checker("SI56101000012345678")
-        ),
-        loop.create_task(
-            balance_topper("SI56101000012345678")
-        )
-    )
-    loop.run_forever()
 
 Sektorji jedra ogrodja
 ========================
@@ -91,7 +55,7 @@ Ti so:
 - Sporočilni sektor
 - Sektor beleženja zgodovine sporočil
 - Sektor (avtomatizacije) brskalnika
-- Sektor za ovoj Discord API (angl. *API wrapper sector*)
+- Sektor za ovoj Discord API (angl. *Discord API wrapper sector*)
 
 
 .. figure:: ./DEP/daf_abstraction.drawio.svg
@@ -114,7 +78,7 @@ Prav tako se tu zgodi inicializacija sektorja beleženja sporočil, s katerim ka
 
 Nadzorni sektor ima vedno vsaj eno opravilo (poleg opravil v ostalih sektorjih), in sicer je to tisto, ki skrbi za čiščenje uporabniških računov v primeru napak.
 Drugo opravilo se zažene le v primeru, da je vklopljeno shranjevanje objektov v datoteko.
-Ogrodje samo po sebi deluje tako, da ima vse objekte (račune, cehe, sporočila, ipd.) shranjene kar neposredno v RAM pomnilniku.
+Ogrodje samo po sebi deluje tako, da ima vse objekte (račune, cehe, sporočila, ipd.) shranjene kar neposredno v :term:`RAM` pomnilniku.
 Že od samega začetka je ogrodje narejeno na način, da se željene objekte definira kar preko Python skripte in je zato shranjevanje v RAM
 ob taki definiciji neproblematično, problem pa je nastopil, ko je bilo dodano dinamično dodajanje in brisanje objektov, kar
 dejansko uporabnikom omogoča, da ogrodje dinamično uporabljajo in v tem primeru je bilo potrebno dodati neke vrste permanentno shrambo.
@@ -184,7 +148,7 @@ Sam cehovski sektor na začetku razvoja sploh ni bil potreben, a je bil vseeno d
 ne samo notranje kode, ampak tudi kode za definiranje same oglaševalske skripte ob velikem številu sporočil.
 To je sicer posledično zahtevalo definicijo dodatnih vrstic v oglaševalski skripti, kar je hitro postalo opazno ob 90tih različnih cehih.
 Vseeno se je ta izbira dobro izšla, saj je zdaj na cehovskem sektorju veliko funkcionalnosti, ki ne spada v ostale sektorje, 
-kot je na primer avtomatično iskanje novih cehov, in njihovo pridruževanje. Ta abstrakcija nudi tudi veliko preglednosti
+kot je na primer avtomatično iskanje novih cehov, in njihovo pridruževanje. Ta struktura nudi tudi veliko preglednosti
 v primeru logiranja (vsaj v primeru :term:`JSON` datotek), kjer je vse razdeljeno po različnih cehih.
 
 
@@ -202,8 +166,8 @@ Sporočilni sektor je zadolžen za pošiljanje dejanskih sporočil v posamezne k
 V tem sektorju so na voljo trije glavni razredi za ustvarjanje različnih vrst sporočil:
 
 1. |TextMESSAGE| - pošiljanje tekstovnih sporočil v cehovske kanale
-2. |VoiceMESSAGE| - predvajanje posnetkov v cehovskih kanalih
-3. |DirectMESSAGE| - pošiljanje tekstovnih sporočil v direktna (zasebne) kanale neposredno uporabnikom.
+2. |VoiceMESSAGE| - predvajanje zvočnih posnetkov v cehovskih kanalih
+3. |DirectMESSAGE| - pošiljanje tekstovnih sporočil v zasebna sporočila enega samega uporabnika
 
 
 |TextMESSAGE| in |DirectMESSAGE| sta si precej podobna, primarno gre v obeh primerih za tekstovna sporočila, razlika
@@ -217,7 +181,7 @@ Ob ponastavitvi "časovnika" se ta atribut prišteje za konfigurirano periodo.
 Torej čas pošiljanja ni relativen na dejanski prejšnji čas pošiljanja, temveč je relativen na predvideni prejšnji čas pošiljanja.
 Taka vrsta računanja časa omogoča določeno toleranco pri pošiljanju sporočila, saj se zaradi raznih zakasnitev in omejitev
 zahtev (angl. *Rate limiting*) na Discord API dejansko sporočilo lahko pošlje kasneje kot predvideno.
-To je še posebno pomembno v primeru da imamo definiranih veliko sporočil v enem računu, kar je zagotovilo da se sporočilo ne bo
+To je še posebno pomembno v primeru, da imamo definiranih veliko sporočil v enem računu, kar je zagotovilo da se sporočilo ne bo
 poslalo točno ob določenem času. Ker se čas prišteva od prejšnjega predvidenega časa pošiljanja, to pomeni, da bo v primeru
 zamude sporočila razmak med tem in naslednjim sporočilom manjši točno za to časovno napako (če privzamemo da ne bo ponovne zakasnitve).
 
@@ -253,17 +217,17 @@ Omogoča beleženje v tri različne formate, kjer vsakemu pripada lasten objekt 
 3. :term:`SQL` - :class:`~daf.logging.sql.LoggerSQL`
 
 
-Ob inicializaciji, se v nadzornem sektorju poda željen objekt beleženja, ki se inicializira in shrani v sektor beleženja.
+Ob inicializaciji jedra, se v nadzornem sektorju poda željen objekt beleženja, ki se inicializira in shrani v sektor beleženja.
 Po svoji lastni inicializaciji, se inicializira še njegov nadomestni (``fallback`` parameter)
 objekt, ki se uporabi v primeru kakršne koli napake pri beleženju.
 
 Po vsakem poslanem sporočilu se iz cehovskega sektorja naredi zahteva, ki vsebuje podatke o cehu, poslanem sporočilu oz.
-poskusu pošiljanja ter podatki o uporabniškem računu, ki je sporočilo poslal. sektor beleženja posreduje zahtevo
-izbranem objektu beleženja, ki v primeru napake dvigne Python napako (*exception*), na kar sektor beleženja 
+poskusu pošiljanja ter podatki o uporabniškem računu, ki je sporočilo poslal. Sektor beleženja posreduje zahtevo
+izbranem objektu beleženja, ki v primeru napake dvigne Python napako (angl. *exception*), na kar sektor beleženja 
 reagira tako, da začasno zamenja objekt beleženja na njegov nadomestek in spet poskusi. Poskuša dokler mu ne
 zmanjka nadomestkov ali pa je beleženje uspešno.
 
-Pred JSON, CSV in SQL beleženjem se je vse beležilo v Markdown datoteke, kjer se lahko podatke pregledovalo v berljivem formatu,
+Pred JSON, CSV in SQL beleženjem se je vse beležilo v Markdown datoteke, kjer se je lahko podatke pregledovalo v berljivem formatu,
 vendar je bila ta vrsta beleženja kasneje zamenjana z JSON beleženjem.
 
 
@@ -301,7 +265,7 @@ CSV beleženje
 :term:`CSV` beleženje deluje na enak način kot JSON beleženje. Edina razlika je v formatu, kjer je format tu CSV.
 Lokacija datotek je enaka kot pri JSON beleženje. Za shranjevanje je uporabljen vgrajen Python modul :mod:`csv`.
 
-Za sam pregled poslanih sporočil to ni najbolj primren format, saj se vse shrani v eni datoteki, kjer za razliko od JSON
+Za sam pregled poslanih sporočil to ni najbolj primeren format, saj se vse shrani v eni datoteki, kjer za razliko od JSON
 formata, tu ni več-slojnih strukture.
 
 
@@ -312,7 +276,7 @@ formata, tu ni več-slojnih strukture.
 
 SQL beleženje
 ~~~~~~~~~~~~~~~~~~
-:term:`SQL` beleženje pa deluje precej drugače, kot delujeta :ref:`JSON beleženje` in :ref:`CSV beleženje`, saj se podatki shranjujejo
+:term:`SQL` beleženje pa deluje precej drugače, kot delujeta JSON beleženje in CSV beleženje, saj se podatki shranjujejo
 v podatkovno bazo, ki je v primeru uporabe SQLite dialekta lahko tudi datoteka.
 
 Beleženje je omogočeno v štirih SQL dialektih:
@@ -358,12 +322,12 @@ Velika večina ogrodja deluje na podlagi ovojnega API sektorja, kjer ta direktno
 Določenih stvari pa se neposredno z Discord API ne da narediti ali pa za izvedbo neke operacije (prepovedane v pogojih uporabe Discorda)
 obstaja velika možnost, da Discord suspendira uporabnikov račun.
 
-Za ta namen je bil ustvarjen sektor brskalnika, kjer ogrodje namesto z Discord API, komunicira z brskalnikom
+Za ta namen je bil ustvarjen sektor brskalnika, kjer ogrodje namesto z Discord API komunicira z brskalnikom
 Google Chrome. To opravlja s knjižnico `Selenium <https://www.selenium.dev/documentation/webdriver/>`_, ki je namenjena avtomatizaciji brskalnikov
 in se posledično uporablja tudi kot orodje za avtomatično testiranje spletnih grafičnih vmesnikov.
 
 V ogrodju Selenium ni uporabljen za testiranje, temveč je uporabljen za avtomatično prijavljanje v Discord z uporabniškim
-imenom in geslom, ter pa za pol-avtomatično pridruževanje cehom. Dejansko ta sektor posnema živega uporabnika.
+imenom in geslom, ter za pridruževanje novim cehom. Dejansko ta sektor posnema živega uporabnika.
 
 .. figure:: ./DEP/daf-selenium-layer.svg
 

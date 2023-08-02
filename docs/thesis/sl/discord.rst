@@ -6,12 +6,11 @@ Discord
 
 .. _`API Reference`: https://discord.com/developers/docs/topics/opcodes-and-status-codes
 
-Diplomsko delo & projekt se fokusirata na oglaševanje po Discordu-u.
 
 Kaj je Discord
 ==================
 Discord je bil ustvarjen leta 2015 s strani Discord Inc. (prej znan kot Hammer & Chisel), studia za razvoj iger, ki sta ga ustanovila Jason Citron in Stanislav Vishnevskiy.
-Platforma je bila zasnovana kot orodje za komunikacijo med igralci video iger.
+Platforma je bila zasnovana kot orodje za komunikacijo med igralci video iger. :ref:`discord_company`
 
 Zamisel za Discord je izvirala iz Citronove osebne izkušnje v vlogi igralca računalniških igric.
 Opazil je, da so mnoga obstoječa orodja za komunikacijo (Skype, TeamSpeak) za igralce zastarela in težko uporabna,
@@ -27,7 +26,7 @@ Večina skupnosti (strežniki / cehi) je zasebnih in zahtevajo povabilo za vstop
 Vendar pa obstajajo tudi večje, bolj javne skupnosti, osredotočene na določene teme, kot so priljubljene videoigre
 ali pa, v primeru te naloge, stvari kot sta veriga blokov (angl. *blockchain*) in NFT.
 Uporablja se lahko tudi kot skupnost fakultete, kjer študenti lahko govorijo preko glasovnih kanalov, delijo študijske materiale
-in postavljajo vprašanja o gradivu, ki ga ne razumejo :ref:`discord_what_is`.
+in postavljajo vprašanja o gradivu, ki ga ne razumejo.
 
 Nekaj primerov Discord skupnosti, povezanih s Univerzo v Ljubljani:
 
@@ -124,7 +123,6 @@ Oglaševanje po Discordu
 Po Discordu se lahko oglašuje širok nabor tem, med katerimi so
 video igre, kreativni projekti, produkti, usluge, ipd. Ne sme pa se oglaševati nelegalnih vsebin oz. vsebin,
 ki spodbujajo kršenje zakona in vsebin, ki bi lahko povzročijo škodo posameznikom :ref:`discord_guidelines`.
-V okviru te diplomske naloge je fokus oglaševanje nezamenljivih žetonov.
 
 Oglašuje se lahko ročno ali pa avtomatično s primernim orodjem.
 Oglaševanje vključuje pisanje vsebine oglasa, ustvarjanje uporabniških računov, iskanje cehov kamor se z uporabiškimi računi pridruži,
@@ -134,7 +132,7 @@ in večkratno periodično pošiljanje sporočil v kanale cehov. Najpogosteje se 
 Generiranje vsebine
 ---------------------------
 Oglaševalsko vsebino se lahko napiše na pamet iz glave ali pa se za to uporabi orodja, kot je na primer
-GPT (*Generative pretrained transformer*) :ref:`gpt3_content_generation`.
+:term:`GPT` :ref:`gpt3_content_generation`.
 
 GPT-3 je najsodobnejši jezikovni model umetne inteligence, ki ga je razvilo podjetje OpenAI.
 Ima sposobnost generiranja besedila, ki se zdi človeško in opravljanja različnih nalog, kot so prevajanje, povzemanje in odgovarjanje na vprašanja.

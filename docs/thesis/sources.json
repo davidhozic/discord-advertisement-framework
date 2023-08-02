@@ -14,17 +14,17 @@
         "updated": "07. 2023"
     },
     {
-        "id": "discord_what_is",
+        "id": "discord_company",
         "author": "Discord",
-        "title" : "WHAT IS DISCORD?",
-        "source": "https://support.discord.com/hc/en-us/categories/200404398",
-        "updated": "01. 2023"
+        "title": "Discord Company",
+        "source": "https://discord.com/company",
+        "updated":"07. 2023"
     },
     {
         "id": "discord_interface",
         "author": "Discord",
         "title" : "Discord Interface",
-        "source": "https://discord.com/safety/360044149331-what-is-discord",
+        "source": "https://support.discord.com/hc/en-us/categories/200404398",
         "updated": "01. 2023"
     },
     {

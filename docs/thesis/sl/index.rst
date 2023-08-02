@@ -7,7 +7,7 @@
 
 .. toctree::
 
-    acronyms
+    glossary
     acknowledgements
     abstract
     introduction

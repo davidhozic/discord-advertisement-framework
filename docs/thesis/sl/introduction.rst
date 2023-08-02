@@ -10,7 +10,7 @@ Uvod
 
 Nezamenljivi žetoni
 ===========================
-Nezamenljivi žetoni (angl. *Non fungible tokens* - NFT) so edinstvena digitalna sredstva, ki živijo na 
+Nezamenljivi žetoni (angl. *Non fungible tokens*) so edinstvena digitalna sredstva, ki živijo na 
 verigi blokov brez možnosti replikacije.
 Najpogosteje predstavljajo digitalna umetniška dela :ref:`nft_what_is`.
 
@@ -32,10 +32,10 @@ Marketinški pristopi za promoviranje nezamenljivih žetonov
 ===========================================================
 Obstaja več načinov oglaševanja, ki se jih lahko uporabi tudi za oglaševanje nezamenljivih žetonov. Ti so na primer
 uporaba Google Ads platforme (oglaševanje po Google iskalniku, YouTube aplikaciji), uporaba forumov in drugi načini.
-Ena izmed teh drugih načinov je morda še najbolj uveljavljena na tem področju, in sicer se temu načinu oglaševanju reče
+Eden izmed teh drugih načinov je morda še najbolj uveljavljen na tem področju, in sicer se temu načinu oglaševanju reče
 šiling (angl. *shilling*) :ref:`nft_shilling`.
 
-Šiling je izraz za promocijo/oglaševanje NFT po socialnih omrežjih.
+Šiling je izraz za promocijo / oglaševanje NFT po socialnih omrežjih.
 Vendar ne gre le za kakršno koli oglaševanje, kot je na primer postavitev promocijskega gradiva na spletno stran ali
 stojnico v javnosti, temveč gre za bolj agresivno metodo trženja.
 Vključuje nenehno objavljanje o izdelku po socialnih omrežjih, kot so Instagram, Telegram, Discord ipd.,
