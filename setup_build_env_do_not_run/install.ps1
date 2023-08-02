@@ -14,7 +14,7 @@ echo "Installing packages"
 Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
 irm get.scoop.sh | iex
 scoop bucket add extras
-scoop install ffmpeg inkscape
+scoop install ffmpeg-shared inkscape
 
 # Install TexLive inside WSL
-wsl sudo apt install -y texlive-latex-base texlive-latex-extra texlive-lang-european latexmk
+wsl sudo apt install -y texlive-latex-base texlive-latex-extra texlive-lang-european latexmk build-essential
