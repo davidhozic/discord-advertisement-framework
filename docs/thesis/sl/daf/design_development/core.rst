@@ -78,7 +78,7 @@ Prav tako se tu zgodi inicializacija sektorja beleženja sporočil, s katerim ka
 
 Nadzorni sektor ima vedno vsaj eno opravilo (poleg opravil v ostalih sektorjih), in sicer je to tisto, ki skrbi za čiščenje uporabniških računov v primeru napak.
 Drugo opravilo se zažene le v primeru, da je vklopljeno shranjevanje objektov v datoteko.
-Ogrodje samo po sebi deluje tako, da ima vse objekte (račune, cehe, sporočila, ipd.) shranjene kar neposredno v :term:`RAM` pomnilniku.
+Ogrodje samo po sebi deluje tako, da ima vse objekte (račune, cehe, sporočila, ipd.) shranjene kar neposredno v RAM pomnilniku.
 Že od samega začetka je ogrodje narejeno na način, da se željene objekte definira kar preko Python skripte in je zato shranjevanje v RAM
 ob taki definiciji neproblematično, problem pa je nastopil, ko je bilo dodano dinamično dodajanje in brisanje objektov, kar
 dejansko uporabnikom omogoča, da ogrodje dinamično uporabljajo in v tem primeru je bilo potrebno dodati neke vrste permanentno shrambo.
@@ -93,7 +93,7 @@ podpora za oddaljen dostop grafičnega vmesnika do jedra. Deluje na knjižnici `
 HTTP knjižnica.
 HTTP vmesnik je v resnici zelo preprost in deluje tako, da ob neki HTTP zahtevi ustvari novo :mod:`asyncio` opravilo,
 ki potem zahtevo posreduje programskemu vmesniku, kar pomeni da je rezultat enak tistemu, ki bi ga dobili ob lokalnem delovanju na isti napravi.
-Vsi podatki se na HTTP vmesniku pretakajo v :term:`JSON` formatu.
+Vsi podatki se na HTTP vmesniku pretakajo v JSON formatu.
 Osnoven koncept je prikazan na spodnji sliki, kjer je z barvo puščic prikazan ločen potek.
 
 
@@ -149,7 +149,7 @@ ne samo notranje kode, ampak tudi kode za definiranje same oglaševalske skripte
 To je sicer posledično zahtevalo definicijo dodatnih vrstic v oglaševalski skripti, kar je hitro postalo opazno ob 90tih različnih cehih.
 Vseeno se je ta izbira dobro izšla, saj je zdaj na cehovskem sektorju veliko funkcionalnosti, ki ne spada v ostale sektorje, 
 kot je na primer avtomatično iskanje novih cehov, in njihovo pridruževanje. Ta struktura nudi tudi veliko preglednosti
-v primeru logiranja (vsaj v primeru :term:`JSON` datotek), kjer je vse razdeljeno po različnih cehih.
+v primeru logiranja (vsaj v primeru JSON datotek), kjer je vse razdeljeno po različnih cehih.
 
 
 .. figure:: ./DEP/daf-guild-layer-flowchart.svg
@@ -212,9 +212,9 @@ je to konfigurirano v cehovskem novoju.
 
 Omogoča beleženje v tri različne formate, kjer vsakemu pripada lasten objekt beleženja:
 
-1. :term:`JSON` - :class:`~daf.logging.LoggerJSON`
-2. :term:`CSV` (nekatera polja so JSON) - :class:`~daf.logging.LoggerCSV`
-3. :term:`SQL` - :class:`~daf.logging.sql.LoggerSQL`
+1. JSON - :class:`~daf.logging.LoggerJSON`
+2. CSV (nekatera polja so JSON) - :class:`~daf.logging.LoggerCSV`
+3. SQL - :class:`~daf.logging.sql.LoggerSQL`
 
 
 Ob inicializaciji jedra, se v nadzornem sektorju poda željen objekt beleženja, ki se inicializira in shrani v sektor beleženja.
@@ -239,7 +239,7 @@ vendar je bila ta vrsta beleženja kasneje zamenjana z JSON beleženjem.
 
 JSON beleženje
 ~~~~~~~~~~~~~~~~~
-Kot že prej omenjeno, je :term:`JSON` beleženje zamenjava za Markdown format beleženja. Razlog za zamenjavo je morebitna
+Kot že prej omenjeno, je JSON beleženje zamenjava za Markdown format beleženja. Razlog za zamenjavo je morebitna
 implementacija analitike, kar bi se v Markdown formatu težko implementiralo. V času pisanja je analitika na voljo le v
 primeru SQL beleženja.
 
@@ -262,7 +262,7 @@ datoteko.
 
 CSV beleženje
 ~~~~~~~~~~~~~~~~~~
-:term:`CSV` beleženje deluje na enak način kot JSON beleženje. Edina razlika je v formatu, kjer je format tu CSV.
+CSV beleženje deluje na enak način kot JSON beleženje. Edina razlika je v formatu, kjer je format tu CSV.
 Lokacija datotek je enaka kot pri JSON beleženje. Za shranjevanje je uporabljen vgrajen Python modul :mod:`csv`.
 
 Za sam pregled poslanih sporočil to ni najbolj primeren format, saj se vse shrani v eni datoteki, kjer za razliko od JSON
@@ -276,7 +276,7 @@ formata, tu ni več-slojnih strukture.
 
 SQL beleženje
 ~~~~~~~~~~~~~~~~~~
-:term:`SQL` beleženje pa deluje precej drugače, kot delujeta JSON beleženje in CSV beleženje, saj se podatki shranjujejo
+SQL beleženje pa deluje precej drugače, kot delujeta JSON beleženje in CSV beleženje, saj se podatki shranjujejo
 v podatkovno bazo, ki je v primeru uporabe SQLite dialekta lahko tudi datoteka.
 
 Beleženje je omogočeno v štirih SQL dialektih:
@@ -287,7 +287,7 @@ Beleženje je omogočeno v štirih SQL dialektih:
 4. MySQL / MariaDB
 
 Za čim bolj univerzalno implementacijo na vseh dialektih, je bila pri razvoju uporabljena knjižnica :mod:`SQLAlchemy`.
-Celoten sistem SQL beleženja je implementiran s pomočjo :term:`ORM`, kar med drugim omogoča tudi
+Celoten sistem SQL beleženja je implementiran s pomočjo ORM, kar med drugim omogoča tudi
 da SQL tabele predstavimo z Python razredi, posamezne vnose v bazo podatkov oz. vrstice pa predstavimo z instancami
 teh razredov. Z ORM lahko skoraj v celoti skrijemo SQL in delamo neposredno z Python objekti, ki so lahko tudi gnezdene
 strukture, npr. vnosa dveh ločenih tabel lahko predstavimo z dvema ločenima instancama, kjer je ena instanca 

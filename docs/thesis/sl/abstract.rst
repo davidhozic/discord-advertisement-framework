@@ -1,5 +1,5 @@
 
-.. only:: html
+.. only:: not latex
 
     =============
     Povzetek
@@ -7,33 +7,9 @@
 
     .. rubric:: Povzetek
 
-.. Prevent inclusion of this "title" into index
 .. raw:: latex
 
     \chapter*{Povzetek}
-
-.. 
-    .. sourcelist::
-
-        .. source:: Test title
-            :id: id_david
-            :author: David Hozic
-            :url: https://daf.davidhozic.com
-            :last_checked: 01. 2023
-
-        .. source:: Test title
-            :id: id_david
-            :author: David Hozic
-            :url: https://daf.davidhozic.com
-            :last_checked: 01. 2023
-
-        .. source:: Test title
-            :id: id_david
-            :author: David Hozic
-            :url: https://daf.davidhozic.com
-            :last_checked: 01. 2023
-
-
 
 
 Nezamenljivi žetoni (angl. *Non fungible tokens*) so edinstvena digitalna sredstva, ki živijo na verigi blokov brez možnosti replikacije.
@@ -77,11 +53,10 @@ je smiselno sklepati da je projekt izjemno uporabne narave.
 shranjevanje v datoteko, dokumentacija, avtomatično testiranje, ogrodje za oglaševanje, beleženje sporočil, zasnova in razvoj.
 
 
-.. only:: html
+.. only:: not latex
 
     .. rubric:: Abstract
 
-.. Prevent inclusion of this "title" into index
 .. raw:: latex
 
     \chapter*{Abstract}
@@ -122,3 +97,6 @@ it is reasonable to conclude that the project is of significant practical value.
 **Keywords:** Non-fungible tokens, automatic advertising, shilling, Python, graphical interface, remote access,
 saving to file, documentation, automatic testing, advertisement framework, message logging, design and development.
 
+.. raw:: latex
+
+    \blankpage

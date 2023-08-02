@@ -3,7 +3,7 @@
 
     \newpage
 
-.. only:: html
+.. only:: not latex
 
     =============
     Zahvala

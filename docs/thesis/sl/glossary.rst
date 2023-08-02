@@ -1,54 +1,72 @@
 
 
-.. only:: html
+.. only:: not latex
 
-    Uporabljene kratice
+    Uporabljene akronimi
     ======================
 
 
 .. raw:: latex
 
-    \chapter*{Uporabljene kratice}
+    \chapter*{Uporabljeni akronimi}
 
 
-.. glossary::
+.. list-table::
+    :header-rows: 1
+    :align: left
 
-    API
-        Application Programming Interface
+    - 
+      + Akronim
+      + Pomen
 
-    CSV
-        Comma-Separated Values
+    - 
+      + API
+      + Application Programming Interface
 
-    GPT
-        Generative Pre-trained Transformer
+    - 
+      + CSV
+      + Comma-Separated Values
 
-    GUI
-        Graphical User Interface
+    -
+      + GPT
+      + Generative Pre-trained Transformer
 
-    HTTP
-        HyperText Transfer Protocol
+    -
+      + GUI
+      + Graphical User Interface
 
-    JSON
-        JavaScript Object Notation
+    -
+      + HTTP
+      + HyperText Transfer Protocol
 
-    NFT
-        Non-Fungible Token
+    -
+      + JSON
+      + JavaScript Object Notation
 
-    ORM
-        Object Relational Mapping
+    -
+      + NFT
+      + Non-Fungible Token
 
-    PIP
-        Preferred Installer Program
-    
-    RAM
-        Random Access Memory
+    - 
+      + ORM
+      + Object Relational Mapping
 
-    SQL
-        Structured Query Language
+    -
+      + PIP
+      + Preferred Installer Program
+
+    -
+      + RAM
+      + Random Access Memory
+
+    -
+      + SQL
+      + Structured Query Language
 
 
 
-.. only:: html
+
+.. only:: not latex
 
     Uporabljeni pojmi
     ======================
@@ -120,7 +138,7 @@
 
     - 
       + Veriga blokov
-      + blockchain
+      + Blockchain
 
     - 
       + Vgrajeno sporočilo

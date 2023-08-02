@@ -132,7 +132,7 @@ in večkratno periodično pošiljanje sporočil v kanale cehov. Najpogosteje se 
 Generiranje vsebine
 ---------------------------
 Oglaševalsko vsebino se lahko napiše na pamet iz glave ali pa se za to uporabi orodja, kot je na primer
-:term:`GPT` :ref:`gpt3_content_generation`.
+GPT :ref:`gpt3_content_generation`.
 
 GPT-3 je najsodobnejši jezikovni model umetne inteligence, ki ga je razvilo podjetje OpenAI.
 Ima sposobnost generiranja besedila, ki se zdi človeško in opravljanja različnih nalog, kot so prevajanje, povzemanje in odgovarjanje na vprašanja.

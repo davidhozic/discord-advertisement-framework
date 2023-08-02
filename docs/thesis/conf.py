@@ -133,10 +133,10 @@ latex_elements = {
     "extraclassoptions": "openright",
     "tableofcontents": r"""
         \tableofcontents
-        \blankpage
+        \newpage
         \listoffigures
+        \newpage
         {}
-        \blankpage
     """.format(literal_block_str.get(language)),
     "fncychap": "",
     "babel": r"\usepackage[slovene]{babel}",
