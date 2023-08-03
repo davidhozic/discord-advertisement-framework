@@ -339,7 +339,6 @@ class VoiceMESSAGE(BaseChannelMessage):
             await self._move_to_connect(channel, C_VC_CONNECT_TIMEOUT)
             self.voice_client.play(stream)
             await asyncio.get_event_loop().run_in_executor(None, self.voice_client._player._end.wait)
-            await asyncio.sleep(1)
             return {"success": True}
         except Exception as ex:
             trace(f"Could not play audio due to {ex}", TraceLEVELS.ERROR)
@@ -352,3 +351,6 @@ class VoiceMESSAGE(BaseChannelMessage):
                 await self.voice_client.move_to(channel)
         else:
             self.voice_client = channel.guild.voice_client or await channel.connect(timeout=timeout)
+
+        self.voice_client.stop()
+        await asyncio.sleep(1)
