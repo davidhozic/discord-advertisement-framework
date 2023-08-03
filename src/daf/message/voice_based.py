@@ -354,3 +354,5 @@ class VoiceMESSAGE(BaseChannelMessage):
 
         self.voice_client.stop()
         await asyncio.sleep(1)
+        self.voice_client.empty_socket()
+        await asyncio.sleep(1)
