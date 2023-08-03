@@ -63,7 +63,6 @@ async def test_text_message_update(channels, guilds, accounts):
         assert message_ctx["success_info"]["success"], "Failed to send to all channels"
 
 
-
 @pytest.mark.asyncio
 async def test_voice_message_update(channels, guilds, accounts):
     "This tests if all the voice messages succeed in their sends"
@@ -71,19 +70,33 @@ async def test_voice_message_update(channels, guilds, accounts):
     _, voice_channels = channels
     voice_channels = voice_channels[:2]
     dc_guild, _ = guilds
-    
-    await asyncio.sleep(5) # Wait for any messages still playing
+
+    await asyncio.sleep(5)  # Wait for any messages still playing
+    cwd = os.getcwd()
+    os.chdir(os.path.dirname(__file__))
+    with open("testing123.mp3", "rb") as file:
+        fdata = file.read()
+
     VOICE_MESSAGE_TEST_MESSAGE = [
-            (9, daf.AUDIO("https://www.youtube.com/watch?v=4vQ8If7f374")),
-            (5, daf.AUDIO("https://www.youtube.com/watch?v=icPHcK_cCF4"))
-        ]
+        (6, daf.FILE("test.mp3", fdata)),
+        (6, daf.FILE("test.mp3", fdata.hex())),
+        (6, daf.AUDIO("testing123.mp3"))
+    ]
+
+    os.chdir(cwd)
 
     guild = daf.GUILD(dc_guild)
-    voice_message = daf.message.VoiceMESSAGE(None, timedelta(seconds=20), daf.AUDIO(os.path.join(os.path.dirname(__file__), "testing123.mp3")), voice_channels,
-                                            volume=50, start_in=timedelta(), remove_after=None)
+    voice_message = daf.message.VoiceMESSAGE(
+        None, timedelta(seconds=20),
+        daf.AUDIO(os.path.join(os.path.dirname(__file__), "testing123.mp3")),
+        voice_channels,
+        volume=50,
+        start_in=timedelta(),
+        remove_after=None
+    )
     await guild.initialize(parent=account)
     await guild.add_message(voice_message)
-    
+
     # Send
     for duration, audio in VOICE_MESSAGE_TEST_MESSAGE:
         await voice_message.update(data=audio)

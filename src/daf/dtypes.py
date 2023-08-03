@@ -166,15 +166,15 @@ class FILE:
     __slots__ = ("_filename", "_data")
 
     def __init__(self, filename: str, data: Optional[Union[bytes, str]] = None):
-        self._filename = filename
-        if isinstance(data, str):
+        if data is None:
+            with open(filename, "rb") as file:
+                data = file.read()
+
+        elif isinstance(data, str):
             data = bytes.fromhex(data)
 
-        if data is None:
-            with open(self._filename, "rb") as file:
-                self._data = file.read()
-        else:
-            self._data = data
+        self._filename = filename
+        self._data = data
 
     def __str__(self) -> str:
         return f"FILE(filename={self._filename})"

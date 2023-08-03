@@ -6,6 +6,7 @@ import asyncio
 import time
 import pytest
 import daf
+import os
 
 # SIMULATION
 
@@ -129,12 +130,21 @@ async def test_voice_period(channels: Tuple[List[Union[daf.discord.TextChannel, 
             return item[1]
 
         await daf.add_object(guild, account)
+
+        cwd = os.getcwd()
+        os.chdir(os.path.dirname(__file__))
+
+        with open("testing123.mp3", "rb") as file:
+            fdata = file.read()
+
         data_ = [
-            (5, daf.AUDIO("https://www.youtube.com/watch?v=IGQBtbKSVhY")),
-            (3, daf.AUDIO("https://www.youtube.com/watch?v=1O0yazhqaxs"))
+            (6, daf.AUDIO("testing123.mp3")),
+            (6, daf.FILE("testname.mp3", fdata)),
         ]
+
+        os.chdir(cwd)
         VOICE_MESSAGE_TEST_MESSAGE = dynamic_getter(data_.copy())
-    
+
         test_period_secs = TEST_SEND_PERIOD_VOICE.total_seconds()
         bottom_secs = (test_period_secs * (1 - TEST_PERIOD_MAX_VARIATION))
         upper_secs = (test_period_secs * (1 + TEST_PERIOD_MAX_VARIATION))

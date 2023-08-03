@@ -36,6 +36,10 @@ class VoiceMESSAGE(BaseChannelMessage):
     """
     This class is used for creating objects that represent messages which will be streamed to voice channels.
 
+    .. warning::
+
+        This additionaly requires FFMPEG to be installed on your system.
+
     .. deprecated:: 2.1
 
         - start_period, end_period - Using int values, use ``timedelta`` object instead.
