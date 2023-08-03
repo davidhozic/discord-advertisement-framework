@@ -116,6 +116,7 @@ class VoiceMESSAGE(BaseChannelMessage):
 
     __slots__ = (
         "volume",
+        "voice_client"
     )
 
     @typechecked
@@ -138,6 +139,7 @@ class VoiceMESSAGE(BaseChannelMessage):
 
         super().__init__(start_period, end_period, data, channels, start_in, remove_after)
         self.volume = max(0, min(100, volume))  # Clamp the volume to 0-100 %
+        self.voice_client = None
 
     def generate_log_context(self,
                              audio: AUDIO,
@@ -304,7 +306,6 @@ class VoiceMESSAGE(BaseChannelMessage):
             the audio to stream.
         """
         stream = None
-        voice_client = None
         try:
             # Check if client has permissions before attempting to join
             client_: discord.Client = self.parent.parent.client
@@ -331,23 +332,23 @@ class VoiceMESSAGE(BaseChannelMessage):
             if client_.get_channel(channel.id) is None:
                 raise self._generate_exception(404, 10003, "Channel was deleted", discord.NotFound)
 
-            voice_client = await channel.connect(timeout=C_VC_CONNECT_TIMEOUT)
-
             stream = discord.PCMVolumeTransformer(
-                discord.FFmpegPCMAudio(audio.stream, pipe=True), volume=self.volume / 100
+                discord.FFmpegPCMAudio(audio.stream, pipe=True),
+                volume=self.volume / 100
             )
-
-            voice_client.play(stream)
-            await asyncio.get_event_loop().run_in_executor(None, voice_client._player._end.wait)
+            await self._move_to_connect(channel, C_VC_CONNECT_TIMEOUT)
+            self.voice_client.play(stream)
+            await asyncio.get_event_loop().run_in_executor(None, self.voice_client._player._end.wait)
             await asyncio.sleep(1)
             return {"success": True}
         except Exception as ex:
             trace(f"Could not play audio due to {ex}", TraceLEVELS.ERROR)
             handled, action = await self._handle_error(channel, ex)
             return {"success": False, "reason": ex, "action": action}
-        finally:
-            if voice_client is not None:
-                with suppress(ConnectionResetError):
-                    await voice_client.disconnect()
 
-                await asyncio.sleep(1)  # Avoid sudden disconnect and connect to a new channel
+    async def _move_to_connect(self, channel: discord.VoiceChannel, timeout: float):
+        if self.voice_client is not None and self.voice_client.is_connected():
+            if channel != self.voice_client.channel:
+                await self.voice_client.move_to(channel)
+        else:
+            self.voice_client = channel.guild.voice_client or await channel.connect(timeout=timeout)

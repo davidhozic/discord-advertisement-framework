@@ -8,7 +8,7 @@ import os
 
 # CONFIGURATION
 TEST_USER_ID = 145196308985020416
-VOICE_MESSAGE_TEST_LENGTH = 10  # Test if entire message is played
+VOICE_MESSAGE_TEST_LENGTH = 8  # Test if entire message is played
 
 
 @pytest.mark.asyncio
@@ -92,4 +92,3 @@ async def test_voice_message_send(channels: Tuple[daf.discord.ChannelType], guil
     # Check results
     assert end_time - start_time >= VOICE_MESSAGE_TEST_LENGTH * len(voice_channels), "Message was not played till the end."
     assert len(message_ctx["channels"]["failed"]) == 0, "Failed to send to all channels"
-
