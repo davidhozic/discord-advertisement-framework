@@ -47,5 +47,6 @@ jobs:
         DISCORD_TOKEN: ${{secrets.DATT}}
       if: ${{ matrix.python-version == 3.8 }}
       run: |
-        pytest -v
+        pytest -v -m "not group_remote"
+        pytest -v -m "group_remote"
       

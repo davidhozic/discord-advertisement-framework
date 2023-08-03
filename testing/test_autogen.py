@@ -1,12 +1,12 @@
 """
-Module contains automatic tests that 
+Module contains automatic tests that
 test if automatic generation part of the framework
 works as expected.
 """
 from datetime import timedelta
 
 import pytest
-import pytest_asyncio
+import os
 import daf
 import asyncio
 
@@ -43,18 +43,19 @@ async def test_autochannel(guilds, channels, accounts):
         guild: daf.discord.Guild
         guild, _ = guilds
         text_channels, voice_channels = channels
-        auto_channel = daf.message.AutoCHANNEL(
-            "testpy-[0-9]", "testpy-[5-9]")
-        auto_channel2 = daf.message.AutoCHANNEL(
-        "testpy-[0-9]", "testpy-[5-9]")
+        auto_channel = daf.message.AutoCHANNEL("testpy-[0-9]", "testpy-[5-9]")
+        auto_channel2 = daf.message.AutoCHANNEL("testpy-[0-9]", "testpy-[5-9]")
 
+        cwd = os.getcwd()
+        os.chdir(os.path.dirname(__file__))
         daf_guild = daf.GUILD(
             guild,
             messages=[
                 tm := daf.TextMESSAGE(None, timedelta(seconds=1), "Hello World", auto_channel),
-                vc := daf.VoiceMESSAGE(None, timedelta(seconds=1), daf.AUDIO("https://www.youtube.com/watch?v=IGQBtbKSVhY"), auto_channel2)
+                vc := daf.VoiceMESSAGE(None, timedelta(seconds=1), daf.AUDIO("testing123.mp3"), auto_channel2)
             ]
         )
+        os.chdir(cwd)
         await daf.add_object(daf_guild, account)
         sort_key = lambda x: x.name
         auto_channel._process()
@@ -78,9 +79,3 @@ async def test_autochannel(guilds, channels, accounts):
     finally:
         if daf_guild is not None:
             await daf.remove_object(daf_guild)
-
-    
-
-
-
-

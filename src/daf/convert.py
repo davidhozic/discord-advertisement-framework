@@ -68,7 +68,8 @@ CONVERSION_ATTRS = {
         "attrs": attributes.get_all_slots(message.AutoCHANNEL),
         "attrs_restore": {
             "parent": None,
-            "cache": set()
+            "cache": set(),
+            "removed_channels": set(),
         },
     },
     logging.LoggerSQL: {
