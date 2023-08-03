@@ -138,8 +138,8 @@ async def test_voice_period(channels: Tuple[List[Union[daf.discord.TextChannel, 
             fdata = file.read()
 
         data_ = [
-            (6, daf.AUDIO("testing123.mp3")),
-            (6, daf.FILE("testname.mp3", fdata)),
+            (5, daf.AUDIO("testing123.mp3")),
+            (5, daf.FILE("testname.mp3", fdata)),
         ]
 
         os.chdir(cwd)
