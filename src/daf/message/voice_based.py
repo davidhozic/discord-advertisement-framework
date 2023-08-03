@@ -356,8 +356,3 @@ class VoiceMESSAGE(BaseChannelMessage):
                 await self.voice_client.move_to(channel)
         else:
             self.voice_client = channel.guild.voice_client or await channel.connect(timeout=timeout)
-
-        self.voice_client.stop()
-        await asyncio.sleep(1)
-        self.voice_client.empty_socket()
-        await asyncio.sleep(1)

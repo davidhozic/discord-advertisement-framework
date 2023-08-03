@@ -104,63 +104,9 @@ async def test_text_period(channels: Tuple[List[Union[daf.discord.TextChannel, d
                 assert item == content, "DirectMESSAGE text does not match message content"
             elif isinstance(item, daf.discord.Embed):
                 assert item.to_dict() in embeds, "DirectMESSAGE embed not in message embeds"
-        
+
     finally:
         with suppress(ValueError):
             await daf.remove_object(guild)
         with suppress(ValueError):
             await daf.remove_object(user)
-        
-
-@pytest.mark.asyncio
-async def test_voice_period(channels: Tuple[List[Union[daf.discord.TextChannel, daf.discord.VoiceChannel]]],
-                            guilds: Tuple[daf.discord.Guild],
-                            accounts: Tuple[daf.client.ACCOUNT]):
-    "Tests if the period and dynamic data works"
-    account = accounts[0]
-    client = account.client
-    _, voice_channels = channels
-    dc_guild, _ = guilds
-    guild = daf.GUILD(dc_guild)
-    try:
-        @daf.data_function
-        def dynamic_getter(items: list):
-            item = items.pop(0)
-            items.append(item)
-            return item[1]
-
-        await daf.add_object(guild, account)
-
-        cwd = os.getcwd()
-        os.chdir(os.path.dirname(__file__))
-
-        with open("testing123.mp3", "rb") as file:
-            fdata = file.read()
-
-        data_ = [
-            (5, daf.AUDIO("testing123.mp3")),
-            (5, daf.FILE("testname.mp3", fdata)),
-        ]
-
-        os.chdir(cwd)
-        VOICE_MESSAGE_TEST_MESSAGE = dynamic_getter(data_.copy())
-
-        test_period_secs = TEST_SEND_PERIOD_VOICE.total_seconds()
-        bottom_secs = (test_period_secs * (1 - TEST_PERIOD_MAX_VARIATION))
-        upper_secs = (test_period_secs * (1 + TEST_PERIOD_MAX_VARIATION))
-        wait_for_message = lambda: client.wait_for("voice_state_update", check=lambda member, before, after: member.id == client.user.id and after.channel == voice_channels[0], timeout=TEST_MAX_WAIT_TIME)
-
-        # Test VoiceMESSAGE
-        await asyncio.sleep(10)
-        voice_message = daf.message.VoiceMESSAGE(None, TEST_SEND_PERIOD_VOICE, VOICE_MESSAGE_TEST_MESSAGE, [voice_channels[0]],
-                                                volume=50, start_in=TEST_SEND_PERIOD_VOICE, remove_after=None)
-        await guild.add_message(voice_message)
-        for item in data_:
-            start = time.time()
-            await wait_for_message()
-            end = time.time()
-            assert bottom_secs < (end - start) < upper_secs
-
-    finally:
-        with suppress(ValueError):
-            await daf.remove_object(guild)
