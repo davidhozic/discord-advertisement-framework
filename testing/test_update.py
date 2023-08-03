@@ -78,9 +78,9 @@ async def test_voice_message_update(channels, guilds, accounts):
         fdata = file.read()
 
     VOICE_MESSAGE_TEST_MESSAGE = [
-        (5, daf.FILE("test.mp3", fdata)),
-        (5, daf.FILE("test.mp3", fdata.hex())),
-        (5, daf.AUDIO("testing123.mp3"))
+        (10, daf.FILE("test.mp3", fdata)),
+        (10, daf.FILE("test.mp3", fdata.hex())),
+        (10, daf.AUDIO("testing123.mp3"))
     ]
 
     os.chdir(cwd)

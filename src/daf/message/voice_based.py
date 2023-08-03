@@ -334,7 +334,7 @@ class VoiceMESSAGE(BaseChannelMessage):
             voice_client = await channel.connect(timeout=C_VC_CONNECT_TIMEOUT)
 
             stream = discord.PCMVolumeTransformer(
-                discord.FFmpegPCMAudio(audio.stream, pipe=True, options="-loglevel fatal"), volume=self.volume / 100
+                discord.FFmpegPCMAudio(audio.stream, pipe=True), volume=self.volume / 100
             )
 
             voice_client.play(stream)
