@@ -338,10 +338,7 @@ class VoiceMESSAGE(BaseChannelMessage):
             )
 
             voice_client.play(stream)
-
-            while voice_client.is_playing():
-                await asyncio.sleep(1)
-
+            await asyncio.get_event_loop().run_in_executor(None, voice_client._player._end.wait)
             await asyncio.sleep(1)
             return {"success": True}
         except Exception as ex:
