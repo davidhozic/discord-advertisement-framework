@@ -8,7 +8,7 @@ import os
 
 # CONFIGURATION
 TEST_USER_ID = 145196308985020416
-VOICE_MESSAGE_TEST_LENGTH = 3  # Test if entire message is played
+VOICE_MESSAGE_TEST_LENGTH = 5.5  # Test if entire message is played
 
 
 @pytest.mark.asyncio
