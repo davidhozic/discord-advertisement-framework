@@ -345,6 +345,7 @@ class VoiceMESSAGE(BaseChannelMessage):
             await asyncio.sleep(1)
             return {"success": True}
         except Exception as ex:
+            trace(f"Could not play audio due to {ex}", TraceLEVELS.ERROR)
             handled, action = await self._handle_error(channel, ex)
             return {"success": False, "reason": ex, "action": action}
         finally:
