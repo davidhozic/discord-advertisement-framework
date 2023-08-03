@@ -119,6 +119,11 @@ class VoiceMESSAGE(BaseChannelMessage):
         "voice_client"
     )
 
+    FFMPEG_OPTIONS = {
+        # 'before_options': '-timeout 2000000',
+        'options': '-vn -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5'
+    }
+
     @typechecked
     def __init__(self,
                  start_period: Union[int, timedelta, None],
@@ -333,7 +338,7 @@ class VoiceMESSAGE(BaseChannelMessage):
                 raise self._generate_exception(404, 10003, "Channel was deleted", discord.NotFound)
 
             stream = discord.PCMVolumeTransformer(
-                discord.FFmpegPCMAudio(audio.stream, pipe=True),
+                discord.FFmpegPCMAudio(audio.stream, pipe=True, **VoiceMESSAGE.FFMPEG_OPTIONS),
                 volume=self.volume / 100
             )
             await self._move_to_connect(channel, C_VC_CONNECT_TIMEOUT)

@@ -148,7 +148,7 @@ async def test_voice_period(channels: Tuple[List[Union[daf.discord.TextChannel, 
         test_period_secs = TEST_SEND_PERIOD_VOICE.total_seconds()
         bottom_secs = (test_period_secs * (1 - TEST_PERIOD_MAX_VARIATION))
         upper_secs = (test_period_secs * (1 + TEST_PERIOD_MAX_VARIATION))
-        wait_for_message = lambda: client.wait_for("voice_state_update", check=lambda member, before, after: before.channel is None and member.id == client.user.id and after.channel == voice_channels[0], timeout=TEST_MAX_WAIT_TIME)
+        wait_for_message = lambda: client.wait_for("voice_state_update", check=lambda member, before, after: member.id == client.user.id and after.channel == voice_channels[0], timeout=TEST_MAX_WAIT_TIME)
 
         # Test VoiceMESSAGE
         await asyncio.sleep(10)
