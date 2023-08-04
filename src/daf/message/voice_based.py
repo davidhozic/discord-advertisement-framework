@@ -17,6 +17,7 @@ from .. import dtypes
 
 import asyncio
 import _discord as discord
+import os
 
 
 __all__ = (
@@ -335,13 +336,25 @@ class VoiceMESSAGE(BaseChannelMessage):
             if client_.get_channel(channel.id) is None:
                 raise self._generate_exception(404, 10003, "Channel was deleted", discord.NotFound)
 
+            # Write data to file instead of directly sending it to FFMPEG.
+            # This is needed due to a bug in the API wrapper, which only seems to appear on Linux.
+            # TODO: When fixed, replace with audio.stream.
+            raw_data = audio.data
+            filename = f"./tmp_{audio.filename}_{hash(raw_data) % 5000}_{datetime.now().microsecond}"
+            with open(filename, "wb") as tmp_file:
+                tmp_file.write(raw_data)
+
             stream = discord.PCMVolumeTransformer(
-                discord.FFmpegPCMAudio(audio.stream, pipe=True, **VoiceMESSAGE.FFMPEG_OPTIONS),
+                discord.FFmpegPCMAudio(filename, **VoiceMESSAGE.FFMPEG_OPTIONS),
                 volume=self.volume / 100
             )
             voice_proto = await channel.connect(reconnect=True, timeout=C_VC_CONNECT_TIMEOUT)
             voice_proto.play(stream)
             await asyncio.get_event_loop().run_in_executor(None, voice_proto._player._end.wait)
+
+            await asyncio.sleep(0.5)
+            os.remove(filename)
+
             return {"success": True}
         except Exception as ex:
             trace(f"Could not play audio due to {ex}", TraceLEVELS.ERROR)
