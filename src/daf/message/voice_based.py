@@ -351,7 +351,9 @@ class VoiceMESSAGE(BaseChannelMessage):
             return {"success": False, "reason": ex, "action": action}
 
     async def _move_to_connect(self, channel: discord.VoiceChannel, timeout: float):
-        if self.voice_client is not None and self.voice_client.is_connected():
+        vc: discord.VoiceClient = channel.guild.voice_client
+        if vc is not None:
+            self.voice_client = vc
             if channel != self.voice_client.channel:
                 await self.voice_client.move_to(channel)
         else:
