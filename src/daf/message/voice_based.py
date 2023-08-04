@@ -340,7 +340,7 @@ class VoiceMESSAGE(BaseChannelMessage):
             # This is needed due to a bug in the API wrapper, which only seems to appear on Linux.
             # TODO: When fixed, replace with audio.stream.
             raw_data = audio.data
-            filename = f"./tmp_{audio.filename}_{hash(raw_data) % 5000}_{datetime.now().microsecond}"
+            filename = os.path.expanduser(f"~/daf/tmp_{id(raw_data)}")
             with open(filename, "wb") as tmp_file:
                 tmp_file.write(raw_data)
 

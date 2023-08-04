@@ -26,6 +26,8 @@ DEALINGS IN THE SOFTWARE.
 from __future__ import annotations
 
 from typing import Any, Callable, ClassVar, Iterator, TypeVar, overload
+from functools import reduce
+from operator import or_
 
 from .enums import UserFlags
 
@@ -631,8 +633,7 @@ class Intents(BaseFlags):
     @classmethod
     def all(cls: type[Intents]) -> Intents:
         """A factory method that creates a :class:`Intents` with everything enabled."""
-        bits = max(cls.VALID_FLAGS.values()).bit_length()
-        value = (1 << bits) - 1
+        value = reduce(or_, cls.VALID_FLAGS.values())
         self = cls.__new__(cls)
         self.value = value
         return self

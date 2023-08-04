@@ -37,7 +37,7 @@ class _FunctionBaseCLASS:
     """
 
 
-@doc.doc_category("Message data types")
+@doc.doc_category("Types")
 def data_function(fnc: Callable):
     """
     Decorator used for wrapping a function that will return data to send when the message is ready.
@@ -122,7 +122,7 @@ def data_function(fnc: Callable):
 # Other
 #######################################################################
 @typechecked
-@doc.doc_category("Message data types")
+@doc.doc_category("Types")
 class FILE:
     """
     FILE object used as a data parameter to the xMESSAGE objects.
@@ -212,7 +212,7 @@ class FILE:
 
 
 @typechecked
-@doc.doc_category("Message data types")
+@doc.doc_category("Types")
 class AUDIO(FILE):
     """
     Used for streaming audio from file or YouTube.
