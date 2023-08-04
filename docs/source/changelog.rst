@@ -42,6 +42,8 @@ v2.10
 
 - New property: :py:attr:`~daf.message.TextMESSAGE.remaining_before_removal`, :py:attr:`~daf.message.VoiceMESSAGE.remaining_before_removal`,
   :py:attr:`~daf.message.DirectMESSAGE.remaining_before_removal`
+- New parameter: ``auto_publish`` to :class:`~daf.message.TextMESSAGE` for automatically publishing messages sent to
+  announcement (news) channels.
 
 - GUI:
 
