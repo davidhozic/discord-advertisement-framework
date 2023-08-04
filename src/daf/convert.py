@@ -68,7 +68,8 @@ CONVERSION_ATTRS = {
         "attrs": attributes.get_all_slots(message.AutoCHANNEL),
         "attrs_restore": {
             "parent": None,
-            "cache": set()
+            "cache": set(),
+            "removed_channels": set(),
         },
     },
     logging.LoggerSQL: {
@@ -95,6 +96,10 @@ CONVERSION_ATTRS = {
     datetime.timedelta: {
         "custom_encoder": lambda object: object.total_seconds(),
         "custom_decoder": lambda seconds: datetime.timedelta(seconds=seconds)
+    },
+    bytes: {
+        "custom_encoder": lambda data: data.hex(),
+        "custom_decoder": lambda hex_str: bytes.fromhex(hex_str)
     }
 }
 """

@@ -43,7 +43,7 @@ def start_daf(event_loop: asyncio.AbstractEventLoop):
     event_loop.close()
 
 
-@pytest_asyncio.fixture(scope="module")
+@pytest_asyncio.fixture(scope="session")
 async def accounts():
     accs = [
         daf.ACCOUNT(token=TEST_TOKEN1),
@@ -57,7 +57,7 @@ async def accounts():
         await daf.remove_object(a)
 
 
-@pytest_asyncio.fixture(scope="module")
+@pytest_asyncio.fixture(scope="session")
 async def guilds(accounts: List[daf.ACCOUNT]):
     """
     Create tests guilds.
@@ -83,7 +83,7 @@ async def guilds(accounts: List[daf.ACCOUNT]):
     return guild_include, guild_exclude
 
 
-@pytest_asyncio.fixture(scope="module")
+@pytest_asyncio.fixture(scope="session")
 async def channels(guilds):
     guild: daf.discord.Guild
     guild, _ = guilds

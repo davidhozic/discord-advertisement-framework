@@ -9,10 +9,6 @@ requires = [
 
 build-backend = "nuitka.distutils.Build"
 
-[nuitka]
-show-scons = true
-enable-plugin = "tk-inter"
-
 
 [project]
 name = "discord-advert-framework"
@@ -58,4 +54,9 @@ file = [
 [tool.setuptools.packages.find]
 where = [
     "src"
+]
+
+[tool.pytest.ini_options]
+markers = [
+    "group_remote",
 ]

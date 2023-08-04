@@ -17,6 +17,7 @@ from .. import dtypes
 
 import asyncio
 import _discord as discord
+import os
 
 
 __all__ = (
@@ -26,7 +27,7 @@ __all__ = (
 
 # Configuration
 # ----------------------#
-C_VC_CONNECT_TIMEOUT = 3  # Timeout of voice channels
+C_VC_CONNECT_TIMEOUT = 7  # Timeout of voice channels
 
 
 @instance_track.track_id
@@ -36,11 +37,20 @@ class VoiceMESSAGE(BaseChannelMessage):
     """
     This class is used for creating objects that represent messages which will be streamed to voice channels.
 
-    .. deprecated:: v2.1
+    .. warning::
+
+        This additionaly requires FFMPEG to be installed on your system.
+
+    .. deprecated:: 2.1
 
         - start_period, end_period - Using int values, use ``timedelta`` object instead.
 
-    .. versionchanged:: v2.7
+    .. versionchanged:: 2.10
+
+        'data' parameter no longer accepets :class:`daf.dtypes.AUDIO` and no longer allows YouTube streaming.
+        Instead it accepts :class:`daf.dtypes.FILE`.
+
+    .. versionchanged:: 2.7
 
         *start_in* now accepts datetime object
 
@@ -74,12 +84,12 @@ class VoiceMESSAGE(BaseChannelMessage):
                 start_period=None, end_period=timedelta(seconds=10), data=daf.AUDIO("msg.mp3"),
                 channels=[12345], start_in=timedelta(seconds=0), volume=50
             )
-    data: AUDIO
+    data: FILE
         The data parameter is the actual data that will be sent using discord's API.
         The data types of this parameter can be:
 
-            - AUDIO object.
-            - Function that accepts any amount of parameters and returns an AUDIO object. To pass a function, YOU MUST USE THE :ref:`data_function` decorator on the function.
+            - FILE object.
+            - Function that accepts any amount of parameters and returns an FILE object. To pass a function, YOU MUST USE THE :ref:`data_function` decorator on the function.
 
     channels: Union[Iterable[Union[int, discord.VoiceChannel]], daf.message.AutoCHANNEL]
         Channels that it will be advertised into (Can be snowflake ID or channel objects from PyCord).
@@ -109,11 +119,15 @@ class VoiceMESSAGE(BaseChannelMessage):
         "volume",
     )
 
+    FFMPEG_OPTIONS = {
+        'options': '-vn'
+    }
+
     @typechecked
     def __init__(self,
                  start_period: Union[int, timedelta, None],
                  end_period: Union[int, timedelta],
-                 data: Union[AUDIO, Iterable[AUDIO], _FunctionBaseCLASS],
+                 data: Union[FILE, Iterable[FILE], _FunctionBaseCLASS],
                  channels: Union[Iterable[Union[int, discord.VoiceChannel]], AutoCHANNEL],
                  volume: Optional[int] = 50,
                  start_in: Optional[Union[timedelta, datetime]] = timedelta(seconds=0),
@@ -123,6 +137,9 @@ class VoiceMESSAGE(BaseChannelMessage):
             raise ModuleNotFoundError(
                 "You need to install extra requirements: pip install discord-advert-framework[voice]"
             )
+
+        if isinstance(data, Iterable) and len(data) > 1:
+            raise ValueError("Iterable was passed to 'data', which has length greater than 1. Only a single FILE object is allowed inside.")
 
         super().__init__(start_period, end_period, data, channels, start_in, remove_after)
         self.volume = max(0, min(100, volume))  # Clamp the volume to 0-100 %
@@ -202,8 +219,10 @@ class VoiceMESSAGE(BaseChannelMessage):
             if not isinstance(data, (list, tuple, set)):
                 data = (data,)
             for element in data:
-                if isinstance(element, AUDIO):
+                if isinstance(element, FILE):
                     _data_to_send["audio"] = element
+                    break
+
         return _data_to_send
 
     async def _handle_error(self, channel: discord.VoiceChannel, ex: Exception) -> Tuple[bool, ChannelErrorAction]:
@@ -290,7 +309,7 @@ class VoiceMESSAGE(BaseChannelMessage):
             the audio to stream.
         """
         stream = None
-        voice_client = None
+        voice_proto = None
         try:
             # Check if client has permissions before attempting to join
             client_: discord.Client = self.parent.parent.client
@@ -317,21 +336,30 @@ class VoiceMESSAGE(BaseChannelMessage):
             if client_.get_channel(channel.id) is None:
                 raise self._generate_exception(404, 10003, "Channel was deleted", discord.NotFound)
 
-            voice_client = await channel.connect(timeout=C_VC_CONNECT_TIMEOUT)
-            stream = discord.PCMVolumeTransformer(
-                discord.FFmpegPCMAudio(audio.url, options="-loglevel fatal"), volume=self.volume / 100
-            )
-            voice_client.play(stream)
+            # Write data to file instead of directly sending it to FFMPEG.
+            # This is needed due to a bug in the API wrapper, which only seems to appear on Linux.
+            # TODO: When fixed, replace with audio.stream.
+            raw_data = audio.data
+            filename = f"./tmp_{audio.filename}_{hash(raw_data) % 5000}_{datetime.now().microsecond}"
+            with open(filename, "wb") as tmp_file:
+                tmp_file.write(raw_data)
 
-            while voice_client.is_playing():
-                await asyncio.sleep(1)
+            stream = discord.PCMVolumeTransformer(
+                discord.FFmpegPCMAudio(filename, **VoiceMESSAGE.FFMPEG_OPTIONS),
+                volume=self.volume / 100
+            )
+            voice_proto = await channel.connect(reconnect=True, timeout=C_VC_CONNECT_TIMEOUT)
+            voice_proto.play(stream)
+            await asyncio.get_event_loop().run_in_executor(None, voice_proto._player._end.wait)
+
+            await asyncio.sleep(0.5)
+            os.remove(filename)
+
             return {"success": True}
         except Exception as ex:
+            trace(f"Could not play audio due to {ex}", TraceLEVELS.ERROR)
             handled, action = await self._handle_error(channel, ex)
             return {"success": False, "reason": ex, "action": action}
         finally:
-            if voice_client is not None:
-                with suppress(ConnectionResetError):
-                    await voice_client.disconnect()
-
-                await asyncio.sleep(1)  # Avoid sudden disconnect and connect to a new channel
+            if voice_proto is not None:
+                await voice_proto.disconnect()

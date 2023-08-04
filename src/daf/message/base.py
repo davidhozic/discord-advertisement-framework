@@ -474,12 +474,12 @@ class AutoCHANNEL:
     def __init__(self,
                  include_pattern: str,
                  exclude_pattern: Optional[str] = None,
-                 interval: Optional[timedelta] = timedelta(minutes=5)) -> None:
+                 interval: Optional[timedelta] = None) -> None:
 
         if interval is not None:
             trace(
-                f"Paramter '{interval}' inside AutoCHANNEL is scheduled for removal is deprecated since\n"
-                f"v2.10 and deprecated and scheduled for removal in v2.10.",
+                "Parameter 'interval' inside AutoCHANNEL is scheduled for removal is deprecated since\n"
+                "v2.10 and deprecated and scheduled for removal in v2.10.",
                 TraceLEVELS.DEPRECATED
             )
         else:

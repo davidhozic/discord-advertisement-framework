@@ -34,6 +34,10 @@ Releases
 
 v2.10
 ====================
+- |BREAK_CH| Removed deprecated feature - YouTube streaming.
+- Deprecated :class:`daf.dtypes.AUDIO`, replaced with :class:`daf.dtypes.FILE`.
+- :class:`daf.dtypes.FILE` now accepts binary data as well and will load the data from ``filename`` at creation
+  if the ``data`` parameter is not given.
 - Moderation timeout handling (messages resume one minute after moderation timeout expiry)
 - :class:`~daf.message.TextMESSAGE` and :class:`~daf.message.VoiceMESSAGE`'s ``remove_after`` parameter:
 

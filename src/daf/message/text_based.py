@@ -440,7 +440,7 @@ class TextMESSAGE(BaseChannelMessage):
                     message = await channel.send(
                         text,
                         embed=embed,
-                        files=[discord.File(fwFILE.filename) for fwFILE in files]
+                        files=[discord.File(file.stream, file.filename) for file in files]
                     )
                     self.sent_messages[channel.id] = message
                     if self.auto_publish and channel.is_news():

@@ -4,10 +4,11 @@ import time
 import pytest
 import daf
 import asyncio
+import os
 
 # CONFIGURATION
 TEST_USER_ID = 145196308985020416
-VOICE_MESSAGE_TEST_LENGTH = 3  # Test if entire message is played
+VOICE_MESSAGE_TEST_LENGTH = 4.5  # Test if entire message is played
 
 
 @pytest.mark.asyncio
@@ -67,8 +68,12 @@ async def test_voice_message_send(channels: Tuple[daf.discord.ChannelType], guil
     account = accounts[0]
     dc_guild, _ = guilds
     _, voice_channels = channels
-    await asyncio.sleep(5) # Wait for any messages still playing
-    VOICE_MESSAGE_TEST_MESSAGE = daf.AUDIO("https://www.youtube.com/watch?v=1O0yazhqaxs") # 3 second countdown
+    await asyncio.sleep(5)  # Wait for any messages still playing
+
+    cwd = os.getcwd()
+    os.chdir(os.path.dirname(__file__))
+    VOICE_MESSAGE_TEST_MESSAGE = daf.FILE("testing123.mp3")
+    os.chdir(cwd)
 
     guild = daf.GUILD(dc_guild)
     voice_message = daf.message.VoiceMESSAGE(None, timedelta(seconds=20), VOICE_MESSAGE_TEST_MESSAGE, voice_channels,
@@ -87,4 +92,3 @@ async def test_voice_message_send(channels: Tuple[daf.discord.ChannelType], guil
     # Check results
     assert end_time - start_time >= VOICE_MESSAGE_TEST_LENGTH * len(voice_channels), "Message was not played till the end."
     assert len(message_ctx["channels"]["failed"]) == 0, "Failed to send to all channels"
-
