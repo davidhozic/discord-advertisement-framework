@@ -26,7 +26,7 @@ __all__ = (
 
 # Configuration
 # ----------------------#
-C_VC_CONNECT_TIMEOUT = 3  # Timeout of voice channels
+C_VC_CONNECT_TIMEOUT = 7  # Timeout of voice channels
 
 
 @instance_track.track_id
