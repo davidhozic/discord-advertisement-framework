@@ -13,12 +13,13 @@ def get_attrs(obj):
     return slots
 
 
-def get_value(obj, attr: str):
+def get_value(obj, attr: str, extra_ignore: set=set()):
     custom_key_map = {
         asyncio.Semaphore: lambda sem: (sem.locked(), sem._value),
     }
 
     ignore_attrs = {}
+
     global_ignores = {
         "_sa_class_manager",
         "_sa_registry",
@@ -30,18 +31,18 @@ def get_value(obj, attr: str):
     value = getattr(obj, attr, None)
     key = custom_key_map.get(type(value), default_key)
     ignore = ignore_attrs.get(type(obj), set())
-    if attr in ignore or attr in global_ignores:
-        return 0
+    if attr in ignore or attr in global_ignores or attr in extra_ignore:
+        return None
 
     return key(value)
 
 
-def compare_objects(obj1, obj2):
+def compare_objects(obj1, obj2, extra_ignore=set()):
     assert type(obj1) is type(obj2)
 
     for attr in get_attrs(obj1):
-        val_obj1 = get_value(obj1, attr)
-        val_obj2 = get_value(obj2, attr)
+        val_obj1 = get_value(obj1, attr, extra_ignore)
+        val_obj2 = get_value(obj2, attr, extra_ignore)
 
         if get_attrs(val_obj1) and not inspect.isclass(val_obj1):
             compare_objects(val_obj1, val_obj2)

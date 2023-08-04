@@ -3,6 +3,7 @@ Testing module used to test the remote control server.
 """
 from daf_gui.connector import RemoteConnectionCLIENT
 from daf.misc import instance_track as it
+from test_util import *
 
 import daf
 import pytest
@@ -49,4 +50,5 @@ async def test_http(accounts, guilds):
 
     # Test get_accounts
     new_accounts = await client.get_accounts()
-    assert new_accounts == accounts
+    for i in range(len(new_accounts)):
+        compare_objects(new_accounts[i], accounts[i], {"_deleted", "_client", "_daf_id"})
