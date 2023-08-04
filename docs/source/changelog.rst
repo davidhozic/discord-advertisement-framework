@@ -54,6 +54,8 @@ v2.10
   - deprecation notices are now a button.
   - Certain fields are now masked with '*' when not editing the object.
   - Old data that is being updated will now be updated by index
+  - View properties of trackable objects. This can be used to, eg. view the channels AutoCHANNEL found.
+
 
 v2.9.3
 =================

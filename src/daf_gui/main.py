@@ -59,7 +59,7 @@ This is written as part of my bachelor thesis as a degree finishing project
 """
 
 GITHUB_URL = "https://github.com/davidhozic/discord-advertisement-framework"
-DOC_URL = f"https://daf.davidhozic.com/en/v{daf.VERSION}"
+DOC_URL = f"https://daf.davidhozic.com/en/v{'.'.join(daf.VERSION.split('.')[:2])}.x/"
 DISCORD_URL = "https://discord.gg/DEnvahb2Sw"
 
 OPTIONAL_MODULES = [

@@ -5,7 +5,7 @@ Modules contains definitions related to GUI object transformations.
 from typing import Any, Union, List, get_type_hints, Generic, TypeVar, Iterable, Mapping
 from contextlib import suppress
 from enum import Enum
-from inspect import signature
+from inspect import signature, getmembers_static
 
 from daf.convert import import_class
 from daf.misc import instance_track as it
@@ -73,10 +73,16 @@ ADDITIONAL_ANNOTATIONS = {
     discord.EmbedField: {
         "name": str, "value": str, "inline": bool
     },
+    discord.TextChannel: {
+        "name": str,
+        "id": int
+    },
     daf.add_object: {
         "obj": daf.ACCOUNT
     },
 }
+
+ADDITIONAL_ANNOTATIONS[discord.VoiceChannel] = ADDITIONAL_ANNOTATIONS[discord.TextChannel]
 
 if daf.logging.sql.SQL_INSTALLED:
     sql_ = daf.logging.sql.tables
@@ -93,9 +99,8 @@ CONVERSION_ATTR_TO_PARAM = {
     dt.timezone: {
         "offset": "_offset",
         "name": "_name",
-    }
+    },
 }
-
 
 CONVERSION_ATTR_TO_PARAM[daf.client.ACCOUNT] = {k: k for k in daf.client.ACCOUNT.__init__.__annotations__}
 CONVERSION_ATTR_TO_PARAM[daf.client.ACCOUNT]["token"] = "_token"
@@ -159,13 +164,22 @@ class ObjectInfo(Generic[TClass]):
     real_object: object
         Actual object that ObjectInfo represents inside GUI. Used whenever update
         of the real object is needed upon saving inside the GUI.
+    property_map: Mapping[str, ObjectInfo]
+        Mapping that maps a property (name) of the object into it's ObjectInfo.
     """
     CHARACTER_LIMIT = 150
 
-    def __init__(self, class_, data: Mapping, real_object: it.ObjectReference = None) -> None:
+    def __init__(
+        self,
+        class_,
+        data: Mapping,
+        real_object: it.ObjectReference = None,
+        property_map: Mapping[str, "ObjectInfo"] = {}
+    ) -> None:
         self.class_ = class_
         self.data = data
-        self.real_object = real_object
+        self.real_object = real_object,
+        self.property_map = property_map
         self.__hash = 0
         self.__repr = None
 
@@ -313,6 +327,19 @@ def convert_to_object_info(object_: object, save_original = False):
         if save_original:
             ret.real_object = it.ObjectReference(it.get_object_id(object_))
 
+            # Convert object properties
+            # This will only be aviable for live objects, since it has no configuration value,
+            # thus keeping it wouldn't make much sense
+            if hasattr(object_, "_daf_id"):
+                property_map = {}
+                members = [x for x in getmembers_static(object_) if isinstance(x[1], property)]
+                prop: property
+                for name, prop in members:
+                    return_annotation = get_type_hints(prop.fget).get("return")
+                    property_map[name] = (convert_to_object_info(prop.fget(object_), True), return_annotation)
+
+                ret.property_map = property_map
+
         return ret
 
     def get_conversion_map(object_type):
@@ -329,7 +356,6 @@ def convert_to_object_info(object_: object, save_original = False):
         return attrs
 
     object_type = type(object_)
-
     if object_type in {int, float, str, bool, decimal.Decimal, type(None)} or isinstance(object_, Enum):
         if object_type is decimal.Decimal:
             object_ = float(object_)
