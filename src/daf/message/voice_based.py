@@ -340,7 +340,7 @@ class VoiceMESSAGE(BaseChannelMessage):
             # TODO: When fixed, replace with audio.stream.
             raw_data = audio.data
             filename = Path.home().joinpath(f"daf/tmp_{id(raw_data)}")
-            filename.touch()
+            filename.parent.mkdir(exist_ok=True, parents=True)
 
             with open(filename, "wb") as tmp_file:
                 tmp_file.write(raw_data)
