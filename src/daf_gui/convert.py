@@ -141,6 +141,9 @@ PASSWORD_PARAMS = {
     daf.SeleniumCLIENT: {"password", },
 }
 
+CONVERSION_ATTR_TO_PARAM[daf.web.SeleniumCLIENT] = {k: f"_{k}" for k in daf.web.SeleniumCLIENT.__init__.__annotations__}
+CONVERSION_ATTR_TO_PARAM[daf.web.SeleniumCLIENT].pop("return")
+
 
 class ObjectInfo(Generic[TClass]):
     """

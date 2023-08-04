@@ -432,6 +432,13 @@ class ACCOUNT:
         if _delete:
             self._delete()
 
+            for server in self.servers:
+                server._delete()
+
+            self._uiservers = self.servers
+            self._servers.clear()
+            self._autoguilds.clear()
+
     async def _loop(self):
         """
         Main task loop for advertising thru each guild.
