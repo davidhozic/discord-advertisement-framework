@@ -358,7 +358,8 @@ class HTTPClient:
 
                         # we are being rate limited
                         if response.status == 429:
-                            if not response.headers.get("Via") or isinstance(data, str) or ("code" in data and data["code"] == 20016):
+                            retry_after: float = data.get("retry_after", 0)
+                            if not response.headers.get("Via") or isinstance(data, str) or ("code" in data and data["code"] == 20016) or retry_after > 30:
                                 # Banned by Cloudflare more than likely.
                                 raise HTTPException(response, data)
 
@@ -368,7 +369,6 @@ class HTTPClient:
                             )
 
                             # sleep a bit
-                            retry_after: float = data["retry_after"]
                             _log.warning(fmt, retry_after, bucket)
 
                             # check if it's a global rate limit

@@ -103,15 +103,25 @@ class TextMESSAGE(BaseChannelMessage):
         * timedelta - the specified time difference
         * datetime - specific date & time
 
-        .. versionchanged:: v2.10
+        .. versionchanged:: 2.10
 
             Parameter ``remove_after`` of int type will now work at a channel level and
             it nows means the SUCCESSFUL number of sends into each channel.
+
+    auto_publish: Optional[bool]
+        Automatically publish message if sending to an announcement channel.
+        Defaults to False.
+
+        If the channel publish is rate limited, the message will still be sent, but an error will be
+        printed to the console instead of message being published to the follower channels.
+
+        .. versionadded:: 2.10
     """
 
     __slots__ = (
         "mode",
         "sent_messages",
+        "auto_publish",
     )
 
     @typechecked
@@ -121,12 +131,14 @@ class TextMESSAGE(BaseChannelMessage):
         end_period: Union[int, timedelta],
         data: Union[Iterable[Union[str, discord.Embed, FILE]], str, discord.Embed, FILE, _FunctionBaseCLASS],
         channels: Union[Iterable[Union[int, discord.TextChannel, discord.Thread]], AutoCHANNEL],
-        mode: Optional[Literal["send", "edit", "clear-send"]] = "send",
-        start_in: Optional[Union[timedelta, datetime]] = timedelta(seconds=0),
-        remove_after: Optional[Union[int, timedelta, datetime]] = None
+        mode: Literal["send", "edit", "clear-send"] = "send",
+        start_in: Union[timedelta, datetime] = timedelta(seconds=0),
+        remove_after: Optional[Union[int, timedelta, datetime]] = None,
+        auto_publish: bool = False
     ):
         super().__init__(start_period, end_period, data, channels, start_in, remove_after)
         self.mode = mode
+        self.auto_publish = auto_publish
         # Dictionary for storing last sent message for each channel
         self.sent_messages: Dict[int, discord.Message] = {}
 
@@ -425,11 +437,22 @@ class TextMESSAGE(BaseChannelMessage):
                     self.mode in {"send", "clear-send"} or
                     self.mode == "edit" and self.sent_messages.get(channel.id, None) is None
                 ):
-                    self.sent_messages[channel.id] = await channel.send(
+                    message = await channel.send(
                         text,
                         embed=embed,
                         files=[discord.File(fwFILE.filename) for fwFILE in files]
                     )
+                    self.sent_messages[channel.id] = message
+                    if self.auto_publish and channel.is_news():
+                        try:
+                            await message.publish()
+                        except discord.HTTPException as exc:
+                            trace(
+                                f"Unable to publish {self} to channel '{channel.name}'({channel.id})",
+                                TraceLEVELS.ERROR,
+                                exc
+                            )
+
                 # Mode is edit and message was already send to this channel
                 elif self.mode == "edit":
                     await self.sent_messages[channel.id].edit(text, embed=embed)
