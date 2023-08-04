@@ -349,4 +349,4 @@ class VoiceMESSAGE(BaseChannelMessage):
             return {"success": False, "reason": ex, "action": action}
         finally:
             if voice_proto is not None:
-                voice_proto.disconnect()
+                await voice_proto.disconnect()
