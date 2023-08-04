@@ -2,8 +2,8 @@
     Contains definitions related to voice messaging."""
 
 
-from contextlib import suppress
 from typing import Any, Dict, List, Iterable, Optional, Union, Tuple
+from pathlib import Path
 from datetime import timedelta, datetime
 from typeguard import typechecked
 
@@ -11,14 +11,13 @@ from .base import *
 from ..dtypes import *
 from ..logging.tracing import *
 from ..logging import sql
-from ..misc import doc, instance_track, async_util
+from ..misc import doc, instance_track
 
 from .. import dtypes
 
 import asyncio
 import _discord as discord
 import os
-
 
 __all__ = (
     "VoiceMESSAGE",
@@ -340,7 +339,7 @@ class VoiceMESSAGE(BaseChannelMessage):
             # This is needed due to a bug in the API wrapper, which only seems to appear on Linux.
             # TODO: When fixed, replace with audio.stream.
             raw_data = audio.data
-            filename = os.path.expanduser(f"~/daf/tmp_{id(raw_data)}")
+            filename = Path.home().joinpath(f"daf/tmp_{id(raw_data)}")
             with open(filename, "wb") as tmp_file:
                 tmp_file.write(raw_data)
 
