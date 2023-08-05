@@ -13,14 +13,14 @@
 
 
 Nezamenljivi žetoni (angl. *Non fungible tokens*) so edinstvena digitalna sredstva, ki živijo na verigi blokov brez možnosti replikacije.
-Obstaj več pristopov za njihovo oglaševanje, kjer je eden izmed teh oglaševanje po socialnem omrežju Discord s pristopom šilinga.
+Obstaj več pristopov za njihovo oglaševanje, kjer je eden izmed teh oglaševanje po socialnem omrežju Discord s pristopom agresivnega oglaševanja.
 Diplomsko delo se fokusira na proces oglaševanja in se navezuje na projekt Ogrodje za oglaševanje po Discordu (angl. Discord Advertisement Framework),
 ki je implementirano v programskem jeziku Python.
 
 Najprej so v delu opisani nezamenljivi žetoni oziroma pristopi k njihovem oglaševanju.
 Zatem je predstavljeno socialno omrežje Discord in pristop oglaševanja na tem omrežju.
 Sledi predstavitev samega projekta diplomske naloge, kjer je cilj naloge izdelava ogrodja za oglaševanje po Discordu,
-ki lahko deluje samodejno brez nadzora uporabnika, se ustrezno odziva na napake, nudi beleženje sporočil in je konfigurabilno,
+ki lahko deluje samodejno brez posredovanja uporabnika, se ustrezno odziva na napake, nudi beleženje sporočil in je konfigurabilno,
 da lahko deluje na več načinov.
 
 V poglavju vezanem na projekt diplomskega dela so predstavljeni zasnova in razvoj projekta, njegova dokumentacija in avtomatično testiranje.
@@ -28,7 +28,7 @@ V poglavju vezanem na projekt diplomskega dela so predstavljeni zasnova in razvo
 Ogrodje se na najvišjem nivoju deli na jedro in grafični vmesnik, kjer jedro lahko deluje neprekinjeno na strežniku in
 je sposobno na daljavo procesirati ukaze iz grafičnega vmesnika. Oglaševalske podatke in parametre se v jedru
 nastavi kar preko Python skripte / programa, kjer je potrebno minimalno znanje Python jezika.
-Jedro se deli na več abstrakcijsih nivojev za lažji razvoj in nadgrajevanje.
+Jedro se deli na več sektorjev za lažji razvoj in nadgrajevanje.
 Grafični vmesnik je prav tako implementiran v Pythonu. Opisan je razvoj grafičnega vmesnika,
 opisana je njegova struktura in na koncu je opisan oddaljen dostop do jedra ogrodja.
 Objekte (račune, sporočila, ipd.) se v grafičnem vmesniku definira preko novega okna, ki se samodejno generira na podlagi
@@ -48,9 +48,8 @@ Ker v času pisanja ne obstaja skoraj nobeno brezplačno oglaševalsko ogrodje, 
 je smiselno sklepati da je projekt izjemno uporabne narave.
 
 
-
-**Ključne besede:** Nezamenljivi žetoni, samodejno oglaševanje, šiling, Python, grafični vmesnik, oddaljen dostop,
-shranjevanje v datoteko, dokumentacija, avtomatično testiranje, ogrodje za oglaševanje, beleženje sporočil, zasnova in razvoj.
+**Ključne besede:** Python, grafični vmesnik, oddaljen dostop,
+shranjevanje v datoteko, dokumentacija, avtomatično testiranje, beleženje sporočil, zasnova in razvoj.
 
 
 .. only:: not latex
@@ -68,14 +67,14 @@ The thesis focuses on the advertisement process and relates to the Discord Adver
 First, the thesis describes non-fungible tokens and approaches to their advertisement.
 Next, it presents the social network Discord and the advertisement approach on this social network. It also explains the types of user accounts and channel types where advertisement can take place.
 The presentation then moves on to the project itself, which aims to create a framework for advertising on Discord,
-capable of operating automatically without user supervision, responding appropriately to errors, logging messages, and being configurable to function in multiple ways.
+capable of operating automatically without user intervention, responding appropriately to errors, logging messages, and being configurable to function in multiple ways.
 
 In the chapter related to the thesis's project, the design and development of the project, its documentation and automatic testing are all presented.
 
 At the highest level, the framework is divided into a core and a graphical interface, where the core can run continuously on a server and
 is capable of remotely processing commands from the graphical interface. Advertisement data and parameters are set in the core
 via a Python script or program, requiring minimal knowledge of the Python language.
-The core is divided into several abstraction layers to facilitate development and upgrades.
+The core is divided into several sectors to facilitate development and upgrades.
 The graphical interface is also implemented in Python. The development of the graphical interface is described,
 its structure is explained, and remote access to the core of the framework is discussed.
 Objects (accounts, messages, etc.) are defined in the graphical interface through a new window, automatically generated based on
@@ -94,8 +93,8 @@ In conclusion, the framework proves to be extremely useful not only for advertis
 Considering that, at the time of writing, there are almost no free advertising frameworks capable of what this framework can do,
 it is reasonable to conclude that the project is of significant practical value.
 
-**Keywords:** Non-fungible tokens, automatic advertising, shilling, Python, graphical interface, remote access,
-saving to file, documentation, automatic testing, advertisement framework, message logging, design and development.
+**Keywords:** Python, graphical interface, remote access,
+saving to file, documentation, automatic testing, message logging, design and development.
 
 .. raw:: latex
 

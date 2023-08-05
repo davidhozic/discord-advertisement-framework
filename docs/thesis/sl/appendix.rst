@@ -49,7 +49,7 @@ Pošiljanje tekstovnega sporočila s periodo naključno med 1 uro in 2 urama, z 
 
 Avtomatsko odkrivanje (angl. discovery) cehov in kanalov
 ---------------------------------------------------------
-Pošiljanje s fiksno periodo dveh ur in avtomatično odkrivanje pridruženih cehov in kanalov na podlagi ReGex vzorca.
+Pošiljanje s fiksno periodo dveh ur in avtomatično odkrivanje pridruženih cehov in kanalov na podlagi RegEx vzorca.
 
 .. literalinclude:: ./DEP/Examples/example-autoguild-autochannel.py
     :caption: Avtomatsko odkrivanje cehov in kanalov - |PY_EXAMPLE|

@@ -22,10 +22,10 @@ vgrajen v Python in služi nalaganju Python paketov. Za uporabo jedra morajo upo
 da se to datoteko generira iz grafičnega vmesnika (:ref:`Zasnova in razvoj grafičnega vmesnika`)
 
 
-Asyncio
+AsyncIO
 ===============
-Jedro ogrodja je zasnovano za konkurečno (angl. *concurrent*) delovanje, kar pomeni da se lahko na videz več opravil izvaja na enkrat, v
-resnici pa se zelo hitro preklapja med njimi. To je omogočeno s knjižnico :mod:`asyncio`.
+Jedro ogrodja je zasnovano za konkurenčno (angl. *concurrent*) delovanje, kar pomeni da se lahko na videz več opravil izvaja na enkrat, v
+resnici pa se zelo hitro preklaplja med njimi. To je omogočeno s knjižnico :mod:`asyncio`.
 AsyncIO omogoča ustvarjanje ``async`` funkcij, ki vrnejo korutine. Te korutine lahko potem zaženemo v opravilih,
 med katerimi bo program preklopil vsakič, ko v trenutnem opravilu z ``await`` besedo na primer čakamo:
 
@@ -78,7 +78,7 @@ Prav tako se tu zgodi inicializacija sektorja beleženja sporočil, s katerim ka
 
 Nadzorni sektor ima vedno vsaj eno opravilo (poleg opravil v ostalih sektorjih), in sicer je to tisto, ki skrbi za čiščenje uporabniških računov v primeru napak.
 Drugo opravilo se zažene le v primeru, da je vklopljeno shranjevanje objektov v datoteko.
-Ogrodje samo po sebi deluje tako, da ima vse objekte (račune, cehe, sporočila, ipd.) shranjene kar neposredno v RAM pomnilniku.
+Ogrodje samo po sebi deluje tako, da ima vse objekte (račune, cehe, sporočila, ipd.) shranjene kar neposredno v RAM.
 Že od samega začetka je ogrodje narejeno na način, da se željene objekte definira kar preko Python skripte in je zato shranjevanje v RAM
 ob taki definiciji neproblematično, problem pa je nastopil, ko je bilo dodano dinamično dodajanje in brisanje objektov, kar
 dejansko uporabnikom omogoča, da ogrodje dinamično uporabljajo in v tem primeru je bilo potrebno dodati neke vrste permanentno shrambo.
@@ -88,7 +88,7 @@ vseh sektorjev, zato se je na koncu izbrala preprosta opcija shranjevanja objekt
 ob vsakem normalnem izklopu ogrodja, ali pa v vsakem primeru na dve minuti periodično. V prihodnosti so
 še vedno načrti za izboljšanje tega mehanizma in ne izključuje se uporaba prej omenjene podatkovne baze.
 
-V nadzornem novoju se (poleg programskega vmesnika) nahaja tudi HTTP vmesnik, ki služi kot
+V nadzornem sektorju se (poleg programskega vmesnika) nahaja tudi HTTP vmesnik, ki služi kot
 podpora za oddaljen dostop grafičnega vmesnika do jedra. Deluje na knjižnici `aiohttp <https://docs.aiohttp.org/en/stable/index.html>`_, ki je asinhrona
 HTTP knjižnica.
 HTTP vmesnik je v resnici zelo preprost in deluje tako, da ob neki HTTP zahtevi ustvari novo :mod:`asyncio` opravilo,
@@ -149,7 +149,7 @@ ne samo notranje kode, ampak tudi kode za definiranje same oglaševalske skripte
 To je sicer posledično zahtevalo definicijo dodatnih vrstic v oglaševalski skripti, kar je hitro postalo opazno ob 90tih različnih cehih.
 Vseeno se je ta izbira dobro izšla, saj je zdaj na cehovskem sektorju veliko funkcionalnosti, ki ne spada v ostale sektorje, 
 kot je na primer avtomatično iskanje novih cehov, in njihovo pridruževanje. Ta struktura nudi tudi veliko preglednosti
-v primeru logiranja (vsaj v primeru JSON datotek), kjer je vse razdeljeno po različnih cehih.
+v primeru beleženja sporočil (vsaj v primeru JSON datotek), kjer je vse razdeljeno po različnih cehih.
 
 
 .. figure:: ./DEP/daf-guild-layer-flowchart.svg
@@ -207,8 +207,8 @@ Primer računanja časa in odprave časovne napake je prikazan na spodnji sliki.
 Sektor beleženja zgodovine sporočil
 ------------------------------------
 Sektor beleženja je zadolžen za beleženje poslanih sporočil oz. beleženje poskusov pošiljanja sporočil. Podatke, ki jih
-mora zabeležiti dobi iz cehovskega sektorja. Beleži se tudi podatke o pridužitvi novih članov, če
-je to konfigurirano v cehovskem novoju.
+mora zabeležiti dobi iz cehovskega sektorja. Beleži se tudi podatke o pridružitvi novih članov, če
+je to konfigurirano v cehovskem sektorju.
 
 Omogoča beleženje v tri različne formate, kjer vsakemu pripada lasten objekt beleženja:
 
@@ -299,7 +299,7 @@ uporabljena knjižnica SQLAlchemy. Zaradi določenih SQL zahtev (funkcije, proce
 je bila ta vrsta beleženja možna le ob uporabi Microsoft SQL Server dialekta.
 Kasneje se je postopoma celotno SQL kodo zamenjalo z ekvivalentno Python kodo, ki preko SQLAlchemy knjižnice dinamično
 generira potrebne SQL stavke, zaradi česar so bile odstranjene določene uporabne originalne funkcionalnosti implementirane
-na sektorju same SQL baze, kot so npr. prožilci (angl. *trigger*), ki se jih da predstavljati kot neke odzivne funckije na dogodke.
+na sektorju same SQL baze, kot so npr. prožilci (angl. *trigger*), ki se jih da predstavljati kot neke odzivne funkcije na dogodke.
 Je pa zaradi tega možno uporabljati bazo na večih dialektih, dodatno pa je bilo veliko stvari lažje implementirati, saj se ni
 potrebno zanašati na specifike dialekta.
 
