@@ -5,7 +5,7 @@ Modules contains definitions related to GUI object transformations.
 from typing import Any, Union, List, get_type_hints, Generic, TypeVar, Iterable, Mapping
 from contextlib import suppress
 from enum import Enum
-from inspect import signature, getmembers_static
+from inspect import signature, getmembers
 
 from daf.convert import import_class
 from daf.misc import instance_track as it
@@ -332,9 +332,8 @@ def convert_to_object_info(object_: object, save_original = False):
             # thus keeping it wouldn't make much sense
             if hasattr(object_, "_daf_id"):
                 property_map = {}
-                members = [x for x in getmembers_static(object_) if isinstance(x[1], property)]
                 prop: property
-                for name, prop in members:
+                for name, prop in getmembers(type(object_), lambda x: isinstance(x, property)):
                     return_annotation = get_type_hints(prop.fget).get("return")
                     property_map[name] = (convert_to_object_info(prop.fget(object_), True), return_annotation)
 
