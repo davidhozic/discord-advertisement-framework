@@ -334,8 +334,9 @@ def convert_to_object_info(object_: object, save_original = False):
                 property_map = {}
                 prop: property
                 for name, prop in getmembers(type(object_), lambda x: isinstance(x, property)):
-                    return_annotation = get_type_hints(prop.fget).get("return")
-                    property_map[name] = (convert_to_object_info(prop.fget(object_), True), return_annotation)
+                    with suppress(AttributeError):
+                        return_annotation = get_type_hints(prop.fget).get("return")
+                        property_map[name] = (convert_to_object_info(prop.fget(object_), True), return_annotation)
 
                 ret.property_map = property_map
 
