@@ -83,6 +83,7 @@ ADDITIONAL_ANNOTATIONS = {
 }
 
 ADDITIONAL_ANNOTATIONS[discord.VoiceChannel] = ADDITIONAL_ANNOTATIONS[discord.TextChannel]
+ADDITIONAL_ANNOTATIONS[discord.Guild] = ADDITIONAL_ANNOTATIONS[discord.TextChannel]
 
 if daf.logging.sql.SQL_INSTALLED:
     sql_ = daf.logging.sql.tables
@@ -178,7 +179,7 @@ class ObjectInfo(Generic[TClass]):
     ) -> None:
         self.class_ = class_
         self.data = data
-        self.real_object = real_object,
+        self.real_object = real_object
         self.property_map = property_map
         self.__hash = 0
         self.__repr = None

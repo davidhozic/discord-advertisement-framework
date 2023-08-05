@@ -546,7 +546,8 @@ class NewObjectFrameStruct(NewObjectFrameBase):
             self.old_gui_data is None or
             # getattr since class_ can also be non ObjectInfo
             getattr(self.old_gui_data, "real_object", None) is None or
-            (available_methods := EXECUTABLE_METHODS.get(self.class_)) is None
+            (available_methods := EXECUTABLE_METHODS.get(self.class_)) is None or
+            not self.allow_save
         ):
             return
 

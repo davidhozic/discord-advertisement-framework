@@ -181,7 +181,7 @@ def setup_additional_live_properties(w: ttk.Menubutton, frame):
         menu.add_command(command=frame._lambda(_callback, k), label=k)
 
     w.configure(menu=menu)
-    ToolTip(w, "*NOTE* This does currently not work properly in remote mode! Use only in local mode. Remote will be supported in v3.0", topmost=True)
+    ToolTip(w, "Inspect additional properties of the object.", topmost=True)
     w.pack(side="right", padx=dpi_scaled(2))
 
 

@@ -8,6 +8,8 @@ from contextlib import suppress
 from enum import Enum
 from inspect import isclass
 
+from daf.logging.tracing import TraceLEVELS, trace
+
 import decimal
 import importlib
 import copy
@@ -61,15 +63,14 @@ CONVERSION_ATTRS = {
             "_safe_sem": asyncio.Semaphore(1),
             "parent": None,
             "guild_query_iter": None,
-            "cache": {}
         },
     },
     message.AutoCHANNEL: {
         "attrs": attributes.get_all_slots(message.AutoCHANNEL),
         "attrs_restore": {
             "parent": None,
-            "cache": set(),
             "removed_channels": set(),
+            "channel_getter": None,
         },
     },
     logging.LoggerSQL: {
@@ -100,6 +101,17 @@ CONVERSION_ATTRS = {
     bytes: {
         "custom_encoder": lambda data: data.hex(),
         "custom_decoder": lambda hex_str: bytes.fromhex(hex_str)
+    },
+    set: {
+        "custom_encoder": lambda data: convert_object_to_semi_dict(list(data)),
+        "custom_decoder": lambda list_data: set(convert_from_semi_dict(list_data))
+    },
+    dict: {
+        "custom_encoder": lambda data: {k: convert_object_to_semi_dict(v) for k, v in data.items()},
+        "custom_decoder": lambda data: {k: convert_from_semi_dict(v) for k, v in data.items()}
+    },
+    discord.Guild: {
+        "attrs": ["name", "id"]
     }
 }
 """
@@ -129,15 +141,17 @@ These are:
 """
 
 
+for cls in {discord.TextChannel, discord.VoiceChannel}:
+    attrs = {"attrs": ["name", "id", "slowmode_delay"]}
+    CONVERSION_ATTRS[cls] = attrs
+
+
 # Guilds
 CONVERSION_ATTRS[guild.GUILD] = {
     "attrs": attributes.get_all_slots(guild.GUILD),
     "attrs_restore": {
         "update_semaphore": asyncio.Semaphore(1),
         "parent": None
-    },
-    "attrs_convert": {
-        "_apiobject": lambda guild: guild.snowflake
     },
 }
 
@@ -203,7 +217,8 @@ CONVERSION_ATTRS[message.TextMESSAGE] = {
     "attrs_restore": {
         "update_semaphore": asyncio.Semaphore(1),
         "parent": None,
-        "sent_messages": {}
+        "sent_messages": {},
+        "channel_getter": None,
     },
     "attrs_convert": {
         "channels": CHANNEL_LAMBDA
@@ -215,6 +230,7 @@ CONVERSION_ATTRS[message.VoiceMESSAGE] = {
     "attrs_restore": {
         "update_semaphore": asyncio.Semaphore(1),
         "parent": None,
+        "channel_getter": None,
     },
     "attrs_convert": {
         "channels": CHANNEL_LAMBDA
@@ -281,7 +297,15 @@ def convert_object_to_semi_dict(to_convert: Any, only_ref: bool = False) -> Mapp
                     if isinstance(value, LAMBDA_TYPE):
                         value = value(to_convert)
                 else:
-                    value = getattr(to_convert, k)
+                    try:
+                        value = getattr(to_convert, k)
+                    except AttributeError as exc:
+                        trace(
+                            f"Conversion could not obtain attr '{k}' in {to_convert}({type(to_convert)}). Using None",
+                            TraceLEVELS.WARNING,
+                            exc
+                        )
+                        value = None
 
                 data_conv[k] = convert_object_to_semi_dict(value)
 
@@ -294,12 +318,9 @@ def convert_object_to_semi_dict(to_convert: Any, only_ref: bool = False) -> Mapp
 
         return to_convert
 
-    if isinstance(to_convert, (set, list, tuple)):
+    if isinstance(to_convert, (list, tuple)):
         to_convert = [convert_object_to_semi_dict(value) for value in to_convert]
         return to_convert
-
-    if isinstance(to_convert, Mapping):
-        return {k: convert_object_to_semi_dict(v) for k, v in to_convert.items()}
 
     if isinstance(to_convert, Enum):
         return {"enum_type": f"{object_type.__module__}.{object_type.__name__}", "value": to_convert.value}
@@ -354,9 +375,6 @@ def convert_from_semi_dict(d: Union[Mapping, list, Any]):
         if attrs is not None:
             attrs_restore = attrs.get("attrs_restore", {})
             for k, v in attrs_restore.items():
-                if isinstance(v, LAMBDA_TYPE):
-                    v = v(_return)
-
                 # copy.copy prevents external modifications since it's passed by reference
                 setattr(_return, k, copy.copy(v))
 
@@ -373,9 +391,6 @@ def convert_from_semi_dict(d: Union[Mapping, list, Any]):
 
         if "class_path" in d:  # A class was directly send (not an instance)
             return import_class(d["class_path"])
-
-        if "object_type" not in d:  # It's a normal dictionary
-            return {k: convert_from_semi_dict(v) for k, v in d.items()}
 
         return __convert_to_slotted()
 
