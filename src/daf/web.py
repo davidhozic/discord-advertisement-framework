@@ -5,6 +5,7 @@ and definitions responsible for making HTTP requests to find servers
 the user might want to shill into.
 """
 from typing import Callable, Optional, Any
+from typing import Callable, Optional, Any
 from contextlib import suppress
 from enum import auto, Enum
 from datetime import timedelta
@@ -37,7 +38,7 @@ try:
     from selenium.webdriver.support.expected_conditions import (
         presence_of_element_located,
         url_contains,
-        url_changes
+        url_changes,
     )
     from selenium.common.exceptions import (
         NoSuchElementException,
@@ -61,6 +62,7 @@ __all__ = (
 
 WD_TIMEOUT_SHORT = 5
 WD_TIMEOUT_MED = 15
+WD_TIMEOUT_30 = 30
 WD_TIMEOUT_LONG = 90
 WD_RD_CLICK_UPPER_N = 5
 WD_RD_CLICK_LOWER_N = 2
@@ -122,6 +124,42 @@ class SeleniumCLIENT:
         self._proxy = proxy
         self.driver = None
         self._token = None
+
+    async def initialize(self) -> None:
+        """
+        Starts the webdriver whenever the framework is started.
+
+        Raises
+        ----------
+        Any
+            Raised in :py:meth:`~SeleniumCLIENT.login` method.
+        """
+        WD_OUTPUT_PATH.mkdir(exist_ok=True, parents=True)
+        web_data_path = pathlib.Path(WD_PROFILES_PATH, self._username)
+
+        opts = Options()
+        opts.add_argument(f"--user-data-dir={web_data_path.absolute()}")
+        opts.add_argument("--profile-directory=Profile 1")
+        opts.add_argument("--no-sandbox")
+        opts.add_argument("--mute-audio")
+        opts.add_argument("--no-first-run")
+        opts.add_argument("--disable-background-networking")
+        opts.add_argument("--disable-sync")
+
+        if self._proxy is not None:
+            proxy = self._proxy.split("://")  # protocol, url
+            if '@' in proxy[1]:  # Username and password also provided
+                trace("Proxy with username and password provided. Enter manually.", TraceLEVELS.WARNING)
+                proxy[1] = proxy[1][proxy[1].find('@') + 1:]
+
+            proxy = f"{proxy[0]}://{proxy[1]}"
+            opts.add_argument(f"--proxy-server={proxy}")
+
+        driver = Chrome(options=opts)
+        driver.maximize_window()
+        self.driver = driver
+
+        return await self.login()
 
     def __str__(self) -> str:
         return f"{type(self).__name__}(username={self._username})"
@@ -257,10 +295,10 @@ class SeleniumCLIENT:
         main_window_handle = driver.current_window_handle
         driver.switch_to.new_window("tab")
         await self.async_execute(driver.get, url)
-        await self.random_sleep(0.5, 1)
+        await asyncio.sleep(1)
         try:
             await self.async_execute(
-                WebDriverWait(driver, WD_TIMEOUT_MED).until,
+                WebDriverWait(driver, WD_TIMEOUT_LONG).until,
                 url_contains("discord.com")
             )
             await self.await_load()
@@ -339,8 +377,8 @@ class SeleniumCLIENT:
         TimeoutError
             The page loading timed-out.
         """
-        await self.random_sleep(2, 3)
         trace("Awaiting Discord load", TraceLEVELS.DEBUG)
+        await asyncio.sleep(3)
         try:
             await self.async_execute(
                 WebDriverWait(self.driver, WD_TIMEOUT_LONG).until_not,
@@ -425,37 +463,6 @@ class SeleniumCLIENT:
         except TimeoutException as exc:
             raise TimeoutError("CAPTCHA was not solved by the user") from exc
 
-    async def initialize(self) -> None:
-        """
-        Starts the webdriver whenever the framework is started.
-
-        Raises
-        ----------
-        Any
-            Raised in :py:meth:`~SeleniumCLIENT.login` method.
-        """
-        WD_OUTPUT_PATH.mkdir(exist_ok=True, parents=True)
-        web_data_path = pathlib.Path(WD_PROFILES_PATH, self._username)
-
-        opts = Options()
-        opts.add_argument(f"--user-data-dir={web_data_path.absolute()}")
-        opts.add_argument("--profile-directory=Profile 1")
-        opts.add_argument("--no-sandbox")
-        opts.add_argument("--mute-audio")
-
-        if self._proxy is not None:
-            proxy = self._proxy.split("://")  # protocol, url
-            if '@' in proxy[1]:
-                proxy[1] = proxy[1][proxy[1].find('@') + 1:]
-
-            proxy = f"{proxy[0]}://{proxy[1]}"
-            opts.add_argument(f"--proxy-server={proxy}")
-
-        driver = Chrome(options=opts)
-        driver.maximize_window()
-        self.driver = driver
-        return await self.login()
-
     async def login(self) -> str:
         """
         Logins to Discord using the webdriver
@@ -478,6 +485,7 @@ class SeleniumCLIENT:
             driver.get(DISCORD_LOGIN_URL)
             await self.await_load()
             await self.random_sleep(2, 3)
+
             # Check if already logged in
             if driver.current_url == DISCORD_LOGIN_URL:
                 # Check previous accounts
@@ -488,6 +496,13 @@ class SeleniumCLIENT:
                         "//div[contains(text(), 'Add an account')]"
                     )
                     await self.hover_click(login_bnt)
+
+                await self.async_execute(
+                    WebDriverWait(driver, WD_TIMEOUT_LONG).until,
+                    presence_of_element_located(
+                        (By.XPATH, "//input[@name='email']")
+                    )
+                )
 
                 # Not logged in
                 email_entry = driver.find_element(
@@ -506,8 +521,8 @@ class SeleniumCLIENT:
                 ActionChains(driver).send_keys(Keys.ENTER).perform()
 
                 await self.await_url_change()
-                await self.await_load()
 
+            await self.await_load()
             return self.update_token_file()
         except (WebDriverException, OSError) as exc:
             raise RuntimeError(
@@ -583,7 +598,7 @@ class SeleniumCLIENT:
 
             join_bnt = driver.find_element(
                 By.XPATH,
-                "//button[@type='button']/div[contains(text(), 'Join')]"
+                "//button[@type='button']/div[contains(text(), 'Join Server')]"
             )
             await self.hover_click(join_bnt)
             await self.random_sleep(3, 5)  # Wait for any CAPTCHA to appear
@@ -607,7 +622,7 @@ class SeleniumCLIENT:
                         (
                             By.XPATH,
                             "//button[@type='button']"
-                            "/div[contains(text(), 'Join')]"
+                            "/div[contains(text(), 'Join Server')]"
                         )
                     )
                 )
