@@ -1,9 +1,14 @@
 on:
   workflow_dispatch:
     inputs:
-      version:
+      version-minor:
         type: string
-        description: Version to create tag on
+        description: Minor version to create tag on (eg. x.x)
+
+      version-bugfix:
+        type: string
+        description: Minor version to create tag on (eg. 2.x)
+        default: ""    
 
 name: Create Release
 
@@ -19,7 +24,7 @@ jobs:
         uses: mathieudutour/github-tag-action@v6.1
         with:
           github_token: ${{ secrets.TOKEN_GH }}
-          custom_tag : ${{github.event.inputs.version}}
+          custom_tag : ${{github.event.inputs.version-minor}}.${{github.event.inputs.version-bugfix}}
       - name: Create Release
         id: create_release
         uses: actions/create-release@latest
@@ -28,6 +33,6 @@ jobs:
         with:
           tag_name: ${{ steps.tag_version.outputs.new_tag }}
           release_name: ${{ steps.tag_version.outputs.new_tag }}
-          body: "Changelog: https://daf.davidhozic.com/en/v${{github.event.inputs.version}}/changelog.html"
+          body: "Changelog: https://daf.davidhozic.com/en/v${{github.event.inputs.version-minor}}.x/changelog.html"
           draft: false
           prerelease: false
