@@ -860,7 +860,7 @@ class AutoGUILD:
         self.guild_query_iter = None
         self.last_guild_join = datetime.min
         self.guild_join_count = 0
-        misc._write_attr_once(self, "_safe_sem", asyncio.Semaphore(2))
+        misc._write_attr_once(self, "_safe_sem", asyncio.Semaphore(1))
 
     @property
     def guilds(self) -> List[GUILD]:

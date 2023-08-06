@@ -32,6 +32,13 @@ Glossary
 Releases
 ----------------------
 
+v2.9.4
+=================
+- Fixed :class:`AutoGUILD` concurrent access. When updating AutoGUILD, the update method did not block
+  causing exceptions.
+- Chrome driver fixes regarding to proxies and timeouts.
+
+
 v2.9.3
 =================
 - Fixed :class:`AutoGUILD` and :class:`AutoCHANNEL` regex patterns. Users can now seperate names with "name1 | name2",

@@ -40,7 +40,7 @@ __all__ = (
 
 
 HELP_URLS = {
-    "daf": f"https://daf.davidhozic.com/en/v{daf.VERSION}/?rtd_search={{}}",
+    "daf": f"https://daf.davidhozic.com/en/v{'.'.join(daf.VERSION.split('.')[:2])}.x/?rtd_search={{}}",
     "_discord": f"https://docs.pycord.dev/en/v{discord._version.__version__}/search.html?q={{}}",
     "builtins": "https://docs.python.org/3/search.html?q={}"
 }
