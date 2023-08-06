@@ -80,7 +80,7 @@ Discord ima tri vrste kanalov:
 2. Glasovni kanali - kanali za govor in predvajanje glasbe
 3. Direktna sporočila - Kanali za pogovor (tekstovno ali glasovno) med dvema uporabnikoma.
 
-Tekstovni kanali se nahajo v cehih in se jih lahko prepozna glede na simbol *#*, ki se nahaja pred imenom vsakega
+Tekstovni kanali se nahajajo v cehih in se jih lahko prepozna glede na simbol *#*, ki se nahaja pred imenom vsakega
 kanala. Sem lahko pošiljate navaden tekst, emotikone, binarne datoteke, nalepke ter, v primeru da imate robotski (angl. *bot*) račun,
 tudi tako imenovana vgrajena sporočila (angl. *Embedded messages* oz. *Embeds*), ki so malo bolj formatirana sporočila
 znotraj okrašene škatle (:numref:`discord-embedded-message`).
@@ -125,7 +125,7 @@ video igre, kreativni projekti, produkti, usluge, ipd. Ne sme pa se oglaševati 
 ki spodbujajo kršenje zakona in vsebin, ki bi lahko povzročijo škodo posameznikom :ref:`discord_guidelines`.
 
 Oglašuje se lahko ročno ali pa avtomatično s primernim orodjem.
-Oglaševanje vključuje pisanje vsebine oglasa, ustvarjanje uporabniških računov, iskanje cehov kamor se z uporabiškimi računi pridruži,
+Oglaševanje vključuje pisanje vsebine oglasa, ustvarjanje uporabniških računov, iskanje cehov kamor se z uporabniškimi računi pridruži,
 in večkratno periodično pošiljanje sporočil v kanale cehov. Najpogosteje se za oglaševanje uporabljajo tekstovni kanali.
 
 
@@ -139,7 +139,7 @@ Ima sposobnost generiranja besedila, ki se zdi človeško in opravljanja različ
 GPT-3 je največji in najmočnejši jezikovni model do danes, s kapaciteto 175 milijard parametrov.
 Prislužil si je pozornost tako raziskovalcev kot industrijskih strokovnjakov zaradi svojih impresivnih sposobnosti in potencialnih aplikacij.
 
-Za referenco, prejšnji odstavek je zgeneriral GPT-3 sam.
+Za referenco, prejšnji odstavek je generiral GPT-3 sam.
 
 
 Za generacijo oglaševalske vsebine lahko npr. GPT-ju podamo slednjo zahtevo:
@@ -172,7 +172,7 @@ Na tej strani lahko v vgrajen iskalnik dodamo določene parametre, med katerimi 
 uporabimo akronim "NFT" in spletna stran nam bo vrnila cehe povezane z NFT.
 
 Tem cehom se lahko potem pridružimo in v primerne kanale oglašujemo našo vsebino. Cehi na temo NFT in kripto valut
-imajo ponavadi namenske kanale, ki so namenjeni oglaševanju in v te lahko oglašujemo brez posledic, medtem ko nas
+imajo po navadi namenske kanale, ki so namenjeni oglaševanju in v te lahko oglašujemo brez posledic, medtem ko nas
 oglaševanje v drugih kanalih lahko privede do izključitve iz strežnika.
 
 .. figure:: ./DEP/topgg_find_servers.png

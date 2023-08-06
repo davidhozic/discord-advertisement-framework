@@ -27,18 +27,15 @@ sod olja za drug sod olja ali en evro za drug evro.
 Najbližji primer nezamenljivega žetona v fizični obliki je bejzbolska kartica. Na primer, lahko imate zelo redko
 bejzbolsko kartico nekega igralca bejzbola in je ne morete enakovredno zamenjati za kakšno drugo običajno bejzbolsko kartico.
 
-
 Marketinški pristopi za promoviranje nezamenljivih žetonov
 ===========================================================
 Obstaja več načinov oglaševanja, ki se jih lahko uporabi tudi za oglaševanje nezamenljivih žetonov. Ti so na primer
 uporaba Google Ads platforme (oglaševanje po Google iskalniku, YouTube aplikaciji), uporaba forumov in drugi načini.
-Eden izmed teh drugih načinov je morda še najbolj uveljavljen na tem področju, in sicer se temu načinu oglaševanju reče
-šiling (angl. *shilling*) :ref:`nft_shilling`.
+Eden izmed teh drugih načinov je morda še najbolj uveljavljen na tem področju, in sicer se temu načinu reče
+agresivno oglaševanje (angl. *shilling*) :ref:`nft_shilling`.
 
-Šiling je izraz za promocijo / oglaševanje NFT po socialnih omrežjih.
-Vendar ne gre le za kakršno koli oglaševanje, kot je na primer postavitev promocijskega gradiva na spletno stran ali
-stojnico v javnosti, temveč gre za bolj agresivno metodo trženja.
-Vključuje nenehno objavljanje o izdelku po socialnih omrežjih, kot so Instagram, Telegram, Discord ipd.,
+Pri agresivnem oglaševanju ni postavljanja promocijskega gradiva na spletno stran ali stojnice v javnost, temveč
+gre za nenehno objavljanje o izdelku po socialnih omrežjih, kot so Instagram, Telegram, Discord ipd.,
 omenjanje izdelka in deljenje povezav do njega povsod, kjer je to mogoče.
 
 Te dni prodajalci nezamenljivih žetonov pogosto ne oglašujejo samostojno, temveč najamejo ljudi, ki to delo 

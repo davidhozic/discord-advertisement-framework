@@ -64,8 +64,6 @@
       + Structured Query Language
 
 
-
-
 .. only:: not latex
 
     Uporabljeni pojmi
@@ -131,10 +129,6 @@
     - 
       + Robot
       + Bot
-
-    -
-      + Šiling (vsiljivo oglaševanje)
-      + Shilling
 
     - 
       + Veriga blokov

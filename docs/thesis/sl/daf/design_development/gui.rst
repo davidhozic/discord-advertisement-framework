@@ -4,8 +4,6 @@
 Zasnova in razvoj grafičnega vmesnika
 ============================================
 
-.. _Python: https://www.python.org
-
 Ogrodje lahko v celoti deluje brez grafičnega vmesnika, a ta način zahteva pisanje konfiguracijskih ``.py`` datotek
 oz. Python skript, kar je marsikomu težje, sploh če se še nikoli niso srečali s Python jezikom.
 
@@ -30,7 +28,7 @@ Posamezne pripomočke se da tudi znatno konfigurirati, kjer lahko spreminjamo st
 
 Pred izbiro Tkinter knjižnice je bila ena izmed možnosti tudi knjižnica PySide (QT), a na koncu se je vseeno obnesla Tkinter
 oz. ttkboostrap knjižnica, saj je že osnovni paket PySide6 knjižnice velik 70 MB, z dodatki pa skoraj 200 MB, medtem ko je Tkinter
-na veliko platformah že pristona kar v sami Python distribuciji in ne zahteva nobene dodatne namestitve, torej je
+na veliko platformah že prisotna kar v sami Python distribuciji in ne zahteva nobene dodatne namestitve, torej je
 ttkboostrap edina dodatna zunanja knjižnica, ki jo je potrebno namesti, in sicer se namesti kar sama ob prvem zagonu grafičnega
 vmesnika.
 
@@ -42,7 +40,7 @@ Grafični vmesnik ogrodja je razdeljen na več zavihkov, kjer je vsak namenjen l
 
 *Optional modules* zavihek
 -----------------------------
-*Optional modules* zavihek omogoča namestitev dodatnih modulov, ki v osnovem paketu ogrodja niso prisotni (zaradi hitrejšega zagona).
+*Optional modules* zavihek omogoča namestitev dodatnih modulov, ki v osnovnem paketu ogrodja niso prisotni (zaradi hitrejšega zagona).
 Sestavljen je iz statusnih panelov, ki če so rdeči (modul ni nameščen) vsebuje še gumb za namestitev.
 Gumb bo namestil potrebne pakete, potem pa bo uporabniku sporočeno, da mora za spremembe ponovno odpreti vmesnik.
 Po ponovnem zagonu bo statusni panel za posamezen modul obarvan zeleno.
@@ -52,25 +50,21 @@ Po ponovnem zagonu bo statusni panel za posamezen modul obarvan zeleno.
     Izgled *Optional Modules* zavihka
 
 
-
-
-
-
 *Schema definition* zavihek
 -----------------------------
 *Schema definition* omogoča definicijo uporabniških računov (in v njih cehov, sporočil, ipd.), definicijo upravljalnika za beleženje,
 izbiro globine izpisov na konzoli in konfiguracijo povezave do jedra ogrodja.
-Omogoča tudi shrambo teh definicij v JSON datoteko, braje definicij iz JSON datoteke in pa generacijo ekvivalentne
+Omogoča tudi shrambo teh definicij v JSON datoteko, branje definicij iz JSON datoteke in pa generacijo ekvivalentne
 Python datoteke, ki požene le jedro orodja (brez grafičnega vmesnika).
-Pravzaprav je ta zavihek namenjen definiciji nekege predloge, ki jo lahko potem uvozimo v jedro ogrodja.
+Pravzaprav je ta zavihek namenjen definiciji neke predloge, ki jo lahko potem uvozimo v jedro ogrodja.
 Izgled je prikazan na :numref:`fig-gui-front`.
 
 Omogoča tudi dinamično branje in dodajanje objektov v že zagnanem vmesniku preko gumbov, ki vsebujejo besedo *live*.
 
 Uporabniške račune (in ostale objekte) se lahko definira z klikom na opcijski meni *Object options*, in opcijo *New ACCOUNT*.
 Ob kliku se odpre novo okno, ki je avtomatično in dinamično generirano iz podatkov o podatkovnih tipih (anotacij), ki jih sprejme
-razred ob definiciji. Za vsak parameter se generirajo labela, opcijski meni in opcijski gumb, v katerem lahko urejamo izbrano vrednost
-oz. definiramo novo vrednost. 
+razred ob definiciji. Za vsak parameter se generirajo oznaka, opcijski meni in opcijski gumb, v katerem lahko urejamo izbrano vrednost
+oz. definiramo novo vrednost.
 
 .. figure:: ./DEP/images/gui-new-item-define.png
     :height: 8cm
@@ -81,21 +75,18 @@ oz. definiramo novo vrednost.
 Shranjevanje sheme (predloge) v datoteko in nalaganje sheme iz datoteke in generiranje ekvivalentne Python datoteke
 je možno preko opcijskega menija *Schema*. Datoteka, kamor se shrani shema je datoteka formata JSON in vsebuje
 definirane račune, objekte za beleženje sporočil, objekte za povezovanje z jedrom ipd.
-Vsi objekti znotaj grafičnega vmesnika, pravzaprav niso pravi Python objekti ampak so dodaten nivo abstrakcije, ki je sestavljen
-iz samega podatkovnega tipa (razreda) definiranega objekta in pa parametrov, ki so shanjeni pod slovar (:class:`dict`).
-Pretvorba v JSON poteka rekurzivno tako, da se za vsak objekt, v JSON naredi nov podslovar, kjer sta noter zapisana
+Vsi objekti znotraj grafičnega vmesnika, pravzaprav niso pravi Python objekti ampak so dodaten nivo abstrakcije, ki je sestavljen
+iz samega podatkovnega tipa (razreda) definiranega objekta in pa parametrov, ki so shranjeni pod slovar (:class:`dict`).
+Pretvorba v JSON poteka rekurzivno tako, da se za vsak objekt, v JSON naredi nov pod-slovar, kjer sta noter zapisana
 podatkovni tip (kot besedilo) in pa parametri objekta.
 
 Nalaganje sheme (predloge) iz JSON datoteke je možno preko *Schema* menija in poteka rekurzivno tako, da se za vsak vnos najprej na podlagi celotne poti
 do razreda naloži (angl. *import*) Python modul, potem pa iz modula še podatkovni tip (razred). Za tem se
 ustvari abstraktni objekt na enak način kot je bil ustvarjen pred shranjevanjem v JSON shemo.    
 
-Preko *Schema* menija je možno ustvariti tudi ekvavilentno Python datoteko, ki bo oglaševala na enak način kot v grafičnem vmesniku, brez
+Preko *Schema* menija je možno ustvariti tudi ekvivalentno Python datoteko, ki bo oglaševala na enak način kot v grafičnem vmesniku, brez
 dejanskega grafičnega vmesnika. Ob kliku na gumb *Generate script* se definira Python koda, ki na vrhu
 definira vse potrebno in zatem zažene ogrodje. Primer skripte je prikazan v :numref:`example-text-message-randomized-period`.
-
-
-
 
 
 *Live view* zavihek
@@ -125,9 +116,6 @@ vijoličnega okvirja možno izvajanje metod (funkcij) na objektu.
 
 
 
-
-
-
 *Output* zavihek
 -----------------------------
 Vse kar se nahaja v *Output* zavihku, je seznam izpisov, ki se izpišejo na standardnem izhodu STDOUT.
@@ -136,9 +124,6 @@ Uporabi se ga lahko za bolj podroben pregled kaj se dogaja z jedrom ogrodja.
 .. figure:: ./DEP/daf-gui-output-tab.png
 
     *Output tab* zavihek
-
-
-
 
 
 *Analytics* zavihek
@@ -157,9 +142,6 @@ Za pridobitev statistike se uporabi gumb *Calculate*, ki na podlagi opcijskega m
     :height: 8cm
 
     Prikaz vnosa o poslanem sporočilu.
-
-
-
 
 
 Povezava grafičnega vmesnika z jedrom ogrodja

@@ -9,8 +9,6 @@ Dokumentacija
 
 .. _RTD: https://readthedocs.org/projects/discord-advertisement-framework/
 
-.. |RTD| replace:: Read The Docs
-
 
 Za projekt obstaja obsežna dokumentacija, ki se samodejno zgradi ob vsaki novi verziji ogrodja in zatem objavi 
 na spletni strani [#daf_web_page]_.
@@ -39,7 +37,7 @@ Je zelo konfigurabilno orodje, kjer se konfiguracijo izvede preko ``.py`` datote
 Python kodo.
 
 Primarno Sphinx podpira reStructuredText_ za pisanje dokumentov, podpira pa tudi ostale formate, npr. Markdown preko
-dodatnih razširitev. Enačbe se lahko piše v jeziku LaTex.
+dodatnih razširitev. Enačbe se lahko piše v jeziku LaTeX.
 
 
 reStructuredText
@@ -49,7 +47,7 @@ reStructuredText je jezik na katerem deluje Sphinx, ki je priljubljen *markup* j
 
 Znotraj sintakse reStructuredTexta so na voljo različne vloge in direktive, ki se uporabljajo za dodajanje oblikovanja in strukture dokumentom.
 Vloge se uporabljajo za aplikacijo oblikovanja na določene besede in stavke v isti vrstici,
-direktive pa so uporabljene za dodajanje nove vsebine v dokument ali za aplikacijo oblikovanja na večvrstično vsebino :ref:`rst_docutils`.
+direktive pa so uporabljene za dodajanje nove vsebine v dokument ali za aplikacijo oblikovanja na več vrstično vsebino :ref:`rst_docutils`.
 
 
 .. code-block:: reStructuredText
@@ -95,7 +93,7 @@ GUI in vodnik za jedro.
 
 API referenca je avtomatično generirana iz komentarjev v izvorni kodi ogrodja in dodatno deli pod različne kategorije.
 
-V nekaterih direktorijah so prisotne datoteke ``dep_local.json``. To so predgradne konfiguracijske datoteke, ki dajejo
+V nekaterih direktorijih so prisotne datoteke ``dep_local.json``. To so pred-gradne konfiguracijske datoteke, ki dajejo
 informacijo o tem iz kje in kam naj se kopirajo dodatne datoteke (ki so skupne drugim delom dokumentacije) in katere
 ``.py`` skripte naj se izvedejo po kopiranju.
 Na primer ``/project root/docs/source/dep_local.json`` datoteka ima sledečo vsebino:
@@ -107,11 +105,11 @@ Na primer ``/project root/docs/source/dep_local.json`` datoteka ima sledečo vse
 
 
 .. literalinclude:: DEP/_dep_local.json
-    :caption: Predgradna konfiguracijska datoteka
+    :caption: Pred-gradna konfiguracijska datoteka
 
 Na podlagi zgornje definicije, se bo bodo v ./DEP mape skopirale slike iz neke zgornje direktorje. Prav tako
 se bodo kopirali primeri uporabe jedra ogrodja. Na koncu se bo izvedla skripta ``generate_autodoc.py``, ki bo na podlagi
-:func:`~daf.misc.doc.doc_category` Python dekoratorja generirala ``autofunction`` in ``autoclass`` Sphinx direktive, katere bodo
+:func:`~daf.misc.doc.doc_category` Python dekoraterja generirala ``autofunction`` in ``autoclass`` Sphinx direktive, katere bodo
 ob gradnji dokumentacije prebrale vsebino *docstring*-ov posameznih razredov in funkcij, ter jo vstavile v dokument.
 
 
