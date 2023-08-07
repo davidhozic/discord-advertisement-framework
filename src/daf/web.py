@@ -64,6 +64,8 @@ WD_TIMEOUT_SHORT = 5
 WD_TIMEOUT_MED = 15
 WD_TIMEOUT_30 = 30
 WD_TIMEOUT_LONG = 90
+
+WD_FETCH_INVITE_CLOUDFLARE_TRIES = 5
 WD_RD_CLICK_UPPER_N = 5
 WD_RD_CLICK_LOWER_N = 2
 WD_OUTPUT_PATH = pathlib.Path.home().joinpath("daf/daf_web_data")
@@ -145,6 +147,7 @@ class SeleniumCLIENT:
         opts.add_argument("--no-first-run")
         opts.add_argument("--disable-background-networking")
         opts.add_argument("--disable-sync")
+        opts.add_argument("--disable-popup-blocking")
 
         if self._proxy is not None:
             proxy = self._proxy.split("://")  # protocol, url
@@ -293,10 +296,28 @@ class SeleniumCLIENT:
         trace(f"Fetching invite link from {url}", TraceLEVELS.DEBUG)
         driver = self.driver
         main_window_handle = driver.current_window_handle
-        driver.switch_to.new_window("tab")
-        await self.async_execute(driver.get, url)
-        await asyncio.sleep(1)
+        # Open a new tab with javascript to bypass detection
+        driver.execute_script("window.open('https://top.gg', '_blank');")  # Open a new tab
+        await asyncio.sleep(3)
+        new_handle = driver.window_handles[-1]
         try:
+            for i in range(WD_FETCH_INVITE_CLOUDFLARE_TRIES):
+                with suppress(NoSuchElementException):
+                    driver.switch_to.window(new_handle)
+                    trace("Finding 'challenge-running' cloudflare ID", TraceLEVELS.DEBUG)
+                    driver.find_element(By.ID, "challenge-running")
+                    driver.switch_to.window(main_window_handle)
+                    await asyncio.sleep(5 * (i + 1))
+                    continue
+
+                await asyncio.sleep(2)
+                driver.switch_to.window(new_handle)
+                trace("No 'challenge-running' found. Checks suceeded", TraceLEVELS.DEBUG)
+                break
+            else:
+                raise RuntimeError("Could not complete cloudflare checks")
+
+            await self.async_execute(driver.get, url)
             await self.async_execute(
                 WebDriverWait(driver, WD_TIMEOUT_LONG).until,
                 url_contains("discord.com")
