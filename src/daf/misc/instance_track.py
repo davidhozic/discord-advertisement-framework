@@ -51,6 +51,7 @@ def track_id(cls):
             self._daf_id = value
             OBJECT_ID_MAP[value] = self
 
+        @wraps(cls.initialize)
         async def initialize(self, *args, **kwargs):
             _r = await super().initialize(*args, **kwargs)
             self._update_tracked_id()

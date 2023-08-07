@@ -153,6 +153,9 @@ class BaseMESSAGE:
             trace("Using int on end_period is deprecated, use timedelta object instead.", TraceLEVELS.DEPRECATED)
             end_period = timedelta(seconds=end_period)
 
+        if isinstance(start_period, timedelta) and start_period >= end_period:
+            raise ValueError("'start_period' must be less than 'end_period'")
+
         # Clamp periods to minimum level (prevent infinite loops)
         self.start_period = None if start_period is None else max(start_period, timedelta(seconds=C_PERIOD_MINIMUM_SEC))
         self.end_period = max(end_period, timedelta(seconds=C_PERIOD_MINIMUM_SEC))

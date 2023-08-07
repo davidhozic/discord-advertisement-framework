@@ -501,15 +501,13 @@ class ACCOUNT:
             if isinstance(intents, discord.Intents) and intents.value == 0:
                 kwargs["intents"] = None
 
-        servers = kwargs.pop("servers", self.servers + self._uiservers)
-        if servers is None:
-            servers = []
+        kwargs["servers"] = kwargs.pop("servers", self.servers + self._uiservers)
 
         @async_util.with_semaphore("_update_sem")
         async def update_servers(self_):
             _servers = []
             _autoguilds = []
-            for server in servers:
+            for server in self.servers:
                 try:
                     await server.update(init_options={"parent": self})
                     if isinstance(server, guild._BaseGUILD):
@@ -527,6 +525,5 @@ class ACCOUNT:
             await update_servers(self)
         except Exception:
             await self.initialize()  # re-login
-            servers = self.servers  # Only return initialized servers
             await update_servers(self)
             raise
