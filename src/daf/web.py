@@ -145,6 +145,7 @@ class SeleniumCLIENT:
         opts.add_argument("--no-first-run")
         opts.add_argument("--disable-background-networking")
         opts.add_argument("--disable-sync")
+        opts.add_argument("--disable-popup-blocking")
 
         if self._proxy is not None:
             proxy = self._proxy.split("://")  # protocol, url
@@ -293,10 +294,23 @@ class SeleniumCLIENT:
         trace(f"Fetching invite link from {url}", TraceLEVELS.DEBUG)
         driver = self.driver
         main_window_handle = driver.current_window_handle
-        driver.switch_to.new_window("tab")
-        await self.async_execute(driver.get, url)
-        await asyncio.sleep(1)
+        # Open a new tab with javascript to bypass detection
+        driver.execute_script("window.open('https://top.gg', '_blank');")  # Open a new tab
+        await asyncio.sleep(2)
+        driver.switch_to.window(driver.window_handles[-1])
         try:
+            with suppress(NoSuchElementException):
+                driver.find_element(By.ID, "challenge-running")
+                trace(
+                    "Cloudflare has detected potential automation! Open the same URL MANUALLY in a SEPERATE tab!",
+                    TraceLEVELS.ERROR
+                )
+
+            await self.async_execute(
+                WebDriverWait(driver, WD_TIMEOUT_LONG).until_not,
+                presence_of_element_located((By.ID, "challenge-running"))
+            )
+            await self.async_execute(driver.get, url)
             await self.async_execute(
                 WebDriverWait(driver, WD_TIMEOUT_LONG).until,
                 url_contains("discord.com")
