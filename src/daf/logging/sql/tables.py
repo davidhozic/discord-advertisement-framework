@@ -17,15 +17,7 @@ from sqlalchemy.orm import (
 
 class ORMBase(DeclarativeBase):
     "Base for all of ORM classes"
-
-    def __eq__(self, value: object) -> bool:
-        try:
-            return self.__dict__["id"] == value.__dict__["id"]
-        except KeyError:
-            return False
-
-    def __hash__(self):
-        return hash(type(self)) << 4 | self.__dict__.get("id", id(self))
+    pass
 
 
 class MessageTYPE(ORMBase):
@@ -48,6 +40,12 @@ class MessageTYPE(ORMBase):
 
     def __init__(self, name: str = None):
         self.name = name
+
+    def __eq__(self, __value: object) -> bool:
+        return isinstance(__value, MessageTYPE) and self.id == __value.id
+
+    def __hash__(self):
+        return hash(self.id)
 
 
 class MessageMODE(ORMBase):
@@ -72,6 +70,12 @@ class MessageMODE(ORMBase):
     def __init__(self, name: str = None):
         self.name = name
 
+    def __eq__(self, __value: object) -> bool:
+        return isinstance(__value, MessageMODE) and self.id == __value.id
+
+    def __hash__(self):
+        return self.id
+
 
 class GuildTYPE(ORMBase):
     """
@@ -94,6 +98,12 @@ class GuildTYPE(ORMBase):
 
     def __init__(self, name: str = None):
         self.name = name
+
+    def __eq__(self, __value: object) -> bool:
+        return isinstance(__value, GuildTYPE) and self.id == __value.id
+
+    def __hash__(self):
+        return self.id
 
 
 class GuildUSER(ORMBase):
@@ -126,6 +136,12 @@ class GuildUSER(ORMBase):
         self.name = name
         self.guild_type = guild_type
 
+    def __eq__(self, __value: object) -> bool:
+        return isinstance(__value, GuildUSER) and self.id == __value.id
+
+    def __hash__(self):
+        return self.id
+
 
 class CHANNEL(ORMBase):
     """
@@ -156,6 +172,12 @@ class CHANNEL(ORMBase):
         self.name = name
         self.guild = guild
 
+    def __eq__(self, __value: object) -> bool:
+        return isinstance(__value, CHANNEL) and self.id == __value.id
+
+    def __hash__(self):
+        return self.id
+
 
 class DataHISTORY(ORMBase):
     """
@@ -179,6 +201,12 @@ class DataHISTORY(ORMBase):
 
     def __init__(self, content: dict):
         self.content = content
+
+    def __eq__(self, __value: object) -> bool:
+        return isinstance(__value, DataHISTORY) and self.id == __value.id
+
+    def __hash__(self):
+        return self.id
 
 
 class MessageChannelLOG(ORMBase):
@@ -207,6 +235,15 @@ class MessageChannelLOG(ORMBase):
     def __init__(self, channel: CHANNEL, reason: str = None):
         self.channel = channel
         self.reason = reason
+
+    def __eq__(self, __value: object) -> bool:
+        return (
+            isinstance(__value, MessageChannelLOG) and
+            (self.channel_id, self.log_id) == (__value.channel_id, __value.log_id)
+        )
+
+    def __hash__(self):
+        return hash((self.channel_id, self.log_id))
 
 
 class MessageLOG(ORMBase):
@@ -289,6 +326,12 @@ class MessageLOG(ORMBase):
         self.timestamp = datetime.now()
         self.channels = channels
 
+    def __eq__(self, __value: object) -> bool:
+        return isinstance(__value, MessageLOG) and self.id == __value.id
+
+    def __hash__(self):
+        return self.id
+
 
 class Invite(ORMBase):
     __tablename__ = "Invite"
@@ -306,6 +349,12 @@ class Invite(ORMBase):
     def __init__(self, discord_id: str, guild: GuildUSER):
         self.discord_id = discord_id
         self.guild = guild
+
+    def __eq__(self, __value: object) -> bool:
+        return isinstance(__value, Invite) and self.id == __value.id
+
+    def __hash__(self):
+        return self.id
 
 
 class InviteLOG(ORMBase):
@@ -328,3 +377,9 @@ class InviteLOG(ORMBase):
         self.invite = invite
         self.member = member
         self.timestamp = datetime.now()
+
+    def __eq__(self, __value: object) -> bool:
+        return isinstance(__value, InviteLOG) and self.id == __value.id
+
+    def __hash__(self):
+        return self.id
