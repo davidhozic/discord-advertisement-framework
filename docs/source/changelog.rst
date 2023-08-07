@@ -32,6 +32,13 @@ Glossary
 Releases
 ----------------------
 
+v2.9.6
+=================
+- Fixed crash if ``start_period`` is larger than ``end_period``.
+- Fixed local update not showing errors if updating objects under AutoGUILD
+
+
+
 v2.9.5
 =================
 - Fixed incorrect caching of the SQL logs, causing incorrect values to be returned back to the GUI.

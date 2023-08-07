@@ -549,6 +549,9 @@ class AutoCHANNEL:
         Any
             Raised from :py:meth:`~daf.message.AutoCHANNEL.initialize` method.
         """
+        if self.parent is None:
+            raise ValueError(f"{type(self).__name__} is not initialized. If this is under AutoGUILD, update AutoGUILD instead.")
+
         if init_options is None:
             init_options = {}
             init_options["parent"] = self.parent
