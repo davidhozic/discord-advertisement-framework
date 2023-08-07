@@ -56,6 +56,12 @@ v2.10
   - Old data that is being updated will now be updated by index
 
 
+v2.9.5
+=================
+- Fixed incorrect caching of the SQL logs, causing incorrect values to be returned back to the GUI.
+- Fixed detection of browser automation on searching for new guilds to join.
+
+
 v2.9.4
 =================
 - Fixed :class:`AutoGUILD` concurrent access. When updating AutoGUILD, the update method did not block

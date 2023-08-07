@@ -64,6 +64,8 @@ WD_TIMEOUT_SHORT = 5
 WD_TIMEOUT_MED = 15
 WD_TIMEOUT_30 = 30
 WD_TIMEOUT_LONG = 90
+
+WD_FETCH_INVITE_CLOUDFLARE_TRIES = 5
 WD_RD_CLICK_UPPER_N = 5
 WD_RD_CLICK_LOWER_N = 2
 WD_OUTPUT_PATH = pathlib.Path.home().joinpath("daf/daf_web_data")
@@ -296,20 +298,25 @@ class SeleniumCLIENT:
         main_window_handle = driver.current_window_handle
         # Open a new tab with javascript to bypass detection
         driver.execute_script("window.open('https://top.gg', '_blank');")  # Open a new tab
-        await asyncio.sleep(2)
-        driver.switch_to.window(driver.window_handles[-1])
+        await asyncio.sleep(3)
+        new_handle = driver.window_handles[-1]
         try:
-            with suppress(NoSuchElementException):
-                driver.find_element(By.ID, "challenge-running")
-                trace(
-                    "Cloudflare has detected potential automation! Open the same URL MANUALLY in a SEPERATE tab!",
-                    TraceLEVELS.ERROR
-                )
+            for i in range(WD_FETCH_INVITE_CLOUDFLARE_TRIES):
+                with suppress(NoSuchElementException):
+                    driver.switch_to.window(new_handle)
+                    trace("Finding 'challenge-running' cloudflare ID", TraceLEVELS.DEBUG)
+                    driver.find_element(By.ID, "challenge-running")
+                    driver.switch_to.window(main_window_handle)
+                    await asyncio.sleep(5 * (i + 1))
+                    continue
 
-            await self.async_execute(
-                WebDriverWait(driver, WD_TIMEOUT_LONG).until_not,
-                presence_of_element_located((By.ID, "challenge-running"))
-            )
+                await asyncio.sleep(2)
+                driver.switch_to.window(new_handle)
+                trace("No 'challenge-running' found. Checks suceeded", TraceLEVELS.DEBUG)
+                break
+            else:
+                raise RuntimeError("Could not complete cloudflare checks")
+
             await self.async_execute(driver.get, url)
             await self.async_execute(
                 WebDriverWait(driver, WD_TIMEOUT_LONG).until,
