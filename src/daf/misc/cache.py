@@ -29,7 +29,7 @@ def cache_result(max: int = 256):
             try:
                 # Convert to pickle string to allow hashing of non-hashables (dictionaries, lists, ...)
                 key = pickle.dumps((*args, kwargs))
-            except TypeError:
+            except Exception:
                 return fnc(*args, **kwargs)
 
             result = cache_dict.get(key, Ellipsis)
