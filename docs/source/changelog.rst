@@ -61,7 +61,7 @@ v2.10
   - Old data that is being updated will now be updated by index
   - View properties of trackable objects. This can be used to, eg. view the channels AutoCHANNEL found.
   - 'Load default' button when editing :class:`discord.Intents` object.
-
+  - A warning is shown besides the method execution frame to let users know, the data is not preserved.
 
 
 v2.9.5
