@@ -456,10 +456,6 @@ class AutoCHANNEL:
             excluded from match.
 
     interval: Optional[timedelta] = timedelta(minutes=5)
-        .. deprecated:: v2.10
-
-            Scheduled for removal in v2.11
-
         Interval at which to scan for new channels.
     """
 
@@ -477,17 +473,7 @@ class AutoCHANNEL:
     def __init__(self,
                  include_pattern: str,
                  exclude_pattern: Optional[str] = None,
-                 interval: Optional[timedelta] = None) -> None:
-
-        if interval is not None:
-            trace(
-                "Parameter 'interval' inside AutoCHANNEL is scheduled for removal is deprecated since\n"
-                "v2.10 and deprecated and scheduled for removal in v2.10.",
-                TraceLEVELS.DEPRECATED
-            )
-        else:
-            interval = timedelta(seconds=5)
-
+                 interval: Optional[timedelta] = timedelta(minutes=1)) -> None:
         # Remove spaces around OR
         self.include_pattern = re.sub(r"\s*\|\s*", '|', include_pattern) if include_pattern else None
         self.exclude_pattern = re.sub(r"\s*\|\s*", '|', exclude_pattern) if exclude_pattern else None

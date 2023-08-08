@@ -75,8 +75,6 @@ ADDITIONAL_PARAMETER_VALUES = {
 DEPRECATION_NOTICES = {
     daf.AUDIO: [("daf.dtypes.AUDIO", "2.12", "Replaced with daf.dtypes.FILE")],
     daf.VoiceMESSAGE: [("daf.dtypes.AUDIO as type for data parameter", "2.12", "Replaced with daf.dtypes.FILE")],
-    daf.AutoCHANNEL: [("Interval parameter", "2.11", "Event based refresh.")],
-    daf.AutoGUILD: [("Interval parameter", "2.11", "Event based refresh.")],
 }
 
 
@@ -634,13 +632,14 @@ class NewObjectFrameStruct(NewObjectFrameBase):
 
             map_[attr] = value
 
-        # Abstraction of the underlaying object
-        object_ = ObjectInfo(
-            self.class_,
-            map_,
+        extra_args = {}
+        if (old_gui_data := self.old_gui_data) is not None:
             # Don't erase the bind to the real object in case this is an edit of an existing ObjectInfo
-            self.old_gui_data.real_object if self.old_gui_data is not None else None
-        )
+            extra_args["real_object"] = old_gui_data.real_object
+            # Also don't erase any saved properties if received from a live object.
+            extra_args["property_map"] = old_gui_data.property_map
+
+        object_ = ObjectInfo(self.class_, map_, **extra_args)  # Abstraction of the underlaying object
         if not ignore_checks and self.check_parameters and inspect.isclass(self.class_):  # Only check objects
             # Cache the object created for faster
             convert_to_objects(object_, cached=True)  # Tries to create instances to check for errors

@@ -24,6 +24,7 @@ from . import client
 from . import guild
 from . import message
 from . import logging
+from . import web
 
 
 __all__ = (
@@ -55,6 +56,7 @@ CONVERSION_ATTRS = {
             "_update_sem": asyncio.Semaphore(1),
             "_running": False,
             "_client": None,
+            "_ws_task": None,
         },
     },
     guild.AutoGUILD: {
@@ -72,6 +74,19 @@ CONVERSION_ATTRS = {
             "removed_channels": set(),
             "channel_getter": None,
         },
+    },
+    web.SeleniumCLIENT: {
+        "attrs": attributes.get_all_slots(web.SeleniumCLIENT),
+        "attrs_restore": {
+            "driver": None
+        }
+    },
+    web.GuildDISCOVERY: {
+        "attrs": attributes.get_all_slots(web.GuildDISCOVERY),
+        "attrs_restore": {
+            "session": None,
+            "browser": None
+        }
     },
     logging.LoggerSQL: {
         "attrs": ["_daf_id"]

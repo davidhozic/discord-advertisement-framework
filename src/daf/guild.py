@@ -29,7 +29,7 @@ __all__ = (
 GUILD_ADVERT_STATUS_SUCCESS = 0
 GUILD_ADVERT_STATUS_ERROR_REMOVE_ACCOUNT = None
 
-GUILD_JOIN_INTERVAL = timedelta(seconds=25)
+GUILD_JOIN_INTERVAL = timedelta(seconds=45)
 GUILD_MAX_AMOUNT = 100
 
 globals_ = globals()
@@ -426,6 +426,7 @@ class GUILD(_BaseGUILD):
         .. versionadded:: 2.7
 
         List of invite IDs to be tracked for member join count inside the guild.
+        **Bot account** only, does not work on user accounts.
 
         .. note::
 
@@ -433,6 +434,13 @@ class GUILD(_BaseGUILD):
             tracking to fully function. *Manage Server* is needed for getting information about invite links,
             *Manage Channels* is needed to delete the invite from the list if it has been deleted,
             however tracking still works without it.
+
+        .. warning::
+
+            For GUILD to receive events about member joins, ``members`` intent is required to be True inside
+            the ``intents`` parameters of :class:`daf.client.ACCOUNT`.
+            This is a **privileged intent** that also needs to be enabled though Discord's developer portal for each bot.
+            After it is enabled, you can set it to True .
     """
     __slots__ = (
         "update_semaphore",
@@ -519,6 +527,7 @@ class GUILD(_BaseGUILD):
     async def add_message(self, message: Union[TextMESSAGE, VoiceMESSAGE]):
         return await super().add_message(message)
 
+    @async_util.with_semaphore("update_semaphore")
     async def _on_member_join(self, member: discord.Member):
         counts = self.join_count
         invites = await self.get_invites()
@@ -532,6 +541,7 @@ class GUILD(_BaseGUILD):
                 await logging.save_log(self.generate_log_context(), None, None, invite_ctx)
                 return
 
+    @async_util.with_semaphore("update_semaphore")
     async def _on_invite_delete(self, invite: discord.Invite):
         if invite.id in self.join_count:
             del self.join_count[invite.id]
@@ -808,10 +818,6 @@ class AutoGUILD:
         Set to True if you want the guilds generated to log
         sent messages.
     interval: Optional[timedelta] = timedelta(minutes=1)
-        .. deprecated:: v2.10
-
-            Scheduled for removal in v2.11
-
         Interval at which to scan for new guilds.
     auto_join: Optional[web.GuildDISCOVERY] = None
         .. versionadded:: v2.5

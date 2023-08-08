@@ -110,6 +110,14 @@ class SeleniumCLIENT:
     proxy: str
         The proxy url to use when connecting to Chrome.
     """
+    __slots__ = (
+        "_username",
+        "_password",
+        "_proxy",
+        "_token",
+        "driver",
+    )
+
     def __init__(self,
                  username: str,
                  password: str,

@@ -175,7 +175,6 @@ class ComboBoxObjects(ttk.Combobox):
     def insert(self, index: Union[int, str], element: Any) -> None:
         if index == tk.END:
             self._original_items.append(element)
-            index = len(self._original_items)
         else:
             self._original_items.insert(index, element)
 

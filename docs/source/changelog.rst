@@ -34,6 +34,11 @@ Releases
 
 v2.10
 ====================
+- Intents:
+  
+  - Added warnings for missing intents.
+  - Intents.members is by default now disabled.
+
 - |BREAK_CH| Removed deprecated feature - YouTube streaming.
 - Deprecated :class:`daf.dtypes.AUDIO`, replaced with :class:`daf.dtypes.FILE`.
 - :class:`daf.dtypes.FILE` now accepts binary data as well and will load the data from ``filename`` at creation
@@ -48,6 +53,8 @@ v2.10
   :py:attr:`~daf.message.DirectMESSAGE.remaining_before_removal`
 - New parameter: ``auto_publish`` to :class:`~daf.message.TextMESSAGE` for automatically publishing messages sent to
   announcement (news) channels.
+- Time between each guild join is now 45 seconds.
+- Selenium can now be used though remote, however it is not recommended.
 
 - GUI:
 
@@ -55,8 +62,8 @@ v2.10
   - Certain fields are now masked with '*' when not editing the object.
   - Old data that is being updated will now be updated by index
   - View properties of trackable objects. This can be used to, eg. view the channels AutoCHANNEL found.
+  - 'Load default' button when editing :class:`discord.Intents` object.
   - A warning is shown besides the method execution frame to let users know, the data is not preserved.
-
 
 
 v2.9.5

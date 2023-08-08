@@ -84,6 +84,15 @@ Invite link tracking
 The invite tracking is split into 2 sub-sections.
 These are :ref:`Logs frame (invites)` and :ref:`Counts frame (invites)` .
 
+.. warning::
+
+    To track invite links, the Members intent (event setting) is needed.
+    To use invite link tracking, users need to enable the privileged intent 'SERVER MEMBERS INTENT' inside
+    the Discord developer portal and also set the ``members`` intent to True
+    inside the ``intents`` parameter of :class:`~daf.client.ACCOUNT`.
+
+    Invite link tracking is **bot account** only and does not work on user accounts.
+
 
 Logs frame (invites)
 -----------------------

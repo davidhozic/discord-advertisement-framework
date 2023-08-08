@@ -65,8 +65,18 @@ class ACCOUNT:
         The Discord account's token
     is_user : Optional[bool] =False
         Declares that the ``token`` is a user account token ("self-bot")
-    intents: Optional[discord.Intents]=discord.Intents.default()
-        Discord Intents (settings of events that the client will subscribe to)
+    intents: Optional[discord.Intents]
+        Discord Intents (settings of events that the client will subscribe to).
+        Defeaults to everything enabled except ``members``, ``presence`` and ``message_content``, as those
+        are privileged events, which need to be enabled though Discord's developer settings for each bot.
+
+        .. warning::
+
+            For invite link tracking to work, it is required to set ``members`` intents to True.
+
+            Intent ``guilds`` is also required for AutoGUILD and AutoCHANNEL, however it is automatically forced
+            to True, as it is not a priveleged intent.
+
     proxy: Optional[str]=None
         The proxy to use when connecting to Discord.
 
@@ -98,6 +108,7 @@ class ACCOUNT:
         "intents",
         "_running",
         "tasks",
+        "_ws_task",
         "_servers",
         "_autoguilds",
         "_selenium",
@@ -135,7 +146,6 @@ class ACCOUNT:
         # If intents not passed, enable default
         if intents is None:
             intents = discord.Intents.default()
-            intents.members = True
 
         self.intents = intents
         self._running = False
@@ -155,6 +165,7 @@ class ACCOUNT:
 
         self._client = None
         self._deleted = False
+        self._ws_task = None
         attributes.write_non_exist(self, "_update_sem", asyncio.Semaphore(1))
 
     def __str__(self) -> str:
@@ -250,6 +261,17 @@ class ACCOUNT:
         RuntimeError
             Unable to login to Discord.
         """
+        intents = self.intents
+        if not intents.members:
+            trace("Members intent is disabled, it is needed for invite link tracking", TraceLEVELS.WARNING)
+
+        if not intents.invites:
+            trace("Invites intent is disabled, it is needed for invite link tracking", TraceLEVELS.WARNING)
+
+        if not intents.guilds:
+            self.intents.guilds = True
+            trace("Guilds intent is disabled. Enabling it since it's needed.", TraceLEVELS.WARNING)
+
         self._deleted = False
         connector = None
         if self.proxy is not None:
@@ -264,12 +286,14 @@ class ACCOUNT:
 
         # Login
         trace("Logging in...")
-        _client_task = asyncio.create_task(self._client.start(self._token, bot=not self.is_user))
         try:
+            await self._client.login(self._token, not self.is_user)
+            ws_task = asyncio.create_task(self._client.connect())
+            self._ws_task = ws_task
             await self._client.wait_for("ready", timeout=LOGIN_TIMEOUT_S)
             trace(f"Logged in as {self._client.user.display_name}")
         except asyncio.TimeoutError as exc:
-            exc = _client_task.exception() if _client_task.done() else exc
+            exc = ws_task.exception() if ws_task.done() else exc
             raise RuntimeError(f"Error logging in to Discord. (Token {self._token[:TOKEN_MAX_PRINT_LEN]}...)") from exc
 
         for server in self._uiservers:
@@ -427,6 +451,7 @@ class ACCOUNT:
             await guild_._close()
 
         await self._client.close()
+        await asyncio.gather(self._ws_task, return_exceptions=True)
         self.client.clear()
 
         if _delete:
