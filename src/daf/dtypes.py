@@ -75,7 +75,7 @@ def data_function(fnc: Callable):
         a ``data`` parameter to the :ref:`Messages` objects.
 
 
-    .. literalinclude:: ../DEP/main_data_function.py
+    .. literalinclude:: ../../DEP/main_data_function.py
         :language: python
         :emphasize-lines: 11, 24
     """
@@ -215,7 +215,7 @@ class FILE:
 @doc.doc_category("Types")
 class AUDIO(FILE):
     """
-    Used for streaming audio from file or YouTube.
+    Used for streaming audio from file.
 
     .. deprecated:: 2.10
 

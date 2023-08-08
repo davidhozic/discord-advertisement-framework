@@ -109,21 +109,22 @@ class NewObjectFrameBase(ttk.Frame):
     def __init__(
         self,
         class_: Any,
-        return_widget: Any,
+        return_widget: Union[ComboBoxObjects, ListBoxObjects, None],
         parent = None,
         old_data: Any = None,
         check_parameters: bool = True,
         allow_save = True,
     ):
         self.class_ = class_
-        self.return_widget: Union[ComboBoxObjects, ListBoxObjects] = return_widget
+        self.return_widget = return_widget
         self._original_gui_data = None
         self.parent = parent
         self.check_parameters = check_parameters  # At save time
         self.allow_save = allow_save  # Allow save or not allow (eg. viewing SQL data)
         self.old_gui_data = old_data  # Set in .load
 
-        editing_index = self.return_widget.current()
+        # If return_widget is None, it's a floating display with no return value
+        editing_index = return_widget.current() if return_widget is not None else -1
         if editing_index == -1:
             editing_index = None
 
@@ -286,8 +287,9 @@ class NewObjectFrameBase(ttk.Frame):
         Opens up a new object frame on top of the current one.
         Parameters are the same as in :class:`NewObjectFrame` (current class).
         """
+        allow_save = kwargs.pop("allow_save", self.allow_save)
         return self.origin_window.open_object_edit_frame(
-            class_, widget, allow_save=self.allow_save, *args, **kwargs
+            class_, widget, allow_save=allow_save, *args, **kwargs
         )
 
     def to_object(self):
@@ -312,7 +314,7 @@ class NewObjectFrameBase(ttk.Frame):
         Save the current object into the return widget and then close this frame.
         """
         try:
-            if not self.allow_save:
+            if not self.allow_save or self.return_widget is None:
                 raise TypeError("Saving is not allowed in this context!")
 
             object_ = self.to_object()
@@ -544,7 +546,8 @@ class NewObjectFrameStruct(NewObjectFrameBase):
             self.old_gui_data is None or
             # getattr since class_ can also be non ObjectInfo
             getattr(self.old_gui_data, "real_object", None) is None or
-            (available_methods := EXECUTABLE_METHODS.get(self.class_)) is None
+            (available_methods := EXECUTABLE_METHODS.get(self.class_)) is None or
+            not self.allow_save
         ):
             return
 

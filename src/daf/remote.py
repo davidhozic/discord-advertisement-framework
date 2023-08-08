@@ -165,18 +165,12 @@ async def http_get_logger():
 @register("/object", "GET")
 async def http_get_object(object_id: int):
     object = it.get_by_id(object_id)
-    if object is None:
-        raise HTTPInternalServerError(reason="Object not present in DAF.")
-
     return create_json_response(object=convert.convert_object_to_semi_dict(object))
 
 
 @register("/method", "POST")
 async def http_execute_method(object_id: int, method_name: str, **kwargs):
     object = it.get_by_id(object_id)
-    if object is None:
-        raise HTTPInternalServerError(reason="Object not present in DAF.")
-
     try:
         result = getattr(object, method_name)(**convert.convert_from_semi_dict(kwargs))
         if isinstance(result, Coroutine):

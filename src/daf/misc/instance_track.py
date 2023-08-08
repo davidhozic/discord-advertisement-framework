@@ -5,6 +5,8 @@ based on ID.
 from weakref import WeakValueDictionary
 from functools import wraps
 
+import gc
+
 __all__ = (
     "get_by_id",
     "get_object_id",
@@ -19,12 +21,15 @@ def get_by_id(id_: int):
     """
     Returns an object from it's id().
     """
-    return OBJECT_ID_MAP.get(id_)
+    try:
+        return OBJECT_ID_MAP[id_]
+    except KeyError as exc:
+        raise KeyError("Object not present in DAF.") from exc
 
 
 def get_object_id(obj: object) -> int:
     "Returns either internal daf's ID if it exist otherwise just the regular id()"
-    return getattr(obj, "_daf_id", id(obj))
+    return getattr(obj, "_daf_id", -1)
 
 
 class ObjectReference:

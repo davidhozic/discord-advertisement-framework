@@ -220,7 +220,7 @@ class ACCOUNT:
         return self._deleted
 
     @property
-    def servers(self):
+    def servers(self) -> List[Union[guild.GUILD, guild.AutoGUILD, guild.USER]]:
         """
         Returns all guild like objects inside the account's s
         shilling list. This also includes :class:`~daf.guild.AutoGUILD`

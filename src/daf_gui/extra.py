@@ -99,8 +99,10 @@ def setup_additional_widget_file_chooser_logger(w: ttk.Button, frame):
 def setup_additional_live_update(w: ttk.Button, frame):
     # Don't have a bound object instance
     if (
+        not frame.allow_save or
         (oi := frame.old_gui_data) is None or
-        oi.real_object is None
+        oi.real_object is None or
+        oi.real_object.ref == -1
     ):
         return
 
@@ -126,7 +128,8 @@ def setup_additional_live_refresh(w: ttk.Button, frame):
     # Don't have a bound object instance
     if (
         (oi := frame.old_gui_data) is None or
-        oi.real_object is None
+        oi.real_object is None or
+        oi.real_object.ref == -1
     ):
         return
 
@@ -147,6 +150,41 @@ def setup_additional_live_refresh(w: ttk.Button, frame):
 
     w.configure(command=_callback)
     ToolTip(w, "Load updated values from the object into the window", topmost=True)
+    w.pack(side="right", padx=dpi_scaled(2))
+
+
+def setup_additional_live_properties(w: ttk.Menubutton, frame):
+    # Don't have a bound object instance
+    oi: ObjectInfo
+    if (
+        (oi := frame.old_gui_data) is None or
+        oi.real_object is None or
+        oi.real_object.ref == -1 or
+        not oi.property_map # Empty dict
+    ):
+        return
+
+    def _callback(property_name: str):
+        property_value, property_type = frame.old_gui_data.property_map[property_name]
+
+        class PropertyView:
+            """
+            Fake class used to generate a view-only object edit frame.
+            """
+            def __init__(self, value: property_type) -> None:
+                pass
+
+        frame.new_object_frame(
+            PropertyView, None,
+            allow_save=False, old_data=ObjectInfo(PropertyView, {"value": property_value})
+        )
+
+    menu = ttk.Menu(w, title="Property menu")
+    for k in oi.property_map:
+        menu.add_command(command=frame._lambda(_callback, k), label=k)
+
+    w.configure(menu=menu)
+    ToolTip(w, "Inspect additional properties of the object.", topmost=True)
     w.pack(side="right", padx=dpi_scaled(2))
 
 
@@ -172,5 +210,10 @@ for name in dir(daf):
                 AdditionalWidget(ttk.Button, setup_additional_live_refresh, text="Refresh"),
             ])
 
+        if hasattr(item, "_daf_id"):
+            if item not in ADDITIONAL_WIDGETS:
+                ADDITIONAL_WIDGETS[item] = []
 
-__all__ = list(globals().keys())
+            ADDITIONAL_WIDGETS[item].append(
+                AdditionalWidget(ttk.Menubutton, setup_additional_live_properties, text="View property"),
+            )
