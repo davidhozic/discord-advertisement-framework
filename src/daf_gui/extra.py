@@ -101,7 +101,8 @@ def setup_additional_live_update(w: ttk.Button, frame):
     if (
         not frame.allow_save or
         (oi := frame.old_gui_data) is None or
-        oi.real_object is None
+        oi.real_object is None or
+        oi.real_object.ref == -1
     ):
         return
 
@@ -127,7 +128,8 @@ def setup_additional_live_refresh(w: ttk.Button, frame):
     # Don't have a bound object instance
     if (
         (oi := frame.old_gui_data) is None or
-        oi.real_object is None
+        oi.real_object is None or
+        oi.real_object.ref == -1
     ):
         return
 
@@ -157,7 +159,8 @@ def setup_additional_live_properties(w: ttk.Menubutton, frame):
     if (
         (oi := frame.old_gui_data) is None or
         oi.real_object is None or
-        not oi.property_map  # Empty dict
+        oi.real_object.ref == -1 or
+        not oi.property_map # Empty dict
     ):
         return
 
