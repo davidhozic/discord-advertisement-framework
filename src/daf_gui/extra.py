@@ -188,6 +188,23 @@ def setup_additional_live_properties(w: ttk.Menubutton, frame):
     w.pack(side="right", padx=dpi_scaled(2))
 
 
+def setup_additional_widget_default_intents(w: ttk.Button, frame):
+    def _callback(*args):
+        default = discord.Intents.default()
+        map_: dict = frame._map.copy()
+        del map_["kwargs"]
+
+        # v = (widget, annotated_types)
+        # k = parameter name
+        for k, v in map_.items():
+            widget, _ = v
+            widget.set(str(getattr(default, k)))
+
+    w.configure(command=_callback)
+    ToolTip(w, text="Enable everything except privileged intents.", topmost=True)
+    w.pack(side="right")
+
+
 # Map that maps the instance we are defining class to a list of additional objects.
 ADDITIONAL_WIDGETS = {
     dt.datetime: [AdditionalWidget(ttk.Button, setup_additional_widget_datetime, text="Select date")],
@@ -196,6 +213,7 @@ ADDITIONAL_WIDGETS = {
     daf.LoggerJSON: [AdditionalWidget(ttk.Button, setup_additional_widget_file_chooser_logger, text="Select folder")],
     daf.LoggerCSV: [AdditionalWidget(ttk.Button, setup_additional_widget_file_chooser_logger, text="Select folder")],
     daf.AUDIO: [AdditionalWidget(ttk.Button, setup_additional_widget_file_chooser, text="File browse")],
+    discord.Intents: [AdditionalWidget(ttk.Button, setup_additional_widget_default_intents, text="Load default")]
 }
 
 for name in dir(daf):

@@ -135,7 +135,6 @@ class ACCOUNT:
         # If intents not passed, enable default
         if intents is None:
             intents = discord.Intents.default()
-            intents.members = True
 
         self.intents = intents
         self._running = False
@@ -250,6 +249,17 @@ class ACCOUNT:
         RuntimeError
             Unable to login to Discord.
         """
+        intents = self.intents
+        if not intents.members:
+            trace("Members intent is disabled, it is needed for invite link tracking", TraceLEVELS.WARNING)
+
+        if not intents.invites:
+            trace("Invites intent is disabled, it is needed for invite link tracking", TraceLEVELS.WARNING)
+
+        if not intents.guilds:
+            self.intents.guilds = True
+            trace("Guilds intent is disabled. Enabling it since it's needed.", TraceLEVELS.WARNING)
+
         self._deleted = False
         connector = None
         if self.proxy is not None:

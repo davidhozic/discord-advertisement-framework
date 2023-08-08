@@ -519,6 +519,7 @@ class GUILD(_BaseGUILD):
     async def add_message(self, message: Union[TextMESSAGE, VoiceMESSAGE]):
         return await super().add_message(message)
 
+    @async_util.with_semaphore("update_semaphore")
     async def _on_member_join(self, member: discord.Member):
         counts = self.join_count
         invites = await self.get_invites()
@@ -532,6 +533,7 @@ class GUILD(_BaseGUILD):
                 await logging.save_log(self.generate_log_context(), None, None, invite_ctx)
                 return
 
+    @async_util.with_semaphore("update_semaphore")
     async def _on_invite_delete(self, invite: discord.Invite):
         if invite.id in self.join_count:
             del self.join_count[invite.id]
@@ -808,10 +810,6 @@ class AutoGUILD:
         Set to True if you want the guilds generated to log
         sent messages.
     interval: Optional[timedelta] = timedelta(minutes=1)
-        .. deprecated:: v2.10
-
-            Scheduled for removal in v2.11
-
         Interval at which to scan for new guilds.
     auto_join: Optional[web.GuildDISCOVERY] = None
         .. versionadded:: v2.5

@@ -34,6 +34,11 @@ Releases
 
 v2.10
 ====================
+- Intents:
+  
+  - Added warnings for missing intents.
+  - Intents.members is by default now disabled.
+
 - |BREAK_CH| Removed deprecated feature - YouTube streaming.
 - Deprecated :class:`daf.dtypes.AUDIO`, replaced with :class:`daf.dtypes.FILE`.
 - :class:`daf.dtypes.FILE` now accepts binary data as well and will load the data from ``filename`` at creation
@@ -55,6 +60,7 @@ v2.10
   - Certain fields are now masked with '*' when not editing the object.
   - Old data that is being updated will now be updated by index
   - View properties of trackable objects. This can be used to, eg. view the channels AutoCHANNEL found.
+  - 'Load default' button when editing :class:`discord.Intents` object.
 
 
 
