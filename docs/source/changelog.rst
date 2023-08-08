@@ -32,6 +32,11 @@ Glossary
 Releases
 ----------------------
 
+v2.9.7
+=================
+- Fixed channels not being visible though GUI, when using SQL logging.
+
+
 v2.9.6
 =================
 - Fixed crash if ``start_period`` is larger than ``end_period``.
