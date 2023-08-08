@@ -53,6 +53,8 @@ v2.10
   :py:attr:`~daf.message.DirectMESSAGE.remaining_before_removal`
 - New parameter: ``auto_publish`` to :class:`~daf.message.TextMESSAGE` for automatically publishing messages sent to
   announcement (news) channels.
+- Time between each guild join is now 45 seconds.
+- Selenium can now be used though remote, however it is not recommended.
 
 - GUI:
 
