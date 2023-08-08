@@ -65,8 +65,18 @@ class ACCOUNT:
         The Discord account's token
     is_user : Optional[bool] =False
         Declares that the ``token`` is a user account token ("self-bot")
-    intents: Optional[discord.Intents]=discord.Intents.default()
-        Discord Intents (settings of events that the client will subscribe to)
+    intents: Optional[discord.Intents]
+        Discord Intents (settings of events that the client will subscribe to).
+        Defeaults to everything enabled except ``members``, ``presence`` and ``message_content``, as those
+        are privileged events, which need to be enabled though Discord's developer settings for each bot.
+
+        .. warning::
+
+            For invite link tracking to work, it is required to set ``members`` intents to True.
+
+            Intent ``guilds`` is also required for AutoGUILD and AutoCHANNEL, however it is automatically forced
+            to True, as it is not a priveleged intent.
+
     proxy: Optional[str]=None
         The proxy to use when connecting to Discord.
 

@@ -15,12 +15,19 @@ The logging module is responsible for 2 types of logging:
 1. **Messages** - Logs (attempts of) sent messages
 2. **Invite links** - Tracks new member joins with configured invite links.
 
+.. warning::
+
+    To track invite links, the Members intent (event setting) is needed.
+    To use invite link tracking, users need to enable the privileged intent 'SERVER MEMBERS INTENT' and
+    also set the ``members`` intent to True inside the ``intents`` parameter of :class:`~daf.client.ACCOUNT`.
+
+
 Logging can be enabled for each :class:`~daf.guild.GUILD` / :class:`~daf.guild.USER` if the ``logging`` parameter is
 set to ``True``.
 
 .. note:: 
     
-    **Invite links** will be tracked regardless of the ``logging`` parameter. Invite link tracking is configured
+    **Invite links** will be tracked regardless of the GUILD's ``logging`` parameter. Invite link tracking is configured
     solely by the ``invite_track`` parameter inside :class:`~daf.guild.GUILD`.
 
 

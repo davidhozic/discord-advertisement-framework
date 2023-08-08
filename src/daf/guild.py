@@ -433,6 +433,13 @@ class GUILD(_BaseGUILD):
             tracking to fully function. *Manage Server* is needed for getting information about invite links,
             *Manage Channels* is needed to delete the invite from the list if it has been deleted,
             however tracking still works without it.
+
+        .. warning::
+
+            For GUILD to receive events about member joins, ``members`` intent is required to be True inside
+            the ``intents`` parameters of :class:`daf.client.ACCOUNT`.
+            This is a **privileged intent** that also needs to be enabled though Discord's developer portal for each bot.
+            After it is enabled, you can set it to True .
     """
     __slots__ = (
         "update_semaphore",
