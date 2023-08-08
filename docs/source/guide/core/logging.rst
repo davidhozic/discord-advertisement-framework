@@ -21,6 +21,8 @@ The logging module is responsible for 2 types of logging:
     To use invite link tracking, users need to enable the privileged intent 'SERVER MEMBERS INTENT' and
     also set the ``members`` intent to True inside the ``intents`` parameter of :class:`~daf.client.ACCOUNT`.
 
+    Invite link tracking is **bot account** only and does not work on user accounts.
+
 
 Logging can be enabled for each :class:`~daf.guild.GUILD` / :class:`~daf.guild.USER` if the ``logging`` parameter is
 set to ``True``.

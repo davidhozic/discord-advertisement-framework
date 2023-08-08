@@ -426,6 +426,7 @@ class GUILD(_BaseGUILD):
         .. versionadded:: 2.7
 
         List of invite IDs to be tracked for member join count inside the guild.
+        **Bot account** only, does not work on user accounts.
 
         .. note::
 
