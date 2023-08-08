@@ -18,8 +18,9 @@ The logging module is responsible for 2 types of logging:
 .. warning::
 
     To track invite links, the Members intent (event setting) is needed.
-    To use invite link tracking, users need to enable the privileged intent 'SERVER MEMBERS INTENT' and
-    also set the ``members`` intent to True inside the ``intents`` parameter of :class:`~daf.client.ACCOUNT`.
+    To use invite link tracking, users need to enable the privileged intent 'SERVER MEMBERS INTENT' inside
+    the Discord developer portal and also set the ``members`` intent to True
+    inside the ``intents`` parameter of :class:`~daf.client.ACCOUNT`.
 
     Invite link tracking is **bot account** only and does not work on user accounts.
 
