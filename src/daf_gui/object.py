@@ -555,7 +555,7 @@ class NewObjectFrameStruct(NewObjectFrameBase):
             async def runner():
                 method = frame_execute_method.combo.get()
                 if not isinstance(method, ObjectInfo):  # String typed in that doesn't match any names
-                    tkdiag.Messagebox.show_error("No method selected!", "Selection error")
+                    tkdiag.Messagebox.show_error("No method selected!", "Selection error", self.origin_window)
                     return
 
                 method_param = convert_to_objects(method.data, skip_real_conversion=True)
@@ -570,7 +570,12 @@ class NewObjectFrameStruct(NewObjectFrameBase):
             async_execute(runner(), parent_window=self.origin_window)
 
         dpi_5, dpi_10 = dpi_scaled(5), dpi_scaled(10)
-        frame_method = ttk.LabelFrame(self, text="Method execution", padding=(dpi_5, dpi_10), bootstyle=ttk.INFO)
+        frame_method = ttk.LabelFrame(
+            self,
+            text="Method execution (WARNING! Method data is NOT preserved when closing / saving the frame!)",
+            padding=(dpi_5, dpi_10),
+            bootstyle=ttk.INFO
+        )
         ttk.Button(frame_method, text="Execute", command=execute_method).pack(side="left")
         combo_values = []
         for unbound_meth in available_methods:
@@ -587,11 +592,7 @@ class NewObjectFrameStruct(NewObjectFrameBase):
 
             return self.new_object_frame(class_, widget, *args, **kwargs, additional_values=extra_values)
 
-        frame_execute_method = ComboEditFrame(
-            new_object_frame_with_values,
-            combo_values,
-            master=frame_method
-        )
+        frame_execute_method = ComboEditFrame(new_object_frame_with_values, combo_values, master=frame_method)
         frame_execute_method.pack(side="right", fill=tk.X, expand=True)
         frame_method.pack(fill=tk.X)
 
@@ -691,7 +692,7 @@ class NewObjectFrameIterable(NewObjectFrameBase):
                 else:
                     self.new_object_frame(type(object_), lb, old_data=object_)
             else:
-                tkdiag.Messagebox.show_error("Select ONE item!", "Selection error", parent=self.origin_window)
+                tkdiag.Messagebox.show_error("Select ONE item!", "Selection error", parent=self)
 
         dpi_5 = dpi_scaled(5)
         super().__init__(class_, return_widget, parent, old_data, check_parameters, allow_save)

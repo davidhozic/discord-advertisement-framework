@@ -55,6 +55,7 @@ v2.10
   - Certain fields are now masked with '*' when not editing the object.
   - Old data that is being updated will now be updated by index
   - View properties of trackable objects. This can be used to, eg. view the channels AutoCHANNEL found.
+  - A warning is shown besides the method execution frame to let users know, the data is not preserved.
 
 
 
