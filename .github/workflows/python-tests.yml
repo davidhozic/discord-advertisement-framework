@@ -9,7 +9,7 @@ on:
 
 concurrency:
     group: "selftest-cg"
-    cancel-in-progress: false
+    cancel-in-progress: true
 
 jobs:
   pytest:
