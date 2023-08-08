@@ -410,6 +410,9 @@ class VoiceMESSAGE(BaseMESSAGE):
         Other
             Raised from .initialize() method
         """
+        if self.parent is None:
+            raise ValueError(f"{type(self).__name__} is not initialized. If this is under AutoGUILD, update AutoGUILD instead.")
+
         if "start_in" not in kwargs:
             # This parameter does not appear as attribute, manual setting necessary
             kwargs["start_in"] = self.next_send_time
