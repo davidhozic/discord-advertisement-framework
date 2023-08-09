@@ -443,7 +443,7 @@ class TextMESSAGE(BaseChannelMessage):
                         files=[discord.File(file.stream, file.filename) for file in files]
                     )
                     self.sent_messages[channel.id] = message
-                    await self._publish_message(channel, message)
+                    await self._publish_message(message)
 
                 # Mode is edit and message was already send to this channel
                 elif self.mode == "edit":
@@ -456,7 +456,8 @@ class TextMESSAGE(BaseChannelMessage):
                 if not handled:
                     return {"success": False, "reason": ex, "action": action}
 
-    async def _publish_message(self, channel: discord.TextChannel, message: discord.Message):
+    async def _publish_message(self, message: discord.Message):
+        channel = message.channel
         if self.auto_publish and channel.is_news():
             try:
                 await message.publish()
