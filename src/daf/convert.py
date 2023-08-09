@@ -395,6 +395,13 @@ def convert_from_semi_dict(d: Union[Mapping, list, Any]):
 
         return _return
 
+    def __convert_to_dict():  # Compatibility with file backups from v2.9.x
+        data = {}
+        for k, v in d.items():
+            data[k] = convert_from_semi_dict(v)
+
+        return data
+
     # List conversion, keeps the list but converts the values
     if isinstance(d, list):
         return [convert_from_semi_dict(value) if isinstance(value, Mapping) else value for value in d]
@@ -406,6 +413,11 @@ def convert_from_semi_dict(d: Union[Mapping, list, Any]):
 
         if "class_path" in d:  # A class was directly send (not an instance)
             return import_class(d["class_path"])
+
+        if "object_type" not in d:
+            # Compatibility with file backups from v2.9.x
+            # It's a normal dictionary
+            return __convert_to_dict()
 
         return __convert_to_slotted()
 
