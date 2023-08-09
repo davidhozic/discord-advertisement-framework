@@ -3,6 +3,7 @@ Module contains definitions related to remote access from a graphical interface.
 """
 from typing import Optional, Literal, Coroutine
 from contextlib import suppress
+from functools import update_wrapper
 
 from aiohttp import BasicAuth
 from aiohttp.web import (
@@ -78,6 +79,11 @@ def register(path: str, type: Literal["GET", "POST", "DELETE", "PATCH"]):
             except Exception as exc:
                 raise HTTPInternalServerError(reason=str(exc))
 
+        # For documentation purposes
+        fnc.__doc__ = (fnc.__doc__ or "") + f'\n\n    :Route:\n        {path}\n\n    :Method:\n        {type}'
+        update_wrapper(request_wrapper, fnc)
+
+        # Use the original aiohttp decorator
         return getattr(GLOBALS.routes, type.lower())(path)(request_wrapper)
 
     return decorator
@@ -153,23 +159,68 @@ class RemoteAccessCLIENT:
 
 
 @register("/ping", "GET")
+@doc.doc_category("Connection", api_type="HTTP")
 async def http_ping():
+    """
+    Pinging route for testing connection.
+    """
     return create_json_response(message="pong")
 
 
 @register("/logging", "GET")
+@doc.doc_category("Logging", api_type="HTTP")
 async def http_get_logger():
+    """
+    Returns active message / invite logger.
+
+    Returns
+    ----------
+    LoggerBASE
+        Active logger.
+    """
     return create_json_response(logger=convert.convert_object_to_semi_dict(logging.get_logger()))
 
 
 @register("/object", "GET")
+@doc.doc_category("Object", api_type="HTTP")
 async def http_get_object(object_id: int):
+    """
+    Returns a tracked object, tracked with @track_id decorator.
+
+    Parameters
+    -------------
+    object_id: int
+        The ID of the object to obtain.
+
+    Returns
+    ---------
+    object
+        The object linked to ``object_id``.
+    """
     object = it.get_by_id(object_id)
     return create_json_response(object=convert.convert_object_to_semi_dict(object))
 
 
 @register("/method", "POST")
+@doc.doc_category("Object", api_type="HTTP")
 async def http_execute_method(object_id: int, method_name: str, **kwargs):
+    """
+    Executes a method on a object. The method is an actual Python method.
+
+    Parameters
+    ----------
+    object_id: int
+        The ID of the object to execute on.
+    method_name: str
+        The name of the method to execute.
+    kwargs
+        Variadic keyword arguments to pass to the executed method.
+
+    Returns
+    -------
+    Any
+        The returned value from method.
+    """
     object = it.get_by_id(object_id)
     try:
         result = getattr(object, method_name)(**convert.convert_from_semi_dict(kwargs))

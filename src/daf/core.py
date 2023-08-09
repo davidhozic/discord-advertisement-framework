@@ -65,7 +65,16 @@ class GLOBALS:
 # These must be in here due to needed interactions with core functions
 # -----------------------------------------------------------------------
 @remote.register("/accounts", "GET")
+@doc.doc_category("Object", api_type="HTTP")
 async def http_get_accounts():
+    """
+    Retrieves all active accounts in the framework.
+
+    Returns
+    --------
+    List[ACCOUNT]
+        The active accounts.
+    """
     accounts = get_accounts()
     return remote.create_json_response(
         message=f"Retrieved {len(accounts)} accounts",
@@ -74,7 +83,16 @@ async def http_get_accounts():
 
 
 @remote.register("/accounts", "POST")
+@doc.doc_category("Object", api_type="HTTP")
 async def http_add_account(account: dict):
+    """
+    Adds a new account to the framework.
+
+    Parameters
+    -----------
+    account: ACCOUNT
+        The account to initialize and add.
+    """
     try:
         account = convert.convert_from_semi_dict(account)
         await add_object(account)
@@ -84,11 +102,17 @@ async def http_add_account(account: dict):
 
 
 @remote.register("/accounts", "DELETE")
+@doc.doc_category("Object", api_type="HTTP")
 async def http_remove_account(account_id: int):
-    account = it.get_by_id(account_id)
-    if account is None:
-        raise aiohttp_web.HTTPInternalServerError(reason="Account not present")
+    """
+    Removes an account from the framework.
 
+    Parameters
+    -------------
+    account_id: int
+        The ID of the account.
+    """
+    account = it.get_by_id(account_id)
     name = account.client.user.display_name
     await remove_object(account)
     return remote.create_json_response(message=f"Removed account {name}")
