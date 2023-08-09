@@ -58,32 +58,6 @@ Pošiljanje s fiksno periodo dveh ur in avtomatično odkrivanje pridruženih ceh
     :caption: Avtomatsko odkrivanje cehov in kanalov - |SCHEMA_EXAMPLE|
 
 
-
-Sledenje cehovskih (pridružnih) povezav
-----------------------------------------------
-Sledenje trem cehovskim povezavam.
-
-.. literalinclude:: ./DEP/Examples/example-invites-tracking.py
-    :caption: Sledenje cehovskih povezav - |PY_EXAMPLE|
-
-.. literalinclude:: ./DEP/Examples/example-invites-tracking.json
-    :caption: Sledenje cehovskih povezav - |SCHEMA_EXAMPLE|
-
-
-
-Pridružitev novim cehom
-----------------------------------------
-Pridruževanje največ 15 novim cehom, na podlagi izraza "NFT", ker imajo cehi med 100 in 1000 uporabnikov.
-
-
-.. literalinclude:: ./DEP/Examples/example-new-guild-join.py
-    :caption: Pridružitev novim cehom - |PY_EXAMPLE|
-
-.. literalinclude:: ./DEP/Examples/example-new-guild-join.json
-    :caption: Pridružitev novim cehom - |SCHEMA_EXAMPLE|
-
-
-
 Oddaljen dostop
 ----------------------------------------
 HTTP strežnik, in GUI shema za povezovanje na ta strežnik.

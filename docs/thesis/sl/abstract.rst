@@ -13,7 +13,7 @@
 
 
 Nezamenljivi žetoni (angl. *Non fungible tokens*) so edinstvena digitalna sredstva, ki živijo na verigi blokov brez možnosti replikacije.
-Obstaj več pristopov za njihovo oglaševanje, kjer je eden izmed teh oglaševanje po socialnem omrežju Discord s pristopom agresivnega oglaševanja.
+Obstaja več pristopov za njihovo oglaševanje, kjer je eden izmed teh oglaševanje po socialnem omrežju Discord s pristopom agresivnega oglaševanja.
 Diplomsko delo se fokusira na proces oglaševanja in se navezuje na projekt Ogrodje za oglaševanje po Discordu (angl. Discord Advertisement Framework),
 ki je implementirano v programskem jeziku Python.
 
