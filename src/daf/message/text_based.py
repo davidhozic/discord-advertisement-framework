@@ -443,15 +443,7 @@ class TextMESSAGE(BaseChannelMessage):
                         files=[discord.File(file.stream, file.filename) for file in files]
                     )
                     self.sent_messages[channel.id] = message
-                    if self.auto_publish and channel.is_news():
-                        try:
-                            await message.publish()
-                        except discord.HTTPException as exc:
-                            trace(
-                                f"Unable to publish {self} to channel '{channel.name}'({channel.id})",
-                                TraceLEVELS.ERROR,
-                                exc
-                            )
+                    await self._publish_message(channel, message)
 
                 # Mode is edit and message was already send to this channel
                 elif self.mode == "edit":
@@ -463,6 +455,17 @@ class TextMESSAGE(BaseChannelMessage):
                 handled, action = await self._handle_error(channel, ex)
                 if not handled:
                     return {"success": False, "reason": ex, "action": action}
+
+    async def _publish_message(self, channel: discord.TextChannel, message: discord.Message):
+        if self.auto_publish and channel.is_news():
+            try:
+                await message.publish()
+            except discord.HTTPException as exc:
+                trace(
+                    f"Unable to publish {self} to channel '{channel.name}'({channel.id})",
+                    TraceLEVELS.ERROR,
+                    exc
+                )
 
 
 @instance_track.track_id
