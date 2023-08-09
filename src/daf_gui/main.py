@@ -472,7 +472,7 @@ class Application():
                     raise ValueError("Analytics only allowed when using LoggerSQL")
 
                 await self.connection.execute_method(
-                    it.get_object_id(logger),
+                    it.ObjectReference(it.get_object_id(logger)),
                     "delete_logs",
                     table=log_class, primary_keys=logs
                 )
