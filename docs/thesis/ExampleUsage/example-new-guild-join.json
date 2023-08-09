@@ -29,16 +29,31 @@
     {
       "type": "daf.client.ACCOUNT",
       "data": {
-        "token": "SDASDSADASDSA",
-        "is_user": true,
         "servers": [
           {
             "type": "daf.guild.AutoGUILD",
             "data": {
-              "include_pattern": "test"
+              "include_pattern": ".*",
+              "auto_join": {
+                "type": "daf.web.GuildDISCOVERY",
+                "data": {
+                  "prompt": "NFT",
+                  "sort_by": {
+                    "type": "daf.web.QuerySortBy",
+                    "value": 0
+                  },
+                  "total_members": {
+                    "type": "daf.web.QueryMembers",
+                    "value": 2
+                  },
+                  "limit": 15
+                }
+              }
             }
           }
-        ]
+        ],
+        "username": "ime.priimerk",
+        "password": "geslo.moje"
       }
     }
   ],

@@ -6,6 +6,7 @@ import asyncio
 import time
 import pytest
 import daf
+import os
 
 # SIMULATION
 
@@ -103,13 +104,13 @@ async def test_text_period(channels: Tuple[List[Union[daf.discord.TextChannel, d
                 assert item == content, "DirectMESSAGE text does not match message content"
             elif isinstance(item, daf.discord.Embed):
                 assert item.to_dict() in embeds, "DirectMESSAGE embed not in message embeds"
-        
+
     finally:
         with suppress(ValueError):
             await daf.remove_object(guild)
         with suppress(ValueError):
             await daf.remove_object(user)
-        
+
 
 @pytest.mark.asyncio
 async def test_voice_period(channels: Tuple[List[Union[daf.discord.TextChannel, daf.discord.VoiceChannel]]],
@@ -129,12 +130,16 @@ async def test_voice_period(channels: Tuple[List[Union[daf.discord.TextChannel, 
             return item[1]
 
         await daf.add_object(guild, account)
+
+        cwd = os.getcwd()
+        os.chdir(os.path.dirname(__file__))
         data_ = [
-            (5, daf.AUDIO("https://www.youtube.com/watch?v=IGQBtbKSVhY")),
-            (3, daf.AUDIO("https://www.youtube.com/watch?v=1O0yazhqaxs"))
+            (8, daf.AUDIO("testing123.mp3")),
+            (8, daf.FILE("testing123.mp3"))
         ]
         VOICE_MESSAGE_TEST_MESSAGE = dynamic_getter(data_.copy())
-    
+        os.chdir(cwd)
+
         test_period_secs = TEST_SEND_PERIOD_VOICE.total_seconds()
         bottom_secs = (test_period_secs * (1 - TEST_PERIOD_MAX_VARIATION))
         upper_secs = (test_period_secs * (1 + TEST_PERIOD_MAX_VARIATION))

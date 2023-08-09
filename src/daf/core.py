@@ -11,10 +11,9 @@ from typeguard import typechecked
 
 from .logging.tracing import TraceLEVELS, trace
 from .logging import _logging as logging, tracing
-
+from .misc import doc, instance_track as it
 from . import guild
 from . import client
-from . import misc
 from . import message
 from . import convert
 from . import remote
@@ -66,7 +65,16 @@ class GLOBALS:
 # These must be in here due to needed interactions with core functions
 # -----------------------------------------------------------------------
 @remote.register("/accounts", "GET")
+@doc.doc_category("Object", api_type="HTTP")
 async def http_get_accounts():
+    """
+    Retrieves all active accounts in the framework.
+
+    Returns
+    --------
+    List[ACCOUNT]
+        The active accounts.
+    """
     accounts = get_accounts()
     return remote.create_json_response(
         message=f"Retrieved {len(accounts)} accounts",
@@ -75,7 +83,16 @@ async def http_get_accounts():
 
 
 @remote.register("/accounts", "POST")
+@doc.doc_category("Object", api_type="HTTP")
 async def http_add_account(account: dict):
+    """
+    Adds a new account to the framework.
+
+    Parameters
+    -----------
+    account: ACCOUNT
+        The account to initialize and add.
+    """
     try:
         account = convert.convert_from_semi_dict(account)
         await add_object(account)
@@ -85,11 +102,17 @@ async def http_add_account(account: dict):
 
 
 @remote.register("/accounts", "DELETE")
+@doc.doc_category("Object", api_type="HTTP")
 async def http_remove_account(account_id: int):
-    account = misc.get_by_id(account_id)
-    if account is None:
-        raise aiohttp_web.HTTPInternalServerError(reason="Account not present")
+    """
+    Removes an account from the framework.
 
+    Parameters
+    -------------
+    account_id: int
+        The ID of the account.
+    """
+    account = it.get_by_id(account_id)
     name = account.client.user.display_name
     await remove_object(account)
     return remote.create_json_response(message=f"Removed account {name}")
@@ -142,7 +165,7 @@ async def schema_load_from_file() -> None:
 
     trace("Restoring objects from file...", TraceLEVELS.NORMAL)
     with open(SHILL_LIST_BACKUP_PATH, "rb") as reader:
-        accounts = convert.convert_from_semi_dict(pickle.load(reader))
+        accounts: List[client.ACCOUNT] = convert.convert_from_semi_dict(pickle.load(reader))
 
     trace("Updating accounts.", TraceLEVELS.DEBUG)
     for account in accounts:
@@ -156,12 +179,14 @@ async def schema_load_from_file() -> None:
                 TraceLEVELS.ERROR, exc
             )
         finally:
+            # Save ID regardless if we failed result otherwise we cannot access though remote
+            account._update_tracked_id()
             GLOBALS.accounts.append(account)
 
     trace(f"Restored objects from file ({len(GLOBALS.accounts)} accounts).", TraceLEVELS.NORMAL)
 
 
-@misc.doc_category("DAF control reference")
+@doc.doc_category("DAF control reference")
 async def initialize(user_callback: Optional[Union[Callable, Coroutine]] = None,
                      debug: Optional[Union[TraceLEVELS, int, str]] = TraceLEVELS.NORMAL,
                      logger: Optional[logging.LoggerBASE] = None,
@@ -245,7 +270,7 @@ async def initialize(user_callback: Optional[Union[Callable, Coroutine]] = None,
 # Functions
 #######################################################################
 @overload
-@misc.doc_category("Dynamic mod.", True)
+@doc.doc_category("Dynamic mod.", True)
 async def add_object(obj: client.ACCOUNT) -> None:
     """
     Adds an account to the framework.
@@ -266,7 +291,7 @@ async def add_object(obj: client.ACCOUNT) -> None:
 
 
 @overload
-@misc.doc_category("Dynamic mod.", True)
+@doc.doc_category("Dynamic mod.", True)
 async def add_object(obj: Union[guild.USER, guild.GUILD, guild.AutoGUILD],
                      snowflake: client.ACCOUNT = None) -> None:
     """
@@ -295,7 +320,7 @@ async def add_object(obj: Union[guild.USER, guild.GUILD, guild.AutoGUILD],
 
 
 @overload
-@misc.doc_category("Dynamic mod.", True)
+@doc.doc_category("Dynamic mod.", True)
 async def add_object(obj: Union[message.DirectMESSAGE, message.TextMESSAGE, message.VoiceMESSAGE],
                      snowflake: Union[guild.GUILD, guild.USER]) -> None:
     """
@@ -355,7 +380,7 @@ async def add_object(obj, snowflake=None):
 
 
 @typechecked
-@misc.doc_category("Dynamic mod.")
+@doc.doc_category("Dynamic mod.")
 async def remove_object(
     snowflake: Union[guild._BaseGUILD, message.BaseMESSAGE, guild.AutoGUILD, client.ACCOUNT]
 ) -> None:
@@ -399,7 +424,7 @@ async def remove_object(
         GLOBALS.accounts.remove(snowflake)
 
 
-@misc.doc_category("Clients")
+@doc.doc_category("Clients")
 def get_accounts() -> List[client.ACCOUNT]:
     """
     .. versionadded:: v2.4
@@ -413,7 +438,7 @@ def get_accounts() -> List[client.ACCOUNT]:
 
 
 @typechecked
-@misc.doc_category("DAF control reference")
+@doc.doc_category("DAF control reference")
 async def shutdown() -> None:
     """
     Stops and cleans the framework.
@@ -461,7 +486,7 @@ def _shutdown_clean(loop: asyncio.AbstractEventLoop) -> None:
 
 
 @typechecked
-@misc.doc_category("DAF control reference")
+@doc.doc_category("DAF control reference")
 def run(user_callback: Optional[Union[Callable, Coroutine]] = None,
         debug: Optional[Union[TraceLEVELS, int, str, bool]] = TraceLEVELS.NORMAL,
         logger: Optional[logging.LoggerBASE] = None,

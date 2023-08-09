@@ -1,9 +1,6 @@
-name: Publish to PyPi
+name: (todo) Nuitka build and publish to PyPi
 
 on:
-  release:
-    types: [published]
-
   workflow_dispatch:
 
 jobs:
@@ -12,12 +9,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
     - name: Set up Python
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version: "3.x"
+        cache: 'pip'
 
     - name: Install dependencies
       run: |
@@ -29,7 +27,7 @@ jobs:
         python -m build
 
     - name: Publish package
-      uses: pypa/gh-action-pypi-publish@f5622bde02b04381239da3573277701ceca8f6a0
+      uses: pypa/gh-action-pypi-publish@f8c70e705ffc13c3b4d1221169b84f12a75d6ca8
       with:
         user: __token__
         password: ${{ secrets.PYPI_API_TOKEN }}

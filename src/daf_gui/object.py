@@ -40,7 +40,7 @@ __all__ = (
 
 
 HELP_URLS = {
-    "daf": f"https://daf.davidhozic.com/en/v{daf.VERSION}/?rtd_search={{}}",
+    "daf": f"https://daf.davidhozic.com/en/v{'.'.join(daf.VERSION.split('.')[:2])}.x/?rtd_search={{}}",
     "_discord": f"https://docs.pycord.dev/en/v{discord._version.__version__}/search.html?q={{}}",
     "builtins": "https://docs.python.org/3/search.html?q={}"
 }
@@ -56,24 +56,25 @@ EXECUTABLE_METHODS = {
 ADDITIONAL_PARAMETER_VALUES = {
     daf.GUILD.remove_message: {
         # GUILD.messages
-        "message": lambda old_info: convert_to_object_info(old_info.real_object.messages, save_original=True)
+        "message": lambda old_info: old_info.data["messages"]
     },
     daf.USER.remove_message: {
         # GUILD.messages
-        "message": lambda old_info: convert_to_object_info(old_info.real_object.messages, save_original=True)
+        "message": lambda old_info: old_info.data["messages"]
     },
     daf.AutoGUILD.remove_message: {
         # GUILD.messages
-        "message": lambda old_info: convert_to_object_info(old_info.real_object.messages, save_original=True)
+        "message": lambda old_info: old_info.data["messages"]
     },
     daf.ACCOUNT.remove_server: {
         # ACCOUNT.servers
-        "server": lambda old_info: convert_to_object_info(old_info.real_object.servers, save_original=True)
+        "server": lambda old_info: old_info.data["servers"]
     }
 }
 
 DEPRECATION_NOTICES = {
-    daf.AUDIO: [("Youtube streaming", "2.10", "Faster loading times.")]
+    daf.AUDIO: [("daf.dtypes.AUDIO", "2.12", "Replaced with daf.dtypes.FILE")],
+    daf.VoiceMESSAGE: [("daf.dtypes.AUDIO as type for data parameter", "2.12", "Replaced with daf.dtypes.FILE")],
 }
 
 
@@ -106,33 +107,30 @@ class NewObjectFrameBase(ttk.Frame):
     def __init__(
         self,
         class_: Any,
-        return_widget: Any,
+        return_widget: Union[ComboBoxObjects, ListBoxObjects, None],
         parent = None,
         old_data: Any = None,
         check_parameters: bool = True,
         allow_save = True,
     ):
         self.class_ = class_
-        self.return_widget: Union[ComboBoxObjects, ListBoxObjects] = return_widget
+        self.return_widget = return_widget
         self._original_gui_data = None
         self.parent = parent
         self.check_parameters = check_parameters  # At save time
         self.allow_save = allow_save  # Allow save or not allow (eg. viewing SQL data)
         self.old_gui_data = old_data  # Set in .load
 
+        # If return_widget is None, it's a floating display with no return value
+        editing_index = return_widget.current() if return_widget is not None else -1
+        if editing_index == -1:
+            editing_index = None
+
+        self.editing_index = editing_index  # The index of old_gui_data inside the return widget
+
         super().__init__(master=parent)
         self.init_toolbar_frame(class_)
         self.init_main_frame()
-
-        # Deprecation notices
-        if not len(notices := DEPRECATION_NOTICES.get(class_, [])):
-            return
-
-        tkdiag.Messagebox.show_warning(
-            f"\n{'-'*30}\n".join(f"[{title}] Scheduled for removal in v{version}.\nReason: '{reason}'" for title, version, reason in notices),
-            "Deprecation notice",
-            self
-        )
 
     @staticmethod
     def get_cls_name(cls):
@@ -220,6 +218,7 @@ class NewObjectFrameBase(ttk.Frame):
 
     def init_toolbar_frame(self, class_):
         frame_toolbar = ttk.Frame(self)
+        frame_toolbar.pack(fill=tk.X)
         self.frame_toolbar = frame_toolbar
 
         # Help button
@@ -231,6 +230,19 @@ class NewObjectFrameBase(ttk.Frame):
 
             ttk.Button(frame_toolbar, text="Help", command=cmd).pack(side="left")
 
+        # Deprecation notices
+        if len(notices := DEPRECATION_NOTICES.get(class_, [])):
+            dep_frame = ttk.Frame(self)
+            dep_frame.pack(fill=tk.X, pady=dpi_scaled(5))
+
+            def show_deprecations():
+                tkdiag.Messagebox.show_warning(
+                    f"\n{'-'*30}\n".join(f"'{title}' is scheduled for removal in v{version}.\nReason: '{reason}'" for title, version, reason in notices),
+                    "Deprecation notice",
+                    self
+                )
+            ttk.Button(dep_frame, text="Deprecation notices", bootstyle="dark", command=show_deprecations).pack(side="left")
+
         # Additional widgets
         add_widgets = ADDITIONAL_WIDGETS.get(class_)
         if add_widgets is not None:
@@ -238,8 +250,6 @@ class NewObjectFrameBase(ttk.Frame):
                 setup_cmd = add_widg.setup_cmd
                 add_widg = add_widg.widget_class(frame_toolbar, *add_widg.args, **add_widg.kwargs)
                 setup_cmd(add_widg, self)
-
-        frame_toolbar.pack(fill=tk.X)
 
     @property
     def modified(self) -> bool:
@@ -275,18 +285,14 @@ class NewObjectFrameBase(ttk.Frame):
         Opens up a new object frame on top of the current one.
         Parameters are the same as in :class:`NewObjectFrame` (current class).
         """
+        allow_save = kwargs.pop("allow_save", self.allow_save)
         return self.origin_window.open_object_edit_frame(
-            class_, widget, allow_save=self.allow_save, *args, **kwargs
+            class_, widget, allow_save=allow_save, *args, **kwargs
         )
 
-    def to_object(self, *, ignore_checks = False):
+    def to_object(self):
         """
         Creates an object from the GUI data.
-
-        Parameters
-        ------------
-        ignore_checks: bool
-            Don't check data validity.
         """
         raise NotImplementedError
 
@@ -306,7 +312,7 @@ class NewObjectFrameBase(ttk.Frame):
         Save the current object into the return widget and then close this frame.
         """
         try:
-            if not self.allow_save:
+            if not self.allow_save or self.return_widget is None:
                 raise TypeError("Saving is not allowed in this context!")
 
             object_ = self.to_object()
@@ -338,15 +344,8 @@ class NewObjectFrameBase(ttk.Frame):
         ind = self.return_widget.count()
         if self.old_gui_data is not None:
             ret_widget = self.return_widget
-            # Ignore if not in list (Combobox allows to type values directly in instead of inserting them)
-            # thus when edit is clicked, the old information is loaded into the object edit info, howver the actual
-            # value while it was writen inside the combobox is not actually present in the list of it's values
-            with suppress(ValueError):
-                if isinstance(ret_widget, ListBoxScrolled):
-                    ind = ret_widget.get().index(self.old_gui_data)
-                else:
-                    ind = ret_widget["values"].index(self.old_gui_data)
-
+            if self.editing_index is not None:  # The index of edited item inside return widget
+                ind = self.editing_index
                 ret_widget.delete(ind)
 
         self.return_widget.insert(ind, new)
@@ -440,7 +439,7 @@ class NewObjectFrameStruct(NewObjectFrameBase):
                 return
 
             with open(filename, "r", encoding="utf-8") as file:
-                json_data: dict = json.load(file)
+                json_data: dict = json.loads(file.read())
                 object_info = convert_from_json(json_data)
                 # Get class_ attribute if we have the ObjectInfo type, if not just compare the actual type
                 if object_info.class_ is not self.class_:
@@ -545,7 +544,8 @@ class NewObjectFrameStruct(NewObjectFrameBase):
             self.old_gui_data is None or
             # getattr since class_ can also be non ObjectInfo
             getattr(self.old_gui_data, "real_object", None) is None or
-            (available_methods := EXECUTABLE_METHODS.get(self.class_)) is None
+            (available_methods := EXECUTABLE_METHODS.get(self.class_)) is None or
+            not self.allow_save
         ):
             return
 
@@ -553,7 +553,7 @@ class NewObjectFrameStruct(NewObjectFrameBase):
             async def runner():
                 method = frame_execute_method.combo.get()
                 if not isinstance(method, ObjectInfo):  # String typed in that doesn't match any names
-                    tkdiag.Messagebox.show_error("No method selected!", "Selection error")
+                    tkdiag.Messagebox.show_error("No method selected!", "Selection error", self.origin_window)
                     return
 
                 method_param = convert_to_objects(method.data, skip_real_conversion=True)
@@ -568,7 +568,12 @@ class NewObjectFrameStruct(NewObjectFrameBase):
             async_execute(runner(), parent_window=self.origin_window)
 
         dpi_5, dpi_10 = dpi_scaled(5), dpi_scaled(10)
-        frame_method = ttk.LabelFrame(self, text="Method execution", padding=(dpi_5, dpi_10), bootstyle=ttk.INFO)
+        frame_method = ttk.LabelFrame(
+            self,
+            text="Method execution (WARNING! Method data is NOT preserved when closing / saving the frame!)",
+            padding=(dpi_5, dpi_10),
+            bootstyle=ttk.INFO
+        )
         ttk.Button(frame_method, text="Execute", command=execute_method).pack(side="left")
         combo_values = []
         for unbound_meth in available_methods:
@@ -585,11 +590,7 @@ class NewObjectFrameStruct(NewObjectFrameBase):
 
             return self.new_object_frame(class_, widget, *args, **kwargs, additional_values=extra_values)
 
-        frame_execute_method = ComboEditFrame(
-            new_object_frame_with_values,
-            combo_values,
-            master=frame_method
-        )
+        frame_execute_method = ComboEditFrame(new_object_frame_with_values, combo_values, master=frame_method)
         frame_execute_method.pack(side="right", fill=tk.X, expand=True)
         frame_method.pack(fill=tk.X)
 
@@ -608,7 +609,15 @@ class NewObjectFrameStruct(NewObjectFrameBase):
 
         self.old_gui_data = old_data
 
-    def to_object(self, *, ignore_checks=False):
+    def to_object(self, *, ignore_checks = False) -> ObjectInfo:
+        """
+        Converts GUI data into an ObjectInfo abstraction object.
+
+        Parameters
+        ------------
+        ignore_checks: bool
+            Don't check the correctness of given parameters.
+        """
         map_ = {}
         widget: ComboBoxObjects
         for attr, (widget, types_) in self._map.items():
@@ -623,15 +632,17 @@ class NewObjectFrameStruct(NewObjectFrameBase):
 
             map_[attr] = value
 
-        # Abstraction of the underlaying object
-        object_ = ObjectInfo(
-            self.class_,
-            map_,
+        extra_args = {}
+        if (old_gui_data := self.old_gui_data) is not None:
             # Don't erase the bind to the real object in case this is an edit of an existing ObjectInfo
-            None if self.old_gui_data is None else self.old_gui_data.real_object
-        )
+            extra_args["real_object"] = old_gui_data.real_object
+            # Also don't erase any saved properties if received from a live object.
+            extra_args["property_map"] = old_gui_data.property_map
+
+        object_ = ObjectInfo(self.class_, map_, **extra_args)  # Abstraction of the underlaying object
         if not ignore_checks and self.check_parameters and inspect.isclass(self.class_):  # Only check objects
-            convert_to_objects(object_)  # Tries to create instances to check for errors
+            # Cache the object created for faster
+            convert_to_objects(object_, cached=True)  # Tries to create instances to check for errors
 
         return object_
 
@@ -665,7 +676,7 @@ class NewObjectFrameNumber(NewObjectFrameBase):
     def get_gui_data(self) -> Union[int, float]:
         return self.return_widget.get()
 
-    def to_object(self, **kwargs):
+    def to_object(self):
         return self.cast_type(self.storage_widget.get(), [self.class_])
 
 
@@ -680,7 +691,7 @@ class NewObjectFrameIterable(NewObjectFrameBase):
                 else:
                     self.new_object_frame(type(object_), lb, old_data=object_)
             else:
-                tkdiag.Messagebox.show_error("Select ONE item!", "Selection error", parent=self.origin_window)
+                tkdiag.Messagebox.show_error("Select ONE item!", "Selection error", parent=self)
 
         dpi_5 = dpi_scaled(5)
         super().__init__(class_, return_widget, parent, old_data, check_parameters, allow_save)
@@ -730,7 +741,7 @@ class NewObjectFrameIterable(NewObjectFrameBase):
     def get_gui_data(self) -> Any:
         return self.storage_widget.get()
 
-    def to_object(self, **kwargs):
+    def to_object(self):
         return self.get_gui_data()  # List items are not to be converted
 
 
@@ -752,7 +763,7 @@ class NewObjectFrameString(NewObjectFrameBase):
     def get_gui_data(self) -> Any:
         return self.storage_widget.get()
 
-    def to_object(self, **kwargs):
+    def to_object(self):
         return self.get_gui_data()
 
 

@@ -39,6 +39,11 @@ class ListBoxObjects(tk.Listbox):
         self.bind("<Delete>", lambda e: self.delete_selected())
         self.bind("<Control-v>", lambda e: self.paste_from_clipboard())
 
+    def current(self) -> int:
+        "Returns index of the first currently selected element or -1 if none selected."
+        selection = self.curselection()
+        return selection[0] if len(selection) else -1
+
     def get(self, first: int = 0, last: int = None) -> list:
         slice_range = slice(first, last)
         return self._original_items[slice_range]
@@ -170,7 +175,6 @@ class ComboBoxObjects(ttk.Combobox):
     def insert(self, index: Union[int, str], element: Any) -> None:
         if index == tk.END:
             self._original_items.append(element)
-            index = len(self._original_items)
         else:
             self._original_items.insert(index, element)
 

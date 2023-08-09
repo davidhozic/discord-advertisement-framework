@@ -1,0 +1,86 @@
+{
+  "loggers": {
+    "all": [
+      {
+        "type": "daf.logging._logging.LoggerJSON",
+        "data": {
+          "path": "C:\\Users\\David\\daf\\History"
+        }
+      },
+      {
+        "type": "daf.logging.sql.mgr.LoggerSQL",
+        "data": {
+          "database": "C:\\Users\\David\\daf\\messages",
+          "dialect": "sqlite"
+        }
+      },
+      {
+        "type": "daf.logging._logging.LoggerCSV",
+        "data": {
+          "path": "C:\\Users\\David\\daf\\History",
+          "delimiter": ";"
+        }
+      }
+    ],
+    "selected_index": 0
+  },
+  "tracing": 3,
+  "accounts": [
+    {
+      "type": "daf.client.ACCOUNT",
+      "data": {
+        "token": "OTMHH72GFA7213JSDH2131HJb",
+        "is_user": true,
+        "servers": [
+          {
+            "type": "daf.guild.AutoGUILD",
+            "data": {
+              "include_pattern": ".*",
+              "exclude_pattern": "David's Dungeon",
+              "messages": [
+                {
+                  "type": "daf.message.text_based.TextMESSAGE",
+                  "data": {
+                    "start_period": null,
+                    "end_period": {
+                      "type": "datetime.timedelta",
+                      "data": {
+                        "hours": 2.0
+                      }
+                    },
+                    "data": [
+                      "We are excited to announce the launch of our White Rabbit NFT project!"
+                    ],
+                    "channels": {
+                      "type": "daf.message.base.AutoCHANNEL",
+                      "data": {
+                        "include_pattern": "shill|advert|promo|projects",
+                        "exclude_pattern": "vanilla-projects|ssfe-obvestila"
+                      }
+                    }
+                  }
+                }
+              ],
+              "logging": true
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "connection": {
+    "all": [
+      {
+        "type": "daf_gui.connector.LocalConnectionCLIENT",
+        "data": {}
+      },
+      {
+        "type": "daf_gui.connector.RemoteConnectionCLIENT",
+        "data": {
+          "host": "http://"
+        }
+      }
+    ],
+    "selected_index": 0
+  }
+}

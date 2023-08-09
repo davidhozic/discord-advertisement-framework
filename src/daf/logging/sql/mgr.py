@@ -11,14 +11,12 @@ from pathlib import Path
 from typeguard import typechecked
 
 from ..tracing import TraceLEVELS, trace
-
 from .. import _logging as logging
+from ...misc import doc, instance_track, async_util
 
 import json
 import copy
 import asyncio
-
-from ... import misc
 
 
 class GLOBALS:
@@ -207,8 +205,8 @@ class TableCache:
         return key in self.data
 
 
-@misc.track_id
-@misc.doc_category("Logging reference", path="logging.sql")
+@instance_track.track_id
+@doc.doc_category("Logging reference", path="logging.sql")
 class LoggerSQL(logging.LoggerBASE):
     """
     .. versionchanged:: v2.7
@@ -823,8 +821,8 @@ class LoggerSQL(logging.LoggerBASE):
         )
         session.add(message_log_obj)
 
-    # _async_safe prevents multiple tasks from attempting to do operations on the database at the same time.
-    @misc._async_safe("safe_sem", 1)
+    # with_semaphore prevents multiple tasks from attempting to do operations on the database at the same time.
+    @async_util.with_semaphore("safe_sem", 1)
     async def _save_log(
         self,
         guild_context: dict,
@@ -1255,7 +1253,7 @@ class LoggerSQL(logging.LoggerBASE):
             await self._run_async(session.execute, delete(table).where(table.id.in_(primary_keys)))
             await self._run_async(session.commit)
 
-    @misc._async_safe("safe_sem", 1)
+    @async_util.with_semaphore("safe_sem", 1)
     async def update(self, **kwargs):
         """
         .. versionadded:: v2.0
@@ -1282,7 +1280,7 @@ class LoggerSQL(logging.LoggerBASE):
         """
         try:
             await self._stop_engine()
-            await misc._update(self, **kwargs)
+            await async_util.update_obj_param(self, **kwargs)
         except Exception:
             # Reinitialize since engine was disconnected
             await self.initialize()

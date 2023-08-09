@@ -7,6 +7,10 @@ on:
     branches: [ "master" , "develop"]
   workflow_dispatch:
 
+concurrency:
+    group: "selftest-cg"
+    cancel-in-progress: true
+
 jobs:
   pytest:
     runs-on: ubuntu-latest
@@ -21,16 +25,17 @@ jobs:
       uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
-    - name: Disable initramfs update
-      run: sudo sed -i 's/yes/no/g' /etc/initramfs-tools/update-initramfs.conf
-    - name: Disable man-db update
-      run: sudo rm -f /var/lib/man-db/auto-update
-    - name: Install dependencies
+        cache: 'pip'
+    - name: Patch pyproject.toml (remove nuitka build)
+      run: python setup-universal.py
+    - name: Install APT dependencies
       run: |
-        sudo apt update
-        sudo apt install -y ffmpeg
+        sudo apt-get update
+        sudo apt install ffmpeg
+    - name: Install Python dependencies
+      run: |
         python -m pip install --upgrade pip
-        pip install -r requirements/mandatory.txt -r requirements/sql.txt -r requirements/web.txt -r requirements/voice.txt -r requirements/testing.txt
+        pip install .[all] .[testing]
     - name: Test version compatibility
       env:
         DISCORD_TOKEN: ${{secrets.DATT}}
@@ -42,5 +47,6 @@ jobs:
         DISCORD_TOKEN: ${{secrets.DATT}}
       if: ${{ matrix.python-version == 3.8 }}
       run: |
-        pytest -v
+        pytest -v -m "not group_remote"
+        pytest -v -m "group_remote"
       

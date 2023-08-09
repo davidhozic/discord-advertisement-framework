@@ -3,25 +3,28 @@ The conversion module is responsible for converting Python objects into differen
 It is also responsible for doing the reverse, which is converting those other forms back into Python objects.
 """
 
-from typing import Union, Any
+from typing import Union, Any, Mapping
 from contextlib import suppress
 from enum import Enum
 from inspect import isclass
+
+from daf.logging.tracing import TraceLEVELS, trace
 
 import decimal
 import importlib
 import copy
 import asyncio
-import array
 import datetime
 
 import _discord as discord
 
+from .misc import cache, attributes
+from .misc.instance_track import *
 from . import client
 from . import guild
 from . import message
-from . import misc
 from . import logging
+from . import web
 
 
 __all__ = (
@@ -33,7 +36,11 @@ __all__ = (
 LAMBDA_TYPE = type(lambda x: x)
 
 
+@cache.cache_result()
 def import_class(path: str):
+    """
+    Imports the class provided by it's ``path``.
+    """
     path = path.split(".")
     module_path, class_name = '.'.join(path[:-1]), path[-1]
     module = importlib.import_module(module_path)
@@ -43,29 +50,43 @@ def import_class(path: str):
 
 CONVERSION_ATTRS = {
     client.ACCOUNT: {
-        "attrs": misc.get_all_slots(client.ACCOUNT),
+        "attrs": attributes.get_all_slots(client.ACCOUNT),
         "attrs_restore": {
             "tasks": [],
             "_update_sem": asyncio.Semaphore(1),
             "_running": False,
             "_client": None,
+            "_ws_task": None,
         },
     },
     guild.AutoGUILD: {
-        "attrs": misc.get_all_slots(guild.AutoGUILD),
+        "attrs": attributes.get_all_slots(guild.AutoGUILD),
         "attrs_restore": {
             "_safe_sem": asyncio.Semaphore(1),
             "parent": None,
             "guild_query_iter": None,
-            "cache": {}
         },
     },
     message.AutoCHANNEL: {
-        "attrs": misc.get_all_slots(message.AutoCHANNEL),
+        "attrs": attributes.get_all_slots(message.AutoCHANNEL),
         "attrs_restore": {
             "parent": None,
-            "cache": set()
+            "removed_channels": set(),
+            "channel_getter": None,
         },
+    },
+    web.SeleniumCLIENT: {
+        "attrs": attributes.get_all_slots(web.SeleniumCLIENT),
+        "attrs_restore": {
+            "driver": None
+        }
+    },
+    web.GuildDISCOVERY: {
+        "attrs": attributes.get_all_slots(web.GuildDISCOVERY),
+        "attrs_restore": {
+            "session": None,
+            "browser": None
+        }
     },
     logging.LoggerSQL: {
         "attrs": ["_daf_id"]
@@ -91,6 +112,21 @@ CONVERSION_ATTRS = {
     datetime.timedelta: {
         "custom_encoder": lambda object: object.total_seconds(),
         "custom_decoder": lambda seconds: datetime.timedelta(seconds=seconds)
+    },
+    bytes: {
+        "custom_encoder": lambda data: data.hex(),
+        "custom_decoder": lambda hex_str: bytes.fromhex(hex_str)
+    },
+    set: {
+        "custom_encoder": lambda data: convert_object_to_semi_dict(list(data)),
+        "custom_decoder": lambda list_data: set(convert_from_semi_dict(list_data))
+    },
+    dict: {
+        "custom_encoder": lambda data: {k: convert_object_to_semi_dict(v) for k, v in data.items()},
+        "custom_decoder": lambda data: {k: convert_from_semi_dict(v) for k, v in data.items()}
+    },
+    discord.Guild: {
+        "attrs": ["name", "id"]
     }
 }
 """
@@ -120,20 +156,22 @@ These are:
 """
 
 
+for cls in {discord.TextChannel, discord.VoiceChannel}:
+    attrs = {"attrs": ["name", "id", "slowmode_delay"]}
+    CONVERSION_ATTRS[cls] = attrs
+
+
 # Guilds
 CONVERSION_ATTRS[guild.GUILD] = {
-    "attrs": misc.get_all_slots(guild.GUILD),
+    "attrs": attributes.get_all_slots(guild.GUILD),
     "attrs_restore": {
         "update_semaphore": asyncio.Semaphore(1),
         "parent": None
     },
-    "attrs_convert": {
-        "_apiobject": lambda guild: guild.snowflake
-    },
 }
 
 CONVERSION_ATTRS[guild.USER] = CONVERSION_ATTRS[guild.GUILD].copy()
-CONVERSION_ATTRS[guild.USER]["attrs"] = misc.get_all_slots(guild.USER)
+CONVERSION_ATTRS[guild.USER]["attrs"] = attributes.get_all_slots(guild.USER)
 
 if logging.sql.SQL_INSTALLED:
     def create_decoder(cls):
@@ -141,11 +179,11 @@ if logging.sql.SQL_INSTALLED:
         Function returns the decoder function which uses the ``cls`` parameter.
         It cannot be passed directly since for loop would update the ``cls`` parameter.
         """
-        def decoder_func(data: dict):
-            def _decode_object_type(cls, data: dict):
+        def decoder_func(data: Mapping):
+            def _decode_object_type(cls, data: Mapping):
                 new_object = cls.__new__(cls)
                 for k, v in data.items():
-                    if isinstance(v, (dict, list)):
+                    if isinstance(v, (Mapping, list)):
                         v = convert_from_semi_dict(v)
 
                     new_object.__dict__[k] = v
@@ -190,11 +228,12 @@ CHANNEL_LAMBDA = (
 )
 
 CONVERSION_ATTRS[message.TextMESSAGE] = {
-    "attrs": misc.get_all_slots(message.TextMESSAGE),
+    "attrs": attributes.get_all_slots(message.TextMESSAGE),
     "attrs_restore": {
         "update_semaphore": asyncio.Semaphore(1),
         "parent": None,
-        "sent_messages": {}
+        "sent_messages": {},
+        "channel_getter": None,
     },
     "attrs_convert": {
         "channels": CHANNEL_LAMBDA
@@ -202,10 +241,11 @@ CONVERSION_ATTRS[message.TextMESSAGE] = {
 }
 
 CONVERSION_ATTRS[message.VoiceMESSAGE] = {
-    "attrs": misc.get_all_slots(message.VoiceMESSAGE),
+    "attrs": attributes.get_all_slots(message.VoiceMESSAGE),
     "attrs_restore": {
         "update_semaphore": asyncio.Semaphore(1),
         "parent": None,
+        "channel_getter": None,
     },
     "attrs_convert": {
         "channels": CHANNEL_LAMBDA
@@ -214,7 +254,7 @@ CONVERSION_ATTRS[message.VoiceMESSAGE] = {
 
 
 CONVERSION_ATTRS[message.DirectMESSAGE] = {
-    "attrs": misc.get_all_slots(message.DirectMESSAGE),
+    "attrs": attributes.get_all_slots(message.DirectMESSAGE),
     "attrs_restore": {
         "update_semaphore": asyncio.Semaphore(1),
         "parent": None,
@@ -224,28 +264,30 @@ CONVERSION_ATTRS[message.DirectMESSAGE] = {
 }
 
 
-def convert_object_to_semi_dict(object_: object) -> dict:
+def convert_object_to_semi_dict(to_convert: Any, only_ref: bool = False) -> Mapping:
     """
-    Converts an object into ObjectInfo.
+    Converts an object into dict.
 
     Parameters
     ---------------
-    object_: object
+    to_convert: Any
         The object to convert.
+    only_ref: bool
+        If True, the object will be replaced with a ObjectReference instance containing only the object_id.
     """
-    def _convert_json_slots(object_):
-        type_object = type(object_)
+    def _convert_json_slots(to_convert):
+        type_object = type(to_convert)
         attrs = CONVERSION_ATTRS.get(type_object)
         if attrs is None:
             # No custom rules defined, try to convert normally with either vars or __slots__
             try:
-                attrs = {"attrs": misc.get_all_slots(type_object) if hasattr(object_, "__slots__") else vars(object_)}
+                attrs = {"attrs": attributes.get_all_slots(type_object) if hasattr(to_convert, "__slots__") else vars(to_convert)}
             except TypeError:
-                return object_  # Not structured object or does not have overrides defined, return the object itself
+                return to_convert  # Not structured object or does not have overrides defined, return the object itself
 
         # Check if custom conversion function is requested
         if (encoder_func := attrs.get("custom_encoder")) is not None:
-            data_conv = encoder_func(object_)
+            data_conv = encoder_func(to_convert)
         else:
             # No custom conversion function provided, use the normal rules
             data_conv = {}
@@ -268,45 +310,48 @@ def convert_object_to_semi_dict(object_: object) -> dict:
                 if k in attrs_convert:
                     value = attrs_convert[k]
                     if isinstance(value, LAMBDA_TYPE):
-                        value = value(object_)
+                        value = value(to_convert)
                 else:
-                    value = getattr(object_, k)
+                    try:
+                        value = getattr(to_convert, k)
+                    except AttributeError as exc:
+                        trace(
+                            f"Conversion could not obtain attr '{k}' in {to_convert}({type(to_convert)}). Using None",
+                            TraceLEVELS.WARNING,
+                            exc
+                        )
+                        value = None
 
                 data_conv[k] = convert_object_to_semi_dict(value)
 
         return {"object_type": f"{type_object.__module__}.{type_object.__name__}", "data": data_conv}
 
-    def _convert_json_dict(object_: dict):
-        data_conv = {}
-        for k, v in object_.items():
-            data_conv[k] = convert_object_to_semi_dict(v)
-
-        return data_conv
-
-    object_type = type(object_)
+    object_type = type(to_convert)
     if object_type in {int, float, str, bool, decimal.Decimal, type(None)}:
         if object_type is decimal.Decimal:
-            object_ = float(object_)
+            to_convert = float(to_convert)
 
-        return object_
+        return to_convert
 
-    if isinstance(object_, (set, list, tuple)):
-        object_ = [convert_object_to_semi_dict(value) for value in object_]
-        return object_
+    if isinstance(to_convert, (list, tuple)):
+        to_convert = [convert_object_to_semi_dict(value) for value in to_convert]
+        return to_convert
 
-    if isinstance(object_, dict):
-        return _convert_json_dict(object_)
+    if isinstance(to_convert, Enum):
+        return {"enum_type": f"{object_type.__module__}.{object_type.__name__}", "value": to_convert.value}
 
-    if isinstance(object_, Enum):
-        return {"enum_type": f"{object_type.__module__}.{object_type.__name__}", "value": object_.value}
+    if isclass(to_convert):  # Class itself, not an actual isntance
+        return {"class_path": f"{to_convert.__module__}.{to_convert.__name__}"}
 
-    if isclass(object_):
-        return {"class_path": f"{object_.__module__}.{object_.__name__}"}
+    if only_ref:
+        # Don't serialize object completly, only ID is requested.
+        # This prevents unnecessarily large data to be encoded
+        to_convert = ObjectReference(get_object_id(to_convert))
 
-    return _convert_json_slots(object_)
+    return _convert_json_slots(to_convert)
 
 
-def convert_from_semi_dict(d: Union[dict, list, Any], use_bound: bool = False):
+def convert_from_semi_dict(d: Union[Mapping, list, Any]):
     """
     Function that converts the ``d`` parameter which is a semi-dict back to the object
     representation.
@@ -315,11 +360,7 @@ def convert_from_semi_dict(d: Union[dict, list, Any], use_bound: bool = False):
     ---------------
     d: Union[dict, list, Any]
         The semi-dict / list to convert.
-    use_bound: bool
-        If ``True`` and objects have the ``_daf_id`` attribute, they will not be recreated but taken from memory.
     """
-    def __convert_to_enum():
-        return import_class(d["enum_type"])(d["value"])
 
     def __convert_to_slotted():
         # d is a object serialized to dict
@@ -329,23 +370,18 @@ def convert_from_semi_dict(d: Union[dict, list, Any], use_bound: bool = False):
             # Custom decoder function is used
             return decoder_func(d["data"])
 
-        # If a bound object is found, don't try to recreate but obtain by ID
-        if use_bound and "_daf_id" in d["data"] and (bound := misc.get_by_id(d["data"]["_daf_id"])) is not None:
-            return bound
+        # Only object's ID reference was encoded -> restore by ID
+        if class_ is ObjectReference:
+            return get_by_id(d["data"]["ref"])
 
         # No custom decoder function, normal conversion is used
-        if issubclass(class_, array.array):
-            _return = array.array.__new__(cls, 'Q')
-        else:
-            _return = object.__new__(class_)
-        # Use object.__new__ instead of class.__new__
-        # to prevent any objects who have IDs tracked from updating the weakref dictionary (in misc module)
+        _return = class_.__new__(class_)
 
         # Change the setattr function to default Python, since we just want to directly set attributes
         # Set saved attributes
         for k, v in d["data"].items():
-            if isinstance(v, (dict, list)):
-                v = convert_from_semi_dict(v, use_bound)
+            if isinstance(v, (Mapping, list)):
+                v = convert_from_semi_dict(v)
 
             setattr(_return, k, v)
 
@@ -354,34 +390,33 @@ def convert_from_semi_dict(d: Union[dict, list, Any], use_bound: bool = False):
         if attrs is not None:
             attrs_restore = attrs.get("attrs_restore", {})
             for k, v in attrs_restore.items():
-                if isinstance(v, LAMBDA_TYPE):
-                    v = v(_return)
-
                 # copy.copy prevents external modifications since it's passed by reference
                 setattr(_return, k, copy.copy(v))
 
         return _return
 
-    def __convert_to_dict():
+    def __convert_to_dict():  # Compatibility with file backups from v2.9.x
         data = {}
         for k, v in d.items():
-            data[k] = convert_from_semi_dict(v, use_bound)
+            data[k] = convert_from_semi_dict(v)
 
         return data
 
     # List conversion, keeps the list but converts the values
     if isinstance(d, list):
-        return [convert_from_semi_dict(value, use_bound) if isinstance(value, dict) else value for value in d]
+        return [convert_from_semi_dict(value) if isinstance(value, Mapping) else value for value in d]
 
     # Either an object serialized to dict or a normal dictionary
-    elif isinstance(d, dict):
+    elif isinstance(d, Mapping):
         if "enum_type" in d:  # It's a JSON converted Enum
-            return __convert_to_enum()
+            return import_class(d["enum_type"])(d["value"])
 
-        if "class_path" in d:
+        if "class_path" in d:  # A class was directly send (not an instance)
             return import_class(d["class_path"])
 
-        if "object_type" not in d:  # It's a normal dictionary
+        if "object_type" not in d:
+            # Compatibility with file backups from v2.9.x
+            # It's a normal dictionary
             return __convert_to_dict()
 
         return __convert_to_slotted()

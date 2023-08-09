@@ -2,10 +2,13 @@
 Modules contains definitions related to GUI object transformations.
 """
 
-from typing import Any, Union, List, get_type_hints, Generic, TypeVar, Iterable
+from typing import Any, Union, List, get_type_hints, Generic, TypeVar, Iterable, Mapping
 from contextlib import suppress
 from enum import Enum
-from inspect import signature
+from inspect import signature, getmembers
+
+from daf.convert import import_class
+from daf.misc import instance_track as it
 
 import decimal
 import datetime as dt
@@ -70,10 +73,17 @@ ADDITIONAL_ANNOTATIONS = {
     discord.EmbedField: {
         "name": str, "value": str, "inline": bool
     },
+    discord.TextChannel: {
+        "name": str,
+        "id": int
+    },
     daf.add_object: {
         "obj": daf.ACCOUNT
     },
 }
+
+ADDITIONAL_ANNOTATIONS[discord.VoiceChannel] = ADDITIONAL_ANNOTATIONS[discord.TextChannel]
+ADDITIONAL_ANNOTATIONS[discord.Guild] = ADDITIONAL_ANNOTATIONS[discord.TextChannel]
 
 if daf.logging.sql.SQL_INSTALLED:
     sql_ = daf.logging.sql.tables
@@ -87,21 +97,19 @@ if daf.logging.sql.SQL_INSTALLED:
 
 
 CONVERSION_ATTR_TO_PARAM = {
-    daf.AUDIO: {
-        "filename": "orig"
-    },
     dt.timezone: {
         "offset": "_offset",
         "name": "_name",
-    }
+    },
 }
-
-OBJECT_CONV_CACHE = {}
 
 CONVERSION_ATTR_TO_PARAM[daf.client.ACCOUNT] = {k: k for k in daf.client.ACCOUNT.__init__.__annotations__}
 CONVERSION_ATTR_TO_PARAM[daf.client.ACCOUNT]["token"] = "_token"
 CONVERSION_ATTR_TO_PARAM[daf.client.ACCOUNT]["username"] = lambda account: account.selenium._username if account.selenium is not None else None
 CONVERSION_ATTR_TO_PARAM[daf.client.ACCOUNT]["password"] = lambda account: account.selenium._password if account.selenium is not None else None
+
+CONVERSION_ATTR_TO_PARAM[daf.dtypes.FILE] = {k: k for k in daf.dtypes.FILE.__init__.__annotations__}
+CONVERSION_ATTR_TO_PARAM[daf.dtypes.FILE]["data"] = "hex"
 
 
 if daf.sql.SQL_INSTALLED:
@@ -132,6 +140,17 @@ CONVERSION_ATTR_TO_PARAM[daf.GUILD]["invite_track"] = (
 )
 
 
+# Map whhich's values is a tuple that tells which fields are passwords.
+# These fields will be replaced with a '*' when viewed in object form.
+PASSWORD_PARAMS = {
+    daf.ACCOUNT: {"token", "password", },
+    daf.SeleniumCLIENT: {"password", },
+}
+
+CONVERSION_ATTR_TO_PARAM[daf.web.SeleniumCLIENT] = {k: f"_{k}" for k in daf.web.SeleniumCLIENT.__init__.__annotations__}
+CONVERSION_ATTR_TO_PARAM[daf.web.SeleniumCLIENT].pop("return")
+
+
 class ObjectInfo(Generic[TClass]):
     """
     A GUI object that represents real objects,.
@@ -146,37 +165,80 @@ class ObjectInfo(Generic[TClass]):
     real_object: object
         Actual object that ObjectInfo represents inside GUI. Used whenever update
         of the real object is needed upon saving inside the GUI.
+    property_map: Mapping[str, ObjectInfo]
+        Mapping that maps a property (name) of the object into it's ObjectInfo.
     """
-    CHARACTER_LIMIT = 200
+    CHARACTER_LIMIT = 150
 
-    def __init__(self, class_, data: dict, real_object: object = None) -> None:
+    def __init__(
+        self,
+        class_,
+        data: Mapping,
+        real_object: it.ObjectReference = None,
+        property_map: Mapping[str, "ObjectInfo"] = {}
+    ) -> None:
         self.class_ = class_
         self.data = data
         self.real_object = real_object
+        self.property_map = property_map
+        self.__hash = 0
+        self.__repr = None
 
-    def __eq__(self, __value: object) -> bool:
-        if isinstance(__value, ObjectInfo):
-            return (
-                self.class_ is __value.class_ and
-                self.real_object is __value.real_object and
-                self.data == __value.data
+    def __eq__(self, _value: object) -> bool:
+        if isinstance(_value, ObjectInfo):
+            cond = (
+                self.class_ is _value.class_ and
+                (   # Compare internal daf IDs for trackable objects (@track_id) in case a remote connection is present
+                    getattr(self.real_object, "ref", None) ==
+                    getattr(_value.real_object, "ref", None)
+                ) and
+                self.data == _value.data
             )
+            return cond
 
         return False
 
+    def __hash__(self) -> int:
+        if not self.__hash:
+            try:
+                self.__hash = hash(self.data)
+            except TypeError:
+                self.__hash = -1
+
+        return self.__hash
+
     def __repr__(self) -> str:
+        if self.__repr is not None:
+            return self.__repr
+
         _ret: str = self.class_.__name__ + "("
+        private_params = PASSWORD_PARAMS.get(self.class_, set())
+        if hasattr(self.class_, "__passwords__"):
+            private_params = private_params.union(self.class_.__passwords__)
+
         for k, v in self.data.items():
-            v = f'"{v}"' if isinstance(v, str) else str(v)
+            if len(_ret) > self.CHARACTER_LIMIT:
+                break
+
+            if isinstance(v, str):
+                if k in private_params:
+                    v = len(v) * '*'  # Hide password types
+
+                v = f'"{v}"'
+            else:
+                v = str(v)
+
             _ret += f"{k}={v}, "
 
         _ret = _ret.rstrip(", ") + ")"
         if len(_ret) > self.CHARACTER_LIMIT:
             _ret = _ret[:self.CHARACTER_LIMIT] + "...)"
 
+        self.__repr = _ret
         return _ret
 
 
+@daf.misc.cache.cache_result(max=1024)
 def convert_objects_to_script(object: Union[ObjectInfo, list, tuple, set, str]):
     """
     Converts ObjectInfo objects into equivalent Python code.
@@ -187,7 +249,7 @@ def convert_objects_to_script(object: Union[ObjectInfo, list, tuple, set, str]):
 
     if isinstance(object, ObjectInfo):
         object_str = f"{object.class_.__name__}(\n    "
-        attr_str = ""
+        attr_str = []
         for attr, value in object.data.items():
             if isinstance(value, (ObjectInfo, list, tuple, set)):
                 value, import_data_, other_str = convert_objects_to_script(value)
@@ -200,25 +262,24 @@ def convert_objects_to_script(object: Union[ObjectInfo, list, tuple, set, str]):
                 if other_str != "":
                     other_data.append(other_str)
 
-            attr_str += f"{attr}={value},\n"
+            attr_str.append(f"{attr}={value},\n")
             if issubclass(type(value), Enum):
                 import_data.append(f"from {type(value).__module__} import {type(value).__name__}")
 
         import_data.append(f"from {object.class_.__module__} import {object.class_.__name__}")
 
-        object_str += "    ".join(attr_str.splitlines(True)) + ")"
+        object_str += "    ".join(''.join(attr_str).splitlines(True)) + ")"
         object_data.append(object_str)
 
     elif isinstance(object, (list, tuple, set)):
-        _list_data = "[\n"
+        _list_data = ["[\n"]
         for element in object:
             object_str, import_data_, other_str = convert_objects_to_script(element)
-            _list_data += object_str + ",\n"
+            _list_data.append(object_str + ",\n")
             import_data.extend(import_data_)
             other_data.append(other_str)
 
-        _list_data = "    ".join(_list_data.splitlines(keepends=True))
-        _list_data += "]"
+        _list_data = "    ".join(''.join(_list_data).splitlines(keepends=True)) + "]"
         object_data.append(_list_data)
     else:
         if isinstance(object, str):
@@ -230,7 +291,8 @@ def convert_objects_to_script(object: Union[ObjectInfo, list, tuple, set, str]):
     return ",".join(object_data).strip(), import_data, "\n".join(other_data).strip()
 
 
-def convert_to_object_info(object_: object, save_original = False, cache = False):
+@daf.misc.cache.cache_result(16_384)
+def convert_to_object_info(object_: object, save_original = False):
     """
     Converts an object into ObjectInfo.
 
@@ -240,8 +302,6 @@ def convert_to_object_info(object_: object, save_original = False, cache = False
         The object to convert.
     save_original: bool
         If True, will save the original object inside the ``real_object`` attribute of :class:`ObjectInfo`
-    cache: bool
-        Should cache be used to speed up lookups.
     """
     def _convert_object_info(object_, save_original, object_type, attrs):
         data_conv = {}
@@ -262,11 +322,25 @@ def convert_to_object_info(object_: object, save_original = False, cache = False
                 if value is object_:
                     data_conv[k] = value
                 else:
-                    data_conv[k] = convert_to_object_info(value, save_original, cache=cache)
+                    data_conv[k] = convert_to_object_info(value, save_original)
 
         ret = ObjectInfo(object_type, data_conv)
         if save_original:
-            ret.real_object = object_
+            ret.real_object = it.ObjectReference(it.get_object_id(object_))
+
+            # Convert object properties
+            # This will only be aviable for live objects, since it has no configuration value,
+            # thus keeping it wouldn't make much sense
+            if hasattr(object_, "_daf_id"):
+                property_map = {}
+                prop: property
+                for name, prop in getmembers(type(object_), lambda x: isinstance(x, property)):
+                    with suppress(AttributeError):
+                        return_annotation = get_type_hints(prop.fget).get("return")
+                        property_map[name] = (convert_to_object_info(prop.fget(object_), True), return_annotation)
+
+                ret.property_map = property_map
+
         return ret
 
     def get_conversion_map(object_type):
@@ -282,12 +356,7 @@ def convert_to_object_info(object_: object, save_original = False, cache = False
         attrs.pop("return", None)
         return attrs
 
-    with suppress(KeyError, TypeError):
-        if cache:
-            return OBJECT_CONV_CACHE[object_]
-
     object_type = type(object_)
-
     if object_type in {int, float, str, bool, decimal.Decimal, type(None)} or isinstance(object_, Enum):
         if object_type is decimal.Decimal:
             object_ = float(object_)
@@ -295,25 +364,22 @@ def convert_to_object_info(object_: object, save_original = False, cache = False
         return object_
 
     if isinstance(object_, (set, list, tuple)):
-        object_ = [convert_to_object_info(value, save_original, cache=cache) for value in object_]
+        object_ = [convert_to_object_info(value, save_original) for value in object_]
         return object_
 
     attrs = get_conversion_map(object_type)
-    ret = _convert_object_info(object_, save_original, object_type, attrs)
-    with suppress(TypeError):
-        if cache:
-            OBJECT_CONV_CACHE[object_] = ret
-            if len(OBJECT_CONV_CACHE) > 50000:
-                for k in list(OBJECT_CONV_CACHE.keys())[:10000]:
-                    del OBJECT_CONV_CACHE[k]
+    return _convert_object_info(object_, save_original, object_type, attrs)
 
-    return ret
+
+@daf.misc.cache.cache_result()
+def _convert_to_objects_cached(*args, **kwargs):
+    return convert_to_objects(*args, **kwargs)
 
 
 def convert_to_objects(
     d: Union[ObjectInfo, dict, list],
-    keep_original_object: bool = False,
     skip_real_conversion: bool = False,
+    cached: bool = False
 ) -> Union[object, dict, List]:
     """
     Converts :class:`ObjectInfo` instances into actual objects,
@@ -324,20 +390,13 @@ def convert_to_objects(
     d: ObjectInfo | list[ObjectInfo] | dict
         The object(s) to convert. Can be an ObjectInfo object, a list of ObjectInfo objects or a dictionary that is a
         mapping of ObjectInfo parameters.
-    keep_original_object: bool
-        If True, the returned object will be the same object (``real_object`` attribute) and will just
-        copy the the attributes. Important for preserving parent-child connections across real objects.
     skip_real_conversion: bool
-        If set to True the old real object will be returned without conversion and ``keep_original_object`` parameter
-        has no effect.
+        If set to True the old real object will be returned without conversion has no effect.
         Defaults to False.
+    cached: bool
+        If True items will be returned from cache. ONLY USE FOR IMMUTABLE USE.
     """
-    def convert_list():
-        _ = []
-        for item in d:
-            _.append(convert_to_objects(item, keep_original_object, skip_real_conversion))
-
-        return _
+    convert_func = _convert_to_objects_cached if cached else convert_to_objects
 
     def convert_object_info():
         # Skip conversion
@@ -345,113 +404,62 @@ def convert_to_objects(
         if skip_real_conversion and real is not None:
             return real
 
-        data_conv = {}
-        for k, v in d.data.items():
-            if isinstance(v, (list, tuple, set, ObjectInfo, dict)):
-                data_conv[k] = convert_to_objects(v, keep_original_object)
-            else:
-                data_conv[k] = v
+        data_conv = {
+            k:
+            convert_func(v, skip_real_conversion, cached)
+            if isinstance(v, (list, tuple, set, ObjectInfo, dict)) else v
+            for k, v in d.data.items()
+        }
 
         new_obj = d.class_(**data_conv)
-        if keep_original_object and real is not None:
-            with suppress(TypeError, AttributeError):
-                # Only update old objects that are surely not built-in and have information about attributes
-                args = daf.misc.get_all_slots(type(real)) if hasattr(real, "__slots__") else vars(real)
-                for a in args:
-                    setattr(real, a, getattr(new_obj, a))
-
-                new_obj = real
-
         return new_obj
 
-    def convert_object_info_dict():
-        data_conv = {}
-        for k, v in d.items():
-            data_conv[k] = convert_to_objects(v, keep_original_object, skip_real_conversion)
-
-        return data_conv
-
     if isinstance(d, (list, tuple, set)):
-        return convert_list()
+        return [convert_func(item, skip_real_conversion, cached) for item in d]
     if isinstance(d, ObjectInfo):
         return convert_object_info()
     if isinstance(d, dict):
-        return convert_object_info_dict()
+        return {k: convert_func(v, skip_real_conversion, cached) for k, v in d.items()}
 
     return d
 
 
+@daf.misc.cache.cache_result()
 def convert_to_json(d: Union[ObjectInfo, List[ObjectInfo], Any]):
     """
     Converts ObjectInfo into JSON representation.
     """
-    def _convert_to_json_oi(d: ObjectInfo):
-        data_conv = {}
-        for k, v in d.data.items():
-            data_conv[k] = convert_to_json(v)
-
+    if isinstance(d, ObjectInfo):
+        data_conv = {k: convert_to_json(v) for k, v in d.data.items()}
         return {"type": f"{d.class_.__module__}.{d.class_.__name__}", "data": data_conv}
 
-    def _convert_to_json_list(d: List[ObjectInfo]):
-        d = d.copy()
-        for i, element in enumerate(d):
-            d[i] = convert_to_json(element)
+    if isinstance(d, list):
+        return [convert_to_json(x) for x in d]
 
-        return d
-
-    if isinstance(d, ObjectInfo):
-        return _convert_to_json_oi(d)
-
-    elif isinstance(d, list):
-        return _convert_to_json_list(d)
-
-    elif issubclass((type_d := type(d)), Enum):
+    if issubclass((type_d := type(d)), Enum):
         return {"type": f"{type_d.__module__}.{type_d.__name__}", "value": d.value}
 
     return d
 
 
+@daf.misc.cache.cache_result()
 def convert_from_json(d: Union[dict, List[dict], Any]) -> ObjectInfo:
     """
     Converts previously converted JSON back to ObjectInfo.
     """
     if isinstance(d, list):
-        result = []
-        for item in d:
-            result.append(convert_from_json(item))
-
+        result = [convert_from_json(item) for item in d]
         return result
 
-    elif isinstance(d, dict):
-        type_: str = d["type"]
-        type_split = type_.split('.')
-        module = type_split[:len(type_split) - 1]
-        type_ = type_split[-1]
-        if module[0] == __name__.split(".")[-1]:
-            type_ = globals()[type_]
-        else:
-            module_ = __import__(module[0])
-            module.pop(0)
-            for i, m in enumerate(module):
-                module_ = getattr(module_, module[i])
+    if isinstance(d, dict):
+        type_ = import_class(d["type"])
 
-            type_ = getattr(module_, type_)
-
-        # Simple object (or enum)
-        if "value" in d:
+        if "value" in d:  # Enum type or a single value type
             return type_(d["value"])
 
-        # ObjectInfo
-        data: dict = d["data"]
-        for k, v in data.items():
-            # List or dictionary and dictionary is a object representation of an object
-            if isinstance(v, list) or isinstance(v, dict) and d.get("type") is not None:
-                v = convert_from_json(v)
-                data[k] = v
+        return ObjectInfo(type_, {k: convert_from_json(v) for k, v in d["data"].items()})
 
-        return ObjectInfo(type_, data)
-    else:
-        return d
+    return d
 
 
 def convert_dict_to_object_info(data: Union[dict, Iterable, Any]):
@@ -471,18 +479,23 @@ def convert_dict_to_object_info(data: Union[dict, Iterable, Any]):
     annotations = {}
     object_info_data = {}
 
-    for k, v in data.items():
-        if isinstance(v, dict):
-            v = convert_dict_to_object_info(v)
-            type_v = type(v)
-        elif isinstance(v, Iterable) and not isinstance(v, str):
-            v = [convert_dict_to_object_info(item) for item in v]
-            type_v = List[Any]
-        else:
-            type_v = type(v)
+    if isinstance(data, dict):
+        for k, v in data.items():
+            if isinstance(v, dict):
+                v = convert_dict_to_object_info(v)
+                type_v = type(v)
+            elif isinstance(v, (list, tuple, set)):
+                v = convert_dict_to_object_info(v)
+                type_v = List[Any]
+            else:
+                type_v = type(v)
 
-        annotations[k] = type_v
-        object_info_data[k] = v
+            annotations[k] = type_v
+            object_info_data[k] = v
 
-    DictView.__init__.__annotations__ = annotations
-    return ObjectInfo(DictView, object_info_data)
+        DictView.__init__.__annotations__ = annotations
+        return ObjectInfo(DictView, object_info_data)
+    elif isinstance(data, (list, tuple, set)):
+        return [convert_dict_to_object_info(x) for x in data]
+    else:
+        return data

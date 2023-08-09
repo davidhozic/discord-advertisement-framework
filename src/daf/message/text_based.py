@@ -1,7 +1,7 @@
 """
 Contains definitions for message classes that are text based."""
 
-from typing import Any, Dict, List, Iterable, Optional, Union, Literal
+from typing import Any, Dict, List, Iterable, Optional, Union, Literal, Tuple
 from datetime import datetime, timedelta
 from typeguard import typechecked
 
@@ -10,7 +10,7 @@ from ..dtypes import *
 from ..logging.tracing import trace, TraceLEVELS
 
 from ..logging import sql
-from .. import misc
+from ..misc import doc, instance_track, async_util
 
 import asyncio
 import _discord as discord
@@ -21,10 +21,6 @@ __all__ = (
     "DirectMESSAGE"
 )
 
-# Configuration
-# ---------------------------
-RLIM_USER_WAIT_TIME = 20
-
 
 # Register message modes
 sql.register_type("MessageMODE", "send")
@@ -32,22 +28,12 @@ sql.register_type("MessageMODE", "edit")
 sql.register_type("MessageMODE", "clear-send")
 
 
-@misc.track_id
-@misc.doc_category("Messages", path="message")
+@instance_track.track_id
+@doc.doc_category("Messages", path="message")
 @sql.register_type("MessageTYPE")
-class TextMESSAGE(BaseMESSAGE):
+class TextMESSAGE(BaseChannelMessage):
     """
     This class is used for creating objects that represent messages which will be sent to Discord's TEXT CHANNELS.
-
-    .. versionchanged:: v2.7
-
-        *start_in* now accepts datetime object
-
-    .. note::
-
-        Slow mode period handling:
-            If the advertisement period is set less than the biggest slow-mode delay of the given channels,
-            the period will be automatically set slightly above the slow-mode delay.
 
     Parameters
     ------------
@@ -87,15 +73,19 @@ class TextMESSAGE(BaseMESSAGE):
             - str (normal text),
             - :class:`discord.Embed`,
             - :ref:`FILE`,
-            - List/Tuple containing any of the above arguments (There can up to 1 string, up to 1 :class:`discord.Embed`
-              and up to 10 :ref:`FILE` objects.
-            - Function that accepts any amount of parameters and returns any of the above types. To pass a function,
-              YOU MUST USE THE :ref:`data_function` decorator on the function before passing the function to the daf.
+            - List/Tuple containing any of the above arguments (There can up to 1 string, up to 1 :class:`discord.Embed` and up to 10 :ref:`FILE` objects.
+            - Function that accepts any amount of parameters and returns any of the above types. To pass a function, YOU MUST USE THE :ref:`data_function` decorator on the function before passing the function to the daf.
+
     channels: Union[Iterable[Union[int, discord.TextChannel, discord.Thread]], daf.message.AutoCHANNEL]
+        Channels that it will be advertised into (Can be snowflake ID or channel objects from PyCord).
+
         .. versionchanged:: v2.3
             Can also be :class:`~daf.message.AutoCHANNEL`
 
-        Channels that it will be advertised into (Can be snowflake ID or channel objects from PyCord).
+        .. note::
+
+            If no channels are left, the message is automatically removed, unless AutoCHANNEL is used.
+
     mode: Optional[str]
         Parameter that defines how message will be sent to a channel.
         It can be:
@@ -109,29 +99,46 @@ class TextMESSAGE(BaseMESSAGE):
     remove_after: Optional[Union[int, timedelta, datetime]]
         Deletes the message after:
 
-        * int - provided amounts of sends
+        * int - provided amounts of successful sends to seperate channels.
         * timedelta - the specified time difference
         * datetime - specific date & time
+
+        .. versionchanged:: 2.10
+
+            Parameter ``remove_after`` of int type will now work at a channel level and
+            it nows means the SUCCESSFUL number of sends into each channel.
+
+    auto_publish: Optional[bool]
+        Automatically publish message if sending to an announcement channel.
+        Defaults to False.
+
+        If the channel publish is rate limited, the message will still be sent, but an error will be
+        printed to the console instead of message being published to the follower channels.
+
+        .. versionadded:: 2.10
     """
 
     __slots__ = (
-        "channels",
         "mode",
         "sent_messages",
+        "auto_publish",
     )
 
     @typechecked
-    def __init__(self,
-                 start_period: Union[timedelta, int, None],
-                 end_period: Union[int, timedelta],
-                 data: Union[Iterable[Union[str, discord.Embed, FILE]], str, discord.Embed, FILE, _FunctionBaseCLASS],
-                 channels: Union[Iterable[Union[int, discord.TextChannel, discord.Thread]], AutoCHANNEL],
-                 mode: Optional[Literal["send", "edit", "clear-send"]] = "send",
-                 start_in: Optional[Union[timedelta, datetime]] = timedelta(seconds=0),
-                 remove_after: Optional[Union[int, timedelta, datetime]] = None):
-        super().__init__(start_period, end_period, data, start_in, remove_after)
+    def __init__(
+        self,
+        start_period: Union[timedelta, int, None],
+        end_period: Union[int, timedelta],
+        data: Union[Iterable[Union[str, discord.Embed, FILE]], str, discord.Embed, FILE, _FunctionBaseCLASS],
+        channels: Union[Iterable[Union[int, discord.TextChannel, discord.Thread]], AutoCHANNEL],
+        mode: Literal["send", "edit", "clear-send"] = "send",
+        start_in: Union[timedelta, datetime] = timedelta(seconds=0),
+        remove_after: Optional[Union[int, timedelta, datetime]] = None,
+        auto_publish: bool = False
+    ):
+        super().__init__(start_period, end_period, data, channels, start_in, remove_after)
         self.mode = mode
-        self.channels = channels
+        self.auto_publish = auto_publish
         # Dictionary for storing last sent message for each channel
         self.sent_messages: Dict[int, discord.Message] = {}
 
@@ -150,33 +157,6 @@ class TextMESSAGE(BaseMESSAGE):
             seconds += 10
 
         return timedelta(seconds=seconds)
-
-    def _check_state(self) -> bool:
-        """
-        Checks if the message is ready to be deleted.
-
-        Returns
-        ----------
-        True
-            The message should be deleted.
-        False
-            The message is in proper state, do not delete.
-        """
-        return super()._check_state() or not bool(self.channels)
-
-    def _update_state(self, err_channels: List[dict]):
-        "Updates the state of the object based on errored channels."
-        super()._update_state()
-        # Remove any channels that returned with code status 404 (They no longer exist)
-        for data in err_channels:
-            reason = data["reason"]
-            channel = data["channel"]
-            if isinstance(reason, discord.HTTPException):
-                if (
-                    reason.status == 403 or  # Forbidden
-                    reason.code in {50007, 10003}  # Not Forbidden, but bad error codes
-                ):
-                    self.channels.remove(channel)
 
     def _check_period(self):
         """
@@ -325,51 +305,13 @@ class TextMESSAGE(BaseMESSAGE):
         ValueError
             No valid channels were passed to object"
         """
-        if parent is None:
-            return
-
-        ch_i = 0
-        self.parent = parent
-        cl = parent.parent.client
-        _guild = parent.apiobject
-        to_remove = []
-
-        if isinstance(self.channels, AutoCHANNEL):
-            await self.channels.initialize(self, "text_channels")
-        else:
-            self.channels: List[Union[discord.TextChannel, discord.Thread]]
-            for ch_i, channel in enumerate(self.channels):
-                if isinstance(channel, discord.abc.GuildChannel):
-                    channel_id = channel.id
-                else:
-                    # Snowflake IDs provided
-                    channel_id = channel
-                    channel = self.channels[ch_i] = cl.get_channel(channel_id)
-
-                if channel is None:
-                    trace(f"Unable to get channel from ID {channel_id}", TraceLEVELS.WARNING)
-                    to_remove.append(channel)
-                elif type(channel) not in {discord.TextChannel, discord.Thread}:
-                    raise TypeError(f"TextMESSAGE object received invalid channel type of {type(channel).__name__}")
-                elif channel.guild != _guild:
-                    raise ValueError(
-                        f"{channel.name}(ID: {channel_id}) not in {_guild.name}(ID: {_guild.id}), "
-                        f"but is part of {channel.guild.name}(ID: {channel.guild.id})"
-                    )
-
-            for channel in to_remove:
-                self.channels.remove(channel)
-
-            if not self.channels:
-                raise ValueError(f"No valid channels were passed to {self} object")
-
+        await super().initialize(parent, {discord.TextChannel, discord.Thread}, lambda: parent.apiobject.text_channels)
         # Increase period to slow mode delay if it is lower
         self._check_period()
 
-    async def _handle_error(self, channel: Union[discord.TextChannel, discord.Thread], ex: Exception) -> bool:
+    async def _handle_error(self, channel: Union[discord.TextChannel, discord.Thread], ex: Exception) -> Tuple[bool, ChannelErrorAction]:
         """
         This method handles the error that occurred during the execution of the function.
-        Returns `True` if error was handled.
 
         Parameters
         -----------
@@ -377,11 +319,35 @@ class TextMESSAGE(BaseMESSAGE):
             The channel where the exception occurred.
         ex: Exception
             The exception that occurred during a send attempt.
+
+        Returns
+        -----------
+        Tuple[bool, ChannelErrorAction]
+            Tuple containing (error_handled, ChannelErrorAction),
+            where the ChannelErrorAction is a enum telling upper part of the message layer how to proceed.
         """
         handled = False
+        action = None
+
         if isinstance(ex, discord.HTTPException):
-            if ex.status == 429:  # Rate limit
-                retry_after = int(ex.response.headers["Retry-After"]) + 1
+            if ex.status == 403:
+                # Timeout handling
+                guild = channel.guild
+                member = guild.get_member(self.parent.parent.client.user.id)
+                if member is not None and member.timed_out:
+                    self.next_send_time = member.communication_disabled_until.astimezone().replace(tzinfo=None) + timedelta(minutes=1)
+                    trace(
+                        f"User '{member.name}' has been timed-out in guild '{guild.name}'.\n"
+                        f"Retrying after {self.next_send_time} (1 minute after expiry)",
+                        TraceLEVELS.WARNING
+                    )
+                    # Prevent channel removal by the cleanup process
+                    ex.status = 429
+                    ex.code = 0
+                    action = ChannelErrorAction.SKIP_CHANNELS  # Don't try to send to other channels as it would yield the same result.
+
+            elif ex.status == 429:  # Rate limit
+                retry_after = int(ex.response.headers["Retry-After"]) + 5
                 if ex.code == 20016:    # Slow Mode
                     self.next_send_time = datetime.now() + timedelta(seconds=retry_after)
                     trace(f"{channel.name} is in slow mode, retrying in {retry_after} seconds", TraceLEVELS.WARNING)
@@ -392,7 +358,10 @@ class TextMESSAGE(BaseMESSAGE):
                     self.sent_messages[channel.id] = None
                     handled = True
 
-        return handled
+            elif ex.status == 401:  # Token invalidated
+                action = ChannelErrorAction.REMOVE_ACCOUNT
+
+        return handled, action
 
     def _reset_timer(self) -> None:
         """
@@ -435,7 +404,8 @@ class TextMESSAGE(BaseMESSAGE):
             try:
                 # Check if we have permissions
                 client_: discord.Client = self.parent.parent.client
-                if (member := channel.guild.get_member(client_.user.id)) is None:
+                member = channel.guild.get_member(client_.user.id)
+                if member is None:
                     raise self._generate_exception(
                         404, -1, "Client user could not be found in guild members", discord.NotFound
                     )
@@ -467,11 +437,14 @@ class TextMESSAGE(BaseMESSAGE):
                     self.mode in {"send", "clear-send"} or
                     self.mode == "edit" and self.sent_messages.get(channel.id, None) is None
                 ):
-                    self.sent_messages[channel.id] = await channel.send(
+                    message = await channel.send(
                         text,
                         embed=embed,
-                        files=[discord.File(fwFILE.filename) for fwFILE in files]
+                        files=[discord.File(file.stream, file.filename) for file in files]
                     )
+                    self.sent_messages[channel.id] = message
+                    await self._publish_message(message)
+
                 # Mode is edit and message was already send to this channel
                 elif self.mode == "edit":
                     await self.sent_messages[channel.id].edit(text, embed=embed)
@@ -479,100 +452,29 @@ class TextMESSAGE(BaseMESSAGE):
                 return {"success": True}
 
             except Exception as ex:
-                if not await self._handle_error(channel, ex):
-                    return {"success": False, "reason": ex}
+                handled, action = await self._handle_error(channel, ex)
+                if not handled:
+                    return {"success": False, "reason": ex, "action": action}
 
-    @misc._async_safe("update_semaphore")
-    async def _send(self) -> MessageSendResult:
-        """
-        Sends the data into the channels.
-
-        Returns
-        ----------
-        MessageSendResult
-            The result of message send attempt.
-        """
-        # Acquire mutex to prevent update method from writing while sending
-        data_to_send = await self._get_data()
-        if any(data_to_send.values()):  # There is data to be send
-            errored_channels = []
-            succeeded_channels = []
-
-            # Send to channels
-            for channel in self.channels:
-                # Clear previous messages sent to channel if mode is MODE_DELETE_SEND
-                context = await self._send_channel(channel, **data_to_send)
-                if context["success"]:
-                    succeeded_channels.append(channel)
-                else:
-                    errored_channels.append({"channel": channel, "reason": context["reason"]})
-                    reason = context["reason"]
-                    if isinstance(reason, discord.HTTPException) and reason.status == 401:  # Token deleted?
-                        return MessageSendResult(
-                            self.generate_log_context(
-                                **data_to_send, succeeded_ch=succeeded_channels, failed_ch=errored_channels
-                            ),
-                            MSG_SEND_STATUS_ERROR_REMOVE_ACCOUNT
-                        )
-
-            self._update_state(errored_channels)
-            return MessageSendResult(
-                self.generate_log_context(**data_to_send, succeeded_ch=succeeded_channels, failed_ch=errored_channels),
-                MSG_SEND_STATUS_SUCCESS if succeeded_channels or errored_channels else MSG_SEND_STATUS_NO_MESSAGE_SENT
-            )
-
-        return MessageSendResult(None, MSG_SEND_STATUS_NO_MESSAGE_SENT)
-
-    @typechecked
-    @misc._async_safe("update_semaphore")
-    async def update(self, _init_options: Optional[dict] = None, **kwargs: Any):
-        """
-        .. versionadded:: v2.0
-
-        Used for changing the initialization parameters the object was initialized with.
-
-        .. warning::
-            Upon updating, the internal state of objects get's reset,
-            meaning you basically have a brand new created object.
-
-        Parameters
-        -------------
-        **kwargs: Any
-            Custom number of keyword parameters which you want to update,
-            these can be anything that is available during the object creation.
-
-        Raises
-        -----------
-        TypeError
-            Invalid keyword argument was passed
-        Other
-            Raised from .initialize() method.
-        """
-        if "start_in" not in kwargs:
-            # This parameter does not appear as attribute, manual setting necessary
-            kwargs["start_in"] = self.next_send_time
-
-        if "data" not in kwargs:
-            kwargs["data"] = self._data
-
-        kwargs["channels"] = channels = kwargs.get("channels", self.channels)
-        if isinstance(channels, AutoCHANNEL):
-            await channels.update(init_options={"parent": self, "channel_type": "text_channels"})
-        elif not isinstance(self.channels[0], int):  # Not initialized (newly created):
-            kwargs["channels"] = [x.id for x in self.channels]
-
-        if _init_options is None:
-            _init_options = {"parent": self.parent}
-
-        await misc._update(self, init_options=_init_options, **kwargs)
+    async def _publish_message(self, message: discord.Message):
+        channel = message.channel
+        if self.auto_publish and channel.is_news():
+            try:
+                await message.publish()
+            except discord.HTTPException as exc:
+                trace(
+                    f"Unable to publish {self} to channel '{channel.name}'({channel.id})",
+                    TraceLEVELS.ERROR,
+                    exc
+                )
 
 
-@misc.track_id
-@misc.doc_category("Messages", path="message")
+@instance_track.track_id
+@doc.doc_category("Messages", path="message")
 @sql.register_type("MessageTYPE")
 class DirectMESSAGE(BaseMESSAGE):
     """
-    This class is used for creating objects that represent messages which will be sent to Discord's TEXT CHANNELS.
+    This class is used for creating objects that represent messages which will be sent to user's private messages.
 
     .. deprecated:: v2.1
 
@@ -640,7 +542,7 @@ class DirectMESSAGE(BaseMESSAGE):
     remove_after: Optional[Union[int, timedelta, datetime]]
         Deletes the guild after:
 
-        * int - provided amounts of sends
+        * int - provided amounts of successful sends
         * timedelta - the specified time difference
         * datetime - specific date & time
     """
@@ -649,6 +551,7 @@ class DirectMESSAGE(BaseMESSAGE):
         "mode",
         "previous_message",
         "dm_channel",
+        "_remove_after"
     )
 
     @typechecked
@@ -663,6 +566,27 @@ class DirectMESSAGE(BaseMESSAGE):
         self.mode = mode
         self.dm_channel: discord.DMChannel = None
         self.previous_message: discord.Message = None
+
+        # Use a different attribute, to prevent inconsistensy with TextMESSAGE and VoiceMESSAGE.
+        # The counter there is split per channel and the remove_after attribute does not change.
+        self._remove_after = remove_after
+
+    @property
+    def remaining_before_removal(self) -> Union[timedelta, datetime, int]:
+        return self._remove_after
+
+    def _check_state(self) -> bool:
+        return (
+            super()._check_state() or
+            type(self._remove_after) is int and self._remove_after == 0
+        )
+
+    def _update_state(self) -> bool:
+        """
+        Updates internal remove_after counter.
+        """
+        if type(self._remove_after) is int:
+            self._remove_after -= 1
 
     def generate_log_context(self,
                              success_context: Dict[str, Union[bool, Optional[Exception]]],
@@ -847,7 +771,7 @@ class DirectMESSAGE(BaseMESSAGE):
                 if await self._handle_error(ex) is False or tries == 2:
                     return {"success": False, "reason": ex}
 
-    @misc._async_safe("update_semaphore")
+    @async_util.with_semaphore("update_semaphore")
     async def _send(self) -> MessageSendResult:
         """
         Sends the data into the channels
@@ -876,7 +800,7 @@ class DirectMESSAGE(BaseMESSAGE):
         return MessageSendResult(None, MSG_SEND_STATUS_NO_MESSAGE_SENT)
 
     @typechecked
-    @misc._async_safe("update_semaphore")
+    @async_util.with_semaphore("update_semaphore")
     async def update(self, _init_options: Optional[dict] = None, **kwargs):
         """
         .. versionadded:: v2.0
@@ -910,4 +834,4 @@ class DirectMESSAGE(BaseMESSAGE):
         if _init_options is None:
             _init_options = {"parent": self.parent}
 
-        await misc._update(self, init_options=_init_options, **kwargs)
+        await async_util.update_obj_param(self, init_options=_init_options, **kwargs)

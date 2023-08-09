@@ -2,22 +2,22 @@
     Contains definitions related to voice messaging."""
 
 
-from contextlib import suppress
-from typing import Any, Dict, List, Iterable, Optional, Union
+from typing import Any, Dict, List, Iterable, Optional, Union, Tuple
+from pathlib import Path
 from datetime import timedelta, datetime
 from typeguard import typechecked
 
 from .base import *
 from ..dtypes import *
 from ..logging.tracing import *
-
 from ..logging import sql
-from .. import misc
+from ..misc import doc, instance_track
+
 from .. import dtypes
 
 import asyncio
 import _discord as discord
-
+import os
 
 __all__ = (
     "VoiceMESSAGE",
@@ -26,21 +26,30 @@ __all__ = (
 
 # Configuration
 # ----------------------#
-C_VC_CONNECT_TIMEOUT = 3  # Timeout of voice channels
+C_VC_CONNECT_TIMEOUT = 7  # Timeout of voice channels
 
 
-@misc.track_id
-@misc.doc_category("Messages", path="message")
+@instance_track.track_id
+@doc.doc_category("Messages", path="message")
 @sql.register_type("MessageTYPE")
-class VoiceMESSAGE(BaseMESSAGE):
+class VoiceMESSAGE(BaseChannelMessage):
     """
     This class is used for creating objects that represent messages which will be streamed to voice channels.
 
-    .. deprecated:: v2.1
+    .. warning::
+
+        This additionaly requires FFMPEG to be installed on your system.
+
+    .. deprecated:: 2.1
 
         - start_period, end_period - Using int values, use ``timedelta`` object instead.
 
-    .. versionchanged:: v2.7
+    .. versionchanged:: 2.10
+
+        'data' parameter no longer accepets :class:`daf.dtypes.AUDIO` and no longer allows YouTube streaming.
+        Instead it accepts :class:`daf.dtypes.FILE`.
+
+    .. versionchanged:: 2.7
 
         *start_in* now accepts datetime object
 
@@ -74,18 +83,19 @@ class VoiceMESSAGE(BaseMESSAGE):
                 start_period=None, end_period=timedelta(seconds=10), data=daf.AUDIO("msg.mp3"),
                 channels=[12345], start_in=timedelta(seconds=0), volume=50
             )
-    data: AUDIO
+    data: FILE
         The data parameter is the actual data that will be sent using discord's API.
         The data types of this parameter can be:
 
-            - AUDIO object.
-            - Function that accepts any amount of parameters and returns an AUDIO object.
-              To pass a function, YOU MUST USE THE :ref:`data_function` decorator on the function.
+            - FILE object.
+            - Function that accepts any amount of parameters and returns an FILE object. To pass a function, YOU MUST USE THE :ref:`data_function` decorator on the function.
+
     channels: Union[Iterable[Union[int, discord.VoiceChannel]], daf.message.AutoCHANNEL]
+        Channels that it will be advertised into (Can be snowflake ID or channel objects from PyCord).
+
         .. versionchanged:: v2.3
             Can also be :class:`~daf.message.AutoCHANNEL`
 
-        Channels that it will be advertised into (Can be snowflake ID or channel objects from PyCord).
     volume: Optional[int]
         The volume (0-100%) at which to play the audio. Defaults to 50%. This was added in v2.0.0
     start_in: Optional[timedelta | datetime]
@@ -94,24 +104,29 @@ class VoiceMESSAGE(BaseMESSAGE):
     remove_after: Optional[Union[int, timedelta, datetime]]
         Deletes the message after:
 
-        * int - provided amounts of sends
+        * int - provided amounts of successful sends to seperate channels.
         * timedelta - the specified time difference
         * datetime - specific date & time
+
+        .. versionchanged:: v2.10
+
+            Parameter ``remove_after`` of int type will now work at a channel level and
+            it nows means the SUCCESSFUL number of sends into each channel.
     """
 
     __slots__ = (
-        "period",
-        "start_period",
-        "end_period",
         "volume",
-        "channels",
     )
+
+    FFMPEG_OPTIONS = {
+        'options': '-vn'
+    }
 
     @typechecked
     def __init__(self,
                  start_period: Union[int, timedelta, None],
                  end_period: Union[int, timedelta],
-                 data: Union[AUDIO, Iterable[AUDIO], _FunctionBaseCLASS],
+                 data: Union[FILE, Iterable[FILE], _FunctionBaseCLASS],
                  channels: Union[Iterable[Union[int, discord.VoiceChannel]], AutoCHANNEL],
                  volume: Optional[int] = 50,
                  start_in: Optional[Union[timedelta, datetime]] = timedelta(seconds=0),
@@ -122,36 +137,11 @@ class VoiceMESSAGE(BaseMESSAGE):
                 "You need to install extra requirements: pip install discord-advert-framework[voice]"
             )
 
-        super().__init__(start_period, end_period, data, start_in, remove_after)
+        if isinstance(data, Iterable) and len(data) > 1:
+            raise ValueError("Iterable was passed to 'data', which has length greater than 1. Only a single FILE object is allowed inside.")
+
+        super().__init__(start_period, end_period, data, channels, start_in, remove_after)
         self.volume = max(0, min(100, volume))  # Clamp the volume to 0-100 %
-        self.channels = channels
-
-    def _check_state(self) -> bool:
-        """
-        Checks if the message is ready to be deleted.
-
-        Returns
-        ----------
-        True
-            The message should be deleted.
-        False
-            The message is in proper state, do not delete.
-        """
-        return super()._check_state() or not bool(self.channels)
-
-    def _update_state(self, err_channels: List[dict]):
-        "Updates the state of the object based on errored channels."
-        super()._update_state()
-        # Remove any channels that returned with code status 404 (They no longer exist)
-        for data in err_channels:
-            reason = data["reason"]
-            channel = data["channel"]
-            if isinstance(reason, discord.HTTPException):
-                if (
-                    reason.status == 403 or  # Forbidden
-                    reason.code in {50007, 10003}  # Not Forbidden, but bad error codes
-                ):
-                    self.channels.remove(channel)
 
     def generate_log_context(self,
                              audio: AUDIO,
@@ -228,11 +218,58 @@ class VoiceMESSAGE(BaseMESSAGE):
             if not isinstance(data, (list, tuple, set)):
                 data = (data,)
             for element in data:
-                if isinstance(element, AUDIO):
+                if isinstance(element, FILE):
                     _data_to_send["audio"] = element
+                    break
+
         return _data_to_send
 
-    async def initialize(self, parent: Any):
+    async def _handle_error(self, channel: discord.VoiceChannel, ex: Exception) -> Tuple[bool, ChannelErrorAction]:
+        """
+        This method handles the error that occurred during the execution of the function.
+
+        Parameters
+        -----------
+        channel: Union[discord.TextChannel, discord.Thread]
+            The channel where the exception occurred.
+        ex: Exception
+            The exception that occurred during a send attempt.
+
+        Returns
+        -----------
+        Tuple[bool, ChannelErrorAction]
+            Tuple containing (error_handled, ChannelErrorAction),
+            where the ChannelErrorAction is a enum telling upper part of the message layer how to proceed.
+        """
+        handled = False
+        action = None
+
+        guild = channel.guild
+        member = guild.get_member(self.parent.parent.client.user.id)
+
+        # Acount token invalidated
+        if isinstance(ex, discord.HTTPException) and ex.status == 401:  # Acount token invalidated
+            action = ChannelErrorAction.REMOVE_ACCOUNT
+
+        # Timeout handling
+        elif member is not None and member.timed_out:
+            self.next_send_time = member.communication_disabled_until.astimezone().replace(tzinfo=None) + timedelta(minutes=1)
+            trace(
+                f"User '{member.name}' has been timed-out in guild '{guild.name}'.\n"
+                f"Retrying after {self.next_send_time} (1 minute after expiry)",
+                TraceLEVELS.WARNING
+            )
+
+            if isinstance(ex, discord.HTTPException):
+                # Prevent channel removal by the cleanup process
+                ex.status = 429
+                ex.code = 0
+
+            action = ChannelErrorAction.SKIP_CHANNELS
+
+        return handled, action
+
+    def initialize(self, parent: Any):
         """
         This method initializes the implementation specific API objects
         and checks for the correct channel input context.
@@ -251,39 +288,7 @@ class VoiceMESSAGE(BaseMESSAGE):
         ValueError
             No valid channels were passed to object"
         """
-        if parent is None:
-            return
-
-        ch_i = 0
-        self.parent = parent
-        cl = parent.parent.client
-        _guild = parent.apiobject
-        to_remove = []
-
-        if isinstance(self.channels, AutoCHANNEL):
-            await self.channels.initialize(self, "voice_channels")
-        else:
-            for ch_i, channel in enumerate(self.channels):
-                if isinstance(channel, discord.abc.GuildChannel):
-                    channel_id = channel.id
-                else:
-                    # Snowflake IDs provided
-                    channel_id = channel
-                    channel = self.channels[ch_i] = cl.get_channel(channel_id)
-
-                if channel is None:
-                    trace(f"Unable to get channel from ID {channel_id}", TraceLEVELS.WARNING)
-                    to_remove.append(channel)
-                elif type(channel) is not discord.VoiceChannel:
-                    raise TypeError(f"VoiceMESSAGE object received invalid channel type of {type(channel).__name__}")
-                elif channel.guild != _guild:
-                    raise ValueError(f"{channel.name}(ID: {channel_id}) not in guild {_guild.name}(ID: {_guild.id})")
-
-            for channel in to_remove:
-                self.channels.remove(channel)
-
-        if not self.channels:
-            raise ValueError(f"No valid channels were passed to {self} object")
+        return super().initialize(parent, {discord.VoiceChannel}, lambda: parent.apiobject.voice_channels)
 
     async def _send_channel(self,
                             channel: discord.VoiceChannel,
@@ -303,11 +308,12 @@ class VoiceMESSAGE(BaseMESSAGE):
             the audio to stream.
         """
         stream = None
-        voice_client = None
+        voice_proto = None
         try:
             # Check if client has permissions before attempting to join
             client_: discord.Client = self.parent.parent.client
-            if (member := channel.guild.get_member(client_.user.id)) is None:
+            member = channel.guild.get_member(client_.user.id)
+            if member is None:
                 raise self._generate_exception(
                     404, -1, "Client user could not be found in guild members", discord.NotFound
                 )
@@ -329,101 +335,32 @@ class VoiceMESSAGE(BaseMESSAGE):
             if client_.get_channel(channel.id) is None:
                 raise self._generate_exception(404, 10003, "Channel was deleted", discord.NotFound)
 
-            voice_client = await channel.connect(timeout=C_VC_CONNECT_TIMEOUT)
-            stream = discord.PCMVolumeTransformer(
-                discord.FFmpegPCMAudio(audio.url, options="-loglevel fatal"), volume=self.volume / 100
-            )
-            voice_client.play(stream)
+            # Write data to file instead of directly sending it to FFMPEG.
+            # This is needed due to a bug in the API wrapper, which only seems to appear on Linux.
+            # TODO: When fixed, replace with audio.stream.
+            raw_data = audio.data
+            filename = Path.home().joinpath(f"daf/tmp_{id(raw_data)}")
+            filename.parent.mkdir(exist_ok=True, parents=True)
 
-            while voice_client.is_playing():
-                await asyncio.sleep(1)
+            with open(filename, "wb") as tmp_file:
+                tmp_file.write(raw_data)
+
+            stream = discord.PCMVolumeTransformer(
+                discord.FFmpegPCMAudio(filename, **VoiceMESSAGE.FFMPEG_OPTIONS),
+                volume=self.volume / 100
+            )
+            voice_proto = await channel.connect(reconnect=True, timeout=C_VC_CONNECT_TIMEOUT)
+            voice_proto.play(stream)
+            await asyncio.get_event_loop().run_in_executor(None, voice_proto._player._end.wait)
+
+            await asyncio.sleep(0.5)
+            os.remove(filename)
+
             return {"success": True}
         except Exception as ex:
-            return {"success": False, "reason": ex}
+            trace(f"Could not play audio due to {ex}", TraceLEVELS.ERROR)
+            handled, action = await self._handle_error(channel, ex)
+            return {"success": False, "reason": ex, "action": action}
         finally:
-            if voice_client is not None:
-                with suppress(ConnectionResetError):
-                    await voice_client.disconnect()
-
-                await asyncio.sleep(1)  # Avoid sudden disconnect and connect to a new channel
-
-    @misc._async_safe("update_semaphore")
-    async def _send(self) -> MessageSendResult:
-        """
-        Sends the data into each channel.
-
-        Returns
-        ----------
-        MessageSendResult
-            The result of a message send attempt.
-        """
-        _data_to_send = await self._get_data()
-        if any(_data_to_send.values()):
-            errored_channels = []
-            succeeded_channels = []
-
-            for channel in self.channels:
-                context = await self._send_channel(channel, **_data_to_send)
-                if context["success"]:
-                    succeeded_channels.append(channel)
-                else:
-                    errored_channels.append({"channel": channel, "reason": context["reason"]})
-                    reason = context["reason"]
-                    if isinstance(reason, discord.HTTPException) and reason.status == 401:  # Token deleted?
-                        return MessageSendResult(
-                            self.generate_log_context(
-                                **_data_to_send, succeeded_ch=succeeded_channels, failed_ch=errored_channels
-                            ),
-                            MSG_SEND_STATUS_ERROR_REMOVE_ACCOUNT
-                        )
-
-            self._update_state(errored_channels)
-            return MessageSendResult(
-                self.generate_log_context(**_data_to_send, succeeded_ch=succeeded_channels, failed_ch=errored_channels),
-                MSG_SEND_STATUS_SUCCESS if succeeded_channels or errored_channels else MSG_SEND_STATUS_NO_MESSAGE_SENT
-            )
-
-        return MessageSendResult(None, MSG_SEND_STATUS_NO_MESSAGE_SENT)
-
-    @typechecked
-    @misc._async_safe("update_semaphore")
-    async def update(self, _init_options: Optional[dict] = None, **kwargs):
-        """
-        .. versionadded:: v2.0
-
-        Used for changing the initialization parameters the object was initialized with.
-
-        .. warning::
-            Upon updating, the internal state of objects get's reset,
-            meaning you basically have a brand new created object.
-
-        Parameters
-        -------------
-        **kwargs: Any
-            Custom number of keyword parameters which you want to update,
-            these can be anything that is available during the object creation.
-
-        Raises
-        -----------
-        TypeError
-            Invalid keyword argument was passed
-        Other
-            Raised from .initialize() method
-        """
-        if "start_in" not in kwargs:
-            # This parameter does not appear as attribute, manual setting necessary
-            kwargs["start_in"] = self.next_send_time
-
-        if "data" not in kwargs:
-            kwargs["data"] = self._data
-
-        kwargs["channels"] = channels = kwargs.get("channels", self.channels)
-        if isinstance(channels, AutoCHANNEL):
-            await channels.update(init_options={"parent": self, "channel_type": "voice_channels"})
-        elif not isinstance(self.channels[0], int):  # Not initialized (newly created):
-            kwargs["channels"] = [x.id for x in self.channels]
-
-        if _init_options is None:
-            _init_options = {"parent": self.parent}
-
-        await misc._update(self, init_options=_init_options, **kwargs)
+            if voice_proto is not None:
+                await voice_proto.disconnect()

@@ -11,7 +11,7 @@ After successful installation, DAF can be run in graphical mode by executing the
 
     $ daf-gui
 
-On Windows it can also be started though the Run (Ctrl + R) menu.
+On Windows it can also be started though the Run (Win + R) menu.
 
 .. image:: ./images/run-windows-daf-gui.png
     :align: center

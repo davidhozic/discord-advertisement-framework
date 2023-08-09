@@ -2,14 +2,15 @@
     Contains base definitions for different message classes.
 """
 
-from typing import Any, Set, List, Iterable, Union, TypeVar, Optional, Dict
+from typing import Any, Set, List, Iterable, Union, TypeVar, Optional, Dict, Callable
 from datetime import timedelta, datetime
 from typeguard import check_type, typechecked
 from dataclasses import dataclass
+from enum import Enum, auto
 
 from ..dtypes import *
 from ..logging.tracing import trace, TraceLEVELS
-from .. import misc
+from ..misc import doc, attributes, async_util, instance_track
 
 import random
 import re
@@ -22,6 +23,8 @@ __all__ = (
     "BaseMESSAGE",
     "AutoCHANNEL",
     "MessageSendResult",
+    "ChannelErrorAction",
+    "BaseChannelMessage",
     "MSG_SEND_STATUS_SUCCESS",
     "MSG_SEND_STATUS_NO_MESSAGE_SENT",
     "MSG_SEND_STATUS_ERROR_REMOVE_GUILD",
@@ -29,7 +32,7 @@ __all__ = (
 )
 
 T = TypeVar("T")
-ChannelType = Union[discord.TextChannel, discord.VoiceChannel]
+ChannelType = Union[discord.TextChannel, discord.Thread, discord.VoiceChannel]
 
 # Configuration
 # ----------------------
@@ -60,6 +63,14 @@ class MessageSendResult:
     """
     message_context: Optional[Dict[str, Any]]
     result_code: int
+
+
+class ChannelErrorAction(Enum):
+    """
+    Used as a message's channel send error action
+    """
+    REMOVE_ACCOUNT = 0
+    SKIP_CHANNELS = auto()
 
 
 class BaseMESSAGE:
@@ -142,6 +153,9 @@ class BaseMESSAGE:
             trace("Using int on end_period is deprecated, use timedelta object instead.", TraceLEVELS.DEPRECATED)
             end_period = timedelta(seconds=end_period)
 
+        if isinstance(start_period, timedelta) and start_period >= end_period:
+            raise ValueError("'start_period' must be less than 'end_period'")
+
         # Clamp periods to minimum level (prevent infinite loops)
         self.start_period = None if start_period is None else max(start_period, timedelta(seconds=C_PERIOD_MINIMUM_SEC))
         self.end_period = max(end_period, timedelta(seconds=C_PERIOD_MINIMUM_SEC))
@@ -160,9 +174,9 @@ class BaseMESSAGE:
         self._deleted = False
         # Attributes created with this function will not be re-referenced to a different object
         # if the function is called again, ensuring safety (.update_method)
-        misc._write_attr_once(self, "update_semaphore", asyncio.Semaphore(1))
+        attributes.write_non_exist(self, "update_semaphore", asyncio.Semaphore(1))
         # For comparing copies of the object (prevents .update from overwriting)
-        misc._write_attr_once(self, "_id", id(self))
+        attributes.write_non_exist(self, "_id", id(self))
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}(data={self._data})"
@@ -189,7 +203,7 @@ class BaseMESSAGE:
     def __deepcopy__(self, *args):
         "Duplicates the object (for use in AutoGUILD)"
         new = copy.copy(self)
-        for slot in misc.get_all_slots(type(self)):
+        for slot in attributes.get_all_slots(type(self)):
             self_val = getattr(self, slot)
             if isinstance(self_val, (asyncio.Semaphore, asyncio.Lock)):
                 # Hack to copy semaphores since not all of it can be copied directly
@@ -200,6 +214,16 @@ class BaseMESSAGE:
             setattr(new, slot, copied)
 
         return new
+
+    @property
+    def remaining_before_removal(self) -> Any:
+        """
+        Returns the remaining send counts / date after which
+        the message will be removed from the sending list.
+
+        .. versionadded:: v2.10
+        """
+        raise NotImplementedError
 
     @property
     def created_at(self) -> datetime:
@@ -244,7 +268,6 @@ class BaseMESSAGE:
         type_ = type(self.remove_after)
         return (
             self.deleted or
-            type_ is int and self.remove_after == 0 or
             type_ is timedelta and datetime.now() - self._created_at > self.remove_after or
             type_ is datetime and datetime.now() > self.remove_after
         )
@@ -254,8 +277,7 @@ class BaseMESSAGE:
         Updates the internal counter for auto-removal
         This is extended in subclasses.
         """
-        if type(self.remove_after) is int:
-            self.remove_after -= 1
+        raise NotImplementedError
 
     def _generate_exception(self,
                             status: int,
@@ -391,11 +413,16 @@ class BaseMESSAGE:
         raise NotImplementedError
 
 
-@misc.track_id
-@misc.doc_category("Auto objects", path="message")
+@instance_track.track_id
+@doc.doc_category("Auto objects", path="message")
 class AutoCHANNEL:
     """
     .. versionadded:: v2.3
+
+    .. versionchanged:: v2.10
+
+        :py:meth:`daf.message.AutoCHANNEL.remove` will now
+        prevent the channel from being readded again.
 
     Used for creating instances of automatically managed channels.
     The objects created with this will automatically add new channels
@@ -417,6 +444,9 @@ class AutoCHANNEL:
     --------------
     include_pattern: str
         Regex pattern to match for the channel to be considered.
+
+        For example you can do write ``.*`` to match ALL channels you are joined into or specify
+        (parts of) channel names separated with ``|`` like so: "name1|name2|name3|name4"
     exclude_pattern: str
         Regex pattern to match for the channel to be excluded
         from the consideration.
@@ -435,6 +465,7 @@ class AutoCHANNEL:
         "interval",
         "parent",
         "cache",
+        "removed_channels",
         "channel_getter",
         "last_scan",
     )
@@ -442,19 +473,25 @@ class AutoCHANNEL:
     def __init__(self,
                  include_pattern: str,
                  exclude_pattern: Optional[str] = None,
-                 interval: Optional[timedelta] = timedelta(minutes=5)) -> None:
-        self.include_pattern = include_pattern
-        self.exclude_pattern = exclude_pattern
+                 interval: Optional[timedelta] = timedelta(minutes=1)) -> None:
+        # Remove spaces around OR
+        self.include_pattern = re.sub(r"\s*\|\s*", '|', include_pattern) if include_pattern else None
+        self.exclude_pattern = re.sub(r"\s*\|\s*", '|', exclude_pattern) if exclude_pattern else None
         self.interval = interval
         self.parent = None
-        self.channel_getter: property = None
+        self.channel_getter: Callable = None
         self.cache: Set[ChannelType] = set()
+        self.removed_channels: Set[int] = set()
         self.last_scan = datetime.min
 
     def __iter__(self):
         "Returns the channel iterator."
         self._process()
         return iter(self.channels)
+
+    def __len__(self):
+        "Returns number of channels found."
+        return len(self.cache)
 
     def __bool__(self) -> bool:
         "Prevents removal of xMESSAGE by always returning True"
@@ -468,10 +505,15 @@ class AutoCHANNEL:
         """
         return list(self.cache)
 
-    async def initialize(self, parent, channel_type: str):
+    async def initialize(self, parent, channel_getter: Callable):
         """
         Initializes async parts of the instance.
         This method should be called by ``parent``.
+
+        .. versionchanged:: v2.10
+
+            Changed the channel ``channel_type`` into ``channel_getter``, which is now
+            a function that can be used to get a list of all the correct channels.
 
         Parameters
         -----------
@@ -481,7 +523,7 @@ class AutoCHANNEL:
             The channel type to look for when searching for channels
         """
         self.parent = parent
-        self.channel_getter = channel_type
+        self.channel_getter = channel_getter
 
     def _process(self):
         """
@@ -492,19 +534,18 @@ class AutoCHANNEL:
         if stamp - self.last_scan > self.interval:
             self.last_scan = stamp
             guild: discord.Guild = self.parent.parent.apiobject
-            client_: discord.Client = self.parent.parent.parent.client
-            member = guild.get_member(client_.user.id)
+            member = guild.me
 
             # Possible intents bug?
             if member is None:
                 return
 
             # User has not verified / has not completed rules
-            if guild.me.pending:
+            if member.pending:
                 return
 
-            for channel in getattr(guild, self.channel_getter):
-                if channel not in self.cache:
+            for channel in self.channel_getter():
+                if channel.id not in self.removed_channels and channel not in self.cache:
                     perms = channel.permissions_for(member)
                     name = channel.name
                     if (
@@ -529,6 +570,7 @@ class AutoCHANNEL:
             The channel is not in cache.
         """
         self.cache.remove(channel)
+        self.removed_channels.add(channel.id)
 
     async def update(self, init_options = None, **kwargs):
         """
@@ -548,8 +590,235 @@ class AutoCHANNEL:
         if init_options is None:
             init_options = {}
             init_options["parent"] = self.parent
-            init_options["channel_type"] = self.channel_getter
+            init_options["channel_getter"] = self.channel_getter
 
-        return await misc._update(self,
-                                  init_options=init_options,
-                                  **kwargs)
+        return await async_util.update_obj_param(self, init_options=init_options, **kwargs)
+
+
+class BaseChannelMessage(BaseMESSAGE):
+    """
+    .. versionadded:: v2.10
+
+    Message base for message types that have channels.
+    """
+    __slots__ = (
+        "channels",
+        "channel_getter",
+        "remove_after_by_channel"
+    )
+
+    @typechecked
+    def __init__(
+        self,
+        start_period: Union[timedelta, int, None],
+        end_period: Union[int, timedelta],
+        data: Any,
+        channels: Union[List[Union[int, ChannelType]], AutoCHANNEL],
+        start_in: Optional[Union[timedelta, datetime]] = timedelta(seconds=0),
+        remove_after: Optional[Union[int, timedelta, datetime]] = None
+    ):
+        super().__init__(start_period, end_period, data, start_in, remove_after)
+        self.channels = channels
+        self.channel_getter = None
+        # Override the default remove_after logic if it's an integer.
+        self.remove_after_by_channel = {}
+
+    @property
+    def remaining_before_removal(self) -> Union[Dict[int, int], timedelta, datetime, int]:
+        # Return the counts dictionary or the original remove_after parameter if dictionary is empty
+        return self.remove_after_by_channel or self.remove_after
+
+    def _check_state(self) -> bool:
+        return (
+            super()._check_state() or
+            # 'or [True]' assures this evaluates to False if the map is empty (no channels were ever advertised)
+            type(self.remove_after) is int and not any(self.remove_after_by_channel.values() or [True]) or
+            not bool(self.channels)
+        )
+
+    def _update_state(self, succeeded_channels: List[ChannelType], err_channels: List[dict]):
+        "Updates internal remove_after counter and checks if any channels need to be remove."
+
+        # Override the default counter remove_after behaviour to act independant on separate channels.
+        if isinstance(self.remove_after, int):
+            for channel in succeeded_channels:
+                snowflake = channel.id
+                if snowflake not in self.remove_after_by_channel:
+                    self.remove_after_by_channel[snowflake] = self.remove_after
+
+                self.remove_after_by_channel[snowflake] -= 1
+                if not self.remove_after_by_channel[snowflake]:  # No more tries left
+                    trace(
+                        f"Removing channel '{channel.name}' ({channel.id}) [Guild '{channel.guild.name}' ({channel.guild.id})] from {self} - 'remove_after' sends reached.",
+                        TraceLEVELS.NORMAL,
+                    )
+                    self.channels.remove(channel)
+
+        # Remove any channels that returned with code status 404 (They no longer exist)
+        for data in err_channels:
+            reason = data["reason"]
+            channel = data["channel"]
+            if isinstance(reason, discord.HTTPException):
+                if (
+                    reason.status == 403 or  # Forbidden
+                    reason.code in {50007, 10003}  # Not Forbidden, but bad error codes
+                ):
+                    trace(
+                        f"Removing channel '{channel.name}' ({channel.id}) [Guild '{channel.guild.name}' ({channel.guild.id})], because user '{self.parent.parent.client.user.name}' lacks permissions.",
+                        TraceLEVELS.WARNING
+                    )
+                    self.channels.remove(channel)
+
+    async def initialize(
+        self,
+        parent: Any,
+        channel_types: Set,
+        channel_getter: Callable
+    ):
+        """
+        This method initializes the implementation specific API objects and
+        checks for the correct channel input context.
+
+        Parameters
+        --------------
+        parent: daf.guild.GUILD
+            The GUILD this message is in
+        channel_types: List
+            List of allowed channel types.
+        channel_getter: Callable
+            The function to call to obtain the correct channels of certain type.
+
+        Raises
+        ------------
+        TypeError
+            Channel contains invalid channels
+        ValueError
+            Channel does not belong to the guild this message is in.
+        ValueError
+            No valid channels were passed to object"
+        """
+        if parent is None:
+            raise RuntimeError(f"No parent was passed to ({self})!")
+
+        ch_i = 0
+        client: discord.Client = parent.parent.client
+        _guild: discord.Guild = parent.apiobject
+        to_remove = []
+        self.channel_getter = channel_getter
+
+        if isinstance(self.channels, AutoCHANNEL):
+            await self.channels.initialize(self, channel_getter)
+        else:
+            for ch_i, channel in enumerate(self.channels):
+                if isinstance(channel, discord.abc.GuildChannel):
+                    channel_id = channel.id
+                else:
+                    # Snowflake IDs provided
+                    channel_id = channel
+                    channel = self.channels[ch_i] = client.get_channel(channel_id)
+
+                if channel is None:
+                    trace(f"Unable to get channel from ID {channel_id}", TraceLEVELS.WARNING)
+                    to_remove.append(channel)
+                elif type(channel) not in channel_types:
+                    raise TypeError(f"{type(self).__name__} object received invalid channel type of {type(channel).__name__}")
+                elif channel.guild != _guild:
+                    raise ValueError(
+                        f"{channel.name}(ID: {channel_id}) not in {_guild.name}(ID: {_guild.id}), "
+                        f"but is part of {channel.guild.name}(ID: {channel.guild.id})"
+                    )
+
+            for channel in to_remove:
+                self.channels.remove(channel)
+
+            if not self.channels:
+                raise ValueError(f"No valid channels were passed to {self} object")
+
+        self.parent = parent
+
+    @async_util.with_semaphore("update_semaphore")
+    async def _send(self) -> MessageSendResult:
+        """
+        Sends the data into the channels.
+
+        Returns
+        ----------
+        MessageSendResult
+            The result of message send attempt.
+        """
+        # Acquire mutex to prevent update method from writing while sending
+        data_to_send = await self._get_data()
+        if any(data_to_send.values()):  # There is data to be send
+            errored_channels = []
+            succeeded_channels = []
+
+            # Send to channels
+            for channel in self.channels:
+                # Clear previous messages sent to channel if mode is MODE_DELETE_SEND
+                context = await self._send_channel(channel, **data_to_send)
+                if context["success"]:
+                    succeeded_channels.append(channel)
+                else:
+                    errored_channels.append({"channel": channel, "reason": context["reason"]})
+                    action = context["action"]
+                    if action is ChannelErrorAction.SKIP_CHANNELS:  # Don't try to send to other channels
+                        break
+
+                    elif action is ChannelErrorAction.REMOVE_ACCOUNT:
+                        return MessageSendResult(
+                            self.generate_log_context(
+                                **data_to_send, succeeded_ch=succeeded_channels, failed_ch=errored_channels
+                            ),
+                            MSG_SEND_STATUS_ERROR_REMOVE_ACCOUNT
+                        )
+
+            self._update_state(succeeded_channels, errored_channels)
+            return MessageSendResult(
+                self.generate_log_context(**data_to_send, succeeded_ch=succeeded_channels, failed_ch=errored_channels),
+                MSG_SEND_STATUS_SUCCESS if succeeded_channels or errored_channels else MSG_SEND_STATUS_NO_MESSAGE_SENT
+            )
+
+        return MessageSendResult(None, MSG_SEND_STATUS_NO_MESSAGE_SENT)
+
+    @typechecked
+    @async_util.with_semaphore("update_semaphore")
+    async def update(self, _init_options: Optional[dict] = None, **kwargs: Any):
+        """
+        .. versionadded:: v2.0
+
+        Used for changing the initialization parameters the object was initialized with.
+
+        .. warning::
+            Upon updating, the internal state of objects get's reset,
+            meaning you basically have a brand new created object.
+
+        Parameters
+        -------------
+        **kwargs: Any
+            Custom number of keyword parameters which you want to update,
+            these can be anything that is available during the object creation.
+
+        Raises
+        -----------
+        TypeError
+            Invalid keyword argument was passed
+        Other
+            Raised from .initialize() method.
+        """
+        if "start_in" not in kwargs:
+            # This parameter does not appear as attribute, manual setting necessary
+            kwargs["start_in"] = self.next_send_time
+
+        if "data" not in kwargs:
+            kwargs["data"] = self._data
+
+        kwargs["channels"] = channels = kwargs.get("channels", self.channels)
+        if isinstance(channels, AutoCHANNEL):
+            await channels.update(init_options={"parent": self, "channel_getter": self.channel_getter})
+        elif not isinstance(self.channels[0], int):  # Not initialized (newly created):
+            kwargs["channels"] = [x.id for x in self.channels]
+
+        if _init_options is None:
+            _init_options = {"parent": self.parent}
+
+        await async_util.update_obj_param(self, init_options=_init_options, **kwargs)

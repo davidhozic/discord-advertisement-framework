@@ -3,11 +3,12 @@
 """
 from typing import Optional, Union, List, Dict
 
-from . import misc
+
 from . import guild
 from . import web
 
 from .logging.tracing import TraceLEVELS, trace
+from .misc import async_util, instance_track, doc, attributes
 
 from typeguard import typechecked
 
@@ -44,8 +45,8 @@ except ImportError:
 # -------------------------------------------- #
 
 
-@misc.track_id
-@misc.doc_category("Clients")
+@instance_track.track_id
+@doc.doc_category("Clients")
 class ACCOUNT:
     """
     .. versionadded:: v2.4
@@ -64,8 +65,18 @@ class ACCOUNT:
         The Discord account's token
     is_user : Optional[bool] =False
         Declares that the ``token`` is a user account token ("self-bot")
-    intents: Optional[discord.Intents]=discord.Intents.default()
-        Discord Intents (settings of events that the client will subscribe to)
+    intents: Optional[discord.Intents]
+        Discord Intents (settings of events that the client will subscribe to).
+        Defeaults to everything enabled except ``members``, ``presence`` and ``message_content``, as those
+        are privileged events, which need to be enabled though Discord's developer settings for each bot.
+
+        .. warning::
+
+            For invite link tracking to work, it is required to set ``members`` intents to True.
+
+            Intent ``guilds`` is also required for AutoGUILD and AutoCHANNEL, however it is automatically forced
+            to True, as it is not a priveleged intent.
+
     proxy: Optional[str]=None
         The proxy to use when connecting to Discord.
 
@@ -97,6 +108,7 @@ class ACCOUNT:
         "intents",
         "_running",
         "tasks",
+        "_ws_task",
         "_servers",
         "_autoguilds",
         "_selenium",
@@ -134,7 +146,6 @@ class ACCOUNT:
         # If intents not passed, enable default
         if intents is None:
             intents = discord.Intents.default()
-            intents.members = True
 
         self.intents = intents
         self._running = False
@@ -154,10 +165,11 @@ class ACCOUNT:
 
         self._client = None
         self._deleted = False
-        misc._write_attr_once(self, "_update_sem", asyncio.Semaphore(1))
+        self._ws_task = None
+        attributes.write_non_exist(self, "_update_sem", asyncio.Semaphore(1))
 
     def __str__(self) -> str:
-        return f"{type(self).__name__}(token={self._token}, is_user={self.is_user}, selenium={self._selenium})"
+        return f"{type(self).__name__}(token={self._token[:10] if self._token is not None else None}, is_user={self.is_user}, selenium={self._selenium})"
 
     def __eq__(self, other):
         if isinstance(other, ACCOUNT):
@@ -168,7 +180,7 @@ class ACCOUNT:
     def __deepcopy__(self, *args):
         "Duplicates the object (for use in AutoGUILD)"
         new = copy.copy(self)
-        for slot in misc.get_all_slots(type(self)):
+        for slot in attributes.get_all_slots(type(self)):
             self_val = getattr(self, slot)
             if isinstance(self_val, (asyncio.Semaphore, asyncio.Lock)):
                 # Hack to copy semaphores since not all of it can be copied directly
@@ -219,7 +231,7 @@ class ACCOUNT:
         return self._deleted
 
     @property
-    def servers(self):
+    def servers(self) -> List[Union[guild.GUILD, guild.AutoGUILD, guild.USER]]:
         """
         Returns all guild like objects inside the account's s
         shilling list. This also includes :class:`~daf.guild.AutoGUILD`
@@ -249,6 +261,17 @@ class ACCOUNT:
         RuntimeError
             Unable to login to Discord.
         """
+        intents = self.intents
+        if not intents.members:
+            trace("Members intent is disabled, it is needed for invite link tracking", TraceLEVELS.WARNING)
+
+        if not intents.invites:
+            trace("Invites intent is disabled, it is needed for invite link tracking", TraceLEVELS.WARNING)
+
+        if not intents.guilds:
+            self.intents.guilds = True
+            trace("Guilds intent is disabled. Enabling it since it's needed.", TraceLEVELS.WARNING)
+
         self._deleted = False
         connector = None
         if self.proxy is not None:
@@ -263,12 +286,14 @@ class ACCOUNT:
 
         # Login
         trace("Logging in...")
-        _client_task = asyncio.create_task(self._client.start(self._token, bot=not self.is_user))
         try:
+            await self._client.login(self._token, not self.is_user)
+            ws_task = asyncio.create_task(self._client.connect())
+            self._ws_task = ws_task
             await self._client.wait_for("ready", timeout=LOGIN_TIMEOUT_S)
             trace(f"Logged in as {self._client.user.display_name}")
         except asyncio.TimeoutError as exc:
-            exc = _client_task.exception() if _client_task.done() else exc
+            exc = ws_task.exception() if ws_task.done() else exc
             raise RuntimeError(f"Error logging in to Discord. (Token {self._token[:TOKEN_MAX_PRINT_LEN]}...)") from exc
 
         for server in self._uiservers:
@@ -426,10 +451,18 @@ class ACCOUNT:
             await guild_._close()
 
         await self._client.close()
+        await asyncio.gather(self._ws_task, return_exceptions=True)
         self.client.clear()
 
         if _delete:
             self._delete()
+
+            for server in self.servers:
+                server._delete()
+
+            self._uiservers = self.servers
+            self._servers.clear()
+            self._autoguilds.clear()
 
     async def _loop(self):
         """
@@ -440,7 +473,7 @@ class ACCOUNT:
         """
         while self._running:
             ###############################################################
-            @misc._async_safe(self._update_sem)
+            @async_util.with_semaphore(self._update_sem)
             async def __loop():
                 to_remove = []
                 to_advert: List[guild._BaseGUILD, guild.AutoGUILD] = []
@@ -456,7 +489,10 @@ class ACCOUNT:
                 for server in to_advert:
                     status = await server._advertise()
                     if status == guild.GUILD_ADVERT_STATUS_ERROR_REMOVE_ACCOUNT:
+                        trace(f"Removing account {self} because token was invalidated! Username: '{self._client.user.name}')", TraceLEVELS.ERROR)
                         self._running = False
+                        self._deleted = True
+
                     # If loop stop has been requested, stop asap
                     if not self._running:
                         return
@@ -490,15 +526,13 @@ class ACCOUNT:
             if isinstance(intents, discord.Intents) and intents.value == 0:
                 kwargs["intents"] = None
 
-        servers = kwargs.pop("servers", self.servers + self._uiservers)
-        if servers is None:
-            servers = []
+        kwargs["servers"] = kwargs.pop("servers", self.servers + self._uiservers)
 
-        @misc._async_safe("_update_sem")
+        @async_util.with_semaphore("_update_sem")
         async def update_servers(self_):
             _servers = []
             _autoguilds = []
-            for server in servers:
+            for server in self.servers:
                 try:
                     await server.update(init_options={"parent": self})
                     if isinstance(server, guild._BaseGUILD):
@@ -512,10 +546,9 @@ class ACCOUNT:
             self._autoguilds = _autoguilds
 
         try:
-            await misc._update(self, **kwargs)
+            await async_util.update_obj_param(self, **kwargs)
             await update_servers(self)
         except Exception:
             await self.initialize()  # re-login
-            servers = self.servers  # Only return initialized servers
             await update_servers(self)
             raise

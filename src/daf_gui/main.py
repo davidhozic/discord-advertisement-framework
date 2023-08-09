@@ -7,6 +7,8 @@ import sys
 from importlib.util import find_spec
 from pathlib import Path
 
+from daf.misc import instance_track as it
+
 
 installed = find_spec("ttkbootstrap") is not None
 
@@ -57,7 +59,7 @@ This is written as part of my bachelor thesis as a degree finishing project
 """
 
 GITHUB_URL = "https://github.com/davidhozic/discord-advertisement-framework"
-DOC_URL = f"https://daf.davidhozic.com/en/v{daf.VERSION}"
+DOC_URL = f"https://daf.davidhozic.com/en/v{'.'.join(daf.VERSION.split('.')[:2])}.x/"
 DISCORD_URL = "https://discord.gg/DEnvahb2Sw"
 
 OPTIONAL_MODULES = [
@@ -304,9 +306,8 @@ class Application():
             gui_daf_assert_running()
             selection = combo_add_object_edit.combo.current()
             if selection >= 0:
-                fnc: ObjectInfo = combo_add_object_edit.combo.get()
-                fnc_data = convert_to_objects(fnc.data)
-                async_execute(self.connection.add_account(**fnc_data), parent_window=self.win_main)
+                account: daf.client.ACCOUNT = convert_to_objects(combo_add_object_edit.combo.get())
+                async_execute(self.connection.add_account(account), parent_window=self.win_main)
             else:
                 tkdiag.Messagebox.show_error("Combobox does not have valid selection.", "Combo invalid selection")
 
@@ -345,10 +346,10 @@ class Application():
         list_live_objects.pack(fill=tk.BOTH, expand=True)
         self.list_live_objects = list_live_objects
         # The default bind is removal from list and not from actual daf.
-        list_live_objects.unbind("<BackSpace>")
-        list_live_objects.unbind("<Delete>")
-        list_live_objects.bind("<BackSpace>", lambda e: remove_account())
-        list_live_objects.bind("<Delete>", lambda e: remove_account())
+        list_live_objects.listbox.unbind_all("<BackSpace>")
+        list_live_objects.listbox.unbind_all("<Delete>")
+        list_live_objects.listbox.bind("<BackSpace>", lambda e: remove_account())
+        list_live_objects.listbox.bind("<Delete>", lambda e: remove_account())
 
     def init_output_tab(self):
         self.tab_output = ttk.Frame(self.tabman_mf)
@@ -446,8 +447,8 @@ class Application():
 
                 param_object = combo_history.combo.get()
                 param_object_params = convert_to_objects(param_object.data)
-                items = await self.connection.execute_method(logger, getter_history, **param_object_params)
-                items = convert_to_object_info(items, cache=True)
+                items = await self.connection.execute_method(it.ObjectReference(it.get_object_id(logger)), getter_history, **param_object_params)
+                items = convert_to_object_info(items)
                 lst_history.clear()
                 lst_history.insert(tk.END, *items)
 
@@ -470,7 +471,11 @@ class Application():
                 if not isinstance(logger, daf.LoggerSQL):
                     raise ValueError("Analytics only allowed when using LoggerSQL")
 
-                await self.connection.execute_method(logger, "delete_logs", table=log_class, primary_keys=logs)
+                await self.connection.execute_method(
+                    it.ObjectReference(it.get_object_id(logger)),
+                    "delete_logs",
+                    table=log_class, primary_keys=logs
+                )
 
             @gui_confirm_action
             def delete_logs(listbox: ListBoxScrolled):
@@ -526,7 +531,7 @@ class Application():
 
                 param_object = combo_count.combo.get()
                 parameters = convert_to_objects(param_object.data)
-                count = await self.connection.execute_method(logger, getter_counts, **parameters)
+                count = await self.connection.execute_method(it.ObjectReference(it.get_object_id(logger)), getter_counts, **parameters)
 
                 tw_num.delete_rows()
                 tw_num.insert_rows(0, count)

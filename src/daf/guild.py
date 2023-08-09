@@ -8,11 +8,10 @@ from typeguard import typechecked
 from datetime import timedelta, datetime
 from copy import deepcopy
 
-from .logging.tracing import TraceLEVELS, trace
 from .message import *
-
+from .logging.tracing import TraceLEVELS, trace
+from .misc import async_util, instance_track, doc, attributes
 from . import logging
-from . import misc
 from . import web
 
 import _discord as discord
@@ -30,7 +29,7 @@ __all__ = (
 GUILD_ADVERT_STATUS_SUCCESS = 0
 GUILD_ADVERT_STATUS_ERROR_REMOVE_ACCOUNT = None
 
-GUILD_JOIN_INTERVAL = timedelta(seconds=25)
+GUILD_JOIN_INTERVAL = timedelta(seconds=45)
 GUILD_MAX_AMOUNT = 100
 
 globals_ = globals()
@@ -234,6 +233,7 @@ class _BaseGUILD:
         ValueError
             Raised when the message is not present in the list.
         """
+        trace(f"Removing message {message} from {self}", TraceLEVELS.DEBUG)
         message._delete()
         self._messages.remove(message)
 
@@ -328,7 +328,7 @@ class _BaseGUILD:
         """
         raise NotImplementedError
 
-    @misc._async_safe("update_semaphore", 1)
+    @async_util.with_semaphore("update_semaphore", 1)
     async def _advertise(self) -> int:
         """
         Common to all messages, function responsible for sending all the
@@ -396,8 +396,8 @@ class _BaseGUILD:
         }
 
 
-@misc.track_id
-@misc.doc_category("Guilds")
+@instance_track.track_id
+@doc.doc_category("Guilds")
 @logging.sql.register_type("GuildTYPE")
 class GUILD(_BaseGUILD):
     """
@@ -426,6 +426,7 @@ class GUILD(_BaseGUILD):
         .. versionadded:: 2.7
 
         List of invite IDs to be tracked for member join count inside the guild.
+        **Bot account** only, does not work on user accounts.
 
         .. note::
 
@@ -433,6 +434,13 @@ class GUILD(_BaseGUILD):
             tracking to fully function. *Manage Server* is needed for getting information about invite links,
             *Manage Channels* is needed to delete the invite from the list if it has been deleted,
             however tracking still works without it.
+
+        .. warning::
+
+            For GUILD to receive events about member joins, ``members`` intent is required to be True inside
+            the ``intents`` parameters of :class:`daf.client.ACCOUNT`.
+            This is a **privileged intent** that also needs to be enabled though Discord's developer portal for each bot.
+            After it is enabled, you can set it to True .
     """
     __slots__ = (
         "update_semaphore",
@@ -452,7 +460,7 @@ class GUILD(_BaseGUILD):
 
         # Auto strip any url parts and keep only ID by splitting
         self.join_count = {invite.split("/")[-1]: 0 for invite in invite_track}
-        misc._write_attr_once(self, "update_semaphore", asyncio.Semaphore(1))
+        attributes.write_non_exist(self, "update_semaphore", asyncio.Semaphore(1))
 
     def _check_state(self) -> bool:
         """
@@ -519,6 +527,7 @@ class GUILD(_BaseGUILD):
     async def add_message(self, message: Union[TextMESSAGE, VoiceMESSAGE]):
         return await super().add_message(message)
 
+    @async_util.with_semaphore("update_semaphore")
     async def _on_member_join(self, member: discord.Member):
         counts = self.join_count
         invites = await self.get_invites()
@@ -532,6 +541,7 @@ class GUILD(_BaseGUILD):
                 await logging.save_log(self.generate_log_context(), None, None, invite_ctx)
                 return
 
+    @async_util.with_semaphore("update_semaphore")
     async def _on_invite_delete(self, invite: discord.Invite):
         if invite.id in self.join_count:
             del self.join_count[invite.id]
@@ -570,7 +580,7 @@ class GUILD(_BaseGUILD):
             }
         }
 
-    @misc._async_safe("update_semaphore", 1)
+    @async_util.with_semaphore("update_semaphore", 1)
     async def update(self, init_options = None, **kwargs):
         """
         Used for changing the initialization parameters,
@@ -608,7 +618,7 @@ class GUILD(_BaseGUILD):
         if init_options is None:
             init_options = {"parent": self.parent}
 
-        await misc._update(self, init_options=init_options, **kwargs)
+        await async_util.update_obj_param(self, init_options=init_options, **kwargs)
 
         _messages = []
         for message in messages:
@@ -621,8 +631,8 @@ class GUILD(_BaseGUILD):
         self._messages = _messages
 
 
-@misc.track_id
-@misc.doc_category("Guilds")
+@instance_track.track_id
+@doc.doc_category("Guilds")
 @logging.sql.register_type("GuildTYPE")
 class USER(_BaseGUILD):
     """
@@ -661,7 +671,7 @@ class USER(_BaseGUILD):
         remove_after: Optional[Union[timedelta, datetime]] = None
     ) -> None:
         super().__init__(snowflake, messages, logging, remove_after)
-        misc._write_attr_once(self, "update_semaphore", asyncio.Semaphore(1))
+        attributes.write_non_exist(self, "update_semaphore", asyncio.Semaphore(1))
 
     def _check_state(self) -> bool:
         """
@@ -697,7 +707,7 @@ class USER(_BaseGUILD):
     async def add_message(self, message: DirectMESSAGE):
         return await super().add_message(message)
 
-    @misc._async_safe("update_semaphore", 1)
+    @async_util.with_semaphore("update_semaphore", 1)
     async def update(self, init_options = None, **kwargs):
         """
         .. versionadded:: v2.0
@@ -732,7 +742,7 @@ class USER(_BaseGUILD):
         if init_options is None:
             init_options = {"parent": self.parent}
 
-        await misc._update(self, init_options=init_options, **kwargs)
+        await async_util.update_obj_param(self, init_options=init_options, **kwargs)
 
         _messages = []
         for message in messages:
@@ -745,8 +755,8 @@ class USER(_BaseGUILD):
         self._messages = _messages
 
 
-@misc.track_id
-@misc.doc_category("Auto objects")
+@instance_track.track_id
+@doc.doc_category("Auto objects")
 class AutoGUILD:
     """
     .. versionchanged:: v2.7
@@ -790,6 +800,10 @@ class AutoGUILD:
     include_pattern: str
         Regex pattern to use for searching guild names that are to be included.
         This is also checked before joining a new guild if ``auto_guild`` is given.
+
+        For example you can do write ``.*`` to match ALL guilds you are joined into or specify
+        (parts of) guild names separated with ``|`` like so: "name1|name2|name3|name4"
+
     exclude_pattern: Optional[str] = None
         Regex pattern to use for searching guild names that are
         **NOT** to be excluded.
@@ -804,7 +818,7 @@ class AutoGUILD:
         Set to True if you want the guilds generated to log
         sent messages.
     interval: Optional[timedelta] = timedelta(minutes=1)
-        Interval at which to scan for new guilds
+        Interval at which to scan for new guilds.
     auto_join: Optional[web.GuildDISCOVERY] = None
         .. versionadded:: v2.5
 
@@ -842,8 +856,9 @@ class AutoGUILD:
                  interval: Optional[timedelta] = timedelta(minutes=1),
                  auto_join: Optional[web.GuildDISCOVERY] = None,
                  invite_track: Optional[List[str]] = None) -> None:
-        self.include_pattern = include_pattern
-        self.exclude_pattern = exclude_pattern
+        # Remove spaces around OR
+        self.include_pattern = re.sub(r"\s*\|\s*", '|', include_pattern) if include_pattern else None
+        self.exclude_pattern = re.sub(r"\s*\|\s*", '|', exclude_pattern) if exclude_pattern else None
         self.remove_after = remove_after
         self.invite_track = invite_track
         # Uninitialized template messages that get copied for each found guild.
@@ -859,7 +874,7 @@ class AutoGUILD:
         self.guild_query_iter = None
         self.last_guild_join = datetime.min
         self.guild_join_count = 0
-        misc._write_attr_once(self, "_safe_sem", asyncio.Semaphore(2))
+        attributes.write_non_exist(self, "_safe_sem", asyncio.Semaphore(1))
 
     @property
     def guilds(self) -> List[GUILD]:
@@ -1040,7 +1055,7 @@ class AutoGUILD:
         selenium: web.SeleniumCLIENT = self.parent.selenium
         client: discord.Client = self.parent.client
         if (
-            discovery is None or  # No auto_join provided
+            self.guild_query_iter is None or  # No auto_join provided or iterated though all guilds
             self.guild_join_count == discovery.limit or
             datetime.now() - self.last_guild_join < GUILD_JOIN_INTERVAL or
             len(client.guilds) == GUILD_MAX_AMOUNT
@@ -1048,24 +1063,22 @@ class AutoGUILD:
             return
 
         async def get_next_guild():
-            for i in range(2):
-                try:
-                    # Get next result from top.gg
-                    yielded: web.QueryResult = await self.guild_query_iter.__anext__()
-                    if (
-                        re.search(self.include_pattern, yielded.name) is None or
-                        (
-                            self.exclude_pattern is not None and
-                            re.search(self.exclude_pattern, yielded.name) is not None
-                        )
-                    ):
-                        return None
+            try:
+                # Get next result from top.gg
+                yielded: web.QueryResult = await self.guild_query_iter.__anext__()
+                if (
+                    re.search(self.include_pattern, yielded.name) is None or
+                    (
+                        self.exclude_pattern is not None and
+                        re.search(self.exclude_pattern, yielded.name) is not None
+                    )
+                ):
+                    return None
 
-                    return yielded
-                except StopAsyncIteration:
-                    self.guild_query_iter = discovery._query_request()
-                    trace("Iterated though all found guilds -> repeating iteration.", TraceLEVELS.DEBUG)
-                    await asyncio.sleep(3)
+                return yielded
+            except StopAsyncIteration:
+                trace(f"Iterated though all found guilds -> stopping guild join in {self}.", TraceLEVELS.NORMAL)
+                self.guild_query_iter = None
 
         if (yielded := await get_next_guild()) is None:
             return
@@ -1074,7 +1087,8 @@ class AutoGUILD:
         # Not already joined in the guild
         if client.get_guild(yielded.id) is None:
             try:
-                if (invite_url := await selenium.fetch_invite_link(yielded.url)) is None:
+                invite_url = await selenium.fetch_invite_link(yielded.url)
+                if invite_url is None:
                     raise RuntimeError("Fetching invite link failed")
 
                 await selenium.random_server_click()
@@ -1099,7 +1113,7 @@ class AutoGUILD:
             # Don't count errored joins but count guilds we are already joined if they match the pattern
             self.guild_join_count += 1
 
-    @misc._async_safe("_safe_sem", 1)
+    @async_util.with_semaphore("_safe_sem", 1)
     async def _advertise(self):
         """
         Advertises thru all the GUILDs.
@@ -1116,7 +1130,7 @@ class AutoGUILD:
 
         return GUILD_ADVERT_STATUS_SUCCESS
 
-    @misc._async_safe("_safe_sem", 1)
+    @async_util.with_semaphore("_safe_sem", 1)
     async def update(self, init_options = None, **kwargs):
         """
         Updates the object with new initialization parameters.
@@ -1130,7 +1144,7 @@ class AutoGUILD:
 
         await self._close()
         try:
-            return await misc._update(self, init_options=init_options, **kwargs)
+            return await async_util.update_obj_param(self, init_options=init_options, **kwargs)
         except Exception:
             self.cache.clear()
             if self.parent is not None:  # Only if it were previously initialized

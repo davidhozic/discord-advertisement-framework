@@ -2,15 +2,14 @@
     The module contains definitions regarding the data types
     you can send using the xxxMESSAGE objects.
 """
-from typing import Any, Callable, TypeVar, Coroutine
+from typing import Any, Callable, Coroutine, Union, Optional
 from typeguard import typechecked
-from urllib.parse import urlparse
+import importlib.util as iu
+import io
 
-from . import misc
 from .logging.tracing import *
+from .misc import doc
 
-
-T = TypeVar("T")
 
 __all__ = (
     "data_function",
@@ -22,16 +21,7 @@ __all__ = (
 
 class GLOBALS:
     "Storage class used for storing global variables"
-    voice_installed: bool = False
-
-
-# --------------------------------- Optional modules --------------------------------- #
-try:
-    import yt_dlp
-    GLOBALS.voice_installed = True
-except ModuleNotFoundError:
-    GLOBALS.voice_installed = False
-# ------------------------------------------------------------------------------------ #
+    voice_installed: bool = iu.find_spec("nacl") is not None
 
 
 #######################################################################
@@ -47,7 +37,7 @@ class _FunctionBaseCLASS:
     """
 
 
-@misc.doc_category("Message data types")
+@doc.doc_category("Types")
 def data_function(fnc: Callable):
     """
     Decorator used for wrapping a function that will return data to send when the message is ready.
@@ -85,9 +75,9 @@ def data_function(fnc: Callable):
         a ``data`` parameter to the :ref:`Messages` objects.
 
 
-    .. literalinclude:: ../DEP/main_data_function.py
+    .. literalinclude:: ../../DEP/main_data_function.py
         :language: python
-        :emphasize-lines: 11, 24
+        :emphasize-lines: 12, 24
     """
 
     class FunctionCLASS(_FunctionBaseCLASS):
@@ -132,126 +122,122 @@ def data_function(fnc: Callable):
 # Other
 #######################################################################
 @typechecked
-@misc.doc_category("Message data types")
+@doc.doc_category("Types")
 class FILE:
     """
-    FILE object used as a data parameter to the MESSAGE objects.
+    FILE object used as a data parameter to the xMESSAGE objects.
     This is needed opposed to a normal file object because this way,
     you can edit the file after the framework has already been started.
 
-    .. warning::
+    .. caution::
         This is used for sending an actual file and **NOT it's contents as text**.
+
+    .. versionchanged:: 2.10
+
+        The file's data is loaded at file creation to support
+        transfers over a remote connection.
+        Additionaly this class replaces :class:`daf.dtypes.AUDIO` for
+        audio streaming.
+
+        New properties: stream, filename, data, hex.
+
 
     Parameters
     -------------
     filename: str
-         Path to the file you want sent.
-    """
-    __slots__ = ("filename",)
+        The filename of file you want to send.
+    data: Optional[Union[bytes, str]]
+        Optional raw data or hex string represending raw data.
 
-    def __init__(self,
-                 filename: str):
-        self.filename = filename
+        If this parameter is not given (set as None), the data will be automatically obtained from ``filename`` file.
+        Defaults to ``None``.
 
-    def __str__(self) -> str:
-        return f"FILE(filename={self.filename})"
-
-
-@typechecked
-@misc.doc_category("Message data types")
-class AUDIO:
-    """
-    Used for streaming audio from file or YouTube.
-
-    .. note::
-        Using a youtube video, will cause the shilling start to be delayed due to youtube data extraction.
-
-    Parameters
-    -----------------
-    filename: str
-        Path to the file you want streamed or a YouTube video url.
+        .. versionadded:: 2.10
 
     Raises
-    ----------
+    -----------
+    FileNotFoundError
+        The ``filename`` does not exist.
+    OSError
+        Could not read file ``filename``.
     ValueError
-        Raised when the file or youtube url is not found.
+        The ``data`` parameter is of incorrect format.
     """
+    __slots__ = ("_filename", "_data")
 
-    ytdl_options = {
-        "format": "bestaudio/best",
-        "outtmpl": "%(extractor)s-%(id)s-%(title)s.%(ext)s",
-        "restrictfilenames": True,
-        "noplaylist": True,
-        "nocheckcertificate": True,
-        "ignoreerrors": False,
-        "logtostderr": False,
-        "quiet": True,
-        "no_warnings": True,
-        "default_search": "auto"
-    }
+    def __init__(self, filename: str, data: Optional[Union[bytes, str]] = None):
+        if data is None:
+            with open(filename, "rb") as file:
+                data = file.read()
 
-    def __init__(self, filename: str) -> None:
-        self.orig = filename
-        self.is_stream = False
+        elif isinstance(data, str):
+            data = bytes.fromhex(data)
 
-        if not GLOBALS.voice_installed:
-            raise ModuleNotFoundError(
-                "You need to install extra requirements: pip install discord-advert-framework[voice]"
-            )
+        self._filename = filename
+        self._data = data
 
-        url_info = urlparse(filename)  # Check if it's youtube
-        if "www.youtube.com" == url_info.hostname:
-            trace(
-                "Youtube streaming is deprecated in favor of faster loading times! Scheduled for removal in v2.10.",
-                TraceLEVELS.DEPRECATED
-            )
-            self.is_stream = True
-            self._get_yt_stream()
-        else:
-            try:
-                with open(self.url):
-                    pass
-            except FileNotFoundError:
-                raise ValueError(f"The file {self.url} could not be found.")
-
-    def _get_yt_stream(self):
-        try:
-            youtube_dl = yt_dlp.YoutubeDL(params=self.ytdl_options)
-            data = youtube_dl.extract_info(self.orig, download=False)
-            if "entries" in data:
-                data = data["entries"][0]  # Is a playlist, get the first entry
-
-            self.title = data["title"]
-            return data["url"]
-
-        except Exception:
-            raise ValueError(f'The audio from "{self.orig}" could not be streamed')
-
-    def __str__(self):
-        return f"AUDIO({str(self.to_dict())})"
+    def __str__(self) -> str:
+        return f"FILE(filename={self._filename})"
 
     @property
-    def url(self):
-        if self.is_stream:
-            return self._get_yt_stream()
-        else:
-            return self.orig
+    def stream(self) -> io.BytesIO:
+        "Returns a stream to data provided at creation."
+        return io.BytesIO(self._data)
+
+    @property
+    def filename(self) -> str:
+        "The name of the file"
+        return self._filename
+
+    @property
+    def data(self) -> bytes:
+        "Returns the raw binary data"
+        return self._data
+
+    @property
+    def hex(self) -> str:
+        "Returns HEX representation of the data."
+        return self._data.hex()
 
     def to_dict(self):
         """
         Returns dictionary representation of this data type.
 
-        .. versionchanged:: v2.0
-
-            Changed to method ``to_dict`` from property ``filename``
+        .. versionadded:: 2.10
         """
-        if self.is_stream:
-            return {
-                "type:": "Youtube",
-                "title": self.title,
-                "url": self.orig
-            }
         return {
             "type:": "File",
-            "filename": self.orig
+            "filename": self._filename
         }
+
+
+@typechecked
+@doc.doc_category("Types")
+class AUDIO(FILE):
+    """
+    Used for streaming audio from file.
+
+    .. deprecated:: 2.10
+
+        Use :class:`daf.dtypes.FILE` instead.
+
+    Parameters
+    -----------------
+    filename: str
+        Path to the file you want streamed.
+
+    Raises
+    ----------
+    FileNotFoundError
+        Raised when the file not found.
+    OSError
+        Could not load audio file.
+    """
+
+    def __init__(self, filename: str) -> None:
+        trace("AUDIO is deprecated, use FILE instead.", TraceLEVELS.DEPRECATED)
+        return super().__init__(filename)
+
+    @property
+    def url(self):
+        return self.filename

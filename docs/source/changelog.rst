@@ -32,6 +32,94 @@ Glossary
 Releases
 ----------------------
 
+v2.10
+====================
+
+- Accounts:
+  
+  - Intents:
+
+    - Added warnings for missing intents.
+    - Intents.members is by default now disabled.
+
+- Messages:
+
+  - |BREAK_CH| Removed deprecated feature - YouTube streaming, in favor of faster startups and installation time. 
+  - New property: :py:attr:`~daf.message.TextMESSAGE.remaining_before_removal`,
+    :py:attr:`~daf.message.VoiceMESSAGE.remaining_before_removal`,
+    :py:attr:`~daf.message.DirectMESSAGE.remaining_before_removal`
+  - New parameter: ``auto_publish`` to :class:`~daf.message.TextMESSAGE` for automatically publishing messages sent to
+    announcement (news) channels.
+
+  - :class:`~daf.message.TextMESSAGE` and :class:`~daf.message.VoiceMESSAGE`'s ``remove_after`` parameter:
+
+    - If integer, it will now work independently for each channel and will only decrement on successful sends.
+    - If :class:`~datetime.datetime` or :class:`~datetime.timedelta`, it will work the same as before.
+
+  - Moderation timeout handling (messages resume one minute after moderation timeout expiry)
+  - Message content:
+
+    - Deprecated :class:`daf.dtypes.AUDIO`, replaced with :class:`daf.dtypes.FILE`.
+    - :class:`daf.dtypes.FILE` now accepts binary data as well and will load the data from ``filename`` at creation
+      if the ``data`` parameter is not given.
+
+- Web browser (Selenium):
+
+  - Time between each guild join is now 45 seconds.
+  - Selenium can now be used though remote, however it is not recommended.
+  - Querying for new guilds will not repeat once no more guilds are found.
+
+- GUI:
+
+  - deprecation notices are now a button.
+  - Certain fields are now masked with '*' when not editing the object.
+  - Old data that is being updated will now be updated by index
+  - View properties of trackable objects. This can be used to, eg. view the channels AutoCHANNEL found.
+  - 'Load default' button when editing :class:`discord.Intents` object.
+  - A warning is shown besides the method execution frame to let users know, the data is not preserved.
+  - Fixed accounts not being deleted when using delete / backspace keys in live view.
+
+
+v2.9.7
+=================
+- Fixed channels not being visible though GUI, when using SQL logging.
+
+
+v2.9.6
+=================
+- Fixed crash if ``start_period`` is larger than ``end_period``.
+- Fixed local update not showing errors if updating objects under AutoGUILD
+
+
+v2.9.5
+=================
+- Fixed incorrect caching of the SQL logs, causing incorrect values to be returned back to the GUI.
+- Fixed detection of browser automation on searching for new guilds to join.
+
+
+v2.9.4
+=================
+- Fixed :class:`AutoGUILD` concurrent access. When updating AutoGUILD, the update method did not block
+  causing exceptions.
+- Chrome driver fixes regarding to proxies and timeouts.
+
+
+v2.9.3
+=================
+- Fixed :class:`AutoGUILD` and :class:`AutoCHANNEL` regex patterns. Users can now seperate names with "name1 | name2",
+  instead of "name1|name2". `#380 <https://github.com/davidhozic/discord-advertisement-framework/issues/380>`_
+
+v2.9.2
+=================
+- Fixed viewing dictionaries inside the GUI
+- Other bug fixes present in :ref:`v2.8.5`
+
+
+v2.9.1
+=================
+- Security update for yt-dlp
+
+
 v2.9
 =================
 - GUI:
@@ -58,6 +146,11 @@ v2.9
 
   - Time between guild joins increased to 25 seconds to prevent rate limits.
   - Searching for invite links will be ignored if the user is already joined into the belonging guild.
+
+
+v2.8.5
+=================
+- Fixed "Object not added to DAF" when accessing broken accounts from remote
 
 
 v2.8.4
@@ -366,5 +459,6 @@ v1.8.1
 v1.7.9
 ===========
 - :class:`daf.DirectMESSAGE` and :class:`daf.USER` classes created for direct messaging.
+
 
 

@@ -9,7 +9,7 @@ from .dpi import *
 from .connector import get_connection
 
 import _discord as discord
-import daf
+from daf.misc import instance_track as it
 
 import ttkbootstrap as ttk
 import tkinter as tk
@@ -99,8 +99,10 @@ def setup_additional_widget_file_chooser_logger(w: ttk.Button, frame):
 def setup_additional_live_update(w: ttk.Button, frame):
     # Don't have a bound object instance
     if (
+        not frame.allow_save or
         (oi := frame.old_gui_data) is None or
-        oi.real_object is None
+        oi.real_object is None or
+        oi.real_object.ref == -1
     ):
         return
 
@@ -126,7 +128,8 @@ def setup_additional_live_refresh(w: ttk.Button, frame):
     # Don't have a bound object instance
     if (
         (oi := frame.old_gui_data) is None or
-        oi.real_object is None
+        oi.real_object is None or
+        oi.real_object.ref == -1
     ):
         return
 
@@ -137,7 +140,7 @@ def setup_additional_live_refresh(w: ttk.Button, frame):
             # Need to do this on all previous frames, otherwise we would have wrong data
             for frame_ in reversed(opened_frames):
                 old_gui_data = frame_.old_gui_data
-                if not isinstance(old_gui_data, list) and hasattr(old_gui_data.real_object, "_daf_id"):
+                if not isinstance(old_gui_data, list) and isinstance(old_gui_data.real_object, it.ObjectReference):
                     real = await connection.refresh(old_gui_data.real_object)  # Get refresh object from DAF
                     frame_.load(convert_to_object_info(real, True))
 
@@ -150,6 +153,58 @@ def setup_additional_live_refresh(w: ttk.Button, frame):
     w.pack(side="right", padx=dpi_scaled(2))
 
 
+def setup_additional_live_properties(w: ttk.Menubutton, frame):
+    # Don't have a bound object instance
+    oi: ObjectInfo
+    if (
+        (oi := frame.old_gui_data) is None or
+        oi.real_object is None or
+        oi.real_object.ref == -1 or
+        not oi.property_map # Empty dict
+    ):
+        return
+
+    def _callback(property_name: str):
+        property_value, property_type = frame.old_gui_data.property_map[property_name]
+
+        class PropertyView:
+            """
+            Fake class used to generate a view-only object edit frame.
+            """
+            def __init__(self, value: property_type) -> None:
+                pass
+
+        frame.new_object_frame(
+            PropertyView, None,
+            allow_save=False, old_data=ObjectInfo(PropertyView, {"value": property_value})
+        )
+
+    menu = ttk.Menu(w, title="Property menu")
+    for k in oi.property_map:
+        menu.add_command(command=frame._lambda(_callback, k), label=k)
+
+    w.configure(menu=menu)
+    ToolTip(w, "Inspect additional properties of the object.", topmost=True)
+    w.pack(side="right", padx=dpi_scaled(2))
+
+
+def setup_additional_widget_default_intents(w: ttk.Button, frame):
+    def _callback(*args):
+        default = discord.Intents.default()
+        map_: dict = frame._map.copy()
+        del map_["kwargs"]
+
+        # v = (widget, annotated_types)
+        # k = parameter name
+        for k, v in map_.items():
+            widget, _ = v
+            widget.set(str(getattr(default, k)))
+
+    w.configure(command=_callback)
+    ToolTip(w, text="Enable everything except privileged intents.", topmost=True)
+    w.pack(side="right")
+
+
 # Map that maps the instance we are defining class to a list of additional objects.
 ADDITIONAL_WIDGETS = {
     dt.datetime: [AdditionalWidget(ttk.Button, setup_additional_widget_datetime, text="Select date")],
@@ -158,6 +213,7 @@ ADDITIONAL_WIDGETS = {
     daf.LoggerJSON: [AdditionalWidget(ttk.Button, setup_additional_widget_file_chooser_logger, text="Select folder")],
     daf.LoggerCSV: [AdditionalWidget(ttk.Button, setup_additional_widget_file_chooser_logger, text="Select folder")],
     daf.AUDIO: [AdditionalWidget(ttk.Button, setup_additional_widget_file_chooser, text="File browse")],
+    discord.Intents: [AdditionalWidget(ttk.Button, setup_additional_widget_default_intents, text="Load default")]
 }
 
 for name in dir(daf):
@@ -169,8 +225,13 @@ for name in dir(daf):
 
             ADDITIONAL_WIDGETS[item].extend([
                 AdditionalWidget(ttk.Button, setup_additional_live_update, text="Live update"),
-                AdditionalWidget(ttk.Button, setup_additional_live_refresh, text="Refresh")
+                AdditionalWidget(ttk.Button, setup_additional_live_refresh, text="Refresh"),
             ])
 
+        if hasattr(item, "_daf_id"):
+            if item not in ADDITIONAL_WIDGETS:
+                ADDITIONAL_WIDGETS[item] = []
 
-__all__ = list(globals().keys())
+            ADDITIONAL_WIDGETS[item].append(
+                AdditionalWidget(ttk.Menubutton, setup_additional_live_properties, text="View property"),
+            )

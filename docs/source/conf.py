@@ -105,3 +105,4 @@ html_theme_options = {
 }
 
 # ----------- Latex ----------- #
+latex_logo = html_logo

@@ -5,6 +5,7 @@ clients.
 from typing import List, Optional, Literal
 
 from daf.logging.tracing import TraceLEVELS, trace
+from daf.misc import instance_track as it
 
 from .convert import *
 from .utilities import *
@@ -56,19 +57,19 @@ class AbstractConnectionCLIENT:
 
         Parameters
         --------------
-        account: daf.client.ACCOUNT
+        account: obj: ObjectInfo[daf.client.ACCOUNT]
             The account to add.
         """
         raise NotImplementedError
 
-    async def remove_account(self, account: daf.client.ACCOUNT):
+    async def remove_account(self, account_ref: it.ObjectReference):
         """
         Logs out and removes account from DAF.
 
-        Paramterers
+        Parameters
         ----------------
-        account: daf.client.ACCOUNT
-            The account to remove from DAF.
+        account_ref: it.ObjectReference
+            The reference to account to remove.
         """
         raise NotImplementedError
 
@@ -84,25 +85,25 @@ class AbstractConnectionCLIENT:
         """
         raise NotImplementedError
 
-    async def refresh(self, object_: object) -> object:
+    async def refresh(self, object_ref: it.ObjectReference) -> object:
         """
         Returns updated state of the object.
 
         Parameters
         ------------
-        object_: object
-            The object that we want to refresh.
+        object_ref
+            Reference to an object to refresh.
         """
         raise NotImplementedError
 
-    async def execute_method(self, object_: object, method_name: str, **kwargs):
+    async def execute_method(self, object_ref: it.ObjectReference, method_name: str, **kwargs):
         """
         Executes a method inside object and returns the result.
 
         Parameter
         -----------
-        object_: object
-            The object to execute the method on.
+        object_ref
+            Reference to an object to execute method on.
         method_name: str
             The name of the method to execute.
         args: Any
@@ -126,6 +127,17 @@ class LocalConnectionCLIENT(AbstractConnectionCLIENT):
         GLOBALS.connection = self  # Set self as global connection
         self.connected = True
 
+    def _convert_ids(self, obj):
+        if isinstance(obj, dict):
+            return {k: self._convert_ids(v) for k, v in obj.items()}
+        if isinstance(obj, list):
+            return [self._convert_ids(x) for x in obj]
+
+        if isinstance(obj, it.ObjectReference):
+            return it.get_by_id(obj.ref)
+
+        return obj
+
     async def shutdown(self):
         await daf.shutdown()
         self.connected = False
@@ -133,8 +145,8 @@ class LocalConnectionCLIENT(AbstractConnectionCLIENT):
     def add_account(self, obj: daf.client.ACCOUNT):
         return daf.add_object(obj)
 
-    def remove_account(self, account: daf.client.ACCOUNT):
-        return daf.remove_object(account)
+    def remove_account(self, account_ref: it.ObjectReference):
+        return daf.remove_object(it.get_by_id(account_ref.ref))
 
     async def get_accounts(self) -> List[daf.client.ACCOUNT]:
         return daf.get_accounts()
@@ -142,11 +154,11 @@ class LocalConnectionCLIENT(AbstractConnectionCLIENT):
     async def get_logger(self) -> daf.logging.LoggerBASE:
         return daf.get_logger()
 
-    async def refresh(self, object_: object) -> object:
-        return object_  # Local connection can just use the local object
+    async def refresh(self, object_ref: it.ObjectReference):
+        return it.get_by_id(object_ref.ref)  # Local connection can just use the local object
 
-    async def execute_method(self, object_: object, method_name: str, **kwargs):
-        result = getattr(object_, method_name)(**kwargs)
+    async def execute_method(self, object_ref: it.ObjectReference, method_name: str, **kwargs):
+        result = getattr(it.get_by_id(object_ref.ref), method_name)(**self._convert_ids(kwargs))
         if isinstance(result, Coroutine):
             result = await result
 
@@ -173,6 +185,8 @@ class RemoteConnectionCLIENT(AbstractConnectionCLIENT):
         Defaults to True. If True, connection will be refused when the certificate does not match the host name.
     """
     TIMEOUT = 10 * 60  # * seconds / minute
+
+    __passwords__ = ("password", )
 
     def __init__(
         self,
@@ -228,12 +242,15 @@ class RemoteConnectionCLIENT(AbstractConnectionCLIENT):
 
     async def add_account(self, obj: daf.client.ACCOUNT):
         trace("Logging in.")
-        response = await self._request("POST", "/accounts", account=daf.convert.convert_object_to_semi_dict(obj))
+        response = await self._request(
+            "POST", "/accounts",
+            account=daf.convert.convert_object_to_semi_dict(obj)
+        )
         trace(response["message"])
 
-    async def remove_account(self, account: daf.client.ACCOUNT):
+    async def remove_account(self, account_ref: it.ObjectReference):
         trace("Removing remote account.")
-        response = await self._request("DELETE", "/accounts", account_id=account._daf_id)
+        response = await self._request("DELETE", "/accounts", account_id=account_ref.ref)
         trace(response["message"])
 
     async def get_accounts(self) -> List[daf.client.ACCOUNT]:
@@ -244,18 +261,15 @@ class RemoteConnectionCLIENT(AbstractConnectionCLIENT):
         response = await self._request("GET", "/logging")
         return daf.convert.convert_from_semi_dict(response["result"]["logger"])
 
-    async def refresh(self, object_: object):
-        response = await self._request("GET", "/object", object_id=object_._daf_id)
+    async def refresh(self, object_ref: it.ObjectReference):
+        response = await self._request("GET", "/object", object_id=object_ref.ref)
         return daf.convert.convert_from_semi_dict(response["result"]["object"])
 
-    async def execute_method(self, object_: object, method_name: str, **kwargs):
+    async def execute_method(self, object_ref: it.ObjectReference, method_name: str, **kwargs):
         kwargs = daf.convert.convert_object_to_semi_dict(kwargs)
-
-        response = await self._request("POST", "/method", object_id=object_._daf_id, method_name=method_name, **kwargs)
+        response = await self._request("POST", "/method", object_id=object_ref.ref, method_name=method_name, **kwargs)
         message = response.get("message")
-        if message is not None:
-            trace(message, TraceLEVELS.DEBUG)
-
+        trace(message, TraceLEVELS.NORMAL)
         return daf.convert.convert_from_semi_dict(response["result"]["result"])
 
     def _ping(self):

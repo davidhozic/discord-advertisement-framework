@@ -66,7 +66,7 @@ The web layer beside login with username and password, also allows (semi) automa
 
 To use this feature, users need to create an :class:`~daf.guild.AutoGUILD` instance, where they pass the ``auto_join``
 parameter. ``auto_join`` parameter is a :class:`~daf.web.GuildDISCOVERY` object, which can be configured how it should
-search for new guilds.
+search for new guilds. DAF will join a new guild every 45 seconds until the limit is reached.
 
 .. warning::
     

@@ -53,3 +53,8 @@ file = [
 where = [
     "src"
 ]
+
+[tool.pytest.ini_options]
+markers = [
+    "group_remote",
+]
