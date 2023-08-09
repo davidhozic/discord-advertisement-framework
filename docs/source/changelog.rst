@@ -66,6 +66,17 @@ v2.10
   - A warning is shown besides the method execution frame to let users know, the data is not preserved.
 
 
+v2.9.7
+=================
+- Fixed channels not being visible though GUI, when using SQL logging.
+
+
+v2.9.6
+=================
+- Fixed crash if ``start_period`` is larger than ``end_period``.
+- Fixed local update not showing errors if updating objects under AutoGUILD
+
+
 v2.9.5
 =================
 - Fixed incorrect caching of the SQL logs, causing incorrect values to be returned back to the GUI.

@@ -236,14 +236,11 @@ class MessageChannelLOG(ORMBase):
         self.channel = channel
         self.reason = reason
 
-    def __eq__(self, __value: object) -> bool:
-        return (
-            isinstance(__value, MessageChannelLOG) and
-            (self.channel_id, self.log_id) == (__value.channel_id, __value.log_id)
-        )
+    def __eq__(self, value: object) -> bool:
+        return self is value  # Can't compare by ID due to circular links, which ORM ignores.
 
     def __hash__(self):
-        return hash((self.channel_id, self.log_id))
+        return id(MessageChannelLOG)
 
 
 class MessageLOG(ORMBase):
