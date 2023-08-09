@@ -1055,7 +1055,7 @@ class AutoGUILD:
         selenium: web.SeleniumCLIENT = self.parent.selenium
         client: discord.Client = self.parent.client
         if (
-            discovery is None or  # No auto_join provided
+            self.guild_query_iter is None or  # No auto_join provided or iterated though all guilds
             self.guild_join_count == discovery.limit or
             datetime.now() - self.last_guild_join < GUILD_JOIN_INTERVAL or
             len(client.guilds) == GUILD_MAX_AMOUNT
@@ -1063,24 +1063,22 @@ class AutoGUILD:
             return
 
         async def get_next_guild():
-            for i in range(2):
-                try:
-                    # Get next result from top.gg
-                    yielded: web.QueryResult = await self.guild_query_iter.__anext__()
-                    if (
-                        re.search(self.include_pattern, yielded.name) is None or
-                        (
-                            self.exclude_pattern is not None and
-                            re.search(self.exclude_pattern, yielded.name) is not None
-                        )
-                    ):
-                        return None
+            try:
+                # Get next result from top.gg
+                yielded: web.QueryResult = await self.guild_query_iter.__anext__()
+                if (
+                    re.search(self.include_pattern, yielded.name) is None or
+                    (
+                        self.exclude_pattern is not None and
+                        re.search(self.exclude_pattern, yielded.name) is not None
+                    )
+                ):
+                    return None
 
-                    return yielded
-                except StopAsyncIteration:
-                    self.guild_query_iter = discovery._query_request()
-                    trace("Iterated though all found guilds -> repeating iteration.", TraceLEVELS.DEBUG)
-                    await asyncio.sleep(3)
+                return yielded
+            except StopAsyncIteration:
+                trace(f"Iterated though all found guilds -> stopping guild join in {self}.", TraceLEVELS.NORMAL)
+                self.guild_query_iter = None
 
         if (yielded := await get_next_guild()) is None:
             return
