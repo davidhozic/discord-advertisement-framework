@@ -34,27 +34,40 @@ Releases
 
 v2.10
 ====================
-- Intents:
+
+- Accounts:
   
-  - Added warnings for missing intents.
-  - Intents.members is by default now disabled.
+  - Intents:
 
-- |BREAK_CH| Removed deprecated feature - YouTube streaming.
-- Deprecated :class:`daf.dtypes.AUDIO`, replaced with :class:`daf.dtypes.FILE`.
-- :class:`daf.dtypes.FILE` now accepts binary data as well and will load the data from ``filename`` at creation
-  if the ``data`` parameter is not given.
-- Moderation timeout handling (messages resume one minute after moderation timeout expiry)
-- :class:`~daf.message.TextMESSAGE` and :class:`~daf.message.VoiceMESSAGE`'s ``remove_after`` parameter:
+    - Added warnings for missing intents.
+    - Intents.members is by default now disabled.
 
-  - If integer, it will now work independently for each channel and will only decrement on successful sends.
-  - If :class:`~datetime.datetime` or :class:`~datetime.timedelta`, it will work the same as before.
+- Messages:
 
-- New property: :py:attr:`~daf.message.TextMESSAGE.remaining_before_removal`, :py:attr:`~daf.message.VoiceMESSAGE.remaining_before_removal`,
-  :py:attr:`~daf.message.DirectMESSAGE.remaining_before_removal`
-- New parameter: ``auto_publish`` to :class:`~daf.message.TextMESSAGE` for automatically publishing messages sent to
-  announcement (news) channels.
-- Time between each guild join is now 45 seconds.
-- Selenium can now be used though remote, however it is not recommended.
+  - |BREAK_CH| Removed deprecated feature - YouTube streaming, in favor of faster startups and installation time. 
+  - New property: :py:attr:`~daf.message.TextMESSAGE.remaining_before_removal`,
+    :py:attr:`~daf.message.VoiceMESSAGE.remaining_before_removal`,
+    :py:attr:`~daf.message.DirectMESSAGE.remaining_before_removal`
+  - New parameter: ``auto_publish`` to :class:`~daf.message.TextMESSAGE` for automatically publishing messages sent to
+    announcement (news) channels.
+
+  - :class:`~daf.message.TextMESSAGE` and :class:`~daf.message.VoiceMESSAGE`'s ``remove_after`` parameter:
+
+    - If integer, it will now work independently for each channel and will only decrement on successful sends.
+    - If :class:`~datetime.datetime` or :class:`~datetime.timedelta`, it will work the same as before.
+
+  - Moderation timeout handling (messages resume one minute after moderation timeout expiry)
+  - Message content:
+
+    - Deprecated :class:`daf.dtypes.AUDIO`, replaced with :class:`daf.dtypes.FILE`.
+    - :class:`daf.dtypes.FILE` now accepts binary data as well and will load the data from ``filename`` at creation
+      if the ``data`` parameter is not given.
+
+- Web browser (Selenium):
+
+  - Time between each guild join is now 45 seconds.
+  - Selenium can now be used though remote, however it is not recommended.
+  - Querying for new guilds will not repeat once no more guilds are found.
 
 - GUI:
 
@@ -64,6 +77,7 @@ v2.10
   - View properties of trackable objects. This can be used to, eg. view the channels AutoCHANNEL found.
   - 'Load default' button when editing :class:`discord.Intents` object.
   - A warning is shown besides the method execution frame to let users know, the data is not preserved.
+  - Fixed accounts not being deleted when using delete / backspace keys in live view.
 
 
 v2.9.7

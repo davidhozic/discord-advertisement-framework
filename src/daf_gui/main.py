@@ -346,10 +346,10 @@ class Application():
         list_live_objects.pack(fill=tk.BOTH, expand=True)
         self.list_live_objects = list_live_objects
         # The default bind is removal from list and not from actual daf.
-        list_live_objects.unbind("<BackSpace>")
-        list_live_objects.unbind("<Delete>")
-        list_live_objects.bind("<BackSpace>", lambda e: remove_account())
-        list_live_objects.bind("<Delete>", lambda e: remove_account())
+        list_live_objects.listbox.unbind_all("<BackSpace>")
+        list_live_objects.listbox.unbind_all("<Delete>")
+        list_live_objects.listbox.bind("<BackSpace>", lambda e: remove_account())
+        list_live_objects.listbox.bind("<Delete>", lambda e: remove_account())
 
     def init_output_tab(self):
         self.tab_output = ttk.Frame(self.tabman_mf)

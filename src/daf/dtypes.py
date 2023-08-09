@@ -77,7 +77,7 @@ def data_function(fnc: Callable):
 
     .. literalinclude:: ../../DEP/main_data_function.py
         :language: python
-        :emphasize-lines: 11, 24
+        :emphasize-lines: 12, 24
     """
 
     class FunctionCLASS(_FunctionBaseCLASS):
