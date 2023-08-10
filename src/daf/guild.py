@@ -441,6 +441,10 @@ class GUILD(_BaseGUILD):
             the ``intents`` parameters of :class:`daf.client.ACCOUNT`.
             This is a **privileged intent** that also needs to be enabled though Discord's developer portal for each bot.
             After it is enabled, you can set it to True .
+
+            Invites intent is also needed. Enable it by setting ``invites`` to True inside
+            the ``intents`` parameter of :class:`~daf.client.ACCOUNT`.
+
     """
     __slots__ = (
         "update_semaphore",
