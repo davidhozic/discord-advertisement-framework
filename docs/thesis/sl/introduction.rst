@@ -21,7 +21,7 @@ Najpogosteje predstavljajo digitalna umetniška dela :ref:`nft_what_is`.
     Primer nezameljivega žetona (ustvaril `DALL-E <https://openai.com/dall-e-2/>`_)
 
 
-Nezamenljivost pomeni, da posameznega žetona ni mogoče preprosto zamenjati za drugo, kot se lahko menja
+Nezamenljivost pomeni, da posameznega žetona ni mogoče preprosto zamenjati za drugega, kot se lahko menja
 sod olja za drug sod olja ali en evro za drug evro.
 
 Najbližji primer nezamenljivega žetona v fizični obliki je bejzbolska kartica. Na primer, lahko imate zelo redko

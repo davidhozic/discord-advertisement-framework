@@ -68,8 +68,8 @@ kot vhod damo primerjavo dveh seznamov.
 
     assert [1, 2, 3] == [1, 2, 3, 4, 5, 6]
 
-Iz zgornjega testa je očitno, da to ne drži in da bo test neuspel, ampak v assertu nimamo nobene
-:func:`print` funkcije, ki bi izpisala kaj je šlo narobe, tako da bi pričakovali da pytest vrne samo informacijo da test ni uspel.
+Iz zgornjega testa je očitno, da to ne drži in da bo test dvignil napako, ampak v assertu nimamo nobenega
+besedila, da bi se izpisalo kaj je šlo narobe, tako da bi pričakovali da pytest vrne samo informacijo da test ni uspel.
 Izkaže se, da nam bo pytest izpisal točno kateri elementi se v seznamu razlikujejo.
 
 .. raw:: latex
@@ -101,6 +101,11 @@ Izkaže se, da nam bo pytest izpisal točno kateri elementi se v seznamu razliku
     E         + [1, 2, 3]
 
     test.py:6: AssertionError
+
+
+.. raw:: latex
+
+    \newpage
 
 
 Testiranje ogrodja
