@@ -26,7 +26,7 @@ AsyncIO
 ===============
 Jedro ogrodja je zasnovano za sočasno (angl. *concurrent*) večopravilnost, kar pomeni da se lahko na videz več opravil izvaja na enkrat, v
 resnici pa se med njimi zelo hitro preklaplja. To je omogočeno s knjižnico :mod:`asyncio`.
-AsyncIO omogoča ustvarjanje ``async`` funkcij, ki vrnejo korutine (angl. coroutine). Te korutine lahko potem zaženemo v opravilih,
+AsyncIO omogoča ustvarjanje ``async`` funkcij, ki vrnejo korutine (angl. *coroutine*). Te korutine lahko potem zaženemo v opravilih,
 med katerimi bo program preklopil vsakič, ko v trenutnem opravilu z ``await`` besedo na primer čakamo:
 
 - na konec neke asinhrone komunikacije (angl. *Async I/O*)
