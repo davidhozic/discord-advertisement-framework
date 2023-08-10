@@ -73,6 +73,8 @@ class ACCOUNT:
         .. warning::
 
             For invite link tracking to work, it is required to set ``members`` intents to True.
+            Invites intent is also needed. Enable it by setting ``invites`` to True inside
+            the ``intents`` parameter of :class:`~daf.client.ACCOUNT`.
 
             Intent ``guilds`` is also required for AutoGUILD and AutoCHANNEL, however it is automatically forced
             to True, as it is not a priveleged intent.
