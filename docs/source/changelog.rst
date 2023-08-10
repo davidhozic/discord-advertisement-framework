@@ -34,6 +34,16 @@ Releases
 
 v2.10
 ====================
+- GUI:
+
+  - GUI can now be started with ``python -m daf_gui``
+  - Deprecation notices are now a button.
+  - Certain fields are now masked with '*' when not editing the object.
+  - Old data that is being updated will now be updated by index
+  - View properties of trackable objects. This can be used to, eg. view the channels AutoCHANNEL found.
+  - 'Load default' button when editing :class:`discord.Intents` object.
+  - A warning is shown besides the method execution frame to let users know, the data is not preserved.
+  - Fixed accounts not being deleted when using delete / backspace keys in live view.
 
 - Accounts:
   
@@ -68,16 +78,6 @@ v2.10
   - Time between each guild join is now 45 seconds.
   - Selenium can now be used though remote, however it is not recommended.
   - Querying for new guilds will not repeat once no more guilds are found.
-
-- GUI:
-
-  - deprecation notices are now a button.
-  - Certain fields are now masked with '*' when not editing the object.
-  - Old data that is being updated will now be updated by index
-  - View properties of trackable objects. This can be used to, eg. view the channels AutoCHANNEL found.
-  - 'Load default' button when editing :class:`discord.Intents` object.
-  - A warning is shown besides the method execution frame to let users know, the data is not preserved.
-  - Fixed accounts not being deleted when using delete / backspace keys in live view.
 
 
 v2.9.7

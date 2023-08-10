@@ -5,11 +5,19 @@ This page contains information to quickly getting started with the GUI.
 
 The first thing you need is the library installed, see :ref:`Installation`.
 
-After successful installation, DAF can be run in graphical mode by executing the command ``daf-gui`` command inside the terminal.
+After successful installation, DAF can be run in graphical mode by executing the command ``daf-gui`` command inside the terminal
 
 .. code-block:: bash
 
     $ daf-gui
+
+or by using ``python -m daf_gui`` command.
+
+
+.. code-block:: bash
+
+    $ python -m daf_gui
+
 
 On Windows it can also be started though the Run (Win + R) menu.
 
