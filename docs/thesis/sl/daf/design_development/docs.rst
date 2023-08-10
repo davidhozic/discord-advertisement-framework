@@ -16,7 +16,7 @@ na spletni strani [#daf_web_page]_.
 .. [#daf_web_page] Na voljo na: https://daf.davidhozic.com/en/v2.9.x/.
 
 Na voljo je v spletni obliki (HTML), kot tudi lokalni obliki (PDF), ki se jo lahko prenese tako, da se na spletni strani dokumentacije
-kurzor premakne levo spodaj strani nad verzijo dokumentacije in zatem klikne *PDF*.
+kurzor premakne na levi spodnji del strani nad verzijo dokumentacije in zatem klikne *PDF*.
 
 
 .. figure:: ./DEP/doc-pdf-download.png
@@ -27,7 +27,7 @@ kurzor premakne levo spodaj strani nad verzijo dokumentacije in zatem klikne *PD
 
 Sphinx
 ----------------
-Sistem, uporabljen za grajenje dokumentacije projekta, se imenuje :ref:`Sphinx`.
+Sistem, uporabljen za grajenje dokumentacije projekta, se imenuje Sphinx.
 Sphinx je popularno orodje med Python razvijalci za generiranje dokumentacije v več formatih.
 Razvijalcem omogoča ustvarjanje profesionalne dokumentacije za lastne projekte, kar je nuja pri javnih projektih.
 

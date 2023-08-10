@@ -21,8 +21,8 @@ Je priljubljena platforma, ki uporabnikom omogoča komunikacijo preko glasovnega
 Pogosto se uporablja za različne namene, vključno z razpravljanjem o umetniških projektih, načrtovanjem družinskih izletov, iskanjem pomoči pri domačih nalogah.
 Prav tako ima dobro funkcijo iskanja vsebine, ki je bila nekoč objavljena, ki je je na primer uporabna za iskanje primera dispozicije diplomske naloge, ki ga je nekdo objavil pred tremi meseci.
 
-Čeprav lahko Discord služi kot dom skupnostim vseh velikosti, je še posebej priljubljen med manjšimi, aktivnimi skupinami, ki med seboj pogosto komunicirajo.
-Večina skupnosti (strežniki / cehi) je zasebnih in zahtevajo povabilo za vstop, kar omogoča prijateljem in skupnostim, da ostanejo povezani.
+Čeprav lahko Discord služi kot dom skupnostim vseh velikosti, je še posebej priljubljen med manjšimi aktivnimi skupinami, ki med seboj pogosto komunicirajo.
+Večina skupnosti (strežnikov / cehov) je zasebnih in zahtevajo povabilo za vstop, kar omogoča prijateljem in skupnostim, da ostanejo povezani.
 Vendar pa obstajajo tudi večje, bolj javne skupnosti, osredotočene na določene teme, kot so priljubljene videoigre
 ali pa, v primeru te naloge, stvari kot sta veriga blokov (angl. *blockchain*) in NFT.
 Uporablja se lahko tudi kot skupnost fakultete, kjer študenti lahko govorijo preko glasovnih kanalov, delijo študijske materiale
@@ -110,7 +110,7 @@ oglaševanja prisotni v kanalu.
 
 Direktna oz. osebna sporočila so namenjena komunikaciji ena na ena med dvema uporabnikoma.
 Pošiljanje v te bi sicer prineslo veliko dosega uporabnikov, vendar je oglaševanje v direktna sporočila na
-vsiljiv način prepovedano v Discordovih pogojih uporabe, kar pomeni da lahko v tem primeru Discord ukine uporabnikov račun.
+vsiljiv oz. agresiven način prepovedano v Discordovih pogojih uporabe, kar pomeni da lahko v tem primeru Discord ukine uporabnikov račun.
 
 .. figure:: ./DEP/discord_direct_message_channel.png
 
@@ -122,7 +122,7 @@ Oglaševanje po Discordu
 ==========================
 Po Discordu se lahko oglašuje širok nabor tem, med katerimi so
 video igre, kreativni projekti, produkti, usluge, ipd. Ne sme pa se oglaševati nelegalnih vsebin oz. vsebin,
-ki spodbujajo kršenje zakona in vsebin, ki bi lahko povzročijo škodo posameznikom :ref:`discord_guidelines`.
+ki spodbujajo kršenje zakona in vsebin, ki bi lahko povzročile škodo posameznikom :ref:`discord_guidelines`.
 
 Oglašuje se lahko ročno ali pa avtomatično s primernim orodjem.
 Oglaševanje vključuje pisanje vsebine oglasa, ustvarjanje uporabniških računov, iskanje cehov kamor se z uporabniškimi računi pridruži,

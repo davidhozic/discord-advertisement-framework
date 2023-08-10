@@ -24,9 +24,9 @@ da se to datoteko generira iz grafičnega vmesnika (:ref:`Zasnova in razvoj graf
 
 AsyncIO
 ===============
-Jedro ogrodja je zasnovano za konkurenčno (angl. *concurrent*) delovanje, kar pomeni da se lahko na videz več opravil izvaja na enkrat, v
-resnici pa se zelo hitro preklaplja med njimi. To je omogočeno s knjižnico :mod:`asyncio`.
-AsyncIO omogoča ustvarjanje ``async`` funkcij, ki vrnejo korutine. Te korutine lahko potem zaženemo v opravilih,
+Jedro ogrodja je zasnovano za sočasno (angl. *concurrent*) večopravilnost, kar pomeni da se lahko na videz več opravil izvaja na enkrat, v
+resnici pa se med njimi zelo hitro preklaplja. To je omogočeno s knjižnico :mod:`asyncio`.
+AsyncIO omogoča ustvarjanje ``async`` funkcij, ki vrnejo korutine (angl. coroutine). Te korutine lahko potem zaženemo v opravilih,
 med katerimi bo program preklopil vsakič, ko v trenutnem opravilu z ``await`` besedo na primer čakamo:
 
 - na konec neke asinhrone komunikacije (angl. *Async I/O*)
@@ -36,6 +36,7 @@ med katerimi bo program preklopil vsakič, ko v trenutnem opravilu z ``await`` b
 
 .. [#asyncio_semaphore] Semafor je mehanizem za sinhronizacijo opravil, kjer omejimo koliko opravil lahko naenkrat dostopa do nekega zaščitenega
    dela kode oz. skupne surovine. https://docs.python.org/3/library/asyncio-sync.html.
+
 
 
 .. raw:: latex
@@ -83,7 +84,7 @@ Ogrodje samo po sebi deluje tako, da ima vse objekte (račune, cehe, sporočila,
 ob taki definiciji neproblematično, problem pa je nastopil, ko je bilo dodano dinamično dodajanje in brisanje objektov, kar
 dejansko uporabnikom omogoča, da ogrodje dinamično uporabljajo in v tem primeru je bilo potrebno dodati neke vrste permanentno shrambo.
 Razmišljalo se je o več alternativah, ena izmed njih je bila da bi se vse objekte shranjevalo v neko bazo podatkov, ki bi omogočala
-mapiranje podatkov v bazi, kar bi z vidika robustnosti bila zelo dobra izbira, a to bi zahtevalo veliko prenovo
+preslikavo bazičnih podatkov v objekte, kar bi z vidika robustnosti bila zelo dobra izbira, a to bi zahtevalo veliko prenovo
 vseh sektorjev, zato se je na koncu izbrala preprosta opcija shranjevanja objektov, ki preko :mod:`pickle` modula shrani vse račune
 ob vsakem normalnem izklopu ogrodja, ali pa v vsakem primeru na dve minuti periodično. V prihodnosti so
 še vedno načrti za izboljšanje tega mehanizma in ne izključuje se uporaba prej omenjene podatkovne baze.
@@ -162,7 +163,7 @@ v primeru beleženja sporočil (vsaj v primeru JSON datotek), kjer je vse razdel
 
 Sporočilni sektor
 -----------------
-Sporočilni sektor je zadolžen za pošiljanje dejanskih sporočil v posamezne kanale na Discordu.
+Sporočilni sektor je zadolžen za pošiljanje dejanskih sporočil v posamezne kanale.
 V tem sektorju so na voljo trije glavni razredi za ustvarjanje različnih vrst sporočil:
 
 1. |TextMESSAGE| - pošiljanje tekstovnih sporočil v cehovske kanale
@@ -185,9 +186,9 @@ To je še posebno pomembno v primeru, da imamo definiranih veliko sporočil v en
 poslalo točno ob določenem času. Ker se čas prišteva od prejšnjega predvidenega časa pošiljanja, to pomeni, da bo v primeru
 zamude sporočila razmak med tem in naslednjim sporočilom manjši točno za to časovno napako (če privzamemo da ne bo ponovne zakasnitve).
 
-Pred tem algoritmom, je za določanje časa pošiljanja bil v rabi preprost časovnik, ki se je ponastavil po vsakem pošiljanju, a se je zaradi Discordove
-omejitve API zahtevkov in tudi drugih Discord API zakasnitev, čas pošiljanja vedno pomikal malo naprej, kar je pomenilo, da če je uporabnik
-ogrodje konfiguriral da se neko sporočilo pošlje vsak dan in definiral čas začetka naslednje jutro ob 10ih (torej pošiljanje vsak dan ob tej uri),
+Pred tem algoritmom je bil za določanje časa pošiljanja v rabi preprost časovnik, ki se je ponastavil po vsakem pošiljanju, a se je zaradi Discordove
+omejitve API zahtevkov in tudi drugih Discord API zakasnitev čas pošiljanja vedno pomikal malo naprej, kar je pomenilo, da če je uporabnik
+ogrodje konfiguriral, da se neko sporočilo pošlje vsak dan in definiral čas začetka naslednje jutro ob 10ih (torej pošiljanje vsak dan ob tej uri),
 potem je po (sicer veliko) pošiljanjih namesto ob 10ih uporabnik opazil, da se sporočilo pošlje ob 10.01, 10.02, itd.
 Primer računanja časa in odprave časovne napake je prikazan na spodnji sliki.
 
@@ -262,7 +263,7 @@ datoteko.
 
 CSV beleženje
 ~~~~~~~~~~~~~~~~~~
-CSV beleženje deluje na enak način kot JSON beleženje. Edina razlika je v formatu, kjer je format tu CSV.
+CSV beleženje deluje na enak način kot JSON beleženje. Edina razlika je v formatu, kjer je ta v tem primeru CSV.
 Lokacija datotek je enaka kot pri JSON beleženje. Za shranjevanje je uporabljen vgrajen Python modul :mod:`csv`.
 
 Za sam pregled poslanih sporočil to ni najbolj primeren format, saj se vse shrani v eni datoteki, kjer za razliko od JSON
@@ -276,18 +277,19 @@ formata, tu ni več-slojnih strukture.
 
 SQL beleženje
 ~~~~~~~~~~~~~~~~~~
-SQL beleženje pa deluje precej drugače, kot delujeta JSON beleženje in CSV beleženje, saj se podatki shranjujejo
+SQL beleženje deluje precej drugače, kot delujeta JSON beleženje in CSV beleženje, saj se podatki shranjujejo
 v podatkovno bazo, ki je v primeru uporabe SQLite dialekta lahko tudi datoteka.
 
 Beleženje je omogočeno v štirih SQL dialektih:
 
 1. SQLite
-2. Microsoft SQL Server
+2. Microsoft SQL Server (T-SQL)
 3. PostgreSQL
 4. MySQL / MariaDB
 
 Za čim bolj univerzalno implementacijo na vseh dialektih, je bila pri razvoju uporabljena knjižnica :mod:`SQLAlchemy`.
-Celoten sistem SQL beleženja je implementiran s pomočjo ORM, kar med drugim omogoča tudi
+
+Celoten sistem SQL beleženja je implementiran s pomočjo ORM, kar med drugim omogoča,
 da SQL tabele predstavimo z Python razredi, posamezne vnose v bazo podatkov oz. vrstice pa predstavimo z instancami
 teh razredov. Z ORM lahko skoraj v celoti skrijemo SQL in delamo neposredno z Python objekti, ki so lahko tudi gnezdene
 strukture, npr. vnosa dveh ločenih tabel lahko predstavimo z dvema ločenima instancama, kjer je ena instanca 
@@ -344,5 +346,5 @@ PyCord je odprtokodno ogrodje, ki je nastalo iz kode starejšega `discord.py <ht
 Ogrodje PyCord skoraj popolnoma zakrije Discord API z raznimi objekti, ki jih ogrodje interno uporablja.
 
 Če bi si ogledali izvorno kodo (angl. *source code*) ogrodja, bi opazili da je poleg ``daf`` paketa zraven tudi paket z imenom ``_discord``.
-To ni nič drugega kot PyCord ogrodje, le da je modificirano za možnost rabe na osebnih uporabniških računih.
+To ni nič drugega kot PyCord ogrodje, le da je modificirano za možnost rabe na uporabniških računih (poleg avtomatiziranih robotskih računov).
 

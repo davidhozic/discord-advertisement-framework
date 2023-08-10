@@ -23,7 +23,7 @@ Tkinter knjižnica je v osnovi vmesnik na Tcl/Tk orodja za izdelavo grafičnih v
 ki še dodatno razširijo delovanje knjižnice.
 Omogoča definicijo različnih pripomočkov (angl. *widgets*), ki se jih da dodatno razširiti in shraniti pod nove
 pripomočke, katere lahko večkrat uporabimo. Ti pripomočki so na primer :class:`~tkinter.ttk.Combobox`, ki je neke vrste 
-(angl.) "drop-down" meni, :class:`~tkinter.ttk.Spinbox` za vnašanje številskih vrednosti, gumbi :class:`~tkinter.ttk.Button`, itd.
+(angl.) "drop-down" meni, :class:`~tkinter.ttk.Spinbox` za vnašanje številskih vrednosti, :class:`~tkinter.ttk.Button` za gumbe, ipd.
 Posamezne pripomočke se da tudi znatno konfigurirati, kjer lahko spreminjamo stile, velikost, pisavo, ipd :ref:`tkinter_py_docs`.
 
 Pred izbiro Tkinter knjižnice je bila ena izmed možnosti tudi knjižnica PySide (QT), a na koncu se je vseeno obnesla Tkinter
@@ -40,8 +40,8 @@ Grafični vmesnik ogrodja je razdeljen na več zavihkov, kjer je vsak namenjen l
 
 *Optional modules* zavihek
 -----------------------------
-*Optional modules* zavihek omogoča namestitev dodatnih modulov, ki v osnovnem paketu ogrodja niso prisotni (zaradi hitrejšega zagona).
-Sestavljen je iz statusnih panelov, ki če so rdeči (modul ni nameščen) vsebuje še gumb za namestitev.
+*Optional modules* zavihek omogoča namestitev dodatnih modulov, ki jih osnovni paket ogrodja pogreša (zaradi hitrejšega zagona).
+Sestavljen je iz statusnih panelov, ki v primeru da so rdeči (modul ni nameščen), vsebujejo še gumb za namestitev.
 Gumb bo namestil potrebne pakete, potem pa bo uporabniku sporočeno, da mora za spremembe ponovno odpreti vmesnik.
 Po ponovnem zagonu bo statusni panel za posamezen modul obarvan zeleno.
 
@@ -54,15 +54,15 @@ Po ponovnem zagonu bo statusni panel za posamezen modul obarvan zeleno.
 -----------------------------
 *Schema definition* omogoča definicijo uporabniških računov (in v njih cehov, sporočil, ipd.), definicijo upravljalnika za beleženje,
 izbiro globine izpisov na konzoli in konfiguracijo povezave do jedra ogrodja.
-Omogoča tudi shrambo teh definicij v JSON datoteko, branje definicij iz JSON datoteke in pa generacijo ekvivalentne
-Python datoteke, ki požene le jedro orodja (brez grafičnega vmesnika).
+Omogoča tudi shrambo teh definicij v JSON datoteko, branje definicij iz JSON datoteke in generacijo ekvivalentne
+Python datoteke (konfiguracijske datoteke jedra), ki požene le jedro orodja (brez grafičnega vmesnika).
 Pravzaprav je ta zavihek namenjen definiciji neke predloge, ki jo lahko potem uvozimo v jedro ogrodja.
 Izgled je prikazan na :numref:`fig-gui-front`.
 
 Omogoča tudi dinamično branje in dodajanje objektov v že zagnanem vmesniku preko gumbov, ki vsebujejo besedo *live*.
 
 Uporabniške račune (in ostale objekte) se lahko definira z klikom na opcijski meni *Object options*, in opcijo *New ACCOUNT*.
-Ob kliku se odpre novo okno, ki je avtomatično in dinamično generirano iz podatkov o podatkovnih tipih (anotacij), ki jih sprejme
+Ob kliku se odpre novo okno, ki je avtomatično in dinamično generirano iz podatkov o podatkovnih tipih, ki jih sprejme
 razred ob definiciji. Za vsak parameter se generirajo oznaka, opcijski meni in opcijski gumb, v katerem lahko urejamo izbrano vrednost
 oz. definiramo novo vrednost.
 
@@ -72,7 +72,7 @@ oz. definiramo novo vrednost.
 
     Definicija uporabiškega računa
 
-Shranjevanje sheme (predloge) v datoteko in nalaganje sheme iz datoteke in generiranje ekvivalentne Python datoteke
+Shranjevanje sheme (predloge) v datoteko, nalaganje sheme iz datoteke in generiranje ekvivalentne Python datoteke
 je možno preko opcijskega menija *Schema*. Datoteka, kamor se shrani shema je datoteka formata JSON in vsebuje
 definirane račune, objekte za beleženje sporočil, objekte za povezovanje z jedrom ipd.
 Vsi objekti znotraj grafičnega vmesnika, pravzaprav niso pravi Python objekti ampak so dodaten nivo abstrakcije, ki je sestavljen
@@ -147,21 +147,21 @@ Za pridobitev statistike se uporabi gumb *Calculate*, ki na podlagi opcijskega m
 Povezava grafičnega vmesnika z jedrom ogrodja
 =====================================================
 Grafični vmesnik lahko s stališča lokacije delovanja deluje na dva načina. Prvi je lokalen način, kjer grafični vmesnik
-jedro ogrodja zažene na istem računalniku, kjer deluje grafični vmesnik. Drugi način pa je oddaljen
-režim delovanja, kjer se grafični vmesnik poveže na HTTP strežnik, kateri deluje znotraj jedra ogrodja in na ta strežnik
-pošilja HTTP ukaze, ki se v jedru mapirajo na programski vmesnik. Koncept je prikazan na :numref:`gui-core-connection`
+jedro ogrodja zažene na istem računalniku. Drugi način je oddaljen režim delovanja,
+kjer se grafični vmesnik poveže na HTTP strežnik, kateri deluje znotraj jedra ogrodja in na ta strežnik
+pošilja zahtevke, ki se v jedru potem preslikajo na programski vmesnik. Koncept je prikazan na :numref:`gui-core-connection`
 
 V primeru oddaljenega dostopa se podatki serializirajo v JSON reprezentacijo, kjer so navadne vrednosti neposredno serializirane v JSON format,
-večina objektov pa v slovar (:class:`dict`), kjer je sta slovarju zapisana pot do podatkovnega tipa (razreda) objekta in njegovi attributi.
+večina objektov pa v slovar (:class:`dict`), kjer je sta slovarju zapisana pot do podatkovnega tipa (razreda) objekta in njegovi atributi.
 Obstaja nekaj izjem pri serializaciji objektov, kjer je ena izmed teh :class:`~datetime.datetime` tip objekta, ki se serializira v besedilo po standardu ISO 8601.
 Pretvorbo v končno JSON reprezentacijo opravlja vgrajena knjižnica :mod:`json`, medtem ko pretvorbo objektov v slovar
 opravlja funkcija :func:`daf.convert.convert_object_to_semi_dict`. Serializacijo in deserializacijo opravljata grafični vmesnik in
-jedro oba enako. Včasih se pri pošiljanju podatkov iz grafičnega vmesnika na jedro sploh ne serializira (kot objekte),
-temveč se pošlje le referenco (identifikator) objekta, kjer se na strežniku (jedru ogrodja) objekt pridobi iz spomina prek reference. 
+jedro oba enako. Včasih se pri pošiljanju podatkov iz grafičnega vmesnika na jedro sploh ne serializira,
+temveč se pošlje le referenco (identifikator) objekta, kjer se na strežniku (jedru) objekt pridobi iz spomina preko reference. 
 
 .. autofunction:: daf.convert.convert_object_to_semi_dict
 
 Za konfiguracijo oddaljenega dostopa je potrebno na vrhu vmesnika izbrati :class:`~daf_gui.connector.RemoteConnectionCLIENT`
 in nastaviti parametre. Prav tako je potrebno ustrezno konfigurirati jedro [#extra_remote_conf]_.
 
-.. [#extra_remote_conf] Več o konfiguraciji je na voljo v :ref:`dokumentaciji ogrodja <Remote control (GUI)>`.
+.. [#extra_remote_conf] Več o konfiguraciji je na voljo v dokumentaciji ogrodja - :ref:`Remote control (core)`.

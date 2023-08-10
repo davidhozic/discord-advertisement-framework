@@ -95,6 +95,11 @@
       + (GUI) Widgets
 
     - 
+
+      + Sočasna večopravilnost
+      + Concurrent multitasking
+
+    - 
       + Izvorna koda
       + Source code
 
