@@ -306,8 +306,9 @@ class Application():
             gui_daf_assert_running()
             selection = combo_add_object_edit.combo.current()
             if selection >= 0:
-                account: daf.client.ACCOUNT = convert_to_objects(combo_add_object_edit.combo.get())
-                async_execute(self.connection.add_account(account), parent_window=self.win_main)
+                fnc: ObjectInfo = combo_add_object_edit.combo.get()
+                fnc_data = convert_to_objects(fnc.data)
+                async_execute(self.connection.add_account(**fnc_data), parent_window=self.win_main)
             else:
                 tkdiag.Messagebox.show_error("Combobox does not have valid selection.", "Combo invalid selection")
 
