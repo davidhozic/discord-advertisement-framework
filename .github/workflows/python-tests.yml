@@ -26,8 +26,6 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
         cache: 'pip'
-    - name: Patch pyproject.toml (remove nuitka build)
-      run: python setup-universal.py
     - name: Install APT dependencies
       run: |
         sudo apt-get update

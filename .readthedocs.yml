@@ -15,6 +15,5 @@ build:
     python: "3.8"
   jobs:
     pre_build:
-      - python ./setup-universal.py
       - pip install .[all] .[docs]
       - python3 ./docs/setup.py --start-dir source
