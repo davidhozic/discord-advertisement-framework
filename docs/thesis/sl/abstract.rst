@@ -12,40 +12,43 @@
     \chapter*{Povzetek}
 
 
-Nezamenljivi žetoni (angl. *Non fungible tokens*) so edinstvena digitalna sredstva, ki živijo na verigi blokov brez možnosti replikacije.
-Obstaja več pristopov za njihovo oglaševanje, kjer je eden izmed teh oglaševanje po socialnem omrežju Discord s pristopom agresivnega oglaševanja.
-Diplomsko delo se fokusira na proces oglaševanja in se navezuje na projekt Ogrodje za oglaševanje po Discordu (angl. Discord Advertisement Framework),
-ki je implementirano v programskem jeziku Python.
+Nezamenljivi žetoni (angl. *Non-fungible tokens*) so edinstvena digitalna sredstva, 
+ki obstajajo na verigi blokov brez možnosti replikacije.
+Obstaja več pristopov za njihovo oglaševanje, pri čemer je eden izmed njih oglaševanje preko socialnega omrežja Discord
+z agresivnim pristopom.
+Diplomsko delo se osredotoča na proces oglaševanja in se nanaša na projekt Ogrodje za oglaševanje preko Discord omrežja
+(angl. *Discord Advertisement Framework*), ki je implementirano v programskem jeziku Python.
 
-Najprej so v delu opisani nezamenljivi žetoni oziroma pristopi k njihovem oglaševanju.
-Zatem je predstavljeno socialno omrežje Discord in pristop oglaševanja na tem omrežju.
-Sledi predstavitev samega projekta diplomske naloge, kjer je cilj naloge izdelava ogrodja za oglaševanje po Discordu,
-ki lahko deluje samodejno brez posredovanja uporabnika, se ustrezno odziva na napake, nudi beleženje sporočil in je konfigurabilno,
-da lahko deluje na več načinov.
+Najprej so v delu opisani nezamenljivi žetoni in pristopi k njihovemu oglaševanju.
+Nato je predstavljeno socialno omrežje Discord in pristop k oglaševanju na tem omrežju.
+Sledi predstavitev samega projekta diplomske naloge, katerega cilj je izdelava ogrodja za oglaševanje preko Discord omrežja,
+ki lahko deluje samodejno brez posredovanja uporabnika, se ustrezno odziva na napake, nudi beleženje sporočil in je
+nastavljivo za različne načine delovanja.
 
-V poglavju vezanem na projekt diplomskega dela so predstavljeni zasnova in razvoj projekta, njegova dokumentacija in avtomatično testiranje.
+V poglavju, ki se nanaša na projekt diplomskega dela, so predstavljeni zasnova in razvoj projekta,
+njegova dokumentacija ter avtomatizirano testiranje.
+Ogrodje se na najvišji ravni deli na jedro in grafični vmesnik, pri čemer lahko jedro deluje neprekinjeno na strežniku
+in je sposobno procesirati ukaze iz grafičnega vmesnika na daljavo.
+Oglaševalske podatke in parametre se v jedru nastavi preko Python datoteke, kar zahteva
+minimalno znanje Python jezika. Jedro je razdeljeno na več sektorjev za lažji razvoj in nadgradnjo.
+Grafični vmesnik je prav tako implementiran v jeziku Python.
+Opisan je razvoj grafičnega vmesnika, predstavljena je njegova struktura, na koncu pa je opisan tudi oddaljen dostop
+do jedra ogrodja. Objekte (račune, sporočila ipd.) je mogoče v grafičnem vmesniku definirati preko novega okna,
+ki se samodejno generira na podlagi podatkovnih tipov, prebranih iz izvorne kode funkcij in razredov v jedru ogrodja.
+Definirane objekte je mogoče shraniti v JSON datoteko, prav tako je omogočeno generiranje Python oglaševalske skripte, ki deluje v jedru ogrodja.
 
-Ogrodje se na najvišjem nivoju deli na jedro in grafični vmesnik, kjer jedro lahko deluje neprekinjeno na strežniku in
-je sposobno na daljavo procesirati ukaze iz grafičnega vmesnika. Oglaševalske podatke in parametre se v jedru
-nastavi kar preko Python skripte / programa, kjer je potrebno minimalno znanje Python jezika.
-Jedro se deli na več sektorjev za lažji razvoj in nadgrajevanje.
-Grafični vmesnik je prav tako implementiran v Pythonu. Opisan je razvoj grafičnega vmesnika,
-opisana je njegova struktura in na koncu je opisan oddaljen dostop do jedra ogrodja.
-Objekte (račune, sporočila, ipd.) se v grafičnem vmesniku definira preko novega okna, ki se samodejno generira na podlagi
-podatkovnih tipov prebranih iz izvorne kode funkcij in razredov v jedru ogrodja. Definirane objekte je mogoče shraniti v JSON datoteko oz.
-omogočeno je tudi generiranje Python oglaševalske skripte, ki deluje v jedru ogrodja.
-
-Po opisu razvoja in zasnove jedra ter grafičnega vmesnika ogrodja, je opisan proces dokumentacije.
-Dokumentacija je izdelana s sistemom Sphinx, in se avtomatično gradi in objavlja ob vsaki izdaji projekta
+Po opisu razvoja in zasnove jedra ter grafičnega vmesnika ogrodja je opisan proces dokumentiranja.
+Dokumentacija je izdelana s sistemom Sphinx in se avtomatično gradi ter objavlja ob vsaki izdaji projekta
 preko platforme GitHub. Opis vseh javnih razredov in funkcij (programskega vmesnika) se samodejno generira iz same kode projekta.
 
-Na koncu poglavja o projektu diplomskega dela je opisan še proces avtomatičnega testiranja, kjer je ta implementiran z ogrodjem za
-avtomatično testiranje pytest. Ogrodje se, ob vsakem zahtevku za združitev vej na GitHubu, avtomatično testira in zavrne združitev veje, če
-katerikoli od testov ne uspe. Z avtomatičnem testiranjem se zmanjšajo možnosti za izdajo nove verzije ogrodja z napakami v delovanju.
+Na koncu poglavja o projektu diplomskega dela je opisano še avtomatizirano testiranje kode, ki je implementirano z
+ogrodjem za avtomatizirano testiranje pytest. Ogrodje se na platformi GitHub avtomatično testira ob vsakem zahtevku za
+združitev veje, pri čemer se združitev zavrne, če kateri koli od testov ne uspe. Z avtomatiziranim testiranjem se
+zmanjšajo možnosti za izdajo nove verzije ogrodja z napakami v delovanju.
 
-Zaključim lahko da je ogrodje izjemno uporabno ne le za oglaševanje NFT, a tudi za oglaševanje katere koli druge vsebine.
-Ker v času pisanja ne obstaja skoraj nobeno brezplačno oglaševalsko ogrodje, ki bi bilo sposobno vsega kar je sposobno to ogrodje,
-je smiselno sklepati da je projekt izjemno uporabne narave.
+Sklepam, da je ogrodje izjemno uporabno ne le za oglaševanje NFT-jev, temveč tudi za oglaševanje katere koli druge vsebine.
+Ker v času pisanja ni na voljo skoraj nobenega brezplačnega ogrodja za oglaševanje, ki bi bilo sposobno vsega, kar je sposobno to
+ogrodje, je smiselno sklepati, da je projekt izjemno uporabne narave.
 
 
 **Ključne besede:** Python, grafični vmesnik, oddaljen dostop,
@@ -60,9 +63,6 @@ shranjevanje v datoteko, dokumentacija, avtomatično testiranje, beleženje spor
 
     \chapter*{Abstract}
 
-Non-fungible tokens (NFTs) are unique digital assets that exist on a blockchain without the ability of replication.
-There are several approaches of advertising them, one of which is advertising on the social network Discord using the shilling approach.
-The thesis focuses on the advertisement process and relates to the Discord Advertisement Framework project, implemented in the Python programming language.
 
 First, the thesis describes non-fungible tokens and approaches to their advertisement.
 Next, it presents the social network Discord and the advertisement approach on this social network. It also explains the types of user accounts and channel types where advertisement can take place.

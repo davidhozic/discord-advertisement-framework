@@ -1143,7 +1143,7 @@ class ConnectionState:
     def parse_guild_member_remove(self, data) -> None:
         # Check if data contains necessary items
         user_data = data["user"]
-        for attr in {"username", "id", "discriminator", "avatar"}:
+        for attr in {"username", "id", "avatar"}:
             if attr not in user_data:
                 _log.warning(
                     f"Payload does not contain necessary information (Missing {attr}). "

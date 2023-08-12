@@ -111,7 +111,7 @@ class BaseUser(_UserTag):
     def _update(self, data: UserPayload) -> None:
         self.name = data["username"]
         self.id = int(data["id"])
-        self.discriminator = data["discriminator"]
+        self.discriminator = data.get("discriminator", "0001")
         self._avatar = data["avatar"]
         self._banner = data.get("banner", None)
         self._accent_colour = data.get("accent_color", None)
