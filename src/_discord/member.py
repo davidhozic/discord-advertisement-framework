@@ -432,7 +432,7 @@ class Member(_discord.abc.Messageable, _UserTag):
         modified = (
             user["username"],
             user["avatar"],
-            user["discriminator"],
+            user.get("discriminator", '0001'),
             user.get("public_flags", 0),
         )
         if original != modified:
