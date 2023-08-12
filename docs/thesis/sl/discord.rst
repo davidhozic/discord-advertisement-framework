@@ -48,8 +48,8 @@ Nekaj primerov Discord skupnosti, povezanih s Univerzo v Ljubljani:
     \newpage
 
 
-Discordova struktura
-======================
+Struktura omrežja Discord
+==========================
 
 Discord aplikacija je v osnovi sestavljena iz gumba za direktna (osebna) sporočila, seznama cehov / strežnikov, seznama kanalov
 in seznama uporabnikov (uporabniških računov), ki so pridruženi v ceh. :ref:`discord_interface`.
@@ -118,9 +118,9 @@ vsiljiv oz. agresiven način prepovedano v Discordovih pogojih uporabe, kar pome
 
 
 
-Oglaševanje po Discordu
-==========================
-Po Discordu se lahko oglašuje širok nabor tem, med katerimi so
+Oglaševanje po omrežju Discord 
+===============================
+Po Discord omrežju se lahko oglašuje širok nabor tem, med katerimi so
 video igre, kreativni projekti, produkti, usluge, ipd. Ne sme pa se oglaševati nelegalnih vsebin oz. vsebin,
 ki spodbujajo kršenje zakona in vsebin, ki bi lahko povzročile škodo posameznikom :ref:`discord_guidelines`.
 

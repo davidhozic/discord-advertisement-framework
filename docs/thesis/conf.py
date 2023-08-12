@@ -142,6 +142,9 @@ latex_elements = {
     "babel": r"\usepackage[slovene]{babel}",
     'preamble':
         r'''
+        % Packages
+        \usepackage[final]{pdfpages}
+
         % Spacing
         \textheight 215mm
         \textwidth 145mm
@@ -170,7 +173,13 @@ latex_elements = {
             \newpage
         }
     ''',
-    "maketitle": latex_title_page,
+    "maketitle": r"""
+        \pagenumbering{roman}
+        \includepdf{NaslovnaStranDiplome.pdf}
+        \includepdf{IzjavaOAvtorstvu.pdf}
+        \includepdf{NaslovnaStranDiplome.pdf}
+        \blankpage
+    """,
     "printindex": ''
 }
 
@@ -186,6 +195,9 @@ if language == "en":
     del numfig_format
 else:
     numfig_format = numfig_format[language]
+
+
+latex_additional_files = ["./NaslovnaStranDiplome.pdf", "./IzjavaOAvtorstvu.pdf"]
 
 
 # ----------- Docx ----------- #
