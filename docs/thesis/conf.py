@@ -174,11 +174,11 @@ latex_elements = {
         }
     ''',
     "maketitle": r"""
-        \pagenumbering{roman}
         \includepdf{NaslovnaStranDiplome.pdf}
         \includepdf{IzjavaOAvtorstvu.pdf}
         \includepdf{NaslovnaStranDiplome.pdf}
         \blankpage
+        \pagenumbering{roman}
     """,
     "printindex": ''
 }
