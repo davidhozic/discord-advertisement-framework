@@ -15,4 +15,4 @@ from .convert import *
 from .remote import *
 
 
-VERSION = "2.10"
+VERSION = "2.11"
