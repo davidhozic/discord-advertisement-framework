@@ -32,6 +32,13 @@ Glossary
 Releases
 ----------------------
 
+v2.11
+====================
+- SQL analytics:
+  
+  - Counts now have better error reporting when an invalid value was passed.
+
+
 v2.10
 ====================
 - GUI:
