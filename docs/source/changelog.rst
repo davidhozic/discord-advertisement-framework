@@ -5,6 +5,8 @@ Changelog
 
 .. |POTENT_BREAK_CH| replace:: **[Potentially breaking change]**
 
+.. |UNRELEASED| replace:: **[Not yet released]**
+
 ------------------------
 Info
 ------------------------
@@ -28,9 +30,23 @@ Glossary
         The change could break functionality from previous versions but only if it
         was used in a certain way.
 
-----------------------
+    |UNRELEASED|
+        Documented changes are not yet available to use.
+
+---------------------
 Releases
-----------------------
+---------------------
+
+|UNRELEASED| v2.10.1
+=======================
+- Fixed files in DirectMESSAGE.
+- Fixed file paths over remote not having the full patch when returned back.
+- Fixed files not having full path in the logs.
+- Added :py:attr:`daf.dtypes.FILE.fullpath` to support the previous fix.
+- Fixed exception when adding messages inside AutoGUILD, when one of the cached guilds fails initialization.
+- Fixed serialization for :class:`discord.VoiceChannel`, which included slowmode_delay,
+  even though the attribute doesn't exist in the VoiceChannel.
+
 
 v2.10
 ====================

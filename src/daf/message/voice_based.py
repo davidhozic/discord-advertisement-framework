@@ -194,7 +194,7 @@ class VoiceMESSAGE(BaseChannelMessage):
                      "reason": str(entry["reason"])} for entry in failed_ch]
         return {
             "sent_data": {
-                "streamed_audio": audio.to_dict()
+                "streamed_audio": audio.fullpath
             },
             "channels": {
                 "successful": succeeded_ch,

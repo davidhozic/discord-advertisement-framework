@@ -127,6 +127,12 @@ CONVERSION_ATTRS = {
     },
     discord.Guild: {
         "attrs": ["name", "id"]
+    },
+    discord.TextChannel: {
+        "attrs": ["name", "id", "slowmode_delay"],
+    },
+    discord.VoiceChannel: {
+        "attrs": ["name", "id"],
     }
 }
 """
@@ -154,12 +160,6 @@ These are:
   serializable object.
 - "custom_decoder": A function that accepts the JSON compatible object. It must return the original Python object.
 """
-
-
-for cls in {discord.TextChannel, discord.VoiceChannel}:
-    attrs = {"attrs": ["name", "id", "slowmode_delay"]}
-    CONVERSION_ATTRS[cls] = attrs
-
 
 # Guilds
 CONVERSION_ATTRS[guild.GUILD] = {
