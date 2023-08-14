@@ -3,6 +3,7 @@
     regarding the guild and also defines a USER class from the
     _BaseGUILD class.
 """
+from contextlib import suppress
 from typing import Any, Coroutine, Union, List, Optional, Dict, Callable
 from typeguard import typechecked
 from datetime import timedelta, datetime
@@ -975,7 +976,10 @@ class AutoGUILD:
         """
         self.messages.append(message)
         for guild in self.cache.values():
-            await guild.add_message(deepcopy(message))
+            try:
+                await guild.add_message(deepcopy(message))
+            except Exception:
+                trace(f"Could not add message {message} to {guild}, cached in {self}", TraceLEVELS.WARNING)
 
     def remove_message(self, message: BaseMESSAGE):
         """
@@ -993,7 +997,8 @@ class AutoGUILD:
         """
         self.messages.remove(message)
         for guild in self.guilds:
-            guild.remove_message(message)
+            with suppress(ValueError):  # Guilds can remove messages themselves
+                guild.remove_message(message)
 
     def _get_server(self, snowflake: Union[int, discord.Guild, discord.User, discord.Object]):
         """

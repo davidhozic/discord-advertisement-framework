@@ -244,7 +244,7 @@ class TextMESSAGE(BaseChannelMessage):
 
         embed = embed.to_dict() if embed is not None else None
 
-        files = [x.filename for x in files]
+        files = [x.fullpath for x in files]
         sent_data_context = {}
         if text is not None:
             sent_data_context["text"] = text
@@ -631,7 +631,7 @@ class DirectMESSAGE(BaseMESSAGE):
                 }
         """
         embed = embed.to_dict() if embed is not None else None
-        files = [x.filename for x in files]
+        files = [x.fullpath for x in files]
 
         success_context = success_context.copy()  # Don't modify outside
         if not success_context["success"]:
@@ -759,12 +759,13 @@ class DirectMESSAGE(BaseMESSAGE):
                     self.previous_message = await self.dm_channel.send(
                         text,
                         embed=embed,
-                        files=[discord.File(fwFILE.filename) for fwFILE in files]
+                        files=[discord.File(fwFILE.stream, fwFILE.filename) for fwFILE in files]
                     )
 
                 # Mode is edit and message was already send to this channel
                 elif self.mode == "edit":
                     await self.previous_message.edit(text, embed=embed)
+
                 return {"success": True}
 
             except Exception as ex:

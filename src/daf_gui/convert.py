@@ -110,6 +110,7 @@ CONVERSION_ATTR_TO_PARAM[daf.client.ACCOUNT]["password"] = lambda account: accou
 
 CONVERSION_ATTR_TO_PARAM[daf.dtypes.FILE] = {k: k for k in daf.dtypes.FILE.__init__.__annotations__}
 CONVERSION_ATTR_TO_PARAM[daf.dtypes.FILE]["data"] = "hex"
+CONVERSION_ATTR_TO_PARAM[daf.dtypes.FILE]["filename"] = "fullpath"
 
 
 if daf.sql.SQL_INSTALLED:
