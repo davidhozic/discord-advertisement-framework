@@ -174,9 +174,11 @@ latex_elements = {
         }
     ''',
     "maketitle": rf"""
-        {latex_title_page}
-        \includepdf{{IzjavaOAvtorstvu.pdf}}
         \includepdf{{NaslovnaStranDiplome.pdf}}
+        \blankpage
+        \includepdf{{IzjavaOAvtorstvu.pdf}}
+        \blankpage
+        {latex_title_page}
         \blankpage
         \pagenumbering{{roman}}
     """,
