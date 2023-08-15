@@ -454,7 +454,6 @@ class ACCOUNT:
 
         await self._client.close()
         await asyncio.gather(self._ws_task, return_exceptions=True)
-        self.client.clear()
 
         if _delete:
             self._delete()
