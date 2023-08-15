@@ -37,6 +37,11 @@ Glossary
 Releases
 ---------------------
 
+|UNRELEASED| v2.10.2
+=======================
+- Fixed *Unclosed client session* warning when removing an user account.
+
+
 v2.10.1
 =======================
 - Fixed files in DirectMESSAGE.
