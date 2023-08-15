@@ -19,22 +19,22 @@ zato je želel ustvariti uporabniku bolj prijazno platformo, ki bi igralcem omog
 Discord se je od takrat razvil v več kot samo orodje za komunikacijo med igralci video iger in postal priljubljena platforma za skupnosti vseh vrst.
 Je priljubljena platforma, ki uporabnikom omogoča komunikacijo preko glasovnega, video in besedilnega klepeta.
 Pogosto se uporablja za različne namene, vključno z razpravljanjem o umetniških projektih, načrtovanjem družinskih izletov, iskanjem pomoči pri domačih nalogah.
-Prav tako ima dobro funkcijo iskanja vsebine, ki je bila nekoč objavljena, ki je je na primer uporabna za iskanje primera dispozicije diplomske naloge, ki ga je nekdo objavil pred tremi meseci.
+Prav tako ima dobro funkcijo iskanja nekoč objavljene vsebine, ki je uporabna na primer za iskanje primera dispozicije diplomske naloge, ki jo je nekdo objavil pred tremi meseci.
 
-Čeprav lahko Discord služi kot dom skupnostim vseh velikosti, je še posebej priljubljen med manjšimi aktivnimi skupinami, ki med seboj pogosto komunicirajo.
-Večina skupnosti (strežnikov / cehov) je zasebnih in zahtevajo povabilo za vstop, kar omogoča prijateljem in skupnostim, da ostanejo povezani.
-Vendar pa obstajajo tudi večje, bolj javne skupnosti, osredotočene na določene teme, kot so priljubljene videoigre
-ali pa, v primeru te naloge, stvari kot sta veriga blokov (angl. *blockchain*) in NFT.
+Čeprav lahko Discord skupnostim vseh velikosti služi kot dom, je še posebej priljubljen med manjšimi aktivnimi skupinami, ki med seboj pogosto komunicirajo.
+Večina skupnosti (strežnikov/cehov) je zasebnih in zahtevajo povabilo za vstop, kar  prijateljem in skupnostim omogoča, da ostanejo povezani.
+Vendar pa obstajajo tudi večje, bolj javne skupnosti, osredotočene na določene teme, kot so priljubljene videoigre,
+ali pa, kot je to v primeru tega diplomskega dela, stvari, kot sta veriga blokov (angl. *blockchain*) in NFT.
 Uporablja se lahko tudi kot skupnost fakultete, kjer študenti lahko govorijo preko glasovnih kanalov, delijo študijske materiale
 in postavljajo vprašanja o gradivu, ki ga ne razumejo.
 
-Nekaj primerov Discord skupnosti, povezanih s Univerzo v Ljubljani:
+Nekaj primerov Discord skupnosti, povezanih z Univerzo v Ljubljani:
 
 - Študentski svet FE (:numref:`ssfe-community-fig`),
 - FE UNI,
 - FE VSŠ,
-- FRI UNI,
-- in druge
+- FRI UNI
+- in druge.
 
 
 .. _ssfe-community-fig:
@@ -51,7 +51,7 @@ Nekaj primerov Discord skupnosti, povezanih s Univerzo v Ljubljani:
 Struktura omrežja Discord
 ==========================
 
-Discord aplikacija je v osnovi sestavljena iz gumba za direktna (osebna) sporočila, seznama cehov / strežnikov, seznama kanalov
+Discord aplikacija je v osnovi sestavljena iz gumba za direktna (osebna) sporočila, seznama cehov/strežnikov, seznama kanalov
 in seznama uporabnikov (uporabniških računov), ki so pridruženi v ceh. :ref:`discord_interface`.
 
 .. figure:: ./DEP/discord_client_struct.drawio.png
@@ -76,12 +76,12 @@ Kanali
 ---------------
 Discord ima tri vrste kanalov:
 
-1. Tekstovni kanali - kanali za pisanje besedila v cehu,
+1. Tekstovni kanali - kanali za pisanje besedila v cehu
 2. Glasovni kanali - kanali za govor in predvajanje glasbe
-3. Direktna sporočila - Kanali za pogovor (tekstovno ali glasovno) med dvema uporabnikoma.
+3. Direktna sporočila - kanali za pogovor (tekstovno ali glasovno) med dvema uporabnikoma
 
 Tekstovni kanali se nahajajo v cehih in se jih lahko prepozna glede na simbol *#*, ki se nahaja pred imenom vsakega
-kanala. Sem lahko pošiljate navaden tekst, emotikone, binarne datoteke, nalepke ter, v primeru da imate robotski (angl. *bot*) račun,
+kanala. Sem lahko uporabnik pošilja navaden tekst, emotikone, binarne datoteke, nalepke ter v primeru robotskega (angl. *bot*) računa
 tudi tako imenovana vgrajena sporočila (angl. *Embedded messages* oz. *Embeds*), ki so malo bolj formatirana sporočila
 znotraj okrašene škatle (:numref:`discord-embedded-message`).
 
@@ -98,8 +98,8 @@ znotraj okrašene škatle (:numref:`discord-embedded-message`).
 
 
 Tako kot se tekstovni kanali lahko uporabljajo za pošiljanje tekstovnih sporočil, se analogno lahko v glasovne kanale
-pošilja glasovna sporočila, oz. se lahko v njih pogovarja preko mikrofona ali pa predvaja glasbo.
-Za samo oglaševanje ti kanali niso tako aktualni, saj bi vaše oglase lahko prejeli le uporabniki, ki so v času
+pošilja glasovna sporočila oz. se lahko v njih pogovarja preko mikrofona ali pa predvaja glasbo.
+Za samo oglaševanje ti kanali niso tako aktualni, saj bi oglase lahko prejeli le uporabniki, ki so v času
 oglaševanja prisotni v kanalu.
 
 
@@ -109,8 +109,8 @@ oglaševanja prisotni v kanalu.
 
 
 Direktna oz. osebna sporočila so namenjena komunikaciji ena na ena med dvema uporabnikoma.
-Pošiljanje v te bi sicer prineslo veliko dosega uporabnikov, vendar je oglaševanje v direktna sporočila na
-vsiljiv oz. agresiven način prepovedano v Discordovih pogojih uporabe, kar pomeni da lahko v tem primeru Discord ukine uporabnikov račun.
+Pošiljanje oglasov v ta sporočila bi sicer prineslo velik doseg uporabnikov, vendar je oglaševanje v direktna sporočila na
+vsiljiv oz. agresiven način v Discordovih pogojih uporabe prepovedano, kar pomeni, da lahko v tem primeru Discord ukine uporabnikov račun.
 
 .. figure:: ./DEP/discord_direct_message_channel.png
 
@@ -121,11 +121,11 @@ vsiljiv oz. agresiven način prepovedano v Discordovih pogojih uporabe, kar pome
 Oglaševanje po omrežju Discord 
 ===============================
 Po Discord omrežju se lahko oglašuje širok nabor tem, med katerimi so
-video igre, kreativni projekti, produkti, usluge, ipd. Ne sme pa se oglaševati nelegalnih vsebin oz. vsebin,
-ki spodbujajo kršenje zakona in vsebin, ki bi lahko povzročile škodo posameznikom :ref:`discord_guidelines`.
+video igre, kreativni projekti, produkti, usluge ipd. Ne sme pa se oglaševati nelegalnih vsebin oz. vsebin,
+ki spodbujajo kršenje zakona, in vsebin, ki bi lahko povzročile škodo posameznikom :ref:`discord_guidelines`.
 
 Oglašuje se lahko ročno ali pa avtomatično s primernim orodjem.
-Oglaševanje vključuje pisanje vsebine oglasa, ustvarjanje uporabniških računov, iskanje cehov kamor se z uporabniškimi računi pridruži,
+Oglaševanje vključuje pisanje vsebine oglasa, ustvarjanje uporabniških računov, iskanje cehov, kamor se z uporabniškimi računi pridruži,
 in večkratno periodično pošiljanje sporočil v kanale cehov. Najpogosteje se za oglaševanje uporabljajo tekstovni kanali.
 
 
@@ -135,19 +135,19 @@ Oglaševalsko vsebino se lahko napiše na pamet iz glave ali pa se za to uporabi
 GPT :ref:`gpt3_content_generation`.
 
 GPT-3 je najsodobnejši jezikovni model umetne inteligence, ki ga je razvilo podjetje OpenAI.
-Ima sposobnost generiranja besedila, ki se zdi človeško in opravljanja različnih nalog, kot so prevajanje, povzemanje in odgovarjanje na vprašanja.
+Ima sposobnost generiranja besedila, ki se zdi človeško, in opravljanja različnih nalog, kot so prevajanje, povzemanje in odgovarjanje na vprašanja.
 GPT-3 je največji in najmočnejši jezikovni model do danes, s kapaciteto 175 milijard parametrov.
 Prislužil si je pozornost tako raziskovalcev kot industrijskih strokovnjakov zaradi svojih impresivnih sposobnosti in potencialnih aplikacij.
 
 Za referenco, prejšnji odstavek je generiral GPT-3 sam.
 
 
-Za generacijo oglaševalske vsebine lahko npr. GPT-ju podamo slednjo zahtevo:
+Za generacijo oglaševalske vsebine lahko npr. GPT-ju podamo naslednjo zahtevo:
 
 *"Write advertisement for my White Rabbit NFT project which came out in 2023. 
 We have over 9000 different NFT available for purchase. Talk about the limited Gray Rabbit NFT (only 50 available). Get additional information here www.mynft.domain"*
 
-in njegov rezultat bo:
+In njegov rezultat bo:
 
 *"Attention all NFT collectors and art enthusiasts!
 We are excited to announce the launch of our White Rabbit NFT project, featuring over 9000 unique and one-of-a-kind digital art pieces. But that's not all - we have a special edition of limited Gray Rabbit NFTs available for purchase, with only 50 available worldwide.
@@ -161,19 +161,19 @@ For more information and to purchase your own Gray Rabbit NFT, visit www.mynft.d
 
 Iskanje cehov za oglaševanje
 ------------------------------
-Ko je oglaševalska vsebina napisana, je potrebo najti cehe, kamor se bo to vsebino pošiljalo.
+Ko je oglaševalska vsebina napisana, je potrebno najti cehe, kamor se bo to vsebino pošiljalo.
 Dober kraj za začetek je kar nek spletni iskalnik.
-Nabor cehov ponuja tudi Discord sam, ampak za to da nek ceh pride na njihov seznam, mora imeti zagotovljenih kar
-nekaj pogojev med katerimi je tudi ta da mora imeti vsaj 1000 članov. To je v redu če želimo oglaševati v večje cehe,
+Nabor cehov ponuja tudi Discord sam, ampak za to, da nek ceh pride na ta seznam, mora imeti zagotovljenih kar
+nekaj pogojev, med katerimi je tudi ta, da mora imeti vsaj 1000 članov. To je primerno, če želimo oglaševati v večje cehe,
 v primeru manjših cehov pa moramo te najti drugje.
 
 Na srečo obstajajo tudi druge strani za iskanje cehov, kot je na primer spletna stran `Top.GG <https://top.gg>`_.
 Na tej strani lahko v vgrajen iskalnik dodamo določene parametre, med katerimi je tudi imenska poizvedba, kjer lahko
-uporabimo akronim "NFT" in spletna stran nam bo vrnila cehe povezane z NFT.
+uporabimo akronim "NFT" in spletna stran nam bo vrnila cehe, povezane z NFT.
 
-Tem cehom se lahko potem pridružimo in v primerne kanale oglašujemo našo vsebino. Cehi na temo NFT in kripto valut
-imajo po navadi namenske kanale, ki so namenjeni oglaševanju in v te lahko oglašujemo brez posledic, medtem ko nas
-oglaševanje v drugih kanalih lahko privede do izključitve iz strežnika.
+Tem cehom se lahko potem pridružimo in našo vsebino oglašujemo v primerne kanale. Cehi na temo NFT in kripto valut
+imajo ponavadi namenske kanale, ki so namenjeni oglaševanju, in lahko vanje oglašujemo brez posledic, medtem ko nas
+oglaševanje v drugih kanalih lahko privede do izključitve s strežnika.
 
 .. figure:: ./DEP/topgg_find_servers.png
     :width: 15cm
