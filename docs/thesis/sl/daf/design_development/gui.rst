@@ -19,7 +19,7 @@ Tkinter
 Za izdelavo grafičnega vmesnika je bila uporabljena knjižnica `ttkboostrap <https://ttkbootstrap.readthedocs.io/en/latest/>`_, ki je razširitev
 vgrajene Python knjižnice :mod:`tkinter`.
 
-Tkinter knjižnica je v osnovi vmesnik na Tcl/Tk orodju za izdelavo grafičnih vmesnikov, doda pa tudi nekaj svojih nivojev,
+Tkinter knjižnica je v osnovi vmesnik na Tcl/Tk orodje za izdelavo grafičnih vmesnikov, doda pa tudi nekaj svojih nivojev,
 ki še dodatno razširijo delovanje knjižnice.
 Omogoča definicijo različnih pripomočkov (angl. *widgets*), ki se jih da dodatno razširiti in shraniti pod nove
 pripomočke, ki jih lahko večkrat uporabimo. Ti pripomočki so na primer :class:`~tkinter.ttk.Combobox`, ki je neke vrste 
