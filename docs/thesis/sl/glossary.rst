@@ -2,7 +2,7 @@
 
 .. only:: not latex
 
-    Uporabljene akronimi
+    Uporabljeni akronimi
     ======================
 
 

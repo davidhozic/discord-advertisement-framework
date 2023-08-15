@@ -20,9 +20,9 @@ Diplomsko delo se osredotoča na proces oglaševanja in se nanaša na projekt Og
 (angl. *Discord Advertisement Framework*), ki je implementirano v programskem jeziku Python.
 
 Najprej so v delu opisani nezamenljivi žetoni in pristopi k njihovemu oglaševanju.
-Nato je predstavljeno socialno omrežje Discord in pristop k oglaševanju na tem omrežju.
-Sledi predstavitev samega projekta diplomske naloge, katerega cilj je izdelava ogrodja za oglaševanje preko Discord omrežja,
-ki lahko deluje samodejno brez posredovanja uporabnika, se ustrezno odziva na napake, nudi beleženje sporočil in je
+Nato je predstavljeno socialno omrežje Discord in pristop k oglaševanju na njem.
+Sledi predstavitev samega projekta diplomskega dela, katerega cilj je izdelava ogrodja za oglaševanje preko Discord omrežja,
+ki lahko deluje samodejno, brez posredovanja uporabnika, se ustrezno odziva na napake, nudi beleženje sporočil in je
 nastavljivo za različne načine delovanja.
 
 V poglavju, ki se nanaša na projekt diplomskega dela, so predstavljeni zasnova in razvoj projekta,
@@ -43,11 +43,11 @@ preko platforme GitHub. Opis vseh javnih razredov in funkcij (programskega vmesn
 
 Na koncu poglavja o projektu diplomskega dela je opisano še avtomatizirano testiranje kode, ki je implementirano z
 ogrodjem za avtomatizirano testiranje pytest. Ogrodje se na platformi GitHub avtomatično testira ob vsakem zahtevku za
-združitev veje, pri čemer se združitev zavrne, če kateri koli od testov ne uspe. Z avtomatiziranim testiranjem se
+združitev veje, pri čemer se združitev zavrne, če katerikoli od testov ni uspešen. Z avtomatiziranim testiranjem se
 zmanjšajo možnosti za izdajo nove verzije ogrodja z napakami v delovanju.
 
-Sklepam, da je ogrodje izjemno uporabno ne le za oglaševanje NFT-jev, temveč tudi za oglaševanje katere koli druge vsebine.
-Ker v času pisanja ni na voljo skoraj nobenega brezplačnega ogrodja za oglaševanje, ki bi bilo sposobno vsega, kar je sposobno to
+Sklepam, da je ogrodje izjemno uporabno, ne le za oglaševanje NFT-jev, temveč tudi za oglaševanje katerekoli druge vsebine.
+Ker v času pisanja ni na voljo skoraj nobenega brezplačnega ogrodja za oglaševanje, ki bi bilo sposobno vsega, česar je sposobno to
 ogrodje, je smiselno sklepati, da je projekt izjemno uporabne narave.
 
 
