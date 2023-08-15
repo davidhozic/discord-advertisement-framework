@@ -37,7 +37,7 @@ Glossary
 Releases
 ---------------------
 
-|UNRELEASED| v2.10.1
+v2.10.1
 =======================
 - Fixed files in DirectMESSAGE.
 - Fixed file paths over remote not having the full patch when returned back.
