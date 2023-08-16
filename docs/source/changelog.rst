@@ -40,6 +40,7 @@ Releases
 |UNRELEASED| v2.10.2
 =======================
 - Fixed *Unclosed client session* warning when removing an user account.
+- Fixed documentation of :func:`daf.core.shutdown` - removed information about non existent parameters.
 
 
 v2.10.1
