@@ -37,7 +37,20 @@ Glossary
 Releases
 ---------------------
 
-|UNRELEASED| v2.10.2
+v2.11
+====================
+- SQL analytics:
+  
+  - Counts now have better error reporting when an invalid value was passed.
+
+- GUI:
+
+  - Higher refresh rate due to threading redesign - instead of calling Tkinter's root.update inside an asyncio task,
+    the root.mainroot is called directly, while the asyncio event loop is running inside another thread.
+  - The GUI will not block the asyncio tasks (explained in previous bullet).
+
+
+v2.10.2
 =======================
 - Fixed *Unclosed client session* warning when removing an user account.
 
@@ -51,13 +64,6 @@ v2.10.1
 - Fixed exception when adding messages inside AutoGUILD, when one of the cached guilds fails initialization.
 - Fixed serialization for :class:`discord.VoiceChannel`, which included slowmode_delay,
   even though the attribute doesn't exist in the VoiceChannel.
-
-
-v2.11
-====================
-- SQL analytics:
-  
-  - Counts now have better error reporting when an invalid value was passed.
 
 
 v2.10

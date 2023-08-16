@@ -3,15 +3,16 @@ Module contains interface to run async tasks from GUI.
 """
 from typing import Coroutine, Callable
 from asyncio import Queue, Task
-
-from daf import trace, TraceLEVELS
+from threading import Thread, current_thread
 
 from .dpi import dpi_scaled
 
 import ttkbootstrap.dialogs.dialogs as tkdiag
 import ttkbootstrap as ttk
 
+import asyncio
 import sys
+
 import daf
 
 
@@ -19,16 +20,15 @@ CONF_TASK_SLEEP = 0.1
 
 
 class GLOBAL:
-    tasks_to_run = Queue()
-    running = False
-    async_task: Task = None
+    async_thread: Thread = None
+    loop: asyncio.AbstractEventLoop = None
 
 
 class ExecutingAsyncWindow(ttk.Toplevel):
     """
     Window that hovers while executing async methods.
     """
-    def __init__(self, awaitable: Coroutine, *args, **kwargs):
+    def __init__(self, awaitable: Coroutine, callback = None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.title("Async execution window")
         self.resizable(False, False)
@@ -53,10 +53,20 @@ class ExecutingAsyncWindow(ttk.Toplevel):
         self.protocol("WM_DELETE_WINDOW", lambda: None)
         self.grab_set()
 
+        self.awaitable = awaitable
+        self.callback = callback
+        self.current_thread = current_thread()
+        self.future = future = asyncio.run_coroutine_threadsafe(awaitable, GLOBAL.loop)
+        future.add_done_callback(self.destroy)
+
     def flush(self):
         pass
 
     def write(self, text: str):
+        if current_thread() is not self.current_thread:
+            self.after_idle(self.write, text)
+            return
+
         if text == "\n":
             return
 
@@ -67,8 +77,19 @@ class ExecutingAsyncWindow(ttk.Toplevel):
         self.status_var.set(text)
         self.old_stdout.write(text)
 
-    def destroy(self) -> None:
+    def destroy(self, future: asyncio.Future = None) -> None:
+        if future is not None and (exc := future.exception()) is not None:
+            self.after_idle(
+                tkdiag.Messagebox.show_error,        
+                f"{exc}\n(Error while running coroutine: {self.awaitable.__name__})\nType: {exc.__class__}",
+                "Coroutine error",
+                self
+            )
+
         sys.stdout = self.old_stdout
+        if self.callback is not None:
+            self.callback()
+
         return super().destroy()
 
 
@@ -117,52 +138,23 @@ def gui_confirm_action(self_parent = False):
     return _gui_confirm_action
 
 
-async def dummy_task():
-    "Dummy task for force waking async_runner()"
-    pass
+def async_stop():
+    "Stops the async queue executor"
+    GLOBAL.loop.call_soon_threadsafe(GLOBAL.loop.stop)
+    GLOBAL.async_thread.join()
+    return GLOBAL.loop
 
-
-async def async_runner():
-    """
-    Executes coroutines from async queue.
-    """
-    GLOBAL.tasks_to_run = Queue()
-    while GLOBAL.running:
-        awaitable, callback, parent_window = await GLOBAL.tasks_to_run.get()  # Coroutine and function to call at end
-        try:
-            executor_win = ExecutingAsyncWindow(awaitable, topmost=True, master=parent_window)
-            result = await awaitable
-            if callback is not None:
-                callback(result)
-        except Exception as exc:
-            tkdiag.Messagebox.show_error(
-                f"{exc}\n(Error while running coroutine: {awaitable.__name__})\nType: {exc.__class__}",
-                "Coroutine error",
-                executor_win
-            )
-            trace(f"Error while running coroutine: {awaitable.__name__}", TraceLEVELS.ERROR, exc)
-        finally:
-            executor_win.destroy()
-
-
-async def async_stop():
-    """
-    Stops the async queue executor.
-    """
-    GLOBAL.running = False
-    async_execute(dummy_task())  # Force wakeup
-    await GLOBAL.async_task
-
-
-def async_start(loop):
+def async_start():
     """
     Starts the async queue executor.
     """
-    GLOBAL.running = True
-    GLOBAL.async_task = loop.create_task(async_runner())
+    loop = asyncio.new_event_loop()
+    GLOBAL.loop = loop
+    GLOBAL.async_thread = Thread(target=loop.run_forever)
+    GLOBAL.async_thread.start()
 
 
-def async_execute(coro: Coroutine, callback: Callable = None, parent_window = None):
+def async_execute(coro: Coroutine, parent_window = None, callback: Callable = None):
     """
     Puts the coroutine into async queue to execue.
 
@@ -175,4 +167,4 @@ def async_execute(coro: Coroutine, callback: Callable = None, parent_window = No
     parent: window
         The window to show exceptions.
     """
-    GLOBAL.tasks_to_run.put_nowait((coro, callback, parent_window))
+    ExecutingAsyncWindow(coro, master=parent_window, callback=callback).wait_window()
