@@ -419,15 +419,6 @@ def get_accounts() -> List[client.ACCOUNT]:
 async def shutdown() -> None:
     """
     Stops and cleans the framework.
-
-    Parameters
-    ----------
-    loop: Optional[asyncio.AbstractEventLoop]
-        The loop everything is running in.
-        Leave empty for default loop.
-        This parameter is only relevant if ``stop_loop`` is set to True.
-    stop_loop: Optional[bool]
-        Default: False; If True, it stops the running event loop.
     """
     trace("Shutting down...", TraceLEVELS.NORMAL)
     GLOBALS.running = False
