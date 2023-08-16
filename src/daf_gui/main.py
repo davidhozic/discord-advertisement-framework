@@ -149,7 +149,6 @@ class Application():
 
         # Status variables
         self._daf_running = False
-        self._window_opened = True
 
         # Window config
         self.win_main.protocol("WM_DELETE_WINDOW", self.close_window)
@@ -283,21 +282,17 @@ class Application():
         dpi_10 = dpi_scaled(10)
         dpi_5 = dpi_scaled(5)
 
+        @gui_confirm_action
         def remove_account():
             selection = list_live_objects.curselection()
             if len(selection):
-                @gui_confirm_action
-                def _():
-                    values = list_live_objects.get()
-                    for i in selection:
-                        async_execute(
-                            self.connection.remove_account(values[i].real_object),
-                            parent_window=self.win_main
-                        )
-
-                    async_execute(dummy_task(), lambda x: self.load_live_accounts(), self.win_main)
-
-                _()
+                values = list_live_objects.get()
+                for i in selection:
+                    async_execute(
+                        self.connection.remove_account(values[i].real_object),
+                        parent_window=self.win_main,
+                        callback=self.load_live_accounts
+                    )
             else:
                 tkdiag.Messagebox.show_error("Select atlest one item!", "Select errror")
 
@@ -633,10 +628,6 @@ class Application():
                 bnt_install.configure(command=install_deps(optional_name, gauge, bnt_install))
                 bnt_install.grid(row=row, column=1)
 
-    @property
-    def opened(self) -> bool:
-        return self._window_opened
-
     def open_object_edit_window(self, *args, **kwargs):
         if self.objects_edit_window is None or self.objects_edit_window.closed:
             self.objects_edit_window = ObjectEditWindow()
@@ -850,10 +841,10 @@ daf.run(
         self.bnt_toolbar_stop_daf.configure(state="enabled")
 
     def stop_daf(self):
-        async_execute(self.connection.shutdown(), parent_window=self.win_main)
         self._daf_running = False
         self.bnt_toolbar_start_daf.configure(state="enabled")
         self.bnt_toolbar_stop_daf.configure(state="disabled")
+        return async_execute(self.connection.shutdown(), self.win_main)
 
     @gui_except
     def add_accounts_daf(self, selection: bool = False):
@@ -875,35 +866,22 @@ daf.run(
         if resp is None or resp == "Cancel" or resp == "Yes" and not self.save_schema():
             return
 
-        self._window_opened = False
-        if self._daf_running:
-            self.stop_daf()
+        sys.stdout = self._oldstdout
+        self.win_main.quit()
 
-        async def _tmp():
-            sys.stdout = self._oldstdout
-
-        async_execute(_tmp())
-
-    def _process(self):
-        self.win_main.update()
+    def until_closed(self):
+        "Runs until closed"
+        self.win_main.mainloop()
 
 
 def run():
     app = Application()
     GLOBAL.app = app
+    async_start()
+    app.until_closed()
+    loop = async_stop()
 
-    async def update_task():
-        while app.opened:
-            app._process()
-            await asyncio.sleep(WIN_UPDATE_DELAY)
-
-    if sys.version_info.minor < 10:
-        loop = asyncio.get_event_loop()
-    else:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-
-    async_start(loop)
-    loop.run_until_complete(update_task())
-    loop.run_until_complete(async_stop())
-    asyncio.set_event_loop(None)
+    # Run in main thread opposed to the async_execute
+    # The problem with running async_execute is synhronization with the quiting TCL interpreter
+    if app._daf_running:
+        loop.run_until_complete(app.connection.shutdown())
