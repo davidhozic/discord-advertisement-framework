@@ -65,7 +65,9 @@ WD_TIMEOUT_MED = 15
 WD_TIMEOUT_30 = 30
 WD_TIMEOUT_LONG = 90
 
-WD_FETCH_INVITE_CLOUDFLARE_TRIES = 5
+WD_FETCH_INVITE_CLOUDFLARE_TRIES = 3
+WD_FETCH_INVITE_CLOUDFLARE_DELAY = 7
+
 WD_RD_CLICK_UPPER_N = 5
 WD_RD_CLICK_LOWER_N = 2
 WD_OUTPUT_PATH = pathlib.Path.home().joinpath("daf/daf_web_data")
@@ -78,7 +80,6 @@ DISCORD_LOGIN_URL = "https://discord.com/login"
 
 TOP_GG_SEARCH_URL = "https://top.gg/api/client/entities/search"
 TOP_GG_SERVER_JOIN_URL = "https://top.gg/servers/{id}/join"
-TOP_GG_REFRESH_TIME = timedelta(hours=1)
 
 
 @doc.doc_category("Clients")
@@ -155,7 +156,8 @@ class SeleniumCLIENT:
         opts.add_argument("--no-first-run")
         opts.add_argument("--disable-background-networking")
         opts.add_argument("--disable-sync")
-        opts.add_argument("--disable-popup-blocking")
+        opts.add_argument("--disable-popup-blocking")  # For purposes of opening a new window with JavaScript
+
 
         if self._proxy is not None:
             proxy = self._proxy.split("://")  # protocol, url
@@ -305,7 +307,7 @@ class SeleniumCLIENT:
         driver = self.driver
         main_window_handle = driver.current_window_handle
         # Open a new tab with javascript to bypass detection
-        driver.execute_script("window.open('https://top.gg', '_blank');")  # Open a new tab
+        driver.execute_script(f"window.open('{url}', '_blank');")  # Open a new tab
         await asyncio.sleep(3)
         new_handle = driver.window_handles[-1]
         try:
@@ -315,7 +317,7 @@ class SeleniumCLIENT:
                     trace("Finding 'challenge-running' cloudflare ID", TraceLEVELS.DEBUG)
                     driver.find_element(By.ID, "challenge-running")
                     driver.switch_to.window(main_window_handle)
-                    await asyncio.sleep(5 * (i + 1))
+                    await asyncio.sleep(WD_FETCH_INVITE_CLOUDFLARE_DELAY * (i + 1))
                     continue
 
                 await asyncio.sleep(2)
@@ -323,9 +325,12 @@ class SeleniumCLIENT:
                 trace("No 'challenge-running' found. Checks suceeded", TraceLEVELS.DEBUG)
                 break
             else:
+                driver.switch_to.window(new_handle)
+                driver.close()
+                driver.switch_to.window(main_window_handle)
                 raise RuntimeError("Could not complete cloudflare checks")
 
-            await self.async_execute(driver.get, url)
+            # await self.async_execute(driver.get, url)
             await self.async_execute(
                 WebDriverWait(driver, WD_TIMEOUT_LONG).until,
                 url_contains("discord.com")

@@ -53,6 +53,9 @@ v2.11
 v2.10.2
 =======================
 - Fixed *Unclosed client session* warning when removing an user account.
+- Fixed documentation of :func:`daf.core.shutdown` - removed information about non existent parameters.
+- Selenium better waiting avoidance
+- Fixed ACCOUNT not being removed from the list if the update failed and the re-login after update failed.
 
 
 v2.10.1

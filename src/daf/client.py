@@ -550,6 +550,10 @@ class ACCOUNT:
             await async_util.update_obj_param(self, **kwargs)
             await update_servers(self)
         except Exception:
-            await self.initialize()  # re-login
-            await update_servers(self)
+            try:
+                await self.initialize()  # re-login
+                await update_servers(self)
+            except Exception:
+                self._delete()
+
             raise
