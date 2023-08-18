@@ -293,26 +293,26 @@ class MessageLOG(ORMBase):
     success_rate = column_property(
         case(
             (
-                select(MessageTYPE.name).where(MessageTYPE.id == message_type_id) != "DirectMESSAGE",
+                select(MessageTYPE.name).where(MessageTYPE.id == message_type_id).scalar_subquery() != "DirectMESSAGE",
                 100 * select(func.count()).where(MessageChannelLOG.reason.is_(None), MessageChannelLOG.log_id == id)
                 .select_from(MessageChannelLOG)
                 .scalar_subquery() /
                 select(func.count()).where(MessageChannelLOG.log_id == id).select_from(MessageChannelLOG)
-                .scalar_subquery(),
+                .scalar_subquery()
             ),
             else_=case((dm_reason.is_(None), 100), else_=0)
         )
     )
 
     def __init__(
-            self,
-            sent_data: DataHISTORY = None,
-            message_type: MessageTYPE = None,
-            message_mode: MessageMODE = None,
-            dm_reason: str = None,
-            guild: GuildUSER = None,
-            author: GuildUSER = None,
-            channels: List["MessageChannelLOG"] = None
+        self,
+        sent_data: DataHISTORY = None,
+        message_type: MessageTYPE = None,
+        message_mode: MessageMODE = None,
+        dm_reason: str = None,
+        guild: GuildUSER = None,
+        author: GuildUSER = None,
+        channels: List["MessageChannelLOG"] = None
     ):
         self.sent_data = sent_data
         self.message_type = message_type

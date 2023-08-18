@@ -573,7 +573,8 @@ class DirectMESSAGE(BaseMESSAGE):
 
     @property
     def remaining_before_removal(self) -> Union[timedelta, datetime, int]:
-        return self._remove_after
+        r = self._remove_after
+        return r if isinstance(r, int) else super().remaining_before_removal
 
     def _check_state(self) -> bool:
         return (
