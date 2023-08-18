@@ -433,7 +433,6 @@ class DiscordWebSocket:
                         "browser_user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
                         "browser_version":"109.0.0.0",
                     },
-                    "presence": {"status":"online","since":0,"activities":[],"afk": False},
                     "compress": True
                 }
             }

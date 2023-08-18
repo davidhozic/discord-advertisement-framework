@@ -28,6 +28,7 @@ class GLOBALS:
 
 # ----------------- OPTIONAL ----------------- #
 try:
+    from webdriver_manager.chrome import ChromeDriverManager
     from undetected_chromedriver import Chrome
     from selenium.webdriver.chrome.options import Options
     from selenium.webdriver.remote.webelement import WebElement
@@ -168,7 +169,7 @@ class SeleniumCLIENT:
             proxy = f"{proxy[0]}://{proxy[1]}"
             opts.add_argument(f"--proxy-server={proxy}")
 
-        driver = Chrome(options=opts)
+        driver = Chrome(options=opts, driver_executable_path=ChromeDriverManager().install())
         driver.maximize_window()
         self.driver = driver
 
@@ -306,31 +307,31 @@ class SeleniumCLIENT:
         trace(f"Fetching invite link from {url}", TraceLEVELS.DEBUG)
         driver = self.driver
         main_window_handle = driver.current_window_handle
-        # Open a new tab with javascript to bypass detection
-        driver.execute_script(f"window.open('{url}', '_blank');")  # Open a new tab
-        await asyncio.sleep(3)
-        new_handle = driver.window_handles[-1]
+
+        driver.execute_script(f"window.open('{url}', '_blank');")  # Try to bypass from start
+        await asyncio.sleep(5)
+        invite_handle = driver.window_handles[-1]
+        driver.switch_to.window(invite_handle)
         try:
             for i in range(WD_FETCH_INVITE_CLOUDFLARE_TRIES):
                 with suppress(NoSuchElementException):
-                    driver.switch_to.window(new_handle)
                     trace("Finding 'challenge-running' cloudflare ID", TraceLEVELS.DEBUG)
-                    driver.find_element(By.ID, "challenge-running")
-                    driver.switch_to.window(main_window_handle)
-                    await asyncio.sleep(WD_FETCH_INVITE_CLOUDFLARE_DELAY * (i + 1))
-                    continue
+                    if "top.gg" in driver.current_url:
+                        driver.find_element(By.ID, "challenge-running")
+                        # Open a new tab with javascript to bypass detection
+                        trace("Found 'challenge-running' tag", TraceLEVELS.DEBUG)
+                        driver.execute_script("window.open('https://top.gg', '_blank');")
+                        await asyncio.sleep(WD_FETCH_INVITE_CLOUDFLARE_DELAY * (i + 1))
+                        driver.switch_to.window(driver.window_handles[-1])
+                        driver.close()
+                        driver.switch_to.window(invite_handle)
+                        await self.async_execute(driver.refresh)
 
-                await asyncio.sleep(2)
-                driver.switch_to.window(new_handle)
-                trace("No 'challenge-running' found. Checks suceeded", TraceLEVELS.DEBUG)
+                trace("Great! 'challenge-running' not found", TraceLEVELS.DEBUG)
                 break
             else:
-                driver.switch_to.window(new_handle)
-                driver.close()
-                driver.switch_to.window(main_window_handle)
-                raise RuntimeError("Could not complete cloudflare checks")
+                raise RuntimeError("Could not bypass 'challenge-running'")
 
-            # await self.async_execute(driver.get, url)
             await self.async_execute(
                 WebDriverWait(driver, WD_TIMEOUT_LONG).until,
                 url_contains("discord.com")
@@ -646,6 +647,7 @@ class SeleniumCLIENT:
                     "//span[contains(text() , 'Unable to accept')]"
                 )
                 # Element found -> join error
+                ActionChains(driver).send_keys(Keys.ESCAPE).perform()
                 raise RuntimeError(f"The user appears to be banned from the guild w/ invite {invite}")
 
             await self.random_sleep(2, 3)

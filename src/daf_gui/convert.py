@@ -367,6 +367,9 @@ def convert_to_object_info(object_: object, save_original = False):
     if isinstance(object_, (set, list, tuple)):
         object_ = [convert_to_object_info(value, save_original) for value in object_]
         return object_
+    
+    if isinstance(object_, dict):
+        return convert_dict_to_object_info(object_)
 
     attrs = get_conversion_map(object_type)
     return _convert_object_info(object_, save_original, object_type, attrs)

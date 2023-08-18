@@ -37,6 +37,15 @@ Glossary
 Releases
 ---------------------
 
+|UNRELEASED| v2.10.3
+======================
+- Fixed Chrome driver not working with newer Chrome versions (115+).
+- Fetching invite links better bypass.
+- Remove invalid presence
+- Fixed ``remaining_before_removal`` properties
+- Fixed SQL queries not working on direct messages.
+
+
 v2.10.2
 =======================
 - Fixed *Unclosed client session* warning when removing an user account.

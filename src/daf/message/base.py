@@ -223,7 +223,11 @@ class BaseMESSAGE:
 
         .. versionadded:: v2.10
         """
-        raise NotImplementedError
+        r = self.remove_after
+        if isinstance(r, timedelta):
+            r = r - (datetime.now() - self._created_at)
+
+        return r
 
     @property
     def created_at(self) -> datetime:
@@ -624,9 +628,20 @@ class BaseChannelMessage(BaseMESSAGE):
         self.remove_after_by_channel = {}
 
     @property
-    def remaining_before_removal(self) -> Union[Dict[int, int], timedelta, datetime, int]:
-        # Return the counts dictionary or the original remove_after parameter if dictionary is empty
-        return self.remove_after_by_channel or self.remove_after
+    def remaining_before_removal(self) -> Union[Dict[ChannelType, int], timedelta, datetime, int]:
+        """
+        Returns
+        ------------
+        int
+            (Only if message not yet sent) Number of successful sends to each channel before removal.
+        Dict[ChannelType, int]
+            Dictionary mapping channel objects to remaining number of sends to that channel.
+        timedelta
+            Remaining ammount of time before removal.
+        datetime
+            Timestamp of removal.
+        """
+        return {self.parent.parent.client.get_channel(k): v for k, v in self.remove_after_by_channel.items()} or super().remaining_before_removal
 
     def _check_state(self) -> bool:
         return (
