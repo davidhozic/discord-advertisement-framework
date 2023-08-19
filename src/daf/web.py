@@ -446,47 +446,7 @@ class SeleniumCLIENT:
             CAPTCHA was not solved in time.
         """
         trace("Awaiting CAPTCHA", TraceLEVELS.DEBUG)
-        driver = self.driver
         await asyncio.sleep(WD_TIMEOUT_SHORT)
-
-        # Find all CAPTCHA iframes
-        captcha_frames = driver.find_elements(
-            By.XPATH,
-            "//iframe[contains(@src, 'captcha')]"
-        )
-        challenge_container = None
-        captcha_button = None
-        captcha_button_frame = None
-        # Find images container and the CAPTCHA button
-        for frame in captcha_frames:
-            driver.switch_to.frame(frame)
-            if challenge_container is None:
-                with suppress(NoSuchElementException):
-                    challenge_container = driver.find_element(
-                        By.XPATH,
-                        "//div[@class='challenge-container']"
-                        "/div[@class='challenge']"
-                    )
-
-            if captcha_button is None:
-                with suppress(NoSuchElementException):
-                    captcha_button = driver.find_element(
-                        By.XPATH,
-                        "//div[@id='checkbox']"
-                    )
-                    captcha_button_frame = frame
-
-            driver.switch_to.default_content()
-
-        if challenge_container is None and captcha_button is None:
-            return  # No CAPTCHA action required
-
-        # Challenge container not found -> click the button to open it
-        if challenge_container is None and captcha_button is not None:
-            driver.switch_to.frame(captcha_button_frame)
-            await self.hover_click(captcha_button)
-            driver.switch_to.default_content()
-
         try:
             # CAPTCHA detected, wait until it is solved by the user
             await self.async_execute(
