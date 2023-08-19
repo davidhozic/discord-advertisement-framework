@@ -27,6 +27,8 @@ import inspect
 import copy
 import json
 
+import tk_async_execute as tae
+
 
 __all__ = (
     "Text",
@@ -565,7 +567,7 @@ class NewObjectFrameStruct(NewObjectFrameBase):
                     **method_param,
                 )
 
-            async_execute(runner(), parent_window=self.origin_window)
+            tae.async_execute(runner(), wait=False, pop_up=True, master=self.origin_window)
 
         dpi_5, dpi_10 = dpi_scaled(5), dpi_scaled(10)
         frame_method = ttk.LabelFrame(
