@@ -37,7 +37,7 @@ Glossary
 Releases
 ---------------------
 
-|UNRELEASED| v2.10.3
+v2.10.3
 ======================
 - Fixed Chrome driver not working with newer Chrome versions (115+).
 - Fetching invite links better bypass.
