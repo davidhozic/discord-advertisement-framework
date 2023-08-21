@@ -37,6 +37,11 @@ Glossary
 Releases
 ---------------------
 
+|UNRELEASED| v2.10.4
+======================
+- Fixed prematurely exiting when waiting for captcha to be completed by user.
+
+
 v2.10.3
 ======================
 - Fixed Chrome driver not working with newer Chrome versions (115+).
