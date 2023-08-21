@@ -69,6 +69,8 @@ WD_TIMEOUT_LONG = 90
 WD_FETCH_INVITE_CLOUDFLARE_TRIES = 3
 WD_FETCH_INVITE_CLOUDFLARE_DELAY = 7
 
+WD_CAPTCHA_RETRIES = 3
+
 WD_RD_CLICK_UPPER_N = 5
 WD_RD_CLICK_LOWER_N = 2
 WD_OUTPUT_PATH = pathlib.Path.home().joinpath("daf/daf_web_data")
@@ -81,6 +83,9 @@ DISCORD_LOGIN_URL = "https://discord.com/login"
 
 TOP_GG_SEARCH_URL = "https://top.gg/api/client/entities/search"
 TOP_GG_SERVER_JOIN_URL = "https://top.gg/servers/{id}/join"
+
+
+XPATH_CAPTCHA = "//iframe[contains(@src, 'captcha')]"
 
 
 @doc.doc_category("Clients")
@@ -448,13 +453,21 @@ class SeleniumCLIENT:
         trace("Awaiting CAPTCHA", TraceLEVELS.DEBUG)
         await asyncio.sleep(WD_TIMEOUT_SHORT)
         try:
+            driver = self.driver
             # CAPTCHA detected, wait until it is solved by the user
-            await self.async_execute(
-                WebDriverWait(self.driver, WD_TIMEOUT_LONG).until_not,
-                presence_of_element_located(
-                    (By.XPATH, "//iframe[contains(@src, 'captcha')]")
+            for _ in range(WD_CAPTCHA_RETRIES):
+                await self.async_execute(
+                    WebDriverWait(driver, WD_TIMEOUT_LONG).until_not,
+                    presence_of_element_located(
+                        (By.XPATH, XPATH_CAPTCHA)
+                    )
                 )
-            )
+                await asyncio.sleep(WD_TIMEOUT_SHORT)
+                try:
+                    driver.find_element(By.XPATH, XPATH_CAPTCHA)
+                except:
+                    break  # No element found, skip the loop to prevent pointless waiting
+
         except TimeoutException as exc:
             raise TimeoutError("CAPTCHA was not solved by the user") from exc
 
