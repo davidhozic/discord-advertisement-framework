@@ -37,7 +37,7 @@ Glossary
 Releases
 ---------------------
 
-|UNRELEASED| v2.10.4
+v2.10.4
 ======================
 - Fixed prematurely exiting when waiting for captcha to be completed by user.
 
