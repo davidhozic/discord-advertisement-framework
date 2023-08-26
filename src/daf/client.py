@@ -152,7 +152,7 @@ class ACCOUNT:
         self.intents = intents
         self._running = False
         self.tasks: List[asyncio.Task] = []
-        self._servers: List[guild._BaseGUILD] = []
+        self._servers: List[guild.BaseGUILD] = []
         self._autoguilds: List[guild.AutoGUILD] = []  # To prevent __eq__ issues, use 2 lists
         self._selenium = web.SeleniumCLIENT(username, password, proxy) if username is not None else None
 
@@ -363,7 +363,7 @@ class ACCOUNT:
             :py:meth:`daf.guild.AutoGUILD.initialize()`
         """
         await server.initialize(parent=self)
-        if isinstance(server, guild._BaseGUILD):
+        if isinstance(server, guild.BaseGUILD):
             self._servers.append(server)
         else:
             self._autoguilds.append(server)
@@ -383,7 +383,7 @@ class ACCOUNT:
         ValueError
             ``server`` is not in the shilling list.
         """
-        if isinstance(server, guild._BaseGUILD):
+        if isinstance(server, guild.BaseGUILD):
             server._delete()
             # Remove by ID
             ids = [id(s) for s in self._servers]
@@ -477,7 +477,7 @@ class ACCOUNT:
             @async_util.with_semaphore(self._update_sem)
             async def __loop():
                 to_remove = []
-                to_advert: List[guild._BaseGUILD, guild.AutoGUILD] = []
+                to_advert: List[guild.BaseGUILD, guild.AutoGUILD] = []
                 for server in self.servers:
                     if server._check_state():
                         to_remove.append(server)
@@ -489,7 +489,7 @@ class ACCOUNT:
 
                 for server in to_advert:
                     status = await server._advertise()
-                    if status == guild.GUILD_ADVERT_STATUS_ERROR_REMOVE_ACCOUNT:
+                    if status == guild.GuildAdvertStatus.REMOVE_ACCOUNT:
                         trace(f"Removing account {self} because token was invalidated! Username: '{self._client.user.name}')", TraceLEVELS.ERROR)
                         self._running = False
                         self._deleted = True
@@ -536,7 +536,7 @@ class ACCOUNT:
             for server in self.servers:
                 try:
                     await server.update(init_options={"parent": self})
-                    if isinstance(server, guild._BaseGUILD):
+                    if isinstance(server, guild.BaseGUILD):
                         _servers.append(server)
                     else:
                         _autoguilds.append(server)
