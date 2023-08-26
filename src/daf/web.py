@@ -465,7 +465,7 @@ class SeleniumCLIENT:
                 await asyncio.sleep(WD_TIMEOUT_SHORT)
                 try:
                     driver.find_element(By.XPATH, XPATH_CAPTCHA)
-                except:
+                except NoSuchElementException:
                     break  # No element found, skip the loop to prevent pointless waiting
 
         except TimeoutException as exc:
