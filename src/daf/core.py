@@ -331,7 +331,7 @@ async def add_object(obj: Union[message.DirectMESSAGE, message.TextMESSAGE, mess
     obj: message.DirectMESSAGE | message.TextMESSAGE | message.VoiceMESSAGE
         The message object to add into the daf.
     snowflake: guild.GUILD | guild.USER
-        Which guild/user to add it to (can be snowflake id or a framework _BaseGUILD object or
+        Which guild/user to add it to (can be snowflake id or a framework BaseGUILD object or
         a discord API wrapper object).
 
     Raises
@@ -360,7 +360,7 @@ async def add_object(obj, snowflake=None):
 
         await obj.initialize()
         GLOBALS.accounts.append(obj)
-    elif isinstance(obj, (guild._BaseGUILD, guild.AutoGUILD)):
+    elif isinstance(obj, (guild.BaseGUILD, guild.AutoGUILD)):
         if not isinstance(snowflake, client.ACCOUNT):
             raise TypeError("snowflake parameter type must be ACCOUNT when the obj parameter type is guild like.")
 
@@ -370,7 +370,7 @@ async def add_object(obj, snowflake=None):
         if snowflake is None:
             raise ValueError("snowflake parameter (guild-like) is required to add a message.")
 
-        if not isinstance(snowflake, (guild.AutoGUILD, guild._BaseGUILD)):
+        if not isinstance(snowflake, (guild.AutoGUILD, guild.BaseGUILD)):
             raise TypeError("snowflake parameter must be one of: guild.AutoGUILD, guild.GUILD, guild.USER")
 
         await snowflake.add_message(obj)
@@ -382,7 +382,7 @@ async def add_object(obj, snowflake=None):
 @typechecked
 @doc.doc_category("Dynamic mod.")
 async def remove_object(
-    snowflake: Union[guild._BaseGUILD, message.BaseMESSAGE, guild.AutoGUILD, client.ACCOUNT]
+    snowflake: Union[guild.BaseGUILD, message.BaseMESSAGE, guild.AutoGUILD, client.ACCOUNT]
 ) -> None:
     """
     .. versionchanged:: v2.4.1
@@ -396,7 +396,7 @@ async def remove_object(
 
     Parameters
     -------------
-    snowflake: guild._BaseGUILD | message.BaseMESSAGE | guild.AutoGUILD | client.ACCOUNT
+    snowflake: guild.BaseGUILD | message.BaseMESSAGE | guild.AutoGUILD | client.ACCOUNT
         The object to remove from the framework.
 
     Raises
@@ -414,7 +414,7 @@ async def remove_object(
         else:
             raise ValueError("Message is not in any guilds")
 
-    elif isinstance(snowflake, (guild._BaseGUILD, guild.AutoGUILD)):
+    elif isinstance(snowflake, (guild.BaseGUILD, guild.AutoGUILD)):
         for account in GLOBALS.accounts:
             if snowflake in account.servers:
                 account.remove_server(snowflake)

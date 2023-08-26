@@ -1,13 +1,15 @@
 """
 Main file of the DAF GUI.
 """
-import subprocess
-import sys
-
 from importlib.util import find_spec
 from pathlib import Path
 
 from daf.misc import instance_track as it
+
+import subprocess
+import sys
+
+import tk_async_execute as tae
 
 
 installed = find_spec("ttkbootstrap") is not None
@@ -200,7 +202,7 @@ class Application():
                 self.lb_accounts.insert(tk.END, *values)
 
             gui_daf_assert_running()
-            async_execute(import_accounts_async(), parent_window=self.win_main)
+            tae.async_execute(import_accounts_async(), wait=False, pop_up=True, master=self.win_main)
 
         menu_bnt = ttk.Menubutton(
             frame_tab_account,
@@ -288,10 +290,12 @@ class Application():
             if len(selection):
                 values = list_live_objects.get()
                 for i in selection:
-                    async_execute(
+                    tae.async_execute(
                         self.connection.remove_account(values[i].real_object),
-                        parent_window=self.win_main,
-                        callback=self.load_live_accounts
+                        wait=False,
+                        pop_up=True,
+                        callback=self.load_live_accounts,
+                        master=self.win_main
                     )
             else:
                 tkdiag.Messagebox.show_error("Select atlest one item!", "Select errror")
@@ -303,7 +307,7 @@ class Application():
             if selection >= 0:
                 fnc: ObjectInfo = combo_add_object_edit.combo.get()
                 fnc_data = convert_to_objects(fnc.data)
-                async_execute(self.connection.add_account(**fnc_data), parent_window=self.win_main)
+                tae.async_execute(self.connection.add_account(**fnc_data), wait=False, pop_up=True, master=self.win_main)
             else:
                 tkdiag.Messagebox.show_error("Combobox does not have valid selection.", "Combo invalid selection")
 
@@ -478,7 +482,12 @@ class Application():
                 selection = listbox.curselection()
                 if len(selection):
                     all_ = listbox.get()
-                    async_execute(delete_logs_async([all_[i].data["id"] for i in selection]))
+                    tae.async_execute(
+                        delete_logs_async([all_[i].data["id"] for i in selection]),
+                        wait=False,
+                        pop_up=True,
+                        master=self.win_main
+                    )
                 else:
                     tkdiag.Messagebox.show_error("Select atlest one item!", "Selection error.")
 
@@ -499,7 +508,7 @@ class Application():
             ttk.Button(
                 frame_msg_history_bnts,
                 text="Get logs",
-                command=lambda: async_execute(analytics_load_history(), parent_window=self.win_main)
+                command=lambda: tae.async_execute(analytics_load_history(), wait=False, pop_up=True, master=self.win_main)
             ).pack(side="left", fill=tk.X)
             ttk.Button(
                 frame_msg_history_bnts,
@@ -551,7 +560,7 @@ class Application():
             ttk.Button(
                 frame_num,
                 text="Calculate",
-                command=lambda: async_execute(analytics_load_num(), parent_window=self.win_main)
+                command=lambda: tae.async_execute(analytics_load_num(), wait=False, pop_up=True, master=self.win_main)
             ).pack(anchor=tk.W, pady=dpi_10)
 
             frame_num.pack(fill=tk.BOTH, expand=True, pady=dpi_5)
@@ -641,7 +650,7 @@ class Application():
             self.list_live_objects.clear()
             self.list_live_objects.insert(tk.END, *object_infos)
 
-        async_execute(load_accounts(), parent_window=self.win_main)
+        tae.async_execute(load_accounts(), wait=False, pop_up=True, master=self.win_main)
 
     def edit_logger(self):
         selection = self.combo_logging_mgr.current()
@@ -828,9 +837,11 @@ daf.run(
         if not isinstance(tracing, str):
             kwargs["debug"] = tracing
 
-        async_execute(
+        tae.async_execute(
             connection.initialize(**kwargs, save_to_file=self.save_objects_to_file_var.get()),
-            parent_window=self.win_main
+            wait=True,
+            pop_up=True,
+            master=self.win_main
         )
 
         self._daf_running = True
@@ -844,7 +855,7 @@ daf.run(
         self._daf_running = False
         self.bnt_toolbar_start_daf.configure(state="enabled")
         self.bnt_toolbar_stop_daf.configure(state="disabled")
-        return async_execute(self.connection.shutdown(), self.win_main)
+        tae.async_execute(self.connection.shutdown(), wait=False, pop_up=True, master=self.win_main)
 
     @gui_except
     def add_accounts_daf(self, selection: bool = False):
@@ -859,12 +870,20 @@ daf.run(
             accounts = [a for i, a in enumerate(accounts) if i in indexes]
 
         for account in accounts:
-            async_execute(self.connection.add_account(convert_to_objects(account)), parent_window=self.win_main)
+            tae.async_execute(
+                self.connection.add_account(convert_to_objects(account)),
+                wait=False,
+                pop_up=True,
+                master=self.win_main
+            )
 
     def close_window(self):
         resp = tkdiag.Messagebox.yesnocancel("Do you wish to save?", "Save?", alert=True, parent=self.win_main)
         if resp is None or resp == "Cancel" or resp == "Yes" and not self.save_schema():
             return
+
+        if self._daf_running:
+            tae.async_execute(self.connection.shutdown(), pop_up=True)
 
         sys.stdout = self._oldstdout
         self.win_main.quit()
@@ -877,11 +896,6 @@ daf.run(
 def run():
     app = Application()
     GLOBAL.app = app
-    async_start()
+    tae.start()
     app.until_closed()
-    loop = async_stop()
-
-    # Run in main thread opposed to the async_execute
-    # The problem with running async_execute is synhronization with the quiting TCL interpreter
-    if app._daf_running:
-        loop.run_until_complete(app.connection.shutdown())
+    tae.stop()
