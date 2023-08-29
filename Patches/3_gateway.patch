@@ -1,8 +1,8 @@
 diff --git a/src/_discord/gateway.py b/src/_discord/gateway.py
-index e3e7d1b..e847fc6 100644
+index bd13f22..0040f3a 100644
 --- a/src/_discord/gateway.py
 +++ b/src/_discord/gateway.py
-@@ -302,6 +302,7 @@ class DiscordWebSocket:
+@@ -304,6 +304,7 @@ class DiscordWebSocket:
          self._buffer = bytearray()
          self._close_code = None
          self._rate_limiter = GatewayRatelimiter()
@@ -10,7 +10,7 @@ index e3e7d1b..e847fc6 100644
  
      @property
      def open(self):
-@@ -338,6 +339,7 @@ class DiscordWebSocket:
+@@ -340,6 +341,7 @@ class DiscordWebSocket:
  
          # dynamically add attributes needed
          ws.token = client.http.token
@@ -18,7 +18,7 @@ index e3e7d1b..e847fc6 100644
          ws._connection = client._connection
          ws._discord_parsers = client._connection.parsers
          ws._dispatch = client.dispatch
-@@ -398,23 +400,41 @@ class DiscordWebSocket:
+@@ -400,23 +402,40 @@ class DiscordWebSocket:
  
      async def identify(self):
          """Sends the IDENTIFY packet."""

@@ -37,7 +37,7 @@ from typing import Literal, NamedTuple
 
 from .utils import deprecated
 
-__version__ = "2.4.1"
+__version__ = "2.5.0"
 
 
 class AdvancedVersionInfo(TypedDict):
