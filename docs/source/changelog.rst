@@ -49,6 +49,9 @@ v2.11
     the root.mainroot is called directly, while the asyncio event loop is running inside another thread.
   - The GUI will not block the asyncio tasks (explained in previous bullet).
 
+- Core:
+  
+  - Updated PyCord API wrapper to 2.5.0 RC5
 
 v2.10.4
 ======================
