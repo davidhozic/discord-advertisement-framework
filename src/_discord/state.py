@@ -45,6 +45,7 @@ from typing import (
 
 from . import utils
 from .activity import BaseActivity
+from .audit_logs import AuditLogEntry
 from .automod import AutoModRule
 from .channel import *
 from .channel import _channel_factory
@@ -671,8 +672,13 @@ class ConnectionState:
         self.dispatch("message", message)
         if self._messages is not None:
             self._messages.append(message)
-        # we ensure that the channel is either a TextChannel, VoiceChannel, or Thread
-        if channel and channel.__class__ in (TextChannel, VoiceChannel, Thread):
+        # we ensure that the channel is either a TextChannel, VoiceChannel, StageChannel, or Thread
+        if channel and channel.__class__ in (
+            TextChannel,
+            VoiceChannel,
+            StageChannel,
+            Thread,
+        ):
             channel.last_message_id = message.id  # type: ignore
 
     def parse_message_delete(self, data) -> None:
@@ -795,14 +801,14 @@ class ConnectionState:
 
     def parse_interaction_create(self, data) -> None:
         interaction = Interaction(data=data, state=self)
-        if data.get("type") == 3:  # interaction component
-            custom_id = interaction.data.get("custom_id")  # type: ignore
-            component_type = interaction.data.get("component_type")  # type: ignore
+        if data["type"] == 3:  # interaction component
+            custom_id = interaction.data["custom_id"]  # type: ignore
+            component_type = interaction.data["component_type"]  # type: ignore
             self._view_store.dispatch(component_type, custom_id, interaction)
         if interaction.type == InteractionType.modal_submit:
             user_id, custom_id = (
                 interaction.user.id,
-                interaction.data.get("custom_id"),
+                interaction.data["custom_id"],
             )
             asyncio.create_task(
                 self._modal_store.dispatch(user_id, custom_id, interaction)
@@ -1133,33 +1139,19 @@ class ConnectionState:
         if self.member_cache_flags.joined:
             guild._add_member(member)
 
-        try:
+        if guild._member_count is not None:
             guild._member_count += 1
-        except AttributeError:
-            pass
 
         self.dispatch("member_join", member)
 
     def parse_guild_member_remove(self, data) -> None:
-        # Check if data contains necessary items
-        user_data = data["user"]
-        for attr in {"username", "id", "avatar"}:
-            if attr not in user_data:
-                _log.warning(
-                    f"Payload does not contain necessary information (Missing {attr}). "
-                    f"Payload contains: {str(data.keys())}"
-                )
-                return
-
-        user = self.store_user(user_data)
+        user = self.store_user(data["user"])
         raw = RawMemberRemoveEvent(data, user)
 
         guild = self._get_guild(int(data["guild_id"]))
         if guild is not None:
-            try:
+            if guild._member_count is not None:
                 guild._member_count -= 1
-            except AttributeError:
-                pass
 
             member = guild.get_member(user.id)
             if member is not None:
@@ -1260,8 +1252,10 @@ class ConnectionState:
         return guild.id not in self._guilds
 
     async def chunk_guild(self, guild, *, wait=True, cache=None):
+        # Note: This method makes an API call without timeout, and should be used in
+        #       conjunction with `asyncio.wait_for(..., timeout=...)`.
         cache = cache or self.member_cache_flags.joined
-        request = self._chunk_requests.get(guild.id)
+        request = self._chunk_requests.get(guild.id)  # nosec B113
         if request is None:
             self._chunk_requests[guild.id] = request = ChunkRequest(
                 guild.id, self.loop, self._get_guild, cache=cache
@@ -1348,6 +1342,26 @@ class ConnectionState:
 
         self._remove_guild(guild)
         self.dispatch("guild_remove", guild)
+
+    def parse_guild_audit_log_entry_create(self, data) -> None:
+        guild = self._get_guild(int(data["guild_id"]))
+        if guild is None:
+            _log.debug(
+                (
+                    "GUILD_AUDIT_LOG_ENTRY_CREATE referencing an unknown guild ID: %s."
+                    " Discarding."
+                ),
+                data["guild_id"],
+            )
+            return
+        payload = RawAuditLogEntryEvent(data)
+        payload.guild = guild
+        self.dispatch("raw_audit_log_entry", payload)
+        user = self.get_user(payload.user_id)
+        if user is not None:
+            data.pop("guild_id")
+            entry = AuditLogEntry(users={data["user_id"]: user}, data=data, guild=guild)
+            self.dispatch("audit_log_entry", entry)
 
     def parse_guild_ban_add(self, data) -> None:
         # we make the assumption that GUILD_BAN_ADD is done
@@ -1619,13 +1633,20 @@ class ConnectionState:
             )
             return
 
-        channel = guild.get_channel(int(data["channel_id"]))
-        if channel is not None:
-            self.dispatch("webhooks_update", channel)
+        channel_id = data["channel_id"]
+        if channel_id is not None:
+            channel = guild.get_channel(int(channel_id))
+            if channel is not None:
+                self.dispatch("webhooks_update", channel)
+            else:
+                _log.debug(
+                    "WEBHOOKS_UPDATE referencing an unknown channel ID: %s. Discarding.",
+                    data["channel_id"],
+                )
         else:
             _log.debug(
-                "WEBHOOKS_UPDATE referencing an unknown channel ID: %s. Discarding.",
-                data["channel_id"],
+                "WEBHOOKS_UPDATE channel ID was null for guild: %s. Discarding.",
+                data["guild_id"],
             )
 
     def parse_stage_instance_create(self, data) -> None:

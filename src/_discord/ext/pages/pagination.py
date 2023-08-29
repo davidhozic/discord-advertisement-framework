@@ -23,10 +23,10 @@ DEALINGS IN THE SOFTWARE.
 """
 from __future__ import annotations
 
-from typing import List
+from typing import List, overload
 
 import _discord
-from _discord.ext.bridge import BridgeContext
+from _discord.ext.bridge import BridgeApplicationContext, BridgeContext, BridgeExtContext
 from _discord.ext.commands import Context
 
 __all__ = (
@@ -428,7 +428,9 @@ class Paginator(_discord.ui.View):
         self.loop_pages = loop_pages
         self.custom_view: _discord.ui.View = custom_view
         self.trigger_on_display = trigger_on_display
-        self.message: _discord.Message | _discord.WebhookMessage | None = None
+        self.message: _discord.Message | _discord.WebhookMessage | _discord.InteractionMessage | None = (
+            None
+        )
 
         if self.custom_buttons and not self.use_default_buttons:
             for button in custom_buttons:
@@ -465,6 +467,7 @@ class Paginator(_discord.ui.View):
         custom_buttons: list[PaginatorButton] | None = None,
         trigger_on_display: bool | None = None,
         interaction: _discord.Interaction | None = None,
+        current_page: int = 0,
     ):
         """Updates the existing :class:`Paginator` instance with the provided options.
 
@@ -505,6 +508,8 @@ class Paginator(_discord.ui.View):
         interaction: Optional[:class:`discord.Interaction`]
             The interaction to use when updating the paginator. If not provided, the paginator will be updated
             by using its stored :attr:`message` attribute instead.
+        current_page: :class:`int`
+            The initial page number to display when updating the paginator.
         """
 
         # Update pages and reset current_page to 0 (default)
@@ -527,7 +532,7 @@ class Paginator(_discord.ui.View):
                 self.page_groups[self.default_page_group]
             )
         self.page_count = max(len(self.pages) - 1, 0)
-        self.current_page = 0
+        self.current_page = current_page if current_page <= self.page_count else 0
         # Apply config changes, if specified
         self.show_disabled = (
             show_disabled if show_disabled is not None else self.show_disabled
@@ -1017,22 +1022,83 @@ class Paginator(_discord.ui.View):
 
         return self.message
 
+    @overload
+    async def edit(
+        self,
+        message: _discord.PartialMessage,
+        suppress: bool | None = ...,
+        allowed_mentions: _discord.AllowedMentions | None = ...,
+        delete_after: float | None = ...,
+        user: _discord.User | _discord.Member = ...,
+    ) -> _discord.Message:
+        ...
+
+    @overload
     async def edit(
         self,
         message: _discord.Message,
+        suppress: bool | None = ...,
+        allowed_mentions: _discord.AllowedMentions | None = ...,
+        delete_after: float | None = ...,
+        user: _discord.User | _discord.Member = ...,
+    ) -> _discord.Message | None:
+        ...
+
+    @overload
+    async def edit(
+        self,
+        message: _discord.ApplicationContext | BridgeApplicationContext,
+        suppress: bool | None = ...,
+        allowed_mentions: _discord.AllowedMentions | None = ...,
+        delete_after: float | None = ...,
+        user: None = ...,
+    ) -> _discord.InteractionMessage:
+        ...
+
+    @overload
+    async def edit(
+        self,
+        message: BridgeExtContext,
+        suppress: bool | None = ...,
+        allowed_mentions: _discord.AllowedMentions | None = ...,
+        delete_after: float | None = ...,
+        user: None = ...,
+    ) -> _discord.Message | None:
+        ...
+
+    @overload
+    async def edit(
+        self,
+        message: _discord.Interaction,
+        suppress: bool | None = ...,
+        allowed_mentions: _discord.AllowedMentions | None = ...,
+        delete_after: float | None = ...,
+        user: None = ...,
+    ) -> _discord.InteractionMessage | None:
+        ...
+
+    async def edit(
+        self,
+        message: _discord.PartialMessage
+        | _discord.Message
+        | _discord.Interaction
+        | _discord.ApplicationContext
+        | BridgeApplicationContext
+        | BridgeExtContext,
         suppress: bool | None = None,
         allowed_mentions: _discord.AllowedMentions | None = None,
         delete_after: float | None = None,
-    ) -> _discord.Message | None:
-        """Edits an existing message to replace it with the paginator contents.
+        user: _discord.User | _discord.Member | None = None,
+    ) -> _discord.Message | _discord.InteractionMessage | None:
+        """Edits an existing message to replace it with the paginator.
 
         .. note::
 
-            If invoked from an interaction, you will still need to respond to the interaction.
+            If a view was previously present on the message, it will be removed.
 
         Parameters
         ----------
-        message: :class:`discord.Message`
+        message: Union[:class:`~discord.PartialMessage`, :class:`~discord.Message`, :class:`~discord.Interaction`, :class:`~discord.ApplicationContext`, :class:`~discord.ext.bridge.Context`]
             The message to edit with the paginator.
         suppress: :class:`bool`
             Whether to suppress embeds for the message. This removes
@@ -1048,14 +1114,14 @@ class Paginator(_discord.ui.View):
             are used instead.
         delete_after: Optional[:class:`float`]
             If set, deletes the paginator after the specified time.
+        user: Optional[Union[:class:`~discord.User`, :class:`~discord.Member`]]
+            The user to set as the paginator's user, if target message is of type :class:`~discord.Message` or :class:`~discord.PartialMessage`.
 
         Returns
         -------
-        Optional[:class:`discord.Message`]
+        :class:`~discord.Message` | :class:`~discord.InteractionMessage` | ``None``
             The message that was edited. Returns ``None`` if the operation failed.
         """
-        if not isinstance(message, _discord.Message):
-            raise TypeError(f"expected Message not {message.__class__!r}")
 
         self.update_buttons()
 
@@ -1067,10 +1133,20 @@ class Paginator(_discord.ui.View):
         if page_content.custom_view:
             self.update_custom_view(page_content.custom_view)
 
-        self.user = message.author
+        if isinstance(message, _discord.Interaction):
+            self.user = message.user
+        elif isinstance(message, (_discord.Message, _discord.PartialMessage)):
+            if not isinstance(user, (_discord.User, _discord.Member)):
+                raise TypeError(
+                    f"expected class discord.User or discord.Member for user parameter. Not {user.__class__.__name__!r}"
+                )
+            self.user = user
+        else:
+            self.user = message.author
 
         try:
-            self.message = await message.edit(
+            # pyright thinks the return type of this method can't be assigned to Message attribute for some reason
+            self.message = await message.edit(  # type: ignore
                 content=page_content.content,
                 embeds=page_content.embeds,
                 files=page_content.files,
@@ -1080,6 +1156,18 @@ class Paginator(_discord.ui.View):
                 allowed_mentions=allowed_mentions,
                 delete_after=delete_after,
             )
+            if self.message is None:
+                if isinstance(message, _discord.Interaction):
+                    # if the message is None, it means that interaction.response.edit_message was used.
+                    # this can only be done if the interaction was from a component or a modal
+                    # both of which have the message attribute set
+                    self.message: _discord.Message = message.message  # type: ignore
+                elif isinstance(
+                    message, _discord.Message
+                ):  # isinstance check was added to satisfy type checker. this is the only other case that might return None
+                    # target was discord.Message, and edit was in-place
+                    self.message: _discord.Message = message
+
         except (_discord.NotFound, _discord.Forbidden):
             pass
 
@@ -1087,7 +1175,7 @@ class Paginator(_discord.ui.View):
 
     async def respond(
         self,
-        interaction: _discord.Interaction | BridgeContext,
+        interaction: _discord.Interaction | BridgeApplicationContext | BridgeExtContext,
         ephemeral: bool = False,
         target: _discord.abc.Messageable | None = None,
         target_message: str = "Paginator sent!",
@@ -1096,7 +1184,7 @@ class Paginator(_discord.ui.View):
 
         Parameters
         ----------
-        interaction: Union[:class:`discord.Interaction`, :class:`BridgeContext`]
+        interaction: Union[:class:`discord.Interaction`, :class:`BridgeApplicationContext`, :class:`BridgeExtContext`]
             The interaction or BridgeContext which invoked the paginator.
             If passing a BridgeContext object, you cannot make this an ephemeral paginator.
         ephemeral: :class:`bool`
