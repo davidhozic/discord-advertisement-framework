@@ -168,13 +168,14 @@ class Interaction:
 
     def _from_data(self, data: InteractionPayload):
         self.id: int = int(data["id"])
-        self.type: InteractionType = try_enum(InteractionType, data["type"])
+        self.type: InteractionType = try_enum(InteractionType, data.get("type"))
         self.data: InteractionData | None = data.get("data")
-        self.token: str = data["token"]
-        self.version: int = data["version"]
+        self.token: str = data.get("token")
+        self.version: int = data.get("version")
         self.channel_id: int | None = utils._get_as_snowflake(data, "channel_id")
         self.guild_id: int | None = utils._get_as_snowflake(data, "guild_id")
-        self.application_id: int = int(data["application_id"])
+        app_id = data.get("application_id")
+        self.application_id: int = int(app_id) if app_id is not None else -1
         self.locale: str | None = data.get("locale")
         self.guild_locale: str | None = data.get("guild_locale")
         self.custom_id: str | None = (

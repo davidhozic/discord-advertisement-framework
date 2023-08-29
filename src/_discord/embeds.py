@@ -28,6 +28,9 @@ from __future__ import annotations
 import datetime
 from typing import TYPE_CHECKING, Any, Mapping, TypeVar
 
+from _discord.types.embed import EmbedType
+
+
 from . import utils
 from .colour import Colour
 
@@ -45,7 +48,6 @@ E = TypeVar("E", bound="Embed")
 
 if TYPE_CHECKING:
     from _discord.types.embed import Embed as EmbedData
-    from _discord.types.embed import EmbedType
 
 
 class EmbedAuthor:

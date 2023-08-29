@@ -801,14 +801,14 @@ class ConnectionState:
 
     def parse_interaction_create(self, data) -> None:
         interaction = Interaction(data=data, state=self)
-        if data["type"] == 3:  # interaction component
-            custom_id = interaction.data["custom_id"]  # type: ignore
-            component_type = interaction.data["component_type"]  # type: ignore
+        if data.get("type") == 3:  # interaction component
+            custom_id = interaction.data.get("custom_id")  # type: ignore
+            component_type = interaction.data.get("component_type")  # type: ignore
             self._view_store.dispatch(component_type, custom_id, interaction)
         if interaction.type == InteractionType.modal_submit:
             user_id, custom_id = (
                 interaction.user.id,
-                interaction.data["custom_id"],
+                interaction.data.get("custom_id"),
             )
             asyncio.create_task(
                 self._modal_store.dispatch(user_id, custom_id, interaction)
@@ -1145,7 +1145,17 @@ class ConnectionState:
         self.dispatch("member_join", member)
 
     def parse_guild_member_remove(self, data) -> None:
-        user = self.store_user(data["user"])
+        # Check if data contains necessary items
+        user_data = data["user"]
+        for attr in {"username", "id", "discriminator", "avatar"}:
+            if attr not in user_data:
+                _log.warning(
+                    f"Payload does not contain necessary information (Missing {attr}). "
+                    f"Payload contains: {str(data.keys())}"
+                )
+                return
+
+        user = self.store_user(user_data)
         raw = RawMemberRemoveEvent(data, user)
 
         guild = self._get_guild(int(data["guild_id"]))
