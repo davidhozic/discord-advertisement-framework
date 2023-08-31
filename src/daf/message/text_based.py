@@ -702,6 +702,7 @@ class DirectMESSAGE(BaseMESSAGE):
                 return
 
             self.parent = parent
+            self._deleted = False
             user = parent.apiobject
             await user.create_dm()
             self.dm_channel = user

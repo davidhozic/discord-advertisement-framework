@@ -388,11 +388,8 @@ class Embed:
 
         self.author = author
         self.footer = footer
-        
-        if image:
-            self.set_image(url=image.url)
-        if thumbnail:
-            self.set_thumbnail(url=image.url)
+        self.image = image
+        self.thumbnail = thumbnail
 
     @classmethod
     def from_dict(cls: type[E], data: Mapping[str, Any]) -> E:
