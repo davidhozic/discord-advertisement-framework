@@ -182,7 +182,7 @@ class BaseGUILD:
         """
         Compares two guild objects if they're equal.
         """
-        return self.snowflake == other.snowflake
+        return isinstance(other, type(self)) and self.snowflake == other.snowflake
 
     def _delete(self):
         """
