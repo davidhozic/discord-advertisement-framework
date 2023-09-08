@@ -418,6 +418,7 @@ class ACCOUNT:
 
         self._removed_servers.append(server)
         if len(self._removed_servers) > self.removal_buffer_length:
+            trace(f"Removing oldest record of removed servers {self._removed_servers[0]}", TraceLEVELS.DEBUG)
             del self._removed_servers[0]
 
         trace(f"Server {server} has been removed from account {self}", TraceLEVELS.NORMAL)

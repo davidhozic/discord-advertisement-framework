@@ -239,6 +239,7 @@ class BaseGUILD:
         self._messages.remove(message)
         self._removed_messages.append(message)
         if len(self._removed_messages) > self.removal_buffer_length:
+            trace(f"Removing oldest record of removed messages {self._removed_messages[0]}", TraceLEVELS.DEBUG)
             del self._removed_messages[0]
 
     async def initialize(self, parent: Any, getter: Callable) -> None:
