@@ -4,33 +4,34 @@ test if automatic generation part of the framework
 works as expected.
 """
 from datetime import timedelta
+from typing import List
 
-import pytest
 import os
 import daf
 import asyncio
 
 
-
-async def test_autoguild(guilds, accounts):
+async def test_autoguild(guilds, accounts: List[daf.ACCOUNT]):
     """
     Test if AutoGUILD works as expected.
     """
     account = accounts[0]
     guild_include, guild_exclude = guilds
-    auto_guild = None
-    try:
-        auto_guild = daf.AutoGUILD("magic-.*-magic", "-321-", messages=[daf.TextMESSAGE(None, timedelta(seconds=1), "Hello World", daf.message.AutoCHANNEL("testpy-[0-9]", "testpy-[5-9]"))])
-        await daf.add_object(auto_guild, snowflake=account)
-        await asyncio.sleep(1)
-        found = [x.apiobject for x in auto_guild.guilds]
-        print('Found Guilds ', found)
-        print('All Guilds ', account.client.guilds)
-        assert guild_include in found, "AutoGUILD failed to find guild that matches the name."
-        assert guild_exclude not in found, "AutoGUILD included the guild that matches exclude pattern."
-    finally:
-        if auto_guild is not None:
-            await daf.remove_object(auto_guild)
+    auto_guild = daf.AutoGUILD(
+        "magic-.*-magic", "-321-",
+        messages=[
+            daf.TextMESSAGE(None, timedelta(seconds=1), "Hello World", daf.message.AutoCHANNEL("testpy-[0-9]", "testpy-[5-9]"))
+        ]
+    )
+    await account.add_server(auto_guild)
+    await asyncio.sleep(1)
+    found = [x.apiobject for x in auto_guild.guilds]
+    print('Found Guilds ', found)
+    print('All Guilds ', account.client.guilds)
+    assert guild_include in found, "AutoGUILD failed to find guild that matches the name."
+    assert guild_exclude not in found, "AutoGUILD included the guild that matches exclude pattern."
+    await daf.remove_object(auto_guild)
+    await asyncio.sleep(1)  # Assure removal
 
 
 async def test_autochannel(guilds, channels, accounts):
