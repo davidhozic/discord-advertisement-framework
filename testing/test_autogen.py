@@ -11,7 +11,7 @@ import daf
 import asyncio
 
 
-@pytest.mark.asyncio
+
 async def test_autoguild(guilds, accounts):
     """
     Test if AutoGUILD works as expected.
@@ -32,7 +32,7 @@ async def test_autoguild(guilds, accounts):
         if auto_guild is not None:
             await daf.remove_object(auto_guild)
 
-@pytest.mark.asyncio
+
 async def test_autochannel(guilds, channels, accounts):
     """
     Tests if AutoCHANNEL functions properly.

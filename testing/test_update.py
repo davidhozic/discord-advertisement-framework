@@ -11,7 +11,7 @@ import asyncio
 TEST_USER_ID = 145196308985020416
 
 
-@pytest.mark.asyncio
+
 async def test_text_message_update(channels, guilds, accounts):
     "This tests if all the text messages succeed in their sends"
     account = accounts[0]
@@ -63,7 +63,7 @@ async def test_text_message_update(channels, guilds, accounts):
         assert message_ctx["success_info"]["success"], "Failed to send to all channels"
 
 
-@pytest.mark.asyncio
+
 async def test_voice_message_update(channels, guilds, accounts):
     "This tests if all the voice messages succeed in their sends"
     account = accounts[0]

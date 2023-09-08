@@ -11,7 +11,7 @@ TEST_USER_ID = 145196308985020416
 VOICE_MESSAGE_TEST_LENGTH = 4.5  # Test if entire message is played
 
 
-@pytest.mark.asyncio
+
 async def test_text_message_send(channels: Tuple[daf.discord.ChannelType], guilds: Tuple[daf.discord.Guild], accounts: List[daf.ACCOUNT]):
     "This tests if all the text messages succeed in their sends"
     account = accounts[0]
@@ -62,7 +62,7 @@ async def test_text_message_send(channels: Tuple[daf.discord.ChannelType], guild
     assert message_ctx["success_info"]["success"], "Failed to send to all channels"
 
 
-@pytest.mark.asyncio
+
 async def test_voice_message_send(channels: Tuple[daf.discord.ChannelType], guilds: Tuple[daf.discord.Guild], accounts: List[daf.ACCOUNT]):
     "This tests if all the voice messages succeed in their sends"
     account = accounts[0]

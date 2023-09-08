@@ -19,7 +19,7 @@ TEST_MAX_WAIT_TIME = 15 # Maximum wait for message
 
 
 
-@pytest.mark.asyncio
+
 async def test_text_period(channels: Tuple[List[Union[daf.discord.TextChannel, daf.discord.VoiceChannel]]],
                            guilds: Tuple[daf.discord.Guild],
                            accounts: Tuple[daf.client.ACCOUNT]):
@@ -112,7 +112,7 @@ async def test_text_period(channels: Tuple[List[Union[daf.discord.TextChannel, d
             await daf.remove_object(user)
 
 
-@pytest.mark.asyncio
+
 async def test_voice_period(channels: Tuple[List[Union[daf.discord.TextChannel, daf.discord.VoiceChannel]]],
                             guilds: Tuple[daf.discord.Guild],
                             accounts: Tuple[daf.client.ACCOUNT]):
