@@ -37,7 +37,7 @@ Glossary
 Releases
 ---------------------
 
-v2.11
+v2.11.0
 ====================
 - SQL analytics:
   
@@ -48,10 +48,21 @@ v2.11
   - Higher refresh rate due to threading redesign - instead of calling Tkinter's root.update inside an asyncio task,
     the root.mainroot is called directly, while the asyncio event loop is running inside another thread.
   - The GUI will not block the asyncio tasks (explained in previous bullet).
+  - When saving a new object definition, if the type of a parameter is literal, the value will be pre-checked inside
+    the GUI and an exception will be raised if a valid value is not given.
 
 - Core:
   
   - Updated PyCord API wrapper to 2.5.0 RC5
+  - New property :py:attr:`daf.client.ACCOUNT.removed_servers` for tracking removed servers.
+  - New property :py:attr:`daf.guild.GUILD.removed_messages` :py:attr:`daf.guild.USER.removed_messages`
+    for tracking removed messages.
+  - New parameter ``removal_buffer_length`` to :class:`daf.client.ACCOUNT` for setting maximum amount of
+    of servers to keep in the :py:attr:`daf.client.ACCOUNT.removed_servers` buffer.
+  - New parameter ``removal_buffer_length`` to :class:`daf.guild.GUILD` and :class:`daf.guild.USER`
+    for setting maximum amount of messages to keep in the :py:attr:`daf.guild.GUILD.removed_messages`
+    / :py:attr:`daf.guild.USER.removed_messages` buffer.
+
 
 v2.10.4
 ======================

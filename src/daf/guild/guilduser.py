@@ -4,8 +4,10 @@
     BaseGUILD class.
 """
 from typing import Any, Coroutine, Union, List, Optional, Dict, Callable
-from typeguard import typechecked
+from contextlib import suppress
 from datetime import timedelta, datetime
+
+from typeguard import typechecked
 
 from ..message import *
 from ..logging.tracing import TraceLEVELS, trace
@@ -22,17 +24,6 @@ __all__ = (
     "USER",
     "BaseGUILD",
 )
-
-
-globals_ = globals()
-prev_val = 0
-for k, v in globals_.copy().items():
-    if k.startswith("GUILD_ADVERT_"):
-        if isinstance(v, int):
-            prev_val = v
-        else:
-            prev_val += 1
-            globals_[k] = prev_val
 
 
 class BaseGUILD:
@@ -58,6 +49,10 @@ class BaseGUILD:
 
         * timedelta - the specified time difference
         * datetime - specific date & time
+    removal_buffer_length: Optional[int]
+        Maximum number of messages to keep in the removed_messages buffer.
+
+        .. versionadded:: 2.11
     """
 
     __slots__ = (       # Faster attribute access
@@ -66,17 +61,22 @@ class BaseGUILD:
         "_messages_uninitialized",
         "_messages",
         "remove_after",
+        "removal_buffer_length",
         "_created_at",
         "_deleted",
+        "_removed_messages",
         "parent",
     )
+
+    _removed_messages: List[BaseMESSAGE]
 
     def __init__(
         self,
         snowflake: Any,
         messages: Optional[List] = None,
         logging: Optional[bool] = False,
-        remove_after: Optional[Union[timedelta, datetime]] = None
+        remove_after: Optional[Union[timedelta, datetime]] = None,
+        removal_buffer_length: int = 50
     ) -> None:
         if messages is None:
             messages = []
@@ -87,6 +87,7 @@ class BaseGUILD:
         self._messages_uninitialized: list = messages
         self._messages: List[BaseMESSAGE] = []
         self.remove_after = remove_after
+        self.removal_buffer_length = removal_buffer_length
         # int - after n sends
         # timedelta - after amount of time
         # datetime - after that time
@@ -94,9 +95,15 @@ class BaseGUILD:
         self._deleted = False
         self._created_at = datetime.now()  # The time this object was created
         self.parent = None
+        attributes.write_non_exist(self, "_removed_messages", [])
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}(discord={self._apiobject})"
+    
+    @property
+    def removed_messages(self) -> List[BaseMESSAGE]:
+        "Returns a list of messages that were removed from server (last ``removal_buffer_length`` messages)."
+        return self._removed_messages[:]
 
     @property
     def deleted(self) -> bool:
@@ -175,7 +182,7 @@ class BaseGUILD:
         """
         Compares two guild objects if they're equal.
         """
-        return self.snowflake == other.snowflake
+        return isinstance(other, type(self)) and self.snowflake == other.snowflake
 
     def _delete(self):
         """
@@ -207,6 +214,8 @@ class BaseGUILD:
         """
         await message.initialize(parent=self)
         self._messages.append(message)
+        with suppress(ValueError):  # Readd the removed message
+            self._removed_messages.remove(message)
 
     @typechecked
     def remove_message(self, message: BaseMESSAGE):
@@ -225,9 +234,13 @@ class BaseGUILD:
         ValueError
             Raised when the message is not present in the list.
         """
-        trace(f"Removing message {message} from {self}", TraceLEVELS.DEBUG)
+        trace(f"Removing message {message} from {self}", TraceLEVELS.NORMAL)
         message._delete()
         self._messages.remove(message)
+        self._removed_messages.append(message)
+        if len(self._removed_messages) > self.removal_buffer_length:
+            trace(f"Removing oldest record of removed messages {self._removed_messages[0]}", TraceLEVELS.DEBUG)
+            del self._removed_messages[0]
 
     async def initialize(self, parent: Any, getter: Callable) -> None:
         """
@@ -257,6 +270,7 @@ class BaseGUILD:
         Other
             Raised from .add_message(message_object) method.
         """
+        self._deleted = False
         self.parent = parent
         guild_id = self.snowflake
         self._apiobject = getter(guild_id)
@@ -436,7 +450,10 @@ class GUILD(BaseGUILD):
 
             Invites intent is also needed. Enable it by setting ``invites`` to True inside
             the ``intents`` parameter of :class:`~daf.client.ACCOUNT`.
+    removal_buffer_length: Optional[int]
+        Maximum number of messages to keep in the removed_messages buffer.
 
+        .. versionadded:: 2.11
     """
     __slots__ = (
         "update_semaphore",
@@ -449,8 +466,9 @@ class GUILD(BaseGUILD):
                  messages: Optional[List[Union[TextMESSAGE, VoiceMESSAGE]]] = None,
                  logging: Optional[bool] = False,
                  remove_after: Optional[Union[timedelta, datetime]] = None,
-                 invite_track: Optional[List[str]] = None):
-        super().__init__(snowflake, messages, logging, remove_after)
+                 invite_track: Optional[List[str]] = None,
+                 removal_buffer_length: int = 50):
+        super().__init__(snowflake, messages, logging, remove_after, removal_buffer_length)
         if invite_track is None:
             invite_track = []
 
@@ -653,6 +671,10 @@ class USER(BaseGUILD):
 
         * timedelta - the specified time difference
         * datetime - specific date & time
+    removal_buffer_length: Optional[int]
+        Maximum number of messages to keep in the removed_messages buffer.
+
+        .. versionadded:: 2.11
     """
     __slots__ = (
         "update_semaphore",
@@ -664,9 +686,10 @@ class USER(BaseGUILD):
         snowflake: Union[int, discord.User],
         messages: Optional[List[DirectMESSAGE]] = None,
         logging: Optional[bool] = False,
-        remove_after: Optional[Union[timedelta, datetime]] = None
+        remove_after: Optional[Union[timedelta, datetime]] = None,
+        removal_buffer_length: int = 50
     ) -> None:
-        super().__init__(snowflake, messages, logging, remove_after)
+        super().__init__(snowflake, messages, logging, remove_after, removal_buffer_length)
         attributes.write_non_exist(self, "update_semaphore", asyncio.Semaphore(1))
 
     def _check_state(self) -> bool:

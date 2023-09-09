@@ -60,14 +60,30 @@ ADDITIONAL_ANNOTATIONS = {
         "fold": int
     },
     discord.Embed: {
-        "colour": Union[int, discord.Colour],
-        "color": Union[int, discord.Colour],
-        "title": str,
+        "colour": Union[int, discord.Colour, None],
+        "color": Union[int, discord.Colour, None],
+        "title": Union[str, None],
         "type": discord.embeds.EmbedType,
-        "url": str,
-        "description": str,
-        "timestamp": dt.datetime,
-        "fields": List[discord.EmbedField]
+        "url": Union[str, None],
+        "description": Union[str, None],
+        "timestamp": Union[dt.datetime, None],
+        "fields": Union[List[discord.EmbedField], None],
+        "author": Union[discord.EmbedAuthor, None],
+        "footer": Union[discord.EmbedFooter, None],
+        "image": Union[str, discord.EmbedMedia, None],
+        "thumbnail": Union[str, discord.EmbedMedia, None],
+    },
+    discord.EmbedAuthor: {
+        "name": str,
+        "url": Union[str, None],
+        "icon_url": Union[str, None]
+    },
+    discord.EmbedFooter: {
+        "text": str,
+        "icon_url": Union[str, None]
+    },
+    discord.EmbedMedia: {
+        "url": str
     },
     discord.Intents: {k: bool for k in discord.Intents.VALID_FLAGS},
     discord.EmbedField: {

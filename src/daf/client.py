@@ -2,7 +2,7 @@
     This modules contains definitions related to the client (for API)
 """
 from typing import Optional, Union, List, Dict
-
+from contextlib import suppress
 
 from . import guild
 from . import web
@@ -95,6 +95,10 @@ class ACCOUNT:
         The username to login with.
     password: Optional[str]
         The password to login with.
+    removal_buffer_length: Optional[int]
+        Maximum number of servers to keep in the removed_servers buffer.
+
+        .. versionadded:: 2.11
 
     Raises
     ---------------
@@ -108,6 +112,7 @@ class ACCOUNT:
         "is_user",
         "proxy",
         "intents",
+        "removal_buffer_length",
         "_running",
         "tasks",
         "_ws_task",
@@ -117,8 +122,12 @@ class ACCOUNT:
         "_uiservers",
         "_client",
         "_deleted",
+        "_removed_servers",
         "_update_sem",
     )
+
+    _removed_servers: List[Union[guild.BaseGUILD, guild.AutoGUILD]]
+    _update_sem: asyncio.Semaphore
 
     @typechecked
     def __init__(
@@ -130,6 +139,7 @@ class ACCOUNT:
         servers: Optional[List[Union[guild.GUILD, guild.USER, guild.AutoGUILD]]] = None,
         username: Optional[str] = None,
         password: Optional[str] = None,
+        removal_buffer_length: int = 50
     ) -> None:
 
         if proxy is not None:
@@ -150,6 +160,7 @@ class ACCOUNT:
             intents = discord.Intents.default()
 
         self.intents = intents
+        self.removal_buffer_length = removal_buffer_length
         self._running = False
         self.tasks: List[asyncio.Task] = []
         self._servers: List[guild.BaseGUILD] = []
@@ -168,6 +179,7 @@ class ACCOUNT:
         self._client = None
         self._deleted = False
         self._ws_task = None
+        attributes.write_non_exist(self, "_removed_servers", [])
         attributes.write_non_exist(self, "_update_sem", asyncio.Semaphore(1))
 
     def __str__(self) -> str:
@@ -239,6 +251,11 @@ class ACCOUNT:
         shilling list. This also includes :class:`~daf.guild.AutoGUILD`
         """
         return self._servers + self._autoguilds
+
+    @property
+    def removed_servers(self) -> List[Union[guild.GUILD, guild.AutoGUILD, guild.USER]]:
+        "Returns a list of servers that were removed from account (last ``removal_buffer_length`` servers)."
+        return self._removed_servers[:]
 
     @property
     def client(self) -> discord.Client:
@@ -368,6 +385,9 @@ class ACCOUNT:
         else:
             self._autoguilds.append(server)
 
+        with suppress(ValueError):
+            self._removed_servers.remove(server)
+
     @typechecked
     def remove_server(self, server: Union[guild.GUILD, guild.USER, guild.AutoGUILD]):
         """
@@ -384,7 +404,6 @@ class ACCOUNT:
             ``server`` is not in the shilling list.
         """
         if isinstance(server, guild.BaseGUILD):
-            server._delete()
             # Remove by ID
             ids = [id(s) for s in self._servers]
             try:
@@ -395,6 +414,12 @@ class ACCOUNT:
             del self._servers[index]
         else:
             self._autoguilds.remove(server)
+
+        server._delete()
+        self._removed_servers.append(server)
+        if len(self._removed_servers) > self.removal_buffer_length:
+            trace(f"Removing oldest record of removed servers {self._removed_servers[0]}", TraceLEVELS.DEBUG)
+            del self._removed_servers[0]
 
         trace(f"Server {server} has been removed from account {self}", TraceLEVELS.NORMAL)
 

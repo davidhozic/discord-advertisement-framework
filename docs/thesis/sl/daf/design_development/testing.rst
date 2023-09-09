@@ -23,7 +23,7 @@ v primeru, da je naš test definiran kot
 
 .. code-block:: python
 
-    @pytest.mark.asyncio
+    
     async def test_example_test(example_fixture):
         ...
 

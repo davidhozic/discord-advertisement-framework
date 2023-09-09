@@ -629,8 +629,11 @@ class NewObjectFrameStruct(NewObjectFrameBase):
                 if not len(value):  # Ignore empty values
                     continue
 
-                if Literal is not get_origin(types_[0]):
+                t0 = types_[0]
+                if Literal is not get_origin(t0):
                     value = self.cast_type(value, types_)
+                elif value not in (args := get_args(t0)):
+                    raise ValueError(f"'{value}' is not a valid value for '{attr}'. Accepted: {args}")
 
             map_[attr] = value
 
@@ -783,7 +786,7 @@ class ObjectEditWindow(ttk.Toplevel):
         list: NewObjectFrameIterable,
         Iterable: NewObjectFrameIterable,
         ABCIterable: NewObjectFrameIterable,
-        tuple: NewObjectFrameIterable
+        tuple: NewObjectFrameIterable,
     }
 
     def __init__(self, *args, **kwargs):

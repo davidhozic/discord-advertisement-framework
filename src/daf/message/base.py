@@ -720,6 +720,7 @@ class BaseChannelMessage(BaseMESSAGE):
         _guild: discord.Guild = parent.apiobject
         to_remove = []
         self.channel_getter = channel_getter
+        self._deleted = False
 
         if isinstance(self.channels, AutoCHANNEL):
             await self.channels.initialize(self, channel_getter)

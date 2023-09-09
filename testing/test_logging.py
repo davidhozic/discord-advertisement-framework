@@ -11,7 +11,7 @@ TEST_USER_ID = 145196308985020416
 C_FILE_NAME_FORBIDDEN_CHAR = ('<','>','"','/','\\','|','?','*',":")
 
 
-@pytest.mark.asyncio
+
 async def test_logging_json(channels, guilds, accounts):
     "Test if json logging works"
     account: daf.ACCOUNT = accounts[0]
@@ -75,7 +75,7 @@ async def test_logging_json(channels, guilds, accounts):
         shutil.rmtree("./History", ignore_errors=True)
 
 
-@pytest.mark.asyncio
+
 async def test_logging_sql(channels, guilds, accounts):
     """
     Tests if SQL logging works(only sqlite).
