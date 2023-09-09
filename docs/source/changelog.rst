@@ -43,6 +43,7 @@ v2.11.0
   
   - Counts now have better error reporting when an invalid value was passed.
 
+- New events system and module :ref:`Event reference`
 - GUI:
 
   - Higher refresh rate due to threading redesign - instead of calling Tkinter's root.update inside an asyncio task,
