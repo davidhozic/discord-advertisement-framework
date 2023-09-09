@@ -30,8 +30,7 @@ async def test_autoguild(guilds, accounts: List[daf.ACCOUNT]):
     print('All Guilds ', account.client.guilds)
     assert guild_include in found, "AutoGUILD failed to find guild that matches the name."
     assert guild_exclude not in found, "AutoGUILD included the guild that matches exclude pattern."
-    await daf.remove_object(auto_guild)
-    await asyncio.sleep(1)  # Assure removal
+    account.remove_server(auto_guild)
 
 
 async def test_autochannel(guilds, channels, accounts):

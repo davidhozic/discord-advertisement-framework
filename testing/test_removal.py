@@ -13,10 +13,19 @@ import daf
 
 TEST_USER_ID = 145196308985020416
 
+@pytest.fixture(scope="module")
+async def ACCOUNT(accounts: List[daf.ACCOUNT]):
+    # Use a new account because we need a clean state here
+    # and we cannot update the existing account due to bound API wrapper objects
+    new_account = daf.ACCOUNT(accounts[0]._token)
+    await new_account.initialize()
+    yield new_account
+    await new_account._close()
+
 
 @pytest.fixture(scope="module")
-async def GUILDSUSER(accounts: List[daf.ACCOUNT], guilds: Tuple[daf.discord.Guild]):
-    account = accounts[0]
+async def GUILDSUSER(ACCOUNT: daf.ACCOUNT, guilds: Tuple[daf.discord.Guild]):
+    account = ACCOUNT
     (g1, g2), u1 = guilds, await account.client.get_or_fetch_user(TEST_USER_ID)
     await account.add_server(GUILD(g1))
     await account.add_server(GUILD(g2))
@@ -26,9 +35,8 @@ async def GUILDSUSER(accounts: List[daf.ACCOUNT], guilds: Tuple[daf.discord.Guil
         account.remove_server(server)
 
 
-async def test_removal_servers(accounts: List[daf.ACCOUNT], GUILDSUSER: Tuple[Union[GUILD, USER]]):
-    account = accounts[0]
-
+async def test_removal_servers(ACCOUNT: daf.ACCOUNT, GUILDSUSER: Tuple[Union[GUILD, USER]]):
+    account = ACCOUNT
     account.removal_buffer_length = 1  # Cannot use the .update method due to fixtures being session dependant
 
     assert len(account.removed_servers) == 0

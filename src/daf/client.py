@@ -404,7 +404,6 @@ class ACCOUNT:
             ``server`` is not in the shilling list.
         """
         if isinstance(server, guild.BaseGUILD):
-            server._delete()
             # Remove by ID
             ids = [id(s) for s in self._servers]
             try:
@@ -416,6 +415,7 @@ class ACCOUNT:
         else:
             self._autoguilds.remove(server)
 
+        server._delete()
         self._removed_servers.append(server)
         if len(self._removed_servers) > self.removal_buffer_length:
             trace(f"Removing oldest record of removed servers {self._removed_servers[0]}", TraceLEVELS.DEBUG)
