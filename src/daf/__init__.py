@@ -12,6 +12,7 @@ from .message import *
 from .logging import *
 from .web import *
 from .convert import *
+from .events import *
 from .remote import *
 
 
