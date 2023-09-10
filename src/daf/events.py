@@ -35,7 +35,7 @@ class EventID(Enum):
     daf_startup = 0
     daf_shutdown = auto()
     message_ready = auto()
-    discord_event = auto()
+    trace = auto()
 
 
 @doc_category("Event reference")
@@ -110,17 +110,17 @@ def emit(event: EventID, *args, **kwargs):
 
 # Dummy event handlers for documenting each event.
 @doc_category("Event reference")
-def daf_startup():
+def on_daf_startup():
     "Called when DAF has been initialized."
 
 
 @doc_category("Event reference")
-def daf_shutdown():
+def on_daf_shutdown():
     "Called when DAF has finished shutting down"
 
 
 @doc_category("Event reference")
-def message_ready(message: "BaseMESSAGE"):
+def on_message_ready(message: "BaseMESSAGE"):
     """
     Called when message is ready to be sent.
 
@@ -128,4 +128,15 @@ def message_ready(message: "BaseMESSAGE"):
     --------------
     message: BaseMESSAGE
         The message that is ready to be sent.
+    """
+
+@doc_category("Event reference")
+def on_trace(content: str):
+    """
+    Called when an trace to the console has been issued.
+
+    Parameters
+    ----------
+    content: str
+        The content being traced.
     """
