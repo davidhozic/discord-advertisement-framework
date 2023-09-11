@@ -7,13 +7,17 @@ from functools import wraps
 from asyncio import Semaphore
 from copy import copy
 from contextlib import suppress
+from datetime import datetime
 
 from .attributes import get_all_slots
+
+import asyncio
 
 
 __all__ = (
     "with_semaphore",
     "update_obj_param",
+    "call_at",
 )
 
 
@@ -151,3 +155,17 @@ async def update_obj_param(
                 setattr(obj, k, getattr(current_state, k))
 
         raise
+
+
+
+def call_at(fnc: Callable, when: datetime, *args, **kwargs) -> asyncio.Task:
+    """
+    Calls ``fnc`` at specific datetime with args and kwargs.
+    """
+    async def waiter():
+        await asyncio.sleep(when - datetime.now())
+        if isinstance((r := fnc(*args, **kwargs)), Coroutine):
+            await r
+
+    
+    return asyncio.create_task(waiter())

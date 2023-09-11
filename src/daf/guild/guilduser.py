@@ -10,6 +10,7 @@ from datetime import timedelta, datetime
 from typeguard import typechecked
 
 from ..message import *
+from ..events import *
 from ..logging.tracing import TraceLEVELS, trace
 from ..misc import async_util, instance_track, doc, attributes
 from .. import logging
@@ -236,6 +237,7 @@ class BaseGUILD:
         """
         trace(f"Removing message {message} from {self}", TraceLEVELS.NORMAL)
         message._delete()
+        message._close()
         self._messages.remove(message)
         self._removed_messages.append(message)
         if len(self._removed_messages) > self.removal_buffer_length:
@@ -334,8 +336,16 @@ class BaseGUILD:
         """
         raise NotImplementedError
 
+    async def _close(self):
+        """
+        Cleans up and closes any asyncio related
+        functionality.
+        """
+        remove_listener(EventID.message_ready, self._advertise)
+
+    @listen(EventID.message_ready)
     @async_util.with_semaphore("update_semaphore", 1)
-    async def _advertise(self) -> int:
+    async def _advertise(self, message: BaseMESSAGE) -> int:
         """
         Common to all messages, function responsible for sending all the
         messages to this specific guild.
@@ -345,43 +355,55 @@ class BaseGUILD:
         int
             Enumerated advertisement result.
         """
-        to_advert: List[BaseMESSAGE] = []
-        to_remove: List[BaseMESSAGE] = []
+        # to_advert: List[BaseMESSAGE] = []
+        # to_remove: List[BaseMESSAGE] = []
         guild_ctx = self.generate_log_context()
         author_ctx = self.parent.generate_log_context()
 
-        for message in self._messages:
-            if message._check_state():
-                to_remove.append(message)
+        result = await message._send()
+        # Must be called after ._send to prevent multiple _advertise calls being added to
+        # the event loop queue in case the period is lower than the time it takes to send the message.
+        message._reset_timer()
 
-            elif message._is_ready():
-                to_advert.append(message)
+        if self.logging and result.result_code != MSG_SEND_STATUS_NO_MESSAGE_SENT:
+            await logging.save_log(guild_ctx, result.message_context, author_ctx)
 
-        # Remove prior to awaits to prevent any user tasks
-        # from removing the message causing ValueErrors
-        for message in to_remove:
-            self.remove_message(message)
+        if result.result_code == MSG_SEND_STATUS_ERROR_REMOVE_GUILD:
+            # Will be removed by ACCOUNT at next advertisement attempt
+            self._delete()
 
-        # Await coroutines outside the main loop to prevent list modification
-        # while iterating, this way even if the user removes the message,
-        # it will still be shilled but no exceptions will be raised when
-        # trying to remove the message.
-        for message in to_advert:
-            message._reset_timer()
-            result: MessageSendResult = await message._send()
+        # for message in self._messages:
+        #     if message._check_state():
+        #         to_remove.append(message)
 
-            if self.logging and result.result_code != MSG_SEND_STATUS_NO_MESSAGE_SENT:
-                await logging.save_log(guild_ctx, result.message_context, author_ctx)
+        #     elif message._is_ready():
+        #         to_advert.append(message)
 
-            if result.result_code == MSG_SEND_STATUS_ERROR_REMOVE_GUILD:
-                # Will be removed by ACCOUNT at next advertisement attempt
-                self._delete()
-                break
+        # # Remove prior to awaits to prevent any user tasks
+        # # from removing the message causing ValueErrors
+        # for message in to_remove:
+        #     self.remove_message(message)
 
-            elif result.result_code == MSG_SEND_STATUS_ERROR_REMOVE_ACCOUNT:
-                return GuildAdvertStatus.REMOVE_ACCOUNT
+        # # Await coroutines outside the main loop to prevent list modification
+        # # while iterating, this way even if the user removes the message,
+        # # it will still be shilled but no exceptions will be raised when
+        # # trying to remove the message.
+        # for message in to_advert:
+        #     message._reset_timer()
+        #     result: MessageSendResult = await message._send()
 
-        return GuildAdvertStatus.SUCCESS
+        #     if self.logging and result.result_code != MSG_SEND_STATUS_NO_MESSAGE_SENT:
+        #         await logging.save_log(guild_ctx, result.message_context, author_ctx)
+
+        #     if result.result_code == MSG_SEND_STATUS_ERROR_REMOVE_GUILD:
+        #         # Will be removed by ACCOUNT at next advertisement attempt
+        #         self._delete()
+        #         break
+
+        #     elif result.result_code == MSG_SEND_STATUS_ERROR_REMOVE_ACCOUNT:
+        #         return GuildAdvertStatus.REMOVE_ACCOUNT
+
+        # return GuildAdvertStatus.SUCCESS
 
     def generate_invite_log_context(self, member: discord.Member, invite_id: str) -> dict:
         raise NotImplementedError

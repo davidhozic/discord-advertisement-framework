@@ -1,12 +1,14 @@
 """
 Module used to support listening and emitting events.
+It also contains the event loop definitions.
 """
 from enum import Enum, auto
-from typing import List, Dict, Callable, TYPE_CHECKING
+from typing import Any, List, Dict, Callable, TYPE_CHECKING
 
 from .misc.doc import doc_category
 from .logging.tracing import TraceLEVELS, trace
 
+import asyncio
 import _discord as discord
 
 if TYPE_CHECKING:
@@ -25,6 +27,7 @@ __all__ = (
 
 class GLOBAL:
     listeners: Dict[Enum, List[Callable]] = {}
+    event_queue: asyncio.Queue["EventID", Any, Any] = asyncio.Queue()
 
 
 @doc_category("Event reference")
@@ -36,6 +39,7 @@ class EventID(Enum):
     daf_shutdown = auto()
     message_ready = auto()
     trace = auto()
+    _stop_event_loop = auto()
 
 
 @doc_category("Event reference")
@@ -104,8 +108,31 @@ def emit(event: EventID, *args, **kwargs):
         Arguments provided don't match all the listener parameters.
     """
     trace(f"Emitting event {event}", TraceLEVELS.DEBUG)
-    for listener in GLOBAL.listeners.get(event, []):
-        listener(*args, **kwargs)
+    GLOBAL.event_queue.put_nowait((event, args, kwargs))
+
+
+def initialize():
+    """
+    Initializes the event module by creating the event loop task.
+    Returns the event loop task, which's reference needs to be preserved.
+    """
+    return asyncio.create_task(event_loop())
+
+
+async def event_loop():
+    """
+    Event loop task.
+    """
+    queue = GLOBAL.event_queue
+    listeners = GLOBAL.listeners
+    while True:
+        event_id, args, kwargs = await queue.get()
+
+        for listener in listeners.get(event_id, []):
+            await listener(*args, **kwargs)
+
+        if event_id is EventID._stop_event_loop:
+            break
 
 
 # Dummy event handlers for documenting each event.

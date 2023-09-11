@@ -8,7 +8,10 @@ from typeguard import check_type, typechecked
 from dataclasses import dataclass
 from enum import Enum, auto
 
+from _discord.ext import tasks
+
 from ..dtypes import *
+from ..events import *
 from ..logging.tracing import trace, TraceLEVELS
 from ..misc import doc, attributes, async_util, instance_track
 
@@ -122,6 +125,7 @@ class BaseMESSAGE:
         "remove_after",
         "_created_at",
         "_deleted",
+        "_timer_handle"
     )
 
     @typechecked
@@ -172,6 +176,7 @@ class BaseMESSAGE:
         self._data = data
         self._fbcdata = isinstance(data, _FunctionBaseCLASS)
         self._deleted = False
+        self._timer_handle: asyncio.Task = None
         # Attributes created with this function will not be re-referenced to a different object
         # if the function is called again, ensuring safety (.update_method)
         attributes.write_non_exist(self, "update_semaphore", asyncio.Semaphore(1))
@@ -347,10 +352,20 @@ class BaseMESSAGE:
         """
         return datetime.now() >= self.next_send_time
 
+    def _set_ready(self):
+        """
+        Emits a ready event and resets the timer.
+        """
+        emit(EventID.message_ready, self)
+        self._reset_timer()
+
     def _reset_timer(self) -> None:
         """
         Resets internal timer.
         """
+        if self._deleted:
+            return  # Prevent any additional calls in case the message has been removed
+
         if self.start_period is not None:
             range = map(int, [self.start_period.total_seconds(), self.end_period.total_seconds()])
             self.period = timedelta(seconds=random.randrange(*range))
@@ -359,6 +374,15 @@ class BaseMESSAGE:
         current_stamp = datetime.now()
         while self.next_send_time < current_stamp:
             self.next_send_time += self.period
+
+        self._timer_handle = async_util.call_at(self._set_ready, self.next_send_time)
+
+    def _close(self):
+        """
+        Closes the timer handles.
+        """
+        if self._timer_handle is not None:
+            self._timer_handle.cancel()
 
     async def _send_channel(self) -> dict:
         """

@@ -12,11 +12,13 @@ from typeguard import typechecked
 from .logging.tracing import TraceLEVELS, trace
 from .logging import _logging as logging, tracing
 from .misc import doc, instance_track as it
+from .events import EventID, emit
 from . import guild
 from . import client
 from . import message
 from . import convert
 from . import remote
+from . import events
 
 import asyncio
 import shutil
@@ -261,8 +263,13 @@ async def initialize(user_callback: Optional[Union[Callable, Coroutine]] = None,
         # lost connections or reset tokens. The user must use the GUI to cleanup any non-running accounts.
         GLOBALS.tasks.append(loop.create_task(cleanup_accounts_task()))
 
+    # Initialize the event loop
+    GLOBALS.tasks.append(events.initialize())
+
     GLOBALS.running = True
     GLOBALS.save_to_file = save_to_file
+
+    emit(EventID.daf_startup)
     trace("Initialization complete.", TraceLEVELS.NORMAL)
 
 
@@ -452,6 +459,7 @@ async def shutdown() -> None:
     if remote.GLOBALS.remote_client is not None:
         await remote.GLOBALS.remote_client._close()
 
+    emit(EventID._stop_event_loop)
     for task in GLOBALS.tasks:  # Wait for core tasks to finish
         await task
 
@@ -460,6 +468,7 @@ async def shutdown() -> None:
         await account._close()
 
     GLOBALS.accounts.clear()
+    emit(EventID.daf_shutdown)
     trace("Shutdown complete.", TraceLEVELS.NORMAL)
 
 
