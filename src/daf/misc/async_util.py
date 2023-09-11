@@ -163,7 +163,7 @@ def call_at(fnc: Callable, when: datetime, *args, **kwargs) -> asyncio.Task:
     Calls ``fnc`` at specific datetime with args and kwargs.
     """
     async def waiter():
-        await asyncio.sleep(when - datetime.now())
+        await asyncio.sleep((when - datetime.now()).total_seconds())
         if isinstance((r := fnc(*args, **kwargs)), Coroutine):
             await r
 

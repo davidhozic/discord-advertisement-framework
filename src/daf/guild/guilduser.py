@@ -14,7 +14,6 @@ from ..events import *
 from ..logging.tracing import TraceLEVELS, trace
 from ..misc import async_util, instance_track, doc, attributes
 from .. import logging
-from .status import GuildAdvertStatus
 
 import _discord as discord
 import asyncio
@@ -67,6 +66,7 @@ class BaseGUILD:
         "_deleted",
         "_removed_messages",
         "parent",
+        "_removal_timer_handle",
     )
 
     _removed_messages: List[BaseMESSAGE]
@@ -96,6 +96,7 @@ class BaseGUILD:
         self._deleted = False
         self._created_at = datetime.now()  # The time this object was created
         self.parent = None
+        self._removal_timer_handle: asyncio.Task = None
         attributes.write_non_exist(self, "_removed_messages", [])
 
     def __repr__(self) -> str:
@@ -219,9 +220,13 @@ class BaseGUILD:
             self._removed_messages.remove(message)
 
     @typechecked
-    def remove_message(self, message: BaseMESSAGE):
+    async def remove_message(self, message: BaseMESSAGE):
         """
         Removes a message from the message list.
+
+        .. versionchanged:: 2.11
+
+            The function is now async.
 
         Parameters
         --------------
@@ -237,7 +242,7 @@ class BaseGUILD:
         """
         trace(f"Removing message {message} from {self}", TraceLEVELS.NORMAL)
         message._delete()
-        message._close()
+        await message._close()
         self._messages.remove(message)
         self._removed_messages.append(message)
         if len(self._removed_messages) > self.removal_buffer_length:
@@ -287,6 +292,22 @@ class BaseGUILD:
                     trace(f" Unable to initialize message {message}, in {self}", TraceLEVELS.WARNING, exc)
 
             self._messages_uninitialized.clear()
+            if self.remove_after is not None:
+                self._removal_timer_handle = (
+                    async_util.call_at(
+                        emit,
+                        self.remove_after
+                        if isinstance(self.remove_after, datetime)
+                        else
+                        datetime.now() + self.remove_after,
+                        EventID.guild_expired,
+                        self
+                    )
+                )
+            else:
+                self._removal_timer_handle = None
+
+            add_listener(EventID.message_ready, self._advertise, lambda m: m.parent is self)
             return
 
         raise ValueError(f"Unable to find object with ID: {guild_id}")
@@ -342,68 +363,32 @@ class BaseGUILD:
         functionality.
         """
         remove_listener(EventID.message_ready, self._advertise)
+        for message in self.messages:
+            await message._close()
 
-    @listen(EventID.message_ready)
+        if self._removal_timer_handle is not None:
+            self._removal_timer_handle.cancel()
+            await asyncio.gather(self._removal_timer_handle, return_exceptions=True)
+
     @async_util.with_semaphore("update_semaphore", 1)
-    async def _advertise(self, message: BaseMESSAGE) -> int:
+    async def _advertise(self, message: BaseMESSAGE):
         """
         Common to all messages, function responsible for sending all the
         messages to this specific guild.
-
-        Returns
-        -----------
-        int
-            Enumerated advertisement result.
         """
-        # to_advert: List[BaseMESSAGE] = []
-        # to_remove: List[BaseMESSAGE] = []
         guild_ctx = self.generate_log_context()
         author_ctx = self.parent.generate_log_context()
 
-        result = await message._send()
+        if message._check_state():
+            await self.remove_message(message)
+            return
+
+        if (message_context := await message._send()) and self.logging:
+            await logging.save_log(guild_ctx, message_context, author_ctx)
+
         # Must be called after ._send to prevent multiple _advertise calls being added to
         # the event loop queue in case the period is lower than the time it takes to send the message.
         message._reset_timer()
-
-        if self.logging and result.result_code != MSG_SEND_STATUS_NO_MESSAGE_SENT:
-            await logging.save_log(guild_ctx, result.message_context, author_ctx)
-
-        if result.result_code == MSG_SEND_STATUS_ERROR_REMOVE_GUILD:
-            # Will be removed by ACCOUNT at next advertisement attempt
-            self._delete()
-
-        # for message in self._messages:
-        #     if message._check_state():
-        #         to_remove.append(message)
-
-        #     elif message._is_ready():
-        #         to_advert.append(message)
-
-        # # Remove prior to awaits to prevent any user tasks
-        # # from removing the message causing ValueErrors
-        # for message in to_remove:
-        #     self.remove_message(message)
-
-        # # Await coroutines outside the main loop to prevent list modification
-        # # while iterating, this way even if the user removes the message,
-        # # it will still be shilled but no exceptions will be raised when
-        # # trying to remove the message.
-        # for message in to_advert:
-        #     message._reset_timer()
-        #     result: MessageSendResult = await message._send()
-
-        #     if self.logging and result.result_code != MSG_SEND_STATUS_NO_MESSAGE_SENT:
-        #         await logging.save_log(guild_ctx, result.message_context, author_ctx)
-
-        #     if result.result_code == MSG_SEND_STATUS_ERROR_REMOVE_GUILD:
-        #         # Will be removed by ACCOUNT at next advertisement attempt
-        #         self._delete()
-        #         break
-
-        #     elif result.result_code == MSG_SEND_STATUS_ERROR_REMOVE_ACCOUNT:
-        #         return GuildAdvertStatus.REMOVE_ACCOUNT
-
-        # return GuildAdvertStatus.SUCCESS
 
     def generate_invite_log_context(self, member: discord.Member, invite_id: str) -> dict:
         raise NotImplementedError

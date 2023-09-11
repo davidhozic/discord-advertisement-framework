@@ -3,7 +3,7 @@ Module used to support listening and emitting events.
 It also contains the event loop definitions.
 """
 from enum import Enum, auto
-from typing import Any, List, Dict, Callable, TYPE_CHECKING
+from typing import Any, List, Dict, Callable, TYPE_CHECKING, TypeVar
 
 from .misc.doc import doc_category
 from .logging.tracing import TraceLEVELS, trace
@@ -15,19 +15,37 @@ if TYPE_CHECKING:
     from .message import BaseMESSAGE
 
 
+T = TypeVar('T')
+
+
 
 __all__ = (
     "EventID",
     "add_listener",
     "remove_listener",
-    "listen",
-    "emit"
+    "emit",
+    "listen"
 )
 
 
 class GLOBAL:
-    listeners: Dict[Enum, List[Callable]] = {}
+    listeners: Dict[Enum, List["EventListener"]] = {}
     event_queue: asyncio.Queue["EventID", Any, Any] = asyncio.Queue()
+
+
+class EventListener:
+    def __init__(self, fnc: Callable, predicate: Callable[[T], bool] = None) -> None:
+        self.fnc = fnc
+        self.predicate = predicate
+
+    def __eq__(self, o):
+        return (isinstance(o, EventListener) and self.fnc is o.fnc) or o == self.fnc
+
+    def __call__(self, *args: Any, **kwds: Any) -> Any:
+        return self.fnc(*args, **kwds)
+
+    def __hash__(self) -> int:
+        return hash(self.fnc)
 
 
 @doc_category("Event reference")
@@ -39,11 +57,13 @@ class EventID(Enum):
     daf_shutdown = auto()
     message_ready = auto()
     trace = auto()
+    account_expired = auto()
+    guild_expired = auto()
     _stop_event_loop = auto()
 
 
 @doc_category("Event reference")
-def add_listener(event: EventID, fnc: Callable):
+def add_listener(event: EventID, fnc: Callable, predicate: Callable[[T], bool] = None):
     """
     Registers the function ``fnc`` as an event listener for ``event``.
     
@@ -55,7 +75,7 @@ def add_listener(event: EventID, fnc: Callable):
         The function listener to add.
     """
     listeners = GLOBAL.listeners[event] = GLOBAL.listeners.get(event, [])
-    listeners.append(fnc)
+    listeners.append(EventListener(fnc, predicate))
 
 
 @doc_category("Event reference")
@@ -96,7 +116,6 @@ def listen(event: EventID):
 
     return _listen_decor
 
-
 @doc_category("Event reference")
 def emit(event: EventID, *args, **kwargs):
     """
@@ -129,7 +148,8 @@ async def event_loop():
         event_id, args, kwargs = await queue.get()
 
         for listener in listeners.get(event_id, []):
-            await listener(*args, **kwargs)
+            if listener.predicate is None or listener.predicate(*args, **kwargs):
+                await listener(*args, **kwargs)
 
         if event_id is EventID._stop_event_loop:
             break

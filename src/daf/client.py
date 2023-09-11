@@ -9,6 +9,7 @@ from . import web
 
 from .logging.tracing import TraceLEVELS, trace
 from .misc import async_util, instance_track, doc, attributes
+from .events import *
 
 from typeguard import typechecked
 
@@ -114,7 +115,6 @@ class ACCOUNT:
         "intents",
         "removal_buffer_length",
         "_running",
-        "tasks",
         "_ws_task",
         "_servers",
         "_autoguilds",
@@ -162,7 +162,6 @@ class ACCOUNT:
         self.intents = intents
         self.removal_buffer_length = removal_buffer_length
         self._running = False
-        self.tasks: List[asyncio.Task] = []
         self._servers: List[guild.BaseGUILD] = []
         self._autoguilds: List[guild.AutoGUILD] = []  # To prevent __eq__ issues, use 2 lists
         self._selenium = web.SeleniumCLIENT(username, password, proxy) if username is not None else None
@@ -343,7 +342,6 @@ class ACCOUNT:
         self._client.event(on_invite_delete)
 
         self._uiservers.clear()  # Only needed for predefined initialization
-        self.tasks.append(asyncio.create_task(self._loop()))
         self._running = True
 
     def generate_log_context(self) -> Dict[str, Union[str, int]]:
@@ -380,6 +378,7 @@ class ACCOUNT:
             :py:meth:`daf.guild.AutoGUILD.initialize()`
         """
         await server.initialize(parent=self)
+        add_listener(EventID.guild_expired, self.remove_server, lambda server: server.parent is self)
         if isinstance(server, guild.BaseGUILD):
             self._servers.append(server)
         else:
@@ -389,9 +388,13 @@ class ACCOUNT:
             self._removed_servers.remove(server)
 
     @typechecked
-    def remove_server(self, server: Union[guild.GUILD, guild.USER, guild.AutoGUILD]):
+    async def remove_server(self, server: Union[guild.GUILD, guild.USER, guild.AutoGUILD]):
         """
         Removes a guild like object from the shilling list.
+
+        .. versionchanged:: 2.11
+
+            Turned async to support event loop.
 
         Parameters
         --------------
@@ -415,6 +418,8 @@ class ACCOUNT:
         else:
             self._autoguilds.remove(server)
 
+        remove_listener(EventID.guild_expired, self.remove_server)
+        await server._close()
         server._delete()
         self._removed_servers.append(server)
         if len(self._removed_servers) > self.removal_buffer_length:
@@ -461,21 +466,12 @@ class ACCOUNT:
             trace(f"Logging out of {self.client.user.display_name}...")
             self._running = False
 
-        for exc in await asyncio.gather(*self.tasks, return_exceptions=True):
-            if exc is not None:
-                trace(
-                    f"Error raised in for {self.client.user.display_name} (Token: {self._token[:TOKEN_MAX_PRINT_LEN]})",
-                    TraceLEVELS.ERROR,
-                    exc
-                )
+        for guild_ in self.servers:
+            await guild_._close()
 
-        self.tasks.clear()
         selenium = self.selenium
         if selenium is not None:
             selenium._close()
-
-        for guild_ in self._autoguilds:
-            await guild_._close()
 
         await self._client.close()
         await asyncio.gather(self._ws_task, return_exceptions=True)
@@ -489,42 +485,6 @@ class ACCOUNT:
             self._uiservers = self.servers
             self._servers.clear()
             self._autoguilds.clear()
-
-    async def _loop(self):
-        """
-        Main task loop for advertising thru each guild.
-
-        Runs while _running is set to True and afterwards
-        closes the connection to Discord.
-        """
-        while self._running:
-            ###############################################################
-            @async_util.with_semaphore(self._update_sem)
-            async def __loop():
-                to_remove = []
-                to_advert: List[guild.BaseGUILD, guild.AutoGUILD] = []
-                for server in self.servers:
-                    if server._check_state():
-                        to_remove.append(server)
-                    else:
-                        to_advert.append(server)
-
-                for server in to_remove:
-                    self.remove_server(server)
-
-                for server in to_advert:
-                    status = await server._advertise()
-                    if status == guild.GuildAdvertStatus.REMOVE_ACCOUNT:
-                        trace(f"Removing account {self} because token was invalidated! Username: '{self._client.user.name}')", TraceLEVELS.ERROR)
-                        self._running = False
-                        self._deleted = True
-
-                    # If loop stop has been requested, stop asap
-                    if not self._running:
-                        return
-            ###############################################################
-            await __loop()
-            await asyncio.sleep(TASK_SLEEP_DELAY_S)
 
     async def update(self, **kwargs):
         """

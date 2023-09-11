@@ -352,13 +352,6 @@ class BaseMESSAGE:
         """
         return datetime.now() >= self.next_send_time
 
-    def _set_ready(self):
-        """
-        Emits a ready event and resets the timer.
-        """
-        emit(EventID.message_ready, self)
-        self._reset_timer()
-
     def _reset_timer(self) -> None:
         """
         Resets internal timer.
@@ -375,14 +368,15 @@ class BaseMESSAGE:
         while self.next_send_time < current_stamp:
             self.next_send_time += self.period
 
-        self._timer_handle = async_util.call_at(self._set_ready, self.next_send_time)
+        self._timer_handle = async_util.call_at(emit, self.next_send_time, EventID.message_ready, self)
 
-    def _close(self):
+    async def _close(self):
         """
         Closes the timer handles.
         """
         if self._timer_handle is not None:
             self._timer_handle.cancel()
+            await asyncio.gather(self._timer_handle, return_exceptions=True)
 
     async def _send_channel(self) -> dict:
         """
@@ -393,7 +387,7 @@ class BaseMESSAGE:
         """
         raise NotImplementedError
 
-    async def _send(self) -> MessageSendResult:
+    async def _send(self) -> Union[Dict, None]:
         """
         Sends a message to all the channels.
 
@@ -409,7 +403,7 @@ class BaseMESSAGE:
         This method initializes the implementation specific
         api objects and checks for the correct channel input context.
         """
-        raise NotImplementedError
+        self._timer_handle = async_util.call_at(emit, self.next_send_time, EventID.message_ready, self)
 
     async def update(self, _init_options: dict = {}, **kwargs):
         """
@@ -775,9 +769,10 @@ class BaseChannelMessage(BaseMESSAGE):
                 raise ValueError(f"No valid channels were passed to {self} object")
 
         self.parent = parent
+        await super().initialize()
 
     @async_util.with_semaphore("update_semaphore")
-    async def _send(self) -> MessageSendResult:
+    async def _send(self):
         """
         Sends the data into the channels.
 
@@ -805,20 +800,16 @@ class BaseChannelMessage(BaseMESSAGE):
                         break
 
                     elif action is ChannelErrorAction.REMOVE_ACCOUNT:
-                        return MessageSendResult(
-                            self.generate_log_context(
-                                **data_to_send, succeeded_ch=succeeded_channels, failed_ch=errored_channels
-                            ),
-                            MSG_SEND_STATUS_ERROR_REMOVE_ACCOUNT
-                        )
+                        emit(EventID.account_expired, self.parent.parent)
+                        break
 
             self._update_state(succeeded_channels, errored_channels)
-            return MessageSendResult(
-                self.generate_log_context(**data_to_send, succeeded_ch=succeeded_channels, failed_ch=errored_channels),
-                MSG_SEND_STATUS_SUCCESS if succeeded_channels or errored_channels else MSG_SEND_STATUS_NO_MESSAGE_SENT
-            )
+            if errored_channels or succeeded_channels:
+                return self.generate_log_context(
+                    **data_to_send, succeeded_ch=succeeded_channels, failed_ch=errored_channels
+                )
 
-        return MessageSendResult(None, MSG_SEND_STATUS_NO_MESSAGE_SENT)
+        return None
 
     @typechecked
     @async_util.with_semaphore("update_semaphore")

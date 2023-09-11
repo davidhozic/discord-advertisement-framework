@@ -12,7 +12,7 @@ from typeguard import typechecked
 from .logging.tracing import TraceLEVELS, trace
 from .logging import _logging as logging, tracing
 from .misc import doc, instance_track as it
-from .events import EventID, emit
+from .events import *
 from . import guild
 from . import client
 from . import message
@@ -58,7 +58,6 @@ class GLOBALS:
     save_to_file: bool = False
     remote_client: remote.RemoteAccessCLIENT = None
 
-    cleanup_event = asyncio.Event()
     schema_backup_event = asyncio.Event()
 
 
@@ -120,19 +119,12 @@ async def http_remove_account(account_id: int):
     return remote.create_json_response(message=f"Removed account {name}")
 
 
-async def cleanup_accounts_task():
-    """
-    Task for cleaning up closed accounts.
-    """
-    loop = asyncio.get_event_loop()
-    event = GLOBALS.cleanup_event
-    while GLOBALS.running:
-        loop.call_later(ACCOUNT_CLEANUP_DELAY, event.set)
-        await event.wait()
-        event.clear()
-        for account in get_accounts():
-            if account.deleted:
-                await remove_object(account)
+@listen(EventID.account_expired)
+async def cleanup_account(account: client.ACCOUNT):
+    if GLOBALS.save_to_file:
+        await account._close()
+    else:
+        await remove_object(account)
 
 
 async def schema_backup_task():
@@ -257,11 +249,6 @@ async def initialize(user_callback: Optional[Union[Callable, Coroutine]] = None,
 
     if save_to_file:  # Backup shilling list to pickle file
         GLOBALS.tasks.append(loop.create_task(schema_backup_task()))
-    else:
-        # Create account cleanup task (account self-deleted)
-        # Only create if state preservation is disable to prevent potential data loss due to
-        # lost connections or reset tokens. The user must use the GUI to cleanup any non-running accounts.
-        GLOBALS.tasks.append(loop.create_task(cleanup_accounts_task()))
 
     # Initialize the event loop
     GLOBALS.tasks.append(events.initialize())
@@ -453,7 +440,6 @@ async def shutdown() -> None:
     trace("Shutting down...", TraceLEVELS.NORMAL)
     GLOBALS.running = False
     # Signal events for tasks to raise out of sleep
-    GLOBALS.cleanup_event.set()
     GLOBALS.schema_backup_event.set()  # This also saves one last time, so manually saving is not needed
     # Close remote client
     if remote.GLOBALS.remote_client is not None:

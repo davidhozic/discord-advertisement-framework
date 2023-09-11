@@ -11,6 +11,7 @@ from ..logging.tracing import trace, TraceLEVELS
 
 from ..logging import sql
 from ..misc import doc, instance_track, async_util
+from ..events import *
 
 import asyncio
 import _discord as discord
@@ -706,6 +707,7 @@ class DirectMESSAGE(BaseMESSAGE):
             user = parent.apiobject
             await user.create_dm()
             self.dm_channel = user
+            await super().initialize()
         except discord.HTTPException as ex:
             raise ValueError(f"Unable to create DM with user {user.display_name}\nReason: {ex}")
 
@@ -789,18 +791,17 @@ class DirectMESSAGE(BaseMESSAGE):
         if any(data_to_send.values()):
             channel_ctx = await self._send_channel(**data_to_send)
             self._update_state()
-            message_ctx = self.generate_log_context(channel_ctx, **data_to_send)
             if channel_ctx["success"] is False:
                 reason = channel_ctx["reason"]
                 if isinstance(reason, discord.HTTPException):
                     if reason.status in {400, 403}:  # Bad request, forbidden
-                        return MessageSendResult(message_ctx, MSG_SEND_STATUS_ERROR_REMOVE_GUILD)
+                        emit(EventID.guild_expired, self.parent)
                     elif reason.status == 401:  # Unauthorized (invalid token)
-                        return MessageSendResult(message_ctx, MSG_SEND_STATUS_ERROR_REMOVE_ACCOUNT)
+                        emit(EventID.account_expired, self.parent.parent)
 
-            return MessageSendResult(message_ctx, MSG_SEND_STATUS_SUCCESS)
+            return self.generate_log_context(channel_ctx, **data_to_send)
 
-        return MessageSendResult(None, MSG_SEND_STATUS_NO_MESSAGE_SENT)
+        return None
 
     @typechecked
     @async_util.with_semaphore("update_semaphore")
