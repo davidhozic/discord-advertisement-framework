@@ -31,7 +31,7 @@ __all__ = (
 
 class GLOBAL:
     listeners: Dict[Enum, List["EventListener"]] = {}
-    event_queue: asyncio.Queue["EventID", Any, Any] = asyncio.Queue()
+    event_queue = asyncio.Queue()
 
 
 class EventListener:
