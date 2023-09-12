@@ -25,7 +25,6 @@ import _discord as discord
 __all__ = (
     "BaseMESSAGE",
     "AutoCHANNEL",
-    "MessageSendResult",
     "ChannelErrorAction",
     "BaseChannelMessage",
     "MSG_SEND_STATUS_SUCCESS",
@@ -56,16 +55,6 @@ for k, v in globals_.copy().items():
         else:
             prev_val += 1
             globals_[k] = prev_val
-
-
-@dataclass
-class MessageSendResult:
-    """
-    Storage container for message send results,
-    to be used by upper layers.
-    """
-    message_context: Optional[Dict[str, Any]]
-    result_code: int
 
 
 class ChannelErrorAction(Enum):
@@ -356,9 +345,6 @@ class BaseMESSAGE:
         """
         Resets internal timer.
         """
-        if self._deleted:
-            return  # Prevent any additional calls in case the message has been removed
-
         if self.start_period is not None:
             range = map(int, [self.start_period.total_seconds(), self.end_period.total_seconds()])
             self.period = timedelta(seconds=random.randrange(*range))
@@ -370,6 +356,7 @@ class BaseMESSAGE:
 
         self._timer_handle = async_util.call_at(emit, self.next_send_time, EventID.message_ready, self)
 
+    @async_util.with_semaphore("update_semaphore")
     async def _close(self):
         """
         Closes the timer handles.
@@ -390,11 +377,6 @@ class BaseMESSAGE:
     async def _send(self) -> Union[Dict, None]:
         """
         Sends a message to all the channels.
-
-        Returns
-        ------------
-        MessageSendResult
-            The result of the message send.
         """
         raise NotImplementedError
 
@@ -431,7 +413,6 @@ class BaseMESSAGE:
         .. versionadded::
             v2.0
         """
-
         raise NotImplementedError
 
 
@@ -775,11 +756,6 @@ class BaseChannelMessage(BaseMESSAGE):
     async def _send(self):
         """
         Sends the data into the channels.
-
-        Returns
-        ----------
-        MessageSendResult
-            The result of message send attempt.
         """
         # Acquire mutex to prevent update method from writing while sending
         data_to_send = await self._get_data()
@@ -812,7 +788,6 @@ class BaseChannelMessage(BaseMESSAGE):
         return None
 
     @typechecked
-    @async_util.with_semaphore("update_semaphore")
     async def update(self, _init_options: Optional[dict] = None, **kwargs: Any):
         """
         .. versionadded:: v2.0
@@ -836,6 +811,7 @@ class BaseChannelMessage(BaseMESSAGE):
         Other
             Raised from .initialize() method.
         """
+        await self._close()
         if "start_in" not in kwargs:
             # This parameter does not appear as attribute, manual setting necessary
             kwargs["start_in"] = self.next_send_time

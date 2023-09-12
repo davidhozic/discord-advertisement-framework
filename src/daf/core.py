@@ -403,7 +403,7 @@ async def remove_object(
         for account in GLOBALS.accounts:
             for guild_ in account.servers:
                 if snowflake in guild_.messages:
-                    guild_.remove_message(snowflake)
+                    await guild_.remove_message(snowflake)
                     break
         else:
             raise ValueError("Message is not in any guilds")
@@ -411,7 +411,7 @@ async def remove_object(
     elif isinstance(snowflake, (guild.BaseGUILD, guild.AutoGUILD)):
         for account in GLOBALS.accounts:
             if snowflake in account.servers:
-                account.remove_server(snowflake)
+                await account.remove_server(snowflake)
 
     elif isinstance(snowflake, client.ACCOUNT):
         await snowflake._close()

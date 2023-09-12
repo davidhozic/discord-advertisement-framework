@@ -1,4 +1,7 @@
 from datetime import timedelta, datetime
+from typing import List
+
+from daf.events import *
 
 import pytest
 import daf
@@ -11,22 +14,26 @@ TEST_USER_ID = 145196308985020416
 C_FILE_NAME_FORBIDDEN_CHAR = ('<','>','"','/','\\','|','?','*',":")
 
 
+@pytest.fixture(scope="module")
+async def TEXT_MESSAGE(channels, guilds, accounts: List[daf.ACCOUNT]):
+    guild = daf.GUILD(guilds[0], logging=True)
+    await accounts[0].add_server(guild)
+    remove_listener(EventID.message_ready, guild._advertise)
+    await guild.add_message(tm := daf.TextMESSAGE(None, timedelta(seconds=5), data="Hello World", channels=channels[0]))
+    yield tm
+    await accounts[0].remove_server(guild)
 
-async def test_logging_json(channels, guilds, accounts):
+
+async def test_logging_json(TEXT_MESSAGE: daf.TextMESSAGE):
     "Test if json logging works"
-    account: daf.ACCOUNT = accounts[0]
-    dc_guild, _ = guilds
-    text_channels, _ = channels
+    tm = TEXT_MESSAGE
     try:
         json_logger = daf.LoggerJSON("./History")
         await json_logger.initialize()
         daf.logging._logging._set_logger(json_logger)
 
-        guild = daf.GUILD(dc_guild, logging=True)
-        await guild.initialize(parent=account)
-        guild_context = guild.generate_log_context()
-        account_context = account.generate_log_context()
-        await guild.add_message(tm := daf.TextMESSAGE(None, timedelta(seconds=5), data="Hello World", channels=text_channels))
+        guild_context = tm.parent.generate_log_context()
+        account_context = tm.parent.parent.generate_log_context()
 
         def check_json_results(message_context):
             timestruct = datetime.now()
@@ -61,8 +68,7 @@ async def test_logging_json(channels, guilds, accounts):
 
         for d in data:
             await tm.update(data=d)
-            result = await tm._send() 
-            message_ctx = result.message_context
+            message_ctx = await tm._send() 
             await daf.logging.save_log(guild_context, message_ctx, account_context)
             check_json_results(message_ctx)
 
@@ -75,25 +81,20 @@ async def test_logging_json(channels, guilds, accounts):
         shutil.rmtree("./History", ignore_errors=True)
 
 
-
-async def test_logging_sql(channels, guilds, accounts):
+async def test_logging_sql(TEXT_MESSAGE: daf.TextMESSAGE):
     """
     Tests if SQL logging works(only sqlite).
     It does not test any of the results as it assumes the database
     will raise an exception if anything is wrong.
     """
-    account: daf.ACCOUNT = accounts[0]
-    dc_guild, _ = guilds
-    text_channels, _ = channels
+    tm = TEXT_MESSAGE
     try:
         sql_logger = daf.LoggerSQL(database="testdb")
         await sql_logger.initialize()
         daf.logging._logging._set_logger(sql_logger)
-        guild = daf.GUILD(dc_guild, logging=True)
-        await guild.initialize(parent=account)
-        guild_context = guild.generate_log_context()
-        account_context = account.generate_log_context()
-        await guild.add_message(tm := daf.TextMESSAGE(None, timedelta(seconds=5), data="Hello World", channels=text_channels))
+
+        guild_context = tm.parent.generate_log_context()
+        account_context = tm.parent.parent.generate_log_context()
 
         data = [
             "Hello World",
@@ -103,8 +104,7 @@ async def test_logging_sql(channels, guilds, accounts):
 
         for d in data:
             await tm.update(data=d)
-            result = await tm._send()
-            message_ctx = result.message_context
+            message_ctx = await tm._send()
             await daf.logging.save_log(guild_context, message_ctx, account_context)
 
         # Simulate member join without checking data

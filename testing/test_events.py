@@ -2,6 +2,7 @@ from datetime import timedelta
 
 import daf
 import pytest
+import asyncio
 
 
 @pytest.mark.parametrize(
@@ -15,7 +16,7 @@ import pytest
             ),
         ]
 )
-def test_events(event: daf.EventID, expected_args: dict):
+async def test_events(event: daf.EventID, expected_args: dict):
     handler_called = True
 
     def dummy_listener(**kwargs):
@@ -25,11 +26,13 @@ def test_events(event: daf.EventID, expected_args: dict):
     handler_called = False
     daf.add_listener(event, dummy_listener)
     daf.emit(event, **expected_args)
+    await asyncio.sleep(0.001)
     assert handler_called, "Handler was not called"
 
     handler_called = False
     daf.remove_listener(event, dummy_listener)
     daf.emit(event, **expected_args)
+    await asyncio.sleep(0.001)
     assert not handler_called, "Handler was called"
 
     @daf.listen(event)
@@ -39,4 +42,5 @@ def test_events(event: daf.EventID, expected_args: dict):
 
     handler_called = False
     daf.emit(event, **expected_args)
+    await asyncio.sleep(0.001)
     assert handler_called, "Handler was not called"

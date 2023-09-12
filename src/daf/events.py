@@ -2,8 +2,9 @@
 Module used to support listening and emitting events.
 It also contains the event loop definitions.
 """
+from contextlib import suppress
 from enum import Enum, auto
-from typing import Any, List, Dict, Callable, TYPE_CHECKING, TypeVar
+from typing import Any, List, Dict, Callable, TYPE_CHECKING, TypeVar, Coroutine
 
 from .misc.doc import doc_category
 from .logging.tracing import TraceLEVELS, trace
@@ -97,7 +98,8 @@ def remove_listener(event: EventID, fnc: Callable):
     ValueError
         Provided function is not a listener.
     """
-    GLOBAL.listeners[event].remove(fnc)
+    with suppress(ValueError):
+        GLOBAL.listeners[event].remove(fnc)
 
 
 @doc_category("Event reference")
@@ -149,7 +151,8 @@ async def event_loop():
 
         for listener in listeners.get(event_id, []):
             if listener.predicate is None or listener.predicate(*args, **kwargs):
-                await listener(*args, **kwargs)
+                if isinstance(r:= listener(*args, **kwargs), Coroutine):
+                    await r
 
         if event_id is EventID._stop_event_loop:
             break

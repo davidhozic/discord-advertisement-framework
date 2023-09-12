@@ -81,7 +81,7 @@ async def test_text_period(channels: Tuple[List[Union[daf.discord.TextChannel, d
             elif isinstance(item, daf.discord.Embed):
                 assert item.to_dict() in embeds, "TextMESSAGE embed not in message embeds"
 
-        guild.remove_message(text_message)
+        await guild.remove_message(text_message)
         await asyncio.sleep(10)
         # Test DirectMESSAGE
         direct_message = daf.message.DirectMESSAGE(None, TEST_SEND_PERIOD_TEXT, DIRECT_MESSAGE_TEST_MESSAGE, "send",

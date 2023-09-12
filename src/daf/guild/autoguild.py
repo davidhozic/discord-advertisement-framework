@@ -17,7 +17,6 @@ import _discord as discord
 import asyncio
 
 from .. import web
-from .status import GuildAdvertStatus
 
 import re
 
@@ -34,6 +33,8 @@ class AutoGUILD:
 
     Internally automatically creates :class:`daf.guild.GUILD` objects.
     Can also automatically join new guilds (``auto_join`` parameter)
+
+    TODO: Re-design to work like GUILD / USER.
 
     .. CAUTION::
         Any objects passed to AutoGUILD get **deep-copied** meaning,
@@ -246,9 +247,13 @@ class AutoGUILD:
             except Exception:
                 trace(f"Could not add message {message} to {guild}, cached in {self}", TraceLEVELS.WARNING)
 
-    def remove_message(self, message: BaseMESSAGE):
+    async def remove_message(self, message: BaseMESSAGE):
         """
         Removes message from the messages list.
+
+        .. versionchanged:: v2.11
+
+            Turned async to support event loop.
 
         Parameters
         ------------
@@ -263,7 +268,7 @@ class AutoGUILD:
         self.messages.remove(message)
         for guild in self.guilds:
             with suppress(ValueError):  # Guilds can remove messages themselves
-                guild.remove_message(message)
+                await guild.remove_message(message)
 
     def _get_server(self, snowflake: Union[int, discord.Guild, discord.User, discord.Object]):
         """
@@ -398,11 +403,7 @@ class AutoGUILD:
             if g._check_state():
                 del self.cache[g.apiobject.id]
             else:
-                status = await g._advertise()
-                if status == GuildAdvertStatus.REMOVE_ACCOUNT:
-                    return GuildAdvertStatus.REMOVE_ACCOUNT
-
-        return GuildAdvertStatus.SUCCESS
+                await g._advertise()
 
     @async_util.with_semaphore("_safe_sem", 1)
     async def update(self, init_options = None, **kwargs):

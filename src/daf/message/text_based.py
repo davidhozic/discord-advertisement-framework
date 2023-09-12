@@ -777,14 +777,9 @@ class DirectMESSAGE(BaseMESSAGE):
                     return {"success": False, "reason": ex}
 
     @async_util.with_semaphore("update_semaphore")
-    async def _send(self) -> MessageSendResult:
+    async def _send(self) -> Union[dict, None]:
         """
         Sends the data into the channels
-
-        Returns
-        ----------
-        MessageSendResult
-            The result of message send.
         """
         # Parse data from the data parameter
         data_to_send = await self._get_data()
@@ -804,7 +799,6 @@ class DirectMESSAGE(BaseMESSAGE):
         return None
 
     @typechecked
-    @async_util.with_semaphore("update_semaphore")
     async def update(self, _init_options: Optional[dict] = None, **kwargs):
         """
         .. versionadded:: v2.0
@@ -828,6 +822,7 @@ class DirectMESSAGE(BaseMESSAGE):
         Other
             Raised from .initialize() method
         """
+        await self._close()
         if "start_in" not in kwargs:
             # This parameter does not appear as attribute, manual setting necessary
             kwargs["start_in"] = self.next_send_time

@@ -67,6 +67,7 @@ class BaseGUILD:
         "_removed_messages",
         "parent",
         "_removal_timer_handle",
+        "_opened",
     )
 
     _removed_messages: List[BaseMESSAGE]
@@ -97,6 +98,7 @@ class BaseGUILD:
         self._created_at = datetime.now()  # The time this object was created
         self.parent = None
         self._removal_timer_handle: asyncio.Task = None
+        self._opened = False
         attributes.write_non_exist(self, "_removed_messages", [])
 
     def __repr__(self) -> str:
@@ -194,6 +196,7 @@ class BaseGUILD:
         for message in self._messages:
             message._delete()
 
+    @async_util.with_semaphore("update_semaphore", 1)
     async def add_message(self, message: BaseMESSAGE):
         """
         Adds a message to the message list.
@@ -219,6 +222,7 @@ class BaseGUILD:
         with suppress(ValueError):  # Readd the removed message
             self._removed_messages.remove(message)
 
+    @async_util.with_semaphore("update_semaphore", 1)
     @typechecked
     async def remove_message(self, message: BaseMESSAGE):
         """
@@ -308,6 +312,7 @@ class BaseGUILD:
                 self._removal_timer_handle = None
 
             add_listener(EventID.message_ready, self._advertise, lambda m: m.parent is self)
+            self._opened = True
             return
 
         raise ValueError(f"Unable to find object with ID: {guild_id}")
@@ -357,11 +362,13 @@ class BaseGUILD:
         """
         raise NotImplementedError
 
+    @async_util.with_semaphore("update_semaphore", 1)
     async def _close(self):
         """
         Cleans up and closes any asyncio related
         functionality.
         """
+        self._opened = False
         remove_listener(EventID.message_ready, self._advertise)
         for message in self.messages:
             await message._close()
@@ -376,6 +383,7 @@ class BaseGUILD:
         Common to all messages, function responsible for sending all the
         messages to this specific guild.
         """
+
         guild_ctx = self.generate_log_context()
         author_ctx = self.parent.generate_log_context()
 
@@ -388,7 +396,8 @@ class BaseGUILD:
 
         # Must be called after ._send to prevent multiple _advertise calls being added to
         # the event loop queue in case the period is lower than the time it takes to send the message.
-        message._reset_timer()
+        if self._opened:  # In case the event loop called _advertise during after / during _close request
+            message._reset_timer()
 
     def generate_invite_log_context(self, member: discord.Member, invite_id: str) -> dict:
         raise NotImplementedError
@@ -601,7 +610,6 @@ class GUILD(BaseGUILD):
             }
         }
 
-    @async_util.with_semaphore("update_semaphore", 1)
     async def update(self, init_options = None, **kwargs):
         """
         Used for changing the initialization parameters,
@@ -627,29 +635,33 @@ class GUILD(BaseGUILD):
         Other
             Raised from .initialize() method.
         """
-        # Update the guild
-        if "snowflake" not in kwargs:
-            kwargs["snowflake"] = self.snowflake
+        try:
+            await self._close()
+            # Update the guild
+            if "snowflake" not in kwargs:
+                kwargs["snowflake"] = self.snowflake
 
-        if "invite_track" not in kwargs:
-            kwargs["invite_track"] = list(self.join_count.keys())
+            if "invite_track" not in kwargs:
+                kwargs["invite_track"] = list(self.join_count.keys())
 
-        messages = kwargs.pop("messages", self.messages + self._messages_uninitialized)
+            messages = kwargs.pop("messages", self.messages + self._messages_uninitialized)
 
-        if init_options is None:
-            init_options = {"parent": self.parent}
+            if init_options is None:
+                init_options = {"parent": self.parent}
 
-        await async_util.update_obj_param(self, init_options=init_options, **kwargs)
+            await async_util.update_obj_param(self, init_options=init_options, **kwargs)
 
-        _messages = []
-        for message in messages:
-            try:
-                await message.update({"parent": self})
-                _messages.append(message)
-            except Exception as exc:
-                trace(f"Could not update {message} after updating {self} - Skipping message.", TraceLEVELS.ERROR, exc)
+            _messages = []
+            for message in messages:
+                try:
+                    await message.update({"parent": self})
+                    _messages.append(message)
+                except Exception as exc:
+                    trace(f"Could not update {message} after updating {self} - Skipping message.", TraceLEVELS.ERROR, exc)
 
-        self._messages = _messages
+            self._messages = _messages
+        finally:
+            self.initialize(self.parent)
 
 
 @instance_track.track_id
@@ -733,7 +745,6 @@ class USER(BaseGUILD):
     async def add_message(self, message: DirectMESSAGE):
         return await super().add_message(message)
 
-    @async_util.with_semaphore("update_semaphore", 1)
     async def update(self, init_options = None, **kwargs):
         """
         .. versionadded:: v2.0
@@ -759,23 +770,28 @@ class USER(BaseGUILD):
         Other
             Raised from .initialize() method.
         """
-        # Update the guild
-        if "snowflake" not in kwargs:
-            kwargs["snowflake"] = self.snowflake
+        try:
+            # Update the guild
+            await self._close()
 
-        messages = kwargs.pop("messages", self.messages + self._messages_uninitialized)
+            if "snowflake" not in kwargs:
+                kwargs["snowflake"] = self.snowflake
 
-        if init_options is None:
-            init_options = {"parent": self.parent}
+            messages = kwargs.pop("messages", self.messages + self._messages_uninitialized)
 
-        await async_util.update_obj_param(self, init_options=init_options, **kwargs)
+            if init_options is None:
+                init_options = {"parent": self.parent}
 
-        _messages = []
-        for message in messages:
-            try:
-                await message.update({"parent": self})
-                _messages.append(message)
-            except Exception as exc:
-                trace(f"Could not update {message} after updating {self} - Skipping message.", TraceLEVELS.ERROR, exc)
+            await async_util.update_obj_param(self, init_options=init_options, **kwargs)
 
-        self._messages = _messages
+            _messages = []
+            for message in messages:
+                try:
+                    await message.update({"parent": self})
+                    _messages.append(message)
+                except Exception as exc:
+                    trace(f"Could not update {message} after updating {self} - Skipping message.", TraceLEVELS.ERROR, exc)
+
+            self._messages = _messages
+        finally:
+            await self.initialize(self.parent)

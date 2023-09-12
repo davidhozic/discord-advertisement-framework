@@ -340,6 +340,7 @@ class ACCOUNT:
 
         self._client.event(on_member_join)
         self._client.event(on_invite_delete)
+        add_listener(EventID.guild_expired, self.remove_server, lambda server: server.parent is self)
 
         self._uiservers.clear()  # Only needed for predefined initialization
         self._running = True
@@ -358,6 +359,7 @@ class ACCOUNT:
             "id": self._client.user.id,
         }
 
+    @async_util.with_semaphore("_update_sem")
     @typechecked
     async def add_server(self, server: Union[guild.GUILD, guild.USER, guild.AutoGUILD]):
         """
@@ -378,7 +380,6 @@ class ACCOUNT:
             :py:meth:`daf.guild.AutoGUILD.initialize()`
         """
         await server.initialize(parent=self)
-        add_listener(EventID.guild_expired, self.remove_server, lambda server: server.parent is self)
         if isinstance(server, guild.BaseGUILD):
             self._servers.append(server)
         else:
@@ -387,6 +388,7 @@ class ACCOUNT:
         with suppress(ValueError):
             self._removed_servers.remove(server)
 
+    @async_util.with_semaphore("_update_sem")
     @typechecked
     async def remove_server(self, server: Union[guild.GUILD, guild.USER, guild.AutoGUILD]):
         """
@@ -418,7 +420,6 @@ class ACCOUNT:
         else:
             self._autoguilds.remove(server)
 
-        remove_listener(EventID.guild_expired, self.remove_server)
         await server._close()
         server._delete()
         self._removed_servers.append(server)
@@ -456,8 +457,9 @@ class ACCOUNT:
                 return server
 
         return None
-
-    async def _close(self, _delete = True):
+    
+    @async_util.with_semaphore("_update_sem")
+    async def _close(self):
         """
         Signals the tasks of this account to finish and
         waits for them.
@@ -466,6 +468,7 @@ class ACCOUNT:
             trace(f"Logging out of {self.client.user.display_name}...")
             self._running = False
 
+        remove_listener(EventID.guild_expired, self.remove_server)
         for guild_ in self.servers:
             await guild_._close()
 
@@ -475,16 +478,6 @@ class ACCOUNT:
 
         await self._client.close()
         await asyncio.gather(self._ws_task, return_exceptions=True)
-
-        if _delete:
-            self._delete()
-
-            for server in self.servers:
-                server._delete()
-
-            self._uiservers = self.servers
-            self._servers.clear()
-            self._autoguilds.clear()
 
     async def update(self, **kwargs):
         """
@@ -496,8 +489,7 @@ class ACCOUNT:
         if self._deleted:
             raise ValueError("Account has been removed from the framework!")
 
-        if self._running:
-            await self._close(False)
+        await self._close()
 
         selenium = self._selenium
         if "token" not in kwargs:
@@ -539,6 +531,6 @@ class ACCOUNT:
                 await self.initialize()  # re-login
                 await update_servers(self)
             except Exception:
-                self._delete()
+                await self._close()
 
             raise

@@ -1,4 +1,5 @@
 from datetime import timedelta
+from typing import List
 
 import os
 import time
@@ -6,33 +7,64 @@ import pytest
 import daf
 import asyncio
 
+from daf.events import *
 
 # CONFIGURATION
 TEST_USER_ID = 145196308985020416
 
 
 
-async def test_text_message_update(channels, guilds, accounts):
+@pytest.fixture(scope="module")
+async def TEXT_MESSAGE(channels, guilds, accounts: List[daf.ACCOUNT]):
+    guild = daf.GUILD(guilds[0], logging=True)
+    await accounts[0].add_server(guild)
+    remove_listener(EventID.message_ready, guild._advertise)
+    await guild.add_message(tm := daf.TextMESSAGE(None, timedelta(seconds=5), data="Hello World", channels=channels[0]))
+    yield tm
+    await accounts[0].remove_server(guild)
+
+
+@pytest.fixture(scope="module")
+async def DIRECT_MESSAGE(accounts: List[daf.ACCOUNT]):
+    user = daf.USER(TEST_USER_ID)
+    await accounts[0].add_server(user)
+    remove_listener(EventID.message_ready, user._advertise)
+    TEXT_MESSAGE_TEST_MESSAGE = "Hello world", daf.discord.Embed(title="Hello world")
+    direct_message = daf.message.DirectMESSAGE(None, timedelta(seconds=5), TEXT_MESSAGE_TEST_MESSAGE, "send",
+                                                start_in=timedelta(0), remove_after=None)
+    await user.add_message(direct_message)
+    yield direct_message
+    await accounts[0].remove_server(user)
+
+
+@pytest.fixture(scope="module")
+async def VOICE_MESSAGE(channels, guilds, accounts: List[daf.ACCOUNT]):
+    guild = daf.GUILD(guilds[0], logging=True)
+    await accounts[0].add_server(guild)
+    remove_listener(EventID.message_ready, guild._advertise)
+
+    cwd = os.getcwd()
+    os.chdir(os.path.dirname(__file__))
+    VOICE_MESSAGE_TEST_MESSAGE = daf.FILE("testing123.mp3")
+    os.chdir(cwd)
+
+    voice_message = daf.message.VoiceMESSAGE(None, timedelta(seconds=20), VOICE_MESSAGE_TEST_MESSAGE, channels[1],
+                                            volume=50, start_in=timedelta(), remove_after=None)
+    await guild.add_message(voice_message)
+    yield voice_message
+    await accounts[0].remove_server(guild)
+
+
+
+async def test_text_message_update(TEXT_MESSAGE: daf.TextMESSAGE, DIRECT_MESSAGE: daf.DirectMESSAGE):
     "This tests if all the text messages succeed in their sends"
-    account = accounts[0]
-    text_channels, _ = channels
-    dc_guild, _ = guilds
     TEXT_MESSAGE_TEST_MESSAGE = [
         ("Hello world", daf.discord.Embed(title="Hello world")),
         ("Goodbye world", daf.discord.Embed(title="Goodbye world"))
     ]
 
-    guild = daf.GUILD(dc_guild)
-    user = daf.USER(TEST_USER_ID)
-    text_message = daf.message.TextMESSAGE(None, timedelta(seconds=5), "START", text_channels,
-                                        "send", start_in=timedelta(), remove_after=None)
-    direct_message = daf.message.DirectMESSAGE(None, timedelta(seconds=5), "START", "send",
-                                                start_in=timedelta(0), remove_after=None)
-    # Initialize objects
-    await guild.initialize(parent=account)
-    await user.initialize(parent=account)
-    await guild.add_message(text_message)
-    await user.add_message(direct_message)
+    text_message = TEXT_MESSAGE
+    direct_message = DIRECT_MESSAGE
 
     # TextMESSAGE send
     text: str
@@ -40,8 +72,7 @@ async def test_text_message_update(channels, guilds, accounts):
     for data in TEXT_MESSAGE_TEST_MESSAGE:
         text, embed = data
         await text_message.update(data=data)
-        result = await text_message._send()
-        message_ctx = result.message_context
+        message_ctx = await text_message._send()
 
         # Check results
         message: daf.discord.Message
@@ -53,9 +84,7 @@ async def test_text_message_update(channels, guilds, accounts):
 
         # DirectMESSAGE send
         await direct_message.update(data=data)
-        result = await direct_message._send()
-        message_ctx = result.message_context
-
+        message_ctx = await direct_message._send()
         # Check results
         message = direct_message.previous_message
         assert text == message.content, "DirectMESSAGE text does not match message content"
@@ -64,13 +93,8 @@ async def test_text_message_update(channels, guilds, accounts):
 
 
 
-async def test_voice_message_update(channels, guilds, accounts):
+async def test_voice_message_update(VOICE_MESSAGE: daf.VoiceMESSAGE):
     "This tests if all the voice messages succeed in their sends"
-    account = accounts[0]
-    _, voice_channels = channels
-    voice_channels = voice_channels[:2]
-    dc_guild, _ = guilds
-
     await asyncio.sleep(5)  # Wait for any messages still playing
     cwd = os.getcwd()
     os.chdir(os.path.dirname(__file__))
@@ -84,27 +108,15 @@ async def test_voice_message_update(channels, guilds, accounts):
     ]
 
     os.chdir(cwd)
-
-    guild = daf.GUILD(dc_guild)
-    voice_message = daf.message.VoiceMESSAGE(
-        None, timedelta(seconds=20),
-        daf.AUDIO(os.path.join(os.path.dirname(__file__), "testing123.mp3")),
-        voice_channels,
-        volume=50,
-        start_in=timedelta(),
-        remove_after=None
-    )
-    await guild.initialize(parent=account)
-    await guild.add_message(voice_message)
+    voice_message = VOICE_MESSAGE
 
     # Send
     for duration, audio in VOICE_MESSAGE_TEST_MESSAGE:
         await voice_message.update(data=audio)
         start_time = time.time()
-        result = await voice_message._send()
-        message_ctx = result.message_context
+        message_ctx = await voice_message._send()
         end_time = time.time()
 
         # Check results
-        assert end_time - start_time >= duration * len(voice_channels), "Message was not played till the end."
+        assert end_time - start_time >= duration * len(voice_message.channels), "Message was not played till the end."
         assert len(message_ctx["channels"]["failed"]) == 0, "Failed to send to all channels"
