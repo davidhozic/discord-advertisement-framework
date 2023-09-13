@@ -287,7 +287,7 @@ class TextMESSAGE(BaseChannelMessage):
                     _data_to_send["files"].append(element)
         return _data_to_send
 
-    async def initialize(self, parent: Any):
+    async def initialize(self, parent: Any, allowed_channels: set):
         """
         This method initializes the implementation specific API objects and
         checks for the correct channel input context.
@@ -306,7 +306,7 @@ class TextMESSAGE(BaseChannelMessage):
         ValueError
             No valid channels were passed to object"
         """
-        await super().initialize(parent, {discord.TextChannel, discord.Thread}, lambda: parent.apiobject.text_channels)
+        await super().initialize(parent, {discord.TextChannel, discord.Thread}, allowed_channels)
         # Increase period to slow mode delay if it is lower
         self._check_period()
 
@@ -680,7 +680,7 @@ class DirectMESSAGE(BaseMESSAGE):
                     _data_to_send["files"].append(element)
         return _data_to_send
 
-    async def initialize(self, parent: Any):
+    async def initialize(self, parent: Any, guild: discord.User):
         """
         The method creates a direct message channel and
         returns True on success or False on failure
@@ -704,12 +704,11 @@ class DirectMESSAGE(BaseMESSAGE):
 
             self.parent = parent
             self._deleted = False
-            user = parent.apiobject
-            await user.create_dm()
-            self.dm_channel = user
+            await guild.create_dm()
+            self.dm_channel = guild
             await super().initialize()
         except discord.HTTPException as ex:
-            raise ValueError(f"Unable to create DM with user {user.display_name}\nReason: {ex}")
+            raise ValueError(f"Unable to create DM with user {guild.display_name}\nReason: {ex}")
 
     async def _handle_error(self, ex: Exception) -> bool:
         """

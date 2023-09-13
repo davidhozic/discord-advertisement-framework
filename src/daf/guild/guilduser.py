@@ -196,7 +196,6 @@ class BaseGUILD:
         for message in self._messages:
             message._delete()
 
-    @async_util.with_semaphore("update_semaphore", 1)
     async def add_message(self, message: BaseMESSAGE):
         """
         Adds a message to the message list.
@@ -217,10 +216,7 @@ class BaseGUILD:
         Other
             Raised from message.initialize() method.
         """
-        await message.initialize(parent=self)
-        self._messages.append(message)
-        with suppress(ValueError):  # Readd the removed message
-            self._removed_messages.remove(message)
+        raise NotImplementedError
 
     @async_util.with_semaphore("update_semaphore", 1)
     @typechecked
@@ -553,9 +549,13 @@ class GUILD(BaseGUILD):
                     TraceLEVELS.WARNING
                 )
 
+    @async_util.with_semaphore("update_semaphore", 1)
     @typechecked
     async def add_message(self, message: Union[TextMESSAGE, VoiceMESSAGE]):
-        return await super().add_message(message)
+        await message.initialize(parent=self, allowed_channels=set(self._apiobject.channels))
+        self._messages.append(message)
+        with suppress(ValueError):  # Readd the removed message
+            self._removed_messages.remove(message)
 
     @async_util.with_semaphore("update_semaphore")
     async def _on_member_join(self, member: discord.Member):
@@ -741,9 +741,13 @@ class USER(BaseGUILD):
             parent.client.get_or_fetch_user
         )
 
+    @async_util.with_semaphore("update_semaphore", 1)
     @typechecked
     async def add_message(self, message: DirectMESSAGE):
-        return await super().add_message(message)
+        await message.initialize(parent=self, guild=self._apiobject)
+        self._messages.append(message)
+        with suppress(ValueError):  # Readd the removed message
+            self._removed_messages.remove(message)
 
     async def update(self, init_options = None, **kwargs):
         """

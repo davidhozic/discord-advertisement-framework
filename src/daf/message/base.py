@@ -508,7 +508,7 @@ class AutoCHANNEL:
         """
         return list(self.cache)
 
-    async def initialize(self, parent, channel_getter: Callable):
+    async def initialize(self, parent):
         """
         Initializes async parts of the instance.
         This method should be called by ``parent``.
@@ -526,7 +526,6 @@ class AutoCHANNEL:
             The channel type to look for when searching for channels
         """
         self.parent = parent
-        self.channel_getter = channel_getter
 
     def _process(self):
         """
@@ -687,7 +686,7 @@ class BaseChannelMessage(BaseMESSAGE):
         self,
         parent: Any,
         channel_types: Set,
-        channel_getter: Callable
+        allowed_channels: Set
     ):
         """
         This method initializes the implementation specific API objects and
@@ -699,8 +698,6 @@ class BaseChannelMessage(BaseMESSAGE):
             The GUILD this message is in
         channel_types: List
             List of allowed channel types.
-        channel_getter: Callable
-            The function to call to obtain the correct channels of certain type.
 
         Raises
         ------------
@@ -716,13 +713,11 @@ class BaseChannelMessage(BaseMESSAGE):
 
         ch_i = 0
         client: discord.Client = parent.parent.client
-        _guild: discord.Guild = parent.apiobject
         to_remove = []
-        self.channel_getter = channel_getter
         self._deleted = False
 
         if isinstance(self.channels, AutoCHANNEL):
-            await self.channels.initialize(self, channel_getter)
+            await self.channels.initialize(self)
         else:
             for ch_i, channel in enumerate(self.channels):
                 if isinstance(channel, discord.abc.GuildChannel):
@@ -737,9 +732,9 @@ class BaseChannelMessage(BaseMESSAGE):
                     to_remove.append(channel)
                 elif type(channel) not in channel_types:
                     raise TypeError(f"{type(self).__name__} object received invalid channel type of {type(channel).__name__}")
-                elif channel.guild != _guild:
+                elif channel not in allowed_channels:
                     raise ValueError(
-                        f"{channel.name}(ID: {channel_id}) not in {_guild.name}(ID: {_guild.id}), "
+                        f"{channel.name}(ID: {channel_id}) not in {channel.guild.name}(ID: {channel.guild.id}), "
                         f"but is part of {channel.guild.name}(ID: {channel.guild.id})"
                     )
 
