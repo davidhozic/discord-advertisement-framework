@@ -1,7 +1,7 @@
 """
 Module contains definitions related to remote access from a graphical interface.
 """
-from typing import Optional, Literal, Coroutine
+from typing import Optional, Literal, Awaitable
 from contextlib import suppress
 from functools import update_wrapper
 
@@ -224,7 +224,7 @@ async def http_execute_method(object_id: int, method_name: str, **kwargs):
     object = it.get_by_id(object_id)
     try:
         result = getattr(object, method_name)(**convert.convert_from_semi_dict(kwargs))
-        if isinstance(result, Coroutine):
+        if isinstance(result, Awaitable):
             result = await result
 
     except Exception as exc:

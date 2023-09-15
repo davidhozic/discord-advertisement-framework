@@ -166,7 +166,8 @@ CONVERSION_ATTRS[guild.GUILD] = {
     "attrs": attributes.get_all_slots(guild.GUILD),
     "attrs_restore": {
         "update_semaphore": asyncio.Semaphore(1),
-        "parent": None
+        "parent": None,
+        "_removal_timer_handle": None
     },
 }
 
