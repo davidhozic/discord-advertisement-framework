@@ -302,8 +302,6 @@ class BaseGUILD:
                         self
                     )
                 )
-            else:
-                self._removal_timer_handle = None
 
             add_listener(EventID.message_ready, self._advertise, lambda m: m.parent is self)
             add_listener(EventID.message_removed, self._on_message_removed, lambda m: m.parent is self)

@@ -117,6 +117,7 @@ class AutoGUILD:
         "_messages",
         "_removed_messages",
         "removal_buffer_length",
+        "_removal_timer_handle"
     )
 
     @typechecked
@@ -148,6 +149,7 @@ class AutoGUILD:
         self._messages: List[BaseMESSAGE] = []
         self._removed_messages: List[BaseMESSAGE] = []
         self.removal_buffer_length = removal_buffer_length
+        self._removal_timer_handle: asyncio.Task = None
         attributes.write_non_exist(self, "update_semaphore", asyncio.Semaphore(1))
 
     @property
@@ -221,7 +223,20 @@ class AutoGUILD:
                 await self.add_message(message)
             except (TypeError, ValueError) as exc:
                 trace(f" Unable to initialize message {message}, in {self}", TraceLEVELS.WARNING, exc)
-        
+
+        if self.remove_after is not None:
+                self._removal_timer_handle = (
+                    async_util.call_at(
+                        emit,
+                        self.remove_after
+                        if isinstance(self.remove_after, datetime)
+                        else
+                        datetime.now() + self.remove_after,
+                        EventID.server_removed,
+                        self
+                    )
+                )
+
         add_listener(EventID.message_ready, self._advertise, lambda m: m.parent is self)
         add_listener(EventID.message_removed, self._on_message_removed, lambda m: m.parent is self)
 
