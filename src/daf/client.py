@@ -340,7 +340,7 @@ class ACCOUNT:
 
         self._client.event(on_member_join)
         self._client.event(on_invite_delete)
-        add_listener(EventID.guild_expired, self.remove_server, lambda server: server.parent is self)
+        add_listener(EventID.server_removed, self._on_server_removed, lambda server: server.parent is self)
 
         self._uiservers.clear()  # Only needed for predefined initialization
         self._running = True
@@ -388,26 +388,37 @@ class ACCOUNT:
         with suppress(ValueError):
             self._removed_servers.remove(server)
 
-    @async_util.with_semaphore("_update_sem")
     @typechecked
-    async def remove_server(self, server: Union[guild.GUILD, guild.USER, guild.AutoGUILD]):
+    def remove_server(self, server: Union[guild.GUILD, guild.USER, guild.AutoGUILD]):
         """
         Removes a guild like object from the shilling list.
+        This does not remove the server instantly, if you wish to wait for the server
+        to be removed do so like this: ``await account.remove_server()``, if that doesn't matter to you,
+        do: ``account.remove_server()`` (notice the lack of ``await``).
 
         .. versionchanged:: 2.11
 
-            Turned async to support event loop.
+            Removal is now asynchronous.
 
         Parameters
         --------------
         server: guild.GUILD | guild.USER | guild.AutoGUILD
             The guild like object to remove
 
+        Returns
+        -------
+        Awaitable
+            Returns an awaitable object that can be used to wait for the server to actually be removed.
+
         Raises
         -----------
         ValueError
             ``server`` is not in the shilling list.
         """
+        trace(f"Server {server} has been removed from account {self}", TraceLEVELS.NORMAL)
+        return emit(EventID.server_removed, server)
+
+    async def _on_server_removed(self, server: Union[guild.GUILD, guild.USER, guild.AutoGUILD]):
         if isinstance(server, guild.BaseGUILD):
             # Remove by ID
             ids = [id(s) for s in self._servers]
@@ -426,8 +437,6 @@ class ACCOUNT:
         if len(self._removed_servers) > self.removal_buffer_length:
             trace(f"Removing oldest record of removed servers {self._removed_servers[0]}", TraceLEVELS.DEBUG)
             del self._removed_servers[0]
-
-        trace(f"Server {server} has been removed from account {self}", TraceLEVELS.NORMAL)
 
     @typechecked
     def get_server(
@@ -468,7 +477,7 @@ class ACCOUNT:
             trace(f"Logging out of {self.client.user.display_name}...")
             self._running = False
 
-        remove_listener(EventID.guild_expired, self.remove_server)
+        remove_listener(EventID.server_removed, self._on_server_removed)
         for guild_ in self.servers:
             await guild_._close()
 

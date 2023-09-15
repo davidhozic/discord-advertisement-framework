@@ -2,7 +2,7 @@
     Contains definitions related to voice messaging."""
 
 
-from typing import Any, Dict, List, Iterable, Optional, Union, Tuple
+from typing import Any, Dict, List, Iterable, Optional, Union, Tuple, Callable
 from pathlib import Path
 from datetime import timedelta, datetime
 from typeguard import typechecked
@@ -269,7 +269,7 @@ class VoiceMESSAGE(BaseChannelMessage):
 
         return handled, action
 
-    def initialize(self, parent: Any, allowed_channels: set):
+    def initialize(self, parent: Any, channel_getter: Callable):
         """
         This method initializes the implementation specific API objects
         and checks for the correct channel input context.
@@ -288,7 +288,7 @@ class VoiceMESSAGE(BaseChannelMessage):
         ValueError
             No valid channels were passed to object"
         """
-        return super().initialize(parent, {discord.VoiceChannel}, allowed_channels)
+        return super().initialize(parent, {discord.VoiceChannel}, channel_getter)
 
     async def _send_channel(self,
                             channel: discord.VoiceChannel,

@@ -117,7 +117,6 @@ class AutoGUILD:
         "_messages",
         "_removed_messages",
         "removal_buffer_length",
-        "_opened",
     )
 
     @typechecked
@@ -149,7 +148,6 @@ class AutoGUILD:
         self._messages: List[BaseMESSAGE] = []
         self._removed_messages: List[BaseMESSAGE] = []
         self.removal_buffer_length = removal_buffer_length
-        self._opened = False
         attributes.write_non_exist(self, "update_semaphore", asyncio.Semaphore(1))
 
     @property
@@ -225,7 +223,7 @@ class AutoGUILD:
                 trace(f" Unable to initialize message {message}, in {self}", TraceLEVELS.WARNING, exc)
         
         add_listener(EventID.message_ready, self._advertise, lambda m: m.parent is self)
-        self._opened = True
+        add_listener(EventID.message_removed, self._on_message_removed, lambda m: m.parent is self)
 
     @async_util.with_semaphore("update_semaphore", 1)
     @typechecked
@@ -249,12 +247,14 @@ class AutoGUILD:
         Other
             Raised from message.initialize() method.
         """
-        await message.initialize(parent=self, allowed_channels=set(chain(*(g.channels for g in self.guilds))))
+        def get_channels(*types):
+            return set(chain(x for x in (g.channels for g in self.guilds) if isinstance(x, types)))
+
+        await message.initialize(parent=self, channel_getter=get_channels)
         self._messages.append(message)
         with suppress(ValueError):  # Readd the removed message
             self._removed_messages.remove(message)
 
-    @async_util.with_semaphore("update_semaphore", 1)
     @typechecked
     async def remove_message(self, message: BaseMESSAGE):
         """
@@ -277,13 +277,17 @@ class AutoGUILD:
             Raised when the message is not present in the list.
         """
         trace(f"Removing message {message} from {self}", TraceLEVELS.NORMAL)
-        message._delete()
-        await message._close()
+        await emit(EventID.message_removed, message)
+
+    async def _on_message_removed(self, message: BaseMESSAGE):
+        "Event loop handler for removing messages"
         self._messages.remove(message)
         self._removed_messages.append(message)
         if len(self._removed_messages) > self.removal_buffer_length:
             trace(f"Removing oldest record of removed messages {self._removed_messages[0]}", TraceLEVELS.DEBUG)
             del self._removed_messages[0]
+
+        await message._close()
 
     async def _join_guilds(self):
         """
@@ -358,7 +362,7 @@ class AutoGUILD:
         Closes any lower-level async objects.
         """
         remove_listener(EventID.message_ready, self._advertise)
-        self._opened = False
+        remove_listener(EventID.message_removed, self._on_message_removed)
         if self.auto_join is not None:
             await self.auto_join._close()
 
@@ -399,8 +403,9 @@ class AutoGUILD:
         if message._check_state():
             await self.remove_message(message)
             return
-        
+
         author_ctx = self.parent.generate_log_context()
+        message._reset_timer()
         message_context = await message._send()
         if message_context and self.logging:
             for guild in self.guilds:
@@ -408,11 +413,6 @@ class AutoGUILD:
                 message_guild_ctx = self._filter_message_context(guild, message_context)
                 if message_guild_ctx:
                     await logging.save_log(guild_ctx, message_guild_ctx, author_ctx)
-
-        # Must be called after ._send to prevent multiple _advertise calls being added to
-        # the event loop queue in case the period is lower than the time it takes to send the message.
-        if self._opened:  # In case the event loop called _advertise during after / during _close request
-            message._reset_timer()
 
     async def update(self, init_options = None, **kwargs):
         """
@@ -428,6 +428,8 @@ class AutoGUILD:
         await self._close()
         try:
             return await async_util.update_obj_param(self, init_options=init_options, **kwargs)
-        finally:        
+        except Exception:        
             if self.parent is not None:  # Only if it were previously initialized
                 await self.initialize(self.parent)  # Reopen any async related connections
+
+            raise

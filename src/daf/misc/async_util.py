@@ -167,5 +167,5 @@ def call_at(fnc: Callable, when: datetime, *args, **kwargs) -> asyncio.Task:
         if isinstance((r := fnc(*args, **kwargs)), Coroutine):
             await r
 
-    
-    return asyncio.create_task(waiter())
+
+    return asyncio.create_task(waiter(), name=f'{fnc}_{args}_{kwargs}')

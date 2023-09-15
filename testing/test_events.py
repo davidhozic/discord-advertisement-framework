@@ -56,6 +56,7 @@ async def test_events(event: daf.EventID, expected_args: dict):
     handler_called = False
     daf.emit(event, **expected_args)
     await asyncio.sleep(0.01)
+    daf.remove_listener(event, dummy_listener)
+    daf.remove_listener(event, dummy_listener2)
     assert handler_called and handler_called2, "Handler was not called"
 
-    daf.events.GLOBAL.listeners.clear()

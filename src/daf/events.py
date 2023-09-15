@@ -57,9 +57,10 @@ class EventID(Enum):
     daf_startup = 0
     daf_shutdown = auto()
     message_ready = auto()
+    message_removed = auto()
     trace = auto()
     account_expired = auto()
-    guild_expired = auto()
+    server_removed = auto()
     _stop_event_loop = auto()
 
 
@@ -98,7 +99,7 @@ def remove_listener(event: EventID, fnc: Callable):
     ValueError
         Provided function is not a listener.
     """
-    with suppress(ValueError):
+    with suppress(ValueError, KeyError):
         GLOBAL.listeners[event].remove(fnc)
 
 
@@ -119,9 +120,18 @@ def listen(event: EventID):
     return _listen_decor
 
 @doc_category("Event reference")
-def emit(event: EventID, *args, **kwargs):
+def emit(event: EventID, *args, **kwargs) -> asyncio.Future:
     """
-    Emits an ``event`` by calling all the registered listener.
+    .. versionadded:: 2.11
+
+    Emits an ``event`` by calling all the registered listeners.
+
+    Returns
+    ---------
+    asyncio.Future
+        A future object that can be awaited.
+        You can use this to wait for the event to actually be processed.
+        The result of the future will always be None.
 
     Raises
     ---------
@@ -129,8 +139,8 @@ def emit(event: EventID, *args, **kwargs):
         Arguments provided don't match all the listener parameters.
     """
     trace(f"Emitting event {event}", TraceLEVELS.DEBUG)
-    GLOBAL.event_queue.put_nowait((event, args, kwargs))
-
+    GLOBAL.event_queue.put_nowait((event, args, kwargs, future := asyncio.Future()))
+    return future
 
 def initialize():
     """
@@ -146,17 +156,24 @@ async def event_loop():
     """
     queue = GLOBAL.event_queue
     listeners = GLOBAL.listeners
+    
+    event_id: EventID
+    future: asyncio.Future
+
     while True:
-        event_id, args, kwargs = await queue.get()
-
-        for listener in listeners.get(event_id, []):
-            if listener.predicate is None or listener.predicate(*args, **kwargs):
-                if isinstance(r:= listener(*args, **kwargs), Coroutine):
-                    await r
-
+        event_id, args, kwargs, future = await queue.get()
         if event_id is EventID._stop_event_loop:
             break
 
+        for listener in listeners.get(event_id, []):
+            try:
+                if listener.predicate is None or listener.predicate(*args, **kwargs):
+                    if isinstance(r:= listener(*args, **kwargs), Coroutine):
+                        await r
+            except Exception as exc:
+                trace(f"Could not call event handler {listener} for event {event_id}.", TraceLEVELS.ERROR, exc)
+
+        future.set_result(None)
 
 # Dummy event handlers for documenting each event.
 @doc_category("Event reference")

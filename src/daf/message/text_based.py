@@ -1,8 +1,9 @@
 """
 Contains definitions for message classes that are text based."""
 
-from typing import Any, Dict, List, Iterable, Optional, Union, Literal, Tuple
+from typing import Any, Dict, List, Iterable, Optional, Union, Literal, Tuple, Callable
 from datetime import datetime, timedelta
+from functools import partial
 from typeguard import typechecked
 
 from .base import *
@@ -287,7 +288,7 @@ class TextMESSAGE(BaseChannelMessage):
                     _data_to_send["files"].append(element)
         return _data_to_send
 
-    async def initialize(self, parent: Any, allowed_channels: set):
+    async def initialize(self, parent: Any, channel_getter: Callable):
         """
         This method initializes the implementation specific API objects and
         checks for the correct channel input context.
@@ -306,7 +307,11 @@ class TextMESSAGE(BaseChannelMessage):
         ValueError
             No valid channels were passed to object"
         """
-        await super().initialize(parent, {discord.TextChannel, discord.Thread}, allowed_channels)
+        await super().initialize(
+            parent,
+            {discord.TextChannel, discord.Thread},
+            channel_getter
+        )
         # Increase period to slow mode delay if it is lower
         self._check_period()
 
@@ -364,13 +369,8 @@ class TextMESSAGE(BaseChannelMessage):
 
         return handled, action
 
-    def _reset_timer(self) -> None:
-        """
-        Resets internal timer, adjusts if the slowmode is lesser.
-        """
-        # Reset the timer
-        super()._reset_timer()
-        # Correct for slowmode
+    def _calc_next_time(self):
+        super()._calc_next_time()
         slowmode_delay = self._slowmode
         current_time = datetime.now()
         if self.next_send_time - current_time < slowmode_delay:
@@ -789,7 +789,7 @@ class DirectMESSAGE(BaseMESSAGE):
                 reason = channel_ctx["reason"]
                 if isinstance(reason, discord.HTTPException):
                     if reason.status in {400, 403}:  # Bad request, forbidden
-                        emit(EventID.guild_expired, self.parent)
+                        emit(EventID.server_removed, self.parent)
                     elif reason.status == 401:  # Unauthorized (invalid token)
                         emit(EventID.account_expired, self.parent.parent)
 
