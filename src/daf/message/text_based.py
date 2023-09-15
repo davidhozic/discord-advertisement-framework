@@ -703,7 +703,6 @@ class DirectMESSAGE(BaseMESSAGE):
                 return
 
             self.parent = parent
-            self._deleted = False
             await guild.create_dm()
             self.dm_channel = guild
             await super().initialize()
