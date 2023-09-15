@@ -565,7 +565,7 @@ class DirectMESSAGE(BaseMESSAGE):
                  remove_after: Optional[Union[int, timedelta, datetime]] = None):
         super().__init__(start_period, end_period, data, start_in, remove_after)
         self.mode = mode
-        self.dm_channel: discord.DMChannel = None
+        self.dm_channel: discord.User = None
         self.previous_message: discord.Message = None
 
         # Use a different attribute, to prevent inconsistensy with TextMESSAGE and VoiceMESSAGE.
@@ -829,6 +829,6 @@ class DirectMESSAGE(BaseMESSAGE):
             kwargs["data"] = self._data
 
         if _init_options is None:
-            _init_options = {"parent": self.parent}
+            _init_options = {"parent": self.parent, "guild": self.dm_channel}
 
         await async_util.update_obj_param(self, init_options=_init_options, **kwargs)

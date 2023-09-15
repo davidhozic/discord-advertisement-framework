@@ -61,7 +61,8 @@ CONVERSION_ATTRS = {
     guild.AutoGUILD: {
         "attrs": attributes.get_all_slots(guild.AutoGUILD),
         "attrs_restore": {
-            "_safe_sem": asyncio.Semaphore(1),
+            "guild_query_iter": None,
+            "update_semaphore": asyncio.Semaphore(1),
             "parent": None,
             "guild_query_iter": None,
         },
