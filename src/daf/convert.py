@@ -25,6 +25,7 @@ from . import guild
 from . import message
 from . import logging
 from . import web
+from . import events
 
 
 __all__ = (
@@ -56,6 +57,7 @@ CONVERSION_ATTRS = {
             "_running": False,
             "_client": None,
             "_ws_task": None,
+            "_event_ctrl": events.EventController()
         },
     },
     guild.AutoGUILD: {
@@ -65,6 +67,8 @@ CONVERSION_ATTRS = {
             "update_semaphore": asyncio.Semaphore(1),
             "parent": None,
             "guild_query_iter": None,
+            "_event_ctrl": None,
+            "_removal_timer_handle": None
         },
     },
     message.AutoCHANNEL: {
@@ -167,7 +171,8 @@ CONVERSION_ATTRS[guild.GUILD] = {
     "attrs_restore": {
         "update_semaphore": asyncio.Semaphore(1),
         "parent": None,
-        "_removal_timer_handle": None
+        "_removal_timer_handle": None,
+        "_event_ctrl": None
     },
 }
 
@@ -235,6 +240,7 @@ CONVERSION_ATTRS[message.TextMESSAGE] = {
         "parent": None,
         "sent_messages": {},
         "channel_getter": None,
+        "_event_ctrl": None
     },
     "attrs_convert": {
         "channels": CHANNEL_LAMBDA
@@ -247,6 +253,7 @@ CONVERSION_ATTRS[message.VoiceMESSAGE] = {
         "update_semaphore": asyncio.Semaphore(1),
         "parent": None,
         "channel_getter": None,
+        "_event_ctrl": None
     },
     "attrs_convert": {
         "channels": CHANNEL_LAMBDA
@@ -260,7 +267,8 @@ CONVERSION_ATTRS[message.DirectMESSAGE] = {
         "update_semaphore": asyncio.Semaphore(1),
         "parent": None,
         "previous_message": None,
-        "dm_channel": None
+        "dm_channel": None,
+        "_event_ctrl": None
     },
 }
 

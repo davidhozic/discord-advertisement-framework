@@ -154,6 +154,9 @@ class EventController:
             )  # Create a new future, that can be awaited for all event controllers to process an event
 
         return future
+    
+    def clear_queue(self):
+        self.event_queue = asyncio.Queue()
 
     async def event_loop(self):
         """
@@ -181,6 +184,7 @@ class EventController:
                 break
 
         self.running = False
+        self.clear_queue()
 
 
 class GLOBAL:

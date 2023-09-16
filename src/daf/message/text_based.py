@@ -3,7 +3,6 @@ Contains definitions for message classes that are text based."""
 
 from typing import Any, Dict, List, Iterable, Optional, Union, Literal, Tuple, Callable
 from datetime import datetime, timedelta
-from functools import partial
 from typeguard import typechecked
 
 from .base import *
@@ -288,7 +287,7 @@ class TextMESSAGE(BaseChannelMessage):
                     _data_to_send["files"].append(element)
         return _data_to_send
 
-    async def initialize(self, parent: Any, channel_getter: Callable):
+    async def initialize(self, parent: Any, event_ctrl: EventController, channel_getter: Callable):
         """
         This method initializes the implementation specific API objects and
         checks for the correct channel input context.
@@ -309,13 +308,18 @@ class TextMESSAGE(BaseChannelMessage):
         """
         await super().initialize(
             parent,
+            event_ctrl,
             {discord.TextChannel, discord.Thread},
             channel_getter
         )
         # Increase period to slow mode delay if it is lower
         self._check_period()
 
-    async def _handle_error(self, channel: Union[discord.TextChannel, discord.Thread], ex: Exception) -> Tuple[bool, ChannelErrorAction]:
+    async def _handle_error(
+        self,
+        channel: Union[discord.TextChannel, discord.Thread],
+        ex: Exception
+    ) -> Tuple[bool, ChannelErrorAction]:
         """
         This method handles the error that occurred during the execution of the function.
 
@@ -680,7 +684,7 @@ class DirectMESSAGE(BaseMESSAGE):
                     _data_to_send["files"].append(element)
         return _data_to_send
 
-    async def initialize(self, parent: Any, guild: discord.User):
+    async def initialize(self, parent: Any, event_ctrl: EventController, guild: discord.User):
         """
         The method creates a direct message channel and
         returns True on success or False on failure
@@ -705,7 +709,7 @@ class DirectMESSAGE(BaseMESSAGE):
             self.parent = parent
             await guild.create_dm()
             self.dm_channel = guild
-            await super().initialize()
+            await super().initialize(event_ctrl)
         except discord.HTTPException as ex:
             raise ValueError(f"Unable to create DM with user {guild.display_name}\nReason: {ex}")
 
@@ -788,9 +792,9 @@ class DirectMESSAGE(BaseMESSAGE):
                 reason = channel_ctx["reason"]
                 if isinstance(reason, discord.HTTPException):
                     if reason.status in {400, 403}:  # Bad request, forbidden
-                        emit(EventID.server_removed, self.parent)
+                        self._event_ctrl.emit(EventID.server_removed, self.parent)
                     elif reason.status == 401:  # Unauthorized (invalid token)
-                        emit(EventID.account_expired, self.parent.parent)
+                        self._event_ctrl.emit(EventID.g_account_expired, self.parent.parent)
 
             return self.generate_log_context(channel_ctx, **data_to_send)
 
@@ -829,6 +833,6 @@ class DirectMESSAGE(BaseMESSAGE):
             kwargs["data"] = self._data
 
         if _init_options is None:
-            _init_options = {"parent": self.parent, "guild": self.dm_channel}
+            _init_options = {"parent": self.parent, "guild": self.dm_channel, "event_ctrl": self._event_ctrl}
 
         await async_util.update_obj_param(self, init_options=_init_options, **kwargs)

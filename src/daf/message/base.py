@@ -6,10 +6,7 @@ from typing import Any, Set, List, Iterable, Union, TypeVar, Optional, Dict, Cal
 from functools import partial
 from datetime import timedelta, datetime
 from typeguard import check_type, typechecked
-from dataclasses import dataclass
 from enum import Enum, auto
-
-from _discord.ext import tasks
 
 from ..dtypes import *
 from ..events import *
@@ -94,7 +91,8 @@ class BaseMESSAGE:
         "parent",
         "remove_after",
         "_created_at",
-        "_timer_handle"
+        "_timer_handle",
+        "_event_ctrl",
     )
 
     @typechecked
@@ -145,6 +143,7 @@ class BaseMESSAGE:
         self._data = data
         self._fbcdata = isinstance(data, _FunctionBaseCLASS)
         self._timer_handle: asyncio.Task = None
+        self._event_ctrl: EventController = None
         # Attributes created with this function will not be re-referenced to a different object
         # if the function is called again, ensuring safety (.update_method)
         attributes.write_non_exist(self, "update_semaphore", asyncio.Semaphore(1))
@@ -312,7 +311,7 @@ class BaseMESSAGE:
         Resets internal timer.
         """
         self._calc_next_time()
-        self._timer_handle = async_util.call_at(emit, self.next_send_time, EventID.message_ready, self)
+        self._timer_handle = async_util.call_at(self._event_ctrl.emit, self.next_send_time, EventID.message_ready, self)
 
     @async_util.with_semaphore("update_semaphore")
     async def _close(self):
@@ -338,12 +337,13 @@ class BaseMESSAGE:
         """
         raise NotImplementedError
 
-    async def initialize(self, **options):
+    async def initialize(self, event_ctrl: EventController):
         """
         This method initializes the implementation specific
         api objects and checks for the correct channel input context.
         """
-        self._timer_handle = async_util.call_at(emit, self.next_send_time, EventID.message_ready, self)
+        self._event_ctrl = event_ctrl
+        self._timer_handle = async_util.call_at(event_ctrl.emit, self.next_send_time, EventID.message_ready, self)
 
     async def update(self, _init_options: dict = {}, **kwargs):
         """
@@ -620,6 +620,7 @@ class BaseChannelMessage(BaseMESSAGE):
     async def initialize(
         self,
         parent: Any,
+        event_ctrl: EventController,
         channel_types: Set,
         channel_getter: Callable
     ):
@@ -683,7 +684,7 @@ class BaseChannelMessage(BaseMESSAGE):
                 raise ValueError(f"No valid channels were passed to {self} object")
 
         self.parent = parent
-        await super().initialize()
+        await super().initialize(event_ctrl)
 
     @async_util.with_semaphore("update_semaphore")
     async def _send(self):
@@ -709,7 +710,7 @@ class BaseChannelMessage(BaseMESSAGE):
                         break
 
                     elif action is ChannelErrorAction.REMOVE_ACCOUNT:
-                        emit(EventID.account_expired, self.parent.parent)
+                        self._event_ctrl.emit(EventID.g_account_expired, self.parent.parent)
                         break
 
             self._update_state(succeeded_channels, errored_channels)
@@ -759,6 +760,10 @@ class BaseChannelMessage(BaseMESSAGE):
             kwargs["channels"] = [x.id for x in self.channels]
 
         if _init_options is None:
-            _init_options = {"parent": self.parent, "channel_getter": self.channel_getter}
+            _init_options = {
+                "parent": self.parent,
+                "channel_getter": self.channel_getter,
+                "event_ctrl": self._event_ctrl
+            }
 
         await async_util.update_obj_param(self, init_options=_init_options, **kwargs)

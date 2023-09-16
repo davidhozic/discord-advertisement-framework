@@ -2,7 +2,6 @@
 Automatic GUILD generation.
 """
 from contextlib import suppress
-from copy import deepcopy
 from typing import Any, Union, List, Optional, Dict
 from typeguard import typechecked
 from datetime import timedelta, datetime
@@ -31,43 +30,10 @@ GUILD_MAX_AMOUNT = 100
 @doc.doc_category("Auto objects", path="guild")
 class AutoGUILD:
     """
-    .. versionchanged:: v2.7
-        ``interval`` parameter changed to 1 minute.
+    .. versionchanged:: v2.11
+        Now works like GUILD and USER.
 
-    Internally automatically creates :class:`daf.guild.GUILD` objects.
-    Can also automatically join new guilds (``auto_join`` parameter)
-
-    TODO: Re-design to work like GUILD / USER.
-
-    .. CAUTION::
-        Any objects passed to AutoGUILD get **deep-copied** meaning,
-        those same objects **will not be initialized** and
-        cannot be used to obtain/change information regarding AutoGUILD.
-
-        .. code-block::
-            :caption: Illegal use of AutoGUILD
-            :emphasize-lines: 6, 7
-
-            auto_ch = daf.AutoCHANNEL(...)
-            tm = daf.TextMESSAGE(..., channels=auto_ch)
-
-            await daf.add_object(AutoGUILD(..., messages=[tm]))
-
-            auto_ch.channels # Illegal results in exception
-            await tm.update(...) # Illegal results in exception
-
-        To actually modify message/channel objects inside AutoGUILD,
-        you need to iterate thru each GUILD.
-
-        .. code-block::
-            :caption: Modifying AutoGUILD messages
-
-            aguild = daf.AutoGUILD(..., messages=[tm])
-            await daf.add_object(aguild)
-
-            for guild in aguild.guilds:
-                for message in guild.messages
-                    await message.update(...)
+    Represents multiple guilds (servers) based on a text pattern.
 
     Parameters
     --------------
@@ -91,8 +57,6 @@ class AutoGUILD:
     logging: Optional[bool] = False
         Set to True if you want the guilds generated to log
         sent messages.
-    interval: Optional[timedelta] = timedelta(minutes=1)
-        Interval at which to scan for new guilds.
     auto_join: Optional[web.GuildDISCOVERY] = None
         .. versionadded:: v2.5
 
@@ -117,7 +81,8 @@ class AutoGUILD:
         "_messages",
         "_removed_messages",
         "removal_buffer_length",
-        "_removal_timer_handle"
+        "_removal_timer_handle",
+        "_event_ctrl",
     )
 
     @typechecked
@@ -150,6 +115,7 @@ class AutoGUILD:
         self._removed_messages: List[BaseMESSAGE] = []
         self.removal_buffer_length = removal_buffer_length
         self._removal_timer_handle: asyncio.Task = None
+        self._event_ctrl: EventController = None
         attributes.write_non_exist(self, "update_semaphore", asyncio.Semaphore(1))
 
     @property
@@ -203,7 +169,7 @@ class AutoGUILD:
             self.remove_after or
             rm_after_type is datetime and now > self.remove_after)
 
-    async def initialize(self, parent: Any):
+    async def initialize(self, parent: Any, event_ctrl: EventController):
         """
         Initializes the object.
 
@@ -213,6 +179,7 @@ class AutoGUILD:
             Auto-join guild functionality requires the account to be
             provided with username and password.
         """
+        self._event_ctrl = event_ctrl
         self.parent = parent
         if self.auto_join is not None:
             await self.auto_join.initialize(self)
@@ -227,7 +194,7 @@ class AutoGUILD:
         if self.remove_after is not None:
                 self._removal_timer_handle = (
                     async_util.call_at(
-                        emit,
+                        event_ctrl.emit,
                         self.remove_after
                         if isinstance(self.remove_after, datetime)
                         else
@@ -237,8 +204,8 @@ class AutoGUILD:
                     )
                 )
 
-        add_listener(EventID.message_ready, self._advertise, lambda m: m.parent is self)
-        add_listener(EventID.message_removed, self._on_message_removed, lambda m: m.parent is self)
+        event_ctrl.add_listener(EventID.message_ready, self._advertise, lambda m: m.parent is self)
+        event_ctrl.add_listener(EventID.message_removed, self._on_message_removed, lambda m: m.parent is self)
 
     @async_util.with_semaphore("update_semaphore", 1)
     @typechecked
@@ -265,7 +232,7 @@ class AutoGUILD:
         def get_channels(*types):
             return set(chain(x for x in (g.channels for g in self.guilds) if isinstance(x, types)))
 
-        await message.initialize(parent=self, channel_getter=get_channels)
+        await message.initialize(parent=self, event_ctrl=self._event_ctrl, channel_getter=get_channels)
         self._messages.append(message)
         with suppress(ValueError):  # Readd the removed message
             self._removed_messages.remove(message)
@@ -292,7 +259,7 @@ class AutoGUILD:
             Raised when the message is not present in the list.
         """
         trace(f"Removing message {message} from {self}", TraceLEVELS.NORMAL)
-        await emit(EventID.message_removed, message)
+        await self._event_ctrl.emit(EventID.message_removed, message)
 
     async def _on_message_removed(self, message: BaseMESSAGE):
         "Event loop handler for removing messages"
@@ -376,8 +343,8 @@ class AutoGUILD:
         """
         Closes any lower-level async objects.
         """
-        remove_listener(EventID.message_ready, self._advertise)
-        remove_listener(EventID.message_removed, self._on_message_removed)
+        self._event_ctrl.remove_listener(EventID.message_ready, self._advertise)
+        self._event_ctrl.remove_listener(EventID.message_removed, self._on_message_removed)
         if self.auto_join is not None:
             await self.auto_join._close()
 

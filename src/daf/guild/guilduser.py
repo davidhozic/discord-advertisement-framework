@@ -67,6 +67,7 @@ class BaseGUILD:
         "_removed_messages",
         "parent",
         "_removal_timer_handle",
+        "_event_ctrl",
     )
 
     _removed_messages: List[BaseMESSAGE]
@@ -97,6 +98,7 @@ class BaseGUILD:
         self._created_at = datetime.now()  # The time this object was created
         self.parent = None
         self._removal_timer_handle: asyncio.Task = None
+        self._event_ctrl = None
         attributes.write_non_exist(self, "_removed_messages", [])
 
     def __repr__(self) -> str:
@@ -236,7 +238,7 @@ class BaseGUILD:
             Raised when the message is not present in the list.
         """
         trace(f"Removing message {message} from {self}", TraceLEVELS.NORMAL)
-        await emit(EventID.message_removed, message)
+        await self._event_ctrl.emit(EventID.message_removed, message)
 
     async def _on_message_removed(self, message: BaseMESSAGE):
         self._messages.remove(message)
@@ -247,7 +249,7 @@ class BaseGUILD:
 
         await message._close()
 
-    async def initialize(self, parent: Any, getter: Callable) -> None:
+    async def initialize(self, parent: Any, event_ctrl: EventController, getter: Callable) -> None:
         """
         This function initializes the API related objects and
         then tries to initialize the MESSAGE objects.
@@ -276,6 +278,7 @@ class BaseGUILD:
             Raised from .add_message(message_object) method.
         """
         self._deleted = False
+        self._event_ctrl = event_ctrl
         self.parent = parent
         guild_id = self.snowflake
         self._apiobject = getter(guild_id)
@@ -293,7 +296,7 @@ class BaseGUILD:
             if self.remove_after is not None:
                 self._removal_timer_handle = (
                     async_util.call_at(
-                        emit,
+                        event_ctrl.emit,
                         self.remove_after
                         if isinstance(self.remove_after, datetime)
                         else
@@ -303,8 +306,8 @@ class BaseGUILD:
                     )
                 )
 
-            add_listener(EventID.message_ready, self._advertise, lambda m: m.parent is self)
-            add_listener(EventID.message_removed, self._on_message_removed, lambda m: m.parent is self)
+            event_ctrl.add_listener(EventID.message_ready, self._advertise, lambda m: m.parent is self)
+            event_ctrl.add_listener(EventID.message_removed, self._on_message_removed, lambda m: m.parent is self)
             return
 
         raise ValueError(f"Unable to find object with ID: {guild_id}")
@@ -360,8 +363,8 @@ class BaseGUILD:
         Cleans up and closes any asyncio related
         functionality.
         """
-        remove_listener(EventID.message_ready, self._advertise)
-        remove_listener(EventID.message_removed, self._on_message_removed)
+        self._event_ctrl.remove_listener(EventID.message_ready, self._advertise)
+        self._event_ctrl.remove_listener(EventID.message_removed, self._on_message_removed)
         for message in self.messages:
             await message._close()
 
@@ -505,7 +508,7 @@ class GUILD(BaseGUILD):
 
         return []  # Return empty on error or no permissions
 
-    async def initialize(self, parent: Any) -> None:
+    async def initialize(self, parent: Any, event_ctrl: EventController) -> None:
         """
         This function initializes the API related objects and
         then tries to initialize the MESSAGE objects.
@@ -521,7 +524,7 @@ class GUILD(BaseGUILD):
         Other
             Raised from .add_message(message_object) method.
         """
-        await super().initialize(parent, parent.client.get_guild)
+        await super().initialize(parent, event_ctrl, parent.client.get_guild)
 
         # Fill invite counts
         if not len(self.join_count):  # Skip invite query from Discord
@@ -545,7 +548,7 @@ class GUILD(BaseGUILD):
 
     @typechecked
     async def add_message(self, message: Union[TextMESSAGE, VoiceMESSAGE]):
-        await message.initialize(parent=self, channel_getter=self._get_guild_channels)
+        await message.initialize(parent=self, event_ctrl=self._event_ctrl, channel_getter=self._get_guild_channels)
         self._messages.append(message)
         with suppress(ValueError):  # Readd the removed message
             self._removed_messages.remove(message)
@@ -641,7 +644,7 @@ class GUILD(BaseGUILD):
                 messages = kwargs.pop("messages", self.messages + self._messages_uninitialized)
 
                 if init_options is None:
-                    init_options = {"parent": self.parent}
+                    init_options = {"parent": self.parent, "event_ctrl": self._event_ctrl}
 
                 await async_util.update_obj_param(self, init_options=init_options, **kwargs)
 
@@ -720,7 +723,7 @@ class USER(BaseGUILD):
         """
         return super()._check_state()
 
-    async def initialize(self, parent: Any):
+    async def initialize(self, parent: Any, event_ctrl: EventController):
         """
         This function initializes the API related objects and
         then tries to initialize the MESSAGE objects.
@@ -734,12 +737,13 @@ class USER(BaseGUILD):
         """
         return await super().initialize(
             parent,
+            event_ctrl,
             parent.client.get_or_fetch_user
         )
 
     @typechecked
     async def add_message(self, message: DirectMESSAGE):
-        await message.initialize(parent=self, guild=self._apiobject)
+        await message.initialize(parent=self, event_ctrl=self._event_ctrl, guild=self._apiobject)
         self._messages.append(message)
         with suppress(ValueError):  # Readd the removed message
             self._removed_messages.remove(message)
@@ -780,7 +784,7 @@ class USER(BaseGUILD):
                 messages = kwargs.pop("messages", self.messages + self._messages_uninitialized)
 
                 if init_options is None:
-                    init_options = {"parent": self.parent}
+                    init_options = {"parent": self.parent, "event_ctrl": self._event_ctrl}
 
                 await async_util.update_obj_param(self, init_options=init_options, **kwargs)
 

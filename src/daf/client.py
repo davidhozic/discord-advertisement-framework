@@ -23,8 +23,6 @@ import copy
 #######################################################################
 LOGIN_TIMEOUT_S = 15
 TOKEN_MAX_PRINT_LEN = 5
-TASK_SLEEP_DELAY_S = 0.100
-TASK_STARTUP_DELAY_S = 2
 
 
 __all__ = (
@@ -124,6 +122,7 @@ class ACCOUNT:
         "_deleted",
         "_removed_servers",
         "_update_sem",
+        "_event_ctrl"
     )
 
     _removed_servers: List[Union[guild.BaseGUILD, guild.AutoGUILD]]
@@ -178,6 +177,7 @@ class ACCOUNT:
         self._client = None
         self._deleted = False
         self._ws_task = None
+        self._event_ctrl = EventController()
         attributes.write_non_exist(self, "_removed_servers", [])
         attributes.write_non_exist(self, "_update_sem", asyncio.Semaphore(1))
 
@@ -314,6 +314,7 @@ class ACCOUNT:
             exc = ws_task.exception() if ws_task.done() else exc
             raise RuntimeError(f"Error logging in to Discord. (Token {self._token[:TOKEN_MAX_PRINT_LEN]}...)") from exc
 
+        self._event_ctrl.start()
         for server in self._uiservers:
             try:
                 await self.add_server(server)
@@ -340,8 +341,7 @@ class ACCOUNT:
 
         self._client.event(on_member_join)
         self._client.event(on_invite_delete)
-        add_listener(EventID.server_removed, self._on_server_removed, lambda server: server.parent is self)
-
+        self._event_ctrl.add_listener(EventID.server_removed, self._on_server_removed)
         self._uiservers.clear()  # Only needed for predefined initialization
         self._running = True
 
@@ -379,7 +379,7 @@ class ACCOUNT:
             :py:meth:`daf.guild.USER.initialize()`  |
             :py:meth:`daf.guild.AutoGUILD.initialize()`
         """
-        await server.initialize(parent=self)
+        await server.initialize(parent=self, event_ctrl=self._event_ctrl)
         if isinstance(server, guild.BaseGUILD):
             self._servers.append(server)
         else:
@@ -415,8 +415,7 @@ class ACCOUNT:
         ValueError
             ``server`` is not in the shilling list.
         """
-        trace(f"Server {server} has been removed from account {self}", TraceLEVELS.NORMAL)
-        return emit(EventID.server_removed, server)
+        return self._event_ctrl.emit(EventID.server_removed, server)
 
     async def _on_server_removed(self, server: Union[guild.GUILD, guild.USER, guild.AutoGUILD]):
         if isinstance(server, guild.BaseGUILD):
@@ -437,6 +436,8 @@ class ACCOUNT:
         if len(self._removed_servers) > self.removal_buffer_length:
             trace(f"Removing oldest record of removed servers {self._removed_servers[0]}", TraceLEVELS.DEBUG)
             del self._removed_servers[0]
+
+        trace(f"Server {server} has been removed from account {self}", TraceLEVELS.NORMAL)
 
     @typechecked
     def get_server(
@@ -477,7 +478,7 @@ class ACCOUNT:
             trace(f"Logging out of {self.client.user.display_name}...")
             self._running = False
 
-        remove_listener(EventID.server_removed, self._on_server_removed)
+        self._event_ctrl.remove_listener(EventID.server_removed, self._on_server_removed)
         for guild_ in self.servers:
             await guild_._close()
 
@@ -521,7 +522,7 @@ class ACCOUNT:
             _autoguilds = []
             for server in self.servers:
                 try:
-                    await server.update(init_options={"parent": self})
+                    await server.update(init_options={"parent": self, "event_ctrl": self._event_ctrl})
                     if isinstance(server, guild.BaseGUILD):
                         _servers.append(server)
                     else:

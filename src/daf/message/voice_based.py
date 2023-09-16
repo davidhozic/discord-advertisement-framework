@@ -9,6 +9,7 @@ from typeguard import typechecked
 
 from .base import *
 from ..dtypes import *
+from ..events import *
 from ..logging.tracing import *
 from ..logging import sql
 from ..misc import doc, instance_track
@@ -269,7 +270,7 @@ class VoiceMESSAGE(BaseChannelMessage):
 
         return handled, action
 
-    def initialize(self, parent: Any, channel_getter: Callable):
+    def initialize(self, parent: Any, event_ctrl: EventController, channel_getter: Callable):
         """
         This method initializes the implementation specific API objects
         and checks for the correct channel input context.
@@ -288,7 +289,7 @@ class VoiceMESSAGE(BaseChannelMessage):
         ValueError
             No valid channels were passed to object"
         """
-        return super().initialize(parent, {discord.VoiceChannel}, channel_getter)
+        return super().initialize(parent, event_ctrl, {discord.VoiceChannel}, channel_getter)
 
     async def _send_channel(self,
                             channel: discord.VoiceChannel,
