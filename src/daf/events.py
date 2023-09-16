@@ -3,35 +3,39 @@ Module used to support listening and emitting events.
 It also contains the event loop definitions.
 """
 from contextlib import suppress
+from weakref import WeakSet
 from enum import Enum, auto
-from typing import Any, List, Dict, Callable, TYPE_CHECKING, TypeVar, Coroutine
+from typing import Any, List, Dict, Callable, TypeVar, Coroutine, Set, Union
 
 from .misc.doc import doc_category
 from .logging.tracing import TraceLEVELS, trace
 
 import asyncio
-import _discord as discord
-
-if TYPE_CHECKING:
-    from .message import BaseMESSAGE
 
 
 T = TypeVar('T')
 
 
-
 __all__ = (
     "EventID",
-    "add_listener",
-    "remove_listener",
-    "emit",
-    "listen"
+    "EventController",
+    "get_global_event_ctrl",
 )
 
 
-class GLOBAL:
-    listeners: Dict[Enum, List["EventListener"]] = {}
-    event_queue = asyncio.Queue()
+@doc_category("Event reference")
+class EventID(Enum):
+    """
+    Enum of all available events.
+    """
+    g_daf_startup = 0
+    g_daf_shutdown = auto()
+    g_trace = auto()
+    g_account_expired = auto()
+    message_ready = auto()
+    message_removed = auto()
+    server_removed = auto()
+    _g_stop_event_loop = auto()
 
 
 class EventListener:
@@ -49,161 +53,149 @@ class EventListener:
         return hash(self.fnc)
 
 
-@doc_category("Event reference")
-class EventID(Enum):
-    """
-    Enum of all available events.
-    """
-    daf_startup = 0
-    daf_shutdown = auto()
-    message_ready = auto()
-    message_removed = auto()
-    trace = auto()
-    account_expired = auto()
-    server_removed = auto()
-    _stop_event_loop = auto()
+class EventController:
+    def __init__(self) -> None:
+        self.listeners: Dict[Enum, List[EventListener]] = {}
+        self.event_queue = asyncio.Queue()
+        self.loop_task: asyncio.Task = None
+        self.running = False
+
+    def start(self):
+        """
+        Starts the event loop.
+        """
+        if not self.running:
+            self.loop_task = asyncio.create_task(self.event_loop())
+            self.running = True
+            # In case this is not the global controller, add itself to a list of non-global controllers
+            # which will additionally receive any events emitted by the global controller.
+            if self is not GLOBAL.g_controller:
+                GLOBAL.non_global_controllers.add(self)
+
+    def add_listener(self, event: EventID, fnc: Callable, predicate: Callable[[Any], bool] = None):
+        """
+        Registers the function ``fnc`` as an event listener for ``event``.
+        
+        Parameters
+        ------------
+        event: EventID
+            The event of listener to add.
+        fnc: Callable
+            The function listener to add.
+        """
+        listeners = self.listeners[event] = self.listeners.get(event, [])
+        listeners.append(EventListener(fnc, predicate))
+
+    def remove_listener(self, event: EventID, fnc: Callable):
+        """
+        Remove the function ``fnc`` from the list of listeners for ``event``.
+
+        Parameters
+        ------------
+        event: EventID
+            The event of listener to remove.
+        fnc: Callable
+            The function listener to remove.
+
+        Raises
+        ---------
+        KeyError
+            The event doesn't have any listeners.
+        ValueError
+            Provided function is not a listener.
+        """
+        with suppress(ValueError, KeyError):
+            self.listeners[event].remove(fnc)
+
+    def listen(self, event: EventID):
+        """
+        Decorator used to register the function as an event listener.
+
+        Parameters
+        ---------------
+        event: EventID
+            The event that needs to occur for the function to be called.
+        """
+        def _listen_decor(fnc: Callable):
+            self.add_listener(event, fnc)
+            return fnc
+
+        return _listen_decor
+
+    def emit(self, event: EventID, *args, **kwargs) -> asyncio.Future:
+        """
+        .. versionadded:: 2.11
+
+        Emits an ``event`` by calling all the registered listeners.
+
+        Returns
+        ---------
+        asyncio.Future
+            A future object that can be awaited.
+            You can use this to wait for the event to actually be processed.
+            The result of the future will always be None.
+
+        Raises
+        ---------
+        TypeError
+            Arguments provided don't match all the listener parameters.
+        """
+        if not self.running:
+            return
+
+        trace(f"Emitting event {event}", TraceLEVELS.DEBUG)
+        self.event_queue.put_nowait((event, args, kwargs, future := asyncio.Future()))
+
+        # If self is the global controller, also emit the event to other controllers.
+        if GLOBAL.g_controller is self:
+            future = asyncio.gather(
+                future,
+                *[controller.emit(event, *args, **kwargs) for controller in GLOBAL.non_global_controllers]
+            )  # Create a new future, that can be awaited for all event controllers to process an event
+
+        return future
+
+    async def event_loop(self):
+        """
+        Event loop task.
+        """
+        queue = self.event_queue
+        listeners = self.listeners
+        
+        event_id: EventID
+        future: asyncio.Future
+
+        while True:
+            event_id, args, kwargs, future = await queue.get()
+
+            for listener in listeners.get(event_id, [])[:]:
+                try:
+                    if listener.predicate is None or listener.predicate(*args, **kwargs):
+                        if isinstance(r:= listener(*args, **kwargs), Coroutine):
+                            await r
+                except Exception as exc:
+                    trace(f"Could not call event handler {listener} for event {event_id}.", TraceLEVELS.ERROR, exc)
+
+            future.set_result(None)
+            if event_id is EventID._g_stop_event_loop:
+                break
+
+        self.running = False
 
 
-@doc_category("Event reference")
-def add_listener(event: EventID, fnc: Callable, predicate: Callable[[T], bool] = None):
-    """
-    Registers the function ``fnc`` as an event listener for ``event``.
-    
-    Parameters
-    ------------
-    event: EventID
-        The event of listener to add.
-    fnc: Callable
-        The function listener to add.
-    """
-    listeners = GLOBAL.listeners[event] = GLOBAL.listeners.get(event, [])
-    listeners.append(EventListener(fnc, predicate))
+class GLOBAL:
+    g_controller = EventController()
+    non_global_controllers: Set["EventController"] = WeakSet()
 
-
-@doc_category("Event reference")
-def remove_listener(event: EventID, fnc: Callable):
-    """
-    Remove the function ``fnc`` from the list of listeners for ``event``.
-
-    Parameters
-    ------------
-    event: EventID
-        The event of listener to remove.
-    fnc: Callable
-        The function listener to remove.
-
-    Raises
-    ---------
-    KeyError
-        The event doesn't have any listeners.
-    ValueError
-        Provided function is not a listener.
-    """
-    with suppress(ValueError, KeyError):
-        GLOBAL.listeners[event].remove(fnc)
-
-
-@doc_category("Event reference")
-def listen(event: EventID):
-    """
-    Decorator used to register the function as an event listener.
-
-    Parameters
-    ---------------
-    event: EventID
-        The event that needs to occur for the function to be called.
-    """
-    def _listen_decor(fnc: Callable):
-        add_listener(event, fnc)
-        return fnc
-
-    return _listen_decor
-
-@doc_category("Event reference")
-def emit(event: EventID, *args, **kwargs) -> asyncio.Future:
-    """
-    .. versionadded:: 2.11
-
-    Emits an ``event`` by calling all the registered listeners.
-
-    Returns
-    ---------
-    asyncio.Future
-        A future object that can be awaited.
-        You can use this to wait for the event to actually be processed.
-        The result of the future will always be None.
-
-    Raises
-    ---------
-    TypeError
-        Arguments provided don't match all the listener parameters.
-    """
-    trace(f"Emitting event {event}", TraceLEVELS.DEBUG)
-    GLOBAL.event_queue.put_nowait((event, args, kwargs, future := asyncio.Future()))
-    return future
 
 def initialize():
     """
     Initializes the event module by creating the event loop task.
     Returns the event loop task, which's reference needs to be preserved.
     """
-    return asyncio.create_task(event_loop())
+    GLOBAL.g_controller.start()
 
 
-async def event_loop():
-    """
-    Event loop task.
-    """
-    queue = GLOBAL.event_queue
-    listeners = GLOBAL.listeners
-    
-    event_id: EventID
-    future: asyncio.Future
-
-    while True:
-        event_id, args, kwargs, future = await queue.get()
-        if event_id is EventID._stop_event_loop:
-            break
-
-        for listener in listeners.get(event_id, []):
-            try:
-                if listener.predicate is None or listener.predicate(*args, **kwargs):
-                    if isinstance(r:= listener(*args, **kwargs), Coroutine):
-                        await r
-            except Exception as exc:
-                trace(f"Could not call event handler {listener} for event {event_id}.", TraceLEVELS.ERROR, exc)
-
-        future.set_result(None)
-
-# Dummy event handlers for documenting each event.
-@doc_category("Event reference")
-def on_daf_startup():
-    "Called when DAF has been initialized."
-
-
-@doc_category("Event reference")
-def on_daf_shutdown():
-    "Called when DAF has finished shutting down"
-
-
-@doc_category("Event reference")
-def on_message_ready(message: "BaseMESSAGE"):
-    """
-    Called when message is ready to be sent.
-
-    Parameters
-    --------------
-    message: BaseMESSAGE
-        The message that is ready to be sent.
-    """
-
-@doc_category("Event reference")
-def on_trace(content: str):
-    """
-    Called when an trace to the console has been issued.
-
-    Parameters
-    ----------
-    content: str
-        The content being traced.
-    """
+def get_global_event_ctrl() -> Union[EventController, None]:
+    "Returns the global event controller"
+    return GLOBAL.g_controller

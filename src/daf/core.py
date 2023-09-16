@@ -119,7 +119,7 @@ async def http_remove_account(account_id: int):
     return remote.create_json_response(message=f"Removed account {name}")
 
 
-@listen(EventID.account_expired)
+# @get_global_event_ctrl().listen(EventID.g_account_expired)
 async def cleanup_account(account: client.ACCOUNT):
     if GLOBALS.save_to_file:
         await account._close()
@@ -250,13 +250,13 @@ async def initialize(user_callback: Optional[Union[Callable, Coroutine]] = None,
     if save_to_file:  # Backup shilling list to pickle file
         GLOBALS.tasks.append(loop.create_task(schema_backup_task()))
 
-    # Initialize the event loop
-    GLOBALS.tasks.append(events.initialize())
-
     GLOBALS.running = True
     GLOBALS.save_to_file = save_to_file
 
-    emit(EventID.daf_startup)
+    events.initialize()
+    evt = events.get_global_event_ctrl()
+    evt.add_listener(EventID.g_account_expired, cleanup_account)
+    evt.emit(EventID.g_daf_startup)
     trace("Initialization complete.", TraceLEVELS.NORMAL)
 
 
@@ -438,6 +438,7 @@ async def shutdown() -> None:
     Stops and cleans the framework.
     """
     trace("Shutting down...", TraceLEVELS.NORMAL)
+    evt = get_global_event_ctrl()
     GLOBALS.running = False
     # Signal events for tasks to raise out of sleep
     GLOBALS.schema_backup_event.set()  # This also saves one last time, so manually saving is not needed
@@ -445,7 +446,6 @@ async def shutdown() -> None:
     if remote.GLOBALS.remote_client is not None:
         await remote.GLOBALS.remote_client._close()
 
-    emit(EventID._stop_event_loop)
     for task in GLOBALS.tasks:  # Wait for core tasks to finish
         await task
 
@@ -454,7 +454,9 @@ async def shutdown() -> None:
         await account._close()
 
     GLOBALS.accounts.clear()
-    emit(EventID.daf_shutdown)
+    evt.remove_listener(EventID.g_account_expired, cleanup_account)
+    await evt.emit(EventID.g_daf_shutdown)
+    await evt.emit(EventID._g_stop_event_loop)
     trace("Shutdown complete.", TraceLEVELS.NORMAL)
 
 
