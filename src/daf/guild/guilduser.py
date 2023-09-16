@@ -652,7 +652,13 @@ class GUILD(BaseGUILD):
                 message: BaseChannelMessage
                 for message in messages:
                     try:
-                        await message.update({"parent": self, "channel_getter": self._get_guild_channels})
+                        await message.update(
+                            {
+                                "parent": self,
+                                "event_ctrl": self._event_ctrl,
+                                "channel_getter": self._get_guild_channels
+                            }
+                        )
                         _messages.append(message)
                     except Exception as exc:
                         trace(f"Could not update {message} after updating {self} - Skipping message.", TraceLEVELS.ERROR, exc)
@@ -791,7 +797,7 @@ class USER(BaseGUILD):
                 _messages = []
                 for message in messages:
                     try:
-                        await message.update({"parent": self})
+                        await message.update({"parent": self, "event_ctrl": self._event_ctrl})
                         _messages.append(message)
                     except Exception as exc:
                         trace(f"Could not update {message} after updating {self} - Skipping message.", TraceLEVELS.ERROR, exc)

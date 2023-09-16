@@ -132,6 +132,9 @@ CONVERSION_ATTRS = {
     discord.Guild: {
         "attrs": ["name", "id"]
     },
+    discord.User: {
+        "attrs": ["name", "id"]
+    },
     discord.TextChannel: {
         "attrs": ["name", "id", "slowmode_delay"],
     },
@@ -240,7 +243,8 @@ CONVERSION_ATTRS[message.TextMESSAGE] = {
         "parent": None,
         "sent_messages": {},
         "channel_getter": None,
-        "_event_ctrl": None
+        "_event_ctrl": None,
+        "_timer_handle": None
     },
     "attrs_convert": {
         "channels": CHANNEL_LAMBDA
@@ -253,7 +257,8 @@ CONVERSION_ATTRS[message.VoiceMESSAGE] = {
         "update_semaphore": asyncio.Semaphore(1),
         "parent": None,
         "channel_getter": None,
-        "_event_ctrl": None
+        "_event_ctrl": None,
+        "_timer_handle": None
     },
     "attrs_convert": {
         "channels": CHANNEL_LAMBDA
@@ -268,7 +273,8 @@ CONVERSION_ATTRS[message.DirectMESSAGE] = {
         "parent": None,
         "previous_message": None,
         "dm_channel": None,
-        "_event_ctrl": None
+        "_event_ctrl": None,
+        "_timer_handle": None
     },
 }
 

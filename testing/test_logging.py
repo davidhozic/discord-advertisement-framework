@@ -114,3 +114,4 @@ async def test_logging_sql(TEXT_MESSAGE: daf.TextMESSAGE):
         )
     finally:
         os.remove("./testdb.db")
+        daf.logging._logging._set_logger(None)

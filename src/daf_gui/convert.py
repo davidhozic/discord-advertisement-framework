@@ -100,6 +100,7 @@ ADDITIONAL_ANNOTATIONS = {
 
 ADDITIONAL_ANNOTATIONS[discord.VoiceChannel] = ADDITIONAL_ANNOTATIONS[discord.TextChannel]
 ADDITIONAL_ANNOTATIONS[discord.Guild] = ADDITIONAL_ANNOTATIONS[discord.TextChannel]
+ADDITIONAL_ANNOTATIONS[discord.User] = ADDITIONAL_ANNOTATIONS[discord.Guild]
 
 if daf.logging.sql.SQL_INSTALLED:
     sql_ = daf.logging.sql.tables
