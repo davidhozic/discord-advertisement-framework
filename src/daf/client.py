@@ -97,7 +97,7 @@ class ACCOUNT:
     removal_buffer_length: Optional[int]
         Maximum number of servers to keep in the removed_servers buffer.
 
-        .. versionadded:: 2.11
+        .. versionadded:: 3.0
 
     Raises
     ---------------
@@ -396,7 +396,7 @@ class ACCOUNT:
         to be removed do so like this: ``await account.remove_server()``, if that doesn't matter to you,
         do: ``account.remove_server()`` (notice the lack of ``await``).
 
-        .. versionchanged:: 2.11
+        .. versionchanged:: 3.0
 
             Removal is now asynchronous.
 

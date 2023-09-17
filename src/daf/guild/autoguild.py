@@ -5,7 +5,6 @@ from contextlib import suppress
 from typing import Any, Union, List, Optional, Dict
 from typeguard import typechecked
 from datetime import timedelta, datetime
-from itertools import chain
 
 from ..message import TextMESSAGE, VoiceMESSAGE, BaseMESSAGE
 from ..logging.tracing import TraceLEVELS, trace
@@ -82,6 +81,7 @@ class AutoGUILD:
         "_removed_messages",
         "removal_buffer_length",
         "_removal_timer_handle",
+        "_guild_join_timer_handle",
         "_event_ctrl",
     )
 
@@ -115,6 +115,7 @@ class AutoGUILD:
         self._removed_messages: List[BaseMESSAGE] = []
         self.removal_buffer_length = removal_buffer_length
         self._removal_timer_handle: asyncio.Task = None
+        self._guild_join_timer_handle: asyncio.Task = None
         self._event_ctrl: EventController = None
         attributes.write_non_exist(self, "update_semaphore", asyncio.Semaphore(1))
 
@@ -139,6 +140,15 @@ class AutoGUILD:
             Object is in the framework in normal operation.
         """
         return self._deleted
+
+    @property
+    def messages(self) -> List[Union[TextMESSAGE, VoiceMESSAGE]]:
+        """
+        .. versionadded:: 3.0
+
+        Returns all the (initialized) message objects.
+        """
+        return self._messages[:]
 
     def _delete(self):
         """
@@ -168,6 +178,15 @@ class AutoGUILD:
             rm_after_type is timedelta and now - self._created_at >
             self.remove_after or
             rm_after_type is datetime and now > self.remove_after)
+    
+    def _reset_auto_join_timer(self):
+        "Resets the periodic auto guild join timer."
+        self._guild_join_timer_handle = async_util.call_at(
+            self._event_ctrl.emit,
+            GUILD_JOIN_INTERVAL,
+            EventID.auto_guild_start_join,
+            self
+        )
 
     async def initialize(self, parent: Any, event_ctrl: EventController):
         """
@@ -192,17 +211,18 @@ class AutoGUILD:
                 trace(f" Unable to initialize message {message}, in {self}", TraceLEVELS.WARNING, exc)
 
         if self.remove_after is not None:
-                self._removal_timer_handle = (
-                    async_util.call_at(
-                        event_ctrl.emit,
-                        self.remove_after
-                        if isinstance(self.remove_after, datetime)
-                        else
-                        datetime.now() + self.remove_after,
-                        EventID.server_removed,
-                        self
-                    )
+            self._removal_timer_handle = (
+                async_util.call_at(
+                    event_ctrl.emit,
+                    self.remove_after,
+                    EventID.server_removed,
+                    self
                 )
+            )
+
+        if self.auto_join is not None:
+            self._reset_auto_join_timer()
+            event_ctrl.add_listener(EventID.auto_guild_start_join, self._join_guilds, lambda ag: ag is self)
 
         event_ctrl.add_listener(EventID.message_ready, self._advertise, lambda m: m.parent is self)
         event_ctrl.add_listener(EventID.message_removed, self._on_message_removed, lambda m: m.parent is self)
@@ -230,7 +250,11 @@ class AutoGUILD:
             Raised from message.initialize() method.
         """
         def get_channels(*types):
-            return set(chain(x for x in (g.channels for g in self.guilds) if isinstance(x, types)))
+            for guild in self.guilds:
+                for channel in guild.channels:
+                    if isinstance(channel, types):
+                        yield channel
+
 
         await message.initialize(parent=self, event_ctrl=self._event_ctrl, channel_getter=get_channels)
         self._messages.append(message)
@@ -242,7 +266,7 @@ class AutoGUILD:
         """
         Removes a message from the message list.
 
-        .. versionchanged:: 2.11
+        .. versionchanged:: 3.0
 
             The function is now async.
 
@@ -270,8 +294,9 @@ class AutoGUILD:
             del self._removed_messages[0]
 
         await message._close()
-
-    async def _join_guilds(self):
+    
+    @async_util.with_semaphore("update_semaphore")
+    async def _join_guilds(self, _):
         """
         Coroutine that joins new guilds thru the web layer.
         """
@@ -282,9 +307,9 @@ class AutoGUILD:
         if (
             self.guild_query_iter is None or  # No auto_join provided or iterated though all guilds
             self.guild_join_count == discovery.limit or
-            datetime.now() - self.last_guild_join < GUILD_JOIN_INTERVAL or
             len(client.guilds) == GUILD_MAX_AMOUNT
         ):
+            self._event_ctrl.remove_listener(EventID.auto_guild_start_join, self._join_guilds)
             return
 
         async def get_next_guild():
@@ -332,11 +357,11 @@ class AutoGUILD:
                     exc
                 )
 
-            self.last_guild_join = datetime.now()
-
         if no_error:
             # Don't count errored joins but count guilds we are already joined if they match the pattern
             self.guild_join_count += 1
+
+        self._reset_auto_join_timer()
 
     @async_util.with_semaphore("update_semaphore")
     async def _close(self):
@@ -345,6 +370,16 @@ class AutoGUILD:
         """
         self._event_ctrl.remove_listener(EventID.message_ready, self._advertise)
         self._event_ctrl.remove_listener(EventID.message_removed, self._on_message_removed)
+        self._event_ctrl.remove_listener(EventID.auto_guild_start_join, self._join_guilds)
+
+        if self._removal_timer_handle is not None and not self._removal_timer_handle.cancelled():
+            self._removal_timer_handle.cancel()
+            await asyncio.gather(self._removal_timer_handle, return_exceptions=True)
+        
+        if self._guild_join_timer_handle is not None and not self._guild_join_timer_handle.cancelled():
+            self._guild_join_timer_handle.cancel()
+            await asyncio.gather(self._guild_join_timer_handle, return_exceptions=True)
+
         if self.auto_join is not None:
             await self.auto_join._close()
 
@@ -370,6 +405,8 @@ class AutoGUILD:
 
     def _filter_message_context(self, guild: discord.Guild, message_ctx: dict) -> Dict:
         message_ctx = message_ctx.copy()
+        message_ctx["channels"] = message_ctx["channels"].copy()
+
         channel_ctx = message_ctx["channels"]
         guild_channels = set(x.id for x in guild.channels)
         channel_ctx["successful"] = [x for x in channel_ctx["successful"] if x["id"] in guild_channels]

@@ -52,7 +52,7 @@ class BaseGUILD:
     removal_buffer_length: Optional[int]
         Maximum number of messages to keep in the removed_messages buffer.
 
-        .. versionadded:: 2.11
+        .. versionadded:: 3.0
     """
 
     __slots__ = (       # Faster attribute access
@@ -221,7 +221,7 @@ class BaseGUILD:
         """
         Removes a message from the message list.
 
-        .. versionchanged:: 2.11
+        .. versionchanged:: 3.0
 
             The function is now async.
 
@@ -457,7 +457,7 @@ class GUILD(BaseGUILD):
     removal_buffer_length: Optional[int]
         Maximum number of messages to keep in the removed_messages buffer.
 
-        .. versionadded:: 2.11
+        .. versionadded:: 3.0
     """
     __slots__ = (
         "update_semaphore",
@@ -698,7 +698,7 @@ class USER(BaseGUILD):
     removal_buffer_length: Optional[int]
         Maximum number of messages to keep in the removed_messages buffer.
 
-        .. versionadded:: 2.11
+        .. versionadded:: 3.0
     """
     __slots__ = (
         "update_semaphore",

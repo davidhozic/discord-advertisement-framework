@@ -7,7 +7,7 @@ from functools import wraps
 from asyncio import Semaphore
 from copy import copy
 from contextlib import suppress
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from .attributes import get_all_slots
 
@@ -158,14 +158,14 @@ async def update_obj_param(
 
 
 
-def call_at(fnc: Callable, when: datetime, *args, **kwargs) -> asyncio.Task:
+def call_at(fnc: Callable, when: Union[datetime, timedelta], *args, **kwargs) -> asyncio.Task:
     """
     Calls ``fnc`` at specific datetime with args and kwargs.
     """
     async def waiter():
-        await asyncio.sleep((when - datetime.now()).total_seconds())
+        delay = when if isinstance(when, timedelta) else max((when - datetime.now()), timedelta(0))
+        await asyncio.sleep(delay.total_seconds())
         if isinstance((r := fnc(*args, **kwargs)), Coroutine):
             await r
-
 
     return asyncio.create_task(waiter(), name=f'{fnc}_{args}_{kwargs}')

@@ -35,6 +35,7 @@ class EventID(Enum):
     message_ready = auto()
     message_removed = auto()
     server_removed = auto()
+    auto_guild_start_join = auto()
     _g_stop_event_loop = auto()
 
 
@@ -124,7 +125,7 @@ class EventController:
 
     def emit(self, event: EventID, *args, **kwargs) -> asyncio.Future:
         """
-        .. versionadded:: 2.11
+        .. versionadded:: 3.0
 
         Emits an ``event`` by calling all the registered listeners.
 
@@ -185,6 +186,8 @@ class EventController:
 
         self.running = False
         self.clear_queue()
+        if self is not GLOBAL.g_controller:
+            GLOBAL.non_global_controllers.remove(self)
 
 
 class GLOBAL:
