@@ -63,7 +63,6 @@ class BaseGUILD:
         "remove_after",
         "removal_buffer_length",
         "_created_at",
-        "_deleted",
         "_removed_messages",
         "parent",
         "_removal_timer_handle",
@@ -86,7 +85,7 @@ class BaseGUILD:
         self._apiobject: discord.Object = snowflake
         self.logging: bool = logging
         # Contains all the different message objects (added in .initialize())
-        self._messages_uninitialized: list = messages
+        self._messages_uninitialized: List[BaseMESSAGE] = messages
         self._messages: List[BaseMESSAGE] = []
         self.remove_after = remove_after
         self.removal_buffer_length = removal_buffer_length
@@ -94,7 +93,6 @@ class BaseGUILD:
         # timedelta - after amount of time
         # datetime - after that time
 
-        self._deleted = False
         self._created_at = datetime.now()  # The time this object was created
         self.parent = None
         self._removal_timer_handle: asyncio.Task = None
@@ -104,25 +102,16 @@ class BaseGUILD:
     def __repr__(self) -> str:
         return f"{type(self).__name__}(discord={self._apiobject})"
     
+    def __eq__(self, other: Any) -> bool:
+        """
+        Compares two guild objects if they're equal.
+        """
+        return isinstance(other, type(self)) and self.snowflake == other.snowflake
+
     @property
     def removed_messages(self) -> List[BaseMESSAGE]:
         "Returns a list of messages that were removed from server (last ``removal_buffer_length`` messages)."
         return self._removed_messages[:]
-
-    @property
-    def deleted(self) -> bool:
-        """
-        Indicates the status of deletion.
-
-        Returns
-        -----------
-        True
-            The object is no longer in the framework and should no longer
-            be used.
-        False
-            Object is in the framework in normal operation.
-        """
-        return self._deleted
 
     @property
     def messages(self) -> List[BaseMESSAGE]:
@@ -163,38 +152,7 @@ class BaseGUILD:
         """
         return self._created_at
 
-    def _check_state(self) -> bool:
-        """
-        Checks if the guild is ready to be deleted.
-
-        Returns
-        ----------
-        True
-            The guild should be deleted.
-        False
-            The guild is in proper state, do not delete.
-        """
-        type_ = type(self.remove_after)
-        dt = datetime.now()
-        return (
-            self.deleted or  # Force delete
-            type_ is timedelta and dt - self._created_at > self.remove_after or
-            type_ is datetime and dt > self.remove_after
-        )
-
-    def __eq__(self, other: Any) -> bool:
-        """
-        Compares two guild objects if they're equal.
-        """
-        return isinstance(other, type(self)) and self.snowflake == other.snowflake
-
-    def _delete(self):
-        """
-        Sets the internal _deleted flag to True.
-        """
-        self._deleted = True
-
-    async def add_message(self, message: BaseMESSAGE):
+    def add_message(self, message: BaseMESSAGE) -> asyncio.Future:
         """
         Adds a message to the message list.
 
@@ -202,10 +160,18 @@ class BaseGUILD:
             To use this method, the guild must already be added to the
             framework's shilling list (or initialized).
 
+        |ASYNC_API|
+
         Parameters
         --------------
         message: BaseMESSAGE
             Message object to add.
+
+        Returns
+        --------
+        Awaitable
+            An awaitable object which can be used to await for execution to finish.
+            To wait for the execution to finish, use ``await`` like so: ``await method_name()``.
 
         Raises
         --------------
@@ -217,9 +183,11 @@ class BaseGUILD:
         raise NotImplementedError
 
     @typechecked
-    async def remove_message(self, message: BaseMESSAGE):
+    def remove_message(self, message: BaseMESSAGE) -> asyncio.Future:
         """
         Removes a message from the message list.
+
+        |ASYNC_API|
 
         .. versionchanged:: 3.0
 
@@ -230,6 +198,12 @@ class BaseGUILD:
         message: BaseMESSAGE
             Message object to remove.
 
+        Returns
+        --------
+        Awaitable
+            An awaitable object which can be used to await for execution to finish.
+            To wait for the execution to finish, use ``await`` like so: ``await method_name()``.
+
         Raises
         --------------
         TypeError
@@ -237,18 +211,32 @@ class BaseGUILD:
         ValueError
             Raised when the message is not present in the list.
         """
-        trace(f"Removing message {message} from {self}", TraceLEVELS.NORMAL)
-        await self._event_ctrl.emit(EventID.message_removed, message)
+        return self._event_ctrl.emit(EventID.message_removed, self, message)
 
-    async def _on_message_removed(self, message: BaseMESSAGE):
-        self._messages.remove(message)
-        self._removed_messages.append(message)
-        if len(self._removed_messages) > self.removal_buffer_length:
-            trace(f"Removing oldest record of removed messages {self._removed_messages[0]}", TraceLEVELS.DEBUG)
-            del self._removed_messages[0]
+    def update(self, init_options = None, **kwargs) -> asyncio.Future:
+        """
+        .. versionadded:: v2.0
 
-        await message._close()
+        Used for changing the initialization parameters,
+        the object was initialized with.
 
+        .. warning::
+            This method will BLOCK until every message has finished shilling!
+            This is done for safety due to asynchronous operations.
+
+        .. warning::
+            Upon updating, the internal state of objects get's reset,
+            meaning you basically have a brand new created object.
+
+        Parameters
+        -------------
+        **kwargs: Any
+            Custom number of keyword parameters which you want to update,
+            these can be anything that is available during the object creation.
+        """
+        raise NotImplementedError
+
+    # Non public
     async def initialize(self, parent: Any, event_ctrl: EventController, getter: Callable) -> None:
         """
         This function initializes the API related objects and
@@ -277,7 +265,6 @@ class BaseGUILD:
         Other
             Raised from .add_message(message_object) method.
         """
-        self._deleted = False
         self._event_ctrl = event_ctrl
         self.parent = parent
         guild_id = self.snowflake
@@ -288,7 +275,7 @@ class BaseGUILD:
         if self._apiobject is not None:
             for message in self._messages_uninitialized:
                 try:
-                    await self.add_message(message)
+                    await self._on_add_message(self, message)
                 except (TypeError, ValueError) as exc:
                     trace(f" Unable to initialize message {message}, in {self}", TraceLEVELS.WARNING, exc)
 
@@ -306,11 +293,64 @@ class BaseGUILD:
                     )
                 )
 
-            event_ctrl.add_listener(EventID.message_ready, self._advertise, lambda m: m.parent is self)
-            event_ctrl.add_listener(EventID.message_removed, self._on_message_removed, lambda m: m.parent is self)
+            event_ctrl.add_listener(EventID.message_ready, self._advertise, lambda server, m: server is self)
+            event_ctrl.add_listener(EventID.message_removed, self._on_message_removed, lambda server, m: server is self)
+            event_ctrl.add_listener(EventID.server_update, self._on_update, lambda server, *h, **k: server is self)
+            event_ctrl.add_listener(EventID.message_added, self._on_add_message, lambda server, m: server is self)
             return
 
         raise ValueError(f"Unable to find object with ID: {guild_id}")
+
+    def generate_invite_log_context(self, member: discord.Member, invite_id: str) -> dict:
+        raise NotImplementedError
+
+    def generate_log_context(self) -> Dict[str, Union[str, int]]:
+        """
+        Generates a dictionary of the guild's context,
+        which is then used for logging.
+
+        Returns
+        ---------
+        Dict[str, Union[str, int]]
+        """
+        return {
+            "name": self._apiobject.name,
+            "id": self._apiobject.id,
+            "type": type(self).__name__
+        }
+
+    # Event handlers
+    async def _on_add_message(self, _, message: BaseMESSAGE):
+        raise NotImplementedError
+
+    async def _on_update(self, _, init_options, **kwargs):
+        raise NotImplementedError
+
+    async def _on_message_removed(self, _, message: BaseMESSAGE):
+        trace(f"Removing message {message} from {self}", TraceLEVELS.NORMAL)
+        self._messages.remove(message)
+        self._removed_messages.append(message)
+        if len(self._removed_messages) > self.removal_buffer_length:
+            trace(f"Removing oldest record of removed messages {self._removed_messages[0]}", TraceLEVELS.DEBUG)
+            del self._removed_messages[0]
+
+        await message._close()
+
+    @async_util.with_semaphore("update_semaphore")
+    async def _advertise(self, _, message: BaseMESSAGE):
+        """
+        Common to all messages, function responsible for sending all the
+        messages to this specific guild.
+
+        This is an event handler.
+        """
+        guild_ctx = self.generate_log_context()
+        author_ctx = self.parent.generate_log_context()
+
+        if (message_context := await message._send()) and self.logging:
+            await logging.save_log(guild_ctx, message_context, author_ctx)
+
+        message._reset_timer()    
 
     async def _on_member_join(self, member: discord.Member):
         """
@@ -334,29 +374,6 @@ class BaseGUILD:
         """
         raise NotImplementedError
 
-    async def update(self, init_options = None, **kwargs):
-        """
-        .. versionadded:: v2.0
-
-        Used for changing the initialization parameters,
-        the object was initialized with.
-
-        .. warning::
-            This method will BLOCK until every message has finished shilling!
-            This is done for safety due to asynchronous operations.
-
-        .. warning::
-            Upon updating, the internal state of objects get's reset,
-            meaning you basically have a brand new created object.
-
-        Parameters
-        -------------
-        **kwargs: Any
-            Custom number of keyword parameters which you want to update,
-            these can be anything that is available during the object creation.
-        """
-        raise NotImplementedError
-
     @async_util.with_semaphore("update_semaphore")
     async def _close(self):
         """
@@ -365,45 +382,14 @@ class BaseGUILD:
         """
         self._event_ctrl.remove_listener(EventID.message_ready, self._advertise)
         self._event_ctrl.remove_listener(EventID.message_removed, self._on_message_removed)
+        self._event_ctrl.remove_listener(EventID.server_update, self._on_update)
+        self._event_ctrl.remove_listener(EventID.message_added, self._on_add_message)
         for message in self.messages:
             await message._close()
 
         if self._removal_timer_handle is not None and not self._removal_timer_handle.cancelled():
             self._removal_timer_handle.cancel()
             await asyncio.gather(self._removal_timer_handle, return_exceptions=True)
-
-    @async_util.with_semaphore("update_semaphore")
-    async def _advertise(self, message: BaseMESSAGE):
-        """
-        Common to all messages, function responsible for sending all the
-        messages to this specific guild.
-
-        This is an event handler.
-        """
-        guild_ctx = self.generate_log_context()
-        author_ctx = self.parent.generate_log_context()
-
-        message._reset_timer()
-        if (message_context := await message._send()) and self.logging:
-            await logging.save_log(guild_ctx, message_context, author_ctx)
-
-    def generate_invite_log_context(self, member: discord.Member, invite_id: str) -> dict:
-        raise NotImplementedError
-
-    def generate_log_context(self) -> Dict[str, Union[str, int]]:
-        """
-        Generates a dictionary of the guild's context,
-        which is then used for logging.
-
-        Returns
-        ---------
-        Dict[str, Union[str, int]]
-        """
-        return {
-            "name": self._apiobject.name,
-            "id": self._apiobject.id,
-            "type": type(self).__name__
-        }
 
 
 @instance_track.track_id
@@ -482,21 +468,7 @@ class GUILD(BaseGUILD):
         self.join_count = {invite.split("/")[-1]: 0 for invite in invite_track}
         attributes.write_non_exist(self, "update_semaphore", asyncio.Semaphore(1))
 
-    def _check_state(self) -> bool:
-        """
-        Checks if the user is ready to be deleted.
-
-        Returns
-        ----------
-        True
-            The user should be deleted.
-        False
-            The user is in proper state, do not delete.
-        """
-        return (self.parent.client.get_guild(self.snowflake) is None or
-                super()._check_state())
-
-    async def get_invites(self) -> List[discord.Invite]:
+    async def _get_invites(self) -> List[discord.Invite]:
         guild: discord.Guild = self.apiobject
         client: discord.Client = self.parent.client
         try:
@@ -530,7 +502,7 @@ class GUILD(BaseGUILD):
         if not len(self.join_count):  # Skip invite query from Discord
             return
 
-        invites = await self.get_invites()
+        invites = await self._get_invites()
         invites = {invite.id: invite.uses for invite in invites}
         counts = self.join_count
         for invite in list(counts.keys()):
@@ -546,35 +518,46 @@ class GUILD(BaseGUILD):
     def _get_guild_channels(self, *types):
         return set(x for x in self._apiobject.channels if isinstance(x, types))
 
+    # API
     @typechecked
-    async def add_message(self, message: Union[TextMESSAGE, VoiceMESSAGE]):
-        await message.initialize(parent=self, event_ctrl=self._event_ctrl, channel_getter=self._get_guild_channels)
-        self._messages.append(message)
-        with suppress(ValueError):  # Readd the removed message
-            self._removed_messages.remove(message)
+    def add_message(self, message: Union[TextMESSAGE, VoiceMESSAGE]):
+        return self._event_ctrl.emit(EventID.message_added, self, message)
 
-    @async_util.with_semaphore("update_semaphore")
-    async def _on_member_join(self, member: discord.Member):
-        counts = self.join_count
-        invites = await self.get_invites()
-        invites = {invite.id: invite.uses for invite in invites}
-        for id_, last_uses in counts.items():
-            uses = invites[id_]
-            if last_uses != uses:
-                trace(f"User {member.name} joined to {member.guild.name} with invite {id_}", TraceLEVELS.DEBUG)
-                counts[id_] = uses
-                invite_ctx = self.generate_invite_log_context(member, id_)
-                await logging.save_log(self.generate_log_context(), None, None, invite_ctx)
-                return
+    def update(self, init_options = None, **kwargs):
+        """
+        .. versionadded:: v2.0
 
-    @async_util.with_semaphore("update_semaphore")
-    async def _on_invite_delete(self, invite: discord.Invite):
-        if invite.id in self.join_count:
-            del self.join_count[invite.id]
-            trace(
-                f"Invite link ID {invite.id} deleted from {self.apiobject.name} (ID: {self.apiobject.id})",
-                TraceLEVELS.DEBUG
-            )
+        Used for changing the initialization parameters,
+        the object was initialized with.
+
+        |ASYNC_API|
+
+        .. warning::
+            Upon updating, the internal state of objects get's reset,
+            meaning you basically have a brand new created object.
+            It also resets the message objects.
+
+        Parameters
+        -------------
+        **kwargs: Any
+            Custom number of keyword parameters which you want to update,
+            these can be anything that is available during the object creation.
+
+
+        Returns
+        --------
+        Awaitable
+            An awaitable object which can be used to await for execution to finish.
+            To wait for the execution to finish, use ``await`` like so: ``await method_name()``.
+
+        Raises
+        -----------
+        TypeError
+            Invalid keyword argument was passed.
+        Other
+            Raised from .initialize() method.
+        """
+        return self._event_ctrl.emit(EventID.server_update, self, init_options, **kwargs)
 
     def generate_invite_log_context(self, member: discord.Member, invite_id: str) -> dict:
         """
@@ -606,67 +589,73 @@ class GUILD(BaseGUILD):
             }
         }
 
-    async def update(self, init_options = None, **kwargs):
-        """
-        Used for changing the initialization parameters,
-        the object was initialized with.
+    # Event Handlers
+    async def _on_add_message(self, _, message: Union[TextMESSAGE, VoiceMESSAGE]):
+        await message.initialize(parent=self, event_ctrl=self._event_ctrl, channel_getter=self._get_guild_channels)
+        self._messages.append(message)
+        with suppress(ValueError):  # Readd the removed message
+            self._removed_messages.remove(message)
 
-        .. versionadded:: v2.0
-
-        .. warning::
-            Upon updating, the internal state of objects get's reset,
-            meaning you basically have a brand new created object.
-            It also resets the message objects.
-
-        Parameters
-        -------------
-        **kwargs: Any
-            Custom number of keyword parameters which you want to update,
-            these can be anything that is available during the object creation.
-
-        Raises
-        -----------
-        TypeError
-            Invalid keyword argument was passed.
-        Other
-            Raised from .initialize() method.
-        """
+    async def _on_update(self, _, init_options, **kwargs):
         await self._close()
         try:
-            async with self.update_semaphore:
-                # Update the guild
-                if "snowflake" not in kwargs:
-                    kwargs["snowflake"] = self.snowflake
+            # Update the guild
+            if "snowflake" not in kwargs:
+                kwargs["snowflake"] = self.snowflake
 
-                if "invite_track" not in kwargs:
-                    kwargs["invite_track"] = list(self.join_count.keys())
+            if "invite_track" not in kwargs:
+                kwargs["invite_track"] = list(self.join_count.keys())
 
-                messages = kwargs.pop("messages", self.messages + self._messages_uninitialized)
+            messages = kwargs.pop("messages", self.messages + self._messages_uninitialized)
 
-                if init_options is None:
-                    init_options = {"parent": self.parent, "event_ctrl": self._event_ctrl}
+            if init_options is None:
+                init_options = {"parent": self.parent, "event_ctrl": self._event_ctrl}
 
-                await async_util.update_obj_param(self, init_options=init_options, **kwargs)
+            await async_util.update_obj_param(self, init_options=init_options, **kwargs)
 
-                _messages = []
-                message: BaseChannelMessage
-                for message in messages:
-                    try:
-                        await message.update(
-                            {
-                                "parent": self,
-                                "event_ctrl": self._event_ctrl,
-                                "channel_getter": self._get_guild_channels
-                            }
-                        )
-                        _messages.append(message)
-                    except Exception as exc:
-                        trace(f"Could not update {message} after updating {self} - Skipping message.", TraceLEVELS.ERROR, exc)
+            _messages = []
+            message: BaseChannelMessage
+            for message in messages:
+                try:
+                    await message.update(
+                        {
+                            "parent": self,
+                            "event_ctrl": self._event_ctrl,
+                            "channel_getter": self._get_guild_channels
+                        }
+                    )
+                    _messages.append(message)
+                except Exception as exc:
+                    trace(f"Could not update {message} after updating {self} - Skipping message.", TraceLEVELS.ERROR, exc)
 
-                self._messages = _messages
+            self._messages = _messages
         except Exception:
             await self.initialize(self.parent)
             raise
+
+    @async_util.with_semaphore("update_semaphore")
+    async def _on_member_join(self, member: discord.Member):
+        counts = self.join_count
+        invites = await self._get_invites()
+        invites = {invite.id: invite.uses for invite in invites}
+        for id_, last_uses in counts.items():
+            uses = invites[id_]
+            if last_uses != uses:
+                trace(f"User {member.name} joined to {member.guild.name} with invite {id_}", TraceLEVELS.DEBUG)
+                counts[id_] = uses
+                invite_ctx = self.generate_invite_log_context(member, id_)
+                await logging.save_log(self.generate_log_context(), None, None, invite_ctx)
+                return
+
+    @async_util.with_semaphore("update_semaphore")
+    async def _on_invite_delete(self, invite: discord.Invite):
+        if invite.id in self.join_count:
+            del self.join_count[invite.id]
+            trace(
+                f"Invite link ID {invite.id} deleted from {self.apiobject.name} (ID: {self.apiobject.id})",
+                TraceLEVELS.DEBUG
+            )
+
 
 
 @instance_track.track_id
@@ -748,15 +737,14 @@ class USER(BaseGUILD):
         )
 
     @typechecked
-    async def add_message(self, message: DirectMESSAGE):
-        await message.initialize(parent=self, event_ctrl=self._event_ctrl, guild=self._apiobject)
-        self._messages.append(message)
-        with suppress(ValueError):  # Readd the removed message
-            self._removed_messages.remove(message)
+    def add_message(self, message: DirectMESSAGE) -> asyncio.Future:
+        return self._event_ctrl.emit(EventID.message_added, self, message)
 
-    async def update(self, init_options = None, **kwargs):
+    def update(self, init_options = None, **kwargs) -> asyncio.Future:
         """
         .. versionadded:: v2.0
+
+        |ASYNC_API|
 
         Used for changing the initialization parameters,
         the object was initialized with.
@@ -772,6 +760,12 @@ class USER(BaseGUILD):
             Custom number of keyword parameters which you want to update,
             these can be anything that is available during the object creation.
 
+        Returns
+        --------
+        Awaitable
+            An awaitable object which can be used to await for execution to finish.
+            To wait for the execution to finish, use ``await`` like so: ``await method_name()``.
+
         Raises
         -----------
         TypeError
@@ -779,6 +773,16 @@ class USER(BaseGUILD):
         Other
             Raised from .initialize() method.
         """
+        return self._event_ctrl.emit(EventID.server_update, self, init_options, **kwargs)
+
+    # Event Handlers
+    async def _on_add_message(self, _, message: Union[VoiceMESSAGE, VoiceMESSAGE]):
+        await message.initialize(parent=self, event_ctrl=self._event_ctrl, guild=self._apiobject)
+        self._messages.append(message)
+        with suppress(ValueError):  # Readd the removed message
+            self._removed_messages.remove(message)
+
+    async def _on_update(self, _, init_options, **kwargs):
         try:
             # Update the guild
             await self._close()
@@ -787,7 +791,7 @@ class USER(BaseGUILD):
                 if "snowflake" not in kwargs:
                     kwargs["snowflake"] = self.snowflake
 
-                messages = kwargs.pop("messages", self.messages + self._messages_uninitialized)
+                messages: List[BaseMESSAGE] = kwargs.pop("messages", self.messages + self._messages_uninitialized)
 
                 if init_options is None:
                     init_options = {"parent": self.parent, "event_ctrl": self._event_ctrl}

@@ -11,6 +11,7 @@ from .misc.doc import doc_category
 from .logging.tracing import TraceLEVELS, trace
 
 import asyncio
+import inspect
 
 
 T = TypeVar('T')
@@ -30,12 +31,21 @@ class EventID(Enum):
     """
     g_daf_startup = 0
     g_daf_shutdown = auto()
+
     g_trace = auto()
+
     g_account_expired = auto()
+    account_update = auto()
+
     message_ready = auto()
     message_removed = auto()
+    message_added = auto()
+
     server_removed = auto()
-    auto_guild_start_join = auto()
+    server_added = auto()
+    server_update = auto()
+    auto_guild_start_join = auto() 
+    
     _g_stop_event_loop = auto()
 
 
@@ -165,7 +175,7 @@ class EventController:
         """
         queue = self.event_queue
         listeners = self.listeners
-        
+
         event_id: EventID
         future: asyncio.Future
 
@@ -179,6 +189,7 @@ class EventController:
                             await r
                 except Exception as exc:
                     trace(f"Could not call event handler {listener} for event {event_id}.", TraceLEVELS.ERROR, exc)
+                    future.set_exception(exc)
 
             future.set_result(None)
             if event_id is EventID._g_stop_event_loop:
@@ -201,7 +212,6 @@ def initialize():
     Returns the event loop task, which's reference needs to be preserved.
     """
     GLOBAL.g_controller.start()
-
 
 def get_global_event_ctrl() -> Union[EventController, None]:
     "Returns the global event controller"

@@ -53,7 +53,6 @@ CONVERSION_ATTRS = {
     client.ACCOUNT: {
         "attrs": attributes.get_all_slots(client.ACCOUNT),
         "attrs_restore": {
-            "_update_sem": asyncio.Semaphore(1),
             "_running": False,
             "_client": None,
             "_ws_task": None,

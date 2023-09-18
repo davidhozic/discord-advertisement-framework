@@ -30,6 +30,10 @@ version = VERSION
 # -- General configuration ---------------------------------------------------
 root_doc = 'index'
 
+rst_prolog = """
+.. |ASYNC_API| replace:: This is an asynchronous API operation. When returning from this function, the action is not immediately executed.
+"""
+
 numfig = True
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom

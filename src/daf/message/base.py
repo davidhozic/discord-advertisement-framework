@@ -311,7 +311,11 @@ class BaseMESSAGE:
         Resets internal timer.
         """
         self._calc_next_time()
-        self._timer_handle = async_util.call_at(self._event_ctrl.emit, self.next_send_time, EventID.message_ready, self)
+        self._timer_handle = async_util.call_at(
+            self._event_ctrl.emit,
+            self.next_send_time,
+            EventID.message_ready, self.parent, self
+        )
 
     @async_util.with_semaphore("update_semaphore")
     async def _close(self):
@@ -343,7 +347,11 @@ class BaseMESSAGE:
         api objects and checks for the correct channel input context.
         """
         self._event_ctrl = event_ctrl
-        self._timer_handle = async_util.call_at(event_ctrl.emit, self.next_send_time, EventID.message_ready, self)
+        self._timer_handle = async_util.call_at(
+            event_ctrl.emit,
+            self.next_send_time,
+            EventID.message_ready, self.parent, self
+        )
 
     async def update(self, _init_options: dict = {}, **kwargs):
         """

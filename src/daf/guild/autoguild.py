@@ -70,7 +70,6 @@ class AutoGUILD:
         "_messages_uninitialized",
         "logging",
         "_created_at",
-        "_deleted",
         "update_semaphore",
         "parent",
         "auto_join",
@@ -106,7 +105,6 @@ class AutoGUILD:
         self._messages_uninitialized = messages if messages is not None else []
         self.logging = logging
         self.auto_join = auto_join
-        self._deleted = False
         self._created_at = datetime.now()
         self.parent = None
         self.guild_query_iter = None
@@ -127,21 +125,6 @@ class AutoGUILD:
         return self._created_at
 
     @property
-    def deleted(self) -> bool:
-        """
-        Indicates the status of deletion.
-
-        Returns
-        -----------
-        True
-            The object is no longer in the framework and should no longer
-            be used.
-        False
-            Object is in the framework in normal operation.
-        """
-        return self._deleted
-
-    @property
     def messages(self) -> List[Union[TextMESSAGE, VoiceMESSAGE]]:
         """
         .. versionadded:: 3.0
@@ -150,35 +133,98 @@ class AutoGUILD:
         """
         return self._messages[:]
 
-    def _delete(self):
-        """
-        Sets the internal _deleted flag to True
-        and cancels main task.
-        """
-        self._deleted = True
+    @property
+    def guilds(self) -> List[discord.Guild]:
+        "Returns all the guilds that match the include_pattern and not exclude_pattern"
+        client: discord.Client = self.parent.client
+        return [
+            g for g in client.guilds
+            if re.search(self.include_pattern, g.name) is not None and
+               (self.exclude_pattern is None or re.search(self.exclude_pattern, g.name) is None)
+        ]
 
-    def _check_state(self) -> bool:
+    # API
+    @typechecked
+    def add_message(self, message: BaseMESSAGE) -> asyncio.Future:
         """
-        Checks if the object is ready to be deleted.
+        Adds a message to the message list.
 
-        If the object has already been deleted, return False
-        to prevent multiple tasks from trying to remove it multiple
-        times which would result in ValueError exceptions.
+        .. warning::
+            To use this method, the guild must already be added to the
+            framework's shilling list (or initialized).
+
+        |ASYNC_API|
+
+        Parameters
+        --------------
+        message: BaseMESSAGE
+            Message object to add.
 
         Returns
-        ----------
-        True
-            The object should be deleted.
-        False
-            The object is in proper state, do not delete.
+        --------
+        Awaitable
+            An awaitable object which can be used to await for execution to finish.
+            To wait for the execution to finish, use ``await`` like so: ``await method_name()``.
+
+        Raises
+        --------------
+        TypeError
+            Raised when the message is not of type the guild allows.
+        Other
+            Raised from message.initialize() method.
         """
-        rm_after_type = type(self.remove_after)
-        now = datetime.now()
-        return (
-            rm_after_type is timedelta and now - self._created_at >
-            self.remove_after or
-            rm_after_type is datetime and now > self.remove_after)
-    
+        return self._event_ctrl.emit(EventID.message_added, self, message)
+
+    @typechecked
+    def remove_message(self, message: BaseMESSAGE) -> asyncio.Future:
+        """
+        Removes a message from the message list.
+
+        .. versionchanged:: 3.0
+
+            The function is now async.
+
+        |ASYNC_API|
+
+        Parameters
+        --------------
+        message: BaseMESSAGE
+            Message object to remove.
+
+        Returns
+        --------
+        Awaitable
+            An awaitable object which can be used to await for execution to finish.
+            To wait for the execution to finish, use ``await`` like so: ``await method_name()``.
+
+        Raises
+        --------------
+        TypeError
+            Raised when the message is not of type the guild allows.
+        ValueError
+            Raised when the message is not present in the list.
+        """
+        return self._event_ctrl.emit(EventID.message_removed, self, message)
+
+    def update(self, init_options = None, **kwargs) -> asyncio.Future:
+        """
+        Updates the object with new initialization parameters.
+
+        |ASYNC_API|
+
+        Returns
+        --------
+        Awaitable
+            An awaitable object which can be used to await for execution to finish.
+            To wait for the execution to finish, use ``await`` like so: ``await method_name()``.
+
+        .. WARNING::
+            After calling this method the entire object is reset
+            (this includes it's GUILD objects in cache).
+        """
+        return self._event_ctrl.emit(EventID.server_update, self, init_options, **kwargs)
+
+    # Non public methods
     def _reset_auto_join_timer(self):
         "Resets the periodic auto guild join timer."
         self._guild_join_timer_handle = async_util.call_at(
@@ -206,7 +252,7 @@ class AutoGUILD:
 
         for message in self._messages_uninitialized:
             try:
-                await self.add_message(message)
+                await self._on_add_message(self, message)
             except (TypeError, ValueError) as exc:
                 trace(f" Unable to initialize message {message}, in {self}", TraceLEVELS.WARNING, exc)
 
@@ -224,31 +270,50 @@ class AutoGUILD:
             self._reset_auto_join_timer()
             event_ctrl.add_listener(EventID.auto_guild_start_join, self._join_guilds, lambda ag: ag is self)
 
-        event_ctrl.add_listener(EventID.message_ready, self._advertise, lambda m: m.parent is self)
-        event_ctrl.add_listener(EventID.message_removed, self._on_message_removed, lambda m: m.parent is self)
+        event_ctrl.add_listener(EventID.message_ready, self._advertise, lambda server, m: server is self)
+        event_ctrl.add_listener(EventID.message_added, self._on_add_message, lambda server, m: server is self)
+        event_ctrl.add_listener(EventID.server_update, self._on_update, lambda server, m: server is self)
+        event_ctrl.add_listener(EventID.message_removed, self._on_remove_message, lambda server, m: server is self)
 
-    @async_util.with_semaphore("update_semaphore", 1)
-    @typechecked
-    async def add_message(self, message: BaseMESSAGE):
+    def _generate_guild_log_context(self, guild: discord.Guild):
+        return {
+                "name": guild.name,
+                "id": guild.id,
+                "type": GUILD
+        }
+
+    def _filter_message_context(self, guild: discord.Guild, message_ctx: dict) -> Dict:
+        message_ctx = message_ctx.copy()
+        message_ctx["channels"] = message_ctx["channels"].copy()
+
+        channel_ctx = message_ctx["channels"]
+        guild_channels = set(x.id for x in guild.channels)
+        channel_ctx["successful"] = [x for x in channel_ctx["successful"] if x["id"] in guild_channels]
+        channel_ctx["failed"] = [x for x in channel_ctx["failed"] if x["id"] in guild_channels]
+
+        return message_ctx if channel_ctx["successful"] or channel_ctx["failed"] else None
+
+    @async_util.with_semaphore("update_semaphore")
+    async def _advertise(self, _, message: BaseMESSAGE):
         """
-        Adds a message to the message list.
-
-        .. warning::
-            To use this method, the guild must already be added to the
-            framework's shilling list (or initialized).
-
-        Parameters
-        --------------
-        message: BaseMESSAGE
-            Message object to add.
-
-        Raises
-        --------------
-        TypeError
-            Raised when the message is not of type the guild allows.
-        Other
-            Raised from message.initialize() method.
+        Advertises thru all the GUILDs.
         """
+        if message._check_state():
+            await self.remove_message(message)
+            return
+
+        author_ctx = self.parent.generate_log_context()
+        message_context = await message._send()
+        if message_context and self.logging:
+            for guild in self.guilds:
+                guild_ctx = self._generate_guild_log_context(guild)
+                message_guild_ctx = self._filter_message_context(guild, message_context)
+                if message_guild_ctx:
+                    await logging.save_log(guild_ctx, message_guild_ctx, author_ctx)
+
+        message._reset_timer()
+
+    async def _on_add_message(self, _, message: BaseMESSAGE):
         def get_channels(*types):
             for guild in self.guilds:
                 for channel in guild.channels:
@@ -261,32 +326,9 @@ class AutoGUILD:
         with suppress(ValueError):  # Readd the removed message
             self._removed_messages.remove(message)
 
-    @typechecked
-    async def remove_message(self, message: BaseMESSAGE):
-        """
-        Removes a message from the message list.
-
-        .. versionchanged:: 3.0
-
-            The function is now async.
-
-        Parameters
-        --------------
-        message: BaseMESSAGE
-            Message object to remove.
-
-        Raises
-        --------------
-        TypeError
-            Raised when the message is not of type the guild allows.
-        ValueError
-            Raised when the message is not present in the list.
-        """
-        trace(f"Removing message {message} from {self}", TraceLEVELS.NORMAL)
-        await self._event_ctrl.emit(EventID.message_removed, message)
-
-    async def _on_message_removed(self, message: BaseMESSAGE):
+    async def _on_remove_message(self, _, message: BaseMESSAGE):
         "Event loop handler for removing messages"
+        trace(f"Removing message {message} from {self}", TraceLEVELS.NORMAL)
         self._messages.remove(message)
         self._removed_messages.append(message)
         if len(self._removed_messages) > self.removal_buffer_length:
@@ -294,9 +336,22 @@ class AutoGUILD:
             del self._removed_messages[0]
 
         await message._close()
+
+    async def _on_update(self, _, init_options, **kwargs):
+        if init_options is None:
+            init_options = {"parent": self.parent, "event_ctrl": self._event_ctrl}
+
+        await self._close()
+        try:
+            return await async_util.update_obj_param(self, init_options=init_options, **kwargs)
+        except Exception:        
+            if self.parent is not None:  # Only if it were previously initialized
+                await self.initialize(self.parent)  # Reopen any async related connections
+
+            raise
     
     @async_util.with_semaphore("update_semaphore")
-    async def _join_guilds(self, _):
+    async def _join_guilds(self):
         """
         Coroutine that joins new guilds thru the web layer.
         """
@@ -369,8 +424,10 @@ class AutoGUILD:
         Closes any lower-level async objects.
         """
         self._event_ctrl.remove_listener(EventID.message_ready, self._advertise)
-        self._event_ctrl.remove_listener(EventID.message_removed, self._on_message_removed)
+        self._event_ctrl.remove_listener(EventID.message_removed, self._on_remove_message)
         self._event_ctrl.remove_listener(EventID.auto_guild_start_join, self._join_guilds)
+        self._event_ctrl.remove_listener(EventID.message_added, self._on_add_message)
+        self._event_ctrl.remove_listener(EventID.server_update, self._on_update)
 
         if self._removal_timer_handle is not None and not self._removal_timer_handle.cancelled():
             self._removal_timer_handle.cancel()
@@ -385,70 +442,3 @@ class AutoGUILD:
 
         for message in self._messages:
             await message._close()
-
-    @property
-    def guilds(self) -> List[discord.Guild]:
-        "Returns all the guilds that match the include_pattern and not exclude_pattern"
-        client: discord.Client = self.parent.client
-        return [
-            g for g in client.guilds
-            if re.search(self.include_pattern, g.name) is not None and
-               (self.exclude_pattern is None or re.search(self.exclude_pattern, g.name) is None)
-        ]
-
-    def _generate_guild_log_context(self, guild: discord.Guild):
-        return {
-                "name": guild.name,
-                "id": guild.id,
-                "type": GUILD
-        }
-
-    def _filter_message_context(self, guild: discord.Guild, message_ctx: dict) -> Dict:
-        message_ctx = message_ctx.copy()
-        message_ctx["channels"] = message_ctx["channels"].copy()
-
-        channel_ctx = message_ctx["channels"]
-        guild_channels = set(x.id for x in guild.channels)
-        channel_ctx["successful"] = [x for x in channel_ctx["successful"] if x["id"] in guild_channels]
-        channel_ctx["failed"] = [x for x in channel_ctx["failed"] if x["id"] in guild_channels]
-
-        return message_ctx if channel_ctx["successful"] or channel_ctx["failed"] else None
-
-    @async_util.with_semaphore("update_semaphore", 1)
-    async def _advertise(self, message: BaseMESSAGE):
-        """
-        Advertises thru all the GUILDs.
-        """
-        if message._check_state():
-            await self.remove_message(message)
-            return
-
-        author_ctx = self.parent.generate_log_context()
-        message._reset_timer()
-        message_context = await message._send()
-        if message_context and self.logging:
-            for guild in self.guilds:
-                guild_ctx = self._generate_guild_log_context(guild)
-                message_guild_ctx = self._filter_message_context(guild, message_context)
-                if message_guild_ctx:
-                    await logging.save_log(guild_ctx, message_guild_ctx, author_ctx)
-
-    async def update(self, init_options = None, **kwargs):
-        """
-        Updates the object with new initialization parameters.
-
-        .. WARNING::
-            After calling this method the entire object is reset
-            (this includes it's GUILD objects in cache).
-        """
-        if init_options is None:
-            init_options = {"parent": self.parent}
-
-        await self._close()
-        try:
-            return await async_util.update_obj_param(self, init_options=init_options, **kwargs)
-        except Exception:        
-            if self.parent is not None:  # Only if it were previously initialized
-                await self.initialize(self.parent)  # Reopen any async related connections
-
-            raise

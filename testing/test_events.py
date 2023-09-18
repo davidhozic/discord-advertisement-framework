@@ -14,7 +14,7 @@ from daf.events import *
             (EventID.g_daf_shutdown, {}),
             (
                 EventID.message_ready,
-                {"message": daf.TextMESSAGE(None, timedelta(seconds=5), "Hello World", daf.AutoCHANNEL("test"))}
+                {"server": None, "message": daf.TextMESSAGE(None, timedelta(seconds=5), "Hello World", daf.AutoCHANNEL("test"))}
             ),
         ]
 )
@@ -71,4 +71,3 @@ async def test_events(event: EventID, expected_args: dict):
     global_ctrl.remove_listener(event, dummy_listener)
     global_ctrl.remove_listener(event, dummy_listener2)
     assert handler_called and handler_called2, "Handler was not called"
-
