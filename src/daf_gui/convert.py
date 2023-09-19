@@ -157,6 +157,10 @@ CONVERSION_ATTR_TO_PARAM[daf.GUILD]["invite_track"] = (
     lambda guild_: list(guild_.join_count.keys())
 )
 
+CONVERSION_ATTR_TO_PARAM[daf.AutoGUILD] = {k: k for k in daf.AutoGUILD.__init__.__annotations__}
+CONVERSION_ATTR_TO_PARAM[daf.AutoGUILD]["invite_track"] = (
+    lambda guild_: list(guild_._invite_join_count.keys())
+)
 
 # Map whhich's values is a tuple that tells which fields are passwords.
 # These fields will be replaced with a '*' when viewed in object form.

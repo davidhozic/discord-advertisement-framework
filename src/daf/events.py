@@ -45,6 +45,9 @@ class EventID(Enum):
     server_update = auto()
     auto_guild_start_join = auto()
 
+    discord_member_join = auto()
+    discord_invite_delete = auto()
+
     _dummy = auto()  # For stopping the event loop
 
 
@@ -202,7 +205,8 @@ class EventController:
 
             future.set_result(None)
 
-        GLOBAL.non_global_controllers.remove(self)
+        if self is not GLOBAL.g_controller:
+            GLOBAL.non_global_controllers.remove(self)
         self.clear_queue()
 
 

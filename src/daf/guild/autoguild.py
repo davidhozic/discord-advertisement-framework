@@ -81,6 +81,7 @@ class AutoGUILD:
         "removal_buffer_length",
         "_removal_timer_handle",
         "_guild_join_timer_handle",
+        "_invite_join_count",
         "_event_ctrl",
     )
 
@@ -100,7 +101,6 @@ class AutoGUILD:
         self.include_pattern = re.sub(r"\s*\|\s*", '|', include_pattern) if include_pattern else None
         self.exclude_pattern = re.sub(r"\s*\|\s*", '|', exclude_pattern) if exclude_pattern else None
         self.remove_after = remove_after
-        self.invite_track = invite_track
         # Uninitialized template messages that get copied for each found guild.
         self._messages_uninitialized = messages if messages is not None else []
         self.logging = logging
@@ -115,7 +115,15 @@ class AutoGUILD:
         self._removal_timer_handle: asyncio.Task = None
         self._guild_join_timer_handle: asyncio.Task = None
         self._event_ctrl: EventController = None
+
+        if invite_track is None:
+            invite_track = []
+
+        self._invite_join_count = {invite.split("/")[-1]: 0 for invite in invite_track}
         attributes.write_non_exist(self, "update_semaphore", asyncio.Semaphore(1))
+
+    def __repr__(self) -> str:
+        return f"AutoGUILD(include_pattern='{self.include_pattern}', exclude_pattern='{self.exclude_pattern})'"
 
     @property
     def created_at(self) -> datetime:
@@ -139,8 +147,7 @@ class AutoGUILD:
         client: discord.Client = self.parent.client
         return [
             g for g in client.guilds
-            if re.search(self.include_pattern, g.name) is not None and
-               (self.exclude_pattern is None or re.search(self.exclude_pattern, g.name) is None)
+            if self._check_name_match(g.name)
         ]
 
     # API
@@ -234,6 +241,12 @@ class AutoGUILD:
             self
         )
 
+    def _check_name_match(self, name: str) -> bool:
+        return (
+            re.search(self.include_pattern, name) is not None and
+            (self.exclude_pattern is None or re.search(self.exclude_pattern, name) is None)
+        )
+
     async def initialize(self, parent: Any, event_ctrl: EventController):
         """
         Initializes the object.
@@ -275,11 +288,54 @@ class AutoGUILD:
         event_ctrl.add_listener(EventID.server_update, self._on_update, lambda server, *args, **kwargs: server is self)
         event_ctrl.add_listener(EventID.message_removed, self._on_remove_message, lambda server, m: server is self)
 
+        if not len(self._invite_join_count):  # Skip invite query from Discord
+            return
+
+        invites = await self._get_invites()
+        invites = {invite.id: invite.uses for invite in invites}
+        counts = self._invite_join_count
+        for invite in list(counts.keys()):
+            try:
+                counts[invite] = invites[invite]
+            except KeyError:
+                del counts[invite]
+                trace(
+                    f"Invite link {invite} not found in {self}. It will not be tracked!",
+                    TraceLEVELS.WARNING
+                )
+
+        
+        if not len(counts):  # Don't listen to events if no invites were left
+            return
+
+        client: discord.Client = parent.client
+        client.add_listener(self._discord_on_member_join, "on_member_join")
+        client.add_listener(self._discord_on_invite_delete, "on_invite_delete")
+        self._event_ctrl.add_listener(
+            EventID.discord_member_join,
+            self._on_member_join,
+            predicate=lambda memb: self._check_name_match(memb.guild.name)
+        )
+        self._event_ctrl.add_listener(
+            EventID.discord_invite_delete,
+            self._on_invite_delete,
+            predicate=lambda inv: self._check_name_match(inv.guild.name)
+        )
+
     def _generate_guild_log_context(self, guild: discord.Guild):
         return {
                 "name": guild.name,
                 "id": guild.id,
                 "type": "GUILD"
+        }
+
+    def _generate_invite_log_context(self, member: discord.Member, invite_id: str) -> dict:
+        return {
+            "id": invite_id,
+            "member": {
+                "id": member.id,
+                "name": member.name
+            }
         }
 
     def _filter_message_context(self, guild: discord.Guild, message_ctx: dict) -> Dict:
@@ -292,6 +348,19 @@ class AutoGUILD:
         channel_ctx["failed"] = [x for x in channel_ctx["failed"] if x["id"] in guild_channels]
 
         return message_ctx if channel_ctx["successful"] or channel_ctx["failed"] else None
+
+    async def _get_invites(self) -> List[discord.Invite]:
+        client: discord.Client = self.parent.client
+        invites = []
+        for guild in self.guilds:
+            try:
+                perms = guild.get_member(client.user.id).guild_permissions
+                if perms.manage_guild:
+                    invites.extend(await guild.invites())
+            except discord.HTTPException as exc:
+                trace(f"Error reading invite links for guild {guild.name}!", TraceLEVELS.ERROR, exc)
+
+        return invites
 
     @async_util.with_semaphore("update_semaphore")
     async def _advertise(self, _, message: BaseMESSAGE):
@@ -420,6 +489,35 @@ class AutoGUILD:
 
         self._reset_auto_join_timer()
 
+    async def _on_member_join(self, member: discord.Member):        
+        counts = self._invite_join_count
+        invites = await self._get_invites()
+        invites = {invite.id: invite.uses for invite in invites}
+        for id_, last_uses in counts.items():
+            uses = invites[id_]
+            if last_uses != uses:
+                trace(f"User {member.name} joined to {member.guild.name} with invite {id_}", TraceLEVELS.DEBUG)
+                counts[id_] = uses
+                invite_ctx = self._generate_invite_log_context(member, id_)
+                await logging.save_log(self._generate_guild_log_context(member.guild), None, None, invite_ctx)
+                return
+
+    async def _on_invite_delete(self, invite: discord.Invite):
+        if invite.id in self._invite_join_count:
+            del self._invite_join_count[invite.id]
+            guild = invite.guild
+            trace(
+                f"Invite link ID {invite.id} deleted from {guild.name} (ID: {guild.id} - {self})",
+                TraceLEVELS.DEBUG
+            )
+
+    # Safety wrappers to make sure the event gets emitted through the event loop for safety
+    async def _discord_on_member_join(self, member: discord.Member):
+        self._event_ctrl.emit(EventID.discord_member_join, member)
+
+    async def _discord_on_invite_delete(self, invite: discord.Invite):
+        self._event_ctrl.emit(EventID.discord_invite_delete, invite)
+
     @async_util.with_semaphore("update_semaphore")
     async def _close(self):
         """
@@ -430,6 +528,13 @@ class AutoGUILD:
         self._event_ctrl.remove_listener(EventID.auto_guild_start_join, self._join_guilds)
         self._event_ctrl.remove_listener(EventID.message_added, self._on_add_message)
         self._event_ctrl.remove_listener(EventID.server_update, self._on_update)
+
+        # Remove PyCord API wrapper event handlers.
+        client: discord.Client = self.parent.client
+        client.remove_listener(self._discord_on_member_join, "on_member_join")
+        client.remove_listener(self._discord_on_invite_delete, "on_invite_delete")
+        self._event_ctrl.remove_listener(EventID.discord_member_join, self._on_member_join)
+        self._event_ctrl.remove_listener(EventID.discord_invite_delete, self._on_invite_delete)
 
         if self._removal_timer_handle is not None and not self._removal_timer_handle.cancelled():
             self._removal_timer_handle.cancel()

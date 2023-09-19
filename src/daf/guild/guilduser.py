@@ -502,6 +502,21 @@ class GUILD(BaseGUILD):
         if not len(self.join_count):  # Skip invite query from Discord
             return
 
+        client: discord.Client = parent.client
+        client.add_listener(self._discord_on_member_join, "on_member_join")
+        client.add_listener(self._discord_on_invite_delete, "on_invite_delete")
+        self._event_ctrl.add_listener(
+            EventID.discord_member_join,
+            self._on_member_join,
+            predicate=lambda m: m.guild.id == self._apiobject.id
+        )
+        self._event_ctrl.add_listener(
+            EventID.discord_invite_delete,
+            self._on_invite_delete,
+            predicate=lambda inv: inv.guild.id == self._apiobject.id
+        )
+
+
         invites = await self._get_invites()
         invites = {invite.id: invite.uses for invite in invites}
         counts = self.join_count
@@ -634,8 +649,7 @@ class GUILD(BaseGUILD):
             await self.initialize(self.parent)
             raise
 
-    @async_util.with_semaphore("update_semaphore")
-    async def _on_member_join(self, member: discord.Member):
+    async def _on_member_join(self, member: discord.Member):        
         counts = self.join_count
         invites = await self._get_invites()
         invites = {invite.id: invite.uses for invite in invites}
@@ -648,7 +662,6 @@ class GUILD(BaseGUILD):
                 await logging.save_log(self.generate_log_context(), None, None, invite_ctx)
                 return
 
-    @async_util.with_semaphore("update_semaphore")
     async def _on_invite_delete(self, invite: discord.Invite):
         if invite.id in self.join_count:
             del self.join_count[invite.id]
@@ -657,7 +670,23 @@ class GUILD(BaseGUILD):
                 TraceLEVELS.DEBUG
             )
 
+    # Safety wrappers to make sure the event gets emitted through the event loop for safety
+    async def _discord_on_member_join(self, member: discord.Member):
+        self._event_ctrl.emit(EventID.discord_member_join, member)
 
+    async def _discord_on_invite_delete(self, invite: discord.Invite):
+        self._event_ctrl.emit(EventID.discord_invite_delete, invite)
+
+    def _close(self):
+        client: discord.Client = self.parent.client
+        # Removing these listeners doesn't require a mutex as it does not interfere
+        # with any advertisement methods. These are only for processing
+        # events on the PyCord API wrapper level.
+        client.remove_listener(self._discord_on_member_join, "on_member_join")
+        client.remove_listener(self._discord_on_invite_delete, "on_invite_delete")
+        self._event_ctrl.remove_listener(EventID.discord_member_join, self._on_member_join)
+        self._event_ctrl.remove_listener(EventID.discord_invite_delete, self._on_invite_delete)
+        return super()._close()
 
 @instance_track.track_id
 @doc.doc_category("Guilds", path="guild")
