@@ -621,32 +621,17 @@ class GUILD(BaseGUILD):
             if "invite_track" not in kwargs:
                 kwargs["invite_track"] = list(self.join_count.keys())
 
-            messages = kwargs.pop("messages", self.messages + self._messages_uninitialized)
-
+            kwargs["messages"] = kwargs.pop("messages", self.messages + self._messages_uninitialized)
             if init_options is None:
                 init_options = {"parent": self.parent, "event_ctrl": self._event_ctrl}
 
             await async_util.update_obj_param(self, init_options=init_options, **kwargs)
-
-            _messages = []
-            message: BaseChannelMessage
-            for message in messages:
-                try:
-                    await message._on_update(
-                        message,
-                        {
-                            "parent": self,
-                            "event_ctrl": self._event_ctrl,
-                            "channel_getter": self._get_guild_channels
-                        }
-                    )
-                    _messages.append(message)
-                except Exception as exc:
-                    trace(f"Could not update {message} after updating {self} - Skipping message.", TraceLEVELS.ERROR, exc)
-
-            self._messages = _messages
         except Exception:
-            await self.initialize(self.parent)
+            _messages_to_init = self.messages
+            await self.initialize(self.parent, self._event_ctrl)
+            for message in _messages_to_init:
+                await message.initialize(self._event_ctrl)
+
             raise
 
     async def _on_member_join(self, member: discord.Member):        
@@ -819,22 +804,16 @@ class USER(BaseGUILD):
             if "snowflake" not in kwargs:
                 kwargs["snowflake"] = self.snowflake
 
-            messages: List[BaseMESSAGE] = kwargs.pop("messages", self.messages + self._messages_uninitialized)
+            kwargs["messages"] = kwargs.pop("messages", self.messages + self._messages_uninitialized)
 
             if init_options is None:
                 init_options = {"parent": self.parent, "event_ctrl": self._event_ctrl}
 
             await async_util.update_obj_param(self, init_options=init_options, **kwargs)
-
-            _messages = []
-            for message in messages:
-                try:
-                    await message._on_update(message, {"parent": self, "event_ctrl": self._event_ctrl})
-                    _messages.append(message)
-                except Exception as exc:
-                    trace(f"Could not update {message} after updating {self} - Skipping message.", TraceLEVELS.ERROR, exc)
-
-            self._messages = _messages
-        except Exception as exc:
-            await self.initialize(self.parent)
+        except Exception:
+            _messages_to_init = self.messages
+            await self.initialize(self.parent, self._event_ctrl)
+            for message in _messages_to_init:
+                await message.initialize(self._event_ctrl)
+    
             raise

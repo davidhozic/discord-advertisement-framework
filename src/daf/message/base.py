@@ -453,6 +453,7 @@ class AutoCHANNEL:
         "parent",
         "removed_channels",
         "channel_getter",
+        "_cache"
     )
 
     def __init__(
@@ -466,26 +467,32 @@ class AutoCHANNEL:
         self.parent = None
         self.channel_getter: Callable = None
         self.removed_channels: Set[int] = set()
+        self._cache = []
 
     def __iter__(self):
         "Returns the channel iterator."
-        return iter(self.channels)
+        return iter(self._get_channels())
 
     def __len__(self):
         "Returns number of channels found."
-        return len(list(self.channels))
+        return len(self._cache)
 
     def __bool__(self) -> bool:
         "Prevents removal of xMESSAGE by always returning True"
         return True
 
     @property
-    def channels(self) -> List[ChannelType]:
+    def channels(self) ->  List[ChannelType]:
+        "Return a list of found channels"
+        return self._cache[:]
+
+    def _get_channels(self) -> List[ChannelType]:
         """
         Property that returns a list of :class:`discord.TextChannel` or :class:`discord.VoiceChannel`
         (depends on the xMESSAGE type this is in) objects in cache.
         """
         channel: ChannelType
+        _found = []
         for channel in self.channel_getter():
             if channel.id not in self.removed_channels:
                 if (member := channel.guild.get_member(channel._state.user.id)) is None:  # Invalid intents?
@@ -498,7 +505,10 @@ class AutoCHANNEL:
                     re.search(self.include_pattern, name) is not None and
                     (self.exclude_pattern is None or re.search(self.exclude_pattern, name) is None)
                 ):
-                    yield channel
+                    _found.append(channel)
+
+        self._cache = _found
+        return _found
 
     async def initialize(self, parent, channel_getter: Callable):
         """

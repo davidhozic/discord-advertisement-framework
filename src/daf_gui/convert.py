@@ -16,6 +16,8 @@ import datetime as dt
 import _discord as discord
 import daf
 
+from daf.logging.tracing import trace, TraceLEVELS
+
 
 __all__ = (
     "ObjectInfo",
@@ -357,9 +359,18 @@ def convert_to_object_info(object_: object, save_original = False):
                 property_map = {}
                 prop: property
                 for name, prop in getmembers(type(object_), lambda x: isinstance(x, property)):
-                    with suppress(AttributeError):
+                    if name.startswith("_"):  # Don't obtain private properties
+                        continue
+
+                    try:
                         return_annotation = get_type_hints(prop.fget).get("return")
                         property_map[name] = (convert_to_object_info(prop.fget(object_), True), return_annotation)
+                    except Exception as exc:
+                        trace(
+                            f"Unable to get property {name} in {object_} when converting to ObjectInfo",
+                            TraceLEVELS.ERROR,
+                            exc
+                        )
 
                 ret.property_map = property_map
 

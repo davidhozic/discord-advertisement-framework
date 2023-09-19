@@ -75,13 +75,13 @@ class AutoGUILD:
         "auto_join",
         "guild_query_iter",
         "guild_join_count",
-        "invite_track",
         "_messages",
         "_removed_messages",
         "removal_buffer_length",
         "_removal_timer_handle",
         "_guild_join_timer_handle",
         "_invite_join_count",
+        "_cache",
         "_event_ctrl",
     )
 
@@ -114,6 +114,7 @@ class AutoGUILD:
         self.removal_buffer_length = removal_buffer_length
         self._removal_timer_handle: asyncio.Task = None
         self._guild_join_timer_handle: asyncio.Task = None
+        self._cache = []
         self._event_ctrl: EventController = None
 
         if invite_track is None:
@@ -143,12 +144,17 @@ class AutoGUILD:
 
     @property
     def guilds(self) -> List[discord.Guild]:
+        return self._cache
+
+    def _get_guilds(self):
         "Returns all the guilds that match the include_pattern and not exclude_pattern"
         client: discord.Client = self.parent.client
-        return [
+        guilds = [
             g for g in client.guilds
             if self._check_name_match(g.name)
         ]
+        self._cache = guilds
+        return guilds
 
     # API
     @typechecked
@@ -352,7 +358,7 @@ class AutoGUILD:
     async def _get_invites(self) -> List[discord.Invite]:
         client: discord.Client = self.parent.client
         invites = []
-        for guild in self.guilds:
+        for guild in self._get_guilds():
             try:
                 perms = guild.get_member(client.user.id).guild_permissions
                 if perms.manage_guild:
@@ -374,7 +380,7 @@ class AutoGUILD:
         author_ctx = self.parent.generate_log_context()
         message_context = await message._send()
         if message_context and self.logging:
-            for guild in self.guilds:
+            for guild in self._get_guilds():
                 guild_ctx = self._generate_guild_log_context(guild)
                 message_guild_ctx = self._filter_message_context(guild, message_context)
                 if message_guild_ctx:
@@ -383,7 +389,7 @@ class AutoGUILD:
         message._reset_timer()
 
     def _get_channels(self, *types):
-        for guild in self.guilds:
+        for guild in self._get_guilds():
             for channel in guild.channels:
                 if isinstance(channel, types):
                     yield channel
@@ -418,7 +424,11 @@ class AutoGUILD:
 
             await async_util.update_obj_param(self, init_options=init_options, **kwargs)
         except Exception:
-            await self.initialize(self.parent, event_ctrl=self._event_ctrl)
+            _messages_to_init = self.messages
+            await self.initialize(self.parent, self._event_ctrl)
+            for message in _messages_to_init:
+                await message.initialize(self._event_ctrl)
+
             raise
     
     @async_util.with_semaphore("update_semaphore")

@@ -67,7 +67,8 @@ CONVERSION_ATTRS = {
             "parent": None,
             "guild_query_iter": None,
             "_event_ctrl": None,
-            "_removal_timer_handle": None
+            "_removal_timer_handle": None,
+            "_guild_join_timer_handle": None
         },
     },
     message.AutoCHANNEL: {

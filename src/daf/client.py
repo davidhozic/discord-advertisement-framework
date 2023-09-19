@@ -499,30 +499,15 @@ class ACCOUNT:
                 kwargs["intents"] = None
 
         kwargs["servers"] = kwargs.pop("servers", self.servers + self._uiservers)
-
-        async def update_servers():
-            _servers = []
-            _autoguilds = []
-            for server in self.servers:
-                try:
-                    await server._on_update(server, init_options={"parent": self, "event_ctrl": self._event_ctrl})
-                    if isinstance(server, guild.BaseGUILD):
-                        _servers.append(server)
-                    else:
-                        _autoguilds.append(server)
-                except Exception as exc:
-                    trace(f"Could not update {server} after updating {self} - Skipping server.", TraceLEVELS.ERROR, exc)
-
-            self._servers = _servers
-            self._autoguilds = _autoguilds
-
         try:
             await async_util.update_obj_param(self, **kwargs)
-            await update_servers()
         except Exception:
             try:
+                _servers_to_init = self.servers
                 await self.initialize()  # re-login
-                await update_servers()
+                for server in _servers_to_init:
+                    await server.initialize(self, self._event_ctrl)
+
             except Exception:
                 await self._close()
 

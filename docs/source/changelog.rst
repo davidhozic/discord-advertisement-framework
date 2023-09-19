@@ -37,13 +37,12 @@ Glossary
 Releases
 ---------------------
 
-v2.11.0
+v3.0.0
 ====================
 - SQL analytics:
   
   - Counts now have better error reporting when an invalid value was passed.
 
-- New events system and module :ref:`Event reference`
 - GUI:
 
   - Higher refresh rate due to threading redesign - instead of calling Tkinter's root.update inside an asyncio task,
@@ -51,9 +50,11 @@ v2.11.0
   - The GUI will not block the asyncio tasks (explained in previous bullet).
   - When saving a new object definition, if the type of a parameter is literal, the value will be pre-checked inside
     the GUI and an exception will be raised if a valid value is not given.
+  - Properties that start with ``_`` will no longer be displayed when viewing live structured objects.
 
 - Core:
-  
+
+  - New events system and module :ref:`Event reference`  
   - Updated PyCord API wrapper to 2.5.0 RC5
   - New property :py:attr:`daf.client.ACCOUNT.removed_servers` for tracking removed servers.
   - New property :py:attr:`daf.guild.GUILD.removed_messages` :py:attr:`daf.guild.USER.removed_messages`
@@ -63,6 +64,10 @@ v2.11.0
   - New parameter ``removal_buffer_length`` to :class:`daf.guild.GUILD` and :class:`daf.guild.USER`
     for setting maximum amount of messages to keep in the :py:attr:`daf.guild.GUILD.removed_messages`
     / :py:attr:`daf.guild.USER.removed_messages` buffer.
+
+  - Event loop based API - All API methods that get called now submit an event in the event loop, which causes
+    the API call to happen asynchronously unless awaited with ``await`` keyword. This also makes DAF
+    much more efficient.
 
 
 v2.10.4
