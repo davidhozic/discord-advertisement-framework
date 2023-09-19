@@ -272,14 +272,14 @@ class AutoGUILD:
 
         event_ctrl.add_listener(EventID.message_ready, self._advertise, lambda server, m: server is self)
         event_ctrl.add_listener(EventID.message_added, self._on_add_message, lambda server, m: server is self)
-        event_ctrl.add_listener(EventID.server_update, self._on_update, lambda server, m: server is self)
+        event_ctrl.add_listener(EventID.server_update, self._on_update, lambda server, *args, **kwargs: server is self)
         event_ctrl.add_listener(EventID.message_removed, self._on_remove_message, lambda server, m: server is self)
 
     def _generate_guild_log_context(self, guild: discord.Guild):
         return {
                 "name": guild.name,
                 "id": guild.id,
-                "type": GUILD
+                "type": "GUILD"
         }
 
     def _filter_message_context(self, guild: discord.Guild, message_ctx: dict) -> Dict:
@@ -313,15 +313,14 @@ class AutoGUILD:
 
         message._reset_timer()
 
+    def _get_channels(self, *types):
+        for guild in self.guilds:
+            for channel in guild.channels:
+                if isinstance(channel, types):
+                    yield channel
+
     async def _on_add_message(self, _, message: BaseMESSAGE):
-        def get_channels(*types):
-            for guild in self.guilds:
-                for channel in guild.channels:
-                    if isinstance(channel, types):
-                        yield channel
-
-
-        await message.initialize(parent=self, event_ctrl=self._event_ctrl, channel_getter=get_channels)
+        await message.initialize(parent=self, event_ctrl=self._event_ctrl, channel_getter=self._get_channels)
         self._messages.append(message)
         with suppress(ValueError):  # Readd the removed message
             self._removed_messages.remove(message)
@@ -341,42 +340,20 @@ class AutoGUILD:
         await self._close()
         try:
             # Update the guild
-            if "snowflake" not in kwargs:
-                kwargs["snowflake"] = self.snowflake
-
             if "invite_track" not in kwargs:
-                kwargs["invite_track"] = list(self.join_count.keys())
+                kwargs["invite_track"] = self.invite_track
 
-            messages = kwargs.pop("messages", self.messages + self._messages_uninitialized)
-
+            kwargs["messages"] = kwargs.pop("messages", self.messages + self._messages_uninitialized)
             if init_options is None:
                 init_options = {"parent": self.parent, "event_ctrl": self._event_ctrl}
 
             await async_util.update_obj_param(self, init_options=init_options, **kwargs)
-
-            _messages = []
-            message: BaseMESSAGE
-            for message in messages:
-                try:
-                    await message._on_update(
-                        message,
-                        {
-                            "parent": self,
-                            "event_ctrl": self._event_ctrl,
-                            "channel_getter": self._get_guild_channels
-                        }
-                    )
-                    _messages.append(message)
-                except Exception as exc:
-                    trace(f"Could not update {message} after updating {self} - Skipping message.", TraceLEVELS.ERROR, exc)
-
-            self._messages = _messages
         except Exception:
-            await self.initialize(self.parent)
+            await self.initialize(self.parent, event_ctrl=self._event_ctrl)
             raise
     
     @async_util.with_semaphore("update_semaphore")
-    async def _join_guilds(self):
+    async def _join_guilds(self, _):
         """
         Coroutine that joins new guilds thru the web layer.
         """

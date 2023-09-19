@@ -3,7 +3,6 @@ Module used to support listening and emitting events.
 It also contains the event loop definitions.
 """
 from contextlib import suppress
-from weakref import WeakSet
 from enum import Enum, auto
 from typing import Any, List, Dict, Callable, TypeVar, Coroutine, Set, Union
 
@@ -11,7 +10,6 @@ from .misc.doc import doc_category
 from .logging.tracing import TraceLEVELS, trace
 
 import asyncio
-import inspect
 
 
 T = TypeVar('T')
@@ -45,9 +43,9 @@ class EventID(Enum):
     server_removed = auto()
     server_added = auto()
     server_update = auto()
-    auto_guild_start_join = auto() 
-    
-    _g_stop_event_loop = auto()
+    auto_guild_start_join = auto()
+
+    _dummy = auto()  # For stopping the event loop
 
 
 class EventListener:
@@ -83,6 +81,16 @@ class EventController:
             # which will additionally receive any events emitted by the global controller.
             if self is not GLOBAL.g_controller:
                 GLOBAL.non_global_controllers.add(self)
+
+    def stop(self):
+        "Stops event loop asynchronously"
+        if self.running:
+            self.running = False
+            self.event_queue.put_nowait((EventID._dummy, tuple(), {}, asyncio.Future()))
+            if self is GLOBAL.g_controller:
+                return asyncio.gather(*[ctrl.stop() for ctrl in GLOBAL.non_global_controllers])
+
+        return self.loop_task
 
     def add_listener(self, event: EventID, fnc: Callable, predicate: Callable[[Any], bool] = None):
         """
@@ -180,7 +188,7 @@ class EventController:
         event_id: EventID
         future: asyncio.Future
 
-        while True:
+        while self.running:
             event_id, args, kwargs, future = await queue.get()
 
             for listener in listeners.get(event_id, [])[:]:
@@ -193,18 +201,14 @@ class EventController:
                     future.set_exception(exc)
 
             future.set_result(None)
-            if event_id is EventID._g_stop_event_loop:
-                break
 
-        self.running = False
+        GLOBAL.non_global_controllers.remove(self)
         self.clear_queue()
-        if self is not GLOBAL.g_controller:
-            GLOBAL.non_global_controllers.remove(self)
 
 
 class GLOBAL:
     g_controller = EventController()
-    non_global_controllers: Set["EventController"] = WeakSet()
+    non_global_controllers: Set["EventController"] = set()
 
 
 def initialize():

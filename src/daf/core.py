@@ -440,6 +440,7 @@ async def shutdown() -> None:
     trace("Shutting down...", TraceLEVELS.NORMAL)
     evt = get_global_event_ctrl()
     GLOBALS.running = False
+    await evt.emit(EventID.g_daf_shutdown)
     # Signal events for tasks to raise out of sleep
     GLOBALS.schema_backup_event.set()  # This also saves one last time, so manually saving is not needed
     # Close remote client
@@ -450,13 +451,11 @@ async def shutdown() -> None:
         await task
 
     GLOBALS.tasks.clear()
-    for account in GLOBALS.accounts:
-        await account._close()
+    await asyncio.gather(*[await account._close() for account in GLOBALS.accounts])
 
     GLOBALS.accounts.clear()
     evt.remove_listener(EventID.g_account_expired, cleanup_account)
-    await evt.emit(EventID.g_daf_shutdown)
-    await evt.emit(EventID._g_stop_event_loop)
+    await evt.stop()
     trace("Shutdown complete.", TraceLEVELS.NORMAL)
 
 

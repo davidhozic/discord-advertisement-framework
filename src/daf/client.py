@@ -423,7 +423,7 @@ class ACCOUNT:
         self._event_ctrl.start()
         for server in self._uiservers:
             try:
-                await self.add_server(server)
+                await self._on_add_server(server)
             except Exception as exc:
                 trace("Unable to add server.", TraceLEVELS.ERROR, exc)
 
@@ -560,8 +560,8 @@ class ACCOUNT:
             self._running = False
 
         self._event_ctrl.remove_listener(EventID.server_removed, self._on_remove_server)
-        self._event_ctrl.remove_listener(EventID.server_removed, self._on_add_server)
-        self._event_ctrl.remove_listener(EventID.server_removed, self._on_remove_server)
+        self._event_ctrl.remove_listener(EventID.server_added, self._on_add_server)
+        self._event_ctrl.remove_listener(EventID.server_update, self._on_remove_server)
 
         for guild_ in self.servers:
             await guild_._close()
@@ -572,4 +572,4 @@ class ACCOUNT:
 
         await self._client.close()
         await asyncio.gather(self._ws_task, return_exceptions=True)
-        self._event_ctrl.emit(EventID._g_stop_event_loop)
+        return self._event_ctrl.stop()
