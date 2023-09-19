@@ -86,8 +86,10 @@ async def channels(guilds):
     for channel in guild.channels:
         await channel.delete()
 
-    for i in range(10):
+    for i in range(TEST_TEXT_CHANNEL_NUM):
         t_channels.append(await guild.create_text_channel(f"testpy-{i}"))
+
+    for i in range(TEST_VOICE_CHANNEL_NUM):
         v_channels.append(await guild.create_voice_channel(f"testpy-{i}"))
 
     yield t_channels, v_channels

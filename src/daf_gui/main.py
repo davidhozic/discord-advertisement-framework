@@ -41,7 +41,6 @@ import ttkbootstrap.dialogs.dialogs as tkdiag
 import ttkbootstrap as ttk
 import ttkbootstrap.tableview as tktw
 
-import asyncio
 import json
 import sys
 import os

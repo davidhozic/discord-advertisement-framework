@@ -25,7 +25,8 @@ def get_value(obj, attr: str, extra_ignore: set=set()):
         "_sa_class_manager",
         "_sa_registry",
         "_created_at",
-        "_id"
+        "_id",
+        "_event_ctrl"
     }
 
     default_key = lambda x: x

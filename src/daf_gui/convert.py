@@ -16,6 +16,8 @@ import datetime as dt
 import _discord as discord
 import daf
 
+from daf.logging.tracing import trace, TraceLEVELS
+
 
 __all__ = (
     "ObjectInfo",
@@ -100,6 +102,7 @@ ADDITIONAL_ANNOTATIONS = {
 
 ADDITIONAL_ANNOTATIONS[discord.VoiceChannel] = ADDITIONAL_ANNOTATIONS[discord.TextChannel]
 ADDITIONAL_ANNOTATIONS[discord.Guild] = ADDITIONAL_ANNOTATIONS[discord.TextChannel]
+ADDITIONAL_ANNOTATIONS[discord.User] = ADDITIONAL_ANNOTATIONS[discord.Guild]
 
 if daf.logging.sql.SQL_INSTALLED:
     sql_ = daf.logging.sql.tables
@@ -156,6 +159,10 @@ CONVERSION_ATTR_TO_PARAM[daf.GUILD]["invite_track"] = (
     lambda guild_: list(guild_.join_count.keys())
 )
 
+CONVERSION_ATTR_TO_PARAM[daf.AutoGUILD] = {k: k for k in daf.AutoGUILD.__init__.__annotations__}
+CONVERSION_ATTR_TO_PARAM[daf.AutoGUILD]["invite_track"] = (
+    lambda guild_: list(guild_._invite_join_count.keys())
+)
 
 # Map whhich's values is a tuple that tells which fields are passwords.
 # These fields will be replaced with a '*' when viewed in object form.
@@ -352,9 +359,18 @@ def convert_to_object_info(object_: object, save_original = False):
                 property_map = {}
                 prop: property
                 for name, prop in getmembers(type(object_), lambda x: isinstance(x, property)):
-                    with suppress(AttributeError):
+                    if name.startswith("_"):  # Don't obtain private properties
+                        continue
+
+                    try:
                         return_annotation = get_type_hints(prop.fget).get("return")
                         property_map[name] = (convert_to_object_info(prop.fget(object_), True), return_annotation)
+                    except Exception as exc:
+                        trace(
+                            f"Unable to get property {name} in {object_} when converting to ObjectInfo",
+                            TraceLEVELS.ERROR,
+                            exc
+                        )
 
                 ret.property_map = property_map
 

@@ -2,13 +2,14 @@
     Contains definitions related to voice messaging."""
 
 
-from typing import Any, Dict, List, Iterable, Optional, Union, Tuple
+from typing import Any, Dict, List, Iterable, Optional, Union, Tuple, Callable
 from pathlib import Path
 from datetime import timedelta, datetime
 from typeguard import typechecked
 
 from .base import *
 from ..dtypes import *
+from ..events import *
 from ..logging.tracing import *
 from ..logging import sql
 from ..misc import doc, instance_track
@@ -269,7 +270,7 @@ class VoiceMESSAGE(BaseChannelMessage):
 
         return handled, action
 
-    def initialize(self, parent: Any):
+    def initialize(self, parent: Any, event_ctrl: EventController, channel_getter: Callable):
         """
         This method initializes the implementation specific API objects
         and checks for the correct channel input context.
@@ -288,7 +289,7 @@ class VoiceMESSAGE(BaseChannelMessage):
         ValueError
             No valid channels were passed to object"
         """
-        return super().initialize(parent, {discord.VoiceChannel}, lambda: parent.apiobject.voice_channels)
+        return super().initialize(parent, event_ctrl, {discord.VoiceChannel}, channel_getter)
 
     async def _send_channel(self,
                             channel: discord.VoiceChannel,

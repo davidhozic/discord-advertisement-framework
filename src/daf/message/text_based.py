@@ -1,7 +1,7 @@
 """
 Contains definitions for message classes that are text based."""
 
-from typing import Any, Dict, List, Iterable, Optional, Union, Literal, Tuple
+from typing import Any, Dict, List, Iterable, Optional, Union, Literal, Tuple, Callable
 from datetime import datetime, timedelta
 from typeguard import typechecked
 
@@ -11,6 +11,7 @@ from ..logging.tracing import trace, TraceLEVELS
 
 from ..logging import sql
 from ..misc import doc, instance_track, async_util
+from ..events import *
 
 import asyncio
 import _discord as discord
@@ -286,7 +287,7 @@ class TextMESSAGE(BaseChannelMessage):
                     _data_to_send["files"].append(element)
         return _data_to_send
 
-    async def initialize(self, parent: Any):
+    async def initialize(self, parent: Any, event_ctrl: EventController, channel_getter: Callable):
         """
         This method initializes the implementation specific API objects and
         checks for the correct channel input context.
@@ -305,11 +306,20 @@ class TextMESSAGE(BaseChannelMessage):
         ValueError
             No valid channels were passed to object"
         """
-        await super().initialize(parent, {discord.TextChannel, discord.Thread}, lambda: parent.apiobject.text_channels)
+        await super().initialize(
+            parent,
+            event_ctrl,
+            {discord.TextChannel, discord.Thread},
+            channel_getter
+        )
         # Increase period to slow mode delay if it is lower
         self._check_period()
 
-    async def _handle_error(self, channel: Union[discord.TextChannel, discord.Thread], ex: Exception) -> Tuple[bool, ChannelErrorAction]:
+    async def _handle_error(
+        self,
+        channel: Union[discord.TextChannel, discord.Thread],
+        ex: Exception
+    ) -> Tuple[bool, ChannelErrorAction]:
         """
         This method handles the error that occurred during the execution of the function.
 
@@ -363,13 +373,8 @@ class TextMESSAGE(BaseChannelMessage):
 
         return handled, action
 
-    def _reset_timer(self) -> None:
-        """
-        Resets internal timer, adjusts if the slowmode is lesser.
-        """
-        # Reset the timer
-        super()._reset_timer()
-        # Correct for slowmode
+    def _calc_next_time(self):
+        super()._calc_next_time()
         slowmode_delay = self._slowmode
         current_time = datetime.now()
         if self.next_send_time - current_time < slowmode_delay:
@@ -564,7 +569,7 @@ class DirectMESSAGE(BaseMESSAGE):
                  remove_after: Optional[Union[int, timedelta, datetime]] = None):
         super().__init__(start_period, end_period, data, start_in, remove_after)
         self.mode = mode
-        self.dm_channel: discord.DMChannel = None
+        self.dm_channel: discord.User = None
         self.previous_message: discord.Message = None
 
         # Use a different attribute, to prevent inconsistensy with TextMESSAGE and VoiceMESSAGE.
@@ -679,7 +684,7 @@ class DirectMESSAGE(BaseMESSAGE):
                     _data_to_send["files"].append(element)
         return _data_to_send
 
-    async def initialize(self, parent: Any):
+    async def initialize(self, parent: Any, event_ctrl: EventController, guild: discord.User):
         """
         The method creates a direct message channel and
         returns True on success or False on failure
@@ -702,12 +707,11 @@ class DirectMESSAGE(BaseMESSAGE):
                 return
 
             self.parent = parent
-            self._deleted = False
-            user = parent.apiobject
-            await user.create_dm()
-            self.dm_channel = user
+            await guild.create_dm()
+            self.dm_channel = guild
+            await super().initialize(event_ctrl)
         except discord.HTTPException as ex:
-            raise ValueError(f"Unable to create DM with user {user.display_name}\nReason: {ex}")
+            raise ValueError(f"Unable to create DM with user {guild.display_name}\nReason: {ex}")
 
     async def _handle_error(self, ex: Exception) -> bool:
         """
@@ -775,58 +779,32 @@ class DirectMESSAGE(BaseMESSAGE):
                     return {"success": False, "reason": ex}
 
     @async_util.with_semaphore("update_semaphore")
-    async def _send(self) -> MessageSendResult:
+    async def _send(self) -> Union[dict, None]:
         """
         Sends the data into the channels
-
-        Returns
-        ----------
-        MessageSendResult
-            The result of message send.
         """
         # Parse data from the data parameter
         data_to_send = await self._get_data()
         if any(data_to_send.values()):
             channel_ctx = await self._send_channel(**data_to_send)
             self._update_state()
-            message_ctx = self.generate_log_context(channel_ctx, **data_to_send)
             if channel_ctx["success"] is False:
                 reason = channel_ctx["reason"]
                 if isinstance(reason, discord.HTTPException):
                     if reason.status in {400, 403}:  # Bad request, forbidden
-                        return MessageSendResult(message_ctx, MSG_SEND_STATUS_ERROR_REMOVE_GUILD)
+                        self._event_ctrl.emit(EventID.server_removed, self.parent)
                     elif reason.status == 401:  # Unauthorized (invalid token)
-                        return MessageSendResult(message_ctx, MSG_SEND_STATUS_ERROR_REMOVE_ACCOUNT)
+                        self._event_ctrl.emit(EventID.g_account_expired, self.parent.parent)
 
-            return MessageSendResult(message_ctx, MSG_SEND_STATUS_SUCCESS)
+            return self.generate_log_context(channel_ctx, **data_to_send)
 
-        return MessageSendResult(None, MSG_SEND_STATUS_NO_MESSAGE_SENT)
+        return None
 
-    @typechecked
-    @async_util.with_semaphore("update_semaphore")
-    async def update(self, _init_options: Optional[dict] = None, **kwargs):
-        """
-        .. versionadded:: v2.0
+    def update(self, _init_options: Optional[dict] = None, **kwargs) -> asyncio.Future:
+        return self._event_ctrl.emit(EventID.message_update, self, _init_options, **kwargs)
 
-        Used for changing the initialization parameters the object was initialized with.
-
-        .. warning::
-            Upon updating, the internal state of objects get's reset,
-            meaning you basically have a brand new created object.
-
-        Parameters
-        -------------
-        kwargs: Any
-            Custom number of keyword parameters which you want to update,
-            these can be anything that is available during the object creation.
-
-        Raises
-        -----------
-        TypeError
-            Invalid keyword argument was passed
-        Other
-            Raised from .initialize() method
-        """
+    async def _on_update(self, _, _init_options: Optional[dict], **kwargs):
+        await self._close()
         if "start_in" not in kwargs:
             # This parameter does not appear as attribute, manual setting necessary
             kwargs["start_in"] = self.next_send_time
@@ -835,6 +813,6 @@ class DirectMESSAGE(BaseMESSAGE):
             kwargs["data"] = self._data
 
         if _init_options is None:
-            _init_options = {"parent": self.parent}
+            _init_options = {"parent": self.parent, "guild": self.dm_channel, "event_ctrl": self._event_ctrl}
 
         await async_util.update_obj_param(self, init_options=_init_options, **kwargs)

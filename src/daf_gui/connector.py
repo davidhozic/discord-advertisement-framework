@@ -2,7 +2,7 @@
 Module contains definitions related to different connection
 clients.
 """
-from typing import List, Optional, Literal
+from typing import List, Optional, Literal, Awaitable
 
 from daf.logging.tracing import TraceLEVELS, trace
 from daf.misc import instance_track as it
@@ -159,7 +159,7 @@ class LocalConnectionCLIENT(AbstractConnectionCLIENT):
 
     async def execute_method(self, object_ref: it.ObjectReference, method_name: str, **kwargs):
         result = getattr(it.get_by_id(object_ref.ref), method_name)(**self._convert_ids(kwargs))
-        if isinstance(result, Coroutine):
+        if isinstance(result, Awaitable):
             result = await result
 
         return result

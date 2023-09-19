@@ -6,9 +6,12 @@ works as expected.
 from datetime import timedelta
 from typing import List
 
+from daf.events import *
+
 import os
 import daf
 import asyncio
+import pytest
 
 
 async def test_autoguild(guilds, accounts: List[daf.ACCOUNT]):
@@ -25,12 +28,12 @@ async def test_autoguild(guilds, accounts: List[daf.ACCOUNT]):
     )
     await account.add_server(auto_guild)
     await asyncio.sleep(1)
-    found = [x.apiobject for x in auto_guild.guilds]
+    found = auto_guild.guilds
     print('Found Guilds ', found)
     print('All Guilds ', account.client.guilds)
     assert guild_include in found, "AutoGUILD failed to find guild that matches the name."
     assert guild_exclude not in found, "AutoGUILD included the guild that matches exclude pattern."
-    account.remove_server(auto_guild)
+    await account.remove_server(auto_guild)
 
 
 async def test_autochannel(guilds, channels, accounts):
@@ -38,7 +41,7 @@ async def test_autochannel(guilds, channels, accounts):
     Tests if AutoCHANNEL functions properly.
     """
     daf_guild = None
-    account = accounts[0]
+    account: daf.ACCOUNT = accounts[0]
     try:
         guild: daf.discord.Guild
         guild, _ = guilds
@@ -51,22 +54,24 @@ async def test_autochannel(guilds, channels, accounts):
         daf_guild = daf.GUILD(
             guild,
             messages=[
-                tm := daf.TextMESSAGE(None, timedelta(seconds=1), "Hello World", auto_channel),
-                vc := daf.VoiceMESSAGE(None, timedelta(seconds=1), daf.AUDIO("testing123.mp3"), auto_channel2)
+                tm := daf.TextMESSAGE(None, timedelta(seconds=20), "Hello World", auto_channel),
+                vc := daf.VoiceMESSAGE(None, timedelta(seconds=20), daf.AUDIO("testing123.mp3"), auto_channel2)
             ]
         )
+
         os.chdir(cwd)
         await daf.add_object(daf_guild, account)
+
         sort_key = lambda x: x.name
-        auto_channel._process()
-        auto_channel2._process()
+        auto_channel._get_channels()
+        auto_channel2._get_channels()
         assert sorted(text_channels[:5], key=sort_key) == sorted(auto_channel.channels, key=sort_key), "Correct behavior would be for AutoCHANNEL to only find first 5 text channels"
         assert sorted(voice_channels[:5], key=sort_key) == sorted(auto_channel2.channels, key=sort_key), "Correct behavior would be for AutoCHANNEL to only find first 5 voice channels"
 
         await auto_channel.update(exclude_pattern=None)
         await auto_channel2.update(exclude_pattern=None)
-        auto_channel._process()
-        auto_channel2._process()
+        auto_channel._get_channels()
+        auto_channel2._get_channels()
         assert sorted(text_channels, key=sort_key) == sorted(auto_channel.channels, key=sort_key), "Correct behavior would be for AutoCHANNEL to find all text channels"
         assert sorted(voice_channels, key=sort_key) == sorted(auto_channel2.channels, key=sort_key), "Correct behavior would be for AutoCHANNEL to find all voice channels"
 
@@ -77,5 +82,4 @@ async def test_autochannel(guilds, channels, accounts):
         await auto_channel.update()
         await auto_channel2.update()
     finally:
-        if daf_guild is not None:
-            await daf.remove_object(daf_guild)
+        await account.remove_server(daf_guild)
