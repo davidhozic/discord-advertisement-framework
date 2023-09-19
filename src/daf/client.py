@@ -526,7 +526,7 @@ class ACCOUNT:
             _autoguilds = []
             for server in self.servers:
                 try:
-                    await server.update(init_options={"parent": self, "event_ctrl": self._event_ctrl})
+                    await server._on_update(server, init_options={"parent": self, "event_ctrl": self._event_ctrl})
                     if isinstance(server, guild.BaseGUILD):
                         _servers.append(server)
                     else:

@@ -338,16 +338,41 @@ class AutoGUILD:
         await message._close()
 
     async def _on_update(self, _, init_options, **kwargs):
-        if init_options is None:
-            init_options = {"parent": self.parent, "event_ctrl": self._event_ctrl}
-
         await self._close()
         try:
-            return await async_util.update_obj_param(self, init_options=init_options, **kwargs)
-        except Exception:        
-            if self.parent is not None:  # Only if it were previously initialized
-                await self.initialize(self.parent)  # Reopen any async related connections
+            # Update the guild
+            if "snowflake" not in kwargs:
+                kwargs["snowflake"] = self.snowflake
 
+            if "invite_track" not in kwargs:
+                kwargs["invite_track"] = list(self.join_count.keys())
+
+            messages = kwargs.pop("messages", self.messages + self._messages_uninitialized)
+
+            if init_options is None:
+                init_options = {"parent": self.parent, "event_ctrl": self._event_ctrl}
+
+            await async_util.update_obj_param(self, init_options=init_options, **kwargs)
+
+            _messages = []
+            message: BaseMESSAGE
+            for message in messages:
+                try:
+                    await message._on_update(
+                        message,
+                        {
+                            "parent": self,
+                            "event_ctrl": self._event_ctrl,
+                            "channel_getter": self._get_guild_channels
+                        }
+                    )
+                    _messages.append(message)
+                except Exception as exc:
+                    trace(f"Could not update {message} after updating {self} - Skipping message.", TraceLEVELS.ERROR, exc)
+
+            self._messages = _messages
+        except Exception:
+            await self.initialize(self.parent)
             raise
     
     @async_util.with_semaphore("update_semaphore")
