@@ -482,7 +482,7 @@ class AutoCHANNEL:
         return True
 
     @property
-    def channels(self) ->  List[ChannelType]:
+    def channels(self) -> List[ChannelType]:
         "Return a list of found channels"
         return self._cache[:]
 
