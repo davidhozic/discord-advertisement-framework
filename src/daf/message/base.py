@@ -206,6 +206,42 @@ class BaseMESSAGE:
         "Returns the datetime of when the object was created"
         return self._created_at
 
+    async def update(self, _init_options: dict = {}, **kwargs):
+        """
+        .. versionadded:: v2.0
+
+        .. versionchanged:: v3.0
+            Turned into async api.
+
+        |ASYNC_API|
+
+        Used for changing the initialization parameters the object was initialized with.
+
+        .. warning::
+            Upon updating, the internal state of objects get's reset,
+            meaning you basically have a brand new created object.
+
+        Parameters
+        -------------
+        **kwargs: Any
+            Custom number of keyword parameters which you want to update,
+            these can be anything that is available during the object creation.
+
+        Returns
+        --------
+        Awaitable
+            An awaitable object which can be used to await for execution to finish.
+            To wait for the execution to finish, use ``await`` like so: ``await method_name()``.
+
+        Raises
+        -----------
+        TypeError
+            Invalid keyword argument was passed
+        Other
+            Raised from .initialize() method.
+        """
+        raise NotImplementedError
+
     def _check_state(self) -> bool:
         """
         Checks if the message is ready to be deleted.
@@ -317,15 +353,6 @@ class BaseMESSAGE:
             EventID.message_ready, self.parent, self
         )
 
-    @async_util.with_semaphore("update_semaphore")
-    async def _close(self):
-        """
-        Closes the timer handles.
-        """
-        if self._timer_handle is not None and not self._timer_handle.cancelled():
-            self._timer_handle.cancel()
-            await asyncio.gather(self._timer_handle, return_exceptions=True)
-
     async def _send_channel(self) -> dict:
         """
         Sends data to a specific channel, this is separate from send
@@ -353,33 +380,25 @@ class BaseMESSAGE:
             EventID.message_ready, self.parent, self
         )
 
-    async def update(self, _init_options: dict = {}, **kwargs):
-        """
-        Used for changing the initialization parameters the object was initialized with.
+        event_ctrl.add_listener(
+            EventID.message_update,
+            self._on_update,
+            lambda message, *args, **kwargs: message is self
+        )
 
-        .. warning::
-            Upon updating, the internal state of objects get's reset,
-            meaning you basically have a brand new created object.
-
-        Parameters
-        -------------
-        init_options: dict
-            Contains the initialization options used in .initialize() method for re-initializing certain objects.
-            This is implementation specific and not necessarily available.
-        original_params:
-            The allowed parameters are the initialization parameters first used on creation of the object AND
-
-        Raises
-        ------------
-        TypeError
-            Invalid keyword argument was passed
-        Other
-            Raised from .initialize() method
-
-        .. versionadded::
-            v2.0
-        """
+    async def _on_update(self, _, _init_options: Optional[dict], **kwargs):
         raise NotImplementedError
+    
+    @async_util.with_semaphore("update_semaphore")
+    async def _close(self):
+        """
+        Closes the timer handles.
+        """
+        if self._timer_handle is not None and not self._timer_handle.cancelled():
+            self._timer_handle.cancel()
+            await asyncio.gather(self._timer_handle, return_exceptions=True)
+
+        self._event_ctrl.remove_listener(EventID.message_update, self._on_update)
 
 
 @instance_track.track_id
@@ -584,6 +603,10 @@ class BaseChannelMessage(BaseMESSAGE):
         """
         return {self.parent.parent.client.get_channel(k): v for k, v in self.remove_after_by_channel.items()} or super().remaining_before_removal
 
+    @typechecked
+    def update(self, _init_options: Optional[dict] = None, **kwargs: Any) -> asyncio.Future:
+        return self._event_ctrl.emit(EventID.message_update, self, _init_options, **kwargs)
+
     def _check_state(self) -> bool:
         return (
             super()._check_state() or
@@ -729,30 +752,7 @@ class BaseChannelMessage(BaseMESSAGE):
 
         return None
 
-    @typechecked
-    async def update(self, _init_options: Optional[dict] = None, **kwargs: Any):
-        """
-        .. versionadded:: v2.0
-
-        Used for changing the initialization parameters the object was initialized with.
-
-        .. warning::
-            Upon updating, the internal state of objects get's reset,
-            meaning you basically have a brand new created object.
-
-        Parameters
-        -------------
-        **kwargs: Any
-            Custom number of keyword parameters which you want to update,
-            these can be anything that is available during the object creation.
-
-        Raises
-        -----------
-        TypeError
-            Invalid keyword argument was passed
-        Other
-            Raised from .initialize() method.
-        """
+    async def _on_update(self, _, _init_options: Optional[dict], **kwargs):
         await self._close()
         if "start_in" not in kwargs:
             # This parameter does not appear as attribute, manual setting necessary

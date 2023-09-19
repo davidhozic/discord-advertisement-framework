@@ -800,30 +800,10 @@ class DirectMESSAGE(BaseMESSAGE):
 
         return None
 
-    @typechecked
-    async def update(self, _init_options: Optional[dict] = None, **kwargs):
-        """
-        .. versionadded:: v2.0
+    def update(self, _init_options: Optional[dict] = None, **kwargs) -> asyncio.Future:
+        return self._event_ctrl.emit(EventID.message_update, self, _init_options, **kwargs)
 
-        Used for changing the initialization parameters the object was initialized with.
-
-        .. warning::
-            Upon updating, the internal state of objects get's reset,
-            meaning you basically have a brand new created object.
-
-        Parameters
-        -------------
-        kwargs: Any
-            Custom number of keyword parameters which you want to update,
-            these can be anything that is available during the object creation.
-
-        Raises
-        -----------
-        TypeError
-            Invalid keyword argument was passed
-        Other
-            Raised from .initialize() method
-        """
+    async def _on_update(self, _, _init_options: Optional[dict], **kwargs):
         await self._close()
         if "start_in" not in kwargs:
             # This parameter does not appear as attribute, manual setting necessary

@@ -40,6 +40,7 @@ class EventID(Enum):
     message_ready = auto()
     message_removed = auto()
     message_added = auto()
+    message_update = auto()
 
     server_removed = auto()
     server_added = auto()
