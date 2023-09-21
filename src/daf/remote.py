@@ -251,12 +251,14 @@ async def http_ws_live_connect(request: Request):
 
     ws = WebSocketResponse()
     await ws.prepare(request)
-    
+
     evt = get_global_event_ctrl()
     evt.add_listener(EventID.g_trace, trace_event_publisher)
+    evt.add_listener(EventID.g_daf_shutdown, ws.close)
     async for message in ws:
         if message.type == WSMsgType.CLOSE:
             await ws.close()
 
     evt.remove_listener(EventID.g_trace, trace_event_publisher)
+    evt.remove_listener(EventID.g_daf_shutdown, ws.close)
     return ws

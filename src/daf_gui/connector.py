@@ -239,9 +239,10 @@ class RemoteConnectionCLIENT(AbstractConnectionCLIENT):
 
     async def _connect_ws(self):
         while self.connected:
-            trace("Connecting to live WebSocket connection.", TraceLEVELS.NORMAL)
+            trace("Connecting to live WebSocket connection.")
             try:
                 async with self.session.ws_connect("/subscribe") as ws:
+                    trace("Connected to WebSocket.")
                     async for message in ws:
                         if message.type == WSMsgType.TEXT:
                             resp = daf.convert_from_semi_dict(message.json())

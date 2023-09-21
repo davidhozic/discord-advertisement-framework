@@ -7,9 +7,9 @@ from enum import Enum, auto
 from typing import Any, List, Dict, Callable, TypeVar, Coroutine, Set, Union
 
 from .misc.doc import doc_category
-from .logging.tracing import TraceLEVELS, trace
 
 import asyncio
+import warnings
 
 
 T = TypeVar('T')
@@ -166,7 +166,6 @@ class EventController:
         if not self.running:
             return
 
-        trace(f"Emitting event {event}", TraceLEVELS.DEBUG)
         self.event_queue.put_nowait((event, args, kwargs, future := asyncio.Future()))
 
         # If self is the global controller, also emit the event to other controllers.
@@ -203,8 +202,9 @@ class EventController:
                     if listener.predicate is None or listener.predicate(*args, **kwargs):
                         if isinstance(r:= listener(*args, **kwargs), Coroutine):
                             await r
+
                 except Exception as exc:
-                    trace(f"Could not call event handler {listener} for event {event_id}.", TraceLEVELS.ERROR, exc)
+                    warnings.warn(f"Could not call event handler {listener} for event {event_id}.")
                     future.set_exception(exc)
 
             future.set_result(None)

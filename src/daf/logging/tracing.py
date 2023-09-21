@@ -9,7 +9,7 @@ from datetime import datetime
 from sys import _getframe
 
 from ..misc import doc
-
+from ..events import get_global_event_ctrl, EventID
 
 try:
     from enum_tools.documentation import document_enum
@@ -120,7 +120,6 @@ def trace(message: str,
         )
 
         with GLOBALS.lock:
-            from ..events import get_global_event_ctrl, EventID
             evt = get_global_event_ctrl()
             evt.emit(EventID.g_trace, level, message)
             print(TRACE_COLOR_MAP[level] + msg + "\033[0m")
