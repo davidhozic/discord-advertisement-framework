@@ -120,6 +120,9 @@ def trace(message: str,
         )
 
         with GLOBALS.lock:
+            from ..events import get_global_event_ctrl, EventID
+            evt = get_global_event_ctrl()
+            evt.emit(EventID.g_trace, level, message)
             print(TRACE_COLOR_MAP[level] + msg + "\033[0m")
 
 

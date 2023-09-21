@@ -8,12 +8,15 @@ from functools import update_wrapper
 from aiohttp import BasicAuth
 from aiohttp.web import (
     Request, RouteTableDef, Application, _run_app, json_response,
-    HTTPException, HTTPInternalServerError, HTTPUnauthorized
+    HTTPException, HTTPInternalServerError, HTTPUnauthorized, WebSocketResponse, WSMsgType
 )
 
+from .events import *
+from .logging.tracing import *
 from .misc import doc, instance_track as it
 from . import convert
 from . import logging
+
 
 import asyncio
 import ssl
@@ -71,13 +74,17 @@ def register(path: str, type: Literal["GET", "POST", "DELETE", "PATCH"]):
                 ):
                     raise HTTPUnauthorized(reason="Wrong username / password")
 
-                json_data = await request.json()
-                return await fnc(**json_data["parameters"])
+                if request.content_type == "application/json":
+                    json_data = await request.json()
+                    return await fnc(**json_data["parameters"])
+                
+                # In case the data is not JSON, just pass the original request object
+                return await fnc(request)
             except HTTPException:
                 raise  # Don't wrap already HTTP exceptions
 
             except Exception as exc:
-                raise HTTPInternalServerError(reason=str(exc))
+                raise HTTPInternalServerError(reason=str(exc)) from exc
 
         # For documentation purposes
         fnc.__doc__ = (fnc.__doc__ or "") + f'\n\n    :Route:\n        {path}\n\n    :Method:\n        {type}'
@@ -231,3 +238,25 @@ async def http_execute_method(object_id: int, method_name: str, **kwargs):
         raise HTTPInternalServerError(reason=f"Error executing method {method_name}. ({exc})")
 
     return create_json_response(f"Executed method {method_name}.", result=convert.convert_object_to_semi_dict(result))
+
+
+@register("/subscribe", "GET")
+async def http_ws_live_connect(request: Request):
+    async def trace_event_publisher(level: TraceLEVELS, message: str):
+        await ws.send_json(
+            convert.convert_object_to_semi_dict(
+                {"type": "trace", "data": {"level": level, "message": message}}     
+            )
+        )
+
+    ws = WebSocketResponse()
+    await ws.prepare(request)
+    
+    evt = get_global_event_ctrl()
+    evt.add_listener(EventID.g_trace, trace_event_publisher)
+    async for message in ws:
+        if message.type == WSMsgType.CLOSE:
+            await ws.close()
+
+    evt.remove_listener(EventID.g_trace, trace_event_publisher)
+    return ws

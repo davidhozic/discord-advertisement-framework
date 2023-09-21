@@ -10,7 +10,7 @@ from daf.misc import instance_track as it
 from .convert import *
 from .utilities import *
 
-from aiohttp import ClientSession, BasicAuth
+from aiohttp import ClientSession, BasicAuth, WSMsgType
 from aiohttp import web
 
 import daf
@@ -197,6 +197,7 @@ class RemoteConnectionCLIENT(AbstractConnectionCLIENT):
         verify_ssl: Optional[bool] = True
     ) -> None:
         self.session = None
+        self._ws_task: asyncio.Task = None
         self.connected = False
 
         self.host = host.rstrip('/')  # Remove any slashes in the back to prevent errors with port
@@ -229,16 +230,42 @@ class RemoteConnectionCLIENT(AbstractConnectionCLIENT):
             daf.tracing.initialize(kwargs.get("debug", TraceLEVELS.NORMAL))
             trace("Pinging server.")
             await self._ping()
-            GLOBALS.connection = self  # Set self as global connection
             self.connected = True
+            GLOBALS.connection = self  # Set self as global connection
+            self._ws_task = asyncio.create_task(self._connect_ws())
         except Exception:
             await self.session.close()
             raise
+
+    async def _connect_ws(self):
+        while self.connected:
+            trace("Connecting to live WebSocket connection.", TraceLEVELS.NORMAL)
+            try:
+                async with self.session.ws_connect("/subscribe") as ws:
+                    async for message in ws:
+                        if message.type == WSMsgType.TEXT:
+                            resp = daf.convert_from_semi_dict(message.json())
+                            type = resp["type"]
+                            data = resp["data"]
+                            if type == "trace":
+                                trace(data["message"], data["level"])
+
+                        elif message.type == WSMsgType.CLOSE:
+                            trace("Closing WebSocket", TraceLEVELS.DEBUG)
+                            await ws.close()
+
+                        elif message.type == WSMsgType.ERROR:
+                            raise ws.exception()
+            except Exception as exc:
+                trace(f"WebSocket error received: {ws.exception()}")
+
+        trace("Websocket connection closed", TraceLEVELS.DEBUG)
 
     async def shutdown(self):
         trace("Closing connection.")
         await self.session.close()
         self.connected = False
+        await self._ws_task
 
     async def add_account(self, obj: daf.client.ACCOUNT):
         trace("Logging in.")
