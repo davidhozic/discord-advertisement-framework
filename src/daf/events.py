@@ -173,7 +173,11 @@ class EventController:
         if GLOBAL.g_controller is self:
             future = asyncio.gather(
                 future,
-                *[controller.emit(event, *args, **kwargs) for controller in GLOBAL.non_global_controllers]
+                *[
+                    controller.emit(event, *args, **kwargs)
+                    for controller in GLOBAL.non_global_controllers
+                    if controller.running
+                ]
             )  # Create a new future, that can be awaited for all event controllers to process an event
 
         return future
@@ -207,6 +211,7 @@ class EventController:
 
         if self is not GLOBAL.g_controller:
             GLOBAL.non_global_controllers.remove(self)
+
         self.clear_queue()
 
 
