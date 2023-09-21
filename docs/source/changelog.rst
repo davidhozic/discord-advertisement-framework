@@ -69,6 +69,12 @@ v3.0.0
     the API call to happen asynchronously unless awaited with ``await`` keyword. This also makes DAF
     much more efficient.
 
+  - Remote:
+
+    - Persistent WebSocket connection for receiving events from the core server
+      (eg. :func:`~daf.logging.tracing.trace()` events).
+
+
 
 v2.10.4
 ======================

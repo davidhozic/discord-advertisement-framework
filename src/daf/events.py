@@ -7,9 +7,9 @@ from enum import Enum, auto
 from typing import Any, List, Dict, Callable, TypeVar, Coroutine, Set, Union
 
 from .misc.doc import doc_category
-from .logging.tracing import TraceLEVELS, trace
 
 import asyncio
+import warnings
 
 
 T = TypeVar('T')
@@ -166,14 +166,17 @@ class EventController:
         if not self.running:
             return
 
-        trace(f"Emitting event {event}", TraceLEVELS.DEBUG)
         self.event_queue.put_nowait((event, args, kwargs, future := asyncio.Future()))
 
         # If self is the global controller, also emit the event to other controllers.
         if GLOBAL.g_controller is self:
             future = asyncio.gather(
                 future,
-                *[controller.emit(event, *args, **kwargs) for controller in GLOBAL.non_global_controllers]
+                *[
+                    controller.emit(event, *args, **kwargs)
+                    for controller in GLOBAL.non_global_controllers
+                    if controller.running
+                ]
             )  # Create a new future, that can be awaited for all event controllers to process an event
 
         return future
@@ -199,14 +202,16 @@ class EventController:
                     if listener.predicate is None or listener.predicate(*args, **kwargs):
                         if isinstance(r:= listener(*args, **kwargs), Coroutine):
                             await r
+
                 except Exception as exc:
-                    trace(f"Could not call event handler {listener} for event {event_id}.", TraceLEVELS.ERROR, exc)
+                    warnings.warn(f"Could not call event handler {listener} for event {event_id}.")
                     future.set_exception(exc)
 
             future.set_result(None)
 
         if self is not GLOBAL.g_controller:
             GLOBAL.non_global_controllers.remove(self)
+
         self.clear_queue()
 
 
