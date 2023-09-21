@@ -16,7 +16,7 @@ from .logging.tracing import *
 from .misc import doc, instance_track as it
 from . import convert
 from . import logging
-
+from . import client
 
 import asyncio
 import ssl
@@ -242,10 +242,38 @@ async def http_execute_method(object_id: int, method_name: str, **kwargs):
 
 @register("/subscribe", "GET")
 async def http_ws_live_connect(request: Request):
+    """
+    Route for subscribing to remote published events.
+    This is a WebSocket upgrade route.
+
+    The WebSocket connection will send events in the following JSON format:
+    
+    .. code-block:: JSON
+    
+        {
+            "type": str, # Event type (eg. "trace")
+            "data": dict # (Optional) Dictionary of data related to event, this differs on different event types.
+        }
+    """
+    # Event listeners
     async def trace_event_publisher(level: TraceLEVELS, message: str):
         await ws.send_json(
             convert.convert_object_to_semi_dict(
                 {"type": "trace", "data": {"level": level, "message": message}}     
+            )
+        )
+
+    async def shutdown_event_publisher():
+        await ws.send_json(
+            convert.convert_object_to_semi_dict(
+                {"type": "shutdown"}
+            )
+        )
+
+    async def account_expire_event_publisher(account: client.ACCOUNT):
+        await ws._stored_content_type(
+            convert.convert_object_to_semi_dict(
+                {"type": "account_expired", "data": {"account": account}}
             )
         )
 
@@ -254,11 +282,16 @@ async def http_ws_live_connect(request: Request):
 
     evt = get_global_event_ctrl()
     evt.add_listener(EventID.g_trace, trace_event_publisher)
+    evt.add_listener(EventID.g_account_expired, account_expire_event_publisher)
+    evt.add_listener(EventID.g_daf_shutdown, shutdown_event_publisher)
     evt.add_listener(EventID.g_daf_shutdown, ws.close)
+
     async for message in ws:
         if message.type == WSMsgType.CLOSE:
             await ws.close()
 
     evt.remove_listener(EventID.g_trace, trace_event_publisher)
+    evt.remove_listener(EventID.g_account_expired, account_expire_event_publisher)
+    evt.remove_listener(EventID.g_daf_shutdown, shutdown_event_publisher)
     evt.remove_listener(EventID.g_daf_shutdown, ws.close)
     return ws

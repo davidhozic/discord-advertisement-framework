@@ -241,13 +241,13 @@ class RemoteConnectionCLIENT(AbstractConnectionCLIENT):
         while self.connected:
             trace("Connecting to live WebSocket connection.")
             try:
-                async with self.session.ws_connect("/subscribe") as ws:
+                async with self.session.ws_connect("/subscribe", auth=self.auth) as ws:
                     trace("Connected to WebSocket.")
                     async for message in ws:
                         if message.type == WSMsgType.TEXT:
                             resp = daf.convert_from_semi_dict(message.json())
                             type = resp["type"]
-                            data = resp["data"]
+                            data = resp.get("data")
                             if type == "trace":
                                 trace(data["message"], data["level"])
 
@@ -258,7 +258,7 @@ class RemoteConnectionCLIENT(AbstractConnectionCLIENT):
                         elif message.type == WSMsgType.ERROR:
                             raise ws.exception()
             except Exception as exc:
-                trace(f"WebSocket error received: {ws.exception()}")
+                trace(f"WebSocket error received: {exc}", TraceLEVELS.ERROR)
 
         trace("Websocket connection closed", TraceLEVELS.DEBUG)
 
