@@ -51,6 +51,7 @@ v3.0.0
   - When saving a new object definition, if the type of a parameter is literal, the value will be pre-checked inside
     the GUI and an exception will be raised if a valid value is not given.
   - Properties that start with ``_`` will no longer be displayed when viewing live structured objects.
+  - Toast notifications for :func:`~daf.logging.tracing.trace`.
 
 - Core:
 
