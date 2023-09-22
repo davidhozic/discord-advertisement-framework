@@ -379,8 +379,7 @@ class BaseMESSAGE:
             self.next_send_time,
             EventID.message_ready, self.parent, self
         )
-
-        event_ctrl.add_listener(
+        self._event_ctrl.add_listener(
             EventID.message_update,
             self._on_update,
             lambda message, *args, **kwargs: message is self
@@ -658,11 +657,14 @@ class BaseChannelMessage(BaseMESSAGE):
                     )
                     self.channels.remove(channel)
 
+    def _get_channel_types(self) -> Set[ChannelType]:
+        "Returns a set of valid channels types. Implement in subclasses."
+        raise NotImplementedError
+
     async def initialize(
         self,
         parent: Any,
         event_ctrl: EventController,
-        channel_types: Set,
         channel_getter: Callable
     ):
         """
@@ -673,9 +675,12 @@ class BaseChannelMessage(BaseMESSAGE):
         --------------
         parent: daf.guild.GUILD
             The GUILD this message is in
-        channel_types: List
-            List of allowed channel types.
 
+        event_ctrl: EventController
+            The ACCOUNT bound event controller.
+        channel_getter: Callable
+            Function for retrieving available channels.
+            
         Raises
         ------------
         TypeError
@@ -689,6 +694,7 @@ class BaseChannelMessage(BaseMESSAGE):
             raise RuntimeError(f"No parent was passed to ({self})!")
 
         ch_i = 0
+        channel_types = self._get_channel_types()
         client: discord.Client = parent.parent.client
         to_remove = []
         self.channel_getter = channel_getter  # Store for purposes of update
@@ -722,7 +728,7 @@ class BaseChannelMessage(BaseMESSAGE):
                 self.channels.remove(channel)
 
             if not self.channels:
-                raise ValueError(f"No valid channels were passed to {self} object")
+                trace(f"No valid channels passed to {self}.", TraceLEVELS.ERROR)
 
         self.parent = parent
         await super().initialize(event_ctrl)
@@ -774,8 +780,6 @@ class BaseChannelMessage(BaseMESSAGE):
         kwargs["channels"] = channels = kwargs.get("channels", self.channels)
         if isinstance(channels, AutoCHANNEL):
             await channels.update(init_options={"parent": self, "channel_getter": self.channel_getter})
-        elif not isinstance(self.channels[0], int):  # Not initialized (newly created):
-            kwargs["channels"] = [x.id for x in self.channels]
 
         if _init_options is None:
             _init_options = {
@@ -784,4 +788,10 @@ class BaseChannelMessage(BaseMESSAGE):
                 "event_ctrl": self._event_ctrl
             }
 
-        await async_util.update_obj_param(self, init_options=_init_options, **kwargs)
+        try:
+            await async_util.update_obj_param(self, init_options=_init_options, **kwargs)            
+        except Exception:
+            await self.initialize(self.parent, self._event_ctrl, self.channel_getter)
+            pass
+
+            raise

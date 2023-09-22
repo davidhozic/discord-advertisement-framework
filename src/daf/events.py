@@ -204,10 +204,13 @@ class EventController:
                             await r
 
                 except Exception as exc:
-                    warnings.warn(f"Could not call event handler {listener} for event {event_id}.")
+                    warnings.warn(f"({exc}) Could not call event handler {listener} for event {event_id}.")
                     future.set_exception(exc)
+                    break
 
-            future.set_result(None)
+
+            if not future.done():  # In case exception was set
+                future.set_result(None)
 
         if self is not GLOBAL.g_controller:
             GLOBAL.non_global_controllers.remove(self)
