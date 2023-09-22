@@ -270,6 +270,9 @@ class VoiceMESSAGE(BaseChannelMessage):
 
         return handled, action
 
+    def _get_channel_types(self):
+        return {discord.VoiceChannel}
+
     def initialize(self, parent: Any, event_ctrl: EventController, channel_getter: Callable):
         """
         This method initializes the implementation specific API objects
@@ -289,7 +292,7 @@ class VoiceMESSAGE(BaseChannelMessage):
         ValueError
             No valid channels were passed to object"
         """
-        return super().initialize(parent, event_ctrl, {discord.VoiceChannel}, channel_getter)
+        return super().initialize(parent, event_ctrl, channel_getter)
 
     async def _send_channel(self,
                             channel: discord.VoiceChannel,

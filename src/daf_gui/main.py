@@ -4,6 +4,7 @@ Main file of the DAF GUI.
 from importlib.util import find_spec
 from pathlib import Path
 
+from weakref import WeakSet
 from daf.misc import instance_track as it
 
 import subprocess
@@ -35,6 +36,7 @@ from .connector import *
 
 from PIL import Image, ImageTk
 from ttkbootstrap.tooltip import ToolTip
+from ttkbootstrap.toast import ToastNotification
 import tkinter as tk
 import tkinter.filedialog as tkfile
 import ttkbootstrap.dialogs.dialogs as tkdiag
@@ -130,6 +132,10 @@ class Application():
         tabman_mf.pack(fill=tk.BOTH, expand=True)
         self.tabman_mf = tabman_mf
 
+
+        # Toast notifications
+        self.init_toast()
+
         # Optional dependencies tab
         self.init_optional_dep_tab()
 
@@ -157,6 +163,34 @@ class Application():
 
         # Connection
         self.connection: AbstractConnectionCLIENT = None
+
+    def init_toast(self):
+        "Initializes toast notifications"
+        bootstyle_map = {
+            daf.TraceLEVELS.DEBUG: ttk.LIGHT,
+            daf.TraceLEVELS.NORMAL: ttk.PRIMARY,
+            daf.TraceLEVELS.WARNING: ttk.WARNING,
+            daf.TraceLEVELS.ERROR: ttk.DANGER,
+            daf.TraceLEVELS.DEPRECATED: ttk.DARK
+        }
+        active_toasts = WeakSet()
+
+        def trace_listener(level: daf.TraceLEVELS, message: str):
+            len_toasts = len(active_toasts)
+            toast = ToastNotification(
+                level.name,
+                message,
+                bootstyle=bootstyle_map[level],
+                icon="",
+                duration=5000,
+                position=(10, (100 * len_toasts) % 1200 + 200, "se"),
+                topmost=True
+            )
+
+            active_toasts.add(toast)
+            toast.show_toast()
+        
+        daf.get_global_event_ctrl().add_listener(daf.EventID.g_trace, trace_listener)
 
     def init_schema_tab(self):
         self.objects_edit_window = None

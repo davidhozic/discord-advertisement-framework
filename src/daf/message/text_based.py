@@ -287,6 +287,9 @@ class TextMESSAGE(BaseChannelMessage):
                     _data_to_send["files"].append(element)
         return _data_to_send
 
+    def _get_channel_types(self):
+        return {discord.TextChannel, discord.Thread}
+
     async def initialize(self, parent: Any, event_ctrl: EventController, channel_getter: Callable):
         """
         This method initializes the implementation specific API objects and
@@ -309,7 +312,6 @@ class TextMESSAGE(BaseChannelMessage):
         await super().initialize(
             parent,
             event_ctrl,
-            {discord.TextChannel, discord.Thread},
             channel_getter
         )
         # Increase period to slow mode delay if it is lower
@@ -683,7 +685,7 @@ class DirectMESSAGE(BaseMESSAGE):
                 elif isinstance(element, FILE):
                     _data_to_send["files"].append(element)
         return _data_to_send
-
+    
     async def initialize(self, parent: Any, event_ctrl: EventController, guild: discord.User):
         """
         The method creates a direct message channel and
@@ -815,4 +817,8 @@ class DirectMESSAGE(BaseMESSAGE):
         if _init_options is None:
             _init_options = {"parent": self.parent, "guild": self.dm_channel, "event_ctrl": self._event_ctrl}
 
-        await async_util.update_obj_param(self, init_options=_init_options, **kwargs)
+        try:
+            await async_util.update_obj_param(self, init_options=_init_options, **kwargs)
+        except Exception:
+            await self.initialize(self.parent, self._event_ctrl, self.dm_channel)
+            raise
