@@ -772,6 +772,7 @@ class GuildDISCOVERY:
         """
         Initializes guild discovery session.
         """
+        self.browser: SeleniumCLIENT = parent.parent.selenium
         if self.browser is None:
             trace(
                 "To use auto-join functionality, the account must be provided with username and password.",
@@ -780,7 +781,6 @@ class GuildDISCOVERY:
             )
 
         self.session = http.ClientSession()
-        self.browser: SeleniumCLIENT = parent.parent.selenium
 
     async def _close(self):
         """
