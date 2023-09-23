@@ -27,8 +27,7 @@ async def test_autoguild(guilds, accounts: List[daf.ACCOUNT]):
         ]
     )
     await account.add_server(auto_guild)
-    await asyncio.sleep(1)
-    found = auto_guild.guilds
+    found = auto_guild._get_guilds()
     print('Found Guilds ', found)
     print('All Guilds ', account.client.guilds)
     assert guild_include in found, "AutoGUILD failed to find guild that matches the name."

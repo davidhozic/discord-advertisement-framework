@@ -266,7 +266,7 @@ class BaseGUILD:
         self.parent = parent
         _apiobject = getter(self.snowflake)
 
-        if isinstance(self._apiobject, Coroutine):
+        if isinstance(_apiobject, Coroutine):
             try:
                 _apiobject = await _apiobject
             except discord.HTTPException as exc:
