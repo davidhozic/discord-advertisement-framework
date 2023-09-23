@@ -13,6 +13,7 @@ from ..events import *
 from ..logging.tracing import *
 from ..logging import sql
 from ..misc import doc, instance_track
+from ..misc import async_util
 
 from .. import dtypes
 
@@ -282,15 +283,6 @@ class VoiceMESSAGE(BaseChannelMessage):
         --------------
         parent: daf.guild.GUILD
             The GUILD this message is in
-
-        Raises
-        ------------
-        TypeError
-            Channel contains invalid channels
-        ValueError
-            Channel does not belong to the guild this message is in.
-        ValueError
-            No valid channels were passed to object"
         """
         return super().initialize(parent, event_ctrl, channel_getter)
 

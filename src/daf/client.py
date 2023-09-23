@@ -54,6 +54,11 @@ class ACCOUNT:
         Added ``username`` and ``password`` parameters.
         For logging in automatically
 
+    .. versionchanged:: v3.0
+
+        When servers are added directly through account initialization,
+        they will be removed upon errors and available withing ``removed_servers`` property.
+
     Represents an individual Discord account.
 
     Each ACCOUNT instance runs it's own shilling task.
@@ -90,6 +95,8 @@ class ACCOUNT:
             a proxy.
     servers: Optional[List[guild.GUILD | guild.USER | guild.AutoGUILD]]=[]
         Predefined list of servers (guilds, users, auto-guilds).
+        If initializing a server fails (eg. server doesn't exist on Discord), it will be removed
+        and added to :py:attr:`daf.client.ACCOUNT.removed_servers` property.
     username: Optional[str]
         The username to login with.
     password: Optional[str]
@@ -115,9 +122,7 @@ class ACCOUNT:
         "_running",
         "_ws_task",
         "_servers",
-        "_autoguilds",
         "_selenium",
-        "_uiservers",
         "_client",
         "_deleted",
         "_removed_servers",
@@ -149,29 +154,21 @@ class ACCOUNT:
         if token is None and username is None:  # At least one of these
             raise ValueError("At lest one parameter of these is required: 'token' OR 'username' + 'password'")
 
-        self._token = token
-        self.is_user = is_user
-        self.proxy = proxy
         # If intents not passed, enable default
         if intents is None:
             intents = discord.Intents.default()
 
-        self.intents = intents
-        self.removal_buffer_length = removal_buffer_length
-        self._running = False
-        self._servers: List[guild.BaseGUILD] = []
-        self._autoguilds: List[guild.AutoGUILD] = []  # To prevent __eq__ issues, use 2 lists
-        self._selenium = web.SeleniumCLIENT(username, password, proxy) if username is not None else None
-
         if servers is None:
             servers = []
 
-        self._uiservers = servers
-        """Temporary list of uninitialized servers
-        servers parameter gets stored into _servers to prevent the
-        update method from re-initializing initializes objects.
-        This gets deleted in the initialize method"""
-
+        self._token = token
+        self.is_user = is_user
+        self.proxy = proxy
+        self.intents = intents
+        self.removal_buffer_length = removal_buffer_length
+        self._running = False
+        self._servers = servers
+        self._selenium = web.SeleniumCLIENT(username, password, proxy) if username is not None else None
         self._client = None
         self._deleted = False
         self._ws_task = None
@@ -246,7 +243,7 @@ class ACCOUNT:
         Returns all guild like objects inside the account's s
         shilling list. This also includes :class:`~daf.guild.AutoGUILD`
         """
-        return self._servers + self._autoguilds
+        return self._servers[:]
 
     @property
     def removed_servers(self) -> List[Union[guild.GUILD, guild.AutoGUILD, guild.USER]]:
@@ -280,11 +277,10 @@ class ACCOUNT:
 
         Raises
         --------
-        Any
-            Raised in
-            :py:meth:`daf.guild.GUILD.initialize()` |
-            :py:meth:`daf.guild.USER.initialize()`  |
-            :py:meth:`daf.guild.AutoGUILD.initialize()`
+        ValueError
+            Invalid ``snowflake`` (eg. server doesn't exist).
+        RuntimeError
+            Could not query Discord.
         """
         return self._event_ctrl.emit(EventID.server_added, server)
 
@@ -352,19 +348,30 @@ class ACCOUNT:
 
         |ASYNC_API|
 
+        .. WARNING::
+            After calling this method the entire object is reset.
+
         Returns
         --------
         Awaitable
             An awaitable object which can be used to await for execution to finish.
             To wait for the execution to finish, use ``await`` like so: ``await method_name()``.
         
-        .. WARNING::
-            After calling this method the entire object is reset.
+        Raises
+        --------
+        ValueError
+            The account is no longer running.
+        Exception
+            Other exceptions returned from :class:`daf.client.ACCOUNT` constructor
+            or from :func:`daf.client.ACCOUNT.initialize`.
         """
         if self._deleted:
             raise ValueError("Account has been removed from the framework!")
 
-        return self._event_ctrl.emit(EventID.account_update, **kwargs)
+        if self._running:
+            return self._event_ctrl.emit(EventID.account_update, **kwargs)
+        else:
+            return self._on_update(self, **kwargs)
 
     # Non public methods
     def _delete(self):
@@ -373,17 +380,11 @@ class ACCOUNT:
         indicating the object should not be used.
         """
         self._deleted = True
-        for server in self.servers:
-            server._delete()
 
+    @async_util.except_return
     async def initialize(self):
         """
         Initializes the API wrapper client layer.
-
-        Raises
-        ------------
-        RuntimeError
-            Unable to login to Discord.
         """
         intents = self.intents
         if not intents.members:
@@ -396,6 +397,15 @@ class ACCOUNT:
             self.intents.guilds = True
             trace("Guilds intent is disabled. Enabling it since it's needed.", TraceLEVELS.WARNING)
 
+        if self._selenium is not None:
+            trace("Logging in thru browser and obtaining token")
+            if isinstance(result := await self._selenium.initialize(), Exception):
+                trace(f"Could not initialize browser in {self}.", TraceLEVELS.ERROR, result)
+                raise result
+
+            self._token = result
+            self.is_user = True
+
         self._deleted = False
         connector = None
         if self.proxy is not None:
@@ -403,35 +413,28 @@ class ACCOUNT:
 
         self._client = discord.Client(intents=self.intents, connector=connector)
 
-        if self._selenium is not None:
-            trace("Logging in thru browser and obtaining token")
-            self._token = await self._selenium.initialize()
-            self.is_user = True
-
         # Login
         trace("Logging in...")
+        ws_task = None
         try:
             await self._client.login(self._token, not self.is_user)
             ws_task = asyncio.create_task(self._client.connect())
             self._ws_task = ws_task
             await self._client.wait_for("ready", timeout=LOGIN_TIMEOUT_S)
             trace(f"Logged in as {self._client.user.display_name}")
-        except asyncio.TimeoutError as exc:
-            exc = ws_task.exception() if ws_task.done() else exc
-            raise RuntimeError(f"Error logging in to Discord. (Token {self._token[:TOKEN_MAX_PRINT_LEN]}...)") from exc
+        except Exception as exc:
+            exc = ws_task.exception() if ws_task is not None and ws_task.done() else exc
+            trace(f"Could not login to Discord - {self}", TraceLEVELS.ERROR, exc)
+            raise exc
 
-        self._event_ctrl.start()
-        for server in self._uiservers:
-            try:
-                await self._on_add_server(server)
-            except Exception as exc:
-                trace("Unable to add server.", TraceLEVELS.ERROR, exc)
+        self._event_ctrl.add_listener(EventID.account_update, self._on_update)
+        for server in self._servers:
+            if (await server.initialize(self, self._event_ctrl)) is not None:
+                await self._on_remove_server(server)
 
         self._event_ctrl.add_listener(EventID.server_removed, self._on_remove_server)
         self._event_ctrl.add_listener(EventID.server_added, self._on_add_server)
-        self._event_ctrl.add_listener(EventID.account_update, self._on_update)
-
-        self._uiservers.clear()  # Only needed for predefined initialization
+        self._event_ctrl.start()
         self._running = True
 
     def generate_log_context(self) -> Dict[str, Union[str, int]]:
@@ -451,12 +454,10 @@ class ACCOUNT:
     # API event handlers
     async def _on_add_server(self, server: Union[guild.GUILD, guild.USER, guild.AutoGUILD]):
         "Event handler for adding new servers"
-        await server.initialize(parent=self, event_ctrl=self._event_ctrl)
-        if isinstance(server, guild.BaseGUILD):
-            self._servers.append(server)
-        else:
-            self._autoguilds.append(server)
+        if (exc := await server.initialize(parent=self, event_ctrl=self._event_ctrl)) is not None:
+            raise exc
 
+        self._servers.append(server)
         with suppress(ValueError):
             self._removed_servers.remove(server)
 
@@ -472,7 +473,7 @@ class ACCOUNT:
 
             del self._servers[index]
         else:
-            self._autoguilds.remove(server)
+            self._servers.remove(server)
 
         await server._close()
         self._removed_servers.append(server)
@@ -498,19 +499,11 @@ class ACCOUNT:
             if isinstance(intents, discord.Intents) and intents.value == 0:
                 kwargs["intents"] = None
 
-        kwargs["servers"] = kwargs.pop("servers", self.servers + self._uiservers)
+        kwargs["servers"] = kwargs.pop("servers", self.servers)
         try:
             await async_util.update_obj_param(self, **kwargs)
         except Exception:
-            try:
-                _servers_to_init = self.servers
-                await self.initialize()  # re-login
-                for server in _servers_to_init:
-                    await server.initialize(self, self._event_ctrl)
-
-            except Exception:
-                await self._close()
-
+            await self.initialize()  # re-login
             raise
 
     # Cleanup
@@ -519,9 +512,11 @@ class ACCOUNT:
         Signals the tasks of this account to finish and
         waits for them.
         """
-        if self.running:
-            trace(f"Logging out of {self.client.user.display_name}...")
-            self._running = False
+        if not self.running:
+            return
+
+        trace(f"Logging out of {self.client.user.display_name}...")
+        self._running = False
 
         self._event_ctrl.remove_listener(EventID.server_removed, self._on_remove_server)
         self._event_ctrl.remove_listener(EventID.server_added, self._on_add_server)

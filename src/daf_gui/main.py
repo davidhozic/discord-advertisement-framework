@@ -183,14 +183,18 @@ class Application():
                 bootstyle=bootstyle_map[level],
                 icon="",
                 duration=5000,
-                position=(10, (100 * len_toasts) % 1200 + 200, "se"),
+                position=(10, (150 * len_toasts) % 1200 + 200, "se"),
                 topmost=True
             )
 
             active_toasts.add(toast)
             toast.show_toast()
+
+        def shutdown_listener():
+            self.stop_daf()
         
         daf.get_global_event_ctrl().add_listener(daf.EventID.g_trace, trace_listener)
+        daf.get_global_event_ctrl().add_listener(daf.EventID.g_daf_shutdown, shutdown_listener)
 
     def init_schema_tab(self):
         self.objects_edit_window = None

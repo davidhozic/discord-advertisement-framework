@@ -269,6 +269,7 @@ async def http_ws_live_connect(request: Request):
                 {"type": "shutdown"}
             )
         )
+        await ws.close()
 
     async def account_expire_event_publisher(account: client.ACCOUNT):
         await ws._stored_content_type(

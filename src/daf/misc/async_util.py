@@ -18,6 +18,7 @@ __all__ = (
     "with_semaphore",
     "update_obj_param",
     "call_at",
+    "except_return",
 )
 
 
@@ -146,7 +147,8 @@ async def update_obj_param(
 
         # Call additional initialization function (if it has one)
         if hasattr(obj, "initialize"):
-            await obj.initialize(**init_options)
+            if isinstance(res := await obj.initialize(**init_options), Exception):
+                raise res
 
     except Exception:
         # In case of failure, restore to original attributes
@@ -163,8 +165,28 @@ def call_at(fnc: Callable, when: Union[datetime, timedelta], *args, **kwargs) ->
     """
     async def waiter():
         delay = when if isinstance(when, timedelta) else max((when - datetime.now()), timedelta(0))
-        await asyncio.sleep(delay.total_seconds())
+        delay = delay.total_seconds()
+        while delay > 0:
+            to_sleep = min(delay, 86400)  # Maximum sleep of one day for precision purposes
+            await asyncio.sleep(to_sleep)
+            delay -= to_sleep
+
         if isinstance((r := fnc(*args, **kwargs)), Coroutine):
             await r
 
     return asyncio.create_task(waiter(), name=f'{fnc}_{args}_{kwargs}')
+
+
+def except_return(fnc):
+    """
+    Wraps the ``fnc`` into a wrapper that returns False.
+    If no exception is raised it returns the result of the ``fnc`` call.
+    """
+    @wraps(fnc)
+    async def wrapper(*args, **kwargs):
+        try:
+            return await fnc(*args, **kwargs)
+        except Exception as exc:
+            return exc
+
+    return wrapper

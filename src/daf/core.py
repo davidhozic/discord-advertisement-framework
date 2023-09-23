@@ -201,6 +201,14 @@ async def initialize(user_callback: Optional[Union[Callable, Coroutine]] = None,
     loop = asyncio.get_event_loop()
     if accounts is None:
         accounts = []
+
+    
+    # ------------------------------------------------------------
+    # Initialize events
+    # ------------------------------------------------------------
+    events.initialize()
+    evt = events.get_global_event_ctrl()
+    evt.add_listener(EventID.g_account_expired, cleanup_account)
     # ------------------------------------------------------------
     # Initialize tracing
     # ------------------------------------------------------------
@@ -253,9 +261,6 @@ async def initialize(user_callback: Optional[Union[Callable, Coroutine]] = None,
     GLOBALS.running = True
     GLOBALS.save_to_file = save_to_file
 
-    events.initialize()
-    evt = events.get_global_event_ctrl()
-    evt.add_listener(EventID.g_account_expired, cleanup_account)
     evt.emit(EventID.g_daf_startup)
     trace("Initialization complete.", TraceLEVELS.NORMAL)
 
@@ -352,7 +357,9 @@ async def add_object(obj, snowflake=None):
         if obj in GLOBALS.accounts:
             raise ValueError("Account already added to the list")
 
-        await obj.initialize()
+        if (res := await obj.initialize()) is not None:
+            raise res
+
         GLOBALS.accounts.append(obj)
     elif isinstance(obj, (guild.BaseGUILD, guild.AutoGUILD)):
         if not isinstance(snowflake, client.ACCOUNT):
@@ -415,6 +422,7 @@ async def remove_object(
 
     elif isinstance(snowflake, client.ACCOUNT):
         await snowflake._close()
+        snowflake._delete()
         GLOBALS.accounts.remove(snowflake)
 
 
@@ -443,10 +451,6 @@ async def shutdown() -> None:
     await evt.emit(EventID.g_daf_shutdown)
     # Signal events for tasks to raise out of sleep
     GLOBALS.schema_backup_event.set()  # This also saves one last time, so manually saving is not needed
-    # Close remote client
-    if remote.GLOBALS.remote_client is not None:
-        await remote.GLOBALS.remote_client._close()
-
     for task in GLOBALS.tasks:  # Wait for core tasks to finish
         await task
 
@@ -456,6 +460,10 @@ async def shutdown() -> None:
     GLOBALS.accounts.clear()
     evt.remove_listener(EventID.g_account_expired, cleanup_account)
     await evt.stop()
+
+    if remote.GLOBALS.remote_client is not None:
+        await remote.GLOBALS.remote_client._close()
+
     trace("Shutdown complete.", TraceLEVELS.NORMAL)
 
 

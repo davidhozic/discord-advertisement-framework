@@ -93,6 +93,7 @@ class BaseMESSAGE:
         "_created_at",
         "_timer_handle",
         "_event_ctrl",
+        "_running",
     )
 
     @typechecked
@@ -144,6 +145,7 @@ class BaseMESSAGE:
         self._fbcdata = isinstance(data, _FunctionBaseCLASS)
         self._timer_handle: asyncio.Task = None
         self._event_ctrl: EventController = None
+        self._running = False
         # Attributes created with this function will not be re-referenced to a different object
         # if the function is called again, ensuring safety (.update_method)
         attributes.write_non_exist(self, "update_semaphore", asyncio.Semaphore(1))
@@ -384,6 +386,7 @@ class BaseMESSAGE:
             self._on_update,
             lambda message, *args, **kwargs: message is self
         )
+        self._running = True
 
     async def _on_update(self, _, _init_options: Optional[dict], **kwargs):
         raise NotImplementedError
@@ -393,6 +396,10 @@ class BaseMESSAGE:
         """
         Closes the timer handles.
         """
+        if not self._running:
+            return
+        
+        self._running = False
         if self._timer_handle is not None and not self._timer_handle.cancelled():
             self._timer_handle.cancel()
             await asyncio.gather(self._timer_handle, return_exceptions=True)
@@ -675,24 +682,11 @@ class BaseChannelMessage(BaseMESSAGE):
         --------------
         parent: daf.guild.GUILD
             The GUILD this message is in
-
         event_ctrl: EventController
             The ACCOUNT bound event controller.
         channel_getter: Callable
             Function for retrieving available channels.
-            
-        Raises
-        ------------
-        TypeError
-            Channel contains invalid channels
-        ValueError
-            Channel does not belong to the guild this message is in.
-        ValueError
-            No valid channels were passed to object"
         """
-        if parent is None:
-            raise RuntimeError(f"No parent was passed to ({self})!")
-
         ch_i = 0
         channel_types = self._get_channel_types()
         client: discord.Client = parent.parent.client
@@ -714,24 +708,29 @@ class BaseChannelMessage(BaseMESSAGE):
                     channel = self.channels[ch_i] = client.get_channel(channel_id)
 
                 if channel is None:
-                    trace(f"Unable to get channel from ID {channel_id}", TraceLEVELS.WARNING)
+                    trace(f"Unable to get channel from ID {channel_id} - {self}", TraceLEVELS.ERROR)
                     to_remove.append(channel)
                 elif type(channel) not in channel_types:
-                    raise TypeError(f"{type(self).__name__} object received invalid channel type of {type(channel).__name__}")
-                elif channel not in channel_getter():
-                    raise ValueError(
-                        f"{channel.name}(ID: {channel_id}) not in {channel.guild.name}(ID: {channel.guild.id}), "
-                        f"but is part of {channel.guild.name}(ID: {channel.guild.id})"
+                    trace(
+                        f"{self} received channel of invalid type: {channel}",
+                        TraceLEVELS.ERROR
                     )
+                    to_remove.append(channel)
+                elif channel not in channel_getter():
+                    trace(
+                        f"{channel} is not part of the guild that message is in - {self}",
+                        TraceLEVELS.ERROR
+                    )
+                    to_remove.append(channel)
 
             for channel in to_remove:
                 self.channels.remove(channel)
 
             if not self.channels:
-                trace(f"No valid channels passed to {self}.", TraceLEVELS.ERROR)
+                trace(f"No valid channels passed to {self}.", TraceLEVELS.WARNING)
 
         self.parent = parent
-        await super().initialize(event_ctrl)
+        return await super().initialize(event_ctrl)
 
     @async_util.with_semaphore("update_semaphore")
     async def _send(self):
@@ -792,6 +791,4 @@ class BaseChannelMessage(BaseMESSAGE):
             await async_util.update_obj_param(self, init_options=_init_options, **kwargs)            
         except Exception:
             await self.initialize(self.parent, self._event_ctrl, self.channel_getter)
-            pass
-
             raise
