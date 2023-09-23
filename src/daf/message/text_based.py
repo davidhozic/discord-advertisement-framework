@@ -307,7 +307,6 @@ class TextMESSAGE(BaseChannelMessage):
         )
         # Increase period to slow mode delay if it is lower
         self._check_period()
-        return True
 
     async def _handle_error(
         self,

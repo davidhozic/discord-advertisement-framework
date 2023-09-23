@@ -254,6 +254,7 @@ class AutoGUILD:
             (self.exclude_pattern is None or re.search(self.exclude_pattern, name) is None)
         )
 
+    @async_util.except_return
     async def initialize(self, parent: Any, event_ctrl: EventController):
         """
         Initializes the object.
@@ -261,14 +262,15 @@ class AutoGUILD:
         self._event_ctrl = event_ctrl
         self.parent = parent
         if self.auto_join is not None:
-            if not await self.auto_join.initialize(self):
-                return False
+            if (res := await self.auto_join.initialize(self)) is not None:
+                raise res
 
             self.guild_query_iter = self.auto_join._query_request()
 
         message: BaseChannelMessage
         for message in self._messages:
-            await message.initialize(self, event_ctrl, self._get_channels)
+            if (await message.initialize(self, event_ctrl, self._get_channels)) is not None:
+                await self._on_remove_message(self, message)
 
         if self.remove_after is not None:
             self._removal_timer_handle = (
@@ -280,6 +282,37 @@ class AutoGUILD:
                 )
             )
 
+        if len(self._invite_join_count):  # Skip invite query from Discord
+            try:
+                invites = await self._get_invites()
+                invites = {invite.id: invite.uses for invite in invites}
+                counts = self._invite_join_count
+                for invite in list(counts.keys()):
+                    try:
+                        counts[invite] = invites[invite]
+                    except KeyError:
+                        del counts[invite]
+                        trace(
+                            f"Invite link {invite} not found in {self}. It will not be tracked!",
+                            TraceLEVELS.ERROR
+                        )
+
+                    client: discord.Client = parent.client
+                    client.add_listener(self._discord_on_member_join, "on_member_join")
+                    client.add_listener(self._discord_on_invite_delete, "on_invite_delete")
+                    self._event_ctrl.add_listener(
+                        EventID.discord_member_join,
+                        self._on_member_join,
+                        predicate=lambda memb: self._check_name_match(memb.guild.name)
+                    )
+                    self._event_ctrl.add_listener(
+                        EventID.discord_invite_delete,
+                        self._on_invite_delete,
+                        predicate=lambda inv: self._check_name_match(inv.guild.name)
+                    )
+            except discord.HTTPException as exc:
+                trace(f"Could not query invite links in {self}", TraceLEVELS.ERROR, exc)
+
         if self.auto_join is not None:
             self._reset_auto_join_timer()
             event_ctrl.add_listener(EventID.auto_guild_start_join, self._join_guilds, lambda ag: ag is self)
@@ -288,40 +321,7 @@ class AutoGUILD:
         event_ctrl.add_listener(EventID.message_added, self._on_add_message, lambda server, m: server is self)
         event_ctrl.add_listener(EventID.message_removed, self._on_remove_message, lambda server, m: server is self)
         event_ctrl.add_listener(EventID.server_update, self._on_update, lambda server, *args, **kwargs: server is self)
-
-        if not len(self._invite_join_count):  # Skip invite query from Discord
-            return True
-
-        invites = await self._get_invites()
-        invites = {invite.id: invite.uses for invite in invites}
-        counts = self._invite_join_count
-        for invite in list(counts.keys()):
-            try:
-                counts[invite] = invites[invite]
-            except KeyError:
-                del counts[invite]
-                trace(
-                    f"Invite link {invite} not found in {self}. It will not be tracked!",
-                    TraceLEVELS.ERROR
-                )
-
-        if len(counts):  # Don't listen to events if no invites were left
-            client: discord.Client = parent.client
-            client.add_listener(self._discord_on_member_join, "on_member_join")
-            client.add_listener(self._discord_on_invite_delete, "on_invite_delete")
-            self._event_ctrl.add_listener(
-                EventID.discord_member_join,
-                self._on_member_join,
-                predicate=lambda memb: self._check_name_match(memb.guild.name)
-            )
-            self._event_ctrl.add_listener(
-                EventID.discord_invite_delete,
-                self._on_invite_delete,
-                predicate=lambda inv: self._check_name_match(inv.guild.name)
-            )
-
         self._running = True
-        return True
 
     def _generate_guild_log_context(self, guild: discord.Guild):
         return {
@@ -390,7 +390,10 @@ class AutoGUILD:
                     yield channel
 
     async def _on_add_message(self, _, message: BaseMESSAGE):
-        await message.initialize(parent=self, event_ctrl=self._event_ctrl, channel_getter=self._get_channels)
+        exc = await message.initialize(parent=self, event_ctrl=self._event_ctrl, channel_getter=self._get_channels)
+        if exc is not None:
+            raise exc
+
         self._messages.append(message)
         with suppress(ValueError):  # Readd the removed message
             self._removed_messages.remove(message)

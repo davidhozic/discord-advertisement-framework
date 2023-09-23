@@ -81,7 +81,8 @@ class GLOBALS:
 @doc.doc_category("Logging reference")
 def trace(message: str,
           level: Union[TraceLEVELS, int] = TraceLEVELS.NORMAL,
-          reason: Optional[Exception] = None):
+          reason: Optional[Exception] = None,
+          exception_cls: Optional[Exception] = None):
     """
     Prints a trace to the console.
     This is thread safe.
@@ -107,6 +108,8 @@ def trace(message: str,
         Level of the trace. Defaults to TraceLEVELS.NORMAL.
     reason: Optional[Exception]
         Optional exception object, which caused the prinout.
+    exception_cls: Optional[Exception]
+        An exception to raise after tracing.
     """
     if GLOBALS.set_level >= level:
         frame = _getframe(1)
@@ -123,6 +126,9 @@ def trace(message: str,
             evt = get_global_event_ctrl()
             evt.emit(EventID.g_trace, level, message)
             print(TRACE_COLOR_MAP[level] + msg + "\033[0m")
+
+        if exception_cls is not None:
+            raise exception_cls(message) from reason
 
 
 def initialize(level: Union[TraceLEVELS, int, str] = TraceLEVELS.NORMAL):

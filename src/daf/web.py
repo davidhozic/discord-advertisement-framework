@@ -767,25 +767,20 @@ class GuildDISCOVERY:
         self.session = None
         self.browser = None
 
-    async def initialize(self, parent: Any) -> bool:
+    @except_return
+    async def initialize(self, parent: Any):
         """
         Initializes guild discovery session.
-
-        Returns
-        ---------
-        bool
-            True on success or False on error.
         """
         if self.browser is None:
             trace(
                 "To use auto-join functionality, the account must be provided with username and password.",
-                TraceLEVELS.ERROR
+                TraceLEVELS.ERROR,
+                ValueError
             )
-            return False
 
         self.session = http.ClientSession()
         self.browser: SeleniumCLIENT = parent.parent.selenium
-        return True
 
     async def _close(self):
         """

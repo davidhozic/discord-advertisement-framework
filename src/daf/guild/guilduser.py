@@ -240,6 +240,7 @@ class BaseGUILD:
         raise NotImplementedError
 
     # Non public
+    @async_util.except_return
     async def initialize(self, parent: Any, event_ctrl: EventController, getter: Callable) -> None:
         """
         This function initializes the API related objects and
@@ -269,12 +270,10 @@ class BaseGUILD:
             try:
                 _apiobject = await _apiobject
             except discord.HTTPException as exc:
-                trace(f"Exception obtaining API object - {self}", TraceLEVELS.ERROR, exc)
-                return False
+                trace(f"Exception obtaining API object - {self}", TraceLEVELS.ERROR, exc, RuntimeError)
 
         if _apiobject is None:
-            trace(f"Invalid ID {self.snowflake} - {self}", TraceLEVELS.ERROR)
-            return False
+            trace(f"Invalid ID {self.snowflake} - {self}", TraceLEVELS.ERROR, exception_cls=ValueError)
         
         self._apiobject = _apiobject
         await self._init_messages()
@@ -297,7 +296,6 @@ class BaseGUILD:
         event_ctrl.add_listener(EventID.message_added, self._on_add_message, lambda server, m: server is self)
         event_ctrl.add_listener(EventID.server_update, self._on_update, lambda server, *h, **k: server is self)
         self._running = True
-        return True
 
     def generate_invite_log_context(self, member: discord.Member, invite_id: str) -> dict:
         raise NotImplementedError
@@ -380,7 +378,7 @@ class BaseGUILD:
         """
         if not self._running:
             return
-        
+
         self._running = False
         self._event_ctrl.remove_listener(EventID.message_ready, self._advertise)
         self._event_ctrl.remove_listener(EventID.message_removed, self._on_message_removed)
@@ -486,7 +484,8 @@ class GUILD(BaseGUILD):
     async def _init_messages(self):
         message: BaseChannelMessage
         for message in self._messages:
-            await message.initialize(self, self._event_ctrl, self._get_guild_channels)
+            if (await message.initialize(self, self._event_ctrl, self._get_guild_channels)) is not None:
+                await self._on_message_removed(self, message)
 
     async def initialize(self, parent: Any, event_ctrl: EventController) -> None:
         """
@@ -497,8 +496,8 @@ class GUILD(BaseGUILD):
             This should NOT be manually called, it is called automatically
             after adding the message.
         """
-        if not await super().initialize(parent, event_ctrl, parent.client.get_guild):
-            return False
+        if (exc := await super().initialize(parent, event_ctrl, parent.client.get_guild)) is not None:
+            return exc
 
         # Fill invite counts
         if len(self.join_count):  # Skip invite query from Discord
@@ -528,8 +527,6 @@ class GUILD(BaseGUILD):
                         f"Invite link {invite} not found in {self.apiobject.name}. It will not be tracked!",
                         TraceLEVELS.ERROR
                     )
-
-        return True
 
     def _get_guild_channels(self, *types):
         return set(x for x in self._apiobject.channels if isinstance(x, types))
@@ -568,10 +565,8 @@ class GUILD(BaseGUILD):
 
         Raises
         -----------
-        TypeError
+        Union[TypeError, ValueError]
             Invalid keyword argument was passed.
-        Other
-            Raised from .initialize() method.
         """
         if self._running:
             return self._event_ctrl.emit(EventID.server_update, self, init_options, **kwargs)
@@ -610,7 +605,14 @@ class GUILD(BaseGUILD):
 
     # Event Handlers
     async def _on_add_message(self, _, message: Union[TextMESSAGE, VoiceMESSAGE]):
-        await message.initialize(parent=self, event_ctrl=self._event_ctrl, channel_getter=self._get_guild_channels)
+        exc = await message.initialize(
+            parent=self,
+            event_ctrl=self._event_ctrl,
+            channel_getter=self._get_guild_channels
+        )
+        if exc is not None:
+            raise exc
+
         self._messages.append(message)
         with suppress(ValueError):  # Readd the removed message
             self._removed_messages.remove(message)
@@ -775,7 +777,8 @@ class USER(BaseGUILD):
     async def _init_messages(self):
         message: DirectMESSAGE
         for message in self._messages:
-            await message.initialize(self, self._event_ctrl, self._apiobject)
+            if (await message.initialize(self, self._event_ctrl, self._apiobject)) is not None:
+                await self._on_message_removed(self, message)
 
     async def initialize(self, parent: Any, event_ctrl: EventController):
         """
@@ -790,7 +793,10 @@ class USER(BaseGUILD):
 
     # Event Handlers
     async def _on_add_message(self, _, message: Union[VoiceMESSAGE, VoiceMESSAGE]):
-        await message.initialize(parent=self, event_ctrl=self._event_ctrl, guild=self._apiobject)
+        exc = await message.initialize(parent=self, event_ctrl=self._event_ctrl, guild=self._apiobject)
+        if exc is not None:
+            raise exc
+
         self._messages.append(message)
         with suppress(ValueError):  # Readd the removed message
             self._removed_messages.remove(message)

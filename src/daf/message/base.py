@@ -387,7 +387,6 @@ class BaseMESSAGE:
             lambda message, *args, **kwargs: message is self
         )
         self._running = True
-        return True
 
     async def _on_update(self, _, _init_options: Optional[dict], **kwargs):
         raise NotImplementedError
@@ -536,7 +535,6 @@ class AutoCHANNEL:
         """
         self.parent = parent
         self.channel_getter = channel_getter
-        return True
 
     def remove(self, channel: ChannelType):
         """
