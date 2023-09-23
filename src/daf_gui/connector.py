@@ -265,7 +265,7 @@ class RemoteConnectionCLIENT(AbstractConnectionCLIENT):
             trace("WebSocket error, closing connection!", TraceLEVELS.ERROR, exc)
 
         if self.connected:  # Only call this if the task has not ended due to manual disconnect
-            await evt.emit(daf.EventID.g_daf_shutdown)
+            await evt.emit(daf.EventID._ws_disconnect)
 
         trace("Websocket connection closed", TraceLEVELS.DEBUG)
 

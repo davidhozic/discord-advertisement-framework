@@ -4,7 +4,6 @@ Main file of the DAF GUI.
 from importlib.util import find_spec
 from pathlib import Path
 
-from weakref import WeakSet
 from daf.misc import instance_track as it
 
 import subprocess
@@ -134,7 +133,7 @@ class Application():
 
 
         # Toast notifications
-        self.init_toast()
+        self.init_event_listeners()
 
         # Optional dependencies tab
         self.init_optional_dep_tab()
@@ -164,8 +163,8 @@ class Application():
         # Connection
         self.connection: AbstractConnectionCLIENT = None
 
-    def init_toast(self):
-        "Initializes toast notifications"
+    def init_event_listeners(self):
+        "Initializes event listeners."
         bootstyle_map = {
             daf.TraceLEVELS.DEBUG: ttk.LIGHT,
             daf.TraceLEVELS.NORMAL: ttk.PRIMARY,
@@ -173,28 +172,34 @@ class Application():
             daf.TraceLEVELS.ERROR: ttk.DANGER,
             daf.TraceLEVELS.DEPRECATED: ttk.DARK
         }
-        active_toasts = WeakSet()
 
         def trace_listener(level: daf.TraceLEVELS, message: str):
-            len_toasts = len(active_toasts)
+            last_toast: ToastNotification = ToastNotification.last_toast
+            if last_toast is not None and last_toast.toplevel.winfo_exists():
+                next_position = max((last_toast.position[1] + 150) % 1200, 150)
+            else:
+                next_position = 150
+
             toast = ToastNotification(
                 level.name,
                 message,
                 bootstyle=bootstyle_map[level],
                 icon="",
                 duration=5000,
-                position=(10, (150 * len_toasts) % 1200 + 200, "se"),
+                position=(10, next_position, "se"),
                 topmost=True
             )
-
-            active_toasts.add(toast)
+            ToastNotification.last_toast = toast
             toast.show_toast()
 
-        def shutdown_listener():
-            self.stop_daf()
-        
-        daf.get_global_event_ctrl().add_listener(daf.EventID.g_trace, trace_listener)
-        daf.get_global_event_ctrl().add_listener(daf.EventID.g_daf_shutdown, shutdown_listener)
+        ToastNotification.last_toast = None
+        evt = daf.get_global_event_ctrl()
+        evt.add_listener(
+            daf.EventID.g_trace, lambda l, m: self.win_main.after_idle(trace_listener, l, m)
+        )
+        evt.add_listener(
+            daf.EventID._ws_disconnect, lambda: self.win_main.after_idle(self.stop_daf)
+        )
 
     def init_schema_tab(self):
         self.objects_edit_window = None

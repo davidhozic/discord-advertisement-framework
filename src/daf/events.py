@@ -50,6 +50,9 @@ class EventID(Enum):
 
     _dummy = auto()  # For stopping the event loop
 
+    # Events for use externally (not within daf)
+    _ws_disconnect = auto()
+
 
 class EventListener:
     def __init__(self, fnc: Callable, predicate: Callable[[T], bool] = None) -> None:
