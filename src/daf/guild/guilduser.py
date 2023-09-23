@@ -58,7 +58,6 @@ class BaseGUILD:
     __slots__ = (       # Faster attribute access
         "_apiobject",
         "logging",
-        "_messages_uninitialized",
         "_messages",
         "remove_after",
         "removal_buffer_length",
@@ -67,6 +66,7 @@ class BaseGUILD:
         "parent",
         "_removal_timer_handle",
         "_event_ctrl",
+        "_running"
     )
 
     _removed_messages: List[BaseMESSAGE]
@@ -85,8 +85,7 @@ class BaseGUILD:
         self._apiobject: discord.Object = snowflake
         self.logging: bool = logging
         # Contains all the different message objects (added in .initialize())
-        self._messages_uninitialized: List[BaseMESSAGE] = messages
-        self._messages: List[BaseMESSAGE] = []
+        self._messages: List[BaseMESSAGE] = messages
         self.remove_after = remove_after
         self.removal_buffer_length = removal_buffer_length
         # int - after n sends
@@ -97,6 +96,7 @@ class BaseGUILD:
         self.parent = None
         self._removal_timer_handle: asyncio.Task = None
         self._event_ctrl = None
+        self._running = False
         attributes.write_non_exist(self, "_removed_messages", [])
 
     def __repr__(self) -> str:
@@ -236,6 +236,9 @@ class BaseGUILD:
         """
         raise NotImplementedError
 
+    async def _init_messages(self):
+        raise NotImplementedError
+
     # Non public
     async def initialize(self, parent: Any, event_ctrl: EventController, getter: Callable) -> None:
         """
@@ -257,49 +260,44 @@ class BaseGUILD:
         getter: Callable
             Callable function or async generator used for
             retrieving an api object (client.get_*).
-
-        Raises
-        -----------
-        ValueError
-            Raised when the guild_id wasn't found.
-        Other
-            Raised from .add_message(message_object) method.
         """
         self._event_ctrl = event_ctrl
         self.parent = parent
-        guild_id = self.snowflake
-        self._apiobject = getter(guild_id)
+        _apiobject = getter(self.snowflake)
+
         if isinstance(self._apiobject, Coroutine):
-            self._apiobject = await self._apiobject
+            try:
+                _apiobject = await _apiobject
+            except discord.HTTPException as exc:
+                trace(f"Exception obtaining API object - {self}", TraceLEVELS.ERROR, exc)
+                return False
 
-        if self._apiobject is not None:
-            for message in self._messages_uninitialized:
-                try:
-                    await self._on_add_message(self, message)
-                except (TypeError, ValueError) as exc:
-                    trace(f" Unable to initialize message {message}, in {self}", TraceLEVELS.WARNING, exc)
+        if _apiobject is None:
+            trace(f"Invalid ID {self.snowflake} - {self}", TraceLEVELS.ERROR)
+            return False
+        
+        self._apiobject = _apiobject
+        await self._init_messages()
 
-            self._messages_uninitialized.clear()
-            if self.remove_after is not None:
-                self._removal_timer_handle = (
-                    async_util.call_at(
-                        event_ctrl.emit,
-                        self.remove_after
-                        if isinstance(self.remove_after, datetime)
-                        else
-                        datetime.now() + self.remove_after,
-                        EventID.server_removed,
-                        self
-                    )
+        if self.remove_after is not None:
+            self._removal_timer_handle = (
+                async_util.call_at(
+                    event_ctrl.emit,
+                    self.remove_after
+                    if isinstance(self.remove_after, datetime)
+                    else
+                    datetime.now() + self.remove_after,
+                    EventID.server_removed,
+                    self
                 )
+            )
 
-            event_ctrl.add_listener(EventID.message_ready, self._advertise, lambda server, m: server is self)
-            event_ctrl.add_listener(EventID.message_removed, self._on_message_removed, lambda server, m: server is self)
-            event_ctrl.add_listener(EventID.server_update, self._on_update, lambda server, *h, **k: server is self)
-            event_ctrl.add_listener(EventID.message_added, self._on_add_message, lambda server, m: server is self)
-            return
-
-        raise ValueError(f"Unable to find object with ID: {guild_id}")
+        event_ctrl.add_listener(EventID.message_ready, self._advertise, lambda server, m: server is self)
+        event_ctrl.add_listener(EventID.message_removed, self._on_message_removed, lambda server, m: server is self)
+        event_ctrl.add_listener(EventID.message_added, self._on_add_message, lambda server, m: server is self)
+        event_ctrl.add_listener(EventID.server_update, self._on_update, lambda server, *h, **k: server is self)
+        self._running = True
+        return True
 
     def generate_invite_log_context(self, member: discord.Member, invite_id: str) -> dict:
         raise NotImplementedError
@@ -380,6 +378,10 @@ class BaseGUILD:
         Cleans up and closes any asyncio related
         functionality.
         """
+        if not self._running:
+            return
+        
+        self._running = False
         self._event_ctrl.remove_listener(EventID.message_ready, self._advertise)
         self._event_ctrl.remove_listener(EventID.message_removed, self._on_message_removed)
         self._event_ctrl.remove_listener(EventID.server_update, self._on_update)
@@ -480,6 +482,12 @@ class GUILD(BaseGUILD):
 
         return []  # Return empty on error or no permissions
 
+
+    async def _init_messages(self):
+        message: BaseChannelMessage
+        for message in self._messages:
+            await message.initialize(self, self._event_ctrl, self._get_guild_channels)
+
     async def initialize(self, parent: Any, event_ctrl: EventController) -> None:
         """
         This function initializes the API related objects and
@@ -488,47 +496,40 @@ class GUILD(BaseGUILD):
         .. note::
             This should NOT be manually called, it is called automatically
             after adding the message.
-
-        Raises
-        -----------
-        ValueError
-            Raised when the guild_id wasn't found.
-        Other
-            Raised from .add_message(message_object) method.
         """
-        await super().initialize(parent, event_ctrl, parent.client.get_guild)
+        if not await super().initialize(parent, event_ctrl, parent.client.get_guild):
+            return False
 
         # Fill invite counts
-        if not len(self.join_count):  # Skip invite query from Discord
-            return
+        if len(self.join_count):  # Skip invite query from Discord
+            client: discord.Client = parent.client
+            client.add_listener(self._discord_on_member_join, "on_member_join")
+            client.add_listener(self._discord_on_invite_delete, "on_invite_delete")
+            self._event_ctrl.add_listener(
+                EventID.discord_member_join,
+                self._on_member_join,
+                predicate=lambda m: m.guild.id == self._apiobject.id
+            )
+            self._event_ctrl.add_listener(
+                EventID.discord_invite_delete,
+                self._on_invite_delete,
+                predicate=lambda inv: inv.guild.id == self._apiobject.id
+            )
 
-        client: discord.Client = parent.client
-        client.add_listener(self._discord_on_member_join, "on_member_join")
-        client.add_listener(self._discord_on_invite_delete, "on_invite_delete")
-        self._event_ctrl.add_listener(
-            EventID.discord_member_join,
-            self._on_member_join,
-            predicate=lambda m: m.guild.id == self._apiobject.id
-        )
-        self._event_ctrl.add_listener(
-            EventID.discord_invite_delete,
-            self._on_invite_delete,
-            predicate=lambda inv: inv.guild.id == self._apiobject.id
-        )
+            invites = await self._get_invites()
+            invites = {invite.id: invite.uses for invite in invites}
+            counts = self.join_count
+            for invite in list(counts.keys()):
+                try:
+                    counts[invite] = invites[invite]
+                except KeyError:
+                    del counts[invite]
+                    trace(
+                        f"Invite link {invite} not found in {self.apiobject.name}. It will not be tracked!",
+                        TraceLEVELS.ERROR
+                    )
 
-
-        invites = await self._get_invites()
-        invites = {invite.id: invite.uses for invite in invites}
-        counts = self.join_count
-        for invite in list(counts.keys()):
-            try:
-                counts[invite] = invites[invite]
-            except KeyError:
-                del counts[invite]
-                trace(
-                    f"Invite link {invite} not found in {self.apiobject.name}. It will not be tracked!",
-                    TraceLEVELS.WARNING
-                )
+        return True
 
     def _get_guild_channels(self, *types):
         return set(x for x in self._apiobject.channels if isinstance(x, types))
@@ -572,7 +573,10 @@ class GUILD(BaseGUILD):
         Other
             Raised from .initialize() method.
         """
-        return self._event_ctrl.emit(EventID.server_update, self, init_options, **kwargs)
+        if self._running:
+            return self._event_ctrl.emit(EventID.server_update, self, init_options, **kwargs)
+        else:
+            return self._on_update(self, init_options, **kwargs)
 
     def generate_invite_log_context(self, member: discord.Member, invite_id: str) -> dict:
         """
@@ -621,17 +625,13 @@ class GUILD(BaseGUILD):
             if "invite_track" not in kwargs:
                 kwargs["invite_track"] = list(self.join_count.keys())
 
-            kwargs["messages"] = kwargs.pop("messages", self.messages + self._messages_uninitialized)
+            kwargs["messages"] = kwargs.pop("messages", self._messages)
             if init_options is None:
                 init_options = {"parent": self.parent, "event_ctrl": self._event_ctrl}
 
             await async_util.update_obj_param(self, init_options=init_options, **kwargs)
         except Exception:
-            _messages_to_init = self.messages
             await self.initialize(self.parent, self._event_ctrl)
-            for message in _messages_to_init:
-                await message.initialize(self._event_ctrl)
-
             raise
 
     async def _on_member_join(self, member: discord.Member):        
@@ -720,37 +720,6 @@ class USER(BaseGUILD):
         super().__init__(snowflake, messages, logging, remove_after, removal_buffer_length)
         attributes.write_non_exist(self, "update_semaphore", asyncio.Semaphore(1))
 
-    def _check_state(self) -> bool:
-        """
-        Checks if the user is ready to be deleted.
-
-        Returns
-        ----------
-        True
-            The user should be deleted.
-        False
-            The user is in proper state, do not delete.
-        """
-        return super()._check_state()
-
-    async def initialize(self, parent: Any, event_ctrl: EventController):
-        """
-        This function initializes the API related objects and
-        then tries to initialize the MESSAGE objects.
-
-        Raises
-        -----------
-        ValueError
-            Raised when the DM could not be created.
-        Other
-            Raised from .add_message(message_object) method.
-        """
-        return await super().initialize(
-            parent,
-            event_ctrl,
-            parent.client.get_or_fetch_user
-        )
-
     @typechecked
     def add_message(self, message: DirectMESSAGE) -> asyncio.Future:
         return self._event_ctrl.emit(EventID.message_added, self, message)
@@ -790,6 +759,35 @@ class USER(BaseGUILD):
         """
         return self._event_ctrl.emit(EventID.server_update, self, init_options, **kwargs)
 
+    def _check_state(self) -> bool:
+        """
+        Checks if the user is ready to be deleted.
+
+        Returns
+        ----------
+        True
+            The user should be deleted.
+        False
+            The user is in proper state, do not delete.
+        """
+        return super()._check_state()
+
+    async def _init_messages(self):
+        message: DirectMESSAGE
+        for message in self._messages:
+            await message.initialize(self, self._event_ctrl, self._apiobject)
+
+    async def initialize(self, parent: Any, event_ctrl: EventController):
+        """
+        This function initializes the API related objects and
+        then tries to initialize the MESSAGE objects.
+        """
+        return await super().initialize(
+            parent,
+            event_ctrl,
+            parent.client.get_or_fetch_user
+        )
+
     # Event Handlers
     async def _on_add_message(self, _, message: Union[VoiceMESSAGE, VoiceMESSAGE]):
         await message.initialize(parent=self, event_ctrl=self._event_ctrl, guild=self._apiobject)
@@ -804,16 +802,12 @@ class USER(BaseGUILD):
             if "snowflake" not in kwargs:
                 kwargs["snowflake"] = self.snowflake
 
-            kwargs["messages"] = kwargs.pop("messages", self.messages + self._messages_uninitialized)
+            kwargs["messages"] = kwargs.pop("messages", self._messages)
 
             if init_options is None:
                 init_options = {"parent": self.parent, "event_ctrl": self._event_ctrl}
 
             await async_util.update_obj_param(self, init_options=init_options, **kwargs)
         except Exception:
-            _messages_to_init = self.messages
             await self.initialize(self.parent, self._event_ctrl)
-            for message in _messages_to_init:
-                await message.initialize(self._event_ctrl)
-    
             raise

@@ -299,15 +299,6 @@ class TextMESSAGE(BaseChannelMessage):
         --------------
         parent: daf.guild.GUILD
             The GUILD this message is in
-
-        Raises
-        ------------
-        TypeError
-            Channel contains invalid channels
-        ValueError
-            Channel does not belong to the guild this message is in.
-        ValueError
-            No valid channels were passed to object"
         """
         await super().initialize(
             parent,
@@ -316,6 +307,7 @@ class TextMESSAGE(BaseChannelMessage):
         )
         # Increase period to slow mode delay if it is lower
         self._check_period()
+        return True
 
     async def _handle_error(
         self,
@@ -685,7 +677,8 @@ class DirectMESSAGE(BaseMESSAGE):
                 elif isinstance(element, FILE):
                     _data_to_send["files"].append(element)
         return _data_to_send
-    
+
+    @async_util.except_return
     async def initialize(self, parent: Any, event_ctrl: EventController, guild: discord.User):
         """
         The method creates a direct message channel and
@@ -698,22 +691,15 @@ class DirectMESSAGE(BaseMESSAGE):
         -----------
         parent: daf.guild.USER
             The USER this message is in
-
-        Raises
-        ---------
-        ValueError
-            Raised when the direct message channel could not be created
         """
         try:
-            if parent is None:
-                return
-
             self.parent = parent
             await guild.create_dm()
             self.dm_channel = guild
-            await super().initialize(event_ctrl)
-        except discord.HTTPException as ex:
-            raise ValueError(f"Unable to create DM with user {guild.display_name}\nReason: {ex}")
+            return await super().initialize(event_ctrl)
+        except discord.HTTPException as exc:
+            trace(f"Unable to create DM with user {guild.display_name}", TraceLEVELS.ERROR, exc)
+            raise
 
     async def _handle_error(self, ex: Exception) -> bool:
         """

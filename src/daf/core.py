@@ -228,9 +228,7 @@ async def initialize(user_callback: Optional[Union[Callable, Coroutine]] = None,
             trace("Unable to load from file", TraceLEVELS.ERROR, exc)
 
     for account in accounts:
-        try:
-            await add_object(account)
-        except Exception as exc:
+        if not await add_object(account):
             trace("Unable to add account.", TraceLEVELS.ERROR, exc)
 
     # ------------------------------------------

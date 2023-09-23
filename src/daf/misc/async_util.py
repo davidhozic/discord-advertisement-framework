@@ -18,6 +18,7 @@ __all__ = (
     "with_semaphore",
     "update_obj_param",
     "call_at",
+    "except_return",
 )
 
 
@@ -146,7 +147,8 @@ async def update_obj_param(
 
         # Call additional initialization function (if it has one)
         if hasattr(obj, "initialize"):
-            await obj.initialize(**init_options)
+            if not await obj.initialize(**init_options):
+                raise RuntimeError(f"Could not initialize {obj}")
 
     except Exception:
         # In case of failure, restore to original attributes
@@ -168,3 +170,18 @@ def call_at(fnc: Callable, when: Union[datetime, timedelta], *args, **kwargs) ->
             await r
 
     return asyncio.create_task(waiter(), name=f'{fnc}_{args}_{kwargs}')
+
+
+def except_return(fnc):
+    """
+    Wraps the ``fnc`` into a wrapper that returns False.
+    If no exception is raised it returns the result of the ``fnc`` call.
+    """
+    @wraps(fnc)
+    async def wrapper(*args, **kwargs):
+        try:
+            return await fnc(*args, **kwargs)
+        except Exception as exc:
+            return exc
+
+    return wrapper

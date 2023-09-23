@@ -6,12 +6,10 @@ from typing import Any, Union, List, Optional, Dict
 from typeguard import typechecked
 from datetime import timedelta, datetime
 
-from ..message import TextMESSAGE, VoiceMESSAGE, BaseMESSAGE
+from ..message import TextMESSAGE, VoiceMESSAGE, BaseMESSAGE, BaseChannelMessage
 from ..logging.tracing import TraceLEVELS, trace
 from ..misc import async_util, instance_track, doc, attributes
 from ..events import *
-
-from .guilduser import GUILD
 
 import _discord as discord
 import asyncio
@@ -67,7 +65,6 @@ class AutoGUILD:
         "include_pattern",
         "exclude_pattern",
         "remove_after",
-        "_messages_uninitialized",
         "logging",
         "_created_at",
         "update_semaphore",
@@ -83,6 +80,7 @@ class AutoGUILD:
         "_invite_join_count",
         "_cache",
         "_event_ctrl",
+        "_running",
     )
 
     @typechecked
@@ -101,8 +99,7 @@ class AutoGUILD:
         self.include_pattern = re.sub(r"\s*\|\s*", '|', include_pattern) if include_pattern else None
         self.exclude_pattern = re.sub(r"\s*\|\s*", '|', exclude_pattern) if exclude_pattern else None
         self.remove_after = remove_after
-        # Uninitialized template messages that get copied for each found guild.
-        self._messages_uninitialized = messages if messages is not None else []
+        self._messages = messages
         self.logging = logging
         self.auto_join = auto_join
         self._created_at = datetime.now()
@@ -116,6 +113,7 @@ class AutoGUILD:
         self._guild_join_timer_handle: asyncio.Task = None
         self._cache = []
         self._event_ctrl: EventController = None
+        self._running = False
 
         if invite_track is None:
             invite_track = []
@@ -235,7 +233,10 @@ class AutoGUILD:
             After calling this method the entire object is reset
             (this includes it's GUILD objects in cache).
         """
-        return self._event_ctrl.emit(EventID.server_update, self, init_options, **kwargs)
+        if self._running:
+            return self._event_ctrl.emit(EventID.server_update, self, init_options, **kwargs)
+        else:
+            return self._on_update(self, init_options, **kwargs)
 
     # Non public methods
     def _reset_auto_join_timer(self):
@@ -256,24 +257,18 @@ class AutoGUILD:
     async def initialize(self, parent: Any, event_ctrl: EventController):
         """
         Initializes the object.
-
-        Raises
-        --------
-        ValueError
-            Auto-join guild functionality requires the account to be
-            provided with username and password.
         """
         self._event_ctrl = event_ctrl
         self.parent = parent
         if self.auto_join is not None:
-            await self.auto_join.initialize(self)
+            if not await self.auto_join.initialize(self):
+                return False
+
             self.guild_query_iter = self.auto_join._query_request()
 
-        for message in self._messages_uninitialized:
-            try:
-                await self._on_add_message(self, message)
-            except (TypeError, ValueError) as exc:
-                trace(f" Unable to initialize message {message}, in {self}", TraceLEVELS.WARNING, exc)
+        message: BaseChannelMessage
+        for message in self._messages:
+            await message.initialize(self, event_ctrl, self._get_channels)
 
         if self.remove_after is not None:
             self._removal_timer_handle = (
@@ -291,11 +286,11 @@ class AutoGUILD:
 
         event_ctrl.add_listener(EventID.message_ready, self._advertise, lambda server, m: server is self)
         event_ctrl.add_listener(EventID.message_added, self._on_add_message, lambda server, m: server is self)
-        event_ctrl.add_listener(EventID.server_update, self._on_update, lambda server, *args, **kwargs: server is self)
         event_ctrl.add_listener(EventID.message_removed, self._on_remove_message, lambda server, m: server is self)
+        event_ctrl.add_listener(EventID.server_update, self._on_update, lambda server, *args, **kwargs: server is self)
 
         if not len(self._invite_join_count):  # Skip invite query from Discord
-            return
+            return True
 
         invites = await self._get_invites()
         invites = {invite.id: invite.uses for invite in invites}
@@ -307,26 +302,26 @@ class AutoGUILD:
                 del counts[invite]
                 trace(
                     f"Invite link {invite} not found in {self}. It will not be tracked!",
-                    TraceLEVELS.WARNING
+                    TraceLEVELS.ERROR
                 )
 
-        
-        if not len(counts):  # Don't listen to events if no invites were left
-            return
+        if len(counts):  # Don't listen to events if no invites were left
+            client: discord.Client = parent.client
+            client.add_listener(self._discord_on_member_join, "on_member_join")
+            client.add_listener(self._discord_on_invite_delete, "on_invite_delete")
+            self._event_ctrl.add_listener(
+                EventID.discord_member_join,
+                self._on_member_join,
+                predicate=lambda memb: self._check_name_match(memb.guild.name)
+            )
+            self._event_ctrl.add_listener(
+                EventID.discord_invite_delete,
+                self._on_invite_delete,
+                predicate=lambda inv: self._check_name_match(inv.guild.name)
+            )
 
-        client: discord.Client = parent.client
-        client.add_listener(self._discord_on_member_join, "on_member_join")
-        client.add_listener(self._discord_on_invite_delete, "on_invite_delete")
-        self._event_ctrl.add_listener(
-            EventID.discord_member_join,
-            self._on_member_join,
-            predicate=lambda memb: self._check_name_match(memb.guild.name)
-        )
-        self._event_ctrl.add_listener(
-            EventID.discord_invite_delete,
-            self._on_invite_delete,
-            predicate=lambda inv: self._check_name_match(inv.guild.name)
-        )
+        self._running = True
+        return True
 
     def _generate_guild_log_context(self, guild: discord.Guild):
         return {
@@ -418,17 +413,13 @@ class AutoGUILD:
             if "invite_track" not in kwargs:
                 kwargs["invite_track"] = self.invite_track
 
-            kwargs["messages"] = kwargs.pop("messages", self.messages + self._messages_uninitialized)
+            kwargs["messages"] = kwargs.pop("messages", self._messages)
             if init_options is None:
                 init_options = {"parent": self.parent, "event_ctrl": self._event_ctrl}
 
             await async_util.update_obj_param(self, init_options=init_options, **kwargs)
         except Exception:
-            _messages_to_init = self.messages
             await self.initialize(self.parent, self._event_ctrl)
-            for message in _messages_to_init:
-                await message.initialize(self._event_ctrl)
-
             raise
     
     @async_util.with_semaphore("update_semaphore")

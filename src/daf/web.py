@@ -13,6 +13,7 @@ from typeguard import typechecked
 
 from .logging.tracing import trace, TraceLEVELS
 from .misc import doc
+from .misc.async_util import except_return
 
 import asyncio
 import pathlib
@@ -142,14 +143,15 @@ class SeleniumCLIENT:
         self.driver = None
         self._token = None
 
+    @except_return
     async def initialize(self) -> None:
         """
         Starts the webdriver whenever the framework is started.
 
-        Raises
-        ----------
-        Any
-            Raised in :py:meth:`~SeleniumCLIENT.login` method.
+        Returns
+        ---------
+        bool
+            ``True`` on success or ``False`` on error.
         """
         WD_OUTPUT_PATH.mkdir(exist_ok=True, parents=True)
         web_data_path = pathlib.Path(WD_PROFILES_PATH, self._username)
@@ -765,14 +767,25 @@ class GuildDISCOVERY:
         self.session = None
         self.browser = None
 
-    async def initialize(self, parent: Any):
+    async def initialize(self, parent: Any) -> bool:
+        """
+        Initializes guild discovery session.
+
+        Returns
+        ---------
+        bool
+            True on success or False on error.
+        """
+        if self.browser is None:
+            trace(
+                "To use auto-join functionality, the account must be provided with username and password.",
+                TraceLEVELS.ERROR
+            )
+            return False
+
         self.session = http.ClientSession()
         self.browser: SeleniumCLIENT = parent.parent.selenium
-        if self.browser is None:
-            raise ValueError(
-                "To use auto-join functionality,"
-                " the account must be provided with username and password."
-            )
+        return True
 
     async def _close(self):
         """
