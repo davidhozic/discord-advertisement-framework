@@ -195,7 +195,7 @@ class Application():
         ToastNotification.last_toast = None
         evt = daf.get_global_event_ctrl()
         evt.add_listener(
-            daf.EventID.g_trace, lambda l, m: self.win_main.after_idle(trace_listener, l, m)
+            daf.EventID.g_trace, lambda level, message: self.win_main.after_idle(trace_listener, level, message)
         )
         evt.add_listener(
             daf.EventID._ws_disconnect, lambda: self.win_main.after_idle(self.stop_daf)
