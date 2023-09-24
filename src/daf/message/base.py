@@ -48,6 +48,12 @@ class BaseMESSAGE:
     This is the base class for all the different classes that
     represent a message you want to be sent into discord.
 
+
+    .. versionchanged:: v3.0
+    
+        - New ``remove_after`` property.
+        - Removed ``remaining_before_removal`` property.
+
     .. deprecated:: v2.1
 
         - start_period, end_period - Using int values, use ``timedelta`` object instead.
@@ -89,11 +95,9 @@ class BaseMESSAGE:
         "_fbcdata",
         "update_semaphore",
         "parent",
-        "remove_after",
-        "_created_at",
+        "_remove_after",
         "_timer_handle",
         "_event_ctrl",
-        "_running",
     )
 
     @typechecked
@@ -134,18 +138,16 @@ class BaseMESSAGE:
         self.period = self.end_period  # This can randomize in _reset_timer
 
         if isinstance(start_in, datetime):
-            self.next_send_time = start_in
+            self.next_send_time = start_in.astimezone()
         else:
-            self.next_send_time = datetime.now() + start_in
+            self.next_send_time = datetime.now().astimezone() + start_in
 
         self.parent = None  # The xGUILD object this message is in (needed for update method).
-        self.remove_after = remove_after  # Remove the message from the list after this
-        self._created_at = datetime.now()
+        self._remove_after = remove_after  # Remove the message from the list after this
         self._data = data
         self._fbcdata = isinstance(data, _FunctionBaseCLASS)
         self._timer_handle: asyncio.Task = None
         self._event_ctrl: EventController = None
-        self._running = False
         # Attributes created with this function will not be re-referenced to a different object
         # if the function is called again, ensuring safety (.update_method)
         attributes.write_non_exist(self, "update_semaphore", asyncio.Semaphore(1))
@@ -153,7 +155,8 @@ class BaseMESSAGE:
         attributes.write_non_exist(self, "_id", id(self))
 
     def __repr__(self) -> str:
-        return f"{type(self).__name__}(data={self._data})"
+        data_str = str(self._data)[:30].strip("'")
+        return f"{type(self).__name__}(data='{data_str}')"
 
     def __eq__(self, o: object) -> bool:
         """
@@ -190,23 +193,14 @@ class BaseMESSAGE:
         return new
 
     @property
-    def remaining_before_removal(self) -> Any:
+    def remove_after(self) -> Any:
         """
+        .. versionadded:: v3.0
+
         Returns the remaining send counts / date after which
         the message will be removed from the sending list.
-
-        .. versionadded:: v2.10
         """
-        r = self.remove_after
-        if isinstance(r, timedelta):
-            r = r - (datetime.now() - self._created_at)
-
-        return r
-
-    @property
-    def created_at(self) -> datetime:
-        "Returns the datetime of when the object was created"
-        return self._created_at
+        return self._remove_after
 
     async def update(self, _init_options: dict = {}, **kwargs):
         """
@@ -244,25 +238,6 @@ class BaseMESSAGE:
         """
         raise NotImplementedError
 
-    def _check_state(self) -> bool:
-        """
-        Checks if the message is ready to be deleted.
-        This is extended in subclasses.
-
-        Returns
-        ----------
-        True
-            The message should be deleted.
-        False
-            The message is in proper state, do not delete.
-        """
-        # Check remove_after
-        type_ = type(self.remove_after)
-        return (
-            type_ is timedelta and datetime.now() - self._created_at > self.remove_after or
-            type_ is datetime and datetime.now() > self.remove_after
-        )
-
     def _update_state(self):
         """
         Updates the internal counter for auto-removal
@@ -270,8 +245,8 @@ class BaseMESSAGE:
         """
         raise NotImplementedError
 
-    def _generate_exception(self,
-                            status: int,
+    @staticmethod
+    def _generate_exception(status: int,
                             code: int,
                             description: str,
                             cls: T) -> T:
@@ -328,19 +303,13 @@ class BaseMESSAGE:
         """
         raise NotImplementedError
 
-    def _is_ready(self) -> bool:
-        """
-        This method returns bool indicating if message is ready to be sent.
-        """
-        return datetime.now() >= self.next_send_time
-
     def _calc_next_time(self):
         if self.start_period is not None:
             range = map(int, [self.start_period.total_seconds(), self.end_period.total_seconds()])
             self.period = timedelta(seconds=random.randrange(*range))
 
         # Absolute timing instead of relative to prevent time slippage due to missed timer reset.
-        current_stamp = datetime.now()
+        current_stamp = datetime.now().astimezone()
         while self.next_send_time < current_stamp:
             self.next_send_time += self.period
 
@@ -386,7 +355,6 @@ class BaseMESSAGE:
             self._on_update,
             lambda message, *args, **kwargs: message is self
         )
-        self._running = True
 
     async def _on_update(self, _, _init_options: Optional[dict], **kwargs):
         raise NotImplementedError
@@ -396,10 +364,9 @@ class BaseMESSAGE:
         """
         Closes the timer handles.
         """
-        if not self._running:
+        if self._event_ctrl is None:  # Message not initialized / already closed
             return
-        
-        self._running = False
+
         if self._timer_handle is not None and not self._timer_handle.cancelled():
             self._timer_handle.cancel()
             await asyncio.gather(self._timer_handle, return_exceptions=True)
@@ -584,7 +551,7 @@ class BaseChannelMessage(BaseMESSAGE):
     __slots__ = (
         "channels",
         "channel_getter",
-        "remove_after_by_channel"
+        "_remove_after_original"
     )
 
     @typechecked
@@ -600,54 +567,50 @@ class BaseChannelMessage(BaseMESSAGE):
         super().__init__(start_period, end_period, data, start_in, remove_after)
         self.channels = channels
         self.channel_getter = None
-        # Override the default remove_after logic if it's an integer.
-        self.remove_after_by_channel = {}
+
+        # In case int was passed, we need to have an original value in case any additional
+        # channels were added by AutoCHANNEL, as int in case of channel messages is defined
+        # as maximum amount of successful sends into each channel separately.
+        self._remove_after_original = remove_after
+        if isinstance(self._remove_after, int):
+            self._remove_after = {}
 
     @property
-    def remaining_before_removal(self) -> Union[Dict[ChannelType, int], timedelta, datetime, int]:
+    def remove_after(self) -> Union[int, datetime, None]:
         """
-        Returns
-        ------------
-        int
-            (Only if message not yet sent) Number of successful sends to each channel before removal.
-        Dict[ChannelType, int]
-            Dictionary mapping channel objects to remaining number of sends to that channel.
-        timedelta
-            Remaining ammount of time before removal.
-        datetime
-            Timestamp of removal.
+        Returns the remaining send counts / date after which the message will be removed from the sending list.
+        If the original type of the ``remove_after`` parameter to the message was of type int, this will
+        return the maximum remaining amount of sends from all channels. If all the channels have been removed,
+        this will return the original count ``remove_after`` parameter.
         """
-        return {self.parent.parent.client.get_channel(k): v for k, v in self.remove_after_by_channel.items()} or super().remaining_before_removal
+        # An integer was originally provided, the dict is remove_after by each channel
+        if isinstance(self._remove_after_original, int):
+            return max(self._remove_after.values()) if self._remove_after else self._remove_after_original
+
+        return self._remove_after
 
     @typechecked
     def update(self, _init_options: Optional[dict] = None, **kwargs: Any) -> asyncio.Future:
         return self._event_ctrl.emit(EventID.message_update, self, _init_options, **kwargs)
 
-    def _check_state(self) -> bool:
-        return (
-            super()._check_state() or
-            # 'or [True]' assures this evaluates to False if the map is empty (no channels were ever advertised)
-            type(self.remove_after) is int and not any(self.remove_after_by_channel.values() or [True]) or
-            not bool(self.channels)
-        )
-
     def _update_state(self, succeeded_channels: List[ChannelType], err_channels: List[dict]):
         "Updates internal remove_after counter and checks if any channels need to be remove."
 
         # Override the default counter remove_after behaviour to act independant on separate channels.
-        if isinstance(self.remove_after, int):
+        if isinstance(self._remove_after_original, int):
             for channel in succeeded_channels:
                 snowflake = channel.id
-                if snowflake not in self.remove_after_by_channel:
-                    self.remove_after_by_channel[snowflake] = self.remove_after
+                if snowflake not in self._remove_after:
+                    self._remove_after[snowflake] = self._remove_after_original
 
-                self.remove_after_by_channel[snowflake] -= 1
-                if not self.remove_after_by_channel[snowflake]:  # No more tries left
+                self._remove_after[snowflake] -= 1
+                if not self._remove_after[snowflake]:  # No more tries left
                     trace(
                         f"Removing channel '{channel.name}' ({channel.id}) [Guild '{channel.guild.name}' ({channel.guild.id})] from {self} - 'remove_after' sends reached.",
                         TraceLEVELS.NORMAL,
                     )
                     self.channels.remove(channel)
+                    del self._remove_after[snowflake]
 
         # Remove any channels that returned with code status 404 (They no longer exist)
         for data in err_channels:
@@ -664,10 +627,14 @@ class BaseChannelMessage(BaseMESSAGE):
                     )
                     self.channels.remove(channel)
 
+        if not self.channels:
+            self._event_ctrl.emit(EventID.message_removed, self.parent, self)
+
     def _get_channel_types(self) -> Set[ChannelType]:
         "Returns a set of valid channels types. Implement in subclasses."
         raise NotImplementedError
 
+    @async_util.except_return
     async def initialize(
         self,
         parent: Any,
@@ -727,7 +694,7 @@ class BaseChannelMessage(BaseMESSAGE):
                 self.channels.remove(channel)
 
             if not self.channels:
-                trace(f"No valid channels passed to {self}.", TraceLEVELS.WARNING)
+                trace(f"No valid channels passed to {self}.", TraceLEVELS.ERROR, exception_cls=ValueError)
 
         self.parent = parent
         return await super().initialize(event_ctrl)

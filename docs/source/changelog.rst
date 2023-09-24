@@ -77,6 +77,10 @@ v3.0.0
       (eg. :func:`~daf.logging.tracing.trace()` events).
 
 
+  - Removed ``remaining_before_removal`` property from all message classes.
+  - Added ``remove_after`` property to :class:`~daf.guild.GUILD`, :class:`~daf.guild.USER`,
+    :class:`~daf.message.TextMESSAGE`, :class:`~daf.message.VoiceMESSAGE` and :class:`~daf.message.DirectMESSAGE`.
+
 
 v2.10.4
 ======================

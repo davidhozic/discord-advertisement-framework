@@ -59,7 +59,11 @@ ADDITIONAL_ANNOTATIONS = {
         "minute": int,
         "second": int,
         "microsecond": int,
-        "fold": int
+        "tzinfo": dt.timezone
+    },
+    dt.timezone: {
+        "offset": dt.timedelta,
+        "name": str
     },
     discord.Embed: {
         "colour": Union[int, discord.Colour, None],
@@ -117,10 +121,11 @@ if daf.logging.sql.SQL_INSTALLED:
 
 CONVERSION_ATTR_TO_PARAM = {
     dt.timezone: {
-        "offset": "_offset",
-        "name": "_name",
+        "offset": lambda timezone: timezone.utcoffset(None),
+        "name": lambda timezone: timezone.tzname(None)
     },
 }
+
 
 CONVERSION_ATTR_TO_PARAM[daf.client.ACCOUNT] = {k: k for k in daf.client.ACCOUNT.__init__.__annotations__}
 CONVERSION_ATTR_TO_PARAM[daf.client.ACCOUNT]["token"] = "_token"

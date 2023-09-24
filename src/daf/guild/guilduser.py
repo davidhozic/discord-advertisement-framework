@@ -28,12 +28,13 @@ __all__ = (
 
 class BaseGUILD:
     """
+    .. versionchanged:: v3.0
+        
+        - Removed ``created_at`` property
+        - New ``remove_after`` property
+        
+
     Represents an universal guild.
-
-    .. versionchanged:: v2.1
-
-        - Added ``created_at`` attribute
-        - Added ``remove_after`` parameter
 
 
     Parameters
@@ -55,18 +56,16 @@ class BaseGUILD:
         .. versionadded:: 3.0
     """
 
-    __slots__ = (       # Faster attribute access
+    __slots__ = (
         "_apiobject",
         "logging",
         "_messages",
-        "remove_after",
+        "_remove_after",
         "removal_buffer_length",
-        "_created_at",
         "_removed_messages",
         "parent",
         "_removal_timer_handle",
         "_event_ctrl",
-        "_running"
     )
 
     _removed_messages: List[BaseMESSAGE]
@@ -86,17 +85,11 @@ class BaseGUILD:
         self.logging: bool = logging
         # Contains all the different message objects (added in .initialize())
         self._messages: List[BaseMESSAGE] = messages
-        self.remove_after = remove_after
+        self._remove_after = remove_after
         self.removal_buffer_length = removal_buffer_length
-        # int - after n sends
-        # timedelta - after amount of time
-        # datetime - after that time
-
-        self._created_at = datetime.now()  # The time this object was created
         self.parent = None
         self._removal_timer_handle: asyncio.Task = None
         self._event_ctrl = None
-        self._running = False
         attributes.write_non_exist(self, "_removed_messages", [])
 
     def __repr__(self) -> str:
@@ -142,15 +135,11 @@ class BaseGUILD:
         Returns the Discord API wrapper's object of self.
         """
         return self._apiobject
-
+    
     @property
-    def created_at(self) -> datetime:
-        """
-        .. versionadded:: v2.1
-
-        Returns the datetime of when the object has been created.
-        """
-        return self._created_at
+    def remove_after(self) -> Union[datetime, None]:
+        "Returns the timestamp at which object will be removed or None if it will not be removed."
+        return self._remove_after
 
     def add_message(self, message: BaseMESSAGE) -> asyncio.Future:
         """
@@ -220,21 +209,32 @@ class BaseGUILD:
         Used for changing the initialization parameters,
         the object was initialized with.
 
-        .. warning::
-            This method will BLOCK until every message has finished shilling!
-            This is done for safety due to asynchronous operations.
+        |ASYNC_API|
 
         .. warning::
             Upon updating, the internal state of objects get's reset,
             meaning you basically have a brand new created object.
+            It also resets the message objects.
 
         Parameters
         -------------
         **kwargs: Any
             Custom number of keyword parameters which you want to update,
             these can be anything that is available during the object creation.
+
+
+        Returns
+        --------
+        Awaitable
+            An awaitable object which can be used to await for execution to finish.
+            To wait for the execution to finish, use ``await`` like so: ``await method_name()``.
+
+        Raises
+        -----------
+        Union[TypeError, ValueError]
+            Invalid keyword argument was passed.
         """
-        raise NotImplementedError
+        return self._event_ctrl.emit(EventID.server_update, self, init_options, **kwargs)
 
     async def _init_messages(self):
         raise NotImplementedError
@@ -278,14 +278,16 @@ class BaseGUILD:
         self._apiobject = _apiobject
         await self._init_messages()
 
-        if self.remove_after is not None:
+        if self._remove_after is not None:
+            if isinstance(self._remove_after, timedelta):
+                self._remove_after = datetime.now().astimezone() + self._remove_after
+            else:
+                self._remove_after = self._remove_after.astimezone()
+
             self._removal_timer_handle = (
                 async_util.call_at(
                     event_ctrl.emit,
-                    self.remove_after
-                    if isinstance(self.remove_after, datetime)
-                    else
-                    datetime.now() + self.remove_after,
+                    self._remove_after,
                     EventID.server_removed,
                     self
                 )
@@ -295,7 +297,6 @@ class BaseGUILD:
         event_ctrl.add_listener(EventID.message_removed, self._on_message_removed, lambda server, m: server is self)
         event_ctrl.add_listener(EventID.message_added, self._on_add_message, lambda server, m: server is self)
         event_ctrl.add_listener(EventID.server_update, self._on_update, lambda server, *h, **k: server is self)
-        self._running = True
 
     def generate_invite_log_context(self, member: discord.Member, invite_id: str) -> dict:
         raise NotImplementedError
@@ -376,10 +377,9 @@ class BaseGUILD:
         Cleans up and closes any asyncio related
         functionality.
         """
-        if not self._running:
+        if self._event_ctrl is None:  # Already closed
             return
 
-        self._running = False
         self._event_ctrl.remove_listener(EventID.message_ready, self._advertise)
         self._event_ctrl.remove_listener(EventID.message_removed, self._on_message_removed)
         self._event_ctrl.remove_listener(EventID.server_update, self._on_update)
@@ -398,6 +398,11 @@ class BaseGUILD:
 class GUILD(BaseGUILD):
     """
     The GUILD object represents a server to which messages will be sent.
+
+    .. versionchanged:: v3.0
+
+        - Removed ``created_at`` property.
+        - New ``remove_after`` property
 
     .. versionchanged:: v2.7
 
@@ -536,43 +541,6 @@ class GUILD(BaseGUILD):
     def add_message(self, message: Union[TextMESSAGE, VoiceMESSAGE]):
         return self._event_ctrl.emit(EventID.message_added, self, message)
 
-    def update(self, init_options = None, **kwargs):
-        """
-        .. versionadded:: v2.0
-
-        Used for changing the initialization parameters,
-        the object was initialized with.
-
-        |ASYNC_API|
-
-        .. warning::
-            Upon updating, the internal state of objects get's reset,
-            meaning you basically have a brand new created object.
-            It also resets the message objects.
-
-        Parameters
-        -------------
-        **kwargs: Any
-            Custom number of keyword parameters which you want to update,
-            these can be anything that is available during the object creation.
-
-
-        Returns
-        --------
-        Awaitable
-            An awaitable object which can be used to await for execution to finish.
-            To wait for the execution to finish, use ``await`` like so: ``await method_name()``.
-
-        Raises
-        -----------
-        Union[TypeError, ValueError]
-            Invalid keyword argument was passed.
-        """
-        if self._running:
-            return self._event_ctrl.emit(EventID.server_update, self, init_options, **kwargs)
-        else:
-            return self._on_update(self, init_options, **kwargs)
-
     def generate_invite_log_context(self, member: discord.Member, invite_id: str) -> dict:
         """
         Generates dictionary representing the log of a member joining a guild.
@@ -665,6 +633,9 @@ class GUILD(BaseGUILD):
         self._event_ctrl.emit(EventID.discord_invite_delete, invite)
 
     def _close(self):
+        if self._event_ctrl is None:  # Already closed
+            return
+
         client: discord.Client = self.parent.client
         # Removing these listeners doesn't require a mutex as it does not interfere
         # with any advertisement methods. These are only for processing
@@ -675,6 +646,7 @@ class GUILD(BaseGUILD):
         self._event_ctrl.remove_listener(EventID.discord_invite_delete, self._on_invite_delete)
         return super()._close()
 
+
 @instance_track.track_id
 @doc.doc_category("Guilds", path="guild")
 @logging.sql.register_type("GuildTYPE")
@@ -682,10 +654,14 @@ class USER(BaseGUILD):
     """
     The USER object represents a user to whom messages will be sent.
 
-    .. versionchanged:: v2.1
+    .. versionchanged:: v3.0
 
-        - Added ``created_at`` attribute
-        - Added ``remove_after`` parameter
+        - Removed ``created_at`` property.
+        - New ``remove_after`` property
+
+    .. versionchanged:: v2.7
+
+        Added ``invite_track`` parameter.
 
     Parameters
     ------------
@@ -725,41 +701,6 @@ class USER(BaseGUILD):
     @typechecked
     def add_message(self, message: DirectMESSAGE) -> asyncio.Future:
         return self._event_ctrl.emit(EventID.message_added, self, message)
-
-    def update(self, init_options = None, **kwargs) -> asyncio.Future:
-        """
-        .. versionadded:: v2.0
-
-        |ASYNC_API|
-
-        Used for changing the initialization parameters,
-        the object was initialized with.
-
-        .. warning::
-            Upon updating, the internal state of objects get's reset,
-            meaning you basically have a brand new created object.
-            It also resets the message objects.
-
-        Parameters
-        -------------
-        **kwargs: Any
-            Custom number of keyword parameters which you want to update,
-            these can be anything that is available during the object creation.
-
-        Returns
-        --------
-        Awaitable
-            An awaitable object which can be used to await for execution to finish.
-            To wait for the execution to finish, use ``await`` like so: ``await method_name()``.
-
-        Raises
-        -----------
-        TypeError
-            Invalid keyword argument was passed.
-        Other
-            Raised from .initialize() method.
-        """
-        return self._event_ctrl.emit(EventID.server_update, self, init_options, **kwargs)
 
     def _check_state(self) -> bool:
         """
