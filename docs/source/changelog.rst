@@ -53,6 +53,7 @@ v3.0.0
   - Properties that start with ``_`` will no longer be displayed when viewing live structured objects.
   - Toast notifications for :func:`~daf.logging.tracing.trace`.
   - Parameter validation for literals, enums and bool.
+  - Copy / Paste globally for both drop-down menus and list menus.
 
 - Core:
 
