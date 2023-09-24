@@ -111,11 +111,13 @@ def setup_additional_live_update(w: ttk.Button, frame):
     def _callback(*args):
         async def update():
             old = frame.old_gui_data
-            values = {
-                k: convert_to_objects(v)
-                for k, v in frame.get_gui_data().items()
-                if not isinstance(v, str) or v != ''
-            }
+            values = {}
+            for k, v in frame.get_gui_data().items():
+                if isinstance(v, str):
+                    v = frame.cast_type(v, frame._map[k][1])
+
+                values[k] = convert_to_objects(v)
+
             connector = get_connection()
             await connector.execute_method(old.real_object, "update", **values)
 
