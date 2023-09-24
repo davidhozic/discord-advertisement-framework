@@ -21,6 +21,7 @@ import daf
 import ttkbootstrap as ttk
 import tkinter as tk
 import ttkbootstrap.dialogs.dialogs as tkdiag
+import ttkbootstrap.validation as tkvalid
 
 import webbrowser
 import inspect
@@ -168,6 +169,13 @@ class NewObjectFrameBase(ttk.Frame):
         CAST_FUNTIONS = {
             dict: lambda v: convert_dict_to_object_info(json.loads(v))
         }
+
+        # Validate literals
+        if get_origin(types[0]) is Literal:
+            if value not in (args := get_args(types[0])):
+                raise ValueError(f"'{value}' is not a valid value'. Accepted: {args}")
+            
+            return value
 
         for type_ in filter(lambda t: cls.get_cls_name(t) in __builtins__, types):
             with suppress(Exception):
@@ -464,12 +472,16 @@ class NewObjectFrameStruct(NewObjectFrameBase):
             last_list_type = None
             for entry_type in entry_types:
                 if get_origin(entry_type) is Literal:
-                    combo["values"] = get_args(entry_type)
+                    values = get_args(entry_type)
+                    combo["values"] = values
+                    tkvalid.add_option_validation(combo, values)
                 elif entry_type is bool:
                     combo.insert(tk.END, True)
                     combo.insert(tk.END, False)
+                    tkvalid.add_option_validation(combo, ["True", "False"])
                 elif issubclass_noexcept(entry_type, Enum):
-                    combo["values"] = [en for en in entry_type]
+                    combo["values"] = values = [en for en in entry_type]
+                    tkvalid.add_option_validation(combo, list(map(str, values)))
                 elif entry_type is type(None):
                     if bool not in entry_types:
                         combo.insert(tk.END, None)
@@ -626,14 +638,10 @@ class NewObjectFrameStruct(NewObjectFrameBase):
             value = widget.get()
             # Either it's a string needing conversion or a Literal constant not to be converted
             if isinstance(value, str):
-                if not len(value):  # Ignore empty values
+                if not value:
                     continue
 
-                t0 = types_[0]
-                if Literal is not get_origin(t0):
-                    value = self.cast_type(value, types_)
-                elif value not in (args := get_args(t0)):
-                    raise ValueError(f"'{value}' is not a valid value for '{attr}'. Accepted: {args}")
+                value = self.cast_type(value, types_)
 
             map_[attr] = value
 
@@ -655,6 +663,9 @@ class NewObjectFrameStruct(NewObjectFrameBase):
         values = {}
         for attr, (widget, types_) in self._map.items():
             value = widget.get()
+            if isinstance(value, str) and not value:  # Ignore empty values
+                continue
+
             if isinstance(value, (list, tuple, set)):  # Copy lists else the values would change in the original state
                 value = copy.copy(value)
 
