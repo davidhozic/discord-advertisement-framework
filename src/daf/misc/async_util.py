@@ -164,7 +164,7 @@ def call_at(fnc: Callable, when: Union[datetime, timedelta], *args, **kwargs) ->
     Calls ``fnc`` at specific datetime with args and kwargs.
     """
     async def waiter():
-        delay = when if isinstance(when, timedelta) else max((when - datetime.now()), timedelta(0))
+        delay = when if isinstance(when, timedelta) else max((when.astimezone() - datetime.now().astimezone()), timedelta(0))
         delay = delay.total_seconds()
         while delay > 0:
             to_sleep = min(delay, 86400)  # Maximum sleep of one day for precision purposes

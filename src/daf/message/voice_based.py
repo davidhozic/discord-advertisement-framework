@@ -255,7 +255,7 @@ class VoiceMESSAGE(BaseChannelMessage):
 
         # Timeout handling
         elif member is not None and member.timed_out:
-            self.next_send_time = member.communication_disabled_until.astimezone().replace(tzinfo=None) + timedelta(minutes=1)
+            self.next_send_time = member.communication_disabled_until.astimezone() + timedelta(minutes=1)
             trace(
                 f"User '{member.name}' has been timed-out in guild '{guild.name}'.\n"
                 f"Retrying after {self.next_send_time} (1 minute after expiry)",

@@ -300,11 +300,14 @@ class TextMESSAGE(BaseChannelMessage):
         parent: daf.guild.GUILD
             The GUILD this message is in
         """
-        await super().initialize(
+        exc = await super().initialize(
             parent,
             event_ctrl,
             channel_getter
         )
+        if exc is not None:
+            return exc
+
         # Increase period to slow mode delay if it is lower
         self._check_period()
 
@@ -338,7 +341,7 @@ class TextMESSAGE(BaseChannelMessage):
                 guild = channel.guild
                 member = guild.get_member(self.parent.parent.client.user.id)
                 if member is not None and member.timed_out:
-                    self.next_send_time = member.communication_disabled_until.astimezone().replace(tzinfo=None) + timedelta(minutes=1)
+                    self.next_send_time = member.communication_disabled_until.astimezone() + timedelta(minutes=1)
                     trace(
                         f"User '{member.name}' has been timed-out in guild '{guild.name}'.\n"
                         f"Retrying after {self.next_send_time} (1 minute after expiry)",
@@ -369,7 +372,7 @@ class TextMESSAGE(BaseChannelMessage):
     def _calc_next_time(self):
         super()._calc_next_time()
         slowmode_delay = self._slowmode
-        current_time = datetime.now()
+        current_time = datetime.now().astimezone()
         if self.next_send_time - current_time < slowmode_delay:
             self.next_send_time = current_time + slowmode_delay
 
@@ -549,7 +552,6 @@ class DirectMESSAGE(BaseMESSAGE):
         "mode",
         "previous_message",
         "dm_channel",
-        "_remove_after"
     )
 
     @typechecked
@@ -565,27 +567,15 @@ class DirectMESSAGE(BaseMESSAGE):
         self.dm_channel: discord.User = None
         self.previous_message: discord.Message = None
 
-        # Use a different attribute, to prevent inconsistensy with TextMESSAGE and VoiceMESSAGE.
-        # The counter there is split per channel and the remove_after attribute does not change.
-        self._remove_after = remove_after
-
-    @property
-    def remaining_before_removal(self) -> Union[timedelta, datetime, int]:
-        r = self._remove_after
-        return r if isinstance(r, int) else super().remaining_before_removal
-
-    def _check_state(self) -> bool:
-        return (
-            super()._check_state() or
-            type(self._remove_after) is int and self._remove_after == 0
-        )
-
     def _update_state(self) -> bool:
         """
         Updates internal remove_after counter.
         """
         if type(self._remove_after) is int:
             self._remove_after -= 1
+            if not self._remove_after:
+                self._event_ctrl.emit(EventID.message_removed, self.parent, self)
+
 
     def generate_log_context(self,
                              success_context: Dict[str, Union[bool, Optional[Exception]]],

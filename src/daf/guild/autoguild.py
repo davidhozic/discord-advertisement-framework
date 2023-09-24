@@ -27,8 +27,11 @@ GUILD_MAX_AMOUNT = 100
 @doc.doc_category("Auto objects", path="guild")
 class AutoGUILD:
     """
-    .. versionchanged:: v2.11
-        Now works like GUILD and USER.
+    .. versionchanged:: v3.0
+
+        - Now works like GUILD and USER.
+        - Removed ``created_at`` property.
+
 
     Represents multiple guilds (servers) based on a text pattern.
 
@@ -64,9 +67,8 @@ class AutoGUILD:
     __slots__ = (
         "include_pattern",
         "exclude_pattern",
-        "remove_after",
+        "_remove_after",
         "logging",
-        "_created_at",
         "update_semaphore",
         "parent",
         "auto_join",
@@ -80,7 +82,6 @@ class AutoGUILD:
         "_invite_join_count",
         "_cache",
         "_event_ctrl",
-        "_running",
     )
 
     @typechecked
@@ -98,11 +99,10 @@ class AutoGUILD:
         # Remove spaces around OR
         self.include_pattern = re.sub(r"\s*\|\s*", '|', include_pattern) if include_pattern else None
         self.exclude_pattern = re.sub(r"\s*\|\s*", '|', exclude_pattern) if exclude_pattern else None
-        self.remove_after = remove_after
+        self._remove_after = remove_after
         self._messages = messages
         self.logging = logging
         self.auto_join = auto_join
-        self._created_at = datetime.now()
         self.parent = None
         self.guild_query_iter = None
         self.guild_join_count = 0
@@ -113,7 +113,6 @@ class AutoGUILD:
         self._guild_join_timer_handle: asyncio.Task = None
         self._cache = []
         self._event_ctrl: EventController = None
-        self._running = False
 
         if invite_track is None:
             invite_track = []
@@ -123,13 +122,6 @@ class AutoGUILD:
 
     def __repr__(self) -> str:
         return f"AutoGUILD(include_pattern='{self.include_pattern}', exclude_pattern='{self.exclude_pattern})'"
-
-    @property
-    def created_at(self) -> datetime:
-        """
-        Returns the datetime of when the object has been created.
-        """
-        return self._created_at
 
     @property
     def messages(self) -> List[Union[TextMESSAGE, VoiceMESSAGE]]:
@@ -142,7 +134,13 @@ class AutoGUILD:
 
     @property
     def guilds(self) -> List[discord.Guild]:
+        "Returns cached :class:`discord.Guild` objects."
         return self._cache
+    
+    @property
+    def remove_after(self) -> Union[datetime, None]:
+        "Returns the timestamp at which AutoGUILD will be removed or None if it will never be removed."
+        return self._remove_after
 
     def _get_guilds(self):
         "Returns all the guilds that match the include_pattern and not exclude_pattern"
@@ -233,10 +231,7 @@ class AutoGUILD:
             After calling this method the entire object is reset
             (this includes it's GUILD objects in cache).
         """
-        if self._running:
-            return self._event_ctrl.emit(EventID.server_update, self, init_options, **kwargs)
-        else:
-            return self._on_update(self, init_options, **kwargs)
+        return self._event_ctrl.emit(EventID.server_update, self, init_options, **kwargs)
 
     # Non public methods
     def _reset_auto_join_timer(self):
@@ -272,11 +267,16 @@ class AutoGUILD:
             if (await message.initialize(self, event_ctrl, self._get_channels)) is not None:
                 await self._on_remove_message(self, message)
 
-        if self.remove_after is not None:
+        if self._remove_after is not None:
+            if isinstance(self._remove_after, timedelta):
+                self._remove_after = datetime.now().astimezone() + self._remove_after
+            else:
+                self._remove_after = datetime.now().astimezone()
+
             self._removal_timer_handle = (
                 async_util.call_at(
                     event_ctrl.emit,
-                    self.remove_after,
+                    self._remove_after,
                     EventID.server_removed,
                     self
                 )
@@ -321,7 +321,6 @@ class AutoGUILD:
         event_ctrl.add_listener(EventID.message_added, self._on_add_message, lambda server, m: server is self)
         event_ctrl.add_listener(EventID.message_removed, self._on_remove_message, lambda server, m: server is self)
         event_ctrl.add_listener(EventID.server_update, self._on_update, lambda server, *args, **kwargs: server is self)
-        self._running = True
 
     def _generate_guild_log_context(self, guild: discord.Guild):
         return {
@@ -527,6 +526,9 @@ class AutoGUILD:
         """
         Closes any lower-level async objects.
         """
+        if self._event_ctrl is None:  # Not initialized or already closed
+            return
+
         self._event_ctrl.remove_listener(EventID.message_ready, self._advertise)
         self._event_ctrl.remove_listener(EventID.message_removed, self._on_remove_message)
         self._event_ctrl.remove_listener(EventID.auto_guild_start_join, self._join_guilds)

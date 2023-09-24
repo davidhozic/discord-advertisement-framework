@@ -96,7 +96,7 @@ class EventController:
             if self is GLOBAL.g_controller:
                 return asyncio.gather(*[ctrl.stop() for ctrl in GLOBAL.non_global_controllers])
 
-        return self.loop_task
+        return asyncio.gather(self.loop_task)
 
     def add_listener(self, event: EventID, fnc: Callable, predicate: Callable[[Any], bool] = None):
         """
