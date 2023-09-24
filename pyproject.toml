@@ -58,3 +58,4 @@ where = [
 markers = [
     "group_remote",
 ]
+asyncio_mode = "auto"

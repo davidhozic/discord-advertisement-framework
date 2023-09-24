@@ -60,7 +60,7 @@ Pošiljanje s fiksno periodo dveh ur in avtomatično odkrivanje pridruženih ceh
 
 Oddaljen dostop
 ----------------------------------------
-HTTP strežnik, in GUI shema za povezovanje na ta strežnik.
+HTTP strežnik in GUI shema za povezovanje na ta strežnik.
 
 
 .. literalinclude:: ./DEP/Examples/example-remote.py

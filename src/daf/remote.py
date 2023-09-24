@@ -1,19 +1,22 @@
 """
 Module contains definitions related to remote access from a graphical interface.
 """
-from typing import Optional, Literal, Coroutine
+from typing import Optional, Literal, Awaitable
 from contextlib import suppress
 from functools import update_wrapper
 
 from aiohttp import BasicAuth
 from aiohttp.web import (
     Request, RouteTableDef, Application, _run_app, json_response,
-    HTTPException, HTTPInternalServerError, HTTPUnauthorized
+    HTTPException, HTTPInternalServerError, HTTPUnauthorized, WebSocketResponse, WSMsgType
 )
 
+from .events import *
+from .logging.tracing import *
 from .misc import doc, instance_track as it
 from . import convert
 from . import logging
+from . import client
 
 import asyncio
 import ssl
@@ -71,13 +74,17 @@ def register(path: str, type: Literal["GET", "POST", "DELETE", "PATCH"]):
                 ):
                     raise HTTPUnauthorized(reason="Wrong username / password")
 
-                json_data = await request.json()
-                return await fnc(**json_data["parameters"])
+                if request.content_type == "application/json":
+                    json_data = await request.json()
+                    return await fnc(**json_data["parameters"])
+                
+                # In case the data is not JSON, just pass the original request object
+                return await fnc(request)
             except HTTPException:
                 raise  # Don't wrap already HTTP exceptions
 
             except Exception as exc:
-                raise HTTPInternalServerError(reason=str(exc))
+                raise HTTPInternalServerError(reason=str(exc)) from exc
 
         # For documentation purposes
         fnc.__doc__ = (fnc.__doc__ or "") + f'\n\n    :Route:\n        {path}\n\n    :Method:\n        {type}'
@@ -224,10 +231,68 @@ async def http_execute_method(object_id: int, method_name: str, **kwargs):
     object = it.get_by_id(object_id)
     try:
         result = getattr(object, method_name)(**convert.convert_from_semi_dict(kwargs))
-        if isinstance(result, Coroutine):
+        if isinstance(result, Awaitable):
             result = await result
 
     except Exception as exc:
         raise HTTPInternalServerError(reason=f"Error executing method {method_name}. ({exc})")
 
     return create_json_response(f"Executed method {method_name}.", result=convert.convert_object_to_semi_dict(result))
+
+
+@register("/subscribe", "GET")
+async def http_ws_live_connect(request: Request):
+    """
+    Route for subscribing to remote published events.
+    This is a WebSocket upgrade route.
+
+    The WebSocket connection will send events in the following JSON format:
+    
+    .. code-block:: JSON
+    
+        {
+            "type": str, # Event type (eg. "trace")
+            "data": dict # (Optional) Dictionary of data related to event, this differs on different event types.
+        }
+    """
+    # Event listeners
+    async def trace_event_publisher(level: TraceLEVELS, message: str):
+        await ws.send_json(
+            convert.convert_object_to_semi_dict(
+                {"type": "trace", "data": {"level": level, "message": message}}     
+            )
+        )
+
+    async def shutdown_event_publisher():
+        await ws.send_json(
+            convert.convert_object_to_semi_dict(
+                {"type": "shutdown"}
+            )
+        )
+        await ws.close()
+
+    async def account_expire_event_publisher(account: client.ACCOUNT):
+        await ws._stored_content_type(
+            convert.convert_object_to_semi_dict(
+                {"type": "account_expired", "data": {"account": account}}
+            )
+        )
+
+    ws = WebSocketResponse()
+    await ws.prepare(request)
+
+    evt = get_global_event_ctrl()
+    evt.add_listener(EventID.g_trace, trace_event_publisher)
+    evt.add_listener(EventID.g_account_expired, account_expire_event_publisher)
+    evt.add_listener(EventID.g_daf_shutdown, shutdown_event_publisher)
+    evt.add_listener(EventID.g_daf_shutdown, ws.close)
+
+    async for message in ws:
+        if message.type == WSMsgType.CLOSE:
+            await ws.close()
+
+    evt.remove_listener(EventID.g_trace, trace_event_publisher)
+    evt.remove_listener(EventID.g_account_expired, account_expire_event_publisher)
+    evt.remove_listener(EventID.g_daf_shutdown, shutdown_event_publisher)
+    evt.remove_listener(EventID.g_daf_shutdown, ws.close)
+    return ws

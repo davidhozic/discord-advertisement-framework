@@ -2,7 +2,6 @@ from contextlib import suppress
 from typing import List
 import asyncio
 import pytest
-import pytest_asyncio
 import os
 import sys
 import daf
@@ -25,25 +24,20 @@ def event_loop():
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
 
-    return loop
-
-
-@pytest.fixture(scope="session", autouse=True)
-def start_daf(event_loop: asyncio.AbstractEventLoop):
-    event_loop.run_until_complete(
+    loop.run_until_complete(
         daf.initialize(
             debug=daf.TraceLEVELS.DEBUG,
             remote_client=daf.RemoteAccessCLIENT("127.0.0.1", 8080, "Hello", "World")
         )
     )
-    event_loop.call_later(420, lambda: event_loop.stop())  # Auto exit tests if they don't complete in 7 minutes
-    yield event_loop
-    event_loop.run_until_complete(daf.shutdown())
+
+    loop.call_later(420, lambda: loop.stop())  # Auto exit tests if they don't complete in 7 minutes
+    yield loop
+    loop.run_until_complete(daf.shutdown())
     asyncio.set_event_loop(None)
-    event_loop.close()
+    loop.close()
 
-
-@pytest_asyncio.fixture(scope="session")
+@pytest.fixture(scope="session")
 async def accounts():
     accs = [
         daf.ACCOUNT(token=TEST_TOKEN1),
@@ -57,7 +51,7 @@ async def accounts():
         await daf.remove_object(a)
 
 
-@pytest_asyncio.fixture(scope="session")
+@pytest.fixture(scope="session")
 async def guilds(accounts: List[daf.ACCOUNT]):
     """
     Create tests guilds.
@@ -83,7 +77,7 @@ async def guilds(accounts: List[daf.ACCOUNT]):
     return guild_include, guild_exclude
 
 
-@pytest_asyncio.fixture(scope="session")
+@pytest.fixture(scope="session")
 async def channels(guilds):
     guild: daf.discord.Guild
     guild, _ = guilds
@@ -92,8 +86,10 @@ async def channels(guilds):
     for channel in guild.channels:
         await channel.delete()
 
-    for i in range(10):
+    for i in range(TEST_TEXT_CHANNEL_NUM):
         t_channels.append(await guild.create_text_channel(f"testpy-{i}"))
+
+    for i in range(TEST_VOICE_CHANNEL_NUM):
         v_channels.append(await guild.create_voice_channel(f"testpy-{i}"))
 
     yield t_channels, v_channels

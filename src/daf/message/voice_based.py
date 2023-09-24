@@ -2,16 +2,18 @@
     Contains definitions related to voice messaging."""
 
 
-from typing import Any, Dict, List, Iterable, Optional, Union, Tuple
+from typing import Any, Dict, List, Iterable, Optional, Union, Tuple, Callable
 from pathlib import Path
 from datetime import timedelta, datetime
 from typeguard import typechecked
 
 from .base import *
 from ..dtypes import *
+from ..events import *
 from ..logging.tracing import *
 from ..logging import sql
 from ..misc import doc, instance_track
+from ..misc import async_util
 
 from .. import dtypes
 
@@ -194,7 +196,7 @@ class VoiceMESSAGE(BaseChannelMessage):
                      "reason": str(entry["reason"])} for entry in failed_ch]
         return {
             "sent_data": {
-                "streamed_audio": audio.to_dict()
+                "streamed_audio": audio.fullpath
             },
             "channels": {
                 "successful": succeeded_ch,
@@ -253,7 +255,7 @@ class VoiceMESSAGE(BaseChannelMessage):
 
         # Timeout handling
         elif member is not None and member.timed_out:
-            self.next_send_time = member.communication_disabled_until.astimezone().replace(tzinfo=None) + timedelta(minutes=1)
+            self.next_send_time = member.communication_disabled_until.astimezone() + timedelta(minutes=1)
             trace(
                 f"User '{member.name}' has been timed-out in guild '{guild.name}'.\n"
                 f"Retrying after {self.next_send_time} (1 minute after expiry)",
@@ -269,7 +271,10 @@ class VoiceMESSAGE(BaseChannelMessage):
 
         return handled, action
 
-    def initialize(self, parent: Any):
+    def _get_channel_types(self):
+        return {discord.VoiceChannel}
+
+    def initialize(self, parent: Any, event_ctrl: EventController, channel_getter: Callable):
         """
         This method initializes the implementation specific API objects
         and checks for the correct channel input context.
@@ -278,17 +283,8 @@ class VoiceMESSAGE(BaseChannelMessage):
         --------------
         parent: daf.guild.GUILD
             The GUILD this message is in
-
-        Raises
-        ------------
-        TypeError
-            Channel contains invalid channels
-        ValueError
-            Channel does not belong to the guild this message is in.
-        ValueError
-            No valid channels were passed to object"
         """
-        return super().initialize(parent, {discord.VoiceChannel}, lambda: parent.apiobject.voice_channels)
+        return super().initialize(parent, event_ctrl, channel_getter)
 
     async def _send_channel(self,
                             channel: discord.VoiceChannel,

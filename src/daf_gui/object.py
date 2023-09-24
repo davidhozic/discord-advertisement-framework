@@ -21,11 +21,14 @@ import daf
 import ttkbootstrap as ttk
 import tkinter as tk
 import ttkbootstrap.dialogs.dialogs as tkdiag
+import ttkbootstrap.validation as tkvalid
 
 import webbrowser
 import inspect
 import copy
 import json
+
+import tk_async_execute as tae
 
 
 __all__ = (
@@ -166,6 +169,13 @@ class NewObjectFrameBase(ttk.Frame):
         CAST_FUNTIONS = {
             dict: lambda v: convert_dict_to_object_info(json.loads(v))
         }
+
+        # Validate literals
+        if get_origin(types[0]) is Literal:
+            if value not in (args := get_args(types[0])):
+                raise ValueError(f"'{value}' is not a valid value'. Accepted: {args}")
+            
+            return value
 
         for type_ in filter(lambda t: cls.get_cls_name(t) in __builtins__, types):
             with suppress(Exception):
@@ -462,12 +472,16 @@ class NewObjectFrameStruct(NewObjectFrameBase):
             last_list_type = None
             for entry_type in entry_types:
                 if get_origin(entry_type) is Literal:
-                    combo["values"] = get_args(entry_type)
+                    values = get_args(entry_type)
+                    combo["values"] = values
+                    tkvalid.add_option_validation(combo, values)
                 elif entry_type is bool:
                     combo.insert(tk.END, True)
                     combo.insert(tk.END, False)
+                    tkvalid.add_option_validation(combo, ["True", "False"])
                 elif issubclass_noexcept(entry_type, Enum):
-                    combo["values"] = [en for en in entry_type]
+                    combo["values"] = values = [en for en in entry_type]
+                    tkvalid.add_option_validation(combo, list(map(str, values)))
                 elif entry_type is type(None):
                     if bool not in entry_types:
                         combo.insert(tk.END, None)
@@ -522,6 +536,13 @@ class NewObjectFrameStruct(NewObjectFrameBase):
             w = combo = ComboBoxObjects(frame_annotated)
             combo.pack(fill=tk.X, side="right", expand=True, padx=dpi_5, pady=dpi_5)
 
+            # Clipboard
+            menu.add_command(label="Copy", command=combo.save_to_clipboard)
+            if self.allow_save:
+                menu.add_command(label="Paste", command=combo.paste_from_clipboard)
+
+            menu.add_separator()
+
             # Fill values
             last_list_type = fill_values(k, entry_types, menu, combo)
 
@@ -529,7 +550,8 @@ class NewObjectFrameStruct(NewObjectFrameBase):
             menu.add_command(
                 label=f"{'Edit' if self.allow_save else 'View'} selected",
                 command=self._lambda(edit_selected, k, w, last_list_type)
-            )
+            )            
+
             self._map[k] = (w, entry_types)
 
         self.init_method_frame()
@@ -565,7 +587,7 @@ class NewObjectFrameStruct(NewObjectFrameBase):
                     **method_param,
                 )
 
-            async_execute(runner(), parent_window=self.origin_window)
+            tae.async_execute(runner(), wait=False, pop_up=True, master=self.origin_window)
 
         dpi_5, dpi_10 = dpi_scaled(5), dpi_scaled(10)
         frame_method = ttk.LabelFrame(
@@ -624,11 +646,10 @@ class NewObjectFrameStruct(NewObjectFrameBase):
             value = widget.get()
             # Either it's a string needing conversion or a Literal constant not to be converted
             if isinstance(value, str):
-                if not len(value):  # Ignore empty values
+                if not value:
                     continue
 
-                if Literal is not get_origin(types_[0]):
-                    value = self.cast_type(value, types_)
+                value = self.cast_type(value, types_)
 
             map_[attr] = value
 
@@ -650,6 +671,9 @@ class NewObjectFrameStruct(NewObjectFrameBase):
         values = {}
         for attr, (widget, types_) in self._map.items():
             value = widget.get()
+            if isinstance(value, str) and not value:  # Ignore empty values
+                continue
+
             if isinstance(value, (list, tuple, set)):  # Copy lists else the values would change in the original state
                 value = copy.copy(value)
 
@@ -699,7 +723,12 @@ class NewObjectFrameIterable(NewObjectFrameBase):
 
         frame_edit_remove = ttk.Frame(self.frame_main, padding=(dpi_5, 0))
         frame_edit_remove.pack(side="right")
+        frame_cp = ttk.Frame(frame_edit_remove)
+        frame_cp.pack(fill=tk.X, expand=True, pady=dpi_5)
+
+        ttk.Button(frame_cp, text="Copy", command=w.save_to_clipboard).pack(side="left", fill=tk.X, expand=True)
         if self.allow_save:
+            ttk.Button(frame_cp, text="Paste", command=w.paste_from_clipboard).pack(side="left", fill=tk.X, expand=True)
             menubtn = ttk.Menubutton(frame_edit_remove, text="Add object")
             menu = tk.Menu(menubtn)
             menubtn.configure(menu=menu)
@@ -711,11 +740,6 @@ class NewObjectFrameIterable(NewObjectFrameBase):
             frame_up_down.pack(fill=tk.X, expand=True, pady=dpi_5)
             ttk.Button(frame_up_down, text="Up", command=lambda: w.move_selection(-1)).pack(side="left", fill=tk.X, expand=True)
             ttk.Button(frame_up_down, text="Down", command=lambda: w.move_selection(1)).pack(side="left", fill=tk.X, expand=True)
-
-            frame_cp = ttk.Frame(frame_edit_remove)
-            frame_cp.pack(fill=tk.X, expand=True)
-            ttk.Button(frame_cp, text="Copy", command=w.save_to_clipboard).pack(side="left", fill=tk.X, expand=True)
-            ttk.Button(frame_cp, text="Paste", command=w.paste_from_clipboard).pack(side="left", fill=tk.X, expand=True)
 
             args = get_args(self.class_)
             args = self.convert_types(args)
@@ -781,7 +805,7 @@ class ObjectEditWindow(ttk.Toplevel):
         list: NewObjectFrameIterable,
         Iterable: NewObjectFrameIterable,
         ABCIterable: NewObjectFrameIterable,
-        tuple: NewObjectFrameIterable
+        tuple: NewObjectFrameIterable,
     }
 
     def __init__(self, *args, **kwargs):

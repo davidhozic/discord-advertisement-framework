@@ -1,13 +1,15 @@
 """
 Main file of the DAF GUI.
 """
-import subprocess
-import sys
-
 from importlib.util import find_spec
 from pathlib import Path
 
 from daf.misc import instance_track as it
+
+import subprocess
+import sys
+
+import tk_async_execute as tae
 
 
 installed = find_spec("ttkbootstrap") is not None
@@ -33,13 +35,13 @@ from .connector import *
 
 from PIL import Image, ImageTk
 from ttkbootstrap.tooltip import ToolTip
+from ttkbootstrap.toast import ToastNotification
 import tkinter as tk
 import tkinter.filedialog as tkfile
 import ttkbootstrap.dialogs.dialogs as tkdiag
 import ttkbootstrap as ttk
 import ttkbootstrap.tableview as tktw
 
-import asyncio
 import json
 import sys
 import os
@@ -129,6 +131,10 @@ class Application():
         tabman_mf.pack(fill=tk.BOTH, expand=True)
         self.tabman_mf = tabman_mf
 
+
+        # Toast notifications
+        self.init_event_listeners()
+
         # Optional dependencies tab
         self.init_optional_dep_tab()
 
@@ -149,7 +155,6 @@ class Application():
 
         # Status variables
         self._daf_running = False
-        self._window_opened = True
 
         # Window config
         self.win_main.protocol("WM_DELETE_WINDOW", self.close_window)
@@ -157,6 +162,44 @@ class Application():
 
         # Connection
         self.connection: AbstractConnectionCLIENT = None
+
+    def init_event_listeners(self):
+        "Initializes event listeners."
+        bootstyle_map = {
+            daf.TraceLEVELS.DEBUG: ttk.LIGHT,
+            daf.TraceLEVELS.NORMAL: ttk.PRIMARY,
+            daf.TraceLEVELS.WARNING: ttk.WARNING,
+            daf.TraceLEVELS.ERROR: ttk.DANGER,
+            daf.TraceLEVELS.DEPRECATED: ttk.DARK
+        }
+
+        def trace_listener(level: daf.TraceLEVELS, message: str):
+            last_toast: ToastNotification = ToastNotification.last_toast
+            if last_toast is not None and last_toast.toplevel.winfo_exists():
+                next_position = max((last_toast.position[1] + 150) % 1200, 150)
+            else:
+                next_position = 150
+
+            toast = ToastNotification(
+                level.name,
+                message,
+                bootstyle=bootstyle_map[level],
+                icon="",
+                duration=5000,
+                position=(10, next_position, "se"),
+                topmost=True
+            )
+            ToastNotification.last_toast = toast
+            toast.show_toast()
+
+        ToastNotification.last_toast = None
+        evt = daf.get_global_event_ctrl()
+        evt.add_listener(
+            daf.EventID.g_trace, lambda level, message: self.win_main.after_idle(trace_listener, level, message)
+        )
+        evt.add_listener(
+            daf.EventID._ws_disconnect, lambda: self.win_main.after_idle(self.stop_daf)
+        )
 
     def init_schema_tab(self):
         self.objects_edit_window = None
@@ -201,7 +244,7 @@ class Application():
                 self.lb_accounts.insert(tk.END, *values)
 
             gui_daf_assert_running()
-            async_execute(import_accounts_async(), parent_window=self.win_main)
+            tae.async_execute(import_accounts_async(), wait=False, pop_up=True, master=self.win_main)
 
         menu_bnt = ttk.Menubutton(
             frame_tab_account,
@@ -283,21 +326,19 @@ class Application():
         dpi_10 = dpi_scaled(10)
         dpi_5 = dpi_scaled(5)
 
+        @gui_confirm_action
         def remove_account():
             selection = list_live_objects.curselection()
             if len(selection):
-                @gui_confirm_action
-                def _():
-                    values = list_live_objects.get()
-                    for i in selection:
-                        async_execute(
-                            self.connection.remove_account(values[i].real_object),
-                            parent_window=self.win_main
-                        )
-
-                    async_execute(dummy_task(), lambda x: self.load_live_accounts(), self.win_main)
-
-                _()
+                values = list_live_objects.get()
+                for i in selection:
+                    tae.async_execute(
+                        self.connection.remove_account(values[i].real_object),
+                        wait=False,
+                        pop_up=True,
+                        callback=self.load_live_accounts,
+                        master=self.win_main
+                    )
             else:
                 tkdiag.Messagebox.show_error("Select atlest one item!", "Select errror")
 
@@ -308,7 +349,7 @@ class Application():
             if selection >= 0:
                 fnc: ObjectInfo = combo_add_object_edit.combo.get()
                 fnc_data = convert_to_objects(fnc.data)
-                async_execute(self.connection.add_account(**fnc_data), parent_window=self.win_main)
+                tae.async_execute(self.connection.add_account(**fnc_data), wait=False, pop_up=True, master=self.win_main)
             else:
                 tkdiag.Messagebox.show_error("Combobox does not have valid selection.", "Combo invalid selection")
 
@@ -483,7 +524,12 @@ class Application():
                 selection = listbox.curselection()
                 if len(selection):
                     all_ = listbox.get()
-                    async_execute(delete_logs_async([all_[i].data["id"] for i in selection]))
+                    tae.async_execute(
+                        delete_logs_async([all_[i].data["id"] for i in selection]),
+                        wait=False,
+                        pop_up=True,
+                        master=self.win_main
+                    )
                 else:
                     tkdiag.Messagebox.show_error("Select atlest one item!", "Selection error.")
 
@@ -504,7 +550,7 @@ class Application():
             ttk.Button(
                 frame_msg_history_bnts,
                 text="Get logs",
-                command=lambda: async_execute(analytics_load_history(), parent_window=self.win_main)
+                command=lambda: tae.async_execute(analytics_load_history(), wait=False, pop_up=True, master=self.win_main)
             ).pack(side="left", fill=tk.X)
             ttk.Button(
                 frame_msg_history_bnts,
@@ -556,7 +602,7 @@ class Application():
             ttk.Button(
                 frame_num,
                 text="Calculate",
-                command=lambda: async_execute(analytics_load_num(), parent_window=self.win_main)
+                command=lambda: tae.async_execute(analytics_load_num(), wait=False, pop_up=True, master=self.win_main)
             ).pack(anchor=tk.W, pady=dpi_10)
 
             frame_num.pack(fill=tk.BOTH, expand=True, pady=dpi_5)
@@ -633,10 +679,6 @@ class Application():
                 bnt_install.configure(command=install_deps(optional_name, gauge, bnt_install))
                 bnt_install.grid(row=row, column=1)
 
-    @property
-    def opened(self) -> bool:
-        return self._window_opened
-
     def open_object_edit_window(self, *args, **kwargs):
         if self.objects_edit_window is None or self.objects_edit_window.closed:
             self.objects_edit_window = ObjectEditWindow()
@@ -650,7 +692,7 @@ class Application():
             self.list_live_objects.clear()
             self.list_live_objects.insert(tk.END, *object_infos)
 
-        async_execute(load_accounts(), parent_window=self.win_main)
+        tae.async_execute(load_accounts(), wait=False, pop_up=True, master=self.win_main)
 
     def edit_logger(self):
         selection = self.combo_logging_mgr.current()
@@ -837,9 +879,11 @@ daf.run(
         if not isinstance(tracing, str):
             kwargs["debug"] = tracing
 
-        async_execute(
+        tae.async_execute(
             connection.initialize(**kwargs, save_to_file=self.save_objects_to_file_var.get()),
-            parent_window=self.win_main
+            wait=True,
+            pop_up=True,
+            master=self.win_main
         )
 
         self._daf_running = True
@@ -850,10 +894,10 @@ daf.run(
         self.bnt_toolbar_stop_daf.configure(state="enabled")
 
     def stop_daf(self):
-        async_execute(self.connection.shutdown(), parent_window=self.win_main)
         self._daf_running = False
         self.bnt_toolbar_start_daf.configure(state="enabled")
         self.bnt_toolbar_stop_daf.configure(state="disabled")
+        tae.async_execute(self.connection.shutdown(), wait=False, pop_up=True, master=self.win_main)
 
     @gui_except
     def add_accounts_daf(self, selection: bool = False):
@@ -868,42 +912,32 @@ daf.run(
             accounts = [a for i, a in enumerate(accounts) if i in indexes]
 
         for account in accounts:
-            async_execute(self.connection.add_account(convert_to_objects(account)), parent_window=self.win_main)
+            tae.async_execute(
+                self.connection.add_account(convert_to_objects(account)),
+                wait=False,
+                pop_up=True,
+                master=self.win_main
+            )
 
     def close_window(self):
         resp = tkdiag.Messagebox.yesnocancel("Do you wish to save?", "Save?", alert=True, parent=self.win_main)
         if resp is None or resp == "Cancel" or resp == "Yes" and not self.save_schema():
             return
 
-        self._window_opened = False
         if self._daf_running:
-            self.stop_daf()
+            tae.async_execute(self.connection.shutdown(), pop_up=True)
 
-        async def _tmp():
-            sys.stdout = self._oldstdout
+        sys.stdout = self._oldstdout
+        self.win_main.quit()
 
-        async_execute(_tmp())
-
-    def _process(self):
-        self.win_main.update()
+    def until_closed(self):
+        "Runs until closed"
+        self.win_main.mainloop()
 
 
 def run():
     app = Application()
     GLOBAL.app = app
-
-    async def update_task():
-        while app.opened:
-            app._process()
-            await asyncio.sleep(WIN_UPDATE_DELAY)
-
-    if sys.version_info.minor < 10:
-        loop = asyncio.get_event_loop()
-    else:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-
-    async_start(loop)
-    loop.run_until_complete(update_task())
-    loop.run_until_complete(async_stop())
-    asyncio.set_event_loop(None)
+    tae.start()
+    app.until_closed()
+    tae.stop()

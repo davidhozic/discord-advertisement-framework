@@ -5,6 +5,8 @@ Changelog
 
 .. |POTENT_BREAK_CH| replace:: **[Potentially breaking change]**
 
+.. |UNRELEASED| replace:: **[Not yet released]**
+
 ------------------------
 Info
 ------------------------
@@ -28,9 +30,91 @@ Glossary
         The change could break functionality from previous versions but only if it
         was used in a certain way.
 
-----------------------
+    |UNRELEASED|
+        Documented changes are not yet available to use.
+
+---------------------
 Releases
-----------------------
+---------------------
+
+v3.0.0
+====================
+- SQL analytics:
+  
+  - Counts now have better error reporting when an invalid value was passed.
+
+- GUI:
+
+  - Higher refresh rate due to threading redesign - instead of calling Tkinter's root.update inside an asyncio task,
+    the root.mainroot is called directly, while the asyncio event loop is running inside another thread.
+  - The GUI will not block the asyncio tasks (explained in previous bullet).
+  - When saving a new object definition, if the type of a parameter is literal, the value will be pre-checked inside
+    the GUI and an exception will be raised if a valid value is not given.
+  - Properties that start with ``_`` will no longer be displayed when viewing live structured objects.
+  - Toast notifications for :func:`~daf.logging.tracing.trace`.
+  - Parameter validation for literals, enums and bool.
+  - Copy / Paste globally for both drop-down menus and list menus.
+
+- Core:
+
+  - New events system and module :ref:`Event reference`  
+  - Updated PyCord API wrapper to 2.5.0 RC5
+  - New property :py:attr:`daf.client.ACCOUNT.removed_servers` for tracking removed servers.
+  - New property :py:attr:`daf.guild.GUILD.removed_messages` :py:attr:`daf.guild.USER.removed_messages`
+    for tracking removed messages.
+  - New parameter ``removal_buffer_length`` to :class:`daf.client.ACCOUNT` for setting maximum amount of
+    of servers to keep in the :py:attr:`daf.client.ACCOUNT.removed_servers` buffer.
+  - New parameter ``removal_buffer_length`` to :class:`daf.guild.GUILD` and :class:`daf.guild.USER`
+    for setting maximum amount of messages to keep in the :py:attr:`daf.guild.GUILD.removed_messages`
+    / :py:attr:`daf.guild.USER.removed_messages` buffer.
+
+  - Event loop based API - All API methods that get called now submit an event in the event loop, which causes
+    the API call to happen asynchronously unless awaited with ``await`` keyword. This also makes DAF
+    much more efficient.
+
+  - Remote:
+
+    - Persistent WebSocket connection for receiving events from the core server
+      (eg. :func:`~daf.logging.tracing.trace()` events).
+
+
+  - Removed ``remaining_before_removal`` property from all message classes.
+  - Added ``remove_after`` property to :class:`~daf.guild.GUILD`, :class:`~daf.guild.USER`,
+    :class:`~daf.message.TextMESSAGE`, :class:`~daf.message.VoiceMESSAGE` and :class:`~daf.message.DirectMESSAGE`.
+
+
+v2.10.4
+======================
+- Fixed prematurely exiting when waiting for captcha to be completed by user.
+
+
+v2.10.3
+======================
+- Fixed Chrome driver not working with newer Chrome versions (115+).
+- Fetching invite links better bypass.
+- Remove invalid presence
+- Fixed ``remaining_before_removal`` properties
+- Fixed SQL queries not working on direct messages.
+
+
+v2.10.2
+=======================
+- Fixed *Unclosed client session* warning when removing an user account.
+- Fixed documentation of :func:`daf.core.shutdown` - removed information about non existent parameters.
+- Selenium better waiting avoidance
+- Fixed ACCOUNT not being removed from the list if the update failed and the re-login after update failed.
+
+
+v2.10.1
+=======================
+- Fixed files in DirectMESSAGE.
+- Fixed file paths over remote not having the full patch when returned back.
+- Fixed files not having full path in the logs.
+- Added :py:attr:`daf.dtypes.FILE.fullpath` to support the previous fix.
+- Fixed exception when adding messages inside AutoGUILD, when one of the cached guilds fails initialization.
+- Fixed serialization for :class:`discord.VoiceChannel`, which included slowmode_delay,
+  even though the attribute doesn't exist in the VoiceChannel.
+
 
 v2.10
 ====================

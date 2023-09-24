@@ -4,6 +4,8 @@ Discord Advertisement Framework
 import _discord as discord
 
 from . import misc
+from . import events
+
 from .client import *
 from .core import *
 from .dtypes import *
@@ -15,4 +17,4 @@ from .convert import *
 from .remote import *
 
 
-VERSION = "2.10"
+VERSION = "3.0.0rc0"

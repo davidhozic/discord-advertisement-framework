@@ -5,7 +5,7 @@
         Added Discord invite link tracking.
 """
 from datetime import datetime, date
-from typing import Callable, Dict, List, Literal, Any, Union, Optional, Tuple
+from typing import Callable, Dict, List, Literal, Any, Union, Optional, Tuple, get_args
 from contextlib import suppress
 from pathlib import Path
 from typeguard import typechecked
@@ -44,7 +44,8 @@ try:
     from .tables import *
 
     from sqlalchemy import (
-        Integer, String, select, text, func, case, delete, event, Engine
+        select, text, case, delete, func,
+        Integer, String, event,
     )
     from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
     from sqlalchemy.engine import URL as SQLURL, create_engine
@@ -942,6 +943,10 @@ class LoggerSQL(logging.LoggerBASE):
         SQLAlchemyError
             There was a problem with the database.
         """
+        args = get_args(self.analytic_get_num_messages.__annotations__["sort_by"])
+        if sort_by not in args:
+            raise ValueError(f"sort_by expected any of {args}. Got '{sort_by}'")
+
         async with self.session_maker() as session:
             conditions = [MessageLOG.timestamp.between(after, before)]
             if guild is not None:
@@ -1051,14 +1056,14 @@ class LoggerSQL(logging.LoggerBASE):
         )
 
     async def analytic_get_num_invites(
-            self,
-            guild: Union[int, None] = None,
-            after: datetime = datetime.min,
-            before: datetime = datetime.max,
-            sort_by: Literal["count", "guild_snow", "guild_name", "invite_id"] = "count",
-            sort_by_direction: Literal["asc", "desc"] = "desc",
-            limit: int = 500,
-            group_by: Literal["year", "month", "day"] = "day"
+        self,
+        guild: Union[int, None] = None,
+        after: datetime = datetime.min,
+        before: datetime = datetime.max,
+        sort_by: Literal["count", "guild_snow", "guild_name", "invite_id"] = "count",
+        sort_by_direction: Literal["asc", "desc"] = "desc",
+        limit: int = 500,
+        group_by: Literal["year", "month", "day"] = "day"
     ) -> List[Tuple[date, int, str]]:
         """
         Returns invite link join counts.
@@ -1098,6 +1103,10 @@ class LoggerSQL(logging.LoggerBASE):
         SQLAlchemyError
             There was a problem with the database.
         """
+        args = get_args(self.analytic_get_num_invites.__annotations__["sort_by"])
+        if sort_by not in args:
+            raise ValueError(f"sort_by expected any of {args}. Got '{sort_by}'")
+
         async with self.session_maker() as session:
             conditions = [InviteLOG.timestamp.between(after, before)]
             if guild is not None:
@@ -1138,11 +1147,15 @@ class LoggerSQL(logging.LoggerBASE):
         conditions: list,
         limit: int,
         sort_by: str,
-        sort_by_direction: str,
+        sort_by_direction: Literal["asc", "desc"],
         select_items: List[Any],
         joins: List[Tuple[Any, Any]],
         select_from: Any
     ):
+        args = get_args(self.__analytic_get_counts.__annotations__["sort_by_direction"])
+        if sort_by_direction not in args:
+            raise ValueError(f"sort_by_direction expected any of {args}. Got '{sort_by_direction}'")
+
         regions = ["day", "month", "year"]
         regions = reversed(regions[regions.index(group_by):])
         extract_stms = []

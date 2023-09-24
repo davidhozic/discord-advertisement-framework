@@ -16,6 +16,7 @@ def get_attrs(obj):
 def get_value(obj, attr: str, extra_ignore: set=set()):
     custom_key_map = {
         asyncio.Semaphore: lambda sem: (sem.locked(), sem._value),
+        daf.discord.Intents: lambda intents: {k: getattr(intents, k) for k in daf.discord.Intents.VALID_FLAGS}
     }
 
     ignore_attrs = {}
@@ -24,7 +25,8 @@ def get_value(obj, attr: str, extra_ignore: set=set()):
         "_sa_class_manager",
         "_sa_registry",
         "_created_at",
-        "_id"
+        "_id",
+        "_event_ctrl"
     }
 
     default_key = lambda x: x

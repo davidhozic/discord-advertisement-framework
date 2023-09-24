@@ -3,6 +3,7 @@
     you can send using the xxxMESSAGE objects.
 """
 from typing import Any, Callable, Coroutine, Union, Optional
+from os.path import basename
 from typeguard import typechecked
 import importlib.util as iu
 import io
@@ -163,7 +164,7 @@ class FILE:
     ValueError
         The ``data`` parameter is of incorrect format.
     """
-    __slots__ = ("_filename", "_data")
+    __slots__ = ("_filename", "_basename", "_data")
 
     def __init__(self, filename: str, data: Optional[Union[bytes, str]] = None):
         if data is None:
@@ -174,9 +175,10 @@ class FILE:
             data = bytes.fromhex(data)
 
         self._filename = filename
+        self._basename = basename(filename)
         self._data = data
 
-    def __str__(self) -> str:
+    def __repr__(self) -> str:
         return f"FILE(filename={self._filename})"
 
     @property
@@ -187,6 +189,11 @@ class FILE:
     @property
     def filename(self) -> str:
         "The name of the file"
+        return self._basename
+    
+    @property
+    def fullpath(self) -> str:
+        "The full path to the file"
         return self._filename
 
     @property
@@ -207,7 +214,7 @@ class FILE:
         """
         return {
             "type:": "File",
-            "filename": self._filename
+            "filename": self.fullpath
         }
 
 

@@ -25,6 +25,7 @@ from . import guild
 from . import message
 from . import logging
 from . import web
+from . import events
 
 
 __all__ = (
@@ -52,19 +53,22 @@ CONVERSION_ATTRS = {
     client.ACCOUNT: {
         "attrs": attributes.get_all_slots(client.ACCOUNT),
         "attrs_restore": {
-            "tasks": [],
-            "_update_sem": asyncio.Semaphore(1),
             "_running": False,
             "_client": None,
             "_ws_task": None,
+            "_event_ctrl": events.EventController()
         },
     },
     guild.AutoGUILD: {
         "attrs": attributes.get_all_slots(guild.AutoGUILD),
         "attrs_restore": {
-            "_safe_sem": asyncio.Semaphore(1),
+            "guild_query_iter": None,
+            "update_semaphore": asyncio.Semaphore(1),
             "parent": None,
             "guild_query_iter": None,
+            "_event_ctrl": None,
+            "_removal_timer_handle": None,
+            "_guild_join_timer_handle": None
         },
     },
     message.AutoCHANNEL: {
@@ -127,6 +131,15 @@ CONVERSION_ATTRS = {
     },
     discord.Guild: {
         "attrs": ["name", "id"]
+    },
+    discord.User: {
+        "attrs": ["name", "id"]
+    },
+    discord.TextChannel: {
+        "attrs": ["name", "id", "slowmode_delay"],
+    },
+    discord.VoiceChannel: {
+        "attrs": ["name", "id"],
     }
 }
 """
@@ -155,18 +168,14 @@ These are:
 - "custom_decoder": A function that accepts the JSON compatible object. It must return the original Python object.
 """
 
-
-for cls in {discord.TextChannel, discord.VoiceChannel}:
-    attrs = {"attrs": ["name", "id", "slowmode_delay"]}
-    CONVERSION_ATTRS[cls] = attrs
-
-
 # Guilds
 CONVERSION_ATTRS[guild.GUILD] = {
     "attrs": attributes.get_all_slots(guild.GUILD),
     "attrs_restore": {
         "update_semaphore": asyncio.Semaphore(1),
-        "parent": None
+        "parent": None,
+        "_removal_timer_handle": None,
+        "_event_ctrl": None
     },
 }
 
@@ -234,6 +243,8 @@ CONVERSION_ATTRS[message.TextMESSAGE] = {
         "parent": None,
         "sent_messages": {},
         "channel_getter": None,
+        "_event_ctrl": None,
+        "_timer_handle": None
     },
     "attrs_convert": {
         "channels": CHANNEL_LAMBDA
@@ -246,6 +257,8 @@ CONVERSION_ATTRS[message.VoiceMESSAGE] = {
         "update_semaphore": asyncio.Semaphore(1),
         "parent": None,
         "channel_getter": None,
+        "_event_ctrl": None,
+        "_timer_handle": None
     },
     "attrs_convert": {
         "channels": CHANNEL_LAMBDA
@@ -259,7 +272,9 @@ CONVERSION_ATTRS[message.DirectMESSAGE] = {
         "update_semaphore": asyncio.Semaphore(1),
         "parent": None,
         "previous_message": None,
-        "dm_channel": None
+        "dm_channel": None,
+        "_event_ctrl": None,
+        "_timer_handle": None
     },
 }
 

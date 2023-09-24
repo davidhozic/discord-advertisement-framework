@@ -12,11 +12,13 @@ from typeguard import typechecked
 from .logging.tracing import TraceLEVELS, trace
 from .logging import _logging as logging, tracing
 from .misc import doc, instance_track as it
+from .events import *
 from . import guild
 from . import client
 from . import message
 from . import convert
 from . import remote
+from . import events
 
 import asyncio
 import shutil
@@ -56,7 +58,6 @@ class GLOBALS:
     save_to_file: bool = False
     remote_client: remote.RemoteAccessCLIENT = None
 
-    cleanup_event = asyncio.Event()
     schema_backup_event = asyncio.Event()
 
 
@@ -118,19 +119,12 @@ async def http_remove_account(account_id: int):
     return remote.create_json_response(message=f"Removed account {name}")
 
 
-async def cleanup_accounts_task():
-    """
-    Task for cleaning up closed accounts.
-    """
-    loop = asyncio.get_event_loop()
-    event = GLOBALS.cleanup_event
-    while GLOBALS.running:
-        loop.call_later(ACCOUNT_CLEANUP_DELAY, event.set)
-        await event.wait()
-        event.clear()
-        for account in get_accounts():
-            if account.deleted:
-                await remove_object(account)
+# @get_global_event_ctrl().listen(EventID.g_account_expired)
+async def cleanup_account(account: client.ACCOUNT):
+    if GLOBALS.save_to_file:
+        await account._close()
+    else:
+        await remove_object(account)
 
 
 async def schema_backup_task():
@@ -207,6 +201,14 @@ async def initialize(user_callback: Optional[Union[Callable, Coroutine]] = None,
     loop = asyncio.get_event_loop()
     if accounts is None:
         accounts = []
+
+    
+    # ------------------------------------------------------------
+    # Initialize events
+    # ------------------------------------------------------------
+    events.initialize()
+    evt = events.get_global_event_ctrl()
+    evt.add_listener(EventID.g_account_expired, cleanup_account)
     # ------------------------------------------------------------
     # Initialize tracing
     # ------------------------------------------------------------
@@ -255,14 +257,11 @@ async def initialize(user_callback: Optional[Union[Callable, Coroutine]] = None,
 
     if save_to_file:  # Backup shilling list to pickle file
         GLOBALS.tasks.append(loop.create_task(schema_backup_task()))
-    else:
-        # Create account cleanup task (account self-deleted)
-        # Only create if state preservation is disable to prevent potential data loss due to
-        # lost connections or reset tokens. The user must use the GUI to cleanup any non-running accounts.
-        GLOBALS.tasks.append(loop.create_task(cleanup_accounts_task()))
 
     GLOBALS.running = True
     GLOBALS.save_to_file = save_to_file
+
+    evt.emit(EventID.g_daf_startup)
     trace("Initialization complete.", TraceLEVELS.NORMAL)
 
 
@@ -331,7 +330,7 @@ async def add_object(obj: Union[message.DirectMESSAGE, message.TextMESSAGE, mess
     obj: message.DirectMESSAGE | message.TextMESSAGE | message.VoiceMESSAGE
         The message object to add into the daf.
     snowflake: guild.GUILD | guild.USER
-        Which guild/user to add it to (can be snowflake id or a framework _BaseGUILD object or
+        Which guild/user to add it to (can be snowflake id or a framework BaseGUILD object or
         a discord API wrapper object).
 
     Raises
@@ -358,9 +357,11 @@ async def add_object(obj, snowflake=None):
         if obj in GLOBALS.accounts:
             raise ValueError("Account already added to the list")
 
-        await obj.initialize()
+        if (res := await obj.initialize()) is not None:
+            raise res
+
         GLOBALS.accounts.append(obj)
-    elif isinstance(obj, (guild._BaseGUILD, guild.AutoGUILD)):
+    elif isinstance(obj, (guild.BaseGUILD, guild.AutoGUILD)):
         if not isinstance(snowflake, client.ACCOUNT):
             raise TypeError("snowflake parameter type must be ACCOUNT when the obj parameter type is guild like.")
 
@@ -370,7 +371,7 @@ async def add_object(obj, snowflake=None):
         if snowflake is None:
             raise ValueError("snowflake parameter (guild-like) is required to add a message.")
 
-        if not isinstance(snowflake, (guild.AutoGUILD, guild._BaseGUILD)):
+        if not isinstance(snowflake, (guild.AutoGUILD, guild.BaseGUILD)):
             raise TypeError("snowflake parameter must be one of: guild.AutoGUILD, guild.GUILD, guild.USER")
 
         await snowflake.add_message(obj)
@@ -382,7 +383,7 @@ async def add_object(obj, snowflake=None):
 @typechecked
 @doc.doc_category("Dynamic mod.")
 async def remove_object(
-    snowflake: Union[guild._BaseGUILD, message.BaseMESSAGE, guild.AutoGUILD, client.ACCOUNT]
+    snowflake: Union[guild.BaseGUILD, message.BaseMESSAGE, guild.AutoGUILD, client.ACCOUNT]
 ) -> None:
     """
     .. versionchanged:: v2.4.1
@@ -396,7 +397,7 @@ async def remove_object(
 
     Parameters
     -------------
-    snowflake: guild._BaseGUILD | message.BaseMESSAGE | guild.AutoGUILD | client.ACCOUNT
+    snowflake: guild.BaseGUILD | message.BaseMESSAGE | guild.AutoGUILD | client.ACCOUNT
         The object to remove from the framework.
 
     Raises
@@ -409,18 +410,19 @@ async def remove_object(
         for account in GLOBALS.accounts:
             for guild_ in account.servers:
                 if snowflake in guild_.messages:
-                    guild_.remove_message(snowflake)
+                    await guild_.remove_message(snowflake)
                     break
         else:
             raise ValueError("Message is not in any guilds")
 
-    elif isinstance(snowflake, (guild._BaseGUILD, guild.AutoGUILD)):
+    elif isinstance(snowflake, (guild.BaseGUILD, guild.AutoGUILD)):
         for account in GLOBALS.accounts:
             if snowflake in account.servers:
-                account.remove_server(snowflake)
+                await account.remove_server(snowflake)
 
     elif isinstance(snowflake, client.ACCOUNT):
         await snowflake._close()
+        snowflake._delete()
         GLOBALS.accounts.remove(snowflake)
 
 
@@ -442,33 +444,26 @@ def get_accounts() -> List[client.ACCOUNT]:
 async def shutdown() -> None:
     """
     Stops and cleans the framework.
-
-    Parameters
-    ----------
-    loop: Optional[asyncio.AbstractEventLoop]
-        The loop everything is running in.
-        Leave empty for default loop.
-        This parameter is only relevant if ``stop_loop`` is set to True.
-    stop_loop: Optional[bool]
-        Default: False; If True, it stops the running event loop.
     """
     trace("Shutting down...", TraceLEVELS.NORMAL)
+    evt = get_global_event_ctrl()
     GLOBALS.running = False
+    await evt.emit(EventID.g_daf_shutdown)
     # Signal events for tasks to raise out of sleep
-    GLOBALS.cleanup_event.set()
     GLOBALS.schema_backup_event.set()  # This also saves one last time, so manually saving is not needed
-    # Close remote client
-    if remote.GLOBALS.remote_client is not None:
-        await remote.GLOBALS.remote_client._close()
-
     for task in GLOBALS.tasks:  # Wait for core tasks to finish
         await task
 
     GLOBALS.tasks.clear()
-    for account in GLOBALS.accounts:
-        await account._close()
+    await asyncio.gather(*[await account._close() for account in GLOBALS.accounts])
 
     GLOBALS.accounts.clear()
+    evt.remove_listener(EventID.g_account_expired, cleanup_account)
+    await evt.stop()
+
+    if remote.GLOBALS.remote_client is not None:
+        await remote.GLOBALS.remote_client._close()
+
     trace("Shutdown complete.", TraceLEVELS.NORMAL)
 
 

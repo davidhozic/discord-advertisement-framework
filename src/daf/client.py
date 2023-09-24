@@ -2,13 +2,14 @@
     This modules contains definitions related to the client (for API)
 """
 from typing import Optional, Union, List, Dict
-
+from contextlib import suppress
 
 from . import guild
 from . import web
 
 from .logging.tracing import TraceLEVELS, trace
 from .misc import async_util, instance_track, doc, attributes
+from .events import *
 
 from typeguard import typechecked
 
@@ -22,8 +23,6 @@ import copy
 #######################################################################
 LOGIN_TIMEOUT_S = 15
 TOKEN_MAX_PRINT_LEN = 5
-TASK_SLEEP_DELAY_S = 0.100
-TASK_STARTUP_DELAY_S = 2
 
 
 __all__ = (
@@ -54,6 +53,11 @@ class ACCOUNT:
     .. versionchanged:: v2.5
         Added ``username`` and ``password`` parameters.
         For logging in automatically
+
+    .. versionchanged:: v3.0
+
+        When servers are added directly through account initialization,
+        they will be removed upon errors and available withing ``removed_servers`` property.
 
     Represents an individual Discord account.
 
@@ -91,10 +95,16 @@ class ACCOUNT:
             a proxy.
     servers: Optional[List[guild.GUILD | guild.USER | guild.AutoGUILD]]=[]
         Predefined list of servers (guilds, users, auto-guilds).
+        If initializing a server fails (eg. server doesn't exist on Discord), it will be removed
+        and added to :py:attr:`daf.client.ACCOUNT.removed_servers` property.
     username: Optional[str]
         The username to login with.
     password: Optional[str]
         The password to login with.
+    removal_buffer_length: Optional[int]
+        Maximum number of servers to keep in the removed_servers buffer.
+
+        .. versionadded:: 3.0
 
     Raises
     ---------------
@@ -108,17 +118,18 @@ class ACCOUNT:
         "is_user",
         "proxy",
         "intents",
+        "removal_buffer_length",
         "_running",
-        "tasks",
         "_ws_task",
         "_servers",
-        "_autoguilds",
         "_selenium",
-        "_uiservers",
         "_client",
         "_deleted",
-        "_update_sem",
+        "_removed_servers",
+        "_event_ctrl"
     )
+
+    _removed_servers: List[Union[guild.BaseGUILD, guild.AutoGUILD]]
 
     @typechecked
     def __init__(
@@ -130,6 +141,7 @@ class ACCOUNT:
         servers: Optional[List[Union[guild.GUILD, guild.USER, guild.AutoGUILD]]] = None,
         username: Optional[str] = None,
         password: Optional[str] = None,
+        removal_buffer_length: int = 50
     ) -> None:
 
         if proxy is not None:
@@ -142,33 +154,26 @@ class ACCOUNT:
         if token is None and username is None:  # At least one of these
             raise ValueError("At lest one parameter of these is required: 'token' OR 'username' + 'password'")
 
-        self._token = token
-        self.is_user = is_user
-        self.proxy = proxy
         # If intents not passed, enable default
         if intents is None:
             intents = discord.Intents.default()
 
-        self.intents = intents
-        self._running = False
-        self.tasks: List[asyncio.Task] = []
-        self._servers: List[guild._BaseGUILD] = []
-        self._autoguilds: List[guild.AutoGUILD] = []  # To prevent __eq__ issues, use 2 lists
-        self._selenium = web.SeleniumCLIENT(username, password, proxy) if username is not None else None
-
         if servers is None:
             servers = []
 
-        self._uiservers = servers
-        """Temporary list of uninitialized servers
-        servers parameter gets stored into _servers to prevent the
-        update method from re-initializing initializes objects.
-        This gets deleted in the initialize method"""
-
+        self._token = token
+        self.is_user = is_user
+        self.proxy = proxy
+        self.intents = intents
+        self.removal_buffer_length = removal_buffer_length
+        self._running = False
+        self._servers = servers
+        self._selenium = web.SeleniumCLIENT(username, password, proxy) if username is not None else None
         self._client = None
         self._deleted = False
         self._ws_task = None
-        attributes.write_non_exist(self, "_update_sem", asyncio.Semaphore(1))
+        self._event_ctrl = EventController()
+        attributes.write_non_exist(self, "_removed_servers", [])
 
     def __str__(self) -> str:
         return f"{type(self).__name__}(token={self._token[:10] if self._token is not None else None}, is_user={self.is_user}, selenium={self._selenium})"
@@ -238,165 +243,75 @@ class ACCOUNT:
         Returns all guild like objects inside the account's s
         shilling list. This also includes :class:`~daf.guild.AutoGUILD`
         """
-        return self._servers + self._autoguilds
+        return self._servers[:]
+
+    @property
+    def removed_servers(self) -> List[Union[guild.GUILD, guild.AutoGUILD, guild.USER]]:
+        "Returns a list of servers that were removed from account (last ``removal_buffer_length`` servers)."
+        return self._removed_servers[:]
 
     @property
     def client(self) -> discord.Client:
         "Returns the API wrapper client"
         return self._client
 
-    def _delete(self):
-        """
-        Sets the internal _deleted flag to True,
-        indicating the object should not be used.
-        """
-        self._deleted = True
-        for server in self.servers:
-            server._delete()
-
-    async def initialize(self):
-        """
-        Initializes the API wrapper client layer.
-
-        Raises
-        ------------
-        RuntimeError
-            Unable to login to Discord.
-        """
-        intents = self.intents
-        if not intents.members:
-            trace("Members intent is disabled, it is needed for invite link tracking", TraceLEVELS.WARNING)
-
-        if not intents.invites:
-            trace("Invites intent is disabled, it is needed for invite link tracking", TraceLEVELS.WARNING)
-
-        if not intents.guilds:
-            self.intents.guilds = True
-            trace("Guilds intent is disabled. Enabling it since it's needed.", TraceLEVELS.WARNING)
-
-        self._deleted = False
-        connector = None
-        if self.proxy is not None:
-            connector = ProxyConnector.from_url(self.proxy)
-
-        self._client = discord.Client(intents=self.intents, connector=connector)
-
-        if self._selenium is not None:
-            trace("Logging in thru browser and obtaining token")
-            self._token = await self._selenium.initialize()
-            self.is_user = True
-
-        # Login
-        trace("Logging in...")
-        try:
-            await self._client.login(self._token, not self.is_user)
-            ws_task = asyncio.create_task(self._client.connect())
-            self._ws_task = ws_task
-            await self._client.wait_for("ready", timeout=LOGIN_TIMEOUT_S)
-            trace(f"Logged in as {self._client.user.display_name}")
-        except asyncio.TimeoutError as exc:
-            exc = ws_task.exception() if ws_task.done() else exc
-            raise RuntimeError(f"Error logging in to Discord. (Token {self._token[:TOKEN_MAX_PRINT_LEN]}...)") from exc
-
-        for server in self._uiservers:
-            try:
-                await self.add_server(server)
-            except Exception as exc:
-                trace("Unable to add server.", TraceLEVELS.ERROR, exc)
-
-        # Invite link tracking
-        async def on_member_join(member: discord.Member):
-            server = self.get_server(member.guild)
-            if server is not None:
-                await server._on_member_join(member)
-
-        async def on_invite_delete(invite: discord.Invite):
-            guild_id = invite.guild.id
-            server = self.get_server(guild_id)
-            if server is None:  # Try AutoGUILDS
-                for autoserver in self._autoguilds:
-                    server = autoserver._get_server(guild_id)
-                    if server is not None:
-                        break
-
-            if server is not None:
-                await server._on_invite_delete(invite)
-
-        self._client.event(on_member_join)
-        self._client.event(on_invite_delete)
-
-        self._uiservers.clear()  # Only needed for predefined initialization
-        self.tasks.append(asyncio.create_task(self._loop()))
-        self._running = True
-
-    def generate_log_context(self) -> Dict[str, Union[str, int]]:
-        """
-        Generates a dictionary of the user's context,
-        which is then used for logging.
-
-        Returns
-        ---------
-        Dict[str, Union[str, int]]
-        """
-        return {
-            "name": self._client.user.name,
-            "id": self._client.user.id,
-        }
-
+    # API methods
     @typechecked
-    async def add_server(self, server: Union[guild.GUILD, guild.USER, guild.AutoGUILD]):
+    def add_server(self, server: Union[guild.GUILD, guild.USER, guild.AutoGUILD]) -> asyncio.Future:
         """
         Initializes a guild like object and
         adds it to the internal account shill list.
+
+        |ASYNC_API|
 
         Parameters
         --------------
         server: guild.GUILD | guild.USER | guild.AutoGUILD
             The guild like object to add
 
+        Returns
+        --------
+        Awaitable
+            An awaitable object which can be used to await for execution to finish.
+            To wait for the execution to finish, use ``await`` like so: ``await method_name()``.
+
         Raises
         --------
-        Any
-            Raised in
-            :py:meth:`daf.guild.GUILD.initialize()` |
-            :py:meth:`daf.guild.USER.initialize()`  |
-            :py:meth:`daf.guild.AutoGUILD.initialize()`
+        ValueError
+            Invalid ``snowflake`` (eg. server doesn't exist).
+        RuntimeError
+            Could not query Discord.
         """
-        await server.initialize(parent=self)
-        if isinstance(server, guild._BaseGUILD):
-            self._servers.append(server)
-        else:
-            self._autoguilds.append(server)
+        return self._event_ctrl.emit(EventID.server_added, server)
 
     @typechecked
-    def remove_server(self, server: Union[guild.GUILD, guild.USER, guild.AutoGUILD]):
+    def remove_server(self, server: Union[guild.GUILD, guild.USER, guild.AutoGUILD]) -> asyncio.Future:
         """
         Removes a guild like object from the shilling list.
+        
+        |ASYNC_API|
+
+        .. versionchanged:: 3.0
+
+            Removal is now asynchronous.
 
         Parameters
         --------------
         server: guild.GUILD | guild.USER | guild.AutoGUILD
             The guild like object to remove
 
+        Returns
+        --------
+        Awaitable
+            An awaitable object which can be used to await for execution to finish.
+            To wait for the execution to finish, use ``await`` like so: ``await method_name()``.
+
         Raises
         -----------
         ValueError
             ``server`` is not in the shilling list.
         """
-        if isinstance(server, guild._BaseGUILD):
-            server._delete()
-            # Remove by ID
-            ids = [id(s) for s in self._servers]
-            try:
-                index = ids.index(id(server))
-            except ValueError:
-                raise ValueError(f"{server} is not in list")
-
-            del self._servers[index]
-        else:
-            self._autoguilds.remove(server)
-
-        trace(f"Server {server} has been removed from account {self}", TraceLEVELS.NORMAL)
+        return self._event_ctrl.emit(EventID.server_removed, server)
 
     @typechecked
     def get_server(
@@ -427,93 +342,149 @@ class ACCOUNT:
 
         return None
 
-    async def _close(self, _delete = True):
-        """
-        Signals the tasks of this account to finish and
-        waits for them.
-        """
-        if self.running:
-            trace(f"Logging out of {self.client.user.display_name}...")
-            self._running = False
-
-        for exc in await asyncio.gather(*self.tasks, return_exceptions=True):
-            if exc is not None:
-                trace(
-                    f"Error raised in for {self.client.user.display_name} (Token: {self._token[:TOKEN_MAX_PRINT_LEN]})",
-                    TraceLEVELS.ERROR,
-                    exc
-                )
-
-        self.tasks.clear()
-        selenium = self.selenium
-        if selenium is not None:
-            selenium._close()
-
-        for guild_ in self._autoguilds:
-            await guild_._close()
-
-        await self._client.close()
-        await asyncio.gather(self._ws_task, return_exceptions=True)
-        self.client.clear()
-
-        if _delete:
-            self._delete()
-
-            for server in self.servers:
-                server._delete()
-
-            self._uiservers = self.servers
-            self._servers.clear()
-            self._autoguilds.clear()
-
-    async def _loop(self):
-        """
-        Main task loop for advertising thru each guild.
-
-        Runs while _running is set to True and afterwards
-        closes the connection to Discord.
-        """
-        while self._running:
-            ###############################################################
-            @async_util.with_semaphore(self._update_sem)
-            async def __loop():
-                to_remove = []
-                to_advert: List[guild._BaseGUILD, guild.AutoGUILD] = []
-                for server in self.servers:
-                    if server._check_state():
-                        to_remove.append(server)
-                    else:
-                        to_advert.append(server)
-
-                for server in to_remove:
-                    self.remove_server(server)
-
-                for server in to_advert:
-                    status = await server._advertise()
-                    if status == guild.GUILD_ADVERT_STATUS_ERROR_REMOVE_ACCOUNT:
-                        trace(f"Removing account {self} because token was invalidated! Username: '{self._client.user.name}')", TraceLEVELS.ERROR)
-                        self._running = False
-                        self._deleted = True
-
-                    # If loop stop has been requested, stop asap
-                    if not self._running:
-                        return
-            ###############################################################
-            await __loop()
-            await asyncio.sleep(TASK_SLEEP_DELAY_S)
-
-    async def update(self, **kwargs):
+    def update(self, **kwargs) -> asyncio.Future:
         """
         Updates the object with new parameters and afterwards updates all lower layers (GUILD->MESSAGE->CHANNEL).
 
+        |ASYNC_API|
+
         .. WARNING::
             After calling this method the entire object is reset.
+
+        Returns
+        --------
+        Awaitable
+            An awaitable object which can be used to await for execution to finish.
+            To wait for the execution to finish, use ``await`` like so: ``await method_name()``.
+        
+        Raises
+        --------
+        ValueError
+            The account is no longer running.
+        Exception
+            Other exceptions returned from :class:`daf.client.ACCOUNT` constructor
+            or from :func:`daf.client.ACCOUNT.initialize`.
         """
         if self._deleted:
             raise ValueError("Account has been removed from the framework!")
 
         if self._running:
-            await self._close(False)
+            return self._event_ctrl.emit(EventID.account_update, **kwargs)
+        else:
+            return self._on_update(self, **kwargs)
+
+    # Non public methods
+    def _delete(self):
+        """
+        Sets the internal _deleted flag to True,
+        indicating the object should not be used.
+        """
+        self._deleted = True
+
+    @async_util.except_return
+    async def initialize(self):
+        """
+        Initializes the API wrapper client layer.
+        """
+        intents = self.intents
+        if not intents.members:
+            trace("Members intent is disabled, it is needed for invite link tracking", TraceLEVELS.WARNING)
+
+        if not intents.invites:
+            trace("Invites intent is disabled, it is needed for invite link tracking", TraceLEVELS.WARNING)
+
+        if not intents.guilds:
+            self.intents.guilds = True
+            trace("Guilds intent is disabled. Enabling it since it's needed.", TraceLEVELS.WARNING)
+
+        if self._selenium is not None:
+            trace("Logging in thru browser and obtaining token")
+            if isinstance(result := await self._selenium.initialize(), Exception):
+                trace(f"Could not initialize browser in {self}.", TraceLEVELS.ERROR, result)
+                raise result
+
+            self._token = result
+            self.is_user = True
+
+        self._deleted = False
+        connector = None
+        if self.proxy is not None:
+            connector = ProxyConnector.from_url(self.proxy)
+
+        self._client = discord.Client(intents=self.intents, connector=connector)
+
+        # Login
+        trace("Logging in...")
+        ws_task = None
+        try:
+            await self._client.login(self._token, not self.is_user)
+            ws_task = asyncio.create_task(self._client.connect())
+            self._ws_task = ws_task
+            await self._client.wait_for("ready", timeout=LOGIN_TIMEOUT_S)
+            trace(f"Logged in as {self._client.user.display_name}")
+        except Exception as exc:
+            exc = ws_task.exception() if ws_task is not None and ws_task.done() else exc
+            trace(f"Could not login to Discord - {self}", TraceLEVELS.ERROR, exc)
+            raise exc
+
+        self._event_ctrl.add_listener(EventID.account_update, self._on_update)
+        for server in self._servers:
+            if (await server.initialize(self, self._event_ctrl)) is not None:
+                await self._on_remove_server(server)
+
+        self._event_ctrl.add_listener(EventID.server_removed, self._on_remove_server)
+        self._event_ctrl.add_listener(EventID.server_added, self._on_add_server)
+        self._event_ctrl.start()
+        self._running = True
+
+    def generate_log_context(self) -> Dict[str, Union[str, int]]:
+        """
+        Generates a dictionary of the user's context,
+        which is then used for logging.
+
+        Returns
+        ---------
+        Dict[str, Union[str, int]]
+        """
+        return {
+            "name": self._client.user.name,
+            "id": self._client.user.id,
+        }
+
+    # API event handlers
+    async def _on_add_server(self, server: Union[guild.GUILD, guild.USER, guild.AutoGUILD]):
+        "Event handler for adding new servers"
+        if (exc := await server.initialize(parent=self, event_ctrl=self._event_ctrl)) is not None:
+            raise exc
+
+        self._servers.append(server)
+        with suppress(ValueError):
+            self._removed_servers.remove(server)
+
+    async def _on_remove_server(self, server: Union[guild.GUILD, guild.USER, guild.AutoGUILD]):
+        "Event handler for removing the guild / server"
+        if isinstance(server, guild.BaseGUILD):
+            # Remove by ID
+            ids = [id(s) for s in self._servers]
+            try:
+                index = ids.index(id(server))
+            except ValueError:
+                raise ValueError(f"{server} is not in list")
+
+            del self._servers[index]
+        else:
+            self._servers.remove(server)
+
+        await server._close()
+        self._removed_servers.append(server)
+        if len(self._removed_servers) > self.removal_buffer_length:
+            trace(f"Removing oldest record of removed servers {self._removed_servers[0]}", TraceLEVELS.DEBUG)
+            del self._removed_servers[0]
+
+        trace(f"Server {server} has been removed from account {self}", TraceLEVELS.NORMAL)
+
+    async def _on_update(self, **kwargs):
+        await self._close()
 
         selenium = self._selenium
         if "token" not in kwargs:
@@ -528,29 +499,36 @@ class ACCOUNT:
             if isinstance(intents, discord.Intents) and intents.value == 0:
                 kwargs["intents"] = None
 
-        kwargs["servers"] = kwargs.pop("servers", self.servers + self._uiservers)
-
-        @async_util.with_semaphore("_update_sem")
-        async def update_servers(self_):
-            _servers = []
-            _autoguilds = []
-            for server in self.servers:
-                try:
-                    await server.update(init_options={"parent": self})
-                    if isinstance(server, guild._BaseGUILD):
-                        _servers.append(server)
-                    else:
-                        _autoguilds.append(server)
-                except Exception as exc:
-                    trace(f"Could not update {server} after updating {self} - Skipping server.", TraceLEVELS.ERROR, exc)
-
-            self._servers = _servers
-            self._autoguilds = _autoguilds
-
+        kwargs["servers"] = kwargs.pop("servers", self.servers)
         try:
             await async_util.update_obj_param(self, **kwargs)
-            await update_servers(self)
         except Exception:
             await self.initialize()  # re-login
-            await update_servers(self)
             raise
+
+    # Cleanup
+    async def _close(self):
+        """
+        Signals the tasks of this account to finish and
+        waits for them.
+        """
+        if not self.running:
+            return
+
+        trace(f"Logging out of {self.client.user.display_name}...")
+        self._running = False
+
+        self._event_ctrl.remove_listener(EventID.server_removed, self._on_remove_server)
+        self._event_ctrl.remove_listener(EventID.server_added, self._on_add_server)
+        self._event_ctrl.remove_listener(EventID.server_update, self._on_remove_server)
+
+        for guild_ in self.servers:
+            await guild_._close()
+
+        selenium = self.selenium
+        if selenium is not None:
+            selenium._close()
+
+        await self._client.close()
+        await asyncio.gather(self._ws_task, return_exceptions=True)
+        return self._event_ctrl.stop()

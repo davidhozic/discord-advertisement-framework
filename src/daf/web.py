@@ -13,6 +13,7 @@ from typeguard import typechecked
 
 from .logging.tracing import trace, TraceLEVELS
 from .misc import doc
+from .misc.async_util import except_return
 
 import asyncio
 import pathlib
@@ -28,6 +29,7 @@ class GLOBALS:
 
 # ----------------- OPTIONAL ----------------- #
 try:
+    from webdriver_manager.chrome import ChromeDriverManager
     from undetected_chromedriver import Chrome
     from selenium.webdriver.chrome.options import Options
     from selenium.webdriver.remote.webelement import WebElement
@@ -65,7 +67,11 @@ WD_TIMEOUT_MED = 15
 WD_TIMEOUT_30 = 30
 WD_TIMEOUT_LONG = 90
 
-WD_FETCH_INVITE_CLOUDFLARE_TRIES = 5
+WD_FETCH_INVITE_CLOUDFLARE_TRIES = 3
+WD_FETCH_INVITE_CLOUDFLARE_DELAY = 7
+
+WD_CAPTCHA_RETRIES = 3
+
 WD_RD_CLICK_UPPER_N = 5
 WD_RD_CLICK_LOWER_N = 2
 WD_OUTPUT_PATH = pathlib.Path.home().joinpath("daf/daf_web_data")
@@ -78,7 +84,9 @@ DISCORD_LOGIN_URL = "https://discord.com/login"
 
 TOP_GG_SEARCH_URL = "https://top.gg/api/client/entities/search"
 TOP_GG_SERVER_JOIN_URL = "https://top.gg/servers/{id}/join"
-TOP_GG_REFRESH_TIME = timedelta(hours=1)
+
+
+XPATH_CAPTCHA = "//iframe[contains(@src, 'captcha')]"
 
 
 @doc.doc_category("Clients")
@@ -135,14 +143,15 @@ class SeleniumCLIENT:
         self.driver = None
         self._token = None
 
+    @except_return
     async def initialize(self) -> None:
         """
         Starts the webdriver whenever the framework is started.
 
-        Raises
-        ----------
-        Any
-            Raised in :py:meth:`~SeleniumCLIENT.login` method.
+        Returns
+        ---------
+        bool
+            ``True`` on success or ``False`` on error.
         """
         WD_OUTPUT_PATH.mkdir(exist_ok=True, parents=True)
         web_data_path = pathlib.Path(WD_PROFILES_PATH, self._username)
@@ -155,7 +164,8 @@ class SeleniumCLIENT:
         opts.add_argument("--no-first-run")
         opts.add_argument("--disable-background-networking")
         opts.add_argument("--disable-sync")
-        opts.add_argument("--disable-popup-blocking")
+        opts.add_argument("--disable-popup-blocking")  # For purposes of opening a new window with JavaScript
+
 
         if self._proxy is not None:
             proxy = self._proxy.split("://")  # protocol, url
@@ -166,7 +176,7 @@ class SeleniumCLIENT:
             proxy = f"{proxy[0]}://{proxy[1]}"
             opts.add_argument(f"--proxy-server={proxy}")
 
-        driver = Chrome(options=opts)
+        driver = Chrome(options=opts, driver_executable_path=ChromeDriverManager().install())
         driver.maximize_window()
         self.driver = driver
 
@@ -304,28 +314,31 @@ class SeleniumCLIENT:
         trace(f"Fetching invite link from {url}", TraceLEVELS.DEBUG)
         driver = self.driver
         main_window_handle = driver.current_window_handle
-        # Open a new tab with javascript to bypass detection
-        driver.execute_script("window.open('https://top.gg', '_blank');")  # Open a new tab
-        await asyncio.sleep(3)
-        new_handle = driver.window_handles[-1]
+
+        driver.execute_script(f"window.open('{url}', '_blank');")  # Try to bypass from start
+        await asyncio.sleep(5)
+        invite_handle = driver.window_handles[-1]
+        driver.switch_to.window(invite_handle)
         try:
             for i in range(WD_FETCH_INVITE_CLOUDFLARE_TRIES):
                 with suppress(NoSuchElementException):
-                    driver.switch_to.window(new_handle)
                     trace("Finding 'challenge-running' cloudflare ID", TraceLEVELS.DEBUG)
-                    driver.find_element(By.ID, "challenge-running")
-                    driver.switch_to.window(main_window_handle)
-                    await asyncio.sleep(5 * (i + 1))
-                    continue
+                    if "top.gg" in driver.current_url:
+                        driver.find_element(By.ID, "challenge-running")
+                        # Open a new tab with javascript to bypass detection
+                        trace("Found 'challenge-running' tag", TraceLEVELS.DEBUG)
+                        driver.execute_script("window.open('https://top.gg', '_blank');")
+                        await asyncio.sleep(WD_FETCH_INVITE_CLOUDFLARE_DELAY * (i + 1))
+                        driver.switch_to.window(driver.window_handles[-1])
+                        driver.close()
+                        driver.switch_to.window(invite_handle)
+                        await self.async_execute(driver.refresh)
 
-                await asyncio.sleep(2)
-                driver.switch_to.window(new_handle)
-                trace("No 'challenge-running' found. Checks suceeded", TraceLEVELS.DEBUG)
+                trace("Great! 'challenge-running' not found", TraceLEVELS.DEBUG)
                 break
             else:
-                raise RuntimeError("Could not complete cloudflare checks")
+                raise RuntimeError("Could not bypass 'challenge-running'")
 
-            await self.async_execute(driver.get, url)
             await self.async_execute(
                 WebDriverWait(driver, WD_TIMEOUT_LONG).until,
                 url_contains("discord.com")
@@ -440,55 +453,23 @@ class SeleniumCLIENT:
             CAPTCHA was not solved in time.
         """
         trace("Awaiting CAPTCHA", TraceLEVELS.DEBUG)
-        driver = self.driver
         await asyncio.sleep(WD_TIMEOUT_SHORT)
-
-        # Find all CAPTCHA iframes
-        captcha_frames = driver.find_elements(
-            By.XPATH,
-            "//iframe[contains(@src, 'captcha')]"
-        )
-        challenge_container = None
-        captcha_button = None
-        captcha_button_frame = None
-        # Find images container and the CAPTCHA button
-        for frame in captcha_frames:
-            driver.switch_to.frame(frame)
-            if challenge_container is None:
-                with suppress(NoSuchElementException):
-                    challenge_container = driver.find_element(
-                        By.XPATH,
-                        "//div[@class='challenge-container']"
-                        "/div[@class='challenge']"
-                    )
-
-            if captcha_button is None:
-                with suppress(NoSuchElementException):
-                    captcha_button = driver.find_element(
-                        By.XPATH,
-                        "//div[@id='checkbox']"
-                    )
-                    captcha_button_frame = frame
-
-            driver.switch_to.default_content()
-
-        if challenge_container is None and captcha_button is None:
-            return  # No CAPTCHA action required
-
-        # Challenge container not found -> click the button to open it
-        if challenge_container is None and captcha_button is not None:
-            driver.switch_to.frame(captcha_button_frame)
-            await self.hover_click(captcha_button)
-            driver.switch_to.default_content()
-
         try:
+            driver = self.driver
             # CAPTCHA detected, wait until it is solved by the user
-            await self.async_execute(
-                WebDriverWait(self.driver, WD_TIMEOUT_LONG).until_not,
-                presence_of_element_located(
-                    (By.XPATH, "//iframe[contains(@src, 'captcha')]")
+            for _ in range(WD_CAPTCHA_RETRIES):
+                await self.async_execute(
+                    WebDriverWait(driver, WD_TIMEOUT_LONG).until_not,
+                    presence_of_element_located(
+                        (By.XPATH, XPATH_CAPTCHA)
+                    )
                 )
-            )
+                await asyncio.sleep(WD_TIMEOUT_SHORT)
+                try:
+                    driver.find_element(By.XPATH, XPATH_CAPTCHA)
+                except NoSuchElementException:
+                    break  # No element found, skip the loop to prevent pointless waiting
+
         except TimeoutException as exc:
             raise TimeoutError("CAPTCHA was not solved by the user") from exc
 
@@ -641,6 +622,7 @@ class SeleniumCLIENT:
                     "//span[contains(text() , 'Unable to accept')]"
                 )
                 # Element found -> join error
+                ActionChains(driver).send_keys(Keys.ESCAPE).perform()
                 raise RuntimeError(f"The user appears to be banned from the guild w/ invite {invite}")
 
             await self.random_sleep(2, 3)
@@ -785,14 +767,20 @@ class GuildDISCOVERY:
         self.session = None
         self.browser = None
 
+    @except_return
     async def initialize(self, parent: Any):
-        self.session = http.ClientSession()
+        """
+        Initializes guild discovery session.
+        """
         self.browser: SeleniumCLIENT = parent.parent.selenium
         if self.browser is None:
-            raise ValueError(
-                "To use auto-join functionality,"
-                " the account must be provided with username and password."
+            trace(
+                "To use auto-join functionality, the account must be provided with username and password.",
+                TraceLEVELS.ERROR,
+                ValueError
             )
+
+        self.session = http.ClientSession()
 
     async def _close(self):
         """

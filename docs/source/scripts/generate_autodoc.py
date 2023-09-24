@@ -87,6 +87,7 @@ with open(os.path.join(OUTPUT_PATH, "index.rst"), "w", encoding="utf-8") as tocw
             )
 
             for category, items in titles.items():
+                export_enum_items = "" # All enum classes string
                 export_c_items = ""  # All classes string
                 export_f_items = ""  # All functions string
                 for item, manual, path in items:
@@ -131,7 +132,7 @@ with open(os.path.join(OUTPUT_PATH, "index.rst"), "w", encoding="utf-8") as tocw
                     elif inspect.isclass(item):
                         # Fill properties
                         if isinstance(item, EnumMeta):
-                            export_c_items += AUTO_ENUM_TEMPLATE.format(object_name=object_name, object_path=object_path) + "\n"
+                            export_enum_items += AUTO_ENUM_TEMPLATE.format(object_name=object_name, object_path=object_path) + "\n"
                         else:
                             export_c_items += AUTO_CLASS_TEMPLATE.format(object_name=object_name, object_path=object_path) + "\n"
 
@@ -142,6 +143,7 @@ with open(os.path.join(OUTPUT_PATH, "index.rst"), "w", encoding="utf-8") as tocw
                     # file_name = <...>/<output>/<Program/HTTP>/<category>.rst
                     with open(file_name, "w", encoding="utf-8") as writer:
                         writer.write(CATEGORY_TEMPLATE.format(category_name=category))
+                        writer.write(export_enum_items)
                         writer.write(export_f_items)
                         writer.write(export_c_items)
 

@@ -19,6 +19,8 @@ from ttkbootstrap.tooltip import ToolTip
 
 import datetime as dt
 
+import tk_async_execute as tae
+
 
 class AdditionalWidget:
     """
@@ -109,15 +111,17 @@ def setup_additional_live_update(w: ttk.Button, frame):
     def _callback(*args):
         async def update():
             old = frame.old_gui_data
-            values = {
-                k: convert_to_objects(v)
-                for k, v in frame.get_gui_data().items()
-                if not isinstance(v, str) or v != ''
-            }
+            values = {}
+            for k, v in frame.get_gui_data().items():
+                if isinstance(v, str):
+                    v = frame.cast_type(v, frame._map[k][1])
+
+                values[k] = convert_to_objects(v)
+
             connector = get_connection()
             await connector.execute_method(old.real_object, "update", **values)
 
-        async_execute(update(), parent_window=frame.origin_window)
+        tae.async_execute(update(), wait=False, pop_up=True, master=frame.origin_window)
 
     w.configure(command=_callback)
     ToolTip(w, "Update the actual object with new parameters (taken from this window)", topmost=True)
@@ -146,7 +150,7 @@ def setup_additional_live_refresh(w: ttk.Button, frame):
 
                 frame_.remember_gui_data()
 
-        async_execute(refresh(), parent_window=frame.origin_window)
+        tae.async_execute(refresh(), wait=False, pop_up=True, master=frame.origin_window)
 
     w.configure(command=_callback)
     ToolTip(w, "Load updated values from the object into the window", topmost=True)

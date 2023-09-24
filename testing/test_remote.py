@@ -10,10 +10,9 @@ import pytest
 
 
 @pytest.mark.group_remote
-@pytest.mark.asyncio
 async def test_http(accounts, guilds):
     client = RemoteConnectionCLIENT("http://127.0.0.1", 8080, "Hello", "World")
-    await client.initialize(debug=daf.TraceLEVELS.DEBUG)
+    await client.initialize(debug=daf.TraceLEVELS.DEPRECATED)
 
     # Ping
     await client._ping()

@@ -16,6 +16,8 @@ import datetime as dt
 import _discord as discord
 import daf
 
+from daf.logging.tracing import trace, TraceLEVELS
+
 
 __all__ = (
     "ObjectInfo",
@@ -57,17 +59,37 @@ ADDITIONAL_ANNOTATIONS = {
         "minute": int,
         "second": int,
         "microsecond": int,
-        "fold": int
+        "tzinfo": dt.timezone
+    },
+    dt.timezone: {
+        "offset": dt.timedelta,
+        "name": str
     },
     discord.Embed: {
-        "colour": Union[int, discord.Colour],
-        "color": Union[int, discord.Colour],
-        "title": str,
+        "colour": Union[int, discord.Colour, None],
+        "color": Union[int, discord.Colour, None],
+        "title": Union[str, None],
         "type": discord.embeds.EmbedType,
-        "url": str,
-        "description": str,
-        "timestamp": dt.datetime,
-        "fields": List[discord.EmbedField]
+        "url": Union[str, None],
+        "description": Union[str, None],
+        "timestamp": Union[dt.datetime, None],
+        "fields": Union[List[discord.EmbedField], None],
+        "author": Union[discord.EmbedAuthor, None],
+        "footer": Union[discord.EmbedFooter, None],
+        "image": Union[str, discord.EmbedMedia, None],
+        "thumbnail": Union[str, discord.EmbedMedia, None],
+    },
+    discord.EmbedAuthor: {
+        "name": str,
+        "url": Union[str, None],
+        "icon_url": Union[str, None]
+    },
+    discord.EmbedFooter: {
+        "text": str,
+        "icon_url": Union[str, None]
+    },
+    discord.EmbedMedia: {
+        "url": str
     },
     discord.Intents: {k: bool for k in discord.Intents.VALID_FLAGS},
     discord.EmbedField: {
@@ -84,6 +106,7 @@ ADDITIONAL_ANNOTATIONS = {
 
 ADDITIONAL_ANNOTATIONS[discord.VoiceChannel] = ADDITIONAL_ANNOTATIONS[discord.TextChannel]
 ADDITIONAL_ANNOTATIONS[discord.Guild] = ADDITIONAL_ANNOTATIONS[discord.TextChannel]
+ADDITIONAL_ANNOTATIONS[discord.User] = ADDITIONAL_ANNOTATIONS[discord.Guild]
 
 if daf.logging.sql.SQL_INSTALLED:
     sql_ = daf.logging.sql.tables
@@ -98,10 +121,11 @@ if daf.logging.sql.SQL_INSTALLED:
 
 CONVERSION_ATTR_TO_PARAM = {
     dt.timezone: {
-        "offset": "_offset",
-        "name": "_name",
+        "offset": lambda timezone: timezone.utcoffset(None),
+        "name": lambda timezone: timezone.tzname(None)
     },
 }
+
 
 CONVERSION_ATTR_TO_PARAM[daf.client.ACCOUNT] = {k: k for k in daf.client.ACCOUNT.__init__.__annotations__}
 CONVERSION_ATTR_TO_PARAM[daf.client.ACCOUNT]["token"] = "_token"
@@ -110,6 +134,7 @@ CONVERSION_ATTR_TO_PARAM[daf.client.ACCOUNT]["password"] = lambda account: accou
 
 CONVERSION_ATTR_TO_PARAM[daf.dtypes.FILE] = {k: k for k in daf.dtypes.FILE.__init__.__annotations__}
 CONVERSION_ATTR_TO_PARAM[daf.dtypes.FILE]["data"] = "hex"
+CONVERSION_ATTR_TO_PARAM[daf.dtypes.FILE]["filename"] = "fullpath"
 
 
 if daf.sql.SQL_INSTALLED:
@@ -139,6 +164,10 @@ CONVERSION_ATTR_TO_PARAM[daf.GUILD]["invite_track"] = (
     lambda guild_: list(guild_.join_count.keys())
 )
 
+CONVERSION_ATTR_TO_PARAM[daf.AutoGUILD] = {k: k for k in daf.AutoGUILD.__init__.__annotations__}
+CONVERSION_ATTR_TO_PARAM[daf.AutoGUILD]["invite_track"] = (
+    lambda guild_: list(guild_._invite_join_count.keys())
+)
 
 # Map whhich's values is a tuple that tells which fields are passwords.
 # These fields will be replaced with a '*' when viewed in object form.
@@ -335,9 +364,18 @@ def convert_to_object_info(object_: object, save_original = False):
                 property_map = {}
                 prop: property
                 for name, prop in getmembers(type(object_), lambda x: isinstance(x, property)):
-                    with suppress(AttributeError):
+                    if name.startswith("_"):  # Don't obtain private properties
+                        continue
+
+                    try:
                         return_annotation = get_type_hints(prop.fget).get("return")
                         property_map[name] = (convert_to_object_info(prop.fget(object_), True), return_annotation)
+                    except Exception as exc:
+                        trace(
+                            f"Unable to get property {name} in {object_} when converting to ObjectInfo",
+                            TraceLEVELS.ERROR,
+                            exc
+                        )
 
                 ret.property_map = property_map
 
@@ -366,6 +404,9 @@ def convert_to_object_info(object_: object, save_original = False):
     if isinstance(object_, (set, list, tuple)):
         object_ = [convert_to_object_info(value, save_original) for value in object_]
         return object_
+    
+    if isinstance(object_, dict):
+        return convert_dict_to_object_info(object_)
 
     attrs = get_conversion_map(object_type)
     return _convert_object_info(object_, save_original, object_type, attrs)

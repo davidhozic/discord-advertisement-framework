@@ -173,12 +173,14 @@ latex_elements = {
             \newpage
         }
     ''',
-    "maketitle": r"""
-        \pagenumbering{roman}
-        \includepdf{NaslovnaStranDiplome.pdf}
-        \includepdf{IzjavaOAvtorstvu.pdf}
-        \includepdf{NaslovnaStranDiplome.pdf}
+    "maketitle": rf"""
+        \includepdf{{NaslovnaStranDiplome.pdf}}
         \blankpage
+        \includepdf{{IzjavaOAvtorstvu.pdf}}
+        \blankpage
+        {latex_title_page}
+        \blankpage
+        \pagenumbering{{roman}}
     """,
     "printindex": ''
 }

@@ -1,5 +1,5 @@
 diff --git a/src/_discord/http.py b/src/_discord/http.py
-index 79455a0..4c16c2b 100644
+index 9eb7837..9ad7137 100644
 --- a/src/_discord/http.py
 +++ b/src/_discord/http.py
 @@ -25,6 +25,8 @@ DEALINGS IN THE SOFTWARE.
@@ -11,7 +11,7 @@ index 79455a0..4c16c2b 100644
  import asyncio
  import logging
  import sys
-@@ -100,6 +102,22 @@ async def json_or_text(response: aiohttp.ClientResponse) -> dict[str, Any] | str
+@@ -101,6 +103,22 @@ async def json_or_text(response: aiohttp.ClientResponse) -> dict[str, Any] | str
      return text
  
  
@@ -34,7 +34,7 @@ index 79455a0..4c16c2b 100644
  class Route:
      def __init__(self, method: str, path: str, **parameters: Any) -> None:
          self.path: str = path
-@@ -166,7 +184,7 @@ class HTTPClient:
+@@ -167,7 +185,7 @@ class HTTPClient:
          proxy: str | None = None,
          proxy_auth: aiohttp.BasicAuth | None = None,
          loop: asyncio.AbstractEventLoop | None = None,
@@ -43,7 +43,7 @@ index 79455a0..4c16c2b 100644
      ) -> None:
          self.loop: asyncio.AbstractEventLoop = (
              asyncio.get_event_loop() if loop is None else loop
-@@ -177,7 +195,7 @@ class HTTPClient:
+@@ -178,7 +196,7 @@ class HTTPClient:
          self._global_over: asyncio.Event = asyncio.Event()
          self._global_over.set()
          self.token: str | None = None
@@ -52,7 +52,7 @@ index 79455a0..4c16c2b 100644
          self.proxy: str | None = proxy
          self.proxy_auth: aiohttp.BasicAuth | None = proxy_auth
          self.use_clock: bool = not unsync_clock
-@@ -188,6 +206,7 @@ class HTTPClient:
+@@ -189,6 +207,7 @@ class HTTPClient:
          self.user_agent: str = user_agent.format(
              __version__, sys.version_info, aiohttp.__version__
          )
@@ -60,7 +60,7 @@ index 79455a0..4c16c2b 100644
  
      def recreate(self) -> None:
          if self.__session.closed:
-@@ -234,8 +253,23 @@ class HTTPClient:
+@@ -235,8 +254,23 @@ class HTTPClient:
              "User-Agent": self.user_agent,
          }
  
@@ -85,7 +85,7 @@ index 79455a0..4c16c2b 100644
          # some checking if it's a JSON request
          if "json" in kwargs:
              headers["Content-Type"] = "application/json"
-@@ -279,6 +313,11 @@ class HTTPClient:
+@@ -280,6 +314,11 @@ class HTTPClient:
                      kwargs["data"] = form_data
  
                  try:
@@ -97,16 +97,25 @@ index 79455a0..4c16c2b 100644
                      async with self.__session.request(
                          method, url, **kwargs
                      ) as response:
-@@ -316,7 +355,7 @@ class HTTPClient:
+@@ -319,7 +358,8 @@ class HTTPClient:
  
                          # we are being rate limited
                          if response.status == 429:
 -                            if not response.headers.get("Via") or isinstance(data, str):
-+                            if not response.headers.get("Via") or isinstance(data, str) or ("code" in data and data["code"] == 20016):
++                            retry_after: float = data.get("retry_after", 0)
++                            if not response.headers.get("Via") or isinstance(data, str) or ("code" in data and data["code"] == 20016) or retry_after > 30:
                                  # Banned by Cloudflare more than likely.
                                  raise HTTPException(response, data)
  
-@@ -401,22 +440,28 @@ class HTTPClient:
+@@ -329,7 +369,6 @@ class HTTPClient:
+                             )
+ 
+                             # sleep a bit
+-                            retry_after: float = data["retry_after"]
+                             _log.warning(fmt, retry_after, bucket)
+ 
+                             # check if it's a global rate limit
+@@ -406,22 +445,28 @@ class HTTPClient:
  
      # login management
  
