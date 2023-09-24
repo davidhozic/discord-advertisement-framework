@@ -536,6 +536,13 @@ class NewObjectFrameStruct(NewObjectFrameBase):
             w = combo = ComboBoxObjects(frame_annotated)
             combo.pack(fill=tk.X, side="right", expand=True, padx=dpi_5, pady=dpi_5)
 
+            # Clipboard
+            menu.add_command(label="Copy", command=combo.save_to_clipboard)
+            if self.allow_save:
+                menu.add_command(label="Paste", command=combo.paste_from_clipboard)
+
+            menu.add_separator()
+
             # Fill values
             last_list_type = fill_values(k, entry_types, menu, combo)
 
@@ -543,7 +550,8 @@ class NewObjectFrameStruct(NewObjectFrameBase):
             menu.add_command(
                 label=f"{'Edit' if self.allow_save else 'View'} selected",
                 command=self._lambda(edit_selected, k, w, last_list_type)
-            )
+            )            
+
             self._map[k] = (w, entry_types)
 
         self.init_method_frame()
@@ -715,7 +723,12 @@ class NewObjectFrameIterable(NewObjectFrameBase):
 
         frame_edit_remove = ttk.Frame(self.frame_main, padding=(dpi_5, 0))
         frame_edit_remove.pack(side="right")
+        frame_cp = ttk.Frame(frame_edit_remove)
+        frame_cp.pack(fill=tk.X, expand=True, pady=dpi_5)
+
+        ttk.Button(frame_cp, text="Copy", command=w.save_to_clipboard).pack(side="left", fill=tk.X, expand=True)
         if self.allow_save:
+            ttk.Button(frame_cp, text="Paste", command=w.paste_from_clipboard).pack(side="left", fill=tk.X, expand=True)
             menubtn = ttk.Menubutton(frame_edit_remove, text="Add object")
             menu = tk.Menu(menubtn)
             menubtn.configure(menu=menu)
@@ -727,11 +740,6 @@ class NewObjectFrameIterable(NewObjectFrameBase):
             frame_up_down.pack(fill=tk.X, expand=True, pady=dpi_5)
             ttk.Button(frame_up_down, text="Up", command=lambda: w.move_selection(-1)).pack(side="left", fill=tk.X, expand=True)
             ttk.Button(frame_up_down, text="Down", command=lambda: w.move_selection(1)).pack(side="left", fill=tk.X, expand=True)
-
-            frame_cp = ttk.Frame(frame_edit_remove)
-            frame_cp.pack(fill=tk.X, expand=True)
-            ttk.Button(frame_cp, text="Copy", command=w.save_to_clipboard).pack(side="left", fill=tk.X, expand=True)
-            ttk.Button(frame_cp, text="Paste", command=w.paste_from_clipboard).pack(side="left", fill=tk.X, expand=True)
 
             args = get_args(self.class_)
             args = self.convert_types(args)

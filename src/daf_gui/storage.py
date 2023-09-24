@@ -1,13 +1,21 @@
 """
 Modules contains storage container widgets.
 """
-from typing import Union, Any, List
+from typing import Union, Any, List, Iterable
 from .convert import ObjectInfo
 from .utilities import gui_confirm_action
 
 import ttkbootstrap as ttk
 import tkinter as tk
 import ttkbootstrap.dialogs.dialogs as tkdiag
+
+
+class _NoClipBoard:
+    pass
+
+
+class GLOBAL:
+    clipboard = _NoClipBoard
 
 
 class Text(tk.Text):
@@ -24,11 +32,6 @@ class ComboBoxText(ttk.Frame):
 
 
 class ListBoxObjects(tk.Listbox):
-    class NoClipBoard:
-        pass
-
-    clipboard = NoClipBoard  # Clipboard is common to all listboxes
-
     def __init__(self, *args, **kwargs):
         self._original_items = []
         super().__init__(*args, **kwargs)
@@ -103,15 +106,18 @@ class ListBoxObjects(tk.Listbox):
         selection = self.curselection()
         if len(selection):
             object_: Union[ObjectInfo, Any] = self.get()[min(selection):max(selection) + 1]
-            ListBoxObjects.clipboard = object_
+            GLOBAL.clipboard = object_ if len(selection) > 1 else object_[0]
         else:
             tkdiag.Messagebox.show_error("Select atleast one item!", "Empty list!", parent=self)
 
     def paste_from_clipboard(self):
-        if ListBoxObjects.clipboard is self.NoClipBoard:
+        if GLOBAL.clipboard is _NoClipBoard:
             return  # Clipboard empty
 
-        self.insert(tk.END, *ListBoxObjects.clipboard)
+        if isinstance(GLOBAL.clipboard, Iterable):
+            self.insert(tk.END, *GLOBAL.clipboard)
+        else:
+            self.insert(tk.END, GLOBAL.clipboard)
 
     def move(self, index: int, direction: int):
         if direction == -1 and index == 0 or direction == 1 and index == len(self._original_items) - 1:
@@ -159,6 +165,19 @@ class ComboBoxObjects(ttk.Combobox):
     def __init__(self, *args, **kwargs):
         self._original_items = []
         super().__init__(*args, **kwargs)
+
+    def save_to_clipboard(self):
+        GLOBAL.clipboard = self.get()
+
+    def paste_from_clipboard(self):
+        value = GLOBAL.clipboard
+        if value is _NoClipBoard:
+            return
+        
+        if value not in self._original_items:
+            self.insert(tk.END, value)
+        
+        self.current(self._original_items.index(value))
 
     def get(self, *args, **kwargs) -> Any:
         index = self.current()
