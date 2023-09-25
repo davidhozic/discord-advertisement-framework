@@ -470,6 +470,7 @@ class NewObjectFrameStruct(NewObjectFrameBase):
         def fill_values(k: str, entry_types: list, menu: ttk.Menu, combo: ComboBoxObjects):
             "Fill ComboBox values based on types in ``entry_types`` and create New <object_type> buttons"
             last_list_type = None
+            any_filled = False
             for entry_type in entry_types:
                 if get_origin(entry_type) is Literal:
                     values = get_args(entry_type)
@@ -478,10 +479,10 @@ class NewObjectFrameStruct(NewObjectFrameBase):
                 elif entry_type is bool:
                     combo.insert(tk.END, True)
                     combo.insert(tk.END, False)
-                    tkvalid.add_option_validation(combo, ["True", "False"])
+                    tkvalid.add_option_validation(combo, ["True", "False", ''])
                 elif issubclass_noexcept(entry_type, Enum):
                     combo["values"] = values = [en for en in entry_type]
-                    tkvalid.add_option_validation(combo, list(map(str, values)))
+                    tkvalid.add_option_validation(combo, list(map(str, values)) + [''])
                 elif entry_type is type(None):
                     if bool not in entry_types:
                         combo.insert(tk.END, None)
@@ -489,6 +490,7 @@ class NewObjectFrameStruct(NewObjectFrameBase):
                     if get_origin(entry_type) in {list, tuple, set, Iterable, ABCIterable}:
                         last_list_type = entry_type
 
+                    any_filled = True
                     if self.allow_save:
                         menu.add_command(
                             label=f"New {self.get_cls_name(entry_type)}",
@@ -501,7 +503,7 @@ class NewObjectFrameStruct(NewObjectFrameBase):
 
             # The class of last list like type. Needed when "Edit selected" is used
             # since we don't know what type it was
-            return last_list_type
+            return last_list_type, any_filled
 
         @gui_except(self)
         def edit_selected(key: str, combo: ComboBoxObjects, original_type = None):
@@ -521,37 +523,54 @@ class NewObjectFrameStruct(NewObjectFrameBase):
             else:
                 return self.new_object_frame(type(selection), combo, old_data=selection)
 
+        max_attr_name_len = max(*map(len, annotations), 15) - 2
+        
         for (k, v) in annotations.items():
             # Init widgets
             entry_types = self.convert_types(v)
             frame_annotated = ttk.Frame(self.frame_main)
-            frame_annotated.pack(fill=tk.BOTH, expand=True)
-            ttk.Label(frame_annotated, text=k, width=15).pack(side="left")
+            frame_annotated.pack(fill=tk.BOTH, expand=True, pady=dpi_5)
+            ttk.Label(frame_annotated, text=k, width=max_attr_name_len).pack(side="left")
 
-            bnt_menu = ttk.Menubutton(frame_annotated)
-            menu = tk.Menu(bnt_menu)
-            bnt_menu.configure(menu=menu)
-            bnt_menu.pack(side="right")
+            bnt_new_menu = ttk.Menubutton(frame_annotated, text="New")            
+            menu_new = tk.Menu(bnt_new_menu)
+            bnt_new_menu.configure(menu=menu_new)
+            
 
             w = combo = ComboBoxObjects(frame_annotated)
-            combo.pack(fill=tk.X, side="right", expand=True, padx=dpi_5, pady=dpi_5)
 
-            # Clipboard
-            menu.add_command(label="Copy", command=combo.save_to_clipboard)
-            if self.allow_save:
-                menu.add_command(label="Paste", command=combo.paste_from_clipboard)
+            # # Clipboard
+            # menu_new.add_command(label="Copy", command=combo.save_to_clipboard)
+            # if self.allow_save:
+            #     menu.add_command(label="Paste", command=combo.paste_from_clipboard)
 
-            menu.add_separator()
 
             # Fill values
-            last_list_type = fill_values(k, entry_types, menu, combo)
-
-            # Edit / view command button
-            menu.add_command(
-                label=f"{'Edit' if self.allow_save else 'View'} selected",
+            last_list_type, any_filled = fill_values(k, entry_types, menu_new, combo)
+            bnt_edit = ttk.Button(
+                frame_annotated,
+                text="🖋️",
+                width=3,
                 command=self._lambda(edit_selected, k, w, last_list_type)
-            )            
+            )
 
+            bnt_copy_paste = ttk.Menubutton(frame_annotated, text="C/P")
+            copy_menu = ttk.Menu(bnt_copy_paste)
+            copy_menu.add_command(label="Copy", command=combo.save_to_clipboard)
+            copy_menu.add_command(label="Paste", command=combo.paste_from_clipboard)
+            bnt_copy_paste.configure(menu=copy_menu)
+
+            if not (any_filled and self.allow_save):
+                bnt_new_menu.configure(state="disabled")
+
+            if not any_filled:
+                bnt_edit.configure(state="disabled")
+
+            dpi_5_h = dpi_5 // 2
+            bnt_copy_paste.pack(side="right", padx=dpi_5_h)
+            bnt_edit.pack(side="right", padx=dpi_5_h)
+            bnt_new_menu.pack(side="right", padx=dpi_5_h)
+            combo.pack(fill=tk.X, side="right", expand=True, padx=dpi_5_h)
             self._map[k] = (w, entry_types)
 
         self.init_method_frame()
@@ -727,8 +746,8 @@ class NewObjectFrameIterable(NewObjectFrameBase):
         frame_cp.pack(fill=tk.X, expand=True, pady=dpi_5)
 
         ttk.Button(frame_cp, text="Copy", command=w.save_to_clipboard).pack(side="left", fill=tk.X, expand=True)
+        ttk.Button(frame_cp, text="Paste", command=w.paste_from_clipboard).pack(side="left", fill=tk.X, expand=True)
         if self.allow_save:
-            ttk.Button(frame_cp, text="Paste", command=w.paste_from_clipboard).pack(side="left", fill=tk.X, expand=True)
             menubtn = ttk.Menubutton(frame_edit_remove, text="Add object")
             menu = tk.Menu(menubtn)
             menubtn.configure(menu=menu)
