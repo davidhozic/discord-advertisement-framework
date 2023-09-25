@@ -134,7 +134,7 @@ class ACCOUNT:
     @typechecked
     def __init__(
         self,
-        token: str,
+        token: Optional[str] = None,
         is_user: Optional[bool] = False,
         intents: Optional[discord.Intents] = None,
         proxy: Optional[str] = None,
