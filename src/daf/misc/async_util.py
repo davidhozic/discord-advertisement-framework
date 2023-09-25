@@ -2,7 +2,7 @@
 Utilities related to the :mod:`asyncio` module.
 """
 from typing import Union, Optional, Callable, Coroutine
-from inspect import getfullargspec
+from inspect import signature
 from functools import wraps
 from asyncio import Semaphore
 from copy import copy
@@ -121,8 +121,9 @@ async def update_obj_param(
         Raised from .initialize() method.
     """
     # Retrieves list of call args
-    init_keys = getfullargspec(obj.__init__.__wrapped__ if hasattr(obj.__init__, "__wrapped__") else obj.__init__).args
-    init_keys.remove("self")
+    parameters = signature(obj.__init__).parameters
+    init_keys = parameters.keys()
+
     # Make a copy of the current object for restoration in case failure
     current_state = copy(obj)
     try:
@@ -139,7 +140,10 @@ async def update_obj_param(
         # with the exception of start_period, end_period and start_now
         updated_params = {}
         for k in init_keys:
-            updated_params[k] = kwargs[k] if k in kwargs else getattr(obj, k)
+            if k in kwargs:
+                updated_params[k] = kwargs[k]
+            else:
+                updated_params[k] = getattr(obj, k)
 
         # Call the implementation __init__ function and
         # then initialize API related things
@@ -167,7 +171,7 @@ def call_at(fnc: Callable, when: Union[datetime, timedelta], *args, **kwargs) ->
         delay = when if isinstance(when, timedelta) else max((when.astimezone() - datetime.now().astimezone()), timedelta(0))
         delay = delay.total_seconds()
         while delay > 0:
-            to_sleep = min(delay, 86400)  # Maximum sleep of one day for precision purposes
+            to_sleep = min(delay, 600)  # Maximum sleep of one day for precision purposes
             await asyncio.sleep(to_sleep)
             delay -= to_sleep
 

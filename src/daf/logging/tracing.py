@@ -4,7 +4,7 @@
 """
 from typing import Union, Optional
 from enum import Enum, auto
-from threading import Lock
+from threading import current_thread, Thread
 from datetime import datetime
 from sys import _getframe
 
@@ -16,6 +16,9 @@ try:
 except ImportError:
     def x(x): return x  # This is only needed for documentation
     document_enum = x
+
+import asyncio
+
 
 __all__ = (
     "TraceLEVELS",
@@ -75,7 +78,8 @@ TRACE_COLOR_MAP = {
 class GLOBALS:
     """Storage class used for storing global variables of the module."""
     set_level = TraceLEVELS.DEPRECATED
-    lock = Lock()  # For print thread safety
+    loop_thread: Thread = None
+    loop: asyncio.AbstractEventLoop = None
 
 
 @doc.doc_category("Logging reference")
@@ -122,10 +126,12 @@ def trace(message: str,
                 message=message
         )
 
-        with GLOBALS.lock:
+        if current_thread() is GLOBALS.loop_thread:  # Thread-safe
             evt = get_global_event_ctrl()
             evt.emit(EventID.g_trace, level, message)
             print(TRACE_COLOR_MAP[level] + msg + "\033[0m")
+        elif GLOBALS.loop is not None:
+            GLOBALS.loop.call_soon_threadsafe(trace, message, level, reason)
 
         if exception_cls is not None:
             raise exception_cls(message) from reason
@@ -153,4 +159,6 @@ def initialize(level: Union[TraceLEVELS, int, str] = TraceLEVELS.NORMAL):
         else:
             trace("Could not find the requested trace level by name (string).", TraceLEVELS.WARNING)
 
+    GLOBALS.loop_thread = current_thread()
     GLOBALS.set_level = level
+    GLOBALS.loop = asyncio.get_running_loop()

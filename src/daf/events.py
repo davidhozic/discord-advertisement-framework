@@ -81,6 +81,7 @@ class EventController:
         Starts the event loop.
         """
         if not self.running:
+            self.clear_queue()
             self.loop_task = asyncio.create_task(self.event_loop())
             self.running = True
             # In case this is not the global controller, add itself to a list of non-global controllers
@@ -166,10 +167,12 @@ class EventController:
         TypeError
             Arguments provided don't match all the listener parameters.
         """
+        future = asyncio.Future()
         if not self.running:
-            return
+            future.set_result(None)
+            return future
 
-        self.event_queue.put_nowait((event, args, kwargs, future := asyncio.Future()))
+        self.event_queue.put_nowait((event, args, kwargs, future))
 
         # If self is the global controller, also emit the event to other controllers.
         if GLOBAL.g_controller is self:

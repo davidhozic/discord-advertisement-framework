@@ -397,25 +397,6 @@ class NewObjectFrameStruct(NewObjectFrameBase):
         allow_save = True,
         additional_values: dict = {},
     ):
-        def get_annotations(class_) -> dict:
-            """
-            Returns class / function annotations including overrides.
-            """
-            annotations = {}
-            with suppress(AttributeError):
-                if inspect.isclass(class_):
-                    annotations = class_.__init__.__annotations__
-                else:
-                    annotations = class_.__annotations__
-
-            additional_annotations = ADDITIONAL_ANNOTATIONS.get(class_, {})
-            annotations = {**annotations, **additional_annotations}
-
-            if "return" in annotations:
-                del annotations["return"]
-
-            return annotations
-
         super().__init__(class_, return_widget, parent, old_data, check_parameters, allow_save)
         self._map: Dict[str, Tuple[ComboBoxObjects, Iterable[type]]] = {}
         dpi_5 = dpi_scaled(5)
