@@ -6,7 +6,7 @@ It is also responsible for doing the reverse, which is converting those other fo
 from typing import Union, Any, Mapping
 from contextlib import suppress
 from enum import Enum
-from inspect import isclass
+from inspect import isclass, signature, _empty
 
 from daf.logging.tracing import TraceLEVELS, trace
 
@@ -44,7 +44,13 @@ def import_class(path: str):
     """
     path = path.split(".")
     module_path, class_name = '.'.join(path[:-1]), path[-1]
-    module = importlib.import_module(module_path)
+    try:
+        module = importlib.import_module(module_path)
+    except Exception as exc:  # Fall back for older versions, try to import from package instead of module
+        module_path = module_path.split('.')[0]
+        trace(f"Could not import {module_path}, trying {module_path}", TraceLEVELS.WARNING, exc)
+        module = importlib.import_module(module_path)
+
     class_ = getattr(module, class_name)
     return class_
 
@@ -398,7 +404,14 @@ def convert_from_semi_dict(d: Union[Mapping, list, Any]):
             if isinstance(v, (Mapping, list)):
                 v = convert_from_semi_dict(v)
 
-            setattr(_return, k, v)
+            try:
+                setattr(_return, k, v)
+            except Exception as exc:
+                trace(
+                    f"Could not set {k} of {class_.__name__} - Older DAF version data?",
+                    TraceLEVELS.WARNING,
+                    exc
+                )        
 
         # Modify attributes that have specified different restore values
         attrs = CONVERSION_ATTRS.get(class_)
@@ -407,6 +420,30 @@ def convert_from_semi_dict(d: Union[Mapping, list, Any]):
             for k, v in attrs_restore.items():
                 # copy.copy prevents external modifications since it's passed by reference
                 setattr(_return, k, copy.copy(v))
+
+        # Try to fill in missing attributes
+        # Try to set attributes from parameters based on their defaults, if it doesn't work
+        # set them to None and hope for the best
+        with suppress(AttributeError):
+            parameters = signature(class_).parameters
+            attrs = attributes.get_all_slots(class_)
+            for k in attrs:
+                if hasattr(_return, k):
+                    continue
+
+                k_lookup = k
+                if k_lookup not in parameters:
+                    # Some attributes are the same as parameters but "private" marked by '_'
+                    k_lookup = k_lookup.strip("_")
+
+                new_val = None
+                if k in parameters:
+                    default = parameters[k].default
+                    if default is not _empty:
+                        new_val = default
+
+
+                setattr(_return, k, new_val)
 
         return _return
 

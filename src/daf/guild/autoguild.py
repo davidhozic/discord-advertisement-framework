@@ -83,6 +83,7 @@ class AutoGUILD:
         "_cache",
         "_event_ctrl",
     )
+    _removed_messages: List[BaseMESSAGE]
 
     @typechecked
     def __init__(
@@ -107,7 +108,6 @@ class AutoGUILD:
         self.guild_query_iter = None
         self.guild_join_count = 0
         self._messages: List[BaseMESSAGE] = []
-        self._removed_messages: List[BaseMESSAGE] = []
         self.removal_buffer_length = removal_buffer_length
         self._removal_timer_handle: asyncio.Task = None
         self._guild_join_timer_handle: asyncio.Task = None
@@ -119,6 +119,7 @@ class AutoGUILD:
 
         self._invite_join_count = {invite.split("/")[-1]: 0 for invite in invite_track}
         attributes.write_non_exist(self, "update_semaphore", asyncio.Semaphore(1))
+        attributes.write_non_exist(self, "_removed_messages", [])
 
     def __repr__(self) -> str:
         return f"AutoGUILD(include_pattern='{self.include_pattern}', exclude_pattern='{self.exclude_pattern})'"
@@ -457,6 +458,9 @@ class AutoGUILD:
                 return yielded
             except StopAsyncIteration:
                 trace(f"Iterated though all found guilds -> stopping guild join in {self}.", TraceLEVELS.NORMAL)
+                self.guild_query_iter = None
+            except Exception as exc:
+                trace(f"Could not query top.gg, stopping auto join.", TraceLEVELS.ERROR, exc)
                 self.guild_query_iter = None
 
         if (yielded := await get_next_guild()) is None:

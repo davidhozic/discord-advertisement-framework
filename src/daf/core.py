@@ -5,6 +5,7 @@
 """
 from typing import Callable, Coroutine, List, Optional, Union, overload
 from pathlib import Path
+from contextlib import suppress
 
 from aiohttp import web as aiohttp_web
 from typeguard import typechecked
@@ -133,6 +134,9 @@ async def schema_backup_task():
     """
     loop = asyncio.get_event_loop()
     event = GLOBALS.schema_backup_event
+
+    from . import VERSION
+
     while GLOBALS.running:
         loop.call_later(SCHEMA_BACKUP_DELAY, event.set)
         await event.wait()
@@ -142,7 +146,13 @@ async def schema_backup_task():
         trace("Saving objects to file.", TraceLEVELS.DEBUG)
         try:
             with open(tmp_path, "wb") as writer:
-                pickle.dump(convert.convert_object_to_semi_dict(GLOBALS.accounts), writer)
+                pickle.dump(
+                    {
+                        "version": VERSION,
+                        "accounts": convert.convert_object_to_semi_dict(GLOBALS.accounts)
+                    },
+                    writer
+                )
 
             shutil.copyfile(tmp_path, SHILL_LIST_BACKUP_PATH)
             os.remove(tmp_path)
@@ -156,15 +166,45 @@ async def schema_load_from_file() -> None:
     """
     if not SHILL_LIST_BACKUP_PATH.exists():
         return
+    
+    from . import VERSION
 
     trace("Restoring objects from file...", TraceLEVELS.NORMAL)
     with open(SHILL_LIST_BACKUP_PATH, "rb") as reader:
-        accounts: List[client.ACCOUNT] = convert.convert_from_semi_dict(pickle.load(reader))
+        data = convert.convert_from_semi_dict(pickle.load(reader))
+        if isinstance(data, dict):
+            accounts: List[client.ACCOUNT] = data["accounts"]
+            version = data["version"]
+        else:
+            version = "UNKNOWN"
+            accounts = data
 
+    if version != VERSION:
+        trace(
+            f"The schema file version does not match DAF version ({version} != {VERSION}).\n"
+            f"If data is missing after restore, please save to JSON through GUI in DAF version {version}, and then\n"
+            f"load from JSON from the current version {VERSION}",
+            TraceLEVELS.WARNING
+        )
+        with suppress(Exception):
+            new_path = str(SHILL_LIST_BACKUP_PATH) + '_old'
+            shutil.copyfile(SHILL_LIST_BACKUP_PATH, new_path)
+            trace(
+                f"A backup of the old schema file is stored to {new_path}.\n"
+                "To use that file, remove '_old' from it's name."
+            )
+
+    trace(f"Restoring schema from DAF version {version}")
     trace("Updating accounts.", TraceLEVELS.DEBUG)
     for account in accounts:
         try:
             await account.update()  # Refresh without __init__ call
+            for guild in account.servers:
+                guild.update()
+                for message in guild.messages:
+                    message.update()
+
+            account._event_ctrl.start()
         except Exception as exc:
             trace(
                 f"Unable to restore account {account}\n" +
@@ -172,6 +212,7 @@ async def schema_load_from_file() -> None:
                 "Use the GUI to edit / remove it.",
                 TraceLEVELS.ERROR, exc
             )
+            await account._close()
         finally:
             # Save ID regardless if we failed result otherwise we cannot access though remote
             account._update_tracked_id()

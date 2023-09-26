@@ -5,18 +5,18 @@ Modules contains definitions related to GUI object transformations.
 from typing import Any, Union, List, get_type_hints, Generic, TypeVar, Iterable, Mapping
 from contextlib import suppress
 from enum import Enum
-from inspect import signature, getmembers
+from inspect import signature, getmembers, isclass
 
 from daf.convert import import_class
 from daf.misc import instance_track as it
+from daf.logging.tracing import trace, TraceLEVELS
 
 import decimal
+import warnings
 import datetime as dt
 
 import _discord as discord
 import daf
-
-from daf.logging.tracing import trace, TraceLEVELS
 
 
 __all__ = (
@@ -29,6 +29,7 @@ __all__ = (
     "convert_dict_to_object_info",
     "ADDITIONAL_ANNOTATIONS",
     "issubclass_noexcept",
+    "get_annotations",
 )
 
 TClass = TypeVar("TClass")
@@ -178,6 +179,26 @@ PASSWORD_PARAMS = {
 
 CONVERSION_ATTR_TO_PARAM[daf.web.SeleniumCLIENT] = {k: f"_{k}" for k in daf.web.SeleniumCLIENT.__init__.__annotations__}
 CONVERSION_ATTR_TO_PARAM[daf.web.SeleniumCLIENT].pop("return")
+
+
+def get_annotations(class_) -> dict:
+    """
+    Returns class / function annotations including overrides.
+    """
+    annotations = {}
+    with suppress(AttributeError):
+        if isclass(class_):
+            annotations = class_.__init__.__annotations__
+        else:
+            annotations = class_.__annotations__
+
+    additional_annotations = ADDITIONAL_ANNOTATIONS.get(class_, {})
+    annotations = {**annotations, **additional_annotations}
+
+    if "return" in annotations:
+        del annotations["return"]
+
+    return annotations
 
 
 class ObjectInfo(Generic[TClass]):
@@ -498,7 +519,15 @@ def convert_from_json(d: Union[dict, List[dict], Any]) -> ObjectInfo:
         if "value" in d:  # Enum type or a single value type
             return type_(d["value"])
 
-        return ObjectInfo(type_, {k: convert_from_json(v) for k, v in d["data"].items()})
+        annotations = get_annotations(type_)
+        data = {}
+        for k, v in d["data"].items():
+            if k in annotations:
+                data[k] = convert_from_json(v)
+            else:
+                warnings.warn(f"Parameter {k} does not exist in {type_}, ignoring.")
+
+        return ObjectInfo(type_, data)
 
     return d
 
