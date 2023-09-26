@@ -683,6 +683,9 @@ class Application():
         if self.objects_edit_window is None or self.objects_edit_window.closed:
             self.objects_edit_window = ObjectEditWindow()
             self.objects_edit_window.open_object_edit_frame(*args, **kwargs)
+        else:
+            tkdiag.Messagebox.show_error("Object edit window is already open, close it first.", "Already open")
+            self.objects_edit_window.focus()
 
     @gui_except
     def load_live_accounts(self):
@@ -879,12 +882,16 @@ daf.run(
         if not isinstance(tracing, str):
             kwargs["debug"] = tracing
 
-        tae.async_execute(
+        window = tae.async_execute(
             connection.initialize(**kwargs, save_to_file=self.save_objects_to_file_var.get()),
             wait=True,
             pop_up=True,
+            show_exceptions=False,
             master=self.win_main
         )
+        exc = window.future.exception()
+        if exc is not None:
+            raise exc
 
         self._daf_running = True
         if self.load_at_start_var.get():

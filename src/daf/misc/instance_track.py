@@ -5,7 +5,6 @@ based on ID.
 from weakref import WeakValueDictionary
 from functools import wraps
 
-import gc
 
 __all__ = (
     "get_by_id",

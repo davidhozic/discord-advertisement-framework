@@ -78,7 +78,7 @@ Depending on the datatype each parameter accepts, we can either:
     :align: center
     :height: 300
 
-2. Create new value by clicking on the button on the right side of the dropdown and clicking *New <datatype>*,
+2. Create new value by clicking on the menu button *New* and then select the type you want to define.
    which will open another definition frame.
 
 .. grid:: 2
@@ -96,10 +96,7 @@ Depending on the datatype each parameter accepts, we can either:
 
 
 
-3. Edit a value (selected in the dropdown) by clicking on the button on the right side of the dropdown and clicking
-   *Edit selected*, which will open a new definition frame for the specific datatype and load in the previously defined
-   values.
-
+3. Edit current value by clicking on 🖋️ button.
 
 .. grid:: 2
 
@@ -198,6 +195,10 @@ We can also define what type of logging DAF will use to log sent messages and th
 
 To configure a logger we can select the wanted logger and click on the *Edit* button,
 located on the right side of the 1st dropdown menu.
+
+.. image:: images/open-logger-definition.png
+    :align: center
+    :width: 15cm
 
 .. image:: images/gui-logger-definition-edit-json.png
     :align: center

@@ -4,6 +4,7 @@ Attribute manipulation utitilities.
 from typing import Any
 from itertools import chain
 from contextlib import suppress
+from inspect import _empty
 
 
 __all__ = (
@@ -31,7 +32,7 @@ def write_non_exist(obj: Any, name: str, value: Any):
         The value to change the attribute with.
     """
     # Write only if forced, or if not forced, then the attribute must not exist
-    if not hasattr(obj, name):
+    if getattr(obj, name, None) is None:
         setattr(obj, name, value)
 
 

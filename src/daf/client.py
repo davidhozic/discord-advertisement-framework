@@ -371,7 +371,7 @@ class ACCOUNT:
         if self._running:
             return self._event_ctrl.emit(EventID.account_update, **kwargs)
         else:
-            return self._on_update(self, **kwargs)
+            return self._on_update(**kwargs)
 
     # Non public methods
     def _delete(self):
@@ -505,6 +505,7 @@ class ACCOUNT:
         except Exception:
             await self.initialize()  # re-login
             raise
+
 
     # Cleanup
     async def _close(self):

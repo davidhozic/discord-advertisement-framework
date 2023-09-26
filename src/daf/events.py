@@ -11,7 +11,6 @@ from .misc.doc import doc_category
 import asyncio
 import warnings
 
-
 T = TypeVar('T')
 
 
@@ -26,13 +25,40 @@ __all__ = (
 class EventID(Enum):
     """
     Enum of all available events.
+
+    Global events (:func:`get_global_event_ctrl`) have a
+    ``g_`` prefix on their name.
     """
+
     g_daf_startup = 0
+    """
+    Emitted at DAF startup.
+    """
+
     g_daf_shutdown = auto()
-
+    """
+    Emitted at DAF shutdown.
+    """
     g_trace = auto()
+    """
+    Emitted when :func:`~daf.logging.tracing.trace` is used.
 
+    Parameters
+    -----------
+    level: :class:`~daf.logging.tracing.TraceLEVELS`
+        The level of the trace.
+    message: str
+        The traced message.
+    """
     g_account_expired = auto()
+    """
+    Emitted when account has been expired (token invalidated).
+    
+    Parameters
+    -----------
+    account: :class:`~daf.client.ACCOUNT
+        The account that has been expired.
+    """
     account_update = auto()
 
     message_ready = auto()
@@ -81,6 +107,7 @@ class EventController:
         Starts the event loop.
         """
         if not self.running:
+            self.clear_queue()
             self.loop_task = asyncio.create_task(self.event_loop())
             self.running = True
             # In case this is not the global controller, add itself to a list of non-global controllers
@@ -166,10 +193,12 @@ class EventController:
         TypeError
             Arguments provided don't match all the listener parameters.
         """
+        future = asyncio.Future()
         if not self.running:
-            return
+            future.set_result(None)
+            return future
 
-        self.event_queue.put_nowait((event, args, kwargs, future := asyncio.Future()))
+        self.event_queue.put_nowait((event, args, kwargs, future))
 
         # If self is the global controller, also emit the event to other controllers.
         if GLOBAL.g_controller is self:
@@ -233,6 +262,8 @@ def initialize():
     """
     GLOBAL.g_controller.start()
 
+
+@doc_category("Event reference")
 def get_global_event_ctrl() -> Union[EventController, None]:
     "Returns the global event controller"
     return GLOBAL.g_controller

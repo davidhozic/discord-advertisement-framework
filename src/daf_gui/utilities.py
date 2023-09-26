@@ -1,18 +1,12 @@
 """
 Module contains interface to run async tasks from GUI.
 """
-from typing import Coroutine, Callable
-from threading import Thread, current_thread
-
-from .dpi import dpi_scaled
+from typing import Callable
+from threading import Thread
+from functools import wraps
 
 import ttkbootstrap.dialogs.dialogs as tkdiag
-import ttkbootstrap as ttk
-
 import asyncio
-import sys
-
-import daf
 
 
 CONF_TASK_SLEEP = 0.1
@@ -31,6 +25,7 @@ def gui_except(parent = None):
         """
         Decorator that catches exceptions and displays them in GUI.
         """
+        @wraps(fnc)
         def wrapper(*args, **kwargs):
             try:
                 return fnc(*args, **kwargs)
