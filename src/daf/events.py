@@ -11,7 +11,6 @@ from .misc.doc import doc_category
 import asyncio
 import warnings
 
-
 T = TypeVar('T')
 
 
@@ -26,13 +25,40 @@ __all__ = (
 class EventID(Enum):
     """
     Enum of all available events.
+
+    Global events (:func:`get_global_event_ctrl`) have a
+    ``g_`` prefix on their name.
     """
+
     g_daf_startup = 0
+    """
+    Emitted at DAF startup.
+    """
+
     g_daf_shutdown = auto()
-
+    """
+    Emitted at DAF shutdown.
+    """
     g_trace = auto()
+    """
+    Emitted when :func:`~daf.logging.tracing.trace` is used.
 
+    Parameters
+    -----------
+    level: :class:`~daf.logging.tracing.TraceLEVELS`
+        The level of the trace.
+    message: str
+        The traced message.
+    """
     g_account_expired = auto()
+    """
+    Emitted when account has been expired (token invalidated).
+    
+    Parameters
+    -----------
+    account: :class:`~daf.client.ACCOUNT
+        The account that has been expired.
+    """
     account_update = auto()
 
     message_ready = auto()
@@ -236,6 +262,8 @@ def initialize():
     """
     GLOBAL.g_controller.start()
 
+
+@doc_category("Event reference")
 def get_global_event_ctrl() -> Union[EventController, None]:
     "Returns the global event controller"
     return GLOBAL.g_controller
