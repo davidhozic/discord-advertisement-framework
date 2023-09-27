@@ -30,7 +30,7 @@ class GLOBALS:
 # ----------------- OPTIONAL ----------------- #
 try:
     from webdriver_manager.chrome import ChromeDriverManager
-    from undetected_chromedriver import Chrome
+    from undetected_chromedriver import Chrome, ChromeOptions
     from selenium.webdriver.chrome.options import Options
     from selenium.webdriver.remote.webelement import WebElement
     from selenium.webdriver.common.by import By
@@ -156,7 +156,7 @@ class SeleniumCLIENT:
         WD_OUTPUT_PATH.mkdir(exist_ok=True, parents=True)
         web_data_path = pathlib.Path(WD_PROFILES_PATH, self._username)
 
-        opts = Options()
+        opts = ChromeOptions()
         opts.add_argument(f"--user-data-dir={web_data_path.absolute()}")
         opts.add_argument("--profile-directory=Profile 1")
         opts.add_argument("--no-sandbox")
