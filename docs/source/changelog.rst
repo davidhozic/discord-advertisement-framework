@@ -37,7 +37,7 @@ Glossary
 Releases
 ---------------------
 
-v3.0.0
+v3.0.1
 ====================
 - Downgraded Selenium version from 4.13 to 4.12 since 4.13 does not support headless, which
   undetected-chrome-driver is trying to set.
