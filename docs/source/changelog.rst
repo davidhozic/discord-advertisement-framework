@@ -39,6 +39,11 @@ Releases
 
 v3.0.0
 ====================
+- Downgraded Selenium version from 4.13 to 4.12 since 4.13 does not support headless, which
+  undetected-chrome-driver is trying to set.
+
+v3.0.0
+====================
 - SQL analytics:
   
   - Counts now have better error reporting when an invalid value was passed.
