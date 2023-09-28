@@ -500,12 +500,13 @@ async def shutdown() -> None:
 
     GLOBALS.accounts.clear()
     evt.remove_listener(EventID.g_account_expired, cleanup_account)
-    await evt.stop()
+
+    trace("Shutdown complete.", TraceLEVELS.NORMAL)
 
     if remote.GLOBALS.remote_client is not None:
         await remote.GLOBALS.remote_client._close()
 
-    trace("Shutdown complete.", TraceLEVELS.NORMAL)
+    await evt.stop()
 
 
 def _shutdown_clean(loop: asyncio.AbstractEventLoop) -> None:
