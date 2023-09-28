@@ -78,7 +78,7 @@ class EventController:
 
         return asyncio.gather(self.loop_task)
 
-    def add_listener(self, event: EventID, fnc: Callable, predicate: Callable[[Any], bool] = None):
+    def add_listener(self, event: "EventID", fnc: Callable, predicate: Callable[[Any], bool] = None):
         """
         Registers the function ``fnc`` as an event listener for ``event``.
         
@@ -92,7 +92,7 @@ class EventController:
         listeners = self.listeners[event] = self.listeners.get(event, [])
         listeners.append(EventListener(fnc, predicate))
 
-    def remove_listener(self, event: EventID, fnc: Callable):
+    def remove_listener(self, event: "EventID", fnc: Callable):
         """
         Remove the function ``fnc`` from the list of listeners for ``event``.
 
@@ -113,7 +113,7 @@ class EventController:
         with suppress(ValueError, KeyError):
             self.listeners[event].remove(fnc)
 
-    def listen(self, event: EventID):
+    def listen(self, event: "EventID"):
         """
         Decorator used to register the function as an event listener.
 
@@ -128,7 +128,7 @@ class EventController:
 
         return _listen_decor
 
-    def emit(self, event: EventID, *args, **kwargs) -> asyncio.Future:
+    def emit(self, event: "EventID", *args, **kwargs) -> asyncio.Future:
         """
         .. versionadded:: 3.0
 
