@@ -101,13 +101,12 @@ class AutoGUILD:
         self.include_pattern = re.sub(r"\s*\|\s*", '|', include_pattern) if include_pattern else None
         self.exclude_pattern = re.sub(r"\s*\|\s*", '|', exclude_pattern) if exclude_pattern else None
         self._remove_after = remove_after
-        self._messages = messages
+        self._messages: List[BaseMESSAGE] = messages
         self.logging = logging
         self.auto_join = auto_join
         self.parent = None
         self.guild_query_iter = None
         self.guild_join_count = 0
-        self._messages: List[BaseMESSAGE] = []
         self.removal_buffer_length = removal_buffer_length
         self._removal_timer_handle: asyncio.Task = None
         self._guild_join_timer_handle: asyncio.Task = None
@@ -123,6 +122,11 @@ class AutoGUILD:
 
     def __repr__(self) -> str:
         return f"AutoGUILD(include_pattern='{self.include_pattern}', exclude_pattern='{self.exclude_pattern})'"
+
+    @property
+    def removed_messages(self) -> List[BaseMESSAGE]:
+        "Returns a list of messages that were removed from server (last ``removal_buffer_length`` messages)."
+        return self._removed_messages[:]
 
     @property
     def messages(self) -> List[Union[TextMESSAGE, VoiceMESSAGE]]:
@@ -263,11 +267,6 @@ class AutoGUILD:
 
             self.guild_query_iter = self.auto_join._query_request()
 
-        message: BaseChannelMessage
-        for message in self._messages:
-            if (await message.initialize(self, event_ctrl, self._get_channels)) is not None:
-                await self._on_remove_message(self, message)
-
         if self._remove_after is not None:
             if isinstance(self._remove_after, timedelta):
                 self._remove_after = datetime.now().astimezone() + self._remove_after
@@ -323,6 +322,11 @@ class AutoGUILD:
         event_ctrl.add_listener(EventID.message_removed, self._on_remove_message, lambda server, m: server is self)
         event_ctrl.add_listener(EventID.server_update, self._on_update, lambda server, *args, **kwargs: server is self)
 
+        message: BaseChannelMessage
+        for message in self._messages:
+            if (await message.initialize(self, event_ctrl, self._get_channels)) is not None:
+                await self._on_remove_message(self, message)
+
     def _generate_guild_log_context(self, guild: discord.Guild):
         return {
                 "name": guild.name,
@@ -368,10 +372,6 @@ class AutoGUILD:
         """
         Advertises thru all the GUILDs.
         """
-        if message._check_state():
-            await self.remove_message(message)
-            return
-
         author_ctx = self.parent.generate_log_context()
         message_context = await message._send()
         if message_context and self.logging:

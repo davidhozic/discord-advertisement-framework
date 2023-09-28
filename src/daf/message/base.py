@@ -585,7 +585,7 @@ class BaseChannelMessage(BaseMESSAGE):
         """
         # An integer was originally provided, the dict is remove_after by each channel
         if isinstance(self._remove_after_original, int):
-            return max(self._remove_after.values()) if self._remove_after else self._remove_after_original
+            return max(self._remove_after.values(), default=self._remove_after_original)
 
         return self._remove_after
 
@@ -611,6 +611,11 @@ class BaseChannelMessage(BaseMESSAGE):
                     )
                     self.channels.remove(channel)
                     del self._remove_after[snowflake]
+                
+            if not self._remove_after:  # All channel counts expired
+                self._event_ctrl.emit(EventID.message_removed, self.parent, self)
+                # Prevent dual removal events, errored channels also don't need to be removed if the message is removed
+                return
 
         # Remove any channels that returned with code status 404 (They no longer exist)
         for data in err_channels:

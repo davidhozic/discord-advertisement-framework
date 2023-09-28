@@ -2,9 +2,10 @@
 Module used to support listening and emitting events.
 It also contains the event loop definitions.
 """
-from contextlib import suppress
+from contextlib import suppress, asynccontextmanager
 from enum import Enum, auto
 from typing import Any, List, Dict, Callable, TypeVar, Coroutine, Set, Union
+from sys import _getframe
 
 from .misc.doc import doc_category
 
@@ -47,6 +48,7 @@ class EventController:
         self.event_queue = asyncio.Queue()
         self.loop_task: asyncio.Task = None
         self.running = False
+        self._critical_lock = asyncio.Lock()
 
     def start(self):
         """
@@ -60,6 +62,16 @@ class EventController:
             # which will additionally receive any events emitted by the global controller.
             if self is not GLOBAL.g_controller:
                 GLOBAL.non_global_controllers.add(self)
+
+    @asynccontextmanager
+    async def critical(self):
+        """
+        Asynchronous Context manager (``async with`` statement), that prevents
+        any events from being processed until this critical section is exited.
+        """
+        await self._critical_lock.acquire()
+        yield
+        self._critical_lock.release()
 
     def stop(self):
         "Stops event loop asynchronously"
@@ -142,6 +154,13 @@ class EventController:
         future = asyncio.Future()
         if not self.running:
             future.set_result(None)
+            caller_frame = _getframe(1)
+            caller_info = caller_frame.f_code
+            caller_text = f"{caller_info.co_name} ({caller_info.co_filename})"
+            warnings.warn(
+                f"{self} is not running, but {event} was emitted, which was ignored! Caller: {caller_text}",
+                stacklevel=2
+            )
             return future
 
         self.event_queue.put_nowait((event, args, kwargs, future))
@@ -174,21 +193,21 @@ class EventController:
 
         while self.running:
             event_id, args, kwargs, future = await queue.get()
+            async with self._critical_lock:
+                for listener in listeners.get(event_id, [])[:]:
+                    try:
+                        if listener.predicate is None or listener.predicate(*args, **kwargs):
+                            if isinstance(r:= listener(*args, **kwargs), Coroutine):
+                                await r
 
-            for listener in listeners.get(event_id, [])[:]:
-                try:
-                    if listener.predicate is None or listener.predicate(*args, **kwargs):
-                        if isinstance(r:= listener(*args, **kwargs), Coroutine):
-                            await r
-
-                except Exception as exc:
-                    warnings.warn(f"({exc}) Could not call event handler {listener} for event {event_id}.")
-                    future.set_exception(exc)
-                    break
+                    except Exception as exc:
+                        warnings.warn(f"({exc}) Could not call event handler {listener} for event {event_id}.")
+                        future.set_exception(exc)
+                        break
 
 
-            if not future.done():  # In case exception was set
-                future.set_result(None)
+                if not future.done():  # In case exception was set
+                    future.set_result(None)
 
         if self is not GLOBAL.g_controller:
             GLOBAL.non_global_controllers.remove(self)
@@ -364,6 +383,7 @@ async def server_update(server):
     :type server: daf.guild.GUILD | daf.guild.USER | daf.guild.AutoGUILD
     """
 
+@doc_category("Event reference")
 async def auto_guild_start_join(auto_guild):
     """
     Event that is emitted when the join for new server should start.

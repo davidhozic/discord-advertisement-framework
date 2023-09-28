@@ -276,8 +276,6 @@ class BaseGUILD:
             trace(f"Invalid ID {self.snowflake} - {self}", TraceLEVELS.ERROR, exception_cls=ValueError)
         
         self._apiobject = _apiobject
-        await self._init_messages()
-
         if self._remove_after is not None:
             if isinstance(self._remove_after, timedelta):
                 self._remove_after = datetime.now().astimezone() + self._remove_after
@@ -297,6 +295,8 @@ class BaseGUILD:
         event_ctrl.add_listener(EventID.message_removed, self._on_message_removed, lambda server, m: server is self)
         event_ctrl.add_listener(EventID.message_added, self._on_add_message, lambda server, m: server is self)
         event_ctrl.add_listener(EventID.server_update, self._on_update, lambda server, *h, **k: server is self)
+
+        await self._init_messages()
 
     def generate_invite_log_context(self, member: discord.Member, invite_id: str) -> dict:
         raise NotImplementedError

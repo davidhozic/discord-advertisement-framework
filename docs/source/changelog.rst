@@ -37,6 +37,12 @@ Glossary
 Releases
 ---------------------
 
+v3.0.2
+====================
+- Fixed AutoGUILD not sending messages (events emitted prematurely).
+- Fixed TextMESSAGE and VoiceMESSAGE not being removed after n sends when using AutoCHANNEL.
+- Added missing :py:attr:`daf.guild.AutoGUILD.removed_messages` property.
+
 v3.0.1
 ====================
 - Downgraded Selenium version from 4.13 to 4.12 since 4.13 does not support headless, which
