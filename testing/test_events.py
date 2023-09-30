@@ -1,10 +1,20 @@
 from datetime import timedelta
+from typing import Tuple
 
 import daf
 import pytest
 import asyncio
 
 from daf.events import *
+
+
+@pytest.fixture
+async def CONTROLLERS():
+    master_controller = EventController()
+    master_controller.add_subcontroller(EventController())
+    master_controller.start()
+    yield (master_controller, *master_controller.subcontrollers)
+    await master_controller.stop()
 
 
 @pytest.mark.parametrize(
@@ -18,10 +28,8 @@ from daf.events import *
             ),
         ]
 )
-async def test_events(event: EventID, expected_args: dict):
-    global_ctrl = get_global_event_ctrl()
-    local_ctrl = EventController()
-    local_ctrl.start()
+async def test_events(CONTROLLERS: Tuple[EventController, EventController], event: EventID, expected_args: dict):
+    master, slave = CONTROLLERS
 
     handler_called = False
     handler_called2 = False
@@ -40,34 +48,34 @@ async def test_events(event: EventID, expected_args: dict):
         nonlocal handler_local_called
         handler_local_called = True
 
-    global_ctrl.add_listener(event, dummy_listener)
-    global_ctrl.add_listener(event, dummy_listener2)
-    local_ctrl.add_listener(event, local_dummy_listener)
-    global_ctrl.emit(event, **expected_args)
+    master.add_listener(event, dummy_listener)
+    master.add_listener(event, dummy_listener2)
+    slave.add_listener(event, local_dummy_listener)
+    master.emit(event, **expected_args)
     await asyncio.sleep(0)
     assert handler_called and handler_called2 and handler_local_called, "Handler was not called"
 
     handler_called = False
     handler_called2 = False
-    global_ctrl.remove_listener(event, dummy_listener)
-    global_ctrl.remove_listener(event, dummy_listener2)
-    global_ctrl.emit(event, **expected_args)
+    master.remove_listener(event, dummy_listener)
+    master.remove_listener(event, dummy_listener2)
+    master.emit(event, **expected_args)
     await asyncio.sleep(0)
     assert not (handler_called or handler_called2), "Handler was called"
 
-    @global_ctrl.listen(event)
+    @master.listen(event)
     def dummy_listener(*args, **kwargs):
         nonlocal handler_called
         handler_called = True
 
-    @global_ctrl.listen(event)
+    @master.listen(event)
     def dummy_listener2(*args, **kwargs):
         nonlocal handler_called2
         handler_called2 = True
 
     handler_called = False
-    global_ctrl.emit(event, **expected_args)
+    master.emit(event, **expected_args)
     await asyncio.sleep(0)
-    global_ctrl.remove_listener(event, dummy_listener)
-    global_ctrl.remove_listener(event, dummy_listener2)
+    master.remove_listener(event, dummy_listener)
+    master.remove_listener(event, dummy_listener2)
     assert handler_called and handler_called2, "Handler was not called"
