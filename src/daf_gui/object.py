@@ -618,6 +618,9 @@ class NewObjectFrameStruct(NewObjectFrameBase):
 
     def load(self, old_data: ObjectInfo):
         data = old_data.data
+        if self.old_gui_data is not None:  # Preserve the old reference, even if reloading data
+            old_data.real_object = self.old_gui_data.real_object
+
         for attr, (widget, types_) in self._map.items():
             if attr not in data:
                 continue
