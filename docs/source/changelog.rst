@@ -37,6 +37,10 @@ Glossary
 Releases
 ---------------------
 
+v3.0.3
+====================
+- Fixed "Loading from JSON template causes live object reference to be lost".
+
 v3.0.2
 ====================
 - Fixed AutoGUILD not sending messages (events emitted prematurely).
