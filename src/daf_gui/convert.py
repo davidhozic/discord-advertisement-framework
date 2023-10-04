@@ -26,7 +26,6 @@ __all__ = (
     "convert_to_json",
     "convert_from_json",
     "convert_objects_to_script",
-    "convert_dict_to_object_info",
     "ADDITIONAL_ANNOTATIONS",
     "issubclass_noexcept",
     "get_annotations",
@@ -427,7 +426,12 @@ def convert_to_object_info(object_: object, save_original = False):
         return object_
     
     if isinstance(object_, dict):
-        return convert_dict_to_object_info(object_)
+        return ObjectInfo(
+            dict,
+            {k: convert_to_object_info(v) for k, v in object_.items()},
+            it.ObjectReference(it.get_object_id(object_)) if save_original else None
+        )
+
 
     attrs = get_conversion_map(object_type)
     return _convert_object_info(object_, save_original, object_type, attrs)
@@ -530,42 +534,3 @@ def convert_from_json(d: Union[dict, List[dict], Any]) -> ObjectInfo:
         return ObjectInfo(type_, data)
 
     return d
-
-
-def convert_dict_to_object_info(data: Union[dict, Iterable, Any]):
-    """
-    Method that converts a dict JSON into
-    It's object representation inside the GUI, that is ObjectInfo.
-
-    Parameters
-    -----------
-    data: str
-        The JSON data to convert.
-    """
-    class DictView:
-        def __init__(self) -> None:
-            raise NotImplementedError
-
-    annotations = {}
-    object_info_data = {}
-
-    if isinstance(data, dict):
-        for k, v in data.items():
-            if isinstance(v, dict):
-                v = convert_dict_to_object_info(v)
-                type_v = type(v)
-            elif isinstance(v, (list, tuple, set)):
-                v = convert_dict_to_object_info(v)
-                type_v = List[Any]
-            else:
-                type_v = type(v)
-
-            annotations[k] = type_v
-            object_info_data[k] = v
-
-        DictView.__init__.__annotations__ = annotations
-        return ObjectInfo(DictView, object_info_data)
-    elif isinstance(data, (list, tuple, set)):
-        return [convert_dict_to_object_info(x) for x in data]
-    else:
-        return data

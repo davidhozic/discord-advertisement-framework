@@ -7,12 +7,15 @@ from typing import Optional, Literal, Union, Tuple, List
 
 from .tracing import trace, TraceLEVELS
 from ..misc import doc, async_util
+from ..misc.instance_track import track_id
 
 
 import json
 import csv
 import pathlib
 import shutil
+import os
+
 
 __all__ = (
     "LoggerBASE",
@@ -258,6 +261,7 @@ class LoggerCSV(LoggerBASE):
                 raise OSError(*exc.args) from exc  # Raise OSError for any type of exceptions
 
 
+@track_id
 @doc.doc_category("Logging reference", path="logging")
 class LoggerJSON(LoggerBASE):
     """
@@ -391,6 +395,77 @@ class LoggerJSON(LoggerBASE):
 
             json.dump(json_data, f_writer, indent=4, ensure_ascii=False)
             f_writer.truncate()  # Remove any old data
+
+    async def analytic_get_message_log(
+        self,
+        guild: Union[int, None] = None,
+        author: Union[int, None] = None,
+        after: Union[datetime, None] = None,
+        before: Union[datetime, None] = None,
+        success_rate: Tuple[float, float] = (0, 100),
+        guild_type: Union[Literal["USER", "GUILD"], None] = None,
+        message_type: Union[Literal["TextMESSAGE", "VoiceMESSAGE", "DirectMESSAGE"], None] = None,
+        sort_by: Literal["timestamp", "success_rate"] = "timestamp",
+        sort_by_direction: Literal["asc", "desc"] = "desc",
+        limit: int = 500
+    ):
+        if after is None:
+            after = datetime.min
+
+        if before is None:
+            before = datetime.max
+
+        logs = []
+        for path, dirs, files in os.walk(self.path):
+            for filename in files:
+                if filename.endswith(".json"):
+                    with open(os.path.join(path, filename), 'r', encoding="utf-8") as reader:
+                        data = json.load(reader)
+
+                        if guild_type is not None and data["type"] != guild_type:
+                            continue
+
+                        if guild is not None and data["id"] != guild:
+                            continue
+
+                        guild_dict = {"name": data["name"], "id": data["id"], "type": data["type"]}
+
+                        for author_ctx in data["message_tracking"].values():
+                            author_dict = {"name": author_ctx["name"], "id": author_ctx["id"]}
+                            if author is not None and author_ctx["id"] != author:
+                                continue
+
+                            for message in author_ctx["messages"]:
+                                if message_type is not None and message["type"] != message_type:
+                                    continue
+
+                                message["author"] = author_dict
+                                message["guild"] = guild_dict
+
+                                date_, time_ = message["timestamp"].split(' ')
+                                day, month, year = map(int, date_.split('.'))
+                                hour, minute, second = map(int, time_.split(':'))
+                                stamp = datetime(year, month, day, hour, minute, second)
+                                if stamp < after or stamp > before:
+                                    continue
+
+                                message = {"timestamp": stamp, **message}
+
+                                channel_ctx = message.get("channels")
+                                if channel_ctx is not None:
+                                    len_s = len(channel_ctx["successful"])
+                                    calc_success_rate = 100 * len_s / (len(channel_ctx["failed"]) + len_s)
+                                else:
+                                    calc_success_rate = 100 if message["success_info"]["success"] else 0
+
+                                if calc_success_rate < success_rate[0] or calc_success_rate > success_rate[1]:
+                                    continue
+
+                                message["success_rate"] = calc_success_rate
+
+                                logs.append(message)
+
+        return sorted(logs, key=lambda log: log[sort_by], reverse=sort_by_direction == "desc")[:limit]
 
 
 async def initialize(logger: LoggerBASE) -> None:

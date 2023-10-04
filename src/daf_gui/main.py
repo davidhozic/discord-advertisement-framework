@@ -484,8 +484,6 @@ class Application():
             async def analytics_load_history():
                 gui_daf_assert_running()
                 logger = await self.connection.get_logger()
-                if not isinstance(logger, daf.LoggerSQL):
-                    raise ValueError("Analytics only allowed when using LoggerSQL")
 
                 param_object = combo_history.combo.get()
                 param_object_params = convert_to_objects(param_object.data)
@@ -494,12 +492,12 @@ class Application():
                 lst_history.clear()
                 lst_history.insert(tk.END, *items)
 
-            def show_log(listbox: ListBoxScrolled, type_):
+            def show_log(listbox: ListBoxScrolled):
                 selection = listbox.curselection()
                 if len(selection) == 1:
                     object_: ObjectInfo = listbox.get()[selection[0]]
                     self.open_object_edit_window(
-                        type_,
+                        object_.class_,
                         listbox,
                         old_data=object_,
                         check_parameters=False,
@@ -554,7 +552,7 @@ class Application():
             ).pack(side="left", fill=tk.X)
             ttk.Button(
                 frame_msg_history_bnts,
-                command=lambda: show_log(lst_history, log_class),
+                command=lambda: show_log(lst_history),
                 text="View log"
             ).pack(side="left", fill=tk.X)
             ttk.Button(
