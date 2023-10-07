@@ -508,9 +508,6 @@ class Application():
 
             async def delete_logs_async(logs: List[int]):
                 logger = await self.connection.get_logger()
-                if not isinstance(logger, daf.LoggerSQL):
-                    raise ValueError("Analytics only allowed when using LoggerSQL")
-
                 await self.connection.execute_method(
                     it.ObjectReference(it.get_object_id(logger)),
                     "delete_logs",
@@ -571,9 +568,6 @@ class Application():
             async def analytics_load_num():
                 gui_daf_assert_running()
                 logger = await self.connection.get_logger()
-                if not isinstance(logger, daf.LoggerSQL):
-                    raise ValueError("Analytics only allowed when using LoggerSQL")
-
                 param_object = combo_count.combo.get()
                 parameters = convert_to_objects(param_object.data)
                 count = await self.connection.execute_method(it.ObjectReference(it.get_object_id(logger)), getter_counts, **parameters)

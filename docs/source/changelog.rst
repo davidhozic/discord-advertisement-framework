@@ -37,6 +37,15 @@ Glossary
 Releases
 ---------------------
 
+v3.1.0
+===================
+- JSON Analytics
+- GUI:
+  
+  - ViewOnly structured data will display only the data that is provided, meaning
+    the GUI will not be constructed based on type annotations of an objects, but rather
+    based on the data itself.
+
 v3.0.3
 ====================
 - Fixed "Loading from JSON template causes live object reference to be lost".

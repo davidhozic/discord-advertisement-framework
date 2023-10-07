@@ -3,7 +3,7 @@ This module is responsible for the logging in daf.
 It contains all the logging classes.
 """
 from datetime import datetime, date
-from typing import Optional, Literal, Union, Tuple, List
+from typing import Optional, Literal, Union, Tuple, List, get_args
 
 from .tracing import trace, TraceLEVELS
 from ..misc import doc, async_util
@@ -90,17 +90,17 @@ class LoggerBASE:
         raise NotImplementedError
 
     async def analytic_get_num_messages(
-            self,
-            guild: Union[int, None] = None,
-            author: Union[int, None] = None,
-            after: Union[datetime, None] = None,
-            before: Union[datetime, None] = None,
-            guild_type: Union[Literal["USER", "GUILD"], None] = None,
-            message_type: Union[Literal["TextMESSAGE", "VoiceMESSAGE", "DirectMESSAGE"], None] = None,
-            sort_by: Literal["successful", "failed", "guild_snow", "guild_name", "author_snow", "author_name"] = "successful",
-            sort_by_direction: Literal["asc", "desc"] = "desc",
-            limit: int = 500,
-            group_by: Literal["year", "month", "day"] = "day"
+        self,
+        guild: Union[int, None] = None,
+        author: Union[int, None] = None,
+        after: Union[datetime, None] = None,
+        before: Union[datetime, None] = None,
+        guild_type: Union[Literal["USER", "GUILD"], None] = None,
+        message_type: Union[Literal["TextMESSAGE", "VoiceMESSAGE", "DirectMESSAGE"], None] = None,
+        sort_by: Literal["successful", "failed", "guild_snow", "guild_name", "author_snow", "author_name"] = "successful",
+        sort_by_direction: Literal["asc", "desc"] = "desc",
+        limit: int = 500,
+        group_by: Literal["year", "month", "day"] = "day"
     ) -> List[Tuple[date, int, int, int, str, int, str]]:
         raise NotImplementedError
 
@@ -449,6 +449,7 @@ class LoggerJSON(LoggerBASE):
                                 if stamp < after or stamp > before:
                                     continue
 
+                                del message["timestamp"]
                                 message = {"timestamp": stamp, **message}
 
                                 channel_ctx = message.get("channels")
@@ -467,6 +468,68 @@ class LoggerJSON(LoggerBASE):
 
         return sorted(logs, key=lambda log: log[sort_by], reverse=sort_by_direction == "desc")[:limit]
 
+    async def analytic_get_num_messages(
+        self,
+        guild: Union[int, None] = None,
+        author: Union[int, None] = None,
+        after: datetime = datetime.min,
+        before: datetime = datetime.max,
+        guild_type: Union[Literal["USER", "GUILD"], None] = None,
+        message_type: Union[Literal["TextMESSAGE", "VoiceMESSAGE", "DirectMESSAGE"], None] = None,
+        sort_by: Literal["successful", "failed", "guild_snow", "guild_name", "author_snow", "author_name"] = "successful",
+        sort_by_direction: Literal["asc", "desc"] = "desc",
+        limit: int = 500,
+        group_by: Literal["year", "month", "day"] = "day"
+    ) -> list:
+        logs = await self.analytic_get_message_log(
+            guild,
+            author,
+            after,
+            before,
+            guild_type=guild_type,
+            message_type=message_type,
+        )
+        cuts = {}
+        if not len(logs):
+            return [cuts]
+
+        regions = ["day", "month", "year"]
+        regions_left = list(reversed(regions[regions.index(group_by):]))
+
+        sort_by_values = get_args(LoggerJSON.analytic_get_num_messages.__annotations__["sort_by"])
+
+        def get_region_text(stamp):
+            return '-'.join(f"{getattr(stamp, region):02d}" for region in regions_left)
+
+        for log in logs:
+            time_group = get_region_text(log["timestamp"])
+            guild = log["guild"]
+            author = log["author"]
+            group_value = time_group, guild["id"], author["id"]
+            if group_value not in cuts:
+                cut_group = cuts[group_value] = [
+                    time_group,
+                    0,
+                    0,
+                    guild["id"],
+                    guild["name"],
+                    author["id"],
+                    author["name"]
+                ]
+            else:
+                cut_group = cuts[group_value]
+
+            if log["success_rate"] == 100:
+                cut_group[1] += 1
+            else:
+                cut_group[2] += 1
+
+        # key: first index is timestamp group, so offset by one and then calculate index by annotation position
+        return sorted(
+            cuts.values(),
+            key=lambda row: row[sort_by_values.index(sort_by) + 1],
+            reverse=sort_by_direction == "desc"
+        )[:limit]
 
 async def initialize(logger: LoggerBASE) -> None:
     """

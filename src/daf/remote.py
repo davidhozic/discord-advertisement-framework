@@ -143,7 +143,6 @@ class RemoteAccessCLIENT:
 
             # HTTPS ssl context
             context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
-            context.minimum_version = ssl.TLSVersion.TLSv1_2
             context.load_cert_chain(certificate, private_key, private_key_pwd)
         else:
             context = None
