@@ -242,7 +242,11 @@ class RemoteConnectionCLIENT(AbstractConnectionCLIENT):
         evt = daf.events.get_global_event_ctrl()
         try:
             trace("Connecting to live WebSocket connection.")
-            async with self.session.ws_connect("/subscribe", auth=self.auth) as ws:
+            additional_kwargs = {}
+            if not self.verify_ssl:
+                additional_kwargs["ssl"] = False
+
+            async with self.session.ws_connect("/subscribe", auth=self.auth, **additional_kwargs) as ws:
                 trace("Connected to WebSocket.")
                 async for message in ws:
                     trace(f"WebSocket received {message.type}", TraceLEVELS.DEBUG)

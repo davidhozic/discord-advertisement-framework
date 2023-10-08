@@ -46,6 +46,13 @@ v3.1.0
     the GUI will not be constructed based on type annotations of an objects, but rather
     based on the data itself.
 
+
+v3.0.4
+====================
+- Fixed AutoGUILD not working if the ``messages`` parameter is None.
+- Fixed ``verify_ssl`` being ignored on the WebSocket connection.
+
+
 v3.0.3
 ====================
 - Fixed "Loading from JSON template causes live object reference to be lost".
