@@ -97,6 +97,12 @@ class AutoGUILD:
         invite_track: Optional[List[str]] = None,
         removal_buffer_length: int = 50
     ) -> None:
+        if messages is None:
+            messages = []
+
+        if invite_track is None:
+            invite_track = []
+
         # Remove spaces around OR
         self.include_pattern = re.sub(r"\s*\|\s*", '|', include_pattern) if include_pattern else None
         self.exclude_pattern = re.sub(r"\s*\|\s*", '|', exclude_pattern) if exclude_pattern else None
@@ -112,9 +118,6 @@ class AutoGUILD:
         self._guild_join_timer_handle: asyncio.Task = None
         self._cache = []
         self._event_ctrl: EventController = None
-
-        if invite_track is None:
-            invite_track = []
 
         self._invite_join_count = {invite.split("/")[-1]: 0 for invite in invite_track}
         attributes.write_non_exist(self, "update_semaphore", asyncio.Semaphore(1))

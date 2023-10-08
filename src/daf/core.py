@@ -399,6 +399,7 @@ async def add_object(obj, snowflake=None):
             raise ValueError("Account already added to the list")
 
         if (res := await obj.initialize()) is not None:
+            await obj._close()
             raise res
 
         GLOBALS.accounts.append(obj)
