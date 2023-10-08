@@ -37,6 +37,12 @@ Glossary
 Releases
 ---------------------
 
+v3.0.4
+====================
+- Fixed AutoGUILD not working if the ``messages`` parameter is None.
+- Fixed ``verify_ssl`` being ignored on the WebSocket connection.
+
+
 v3.0.3
 ====================
 - Fixed "Loading from JSON template causes live object reference to be lost".
