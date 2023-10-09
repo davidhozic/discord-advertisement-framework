@@ -46,6 +46,9 @@ v3.1.0
     the GUI will not be constructed based on type annotations of an objects, but rather
     based on the data itself.
 
+- LoggerJSON ``index`` field of logs is now an unique snowflake like id.
+- |BREAK_CH| :class:`daf.logging.LoggerJSON`'s invite logs will now contain a "member" dictionary
+  for each invite log.
 
 v3.0.4
 ====================
