@@ -16,7 +16,8 @@ def get_attrs(obj):
 def get_value(obj, attr: str, extra_ignore: set=set()):
     custom_key_map = {
         asyncio.Semaphore: lambda sem: (sem.locked(), sem._value),
-        daf.discord.Intents: lambda intents: {k: getattr(intents, k) for k in daf.discord.Intents.VALID_FLAGS}
+        daf.discord.Intents: lambda intents: {k: getattr(intents, k) for k in daf.discord.Intents.VALID_FLAGS},
+        asyncio.Lock: lambda lock: (lock._locked)
     }
 
     ignore_attrs = {}
