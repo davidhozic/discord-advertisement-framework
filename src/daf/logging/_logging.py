@@ -462,59 +462,60 @@ class LoggerJSON(LoggerBASE):
         logs = []
         for path, dirs, files in os.walk(self.path):
             for filename in files:
-                if filename.endswith(".json"):
-                    with open(os.path.join(path, filename), 'r', encoding="utf-8") as reader:
-                        data = json.load(reader)
+                if not filename.endswith(".json"):
+                    continue
 
-                        if guild_type is not None and data["type"] != guild_type:
+                with open(os.path.join(path, filename), 'r', encoding="utf-8") as reader:
+                    data = json.load(reader)
+
+                if guild_type is not None and data["type"] != guild_type:
+                    continue
+
+                if guild is not None and data["id"] != guild:
+                    continue
+
+                guild_dict = {"name": data["name"], "id": data["id"], "type": data["type"]}
+
+                for author_ctx in data["message_tracking"].values():
+                    author_dict = {"name": author_ctx["name"], "id": author_ctx["id"]}
+                    if author is not None and author_ctx["id"] != author:
+                        continue
+
+                    for message in author_ctx["messages"]:
+                        if message_type is not None and message["type"] != message_type:
                             continue
 
-                        if guild is not None and data["id"] != guild:
+                        message["author"] = author_dict
+                        message["guild"] = guild_dict
+
+                        stamp = self._datetime_from_stamp(message["timestamp"])
+                        if stamp < after or stamp > before:
                             continue
 
-                        guild_dict = {"name": data["name"], "id": data["id"], "type": data["type"]}
+                        del message["timestamp"]
+                        message = {"timestamp": stamp, **message}
+                        calc_success_rate = self._calc_success_rate(message)
 
-                        for author_ctx in data["message_tracking"].values():
-                            author_dict = {"name": author_ctx["name"], "id": author_ctx["id"]}
-                            if author is not None and author_ctx["id"] != author:
-                                continue
+                        if calc_success_rate < success_rate[0] or calc_success_rate > success_rate[1]:
+                            continue
 
-                            for message in author_ctx["messages"]:
-                                if message_type is not None and message["type"] != message_type:
-                                    continue
-
-                                message["author"] = author_dict
-                                message["guild"] = guild_dict
-
-                                date_, time_ = message["timestamp"].split(' ')
-                                day, month, year = map(int, date_.split('.'))
-                                hour, minute, second = map(int, time_.split(':'))
-                                stamp = datetime(year, month, day, hour, minute, second)
-                                if stamp < after or stamp > before:
-                                    continue
-
-                                del message["timestamp"]
-                                message = {"timestamp": stamp, **message}
-
-                                channel_ctx = message.get("channels")
-                                if channel_ctx is not None:
-                                    len_s = len(channel_ctx["successful"])
-                                    calc_success_rate = 100 * len_s / (len(channel_ctx["failed"]) + len_s)
-                                else:
-                                    calc_success_rate = 100 if message["success_info"]["success"] else 0
-
-                                if calc_success_rate < success_rate[0] or calc_success_rate > success_rate[1]:
-                                    continue
-
-                                message["success_rate"] = calc_success_rate
-
-                                logs.append(message)
+                        message["success_rate"] = calc_success_rate
+                        logs.append(message)
 
         sorted_ = sorted(logs, key=lambda log: log[sort_by], reverse=sort_by_direction == "desc")
         if limit is not None:
             sorted_ = sorted_[:limit]
 
         return sorted_
+
+    def _calc_success_rate(self, message: dict) -> float:
+        channel_ctx = message.get("channels")
+        if channel_ctx is not None:
+            len_s = len(channel_ctx["successful"])
+            calc_success_rate = 100.00 * len_s / (len(channel_ctx["failed"]) + len_s)
+        else:
+            calc_success_rate = 100.00 if message["success_info"]["success"] else 0.0
+        return calc_success_rate
 
     async def analytic_get_num_messages(
         self,
@@ -599,33 +600,32 @@ class LoggerJSON(LoggerBASE):
         logs = []
         for path, dirs, files in os.walk(self.path):
             for filename in files:
-                if filename.endswith(".json"):
-                    with open(os.path.join(path, filename), 'r', encoding="utf-8") as reader:
-                        data = json.load(reader)
+                if not filename.endswith(".json"):
+                    continue
 
-                        if guild is not None and data["id"] != guild:
+                with open(os.path.join(path, filename), 'r', encoding="utf-8") as reader:
+                    data = json.load(reader)
+
+                if guild is not None and data["id"] != guild:
+                    continue
+
+                guild_dict = {"name": data["name"], "id": data["id"], "type": data["type"]}
+
+                for invite_id, invite_logs in data["invite_tracking"].items():
+                    if invite is not None and invite_id != invite:
+                        continue
+
+                    for log in invite_logs:
+                        log["guild"] = guild_dict
+                        log["invite"] = f"https://discord.gg/{invite_id}"
+
+                        stamp = self._datetime_from_stamp(log["timestamp"])
+                        if stamp < after or stamp > before:
                             continue
 
-                        guild_dict = {"name": data["name"], "id": data["id"], "type": data["type"]}
-
-                        for invite_id, invite_logs in data["invite_tracking"].items():
-                            if invite is not None and invite_id != invite:
-                                continue
-
-                            for log in invite_logs:
-                                log["guild"] = guild_dict
-                                log["invite"] = f"https://discord.gg/{invite_id}"
-
-                                date_, time_ = log["timestamp"].split(' ')
-                                day, month, year = map(int, date_.split('.'))
-                                hour, minute, second = map(int, time_.split(':'))
-                                stamp = datetime(year, month, day, hour, minute, second)
-                                if stamp < after or stamp > before:
-                                    continue
-
-                                del log["timestamp"]
-                                log = {"timestamp": stamp, **log}
-                                logs.append(log)
+                        del log["timestamp"]
+                        log = {"timestamp": stamp, **log}
+                        logs.append(log)
         
         sorted_ = sorted(logs, key=lambda log: log[sort_by], reverse=sort_by_direction == "desc")
         if limit is not None:
@@ -635,9 +635,9 @@ class LoggerJSON(LoggerBASE):
 
     async def analytic_get_num_invites(
         self,
-        guild: int | None = None,
-        after: datetime | None = None,
-        before: datetime | None = None,
+        guild: Optional[int] = None,
+        after: Optional[datetime] = None,
+        before: Optional[datetime] = None,
         sort_by: Literal['count', 'guild_snow', 'guild_name', 'invite_id'] = "count",
         sort_by_direction: Literal['asc', 'desc'] = "desc",
         limit: int = 500,
@@ -686,22 +686,6 @@ class LoggerJSON(LoggerBASE):
             reverse=sort_by_direction == "desc"
         )[:limit]
 
-    def _remove_message_logs(self, data: dict, indexes: Set[int]):
-        for author_ctx in data["message_tracking"].values():
-            for message in author_ctx["messages"].copy():
-                if message["index"] not in indexes:
-                    continue
-
-                author_ctx["messages"].remove(message)
-
-    def _remove_invite_logs(self, data: dict, indexes: Set[int]):
-        for logs in data["invite_tracking"].values():
-            for log in logs.copy():
-                if log["index"] not in indexes:
-                    continue
-
-                logs.remove(log)
-
     @async_util.with_semaphore("_mutex")
     async def delete_logs(self, logs: List[dict]):
         if "type" in logs[0]:  # Message log
@@ -719,6 +703,30 @@ class LoggerJSON(LoggerBASE):
                         f_log.seek(0)
                         f_log.truncate()
                         json.dump(data, f_log, indent=4)
+
+    def _datetime_from_stamp(self, timestamp: str):
+        date_, time_ = timestamp.split(' ')
+        day, month, year = map(int, date_.split('.'))
+        hour, minute, second = map(int, time_.split(':'))
+        stamp = datetime(year, month, day, hour, minute, second)
+        return stamp
+
+    def _remove_message_logs(self, data: dict, indexes: Set[int]):
+        for author_ctx in data["message_tracking"].values():
+            for message in author_ctx["messages"].copy():
+                if message["index"] not in indexes:
+                    continue
+
+                author_ctx["messages"].remove(message)
+
+    def _remove_invite_logs(self, data: dict, indexes: Set[int]):
+        for logs in data["invite_tracking"].values():
+            for log in logs.copy():
+                if log["index"] not in indexes:
+                    continue
+
+                logs.remove(log)
+
 
 async def initialize(logger: LoggerBASE) -> None:
     """
