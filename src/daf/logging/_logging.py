@@ -464,10 +464,7 @@ class LoggerJSON(LoggerBASE):
             with open(filename, 'r', encoding="utf-8") as reader:
                 data = json.load(reader)
 
-            if guild_type is not None and data["type"] != guild_type:
-                continue
-
-            if guild is not None and data["id"] != guild:
+            if guild_type is not None and data["type"] != guild_type or guild is not None and data["id"] != guild:
                 continue
 
             guild_dict = {"name": data["name"], "id": data["id"], "type": data["type"]}
@@ -485,14 +482,14 @@ class LoggerJSON(LoggerBASE):
                     message["guild"] = guild_dict
 
                     stamp = self._datetime_from_stamp(message["timestamp"])
-                    if stamp < after or stamp > before:
+                    if before < stamp or stamp < after:
                         continue
 
                     del message["timestamp"]
                     message = {"timestamp": stamp, **message}
                     calc_success_rate = self._calc_success_rate(message)
 
-                    if calc_success_rate < success_rate[0] or calc_success_rate > success_rate[1]:
+                    if success_rate[0] > calc_success_rate or calc_success_rate > success_rate[1]:
                         continue
 
                     message["success_rate"] = calc_success_rate
