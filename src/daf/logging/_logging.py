@@ -3,7 +3,7 @@ This module is responsible for the logging in daf.
 It contains all the logging classes.
 """
 from datetime import datetime, date
-from typing import Optional, Literal, Union, Tuple, List, Any, Set, get_args 
+from typing import Optional, Literal, Union, Tuple, List, Any, Set, get_args, Iterator
 
 from .tracing import trace, TraceLEVELS
 from ..misc import doc, async_util
@@ -460,47 +460,43 @@ class LoggerJSON(LoggerBASE):
             before = datetime.max
 
         logs = []
-        for path, dirs, files in os.walk(self.path):
-            for filename in files:
-                if not filename.endswith(".json"):
+        for filename in self._get_json_files():
+            with open(filename, 'r', encoding="utf-8") as reader:
+                data = json.load(reader)
+
+            if guild_type is not None and data["type"] != guild_type:
+                continue
+
+            if guild is not None and data["id"] != guild:
+                continue
+
+            guild_dict = {"name": data["name"], "id": data["id"], "type": data["type"]}
+
+            for author_ctx in data["message_tracking"].values():
+                author_dict = {"name": author_ctx["name"], "id": author_ctx["id"]}
+                if author is not None and author_ctx["id"] != author:
                     continue
 
-                with open(os.path.join(path, filename), 'r', encoding="utf-8") as reader:
-                    data = json.load(reader)
-
-                if guild_type is not None and data["type"] != guild_type:
-                    continue
-
-                if guild is not None and data["id"] != guild:
-                    continue
-
-                guild_dict = {"name": data["name"], "id": data["id"], "type": data["type"]}
-
-                for author_ctx in data["message_tracking"].values():
-                    author_dict = {"name": author_ctx["name"], "id": author_ctx["id"]}
-                    if author is not None and author_ctx["id"] != author:
+                for message in author_ctx["messages"]:
+                    if message_type is not None and message["type"] != message_type:
                         continue
 
-                    for message in author_ctx["messages"]:
-                        if message_type is not None and message["type"] != message_type:
-                            continue
+                    message["author"] = author_dict
+                    message["guild"] = guild_dict
 
-                        message["author"] = author_dict
-                        message["guild"] = guild_dict
+                    stamp = self._datetime_from_stamp(message["timestamp"])
+                    if stamp < after or stamp > before:
+                        continue
 
-                        stamp = self._datetime_from_stamp(message["timestamp"])
-                        if stamp < after or stamp > before:
-                            continue
+                    del message["timestamp"]
+                    message = {"timestamp": stamp, **message}
+                    calc_success_rate = self._calc_success_rate(message)
 
-                        del message["timestamp"]
-                        message = {"timestamp": stamp, **message}
-                        calc_success_rate = self._calc_success_rate(message)
+                    if calc_success_rate < success_rate[0] or calc_success_rate > success_rate[1]:
+                        continue
 
-                        if calc_success_rate < success_rate[0] or calc_success_rate > success_rate[1]:
-                            continue
-
-                        message["success_rate"] = calc_success_rate
-                        logs.append(message)
+                    message["success_rate"] = calc_success_rate
+                    logs.append(message)
 
         sorted_ = sorted(logs, key=lambda log: log[sort_by], reverse=sort_by_direction == "desc")
         if limit is not None:
@@ -598,34 +594,30 @@ class LoggerJSON(LoggerBASE):
             before = datetime.max
 
         logs = []
-        for path, dirs, files in os.walk(self.path):
-            for filename in files:
-                if not filename.endswith(".json"):
+        for filename in self._get_json_files():
+            with open(filename, 'r', encoding="utf-8") as reader:
+                data = json.load(reader)
+
+            if guild is not None and data["id"] != guild:
+                continue
+
+            guild_dict = {"name": data["name"], "id": data["id"], "type": data["type"]}
+
+            for invite_id, invite_logs in data["invite_tracking"].items():
+                if invite is not None and invite_id != invite:
                     continue
 
-                with open(os.path.join(path, filename), 'r', encoding="utf-8") as reader:
-                    data = json.load(reader)
+                for log in invite_logs:
+                    log["guild"] = guild_dict
+                    log["invite"] = f"https://discord.gg/{invite_id}"
 
-                if guild is not None and data["id"] != guild:
-                    continue
-
-                guild_dict = {"name": data["name"], "id": data["id"], "type": data["type"]}
-
-                for invite_id, invite_logs in data["invite_tracking"].items():
-                    if invite is not None and invite_id != invite:
+                    stamp = self._datetime_from_stamp(log["timestamp"])
+                    if stamp < after or stamp > before:
                         continue
 
-                    for log in invite_logs:
-                        log["guild"] = guild_dict
-                        log["invite"] = f"https://discord.gg/{invite_id}"
-
-                        stamp = self._datetime_from_stamp(log["timestamp"])
-                        if stamp < after or stamp > before:
-                            continue
-
-                        del log["timestamp"]
-                        log = {"timestamp": stamp, **log}
-                        logs.append(log)
+                    del log["timestamp"]
+                    log = {"timestamp": stamp, **log}
+                    logs.append(log)
         
         sorted_ = sorted(logs, key=lambda log: log[sort_by], reverse=sort_by_direction == "desc")
         if limit is not None:
@@ -726,6 +718,12 @@ class LoggerJSON(LoggerBASE):
                     continue
 
                 logs.remove(log)
+
+    def _get_json_files(self) -> Iterator[str]:
+        for path, dirs, files in os.walk(self.path):
+            for filename in files:
+                if filename.endswith(".json"):
+                    yield os.path.join(path, filename)
 
 
 async def initialize(logger: LoggerBASE) -> None:
