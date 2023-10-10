@@ -453,12 +453,7 @@ class LoggerJSON(LoggerBASE):
         sort_by_direction: Literal["asc", "desc"] = "desc",
         limit: Optional[int] = 500
     ):
-        if after is None:
-            after = datetime.min
-
-        if before is None:
-            before = datetime.max
-
+        after, before = self._limit_dates(after, before)
         logs = []
         for filename in self._get_json_files():
             with open(filename, 'r', encoding="utf-8") as reader:
@@ -478,20 +473,18 @@ class LoggerJSON(LoggerBASE):
                     if message_type is not None and message["type"] != message_type:
                         continue
 
-                    message["author"] = author_dict
-                    message["guild"] = guild_dict
-
                     stamp = self._datetime_from_stamp(message["timestamp"])
                     if before < stamp or stamp < after:
                         continue
 
-                    del message["timestamp"]
-                    message = {"timestamp": stamp, **message}
                     calc_success_rate = self._calc_success_rate(message)
-
                     if success_rate[0] > calc_success_rate or calc_success_rate > success_rate[1]:
                         continue
 
+                    del message["timestamp"]
+                    message = {"timestamp": stamp, **message}
+                    message["author"] = author_dict
+                    message["guild"] = guild_dict
                     message["success_rate"] = calc_success_rate
                     logs.append(message)
 
@@ -500,15 +493,6 @@ class LoggerJSON(LoggerBASE):
             sorted_ = sorted_[:limit]
 
         return sorted_
-
-    def _calc_success_rate(self, message: dict) -> float:
-        channel_ctx = message.get("channels")
-        if channel_ctx is not None:
-            len_s = len(channel_ctx["successful"])
-            calc_success_rate = 100.00 * len_s / (len(channel_ctx["failed"]) + len_s)
-        else:
-            calc_success_rate = 100.00 if message["success_info"]["success"] else 0.0
-        return calc_success_rate
 
     async def analytic_get_num_messages(
         self,
@@ -584,12 +568,7 @@ class LoggerJSON(LoggerBASE):
         sort_by_direction: Literal['asc', 'desc'] = "desc",
         limit: Optional[int] = 50
     ) -> list:
-        if after is None:
-            after = datetime.min
-
-        if before is None:
-            before = datetime.max
-
+        after, before = self._limit_dates(after, before)
         logs = []
         for filename in self._get_json_files():
             with open(filename, 'r', encoding="utf-8") as reader:
@@ -722,6 +701,23 @@ class LoggerJSON(LoggerBASE):
                 if filename.endswith(".json"):
                     yield os.path.join(path, filename)
 
+    def _limit_dates(self, after, before):
+        if after is None:
+            after = datetime.min
+
+        if before is None:
+            before = datetime.max
+        return after,before
+
+    def _calc_success_rate(self, message: dict) -> float:
+        channel_ctx = message.get("channels")
+        if channel_ctx is not None:
+            len_s = len(channel_ctx["successful"])
+            calc_success_rate = 100.00 * len_s / (len(channel_ctx["failed"]) + len_s)
+        else:
+            calc_success_rate = 100.00 if message["success_info"]["success"] else 0.0
+
+        return calc_success_rate
 
 async def initialize(logger: LoggerBASE) -> None:
     """
