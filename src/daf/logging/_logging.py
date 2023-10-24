@@ -3,16 +3,21 @@ This module is responsible for the logging in daf.
 It contains all the logging classes.
 """
 from datetime import datetime, date
-from typing import Optional, Literal, Union, Tuple, List
+from typing import Optional, Literal, Union, Tuple, List, Any, Set, get_args, Iterator
 
 from .tracing import trace, TraceLEVELS
 from ..misc import doc, async_util
+from ..misc import write_non_exist
+from ..misc.instance_track import track_id
 
 
 import json
 import csv
 import pathlib
 import shutil
+import os
+import asyncio
+import time
 
 __all__ = (
     "LoggerBASE",
@@ -50,8 +55,12 @@ class LoggerBASE:
     fallback: Optional[LoggerBASE]
         The manager to use, in case saving using this manager fails.
     """
+
+    _mutex: asyncio.Lock
+
     def __init__(self, fallback = None) -> None:
         self.fallback = fallback
+        write_non_exist(self, "_mutex", asyncio.Lock())
 
     async def initialize(self) -> None:
         "Initializes self and the fallback"
@@ -64,11 +73,11 @@ class LoggerBASE:
                 self.fallback = None
 
     async def _save_log(
-            self,
-            guild_context: dict,
-            message_context: Optional[dict] = None,
-            author_context: Optional[dict] = None,
-            invite_context: Optional[dict] = None
+        self,
+        guild_context: dict,
+        message_context: Optional[dict] = None,
+        author_context: Optional[dict] = None,
+        invite_context: Optional[dict] = None
     ):
         """
         Saves the log of either message attempt or member join into a guild.
@@ -87,17 +96,17 @@ class LoggerBASE:
         raise NotImplementedError
 
     async def analytic_get_num_messages(
-            self,
-            guild: Union[int, None] = None,
-            author: Union[int, None] = None,
-            after: Union[datetime, None] = None,
-            before: Union[datetime, None] = None,
-            guild_type: Union[Literal["USER", "GUILD"], None] = None,
-            message_type: Union[Literal["TextMESSAGE", "VoiceMESSAGE", "DirectMESSAGE"], None] = None,
-            sort_by: Literal["successful", "failed", "guild_snow", "guild_name", "author_snow", "author_name"] = "successful",
-            sort_by_direction: Literal["asc", "desc"] = "desc",
-            limit: int = 500,
-            group_by: Literal["year", "month", "day"] = "day"
+        self,
+        guild: Union[int, None] = None,
+        author: Union[int, None] = None,
+        after: Union[datetime, None] = None,
+        before: Union[datetime, None] = None,
+        guild_type: Union[Literal["USER", "GUILD"], None] = None,
+        message_type: Union[Literal["TextMESSAGE", "VoiceMESSAGE", "DirectMESSAGE"], None] = None,
+        sort_by: Literal["successful", "failed", "guild_snow", "guild_name", "author_snow", "author_name"] = "successful",
+        sort_by_direction: Literal["asc", "desc"] = "desc",
+        limit: int = 500,
+        group_by: Literal["year", "month", "day"] = "day"
     ) -> List[Tuple[date, int, int, int, str, int, str]]:
         raise NotImplementedError
 
@@ -140,6 +149,20 @@ class LoggerBASE:
     ) -> list:
         raise NotImplementedError
 
+    async def delete_logs(self, table: Any, logs: List[Any]):
+        """
+        Method used to delete log objects objects.
+
+        Parameters
+        ------------
+        table: Any
+            The logging table to delete from.
+        primary_keys: List[int]
+            List of Primary Key IDs that match the rows of the table to delete.
+        """
+        raise NotImplementedError
+
+    @async_util.with_semaphore("_mutex")
     async def update(self, **kwargs):
         """
         Used to update the original parameters.
@@ -258,9 +281,15 @@ class LoggerCSV(LoggerBASE):
                 raise OSError(*exc.args) from exc  # Raise OSError for any type of exceptions
 
 
+@track_id
 @doc.doc_category("Logging reference", path="logging")
 class LoggerJSON(LoggerBASE):
     """
+    .. versionchanged:: v3.1
+        The index of each log is now a snowflake ID.
+        It consists of <timestamp in ms since epoch> | <sequence number>.
+        <sequence number> is of fixed size 8 bits, while timestamp is not of fixed size.
+
     .. versionchanged:: v2.8
         When file reaches size of 100 kilobytes, a new file is created.
 
@@ -289,12 +318,31 @@ class LoggerJSON(LoggerBASE):
         fallback: Optional[LoggerBASE] = None
     ) -> None:
         self.path = path
+        self._sequence_number = 0
         super().__init__(fallback)
 
     def initialize(self):
         trace(f"{type(self).__name__} logs will be saved to {self.path}")
         return super().initialize()
 
+    def _generate_snowflake(self) -> int:
+        """
+        Generates an unique snowflake index (id) for identifying logs.
+        The returned number is not fixed size and it consists of
+        <sequence number> | <timestamp in ms since epoch>.
+        <sequence number> is of fixed size 8 bits.
+        """
+        stamp = int(time.time() * 1000)
+        seq = self._sequence_number
+        snowflake = (
+            seq |
+            (stamp << 8)
+        )
+
+        self._sequence_number = (seq + 1) % 0xFF  # modules by max value of 8 bits
+        return snowflake
+
+    @async_util.with_semaphore("_mutex")
     async def _save_log(
         self,
         guild_context: dict,
@@ -371,7 +419,7 @@ class LoggerJSON(LoggerBASE):
 
                 messages.insert(0, {
                     **message_context,
-                    "index": messages[0]["index"] + 1 if len(messages) else 0,
+                    "index": self._generate_snowflake(),
                     "timestamp": timestamp}
                 )
 
@@ -384,14 +432,292 @@ class LoggerJSON(LoggerBASE):
 
                 invite_list: list = json_data_invites[invite_id]
                 invite_list.insert(0, {
-                    **invite_context["member"],
-                    "index": invite_list[0]["index"] + 1 if len(invite_list) else 0,
+                    "member": {**invite_context["member"]},
+                    "index": self._generate_snowflake(),
                     "timestamp": timestamp}
                 )
 
             json.dump(json_data, f_writer, indent=4, ensure_ascii=False)
             f_writer.truncate()  # Remove any old data
 
+    async def analytic_get_message_log(
+        self,
+        guild: Union[int, None] = None,
+        author: Union[int, None] = None,
+        after: Union[datetime, None] = None,
+        before: Union[datetime, None] = None,
+        success_rate: Tuple[float, float] = (0, 100),
+        guild_type: Union[Literal["USER", "GUILD"], None] = None,
+        message_type: Union[Literal["TextMESSAGE", "VoiceMESSAGE", "DirectMESSAGE"], None] = None,
+        sort_by: Literal["timestamp", "success_rate"] = "timestamp",
+        sort_by_direction: Literal["asc", "desc"] = "desc",
+        limit: Optional[int] = 500
+    ):
+        after, before = self._limit_dates(after, before)
+        logs = []
+        for filename in self._get_json_files():
+            with open(filename, 'r', encoding="utf-8") as reader:
+                data = json.load(reader)
+
+            if guild_type is not None and data["type"] != guild_type or guild is not None and data["id"] != guild:
+                continue
+
+            guild_dict = {"name": data["name"], "id": data["id"], "type": data["type"]}
+
+            for author_ctx in data["message_tracking"].values():
+                author_dict = {"name": author_ctx["name"], "id": author_ctx["id"]}
+                if author is not None and author_ctx["id"] != author:
+                    continue
+
+                for message in author_ctx["messages"]:
+                    if message_type is not None and message["type"] != message_type:
+                        continue
+
+                    stamp = self._datetime_from_stamp(message["timestamp"])
+                    if before < stamp or stamp < after:
+                        continue
+
+                    calc_success_rate = self._calc_success_rate(message)
+                    if success_rate[0] > calc_success_rate or calc_success_rate > success_rate[1]:
+                        continue
+
+                    del message["timestamp"]
+                    message = {"timestamp": stamp, **message}
+                    message["author"] = author_dict
+                    message["guild"] = guild_dict
+                    message["success_rate"] = calc_success_rate
+                    logs.append(message)
+
+        sorted_ = sorted(logs, key=lambda log: log[sort_by], reverse=sort_by_direction == "desc")
+        if limit is not None:
+            sorted_ = sorted_[:limit]
+
+        return sorted_
+
+    async def analytic_get_num_messages(
+        self,
+        guild: Union[int, None] = None,
+        author: Union[int, None] = None,
+        after: datetime = datetime.min,
+        before: datetime = datetime.max,
+        guild_type: Union[Literal["USER", "GUILD"], None] = None,
+        message_type: Union[Literal["TextMESSAGE", "VoiceMESSAGE", "DirectMESSAGE"], None] = None,
+        sort_by: Literal["successful", "failed", "guild_snow", "guild_name", "author_snow", "author_name"] = "successful",
+        sort_by_direction: Literal["asc", "desc"] = "desc",
+        limit: int = 500,
+        group_by: Literal["year", "month", "day"] = "day"
+    ) -> list:
+        logs = await self.analytic_get_message_log(
+            guild,
+            author,
+            after,
+            before,
+            guild_type=guild_type,
+            message_type=message_type,
+            limit=None
+        )
+        cuts = {}
+        if not len(logs):
+            return []
+
+        regions = ["day", "month", "year"]
+        regions_left = list(reversed(regions[regions.index(group_by):]))
+
+        sort_by_values = get_args(LoggerJSON.analytic_get_num_messages.__annotations__["sort_by"])
+
+        def get_region_text(stamp):
+            return '-'.join(f"{getattr(stamp, region):02d}" for region in regions_left)
+
+        for log in logs:
+            time_group = get_region_text(log["timestamp"])
+            guild = log["guild"]
+            author = log["author"]
+            group_value = time_group, guild["id"], author["id"]
+            if group_value not in cuts:
+                cut_group = cuts[group_value] = [
+                    time_group,
+                    0,
+                    0,
+                    guild["id"],
+                    guild["name"],
+                    author["id"],
+                    author["name"]
+                ]
+            else:
+                cut_group = cuts[group_value]
+
+            if log["success_rate"] == 100:
+                cut_group[1] += 1
+            else:
+                cut_group[2] += 1
+
+        # key: first index is timestamp group, so offset by one and then calculate index by annotation position
+        return sorted(
+            cuts.values(),
+            key=lambda row: row[sort_by_values.index(sort_by) + 1],
+            reverse=sort_by_direction == "desc"
+        )[:limit]
+    
+    async def analytic_get_invite_log(
+        self,
+        guild: Optional[int] = None,
+        invite: Optional[str] = None,
+        after: Optional[datetime] = None,
+        before: Optional[datetime] = None,
+        sort_by: Literal['timestamp'] = "timestamp",
+        sort_by_direction: Literal['asc', 'desc'] = "desc",
+        limit: Optional[int] = 50
+    ) -> list:
+        after, before = self._limit_dates(after, before)
+        logs = []
+        for filename in self._get_json_files():
+            with open(filename, 'r', encoding="utf-8") as reader:
+                data = json.load(reader)
+
+            if guild is not None and data["id"] != guild:
+                continue
+
+            guild_dict = {"name": data["name"], "id": data["id"], "type": data["type"]}
+
+            for invite_id, invite_logs in data["invite_tracking"].items():
+                if invite is not None and invite_id != invite:
+                    continue
+
+                for log in invite_logs:
+                    log["guild"] = guild_dict
+                    log["invite"] = f"https://discord.gg/{invite_id}"
+
+                    stamp = self._datetime_from_stamp(log["timestamp"])
+                    if stamp < after or stamp > before:
+                        continue
+
+                    del log["timestamp"]
+                    log = {"timestamp": stamp, **log}
+                    logs.append(log)
+        
+        sorted_ = sorted(logs, key=lambda log: log[sort_by], reverse=sort_by_direction == "desc")
+        if limit is not None:
+            sorted_ = sorted_[:limit]
+
+        return sorted_
+
+    async def analytic_get_num_invites(
+        self,
+        guild: Optional[int] = None,
+        after: Optional[datetime] = None,
+        before: Optional[datetime] = None,
+        sort_by: Literal['count', 'guild_snow', 'guild_name', 'invite_id'] = "count",
+        sort_by_direction: Literal['asc', 'desc'] = "desc",
+        limit: int = 500,
+        group_by: Literal['year', 'month', 'day'] = "day"
+    ) -> list:
+        logs = await self.analytic_get_invite_log(
+            guild,
+            after,
+            before,
+            limit=None
+        )
+        cuts = {}
+        if not len(logs):
+            return []
+
+        regions = ["day", "month", "year"]
+        regions_left = list(reversed(regions[regions.index(group_by):]))
+
+        sort_by_values = get_args(LoggerJSON.analytic_get_num_invites.__annotations__["sort_by"])
+
+        def get_region_text(stamp):
+            return '-'.join(f"{getattr(stamp, region):02d}" for region in regions_left)
+
+        for log in logs:
+            time_group = get_region_text(log["timestamp"])
+            guild = log["guild"]
+            invite = log["invite"]
+            group_value = time_group, guild["id"], invite
+            if group_value not in cuts:
+                cut_group = cuts[group_value] = [
+                    time_group,
+                    0,
+                    guild["id"],
+                    guild["name"],
+                    invite
+                ]
+            else:
+                cut_group = cuts[group_value]
+
+            cut_group[1] += 1
+
+        # key: first index is timestamp group, so offset by one and then calculate index by annotation position
+        return sorted(
+            cuts.values(),
+            key=lambda row: row[sort_by_values.index(sort_by) + 1],
+            reverse=sort_by_direction == "desc"
+        )[:limit]
+
+    @async_util.with_semaphore("_mutex")
+    async def delete_logs(self, logs: List[dict]):
+        if "type" in logs[0]:  # Message log
+            filterer = self._remove_message_logs
+        else:  # Invite log
+            filterer = self._remove_invite_logs
+
+        indexes = set(x["index"] for x in logs)
+        for path, dirs, files in os.walk(self.path):
+            for filename in files:
+                if filename.endswith(".json"):
+                    with open(os.path.join(path, filename), 'r+', encoding="utf-8") as f_log:
+                        data = json.load(f_log)
+                        filterer(data, indexes)
+                        f_log.seek(0)
+                        f_log.truncate()
+                        json.dump(data, f_log, indent=4)
+
+    def _datetime_from_stamp(self, timestamp: str):
+        date_, time_ = timestamp.split(' ')
+        day, month, year = map(int, date_.split('.'))
+        hour, minute, second = map(int, time_.split(':'))
+        stamp = datetime(year, month, day, hour, minute, second)
+        return stamp
+
+    def _remove_message_logs(self, data: dict, indexes: Set[int]):
+        for author_ctx in data["message_tracking"].values():
+            for message in author_ctx["messages"].copy():
+                if message["index"] not in indexes:
+                    continue
+
+                author_ctx["messages"].remove(message)
+
+    def _remove_invite_logs(self, data: dict, indexes: Set[int]):
+        for logs in data["invite_tracking"].values():
+            for log in logs.copy():
+                if log["index"] not in indexes:
+                    continue
+
+                logs.remove(log)
+
+    def _get_json_files(self) -> Iterator[str]:
+        for path, dirs, files in os.walk(self.path):
+            for filename in files:
+                if filename.endswith(".json"):
+                    yield os.path.join(path, filename)
+
+    def _limit_dates(self, after, before):
+        if after is None:
+            after = datetime.min
+
+        if before is None:
+            before = datetime.max
+        return after,before
+
+    def _calc_success_rate(self, message: dict) -> float:
+        channel_ctx = message.get("channels")
+        if channel_ctx is not None:
+            len_s = len(channel_ctx["successful"])
+            calc_success_rate = 100.00 * len_s / (len(channel_ctx["failed"]) + len_s)
+        else:
+            calc_success_rate = 100.00 if message["success_info"]["success"] else 0.0
+
+        return calc_success_rate
 
 async def initialize(logger: LoggerBASE) -> None:
     """
@@ -440,10 +766,10 @@ def _set_logger(logger: LoggerBASE):
 
 
 async def save_log(
-        guild_context: dict,
-        message_context: Optional[dict] = None,
-        author_context: Optional[dict] = None,
-        invite_context: Optional[dict] = None
+    guild_context: dict,
+    message_context: Optional[dict] = None,
+    author_context: Optional[dict] = None,
+    invite_context: Optional[dict] = None
 ):
     """
     Saves the log to the selected manager or saves

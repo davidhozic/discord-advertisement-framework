@@ -284,10 +284,6 @@ class LoggerSQL(logging.LoggerBASE):
         # Set in ._begin_engine
         self.engine: sqa.engine.Engine = None
         self.session_maker: sessionmaker = None
-
-        # Semaphore used to prevent multiple tasks from trying to access the `._save_log()` method at once.
-        # Also used in the `.update()` method to prevent race conditions.
-        self.safe_sem = asyncio.Semaphore(1)
         self.reconnecting = False  # Flag that is True while reconnecting, used for emergency exit of other tasks
 
         # Caching (to avoid unnecessary queries)
@@ -823,7 +819,7 @@ class LoggerSQL(logging.LoggerBASE):
         session.add(message_log_obj)
 
     # with_semaphore prevents multiple tasks from attempting to do operations on the database at the same time.
-    @async_util.with_semaphore("safe_sem", 1)
+    @async_util.with_semaphore("_mutex")
     async def _save_log(
         self,
         guild_context: dict,
@@ -1251,7 +1247,7 @@ class LoggerSQL(logging.LoggerBASE):
             )
             return list(*zip(*logs.unique().all()))
 
-    async def delete_logs(self, table: type, primary_keys: List[int]):
+    async def delete_logs(self, logs: List[Union[MessageLOG, InviteLOG]]):
         """
         Method used to delete log objects objects.
 
@@ -1262,11 +1258,13 @@ class LoggerSQL(logging.LoggerBASE):
         primary_keys: List[int]
             List of Primary Key IDs that match the rows of the table to delete.
         """
+        session: Union[AsyncSession, Session]
+        table = type(logs[0])
         async with self.session_maker() as session:
-            await self._run_async(session.execute, delete(table).where(table.id.in_(primary_keys)))
+            await self._run_async(session.execute, delete(table).where(table.id.in_([log.id for log in logs])))
             await self._run_async(session.commit)
 
-    @async_util.with_semaphore("safe_sem", 1)
+    @async_util.with_semaphore("_mutex")
     async def update(self, **kwargs):
         """
         .. versionadded:: v2.0

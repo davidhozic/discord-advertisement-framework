@@ -236,7 +236,7 @@ class Application():
                 # for acc in accs:
                 #     acc.intents = None  # Intents cannot be loaded properly
 
-                values = convert_to_object_info(accs, save_original=False)
+                values = convert_to_object_info(accs)
                 if not len(values):
                     raise ValueError("Live view has no elements.")
 
@@ -459,11 +459,10 @@ class Application():
         self.tabman_mf.add(tab_analytics, text="Analytics")
 
         def create_analytic_frame(
-                getter_history: str,
-                getter_counts: str,
-                log_class: type,
-                counts_coldata: dict,
-                tab_name: str
+            getter_history: str,
+            getter_counts: str,
+            counts_coldata: dict,
+            tab_name: str
         ):
             """
             Creates a logging tab.
@@ -474,8 +473,6 @@ class Application():
                 The name of the LoggerBASE method that is used to retrieve actual logs.
             getter_counts: str
                 The name of the LoggerBASE method that is used to retrieve counts.
-            log_class: type
-                The class of the log entry class (xLOG).
             counts_coldata: dict
                 Column data for TableView used for counts.
             tab_name: str
@@ -484,22 +481,22 @@ class Application():
             async def analytics_load_history():
                 gui_daf_assert_running()
                 logger = await self.connection.get_logger()
-                if not isinstance(logger, daf.LoggerSQL):
-                    raise ValueError("Analytics only allowed when using LoggerSQL")
 
                 param_object = combo_history.combo.get()
                 param_object_params = convert_to_objects(param_object.data)
-                items = await self.connection.execute_method(it.ObjectReference(it.get_object_id(logger)), getter_history, **param_object_params)
-                items = convert_to_object_info(items)
+                items = await self.connection.execute_method(
+                    it.ObjectReference(it.get_object_id(logger)), getter_history, **param_object_params
+                )
+                items = convert_to_object_info(items, SaveBy.OBJECT)
                 lst_history.clear()
                 lst_history.insert(tk.END, *items)
 
-            def show_log(listbox: ListBoxScrolled, type_):
+            def show_log(listbox: ListBoxScrolled):
                 selection = listbox.curselection()
                 if len(selection) == 1:
                     object_: ObjectInfo = listbox.get()[selection[0]]
                     self.open_object_edit_window(
-                        type_,
+                        object_.class_,
                         listbox,
                         old_data=object_,
                         check_parameters=False,
@@ -508,15 +505,12 @@ class Application():
                 else:
                     tkdiag.Messagebox.show_error("Select ONE item!", "Empty list!")
 
-            async def delete_logs_async(logs: List[int]):
+            async def delete_logs_async(logs: List[Any]):
                 logger = await self.connection.get_logger()
-                if not isinstance(logger, daf.LoggerSQL):
-                    raise ValueError("Analytics only allowed when using LoggerSQL")
-
                 await self.connection.execute_method(
                     it.ObjectReference(it.get_object_id(logger)),
                     "delete_logs",
-                    table=log_class, primary_keys=logs
+                    logs=logs
                 )
 
             @gui_confirm_action
@@ -525,7 +519,7 @@ class Application():
                 if len(selection):
                     all_ = listbox.get()
                     tae.async_execute(
-                        delete_logs_async([all_[i].data["id"] for i in selection]),
+                        delete_logs_async([all_[i].real_object for i in selection]),
                         wait=False,
                         pop_up=True,
                         master=self.win_main
@@ -554,7 +548,7 @@ class Application():
             ).pack(side="left", fill=tk.X)
             ttk.Button(
                 frame_msg_history_bnts,
-                command=lambda: show_log(lst_history, log_class),
+                command=lambda: show_log(lst_history),
                 text="View log"
             ).pack(side="left", fill=tk.X)
             ttk.Button(
@@ -573,9 +567,6 @@ class Application():
             async def analytics_load_num():
                 gui_daf_assert_running()
                 logger = await self.connection.get_logger()
-                if not isinstance(logger, daf.LoggerSQL):
-                    raise ValueError("Analytics only allowed when using LoggerSQL")
-
                 param_object = combo_count.combo.get()
                 parameters = convert_to_objects(param_object.data)
                 count = await self.connection.execute_method(it.ObjectReference(it.get_object_id(logger)), getter_counts, **parameters)
@@ -612,8 +603,6 @@ class Application():
         create_analytic_frame(
             "analytic_get_message_log",
             "analytic_get_num_messages",
-            # SQL is an optional feature so fake the object if not present
-            getattr(daf.logging.sql, "MessageLOG", object),
             [
                 {"text": "Date", "stretch": True},
                 {"text": "Number of successful", "stretch": True},
@@ -630,8 +619,6 @@ class Application():
         create_analytic_frame(
             "analytic_get_invite_log",
             "analytic_get_num_invites",
-            # SQL is an optional feature so fake the object if not present
-            getattr(daf.logging.sql, "InviteLOG", object),
             [
                 {"text": "Date", "stretch": True},
                 {"text": "Count", "stretch": True},
@@ -691,7 +678,7 @@ class Application():
     def load_live_accounts(self):
         async def load_accounts():
             gui_daf_assert_running()
-            object_infos = convert_to_object_info(await self.connection.get_accounts(), save_original=True)
+            object_infos = convert_to_object_info(await self.connection.get_accounts(), save_original=SaveBy.REFERENCE)
             self.list_live_objects.clear()
             self.list_live_objects.insert(tk.END, *object_infos)
 

@@ -167,7 +167,7 @@ class NewObjectFrameBase(ttk.Frame):
         """
 
         CAST_FUNTIONS = {
-            dict: lambda v: convert_dict_to_object_info(json.loads(v))
+            # dict: lambda v: convert_dict_to_object_info(json.loads(v))
         }
 
         # Validate literals
@@ -387,6 +387,14 @@ class NewObjectFrameStruct(NewObjectFrameBase):
     additional_values: Dict[str, Any]
         A mapping of additional values to be inserted into corresponding field.
     """
+    def __new__(cls, *args, **kwargs):
+        if kwargs.get("allow_save", True):
+            obj = super().__new__(NewObjectFrameStruct)
+        else:
+            obj = super().__new__(NewObjectFrameStructView)
+
+        return obj
+
     def __init__(
         self,
         class_,
@@ -450,7 +458,6 @@ class NewObjectFrameStruct(NewObjectFrameBase):
 
         def fill_values(k: str, entry_types: list, menu: ttk.Menu, combo: ComboBoxObjects):
             "Fill ComboBox values based on types in ``entry_types`` and create New <object_type> buttons"
-            last_list_type = None
             any_filled = False
             for entry_type in entry_types:
                 if get_origin(entry_type) is Literal:
@@ -468,9 +475,6 @@ class NewObjectFrameStruct(NewObjectFrameBase):
                     if bool not in entry_types:
                         combo.insert(tk.END, None)
                 else:  # Type not supported, try other types
-                    if get_origin(entry_type) in {list, tuple, set, Iterable, ABCIterable}:
-                        last_list_type = entry_type
-
                     any_filled = True
                     if self.allow_save:
                         menu.add_command(
@@ -484,25 +488,7 @@ class NewObjectFrameStruct(NewObjectFrameBase):
 
             # The class of last list like type. Needed when "Edit selected" is used
             # since we don't know what type it was
-            return last_list_type, any_filled
-
-        @gui_except(self)
-        def edit_selected(key: str, combo: ComboBoxObjects, original_type = None):
-            selection = combo.get()
-
-            # Convert selection to any of the allowed types.
-            # This is used for casting manually typed values (which are strings) into appropriate types
-            # Eg. if a number is manually typed in and Edit button is clicked, this would result in a string type
-            # edit request, which is not really the intend. The intend is to edit a number in this example.
-            if isinstance(selection, str):
-                selection = self.cast_type(selection, self._map[key][1])
-
-            if isinstance(selection, list):
-                return self.new_object_frame(original_type, combo, old_data=selection)
-            if isinstance(selection, ObjectInfo):
-                return self.new_object_frame(selection.class_, combo, old_data=selection)
-            else:
-                return self.new_object_frame(type(selection), combo, old_data=selection)
+            return any_filled
 
         max_attr_name_len = max(*map(len, annotations), 15) - 2
         
@@ -527,12 +513,12 @@ class NewObjectFrameStruct(NewObjectFrameBase):
 
 
             # Fill values
-            last_list_type, any_filled = fill_values(k, entry_types, menu_new, combo)
+            any_filled = fill_values(k, entry_types, menu_new, combo)
             bnt_edit = ttk.Button(
                 frame_annotated,
                 text="🖋️",
                 width=3,
-                command=self._lambda(edit_selected, k, w, last_list_type)
+                command=self._lambda(self._edit_selected, k, w)
             )
 
             bnt_copy_paste = ttk.Menubutton(frame_annotated, text="C/P")
@@ -684,6 +670,65 @@ class NewObjectFrameStruct(NewObjectFrameBase):
 
         return values
 
+    @gui_except
+    def _edit_selected(self, key: str, combo: ComboBoxObjects):
+        selection = combo.get()
+
+        # Convert selection to any of the allowed types.
+        # This is used for casting manually typed values (which are strings) into appropriate types
+        # Eg. if a number is manually typed in and Edit button is clicked, this would result in a string type
+        # edit request, which is not really the intend. The intend is to edit a number in this example.
+        if isinstance(selection, str):
+            selection = self.cast_type(selection, self._map[key][1])
+
+        if isinstance(selection, list):
+            types = self.convert_types(get_annotations(self.class_)[key])
+            for type_ in types:
+                if get_origin(type_) in {list, tuple, set, Iterable, ABCIterable}:
+                    list_type = type_
+                    break
+            else:
+                list_type = None
+
+            return self.new_object_frame(list_type, combo, old_data=selection)
+        if isinstance(selection, ObjectInfo):
+            return self.new_object_frame(selection.class_, combo, old_data=selection)
+        else:
+            return self.new_object_frame(type(selection), combo, old_data=selection)
+
+
+class NewObjectFrameStructView(NewObjectFrameStruct):
+    """
+    Same as :class:`NewObjectFrameStruct`, but creates a wrapper Viewer class, which's attributes automatically
+    get mapped as annotations, which the :class:`NewObjectFrameStruct` knows how to handle.
+    """
+    def __init__(self, class_, *args, **kwargs):
+        class Viewer:
+            def __init__(self) -> None:
+                pass
+
+        Viewer.__name__ = class_.__name__
+
+        old_data: ObjectInfo = kwargs["old_data"]
+        Viewer.__init__.__annotations__ = {k: v.class_ if isinstance(v, ObjectInfo) else type(v) for k, v in old_data.data.items()}
+        super().__init__(Viewer, *args, **kwargs)
+
+    @gui_except
+    def _edit_selected(self, key: str, combo: ComboBoxObjects):
+        selection = combo.get()
+
+        # Convert selection to any of the allowed types.
+        # This is used for casting manually typed values (which are strings) into appropriate types
+        # Eg. if a number is manually typed in and Edit button is clicked, this would result in a string type
+        # edit request, which is not really the intend. The intend is to edit a number in this example.
+        if isinstance(selection, str):
+            selection = self.cast_type(selection, self._map[key][1])
+
+        if isinstance(selection, ObjectInfo):
+            return self.new_object_frame(selection.class_, combo, old_data=selection)
+        else:
+            return self.new_object_frame(type(selection), combo, old_data=selection)
+
 
 class NewObjectFrameNumber(NewObjectFrameBase):
     def __init__(self, class_: Any, return_widget: Any, parent=None, old_data: Any = None, check_parameters: bool = True, allow_save=True):
@@ -708,18 +753,15 @@ class NewObjectFrameNumber(NewObjectFrameBase):
 
 
 class NewObjectFrameIterable(NewObjectFrameBase):
-    def __init__(self, class_: Any, return_widget: Any, parent=None, old_data: list = None, check_parameters: bool = True, allow_save=True):
-        def edit_selected(lb: ListBoxScrolled):
-            selection = lb.curselection()
-            if len(selection) == 1:
-                object_ = lb.get()[selection[0]]
-                if isinstance(object_, ObjectInfo):
-                    self.new_object_frame(object_.class_, lb, old_data=object_)
-                else:
-                    self.new_object_frame(type(object_), lb, old_data=object_)
-            else:
-                tkdiag.Messagebox.show_error("Select ONE item!", "Selection error", parent=self)
+    def __new__(cls, *args, **kwargs):
+        if kwargs.get("allow_save", True):
+            obj = super().__new__(NewObjectFrameIterable)
+        else:
+            obj = super().__new__(NewObjectFrameIterableView)
 
+        return obj
+
+    def __init__(self, class_: Any, return_widget: Any, parent=None, old_data: list = None, check_parameters: bool = True, allow_save=True):
         dpi_5 = dpi_scaled(5)
         super().__init__(class_, return_widget, parent, old_data, check_parameters, allow_save)
         self.storage_widget = w = ListBoxScrolled(self.frame_main, height=20)
@@ -731,28 +773,25 @@ class NewObjectFrameIterable(NewObjectFrameBase):
 
         ttk.Button(frame_cp, text="Copy", command=w.save_to_clipboard).pack(side="left", fill=tk.X, expand=True)
         ttk.Button(frame_cp, text="Paste", command=w.paste_from_clipboard).pack(side="left", fill=tk.X, expand=True)
-        if self.allow_save:
-            menubtn = ttk.Menubutton(frame_edit_remove, text="Add object")
-            menu = tk.Menu(menubtn)
-            menubtn.configure(menu=menu)
-            menubtn.pack()
-            ttk.Button(frame_edit_remove, text="Remove", command=w.delete_selected).pack(fill=tk.X)
-            ttk.Button(frame_edit_remove, text="Edit", command=lambda: edit_selected(w)).pack(fill=tk.X)
+        menubtn = ttk.Menubutton(frame_edit_remove, text="Add object")
+        menu = tk.Menu(menubtn)
+        menubtn.configure(menu=menu)
+        menubtn.pack()
+        ttk.Button(frame_edit_remove, text="Remove", command=w.delete_selected).pack(fill=tk.X)
+        ttk.Button(frame_edit_remove, text="Edit", command=lambda: self._edit_selected()).pack(fill=tk.X)
 
-            frame_up_down = ttk.Frame(frame_edit_remove)
-            frame_up_down.pack(fill=tk.X, expand=True, pady=dpi_5)
-            ttk.Button(frame_up_down, text="Up", command=lambda: w.move_selection(-1)).pack(side="left", fill=tk.X, expand=True)
-            ttk.Button(frame_up_down, text="Down", command=lambda: w.move_selection(1)).pack(side="left", fill=tk.X, expand=True)
+        frame_up_down = ttk.Frame(frame_edit_remove)
+        frame_up_down.pack(fill=tk.X, expand=True, pady=dpi_5)
+        ttk.Button(frame_up_down, text="Up", command=lambda: w.move_selection(-1)).pack(side="left", fill=tk.X, expand=True)
+        ttk.Button(frame_up_down, text="Down", command=lambda: w.move_selection(1)).pack(side="left", fill=tk.X, expand=True)
 
-            args = get_args(self.class_)
-            args = self.convert_types(args)
-            if get_origin(args[0]) is Union:
-                args = get_args(args[0])
+        args = get_args(self.class_)
+        args = self.convert_types(args)
+        if get_origin(args[0]) is Union:
+            args = get_args(args[0])
 
-            for arg in args:
-                menu.add_command(label=self.get_cls_name(arg), command=self._lambda(self.new_object_frame, arg, w))
-        else:
-            ttk.Button(frame_edit_remove, text="View", command=lambda: edit_selected(w)).pack(fill=tk.X)
+        for arg in args:
+            menu.add_command(label=self.get_cls_name(arg), command=self._lambda(self.new_object_frame, arg, w))
 
         w.pack(side="left", fill=tk.BOTH, expand=True)
 
@@ -770,7 +809,41 @@ class NewObjectFrameIterable(NewObjectFrameBase):
 
     def to_object(self):
         return self.get_gui_data()  # List items are not to be converted
+    
+    def _edit_selected(self):
+        selection = self.storage_widget.curselection()
+        if len(selection) == 1:
+            object_ = self.storage_widget.get()[selection[0]]
+            if isinstance(object_, ObjectInfo):
+                self.new_object_frame(object_.class_, self.storage_widget, old_data=object_)
+            else:
+                self.new_object_frame(type(object_), self.storage_widget, old_data=object_)
+        else:
+            tkdiag.Messagebox.show_error("Select ONE item!", "Selection error", parent=self)
 
+
+class NewObjectFrameIterableView(NewObjectFrameIterable):
+    """
+    Same as :class:`NewObjectFrameIterable`, but only allows viewing iterable objects.
+    Also does not require annotations as supposed to the base class.
+    """
+    def __init__(self, class_: Any, return_widget: Any, parent=None, old_data: list = None, check_parameters: bool = True, allow_save=True):
+        dpi_5 = dpi_scaled(5)
+        super(NewObjectFrameIterable, self).__init__(class_, return_widget, parent, old_data, check_parameters, allow_save)
+        self.storage_widget = w = ListBoxScrolled(self.frame_main, height=20)
+
+        frame_edit_remove = ttk.Frame(self.frame_main, padding=(dpi_5, 0))
+        frame_edit_remove.pack(side="right")
+        frame_cp = ttk.Frame(frame_edit_remove)
+        frame_cp.pack(fill=tk.X, expand=True, pady=dpi_5)
+
+        ttk.Button(frame_edit_remove, text="View", command=lambda: self._edit_selected()).pack(fill=tk.X)
+        w.pack(side="left", fill=tk.BOTH, expand=True)
+
+        if old_data is not None:
+            self.load(old_data)
+
+        self.remember_gui_data()
 
 class NewObjectFrameString(NewObjectFrameBase):
     def __init__(self, class_: Any, return_widget: Any, parent=None, old_data: str = None, check_parameters: bool = True, allow_save=True):

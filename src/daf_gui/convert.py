@@ -2,9 +2,9 @@
 Modules contains definitions related to GUI object transformations.
 """
 
-from typing import Any, Union, List, get_type_hints, Generic, TypeVar, Iterable, Mapping
+from typing import Any, Union, List, get_type_hints, Generic, TypeVar, Literal, Mapping
 from contextlib import suppress
-from enum import Enum
+from enum import Enum, auto
 from inspect import signature, getmembers, isclass
 
 from daf.convert import import_class
@@ -22,11 +22,11 @@ import daf
 __all__ = (
     "ObjectInfo",
     "convert_to_objects",
+    "SaveBy",
     "convert_to_object_info",
     "convert_to_json",
     "convert_from_json",
     "convert_objects_to_script",
-    "convert_dict_to_object_info",
     "ADDITIONAL_ANNOTATIONS",
     "issubclass_noexcept",
     "get_annotations",
@@ -341,8 +341,15 @@ def convert_objects_to_script(object: Union[ObjectInfo, list, tuple, set, str]):
     return ",".join(object_data).strip(), import_data, "\n".join(other_data).strip()
 
 
+class SaveBy(Enum):
+    "Parameter enum for ``convert_to_object_info``"
+    NO_SAVE = 0
+    REFERENCE = auto()
+    OBJECT = auto()
+
+
 @daf.misc.cache.cache_result(16_384)
-def convert_to_object_info(object_: object, save_original = False):
+def convert_to_object_info(object_: object, save_original: SaveBy = SaveBy.NO_SAVE):
     """
     Converts an object into ObjectInfo.
 
@@ -350,8 +357,8 @@ def convert_to_object_info(object_: object, save_original = False):
     ---------------
     object_: object
         The object to convert.
-    save_original: bool
-        If True, will save the original object inside the ``real_object`` attribute of :class:`ObjectInfo`
+    save_original: SaveBy
+        In what way should the original be preserved. Either by reference or the ``object_`` itself.
     """
     def _convert_object_info(object_, save_original, object_type, attrs):
         data_conv = {}
@@ -375,8 +382,8 @@ def convert_to_object_info(object_: object, save_original = False):
                     data_conv[k] = convert_to_object_info(value, save_original)
 
         ret = ObjectInfo(object_type, data_conv)
-        if save_original:
-            ret.real_object = it.ObjectReference(it.get_object_id(object_))
+        if save_original is not SaveBy.NO_SAVE:
+            ret.real_object = object_ if save_original is SaveBy.OBJECT else it.ObjectReference(it.get_object_id(object_))
 
             # Convert object properties
             # This will only be aviable for live objects, since it has no configuration value,
@@ -390,7 +397,7 @@ def convert_to_object_info(object_: object, save_original = False):
 
                     try:
                         return_annotation = get_type_hints(prop.fget).get("return")
-                        property_map[name] = (convert_to_object_info(prop.fget(object_), True), return_annotation)
+                        property_map[name] = (convert_to_object_info(prop.fget(object_), save_original), return_annotation)
                     except Exception as exc:
                         trace(
                             f"Unable to get property {name} in {object_} when converting to ObjectInfo",
@@ -427,7 +434,19 @@ def convert_to_object_info(object_: object, save_original = False):
         return object_
     
     if isinstance(object_, dict):
-        return convert_dict_to_object_info(object_)
+        ref = None
+        if save_original:
+            if save_original == "ref":
+                ref = it.ObjectReference(it.get_object_id(object_))
+            else:
+                ref = object_
+
+        return ObjectInfo(
+            dict,
+            {k: convert_to_object_info(v, save_original) for k, v in object_.items()},
+            ref           
+        )
+
 
     attrs = get_conversion_map(object_type)
     return _convert_object_info(object_, save_original, object_type, attrs)
@@ -530,42 +549,3 @@ def convert_from_json(d: Union[dict, List[dict], Any]) -> ObjectInfo:
         return ObjectInfo(type_, data)
 
     return d
-
-
-def convert_dict_to_object_info(data: Union[dict, Iterable, Any]):
-    """
-    Method that converts a dict JSON into
-    It's object representation inside the GUI, that is ObjectInfo.
-
-    Parameters
-    -----------
-    data: str
-        The JSON data to convert.
-    """
-    class DictView:
-        def __init__(self) -> None:
-            raise NotImplementedError
-
-    annotations = {}
-    object_info_data = {}
-
-    if isinstance(data, dict):
-        for k, v in data.items():
-            if isinstance(v, dict):
-                v = convert_dict_to_object_info(v)
-                type_v = type(v)
-            elif isinstance(v, (list, tuple, set)):
-                v = convert_dict_to_object_info(v)
-                type_v = List[Any]
-            else:
-                type_v = type(v)
-
-            annotations[k] = type_v
-            object_info_data[k] = v
-
-        DictView.__init__.__annotations__ = annotations
-        return ObjectInfo(DictView, object_info_data)
-    elif isinstance(data, (list, tuple, set)):
-        return [convert_dict_to_object_info(x) for x in data]
-    else:
-        return data
