@@ -229,6 +229,115 @@ class LoggerCSV(LoggerBASE):
         trace(f"{type(self).__name__} logs will be saved to {self.path}")
         return super().initialize()
 
+    async def analytic_get_num_messages(
+        self,
+        guild: Union[int, None] = None,
+        author: Union[int, None] = None,
+        after: Union[datetime, None] = None,
+        before: Union[datetime, None] = None,
+        guild_type: Union[Literal["USER", "GUILD"], None] = None,
+        message_type: Union[Literal["TextMESSAGE", "VoiceMESSAGE", "DirectMESSAGE"], None] = None,
+        sort_by: Literal["successful", "failed", "guild_snow", "guild_name", "author_snow", "author_name"] = "successful",
+        sort_by_direction: Literal["asc", "desc"] = "desc",
+        limit: int = 500,
+        group_by: Literal["year", "month", "day"] = "day"
+    ) -> List[Tuple[date, int, int, int, str, int, str]]:
+        """
+
+        Parameters
+        -----------
+        guild: int
+            The snowflake id of the guild.
+        author: int
+            The snowflake id of the author.
+        after: Union[datetime, None] = None
+            Only count messages sent after the datetime.
+        before: Union[datetime, None]
+            Only count messages sent before the datetime.
+        guild_type: Literal["USER", "GUILD"] | None,
+            Type of guild.
+        message_type: Literal["TextMESSAGE", "VoiceMESSAGE", "DirectMESSAGE"] | None,
+            Type of message.
+        sort_by: Literal["successful", "failed", "guild_snow", "guild_name", "author_snow", "author_name"],
+            Sort items by selected.
+            Defaults to "successful"
+        sort_by_direction: Literal["asc", "desc"]
+            Sort items by ``sort_by`` in selected direction (asc = ascending, desc = descending).
+            Defaults to "desc"
+        limit: int = 500
+            Limit of the rows to return. Defaults to 500.
+        group_by: Literal["year", "month", "day"]
+            Results returned are grouped by ``group_by``
+
+        Returns
+        --------
+        list[tuple[date, int, int, int, str, int, str]]
+            List of tuples.
+
+            Each tuple contains:
+
+            - Date
+            - Successfule sends
+            - Failed sends
+            - Guild snowflake id,
+            - Guild name
+            - Author snowflake id,
+            - Author name
+        """
+        ...
+
+    async def analytic_get_message_log(
+            self,
+            guild: Union[int, None] = None,
+            author: Union[int, None] = None,
+            after: Union[datetime, None] = None,
+            before: Union[datetime, None] = None,
+            success_rate: Tuple[float, float] = (0, 100),
+            guild_type: Union[Literal["USER", "GUILD"], None] = None,
+            message_type: Union[Literal["TextMESSAGE", "VoiceMESSAGE", "DirectMESSAGE"], None] = None,
+            sort_by: Literal["timestamp", "success_rate"] = "timestamp",
+            sort_by_direction: Literal["asc", "desc"] = "desc",
+            limit: int = 500,
+    ) -> list:
+        raise NotImplementedError
+
+    async def analytic_get_num_invites(
+            self,
+            guild: Union[int, None] = None,
+            after: Union[datetime, None] = None,
+            before: Union[datetime, None] = None,
+            sort_by: Literal["count", "guild_snow", "guild_name", "invite_id"] = "count",
+            sort_by_direction: Literal["asc", "desc"] = "desc",
+            limit: int = 500,
+            group_by: Literal["year", "month", "day"] = "day"
+    ) -> list:
+        raise NotImplementedError
+
+    async def analytic_get_invite_log(
+        self,
+        guild: Union[int, None] = None,
+        invite: Union[str, None] = None,
+        after: Union[datetime, None] = None,
+        before: Union[datetime, None] = None,
+        sort_by: Literal["timestamp"] = "timestamp",
+        sort_by_direction: Literal["asc", "desc"] = "desc",
+        limit: int = 500,
+    ) -> list:
+        raise NotImplementedError
+
+    async def delete_logs(self, table: Any, logs: List[Any]):
+        """
+        Method used to delete log objects objects.
+
+        Parameters
+        ------------
+        table: Any
+            The logging table to delete from.
+        primary_keys: List[int]
+            List of Primary Key IDs that match the rows of the table to delete.
+        """
+        raise NotImplementedError
+
     async def _save_log(
             self,
             guild_context: dict,
