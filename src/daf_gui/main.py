@@ -25,12 +25,11 @@ if not installed:
     subprocess.check_call([sys.executable.replace("pythonw", "python"), "-m", "pip", "install", f"ttkbootstrap=={TTKBOOSTRAP_VERSION}"])
 
 
-from .convert import *
-from .dpi import *
-from .extra import *
-from .object import *
-from .storage import *
-from .utilities import *
+from .tk_object_define.convert import *
+from .tk_object_define.dpi import *
+from .tk_object_define.object_frame.window import ObjectEditWindow
+from .tk_object_define.storage import *
+from .tk_object_define.utilities import *
 from .connector import *
 
 from PIL import Image, ImageTk

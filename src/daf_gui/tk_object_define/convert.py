@@ -2,12 +2,12 @@
 Modules contains definitions related to GUI object transformations.
 """
 
-from typing import Any, Union, List, get_type_hints, Generic, TypeVar, Literal, Mapping
+from typing import Any, Union, List, get_type_hints, Generic, TypeVar, Mapping
 from contextlib import suppress
 from enum import Enum, auto
 from inspect import signature, getmembers, isclass
 
-from daf.convert import import_class
+from .utilities import import_class
 from daf.misc import instance_track as it
 from daf.logging.tracing import trace, TraceLEVELS
 

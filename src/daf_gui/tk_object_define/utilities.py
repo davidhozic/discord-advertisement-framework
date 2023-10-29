@@ -7,6 +7,7 @@ from functools import wraps
 
 import ttkbootstrap.dialogs.dialogs as tkdiag
 import asyncio
+import importlib
 
 
 CONF_TASK_SLEEP = 0.1
@@ -15,6 +16,22 @@ CONF_TASK_SLEEP = 0.1
 class GLOBAL:
     async_thread: Thread = None
     loop: asyncio.AbstractEventLoop = None
+
+
+def import_class(path: str):
+    """
+    Imports the class provided by it's ``path``.
+    """
+    path = path.split(".")
+    module_path, class_name = '.'.join(path[:-1]), path[-1]
+    try:
+        module = importlib.import_module(module_path)
+    except Exception as exc:  # Fall back for older versions, try to import from package instead of module
+        module_path = module_path.split('.')[0]
+        module = importlib.import_module(module_path)
+
+    class_ = getattr(module, class_name)
+    return class_
 
 
 def gui_except(parent = None):
