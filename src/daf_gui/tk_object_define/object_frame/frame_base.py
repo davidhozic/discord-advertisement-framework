@@ -5,8 +5,6 @@ from ..convert import *
 from ..dpi import *
 from ..utilities import *
 from ..storage import *
-from .extra import *
-from .extend import *
 
 import tkinter.ttk as ttk
 import tkinter as tk
@@ -169,36 +167,6 @@ class NewObjectFrameBase(ttk.Frame):
         frame_toolbar = ttk.Frame(self)
         frame_toolbar.pack(fill=tk.X)
         self.frame_toolbar = frame_toolbar
-
-        # Help button
-        package = class_.__module__.split(".", 1)[0]
-        help_url = HELP_URLS.get(package)
-        if help_url is not None:
-            def cmd():
-                webbrowser.open(help_url.format(self.get_cls_name(class_)))
-
-            ttk.Button(frame_toolbar, text="Help", command=cmd).pack(side="left")
-
-        # Deprecation notices
-        if len(notices := DEPRECATION_NOTICES.get(class_, [])):
-            dep_frame = ttk.Frame(self)
-            dep_frame.pack(fill=tk.X, pady=dpi_scaled(5))
-
-            def show_deprecations():
-                tkdiag.Messagebox.show_warning(
-                    f"\n{'-'*30}\n".join(f"'{title}' is scheduled for removal in v{version}.\nReason: '{reason}'" for title, version, reason in notices),
-                    "Deprecation notice",
-                    self
-                )
-            ttk.Button(dep_frame, text="Deprecation notices", bootstyle="dark", command=show_deprecations).pack(side="left")
-
-        # Additional widgets
-        add_widgets = ADDITIONAL_WIDGETS.get(class_)
-        if add_widgets is not None:
-            for add_widg in add_widgets:
-                setup_cmd = add_widg.setup_cmd
-                add_widg = add_widg.widget_class(frame_toolbar, *add_widg.args, **add_widg.kwargs)
-                setup_cmd(add_widg, self)
 
     @property
     def modified(self) -> bool:

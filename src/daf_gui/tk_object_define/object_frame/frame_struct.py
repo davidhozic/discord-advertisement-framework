@@ -9,9 +9,10 @@ from ..dpi import *
 from ..utilities import *
 
 from ..storage import *
-from .extra import *
+
 from .frame_base import *
-from .extend import *
+from ..extensions import extendable
+
 
 import ttkbootstrap as ttk
 import tkinter as tk
@@ -22,8 +23,6 @@ import inspect
 import copy
 import json
 
-import tk_async_execute as tae
-
 
 __all__ = (
     "NewObjectFrameStruct",
@@ -31,6 +30,7 @@ __all__ = (
 )
 
 
+@extendable
 class NewObjectFrameStruct(NewObjectFrameBase):
     """
     Frame for inside the :class:`ObjectEditWindow` that allows object definition.
@@ -71,7 +71,7 @@ class NewObjectFrameStruct(NewObjectFrameBase):
         allow_save = True,
         additional_values: dict = {},
     ):
-        super().__init__(class_, return_widget, parent, old_data, check_parameters, allow_save)
+        super().__init__(class_, return_widget, parent, old_data, check_parameters,allow_save)
         self._map: Dict[str, Tuple[ComboBoxObjects, Iterable[type]]] = {}
         dpi_5 = dpi_scaled(5)
 
@@ -206,67 +206,10 @@ class NewObjectFrameStruct(NewObjectFrameBase):
             combo.pack(fill=tk.X, side="right", expand=True, padx=dpi_5_h)
             self._map[k] = (w, entry_types)
 
-        self.init_method_frame()
         if old_data is not None:  # Edit
             self.load(old_data)
 
         self.remember_gui_data()
-
-    def init_method_frame(self):
-        "Inits the frame that supports method executino on live objects."
-        if (
-            self.old_gui_data is None or
-            # getattr since class_ can also be non ObjectInfo
-            getattr(self.old_gui_data, "real_object", None) is None or
-            (available_methods := EXECUTABLE_METHODS.get(self.class_)) is None or
-            not self.allow_save
-        ):
-            return
-
-        def execute_method():
-            async def runner():
-                method = frame_execute_method.combo.get()
-                if not isinstance(method, ObjectInfo):  # String typed in that doesn't match any names
-                    tkdiag.Messagebox.show_error("No method selected!", "Selection error", self.origin_window)
-                    return
-
-                method_param = convert_to_objects(method.data, skip_real_conversion=True)
-                connection = get_connection()
-                # Call the method though the connection manager
-                await connection.execute_method(
-                    self.old_gui_data.real_object,
-                    method.class_.__name__,
-                    **method_param,
-                )
-
-            tae.async_execute(runner(), wait=False, pop_up=True, master=self.origin_window)
-
-        dpi_5, dpi_10 = dpi_scaled(5), dpi_scaled(10)
-        frame_method = ttk.LabelFrame(
-            self,
-            text="Method execution (WARNING! Method data is NOT preserved when closing / saving the frame!)",
-            padding=(dpi_5, dpi_10),
-            bootstyle=ttk.INFO
-        )
-        ttk.Button(frame_method, text="Execute", command=execute_method).pack(side="left")
-        combo_values = []
-        for unbound_meth in available_methods:
-            combo_values.append(ObjectInfo(unbound_meth, {}))
-
-        def new_object_frame_with_values(class_, widget, *args, **kwargs):
-            """
-            Middleware method for opening a new object frame, that fills in additional
-            values for the specific method (class_) we are editing.
-            """
-            extra_values = ADDITIONAL_PARAMETER_VALUES.get(class_, {}).copy()
-            for k, v in extra_values.items():
-                extra_values[k] = v(self.old_gui_data)
-
-            return self.new_object_frame(class_, widget, *args, **kwargs, additional_values=extra_values)
-
-        frame_execute_method = ComboEditFrame(new_object_frame_with_values, combo_values, master=frame_method)
-        frame_execute_method.pack(side="right", fill=tk.X, expand=True)
-        frame_method.pack(fill=tk.X)
 
     def load(self, old_data: ObjectInfo):
         data = old_data.data

@@ -5,9 +5,9 @@ from typing import Callable
 from threading import Thread
 from functools import wraps
 
-import ttkbootstrap.dialogs.dialogs as tkdiag
 import asyncio
 import importlib
+import tkinter.messagebox as msgbox
 
 
 CONF_TASK_SLEEP = 0.1
@@ -47,7 +47,7 @@ def gui_except(parent = None):
             try:
                 return fnc(*args, **kwargs)
             except Exception as exc:
-                tkdiag.Messagebox.show_error(f"{exc}\n(Exception in {fnc.__name__})", parent=parent)
+                msgbox.showerror(message=f"{exc}\n(Exception in {fnc.__name__})", master=parent)
 
         return wrapper
 
@@ -66,8 +66,8 @@ def gui_confirm_action(self_parent = False):
         targeted function (fnc).
         """
         def wrapper(self = None, *args, **kwargs):
-            result = tkdiag.Messagebox.show_question("Are you sure?", "Confirm", parent=self if self_parent else None)
-            if result == "Yes":
+            result = msgbox.askyesnocancel("Confirm", "Are you sure?", master=self if self_parent else None)
+            if result:
                 return fnc(self, *args, **kwargs) if self is not None else fnc(*args, **kwargs)
 
         return wrapper

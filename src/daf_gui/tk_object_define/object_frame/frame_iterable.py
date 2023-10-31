@@ -5,7 +5,6 @@ from ..dpi import *
 from ..utilities import *
 
 from ..storage import *
-from .extra import *
 from .frame_base import *
 
 
