@@ -171,13 +171,14 @@ class Application():
             daf.TraceLEVELS.ERROR: ttk.DANGER,
             daf.TraceLEVELS.DEPRECATED: ttk.DARK
         }
+        dpi_78, dpi_600 = dpi_scaled(78), dpi_scaled(600)
 
         def trace_listener(level: daf.TraceLEVELS, message: str):
             last_toast: ToastNotification = ToastNotification.last_toast
             if last_toast is not None and last_toast.toplevel.winfo_exists():
-                next_position = max((last_toast.position[1] + 150) % 1200, 150)
+                next_position = max((last_toast.position[1] + dpi_78) % dpi_600, dpi_78)
             else:
-                next_position = 150
+                next_position = dpi_78
 
             toast = ToastNotification(
                 level.name,

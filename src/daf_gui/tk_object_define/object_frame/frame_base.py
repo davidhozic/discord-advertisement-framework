@@ -10,8 +10,6 @@ import tkinter.ttk as ttk
 import tkinter as tk
 import ttkbootstrap.dialogs.dialogs as tkdiag
 
-import webbrowser
-
 
 if TYPE_CHECKING:
     from .window import ObjectEditWindow
