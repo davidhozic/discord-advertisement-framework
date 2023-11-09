@@ -8,7 +8,7 @@ from ..storage import *
 
 import tkinter.ttk as ttk
 import tkinter as tk
-import ttkbootstrap.dialogs.dialogs as tkdiag
+from ..messagebox import Messagebox
 
 
 if TYPE_CHECKING:
@@ -180,11 +180,11 @@ class NewObjectFrameBase(ttk.Frame):
 
     def close_frame(self):
         if self.allow_save and self.modified:
-            resp = tkdiag.Messagebox.yesnocancel("Do you wish to save?", "Save?", alert=True, parent=self)
+            resp = Messagebox.yesnocancel("Save?", "Do you wish to save?", master=self.origin_window)
             if resp is not None:
-                if resp == "Yes":
+                if resp:
                     self.save()
-                elif resp == "No":
+                else:
                     self._cleanup()
         else:
             self._cleanup()
@@ -234,9 +234,9 @@ class NewObjectFrameBase(ttk.Frame):
             self._update_ret_widget(object_)
             self._cleanup()
         except Exception as exc:
-            tkdiag.Messagebox.show_error(
-                f"Could not save the object.\n{exc}",
+            Messagebox.show_error(
                 "Saving error",
+                f"Could not save the object.\n{exc}",
                 parent=self.origin_window
             )
 

@@ -8,6 +8,8 @@ from enum import Enum, auto
 from inspect import signature, getmembers, isclass
 
 from .utilities import import_class
+from .extensions import extendable
+
 from daf.misc import instance_track as it
 from daf.logging.tracing import trace, TraceLEVELS
 
@@ -22,7 +24,6 @@ import daf
 __all__ = (
     "ObjectInfo",
     "convert_to_objects",
-    "SaveBy",
     "convert_to_object_info",
     "convert_to_json",
     "convert_from_json",
@@ -170,13 +171,6 @@ CONVERSION_ATTR_TO_PARAM[daf.AutoGUILD]["invite_track"] = (
     lambda guild_: list(guild_._invite_join_count.keys())
 )
 
-# Map whhich's values is a tuple that tells which fields are passwords.
-# These fields will be replaced with a '*' when viewed in object form.
-PASSWORD_PARAMS = {
-    daf.ACCOUNT: {"token", "password", },
-    daf.SeleniumCLIENT: {"password", },
-}
-
 CONVERSION_ATTR_TO_PARAM[daf.web.SeleniumCLIENT] = {k: f"_{k}" for k in daf.web.SeleniumCLIENT.__init__.__annotations__}
 CONVERSION_ATTR_TO_PARAM[daf.web.SeleniumCLIENT].pop("return")
 
@@ -201,6 +195,7 @@ def get_annotations(class_) -> dict:
     return annotations
 
 
+@extendable
 class ObjectInfo(Generic[TClass]):
     """
     A GUI object that represents real objects,.
@@ -224,27 +219,16 @@ class ObjectInfo(Generic[TClass]):
         self,
         class_,
         data: Mapping,
-        real_object: it.ObjectReference = None,
-        property_map: Mapping[str, "ObjectInfo"] = {}
     ) -> None:
         self.class_ = class_
         self.data = data
-        self.real_object = real_object
-        self.property_map = property_map
         self.__hash = 0
         self.__repr = None
 
+    @extendable
     def __eq__(self, _value: object) -> bool:
         if isinstance(_value, ObjectInfo):
-            cond = (
-                self.class_ is _value.class_ and
-                (   # Compare internal daf IDs for trackable objects (@track_id) in case a remote connection is present
-                    getattr(self.real_object, "ref", None) ==
-                    getattr(_value.real_object, "ref", None)
-                ) and
-                self.data == _value.data
-            )
-            return cond
+            return self.class_ is _value.class_ and self.data == _value.data
 
         return False
 
@@ -262,7 +246,7 @@ class ObjectInfo(Generic[TClass]):
             return self.__repr
 
         _ret: str = self.class_.__name__ + "("
-        private_params = PASSWORD_PARAMS.get(self.class_, set())
+        private_params = set()
         if hasattr(self.class_, "__passwords__"):
             private_params = private_params.union(self.class_.__passwords__)
 
@@ -341,15 +325,10 @@ def convert_objects_to_script(object: Union[ObjectInfo, list, tuple, set, str]):
     return ",".join(object_data).strip(), import_data, "\n".join(other_data).strip()
 
 
-class SaveBy(Enum):
-    "Parameter enum for ``convert_to_object_info``"
-    NO_SAVE = 0
-    REFERENCE = auto()
-    OBJECT = auto()
 
 
 @daf.misc.cache.cache_result(16_384)
-def convert_to_object_info(object_: object, save_original: SaveBy = SaveBy.NO_SAVE):
+def convert_to_object_info(object_: object, save_original):
     """
     Converts an object into ObjectInfo.
 
@@ -357,7 +336,7 @@ def convert_to_object_info(object_: object, save_original: SaveBy = SaveBy.NO_SA
     ---------------
     object_: object
         The object to convert.
-    save_original: SaveBy
+    save_original: bool
         In what way should the original be preserved. Either by reference or the ``object_`` itself.
     """
     def _convert_object_info(object_, save_original, object_type, attrs):
@@ -382,8 +361,8 @@ def convert_to_object_info(object_: object, save_original: SaveBy = SaveBy.NO_SA
                     data_conv[k] = convert_to_object_info(value, save_original)
 
         ret = ObjectInfo(object_type, data_conv)
-        if save_original is not SaveBy.NO_SAVE:
-            ret.real_object = object_ if save_original is SaveBy.OBJECT else it.ObjectReference(it.get_object_id(object_))
+        if save_original:
+            ret.real_object = it.ObjectReference(it.get_object_id(object_))
 
             # Convert object properties
             # This will only be aviable for live objects, since it has no configuration value,

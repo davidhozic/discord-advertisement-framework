@@ -3,6 +3,7 @@ Main file of the DAF GUI.
 """
 from importlib.util import find_spec
 from pathlib import Path
+from typing import List, Any, Union
 
 from daf.misc import instance_track as it
 
@@ -24,7 +25,6 @@ if not installed:
     print("Auto installing requirements: ttkbootstrap")
     subprocess.check_call([sys.executable.replace("pythonw", "python"), "-m", "pip", "install", f"ttkbootstrap=={TTKBOOSTRAP_VERSION}"])
 
-
 from .tk_object_define.convert import *
 from .tk_object_define.dpi import *
 from .tk_object_define.object_frame.window import ObjectEditWindow
@@ -38,7 +38,6 @@ from ttkbootstrap.toast import ToastNotification
 import tkinter as tk
 import tkinter.filedialog as tkfile
 import ttkbootstrap.dialogs.dialogs as tkdiag
-import ttkbootstrap as ttk
 import ttkbootstrap.tableview as tktw
 
 import json
@@ -46,6 +45,7 @@ import sys
 import os
 import daf
 import webbrowser
+import ttkbootstrap as ttk
 
 
 WIN_UPDATE_DELAY = 0.005
@@ -487,7 +487,7 @@ class Application():
                 items = await self.connection.execute_method(
                     it.ObjectReference(it.get_object_id(logger)), getter_history, **param_object_params
                 )
-                items = convert_to_object_info(items, SaveBy.OBJECT)
+                items = convert_to_object_info(items, True)
                 lst_history.clear()
                 lst_history.insert(tk.END, *items)
 
@@ -678,7 +678,7 @@ class Application():
     def load_live_accounts(self):
         async def load_accounts():
             gui_daf_assert_running()
-            object_infos = convert_to_object_info(await self.connection.get_accounts(), save_original=SaveBy.REFERENCE)
+            object_infos = convert_to_object_info(await self.connection.get_accounts(), save_original=True)
             self.list_live_objects.clear()
             self.list_live_objects.insert(tk.END, *object_infos)
 

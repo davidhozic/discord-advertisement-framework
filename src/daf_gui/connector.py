@@ -14,6 +14,7 @@ from aiohttp import ClientSession, BasicAuth, WSMsgType
 from aiohttp import web
 
 import daf
+import asyncio
 
 
 __all__ = (

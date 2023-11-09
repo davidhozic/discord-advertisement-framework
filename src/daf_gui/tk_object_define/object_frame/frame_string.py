@@ -16,7 +16,15 @@ __all__ = (
 
 
 class NewObjectFrameString(NewObjectFrameBase):
-    def __init__(self, class_: Any, return_widget: Any, parent=None, old_data: str = None, check_parameters: bool = True, allow_save=True):
+    def __init__(
+        self,
+        class_: Any,
+        return_widget: Any,
+        parent=None,
+        old_data: str = None,
+        check_parameters: bool = True,
+        allow_save=True
+    ):
         super().__init__(class_, return_widget, parent, old_data, check_parameters, allow_save)
         self.storage_widget = Text(self.frame_main, undo=True, maxundo=TEXT_MAX_UNDO)
         self.storage_widget.pack(fill=tk.BOTH, expand=True)

@@ -4,10 +4,20 @@ Modules contains storage container widgets.
 from typing import Union, Any, List, Iterable
 from .convert import ObjectInfo
 from .utilities import gui_confirm_action
+from .messagebox import Messagebox
 
-import ttkbootstrap as ttk
+import tkinter.ttk as ttk
 import tkinter as tk
-import ttkbootstrap.dialogs.dialogs as tkdiag
+
+
+__all__ = (
+    "Text",
+    "ComboBoxText",
+    "ListBoxObjects",
+    "ListBoxScrolled",
+    "ComboBoxObjects",
+    "ComboEditFrame",
+)
 
 
 class _NoClipBoard:
@@ -96,7 +106,7 @@ class ListBoxObjects(tk.Listbox):
         if len(sel):
             self.delete(*sel)
         else:
-            tkdiag.Messagebox.show_error("Select atleast one item!", "Empty list!", parent=self)
+            Messagebox.show_error("Empty list!", "Select atleast one item!", parent=self)
 
     def clear(self) -> None:
         super().delete(0, tk.END)
@@ -108,7 +118,7 @@ class ListBoxObjects(tk.Listbox):
             object_: Union[ObjectInfo, Any] = self.get()[min(selection):max(selection) + 1]
             GLOBAL.clipboard = object_ if len(selection) > 1 else object_[0]
         else:
-            tkdiag.Messagebox.show_error("Select atleast one item!", "Empty list!", parent=self)
+            Messagebox.show_error("Empty list!", "Select atleast one item!", parent=self)
 
     def paste_from_clipboard(self):
         if GLOBAL.clipboard is _NoClipBoard:
@@ -136,7 +146,7 @@ class ListBoxObjects(tk.Listbox):
         if len(selection := self.curselection()) == 1:
             self.move(selection[0], direction)
         else:
-            tkdiag.Messagebox.show_error("Select ONE item!", "Selection error", parent=self)
+            Messagebox.show_error("Selection error", "Select ONE item!", parent=self)
 
 
 class ListBoxScrolled(ttk.Frame):
@@ -248,4 +258,4 @@ class ComboEditFrame(ttk.Frame):
                 old_data=object_,
             )
         else:
-            tkdiag.Messagebox.show_error("Select atleast one item!", "Empty list!")
+            Messagebox.show_error("Empty list!", "Select atleast one item!")

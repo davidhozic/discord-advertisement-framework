@@ -1,16 +1,15 @@
-from typing import get_args, get_origin, Any
+from typing import get_args, get_origin, Any, List, Union
 
 from ..convert import *
 from ..dpi import *
 from ..utilities import *
 
 from ..storage import *
+from ..messagebox import Messagebox
 from .frame_base import *
 
-
-import ttkbootstrap as ttk
 import tkinter as tk
-import ttkbootstrap.dialogs.dialogs as tkdiag
+import tkinter.ttk as ttk
 
 
 __all__ = (
@@ -86,7 +85,7 @@ class NewObjectFrameIterable(NewObjectFrameBase):
             else:
                 self.new_object_frame(type(object_), self.storage_widget, old_data=object_)
         else:
-            tkdiag.Messagebox.show_error("Select ONE item!", "Selection error", parent=self)
+            Messagebox.show_error("Selection error", "Select ONE item!", parent=self)
 
 
 class NewObjectFrameIterableView(NewObjectFrameIterable):

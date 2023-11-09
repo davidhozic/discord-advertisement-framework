@@ -2,20 +2,17 @@
 Module contains interface to run async tasks from GUI.
 """
 from typing import Callable
-from threading import Thread
 from functools import wraps
 
-import asyncio
 import importlib
-import tkinter.messagebox as msgbox
+from .messagebox import Messagebox
 
 
-CONF_TASK_SLEEP = 0.1
-
-
-class GLOBAL:
-    async_thread: Thread = None
-    loop: asyncio.AbstractEventLoop = None
+__all__ = (
+    "import_class",
+    "gui_except",
+    "gui_confirm_action"
+)
 
 
 def import_class(path: str):
@@ -47,7 +44,7 @@ def gui_except(parent = None):
             try:
                 return fnc(*args, **kwargs)
             except Exception as exc:
-                msgbox.showerror(message=f"{exc}\n(Exception in {fnc.__name__})", master=parent)
+                Messagebox.show_error(f"Exception in {fnc.__name__}", str(exc), parent=parent)
 
         return wrapper
 
@@ -66,7 +63,7 @@ def gui_confirm_action(self_parent = False):
         targeted function (fnc).
         """
         def wrapper(self = None, *args, **kwargs):
-            result = msgbox.askyesnocancel("Confirm", "Are you sure?", master=self if self_parent else None)
+            result = Messagebox.yesnocancel("Confirm", "Are you sure?", parent=self if self_parent else None)
             if result:
                 return fnc(self, *args, **kwargs) if self is not None else fnc(*args, **kwargs)
 

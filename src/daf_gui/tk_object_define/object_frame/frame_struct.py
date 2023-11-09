@@ -7,17 +7,15 @@ from enum import Enum
 from ..convert import *
 from ..dpi import *
 from ..utilities import *
-
 from ..storage import *
-
-from .frame_base import *
+from ..messagebox import Messagebox
 from ..extensions import extendable
 
+from .frame_base import *
 
-import ttkbootstrap as ttk
 import tkinter as tk
-import ttkbootstrap.dialogs.dialogs as tkdiag
-import ttkbootstrap.validation as tkvalid
+import tkinter.ttk as ttk
+import tkinter.filedialog as tkfile
 
 import inspect
 import copy
@@ -76,7 +74,7 @@ class NewObjectFrameStruct(NewObjectFrameBase):
         dpi_5 = dpi_scaled(5)
 
         if not (annotations := get_annotations(class_)):
-            tkdiag.Messagebox.show_error("This object cannot be edited.", "Load error", parent=self)
+            Messagebox.show_error("This object cannot be edited.", "Load error", parent=self)
             self.origin_window.after_idle(self._cleanup)  # Can not clean the object before it has been added to list
             return
 
@@ -95,7 +93,7 @@ class NewObjectFrameStruct(NewObjectFrameBase):
             with open(filename, "w", encoding="utf-8") as file:
                 json.dump(json_data, file, indent=2)
 
-            tkdiag.Messagebox.show_info(f"Saved to {filename}", "Finished", self)
+            Messagebox.show_info("Finished", f"Saved to {filename}", parent=self)
 
         @gui_except(parent=self)
         def load_template():
@@ -116,27 +114,27 @@ class NewObjectFrameStruct(NewObjectFrameBase):
                 self.load(object_info)
 
         bnt_menu_template = ttk.Menubutton(self.frame_toolbar, text="Template")
-        menu = ttk.Menu(bnt_menu_template)
+        menu = tk.Menu(bnt_menu_template)
         menu.add_command(label="Load template", command=load_template)
         menu.add_command(label="Save template", command=save_template)
         bnt_menu_template.configure(menu=menu)
         bnt_menu_template.pack(side="left")
 
-        def fill_values(k: str, entry_types: list, menu: ttk.Menu, combo: ComboBoxObjects):
+        def fill_values(k: str, entry_types: list, menu: tk.Menu, combo: ComboBoxObjects):
             "Fill ComboBox values based on types in ``entry_types`` and create New <object_type> buttons"
             any_filled = False
             for entry_type in entry_types:
                 if get_origin(entry_type) is Literal:
                     values = get_args(entry_type)
                     combo["values"] = values
-                    tkvalid.add_option_validation(combo, values)
+                    # tkvalid.add_option_validation(combo, values)
                 elif entry_type is bool:
                     combo.insert(tk.END, True)
                     combo.insert(tk.END, False)
-                    tkvalid.add_option_validation(combo, ["True", "False", ''])
+                    # tkvalid.add_option_validation(combo, ["True", "False", ''])
                 elif issubclass_noexcept(entry_type, Enum):
                     combo["values"] = values = [en for en in entry_type]
-                    tkvalid.add_option_validation(combo, list(map(str, values)) + [''])
+                    # tkvalid.add_option_validation(combo, list(map(str, values)) + [''])
                 elif entry_type is type(None):
                     if bool not in entry_types:
                         combo.insert(tk.END, None)
@@ -168,15 +166,8 @@ class NewObjectFrameStruct(NewObjectFrameBase):
             bnt_new_menu = ttk.Menubutton(frame_annotated, text="New")            
             menu_new = tk.Menu(bnt_new_menu)
             bnt_new_menu.configure(menu=menu_new)
-            
 
             w = combo = ComboBoxObjects(frame_annotated)
-
-            # # Clipboard
-            # menu_new.add_command(label="Copy", command=combo.save_to_clipboard)
-            # if self.allow_save:
-            #     menu.add_command(label="Paste", command=combo.paste_from_clipboard)
-
 
             # Fill values
             any_filled = fill_values(k, entry_types, menu_new, combo)
@@ -188,7 +179,7 @@ class NewObjectFrameStruct(NewObjectFrameBase):
             )
 
             bnt_copy_paste = ttk.Menubutton(frame_annotated, text="C/P")
-            copy_menu = ttk.Menu(bnt_copy_paste)
+            copy_menu = tk.Menu(bnt_copy_paste)
             copy_menu.add_command(label="Copy", command=combo.save_to_clipboard)
             copy_menu.add_command(label="Paste", command=combo.paste_from_clipboard)
             bnt_copy_paste.configure(menu=copy_menu)
@@ -213,9 +204,6 @@ class NewObjectFrameStruct(NewObjectFrameBase):
 
     def load(self, old_data: ObjectInfo):
         data = old_data.data
-        if self.old_gui_data is not None:  # Preserve the old reference, even if reloading data
-            old_data.real_object = self.old_gui_data.real_object
-
         for attr, (widget, types_) in self._map.items():
             if attr not in data:
                 continue
@@ -229,6 +217,7 @@ class NewObjectFrameStruct(NewObjectFrameBase):
 
         self.old_gui_data = old_data
 
+    @extendable
     def to_object(self, *, ignore_checks = False) -> ObjectInfo:
         """
         Converts GUI data into an ObjectInfo abstraction object.
@@ -251,14 +240,7 @@ class NewObjectFrameStruct(NewObjectFrameBase):
 
             map_[attr] = value
 
-        extra_args = {}
-        if (old_gui_data := self.old_gui_data) is not None:
-            # Don't erase the bind to the real object in case this is an edit of an existing ObjectInfo
-            extra_args["real_object"] = old_gui_data.real_object
-            # Also don't erase any saved properties if received from a live object.
-            extra_args["property_map"] = old_gui_data.property_map
-
-        object_ = ObjectInfo(self.class_, map_, **extra_args)  # Abstraction of the underlaying object
+        object_ = ObjectInfo(self.class_, map_)  # Abstraction of the underlaying object
         if not ignore_checks and self.check_parameters and inspect.isclass(self.class_):  # Only check objects
             # Cache the object created for faster
             convert_to_objects(object_, cached=True)  # Tries to create instances to check for errors
