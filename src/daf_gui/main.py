@@ -27,11 +27,11 @@ if not installed:
 
 import ttkbootstrap as ttk
 
-from .tk_object_define.convert import *
-from .tk_object_define.dpi import *
-from .tk_object_define.object_frame.window import ObjectEditWindow
-from .tk_object_define.storage import *
-from .tk_object_define.utilities import *
+from .tkclasswiz.convert import *
+from .tkclasswiz.dpi import *
+from .tkclasswiz.object_frame.window import ObjectEditWindow
+from .tkclasswiz.storage import *
+from .tkclasswiz.utilities import *
 from .connector import *
 
 from PIL import Image, ImageTk
@@ -488,7 +488,7 @@ class Application():
                 items = await self.connection.execute_method(
                     it.ObjectReference(it.get_object_id(logger)), getter_history, **param_object_params
                 )
-                items = convert_to_object_info(items, True)
+                items = convert_to_object_info(items)
                 lst_history.clear()
                 lst_history.insert(tk.END, *items)
 

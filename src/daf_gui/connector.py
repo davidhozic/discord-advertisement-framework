@@ -7,8 +7,8 @@ from typing import List, Optional, Literal, Awaitable
 from daf.logging.tracing import TraceLEVELS, trace
 from daf.misc import instance_track as it
 
-from .tk_object_define.convert import *
-from .tk_object_define.utilities import *
+from .tkclasswiz.convert import *
+from .tkclasswiz.utilities import *
 
 from aiohttp import ClientSession, BasicAuth, WSMsgType
 from aiohttp import web

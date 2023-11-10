@@ -1,11 +1,11 @@
 """
 Extension loader method.
 """
-from ..tk_object_define.object_frame.frame_struct import NewObjectFrameStruct
-from ..tk_object_define.object_frame.frame_base import NewObjectFrameBase
+from ..tkclasswiz.object_frame.frame_struct import NewObjectFrameStruct
+from ..tkclasswiz.object_frame.frame_base import NewObjectFrameBase
 
-from ..tk_object_define.convert import ObjectInfo, convert_to_object_info
-from ..tk_object_define.extensions import Extension
+from ..tkclasswiz.convert import ObjectInfo, convert_to_object_info
+from ..tkclasswiz.extensions import Extension
 
 from . import deprecation_notice
 from . import extra_widgets

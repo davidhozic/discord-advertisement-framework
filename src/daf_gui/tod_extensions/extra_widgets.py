@@ -1,14 +1,14 @@
 """
 Extra widgets TOD extension.
 """
-from ..tk_object_define.convert import (
+from ..tkclasswiz.convert import (
     convert_to_object_info,
     convert_to_objects,
     ObjectInfo
 )
-from ..tk_object_define.object_frame.frame_struct import NewObjectFrameStruct
+from ..tkclasswiz.object_frame.frame_struct import NewObjectFrameStruct
 from ..connector import get_connection
-from ..tk_object_define.dpi import *
+from ..tkclasswiz.dpi import *
 
 
 from ttkbootstrap.tooltip import ToolTip
@@ -138,7 +138,7 @@ def setup_additional_live_refresh(w: ttk.Button, frame):
                 old_gui_data = frame_.old_gui_data
                 if not isinstance(old_gui_data, list) and isinstance(old_gui_data.real_object, it.ObjectReference):
                     real = await connection.refresh(old_gui_data.real_object)  # Get refresh object from DAF
-                    frame_.load(convert_to_object_info(real, True))
+                    frame_.load(convert_to_object_info(real, save_original=True))
 
                 frame_.remember_gui_data()
 

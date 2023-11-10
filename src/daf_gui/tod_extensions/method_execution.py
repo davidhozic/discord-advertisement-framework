@@ -1,11 +1,11 @@
 """
 Method execution TOD extension.
 """
-from ..tk_object_define.object_frame.frame_struct import NewObjectFrameStruct
-from ..tk_object_define.convert import convert_to_objects, ObjectInfo
-from ..tk_object_define.storage import ComboEditFrame
+from ..tkclasswiz.object_frame.frame_struct import NewObjectFrameStruct
+from ..tkclasswiz.convert import convert_to_objects, ObjectInfo
+from ..tkclasswiz.storage import ComboEditFrame
 from ..connector import get_connection
-from ..tk_object_define.dpi import *
+from ..tkclasswiz.dpi import *
 
 import ttkbootstrap.dialogs as tkdiag
 import tk_async_execute as tae

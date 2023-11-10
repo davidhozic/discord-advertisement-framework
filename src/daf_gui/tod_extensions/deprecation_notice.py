@@ -1,7 +1,7 @@
 """
 Deprecation notices TOD extension.
 """
-from ..tk_object_define.object_frame.frame_struct import NewObjectFrameStruct
+from ..tkclasswiz.object_frame.frame_struct import NewObjectFrameStruct
 
 import ttkbootstrap.dialogs as tkdiag
 import ttkbootstrap as ttk
