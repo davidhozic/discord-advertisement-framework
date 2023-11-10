@@ -3,6 +3,7 @@ from typing import Any
 
 from ..storage import *
 from .frame_base import *
+from ..extensions import extendable
 
 import tkinter as tk
 
@@ -15,6 +16,7 @@ __all__ = (
 )
 
 
+@extendable
 class NewObjectFrameString(NewObjectFrameBase):
     def __init__(
         self,

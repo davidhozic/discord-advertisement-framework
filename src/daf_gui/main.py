@@ -25,6 +25,8 @@ if not installed:
     print("Auto installing requirements: ttkbootstrap")
     subprocess.check_call([sys.executable.replace("pythonw", "python"), "-m", "pip", "install", f"ttkbootstrap=={TTKBOOSTRAP_VERSION}"])
 
+import ttkbootstrap as ttk
+
 from .tk_object_define.convert import *
 from .tk_object_define.dpi import *
 from .tk_object_define.object_frame.window import ObjectEditWindow
@@ -45,7 +47,6 @@ import sys
 import os
 import daf
 import webbrowser
-import ttkbootstrap as ttk
 
 
 WIN_UPDATE_DELAY = 0.005

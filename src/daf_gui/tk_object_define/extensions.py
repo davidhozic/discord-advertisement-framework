@@ -60,7 +60,7 @@ def extendable(obj: Union[T, list]):
             def __init__(self, *args, **kwargs):
                 super().__init__(*args, **kwargs)
                 extension: Extension
-                for extension in self.__registered_tod_ext__:
+                for extension in ExtendableClass.__registered_tod_ext__:
                     extension(self)
 
             @classmethod
@@ -77,12 +77,12 @@ def extendable(obj: Union[T, list]):
         class ExtendableFunction:
             __registered_tod_ext__ = []
 
-            def __init__(self) -> None:
-                self.bind = None
+            def __init__(self, bind: object = None) -> None:
+                self.bind = bind
 
             def __call__(self, *args, **kwargs):
                 if self.bind is not None:
-                    extra_args = (self.bind,)
+                    extra_args = (self.bind,)  # self reference
                 else:
                     extra_args = ()
 
@@ -91,11 +91,10 @@ def extendable(obj: Union[T, list]):
                     r = ext(*extra_args, *args, r, **kwargs)
 
                 return r
-            
+
             def __get__(self, instance, cls):
                 # Bind the wrapper callable object into a callable object "instance"
-                self.bind = instance
-                return self
+                return ExtendableFunction(instance)
 
             @classmethod
             def register_extension(cls, extension: Extension):

@@ -8,6 +8,7 @@ from .frame_struct import *
 from .frame_base import *
 
 from ..dpi import dpi_scaled
+from ..extensions import extendable
 
 import tkinter as tk
 import tkinter.ttk as ttk
@@ -18,6 +19,7 @@ __all__ = (
 )
 
 
+@extendable
 class ObjectEditWindow(tk.Toplevel):
     """
     Top level window for creating and editing new objects.

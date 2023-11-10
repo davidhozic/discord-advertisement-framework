@@ -1,6 +1,7 @@
 
 from typing import Union, Any
 from .frame_base import *
+from ..extensions import extendable
 import tkinter as tk
 
 
@@ -8,6 +9,7 @@ __all__ = (
     "NewObjectFrameNumber",
 )
 
+@extendable
 class NewObjectFrameNumber(NewObjectFrameBase):
     def __init__(self, class_: Any, return_widget: Any, parent=None, old_data: Any = None, check_parameters: bool = True, allow_save=True):
         super().__init__(class_, return_widget, parent, old_data, check_parameters, allow_save)

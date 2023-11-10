@@ -5,10 +5,11 @@ from ..convert import *
 from ..dpi import *
 from ..utilities import *
 from ..storage import *
+from ..messagebox import Messagebox
+from ..extensions import extendable
 
 import tkinter.ttk as ttk
 import tkinter as tk
-from ..messagebox import Messagebox
 
 
 if TYPE_CHECKING:
@@ -20,6 +21,7 @@ __all__ = (
 )
 
 
+@extendable
 class NewObjectFrameBase(ttk.Frame):
     """
     Base Frame for inside the :class:`ObjectEditWindow` that allows object definition.

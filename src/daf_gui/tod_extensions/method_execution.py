@@ -51,12 +51,15 @@ def load_extension(frame: NewObjectFrameStruct):
 
     def execute_method():
         async def runner():
-            method = frame_execute_method.combo.get()
+            method: ObjectInfo = frame_execute_method.combo.get()
             if not isinstance(method, ObjectInfo):  # String typed in that doesn't match any names
                 tkdiag.Messagebox.show_error("No method selected!", "Selection error", frame.origin_window)
                 return
 
-            method_param = convert_to_objects(method.data, skip_real_conversion=True)
+            method_param = {}
+            for k, v in method.data.items():
+                method_param[k] = v.real_object if v.real_object is not None else convert_to_objects(v)
+
             connection = get_connection()
             # Call the method though the connection manager
             await connection.execute_method(

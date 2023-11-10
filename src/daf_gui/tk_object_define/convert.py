@@ -4,14 +4,11 @@ Modules contains definitions related to GUI object transformations.
 
 from typing import Any, Union, List, get_type_hints, Generic, TypeVar, Mapping
 from contextlib import suppress
-from enum import Enum, auto
-from inspect import signature, getmembers, isclass
+from enum import Enum
+from inspect import signature, isclass
 
 from .utilities import import_class
 from .extensions import extendable
-
-from daf.misc import instance_track as it
-from daf.logging.tracing import trace, TraceLEVELS
 
 import decimal
 import warnings
@@ -207,11 +204,6 @@ class ObjectInfo(Generic[TClass]):
         Real object's type.
     data: dict
         Dictionary mapping to real object's parameters
-    real_object: object
-        Actual object that ObjectInfo represents inside GUI. Used whenever update
-        of the real object is needed upon saving inside the GUI.
-    property_map: Mapping[str, ObjectInfo]
-        Mapping that maps a property (name) of the object into it's ObjectInfo.
     """
     CHARACTER_LIMIT = 150
 
@@ -325,10 +317,9 @@ def convert_objects_to_script(object: Union[ObjectInfo, list, tuple, set, str]):
     return ",".join(object_data).strip(), import_data, "\n".join(other_data).strip()
 
 
-
-
+@extendable
 @daf.misc.cache.cache_result(16_384)
-def convert_to_object_info(object_: object, save_original):
+def convert_to_object_info(object_: object, **kwargs):
     """
     Converts an object into ObjectInfo.
 
@@ -336,10 +327,8 @@ def convert_to_object_info(object_: object, save_original):
     ---------------
     object_: object
         The object to convert.
-    save_original: bool
-        In what way should the original be preserved. Either by reference or the ``object_`` itself.
     """
-    def _convert_object_info(object_, save_original, object_type, attrs):
+    def _convert_object_info(object_, object_type, attrs):
         data_conv = {}
         for k, v in attrs.items():
             with suppress(Exception):
@@ -358,34 +347,9 @@ def convert_to_object_info(object_: object, save_original):
                 if value is object_:
                     data_conv[k] = value
                 else:
-                    data_conv[k] = convert_to_object_info(value, save_original)
+                    data_conv[k] = convert_to_object_info(value, **kwargs)
 
         ret = ObjectInfo(object_type, data_conv)
-        if save_original:
-            ret.real_object = it.ObjectReference(it.get_object_id(object_))
-
-            # Convert object properties
-            # This will only be aviable for live objects, since it has no configuration value,
-            # thus keeping it wouldn't make much sense
-            if hasattr(object_, "_daf_id"):
-                property_map = {}
-                prop: property
-                for name, prop in getmembers(type(object_), lambda x: isinstance(x, property)):
-                    if name.startswith("_"):  # Don't obtain private properties
-                        continue
-
-                    try:
-                        return_annotation = get_type_hints(prop.fget).get("return")
-                        property_map[name] = (convert_to_object_info(prop.fget(object_), save_original), return_annotation)
-                    except Exception as exc:
-                        trace(
-                            f"Unable to get property {name} in {object_} when converting to ObjectInfo",
-                            TraceLEVELS.ERROR,
-                            exc
-                        )
-
-                ret.property_map = property_map
-
         return ret
 
     def get_conversion_map(object_type):
@@ -409,26 +373,18 @@ def convert_to_object_info(object_: object, save_original):
         return object_
 
     if isinstance(object_, (set, list, tuple)):
-        object_ = [convert_to_object_info(value, save_original) for value in object_]
+        object_ = [convert_to_object_info(value, **kwargs) for value in object_]
         return object_
     
     if isinstance(object_, dict):
-        ref = None
-        if save_original:
-            if save_original == "ref":
-                ref = it.ObjectReference(it.get_object_id(object_))
-            else:
-                ref = object_
-
         return ObjectInfo(
             dict,
-            {k: convert_to_object_info(v, save_original) for k, v in object_.items()},
-            ref           
+            {k: convert_to_object_info(v, **kwargs) for k, v in object_.items()},
         )
 
 
     attrs = get_conversion_map(object_type)
-    return _convert_object_info(object_, save_original, object_type, attrs)
+    return _convert_object_info(object_, object_type, attrs)
 
 
 @daf.misc.cache.cache_result()
@@ -438,7 +394,6 @@ def _convert_to_objects_cached(*args, **kwargs):
 
 def convert_to_objects(
     d: Union[ObjectInfo, dict, list],
-    skip_real_conversion: bool = False,
     cached: bool = False
 ) -> Union[object, dict, List]:
     """
@@ -450,23 +405,15 @@ def convert_to_objects(
     d: ObjectInfo | list[ObjectInfo] | dict
         The object(s) to convert. Can be an ObjectInfo object, a list of ObjectInfo objects or a dictionary that is a
         mapping of ObjectInfo parameters.
-    skip_real_conversion: bool
-        If set to True the old real object will be returned without conversion has no effect.
-        Defaults to False.
     cached: bool
         If True items will be returned from cache. ONLY USE FOR IMMUTABLE USE.
     """
     convert_func = _convert_to_objects_cached if cached else convert_to_objects
 
     def convert_object_info():
-        # Skip conversion
-        real = d.real_object
-        if skip_real_conversion and real is not None:
-            return real
-
         data_conv = {
             k:
-            convert_func(v, skip_real_conversion, cached)
+            convert_func(v, cached)
             if isinstance(v, (list, tuple, set, ObjectInfo, dict)) else v
             for k, v in d.data.items()
         }
@@ -475,11 +422,11 @@ def convert_to_objects(
         return new_obj
 
     if isinstance(d, (list, tuple, set)):
-        return [convert_func(item, skip_real_conversion, cached) for item in d]
+        return [convert_func(item, cached) for item in d]
     if isinstance(d, ObjectInfo):
         return convert_object_info()
     if isinstance(d, dict):
-        return {k: convert_func(v, skip_real_conversion, cached) for k, v in d.items()}
+        return {k: convert_func(v, cached) for k, v in d.items()}
 
     return d
 

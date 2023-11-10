@@ -2,7 +2,9 @@
 Extension loader method.
 """
 from ..tk_object_define.object_frame.frame_struct import NewObjectFrameStruct
-from ..tk_object_define.convert import ObjectInfo
+from ..tk_object_define.object_frame.frame_base import NewObjectFrameBase
+
+from ..tk_object_define.convert import ObjectInfo, convert_to_object_info
 from ..tk_object_define.extensions import Extension
 
 from . import deprecation_notice
@@ -10,6 +12,7 @@ from . import extra_widgets
 from . import help_button
 from . import method_execution
 from . import live_objects
+from . import convert
 
 
 def register_extensions():
@@ -23,3 +26,7 @@ def register_extensions():
 
     ObjectInfo.register_extension(Extension("Live objects", "1.0.0", live_objects.load_extension_oi))
     ObjectInfo.__eq__.register_extension(Extension("Live objects EQ", "1.0.0", live_objects.load_extension_oi_eq))
+    convert_to_object_info.register_extension(
+        Extension("Live object save_original", "1.0.0", convert.load_extension_to_object_info)
+    )
+    

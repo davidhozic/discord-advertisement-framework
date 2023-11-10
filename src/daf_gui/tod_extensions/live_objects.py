@@ -8,9 +8,8 @@ from daf.misc.instance_track import ObjectReference
 
 def load_extension_oi(frame: ObjectInfo):
     # Additional widgets
-    frame.real_object: ObjectReference = None,
+    frame.real_object: ObjectReference = None
     frame.property_map: Mapping[str, "ObjectInfo"] = {}
-
 
 def load_extension_oi_eq(self, other: ObjectInfo, result: bool):
     return result and self.real_object == other.real_object

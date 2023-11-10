@@ -6,6 +6,7 @@ from ..utilities import *
 
 from ..storage import *
 from ..messagebox import Messagebox
+from ..extensions import extendable
 from .frame_base import *
 
 import tkinter as tk
@@ -18,6 +19,7 @@ __all__ = (
 )
 
 
+@extendable
 class NewObjectFrameIterable(NewObjectFrameBase):
     def __new__(cls, *args, **kwargs):
         if kwargs.get("allow_save", True):
