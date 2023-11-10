@@ -11,7 +11,8 @@ from .messagebox import Messagebox
 __all__ = (
     "import_class",
     "gui_except",
-    "gui_confirm_action"
+    "gui_confirm_action",
+    "issubclass_noexcept",
 )
 
 
@@ -75,3 +76,10 @@ def gui_confirm_action(self_parent = False):
         return _gui_confirm_action(fnc)
 
     return _gui_confirm_action
+
+
+def issubclass_noexcept(*args):
+    try:
+        return issubclass(*args)
+    except Exception:
+        return False

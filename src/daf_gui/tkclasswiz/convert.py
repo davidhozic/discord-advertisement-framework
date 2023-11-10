@@ -2,19 +2,19 @@
 Modules contains definitions related to GUI object transformations.
 """
 
-from typing import Any, Union, List, get_type_hints, Generic, TypeVar, Mapping
+from typing import Any, Union, List, Generic, TypeVar, Mapping
 from contextlib import suppress
 from enum import Enum
-from inspect import signature, isclass
+from inspect import signature, getmembers, isclass
 
 from .utilities import import_class
 from .extensions import extendable
+from .annotations import *
 
 import decimal
 import warnings
 import datetime as dt
 
-import _discord as discord
 import daf
 
 
@@ -25,97 +25,9 @@ __all__ = (
     "convert_to_json",
     "convert_from_json",
     "convert_objects_to_script",
-    "ADDITIONAL_ANNOTATIONS",
-    "issubclass_noexcept",
-    "get_annotations",
 )
 
 TClass = TypeVar("TClass")
-
-
-def issubclass_noexcept(*args):
-    try:
-        return issubclass(*args)
-    except Exception:
-        return False
-
-
-ADDITIONAL_ANNOTATIONS = {
-    dt.timedelta: {
-        "days": float,
-        "seconds": float,
-        "microseconds": float,
-        "milliseconds": float,
-        "minutes": float,
-        "hours": float,
-        "weeks": float
-    },
-    dt.datetime: {
-        "year": int,
-        "month": Union[int, None],
-        "day": Union[int, None],
-        "hour": int,
-        "minute": int,
-        "second": int,
-        "microsecond": int,
-        "tzinfo": dt.timezone
-    },
-    dt.timezone: {
-        "offset": dt.timedelta,
-        "name": str
-    },
-    discord.Embed: {
-        "colour": Union[int, discord.Colour, None],
-        "color": Union[int, discord.Colour, None],
-        "title": Union[str, None],
-        "type": discord.embeds.EmbedType,
-        "url": Union[str, None],
-        "description": Union[str, None],
-        "timestamp": Union[dt.datetime, None],
-        "fields": Union[List[discord.EmbedField], None],
-        "author": Union[discord.EmbedAuthor, None],
-        "footer": Union[discord.EmbedFooter, None],
-        "image": Union[str, discord.EmbedMedia, None],
-        "thumbnail": Union[str, discord.EmbedMedia, None],
-    },
-    discord.EmbedAuthor: {
-        "name": str,
-        "url": Union[str, None],
-        "icon_url": Union[str, None]
-    },
-    discord.EmbedFooter: {
-        "text": str,
-        "icon_url": Union[str, None]
-    },
-    discord.EmbedMedia: {
-        "url": str
-    },
-    discord.Intents: {k: bool for k in discord.Intents.VALID_FLAGS},
-    discord.EmbedField: {
-        "name": str, "value": str, "inline": bool
-    },
-    discord.TextChannel: {
-        "name": str,
-        "id": int
-    },
-    daf.add_object: {
-        "obj": daf.ACCOUNT
-    },
-}
-
-ADDITIONAL_ANNOTATIONS[discord.VoiceChannel] = ADDITIONAL_ANNOTATIONS[discord.TextChannel]
-ADDITIONAL_ANNOTATIONS[discord.Guild] = ADDITIONAL_ANNOTATIONS[discord.TextChannel]
-ADDITIONAL_ANNOTATIONS[discord.User] = ADDITIONAL_ANNOTATIONS[discord.Guild]
-
-if daf.logging.sql.SQL_INSTALLED:
-    sql_ = daf.logging.sql.tables
-    for item in sql_.ORMBase.__subclasses__():
-        ADDITIONAL_ANNOTATIONS[item] = item.__init__._sa_original_init.__annotations__
-
-    ADDITIONAL_ANNOTATIONS[sql_.MessageLOG] = {"id": int, "timestamp": dt.datetime, **ADDITIONAL_ANNOTATIONS[sql_.MessageLOG]}
-    ADDITIONAL_ANNOTATIONS[sql_.MessageLOG]["success_rate"] = decimal.Decimal
-
-    ADDITIONAL_ANNOTATIONS[sql_.InviteLOG] = {"id": int, "timestamp": dt.datetime, **ADDITIONAL_ANNOTATIONS[sql_.InviteLOG]}
 
 
 CONVERSION_ATTR_TO_PARAM = {
@@ -134,17 +46,6 @@ CONVERSION_ATTR_TO_PARAM[daf.client.ACCOUNT]["password"] = lambda account: accou
 CONVERSION_ATTR_TO_PARAM[daf.dtypes.FILE] = {k: k for k in daf.dtypes.FILE.__init__.__annotations__}
 CONVERSION_ATTR_TO_PARAM[daf.dtypes.FILE]["data"] = "hex"
 CONVERSION_ATTR_TO_PARAM[daf.dtypes.FILE]["filename"] = "fullpath"
-
-
-if daf.sql.SQL_INSTALLED:
-    sql_ = daf.sql
-
-    for subcls in [sql_.GuildUSER, sql_.CHANNEL]:
-        hints = {**ADDITIONAL_ANNOTATIONS.get(subcls, {}), **get_type_hints(subcls.__init__._sa_original_init)}
-        CONVERSION_ATTR_TO_PARAM[subcls] = {key: key for key in hints.keys()}
-
-    CONVERSION_ATTR_TO_PARAM[sql_.GuildUSER]["snowflake"] = "snowflake_id"
-    CONVERSION_ATTR_TO_PARAM[sql_.CHANNEL]["snowflake"] = "snowflake_id"
 
 
 for item in {daf.TextMESSAGE, daf.VoiceMESSAGE, daf.DirectMESSAGE}:
@@ -171,25 +72,24 @@ CONVERSION_ATTR_TO_PARAM[daf.AutoGUILD]["invite_track"] = (
 CONVERSION_ATTR_TO_PARAM[daf.web.SeleniumCLIENT] = {k: f"_{k}" for k in daf.web.SeleniumCLIENT.__init__.__annotations__}
 CONVERSION_ATTR_TO_PARAM[daf.web.SeleniumCLIENT].pop("return")
 
+sql = daf.sql
+if sql.SQL_INSTALLED:
+    for name, cls in getmembers(sql.tables, lambda x: isclass(x) and hasattr(x.__init__, "_sa_original_init")):
+        CONVERSION_ATTR_TO_PARAM[cls] = {k: k for k in cls.__init__._sa_original_init.__annotations__}
 
-def get_annotations(class_) -> dict:
-    """
-    Returns class / function annotations including overrides.
-    """
-    annotations = {}
-    with suppress(AttributeError):
-        if isclass(class_):
-            annotations = class_.__init__.__annotations__
-        else:
-            annotations = class_.__annotations__
 
-    additional_annotations = ADDITIONAL_ANNOTATIONS.get(class_, {})
-    annotations = {**annotations, **additional_annotations}
+    CONVERSION_ATTR_TO_PARAM[sql.MessageLOG] = {
+        "id": "id",
+        "timestamp": "timestamp",
+        "success_rate": "success_rate",
+        **CONVERSION_ATTR_TO_PARAM[sql.MessageLOG]
+    }
 
-    if "return" in annotations:
-        del annotations["return"]
-
-    return annotations
+    CONVERSION_ATTR_TO_PARAM[sql.InviteLOG] = {
+        "id": "id",
+        "timestamp": "timestamp",
+        **CONVERSION_ATTR_TO_PARAM[sql.InviteLOG]
+    }
 
 
 @extendable
@@ -355,12 +255,7 @@ def convert_to_object_info(object_: object, **kwargs):
     def get_conversion_map(object_type):
         attrs = CONVERSION_ATTR_TO_PARAM.get(object_type)
         if attrs is None:
-            attrs = {}
-            additional_annots = {key: key for key in ADDITIONAL_ANNOTATIONS.get(object_type, {})}
-            with suppress(AttributeError):
-                attrs = {key: key for key in object_type.__init__.__annotations__.keys()}
-
-            attrs.update(**additional_annots)
+            attrs = {k:k for k in get_annotations(object_type)}
 
         attrs.pop("return", None)
         return attrs

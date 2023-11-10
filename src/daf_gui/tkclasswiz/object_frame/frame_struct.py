@@ -10,6 +10,7 @@ from ..utilities import *
 from ..storage import *
 from ..messagebox import Messagebox
 from ..extensions import extendable
+from ..annotations import get_annotations
 
 from .frame_base import *
 
