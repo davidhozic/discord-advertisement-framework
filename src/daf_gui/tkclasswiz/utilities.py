@@ -1,7 +1,7 @@
 """
 Module contains interface to run async tasks from GUI.
 """
-from typing import Callable
+from typing import Any, Callable
 from functools import wraps
 
 import importlib
@@ -32,27 +32,30 @@ def import_class(path: str):
     return class_
 
 
-def gui_except(parent = None):
+def gui_except(window = None):
     """
-    Propagate any exceptions to the ``parent`` window.
+    Propagate any exceptions to the ``window``.
     """
     def decorator(fnc: Callable):
-        """
-        Decorator that catches exceptions and displays them in GUI.
-        """
-        @wraps(fnc)
-        def wrapper(*args, **kwargs):
-            try:
-                return fnc(*args, **kwargs)
-            except Exception as exc:
-                Messagebox.show_error(f"Exception in {fnc.__name__}", str(exc), parent=parent)
+        @wraps(fnc, updated=[])
+        class wrapper:
+            def __init__(self, instance = None) -> None:
+                self.inst = instance
+            
+            def __get__(self, instance, cls = None):
+                return wrapper(instance)
+            
+            def __call__(self, *args: Any, **kwargs: Any) -> Any:
+                parent = window or self.inst
+                try:
+                    if self.inst is not None:
+                        return fnc(self.inst, *args, **kwargs)
 
-        return wrapper
+                    return fnc(*args, **kwargs)
+                except Exception as exc:
+                    Messagebox.show_error(f"Exception in {fnc.__name__}", str(exc), parent=parent)
 
-    if callable(parent):  # Assume no parameters given
-        fnc = parent
-        parent = None
-        return decorator(fnc)
+        return wrapper()
 
     return decorator
 

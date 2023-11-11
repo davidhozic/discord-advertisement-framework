@@ -7,8 +7,10 @@ from .frame_string import *
 from .frame_struct import *
 from .frame_base import *
 
+
 from ..dpi import dpi_scaled
 from ..extensions import extendable
+from ..utilities import gui_except
 
 import tkinter as tk
 import tkinter.ttk as ttk
@@ -73,6 +75,7 @@ class ObjectEditWindow(tk.Toplevel):
     def closed(self) -> bool:
         return self._closed
 
+    @gui_except()
     def open_object_edit_frame(self, class_, *args, **kwargs):
         """
         Opens new frame for defining an object.

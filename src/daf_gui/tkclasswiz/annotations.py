@@ -1,14 +1,10 @@
 """
 Module used for managing annotations.
 """
-from typing import Union, List, Optional
+from datetime import datetime, timedelta, timezone
+from typing import Union, Optional
 from contextlib import suppress
 from inspect import isclass
-
-import datetime as dt
-
-import _discord as discord
-import daf
 
 
 __all__ = (
@@ -18,7 +14,7 @@ __all__ = (
 
 
 ADDITIONAL_ANNOTATIONS = {
-    dt.timedelta: {
+    timedelta: {
         "days": float,
         "seconds": float,
         "microseconds": float,
@@ -27,7 +23,7 @@ ADDITIONAL_ANNOTATIONS = {
         "hours": float,
         "weeks": float
     },
-    dt.datetime: {
+    datetime: {
         "year": int,
         "month": Union[int, None],
         "day": Union[int, None],
@@ -35,54 +31,13 @@ ADDITIONAL_ANNOTATIONS = {
         "minute": int,
         "second": int,
         "microsecond": int,
-        "tzinfo": dt.timezone
+        "tzinfo": timezone
     },
-    dt.timezone: {
-        "offset": dt.timedelta,
+    timezone: {
+        "offset": timedelta,
         "name": str
     },
-    discord.Embed: {
-        "colour": Union[int, discord.Colour, None],
-        "color": Union[int, discord.Colour, None],
-        "title": Union[str, None],
-        "type": discord.embeds.EmbedType,
-        "url": Union[str, None],
-        "description": Union[str, None],
-        "timestamp": Union[dt.datetime, None],
-        "fields": Union[List[discord.EmbedField], None],
-        "author": Union[discord.EmbedAuthor, None],
-        "footer": Union[discord.EmbedFooter, None],
-        "image": Union[str, discord.EmbedMedia, None],
-        "thumbnail": Union[str, discord.EmbedMedia, None],
-    },
-    discord.EmbedAuthor: {
-        "name": str,
-        "url": Union[str, None],
-        "icon_url": Union[str, None]
-    },
-    discord.EmbedFooter: {
-        "text": str,
-        "icon_url": Union[str, None]
-    },
-    discord.EmbedMedia: {
-        "url": str
-    },
-    discord.Intents: {k: bool for k in discord.Intents.VALID_FLAGS},
-    discord.EmbedField: {
-        "name": str, "value": str, "inline": bool
-    },
-    discord.TextChannel: {
-        "name": str,
-        "id": int
-    },
-    daf.add_object: {
-        "obj": daf.ACCOUNT
-    },
 }
-
-ADDITIONAL_ANNOTATIONS[discord.VoiceChannel] = ADDITIONAL_ANNOTATIONS[discord.TextChannel]
-ADDITIONAL_ANNOTATIONS[discord.Guild] = ADDITIONAL_ANNOTATIONS[discord.TextChannel]
-ADDITIONAL_ANNOTATIONS[discord.User] = ADDITIONAL_ANNOTATIONS[discord.Guild]
 
 
 def register_annotations(cls: type, mapping: Optional[dict] = {}, **annotations):

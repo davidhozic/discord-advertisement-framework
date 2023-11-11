@@ -228,7 +228,7 @@ class Application():
         # Accounts list. Defined here since it's needed below
         self.lb_accounts = ListBoxScrolled(frame_tab_account)
 
-        @gui_except
+        @gui_except()
         @gui_confirm_action
         def import_accounts():
             "Imports account from live view"
@@ -343,7 +343,7 @@ class Application():
             else:
                 tkdiag.Messagebox.show_error("Select atlest one item!", "Select errror")
 
-        @gui_except
+        @gui_except()
         def add_account():
             gui_daf_assert_running()
             selection = combo_add_object_edit.combo.current()
@@ -645,7 +645,7 @@ class Application():
         frame_optionals_packages.pack(fill=tk.BOTH, expand=True)
 
         def install_deps(optional: str, gauge: ttk.Floodgauge, bnt: ttk.Button):
-            @gui_except
+            @gui_except()
             def _installer():
                 subprocess.check_call([
                     sys.executable.replace("pythonw", "python"), "-m", "pip", "install",
@@ -675,7 +675,7 @@ class Application():
             tkdiag.Messagebox.show_error("Object edit window is already open, close it first.", "Already open")
             self.objects_edit_window.focus()
 
-    @gui_except
+    @gui_except()
     def load_live_accounts(self):
         async def load_accounts():
             gui_daf_assert_running()
@@ -785,7 +785,7 @@ daf.run(
 
         tkdiag.Messagebox.show_info(f"Saved to {filename}", "Finished", self.win_main)
 
-    @gui_except
+    @gui_except()
     def save_schema(self) -> bool:
         filename = tkfile.asksaveasfilename(filetypes=[("JSON", "*.json")])
         if filename == "":
@@ -814,7 +814,7 @@ daf.run(
 
         return True
 
-    @gui_except
+    @gui_except()
     def load_schema(self):
         filename = tkfile.askopenfilename(filetypes=[("JSON", "*.json")])
         if filename == "":
@@ -855,7 +855,7 @@ daf.run(
                 if selected_index >= 0:
                     self.combo_connection_edit.combo.current(selected_index)
 
-    @gui_except
+    @gui_except()
     def start_daf(self):
         # Initialize connection
         connection = convert_to_objects(self.combo_connection_edit.combo.get())
@@ -894,7 +894,7 @@ daf.run(
         self.bnt_toolbar_stop_daf.configure(state="disabled")
         tae.async_execute(self.connection.shutdown(), wait=False, pop_up=True, master=self.win_main)
 
-    @gui_except
+    @gui_except()
     def add_accounts_daf(self, selection: bool = False):
         gui_daf_assert_running()
         accounts = self.lb_accounts.get()

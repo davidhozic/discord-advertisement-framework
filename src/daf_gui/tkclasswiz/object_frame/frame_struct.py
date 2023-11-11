@@ -75,12 +75,10 @@ class NewObjectFrameStruct(NewObjectFrameBase):
         dpi_5 = dpi_scaled(5)
 
         if not (annotations := get_annotations(class_)):
-            Messagebox.show_error("This object cannot be edited.", "Load error", parent=self)
-            self.origin_window.after_idle(self._cleanup)  # Can not clean the object before it has been added to list
-            return
+            raise TypeError("This object cannot be edited.")
 
         # Template
-        @gui_except(parent=self)
+        @gui_except(window=self)
         def save_template():
             filename = tkfile.asksaveasfilename(filetypes=[("JSON", "*.json")], parent=self)
             if filename == "":
@@ -96,7 +94,7 @@ class NewObjectFrameStruct(NewObjectFrameBase):
 
             Messagebox.show_info("Finished", f"Saved to {filename}", parent=self)
 
-        @gui_except(parent=self)
+        @gui_except(window=self)
         def load_template():
             filename = tkfile.askopenfilename(filetypes=[("JSON", "*.json")], parent=self)
             if filename == "":
@@ -262,7 +260,7 @@ class NewObjectFrameStruct(NewObjectFrameBase):
 
         return values
 
-    @gui_except
+    @gui_except()
     def _edit_selected(self, key: str, combo: ComboBoxObjects):
         selection = combo.get()
 
@@ -305,7 +303,7 @@ class NewObjectFrameStructView(NewObjectFrameStruct):
         Viewer.__init__.__annotations__ = {k: v.class_ if isinstance(v, ObjectInfo) else type(v) for k, v in old_data.data.items()}
         super().__init__(Viewer, *args, **kwargs)
 
-    @gui_except
+    @gui_except()
     def _edit_selected(self, key: str, combo: ComboBoxObjects):
         selection = combo.get()
 
