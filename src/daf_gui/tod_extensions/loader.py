@@ -1,25 +1,28 @@
 """
 Extension loader method.
 """
-from datetime import datetime
+from inspect import getmembers, isclass
 from typing import Union, List
+from datetime import datetime
 
+from ..tkclasswiz.convert import (
+    ObjectInfo,
+    convert_to_object_info,
+    register_object_objectinfo_rule,
+)
+from ..tkclasswiz.annotations import register_annotations as reg_annotations, get_annotations
 from ..tkclasswiz.object_frame.frame_struct import NewObjectFrameStruct
-
-from ..tkclasswiz.convert import ObjectInfo, convert_to_object_info
 from ..tkclasswiz.extensions import Extension
-from ..tkclasswiz.annotations import register_annotations as reg_annotations
 
 from . import deprecation_notice
-from . import extra_widgets
-from . import help_button
 from . import method_execution
+from . import extra_widgets
 from . import live_objects
+from . import help_button
 from . import convert
 
 import _discord as discord
 import daf
-
 
 
 def register_extensions():
@@ -95,3 +98,101 @@ def register_annotations():
         daf.add_object,
         obj=daf.ACCOUNT
     )
+
+
+def register_conversions():
+    # ACCOUNT
+    m = {k: k for k in daf.client.ACCOUNT.__init__.__annotations__}
+    m["token"] = "_token"
+    m["username"] = lambda account: account.selenium._username if account.selenium is not None else None
+    m["password"] = lambda account: account.selenium._password if account.selenium is not None else None
+    del m["return"]
+    register_object_objectinfo_rule(
+        daf.client.ACCOUNT,
+        m
+    )
+
+    # FILE
+    m = {k: k for k in daf.dtypes.FILE.__init__.__annotations__}
+    m["data"] = "hex"
+    m["filename"] = "fullpath"
+    register_object_objectinfo_rule(
+        daf.dtypes.FILE,
+        m
+    )
+
+    # xMESSAGE
+    for item in {daf.TextMESSAGE, daf.VoiceMESSAGE, daf.DirectMESSAGE}:
+        m = {k: k for k in item.__init__.__annotations__}
+        m["data"] = "_data"
+        m["start_in"] = "next_send_time"
+        register_object_objectinfo_rule(item, m)
+
+
+    channels = lambda message_: (
+        [x if isinstance(x, int) else x.id for x in message_.channels]
+        if not isinstance(message_.channels, daf.AutoCHANNEL)
+        else message_.channels
+    )
+    register_object_objectinfo_rule(
+        daf.TextMESSAGE, 
+        channels=channels
+    )
+
+    register_object_objectinfo_rule(
+        daf.VoiceMESSAGE,
+        channels=channels        
+    )
+
+    # GUILD
+    m = {k: k for k in daf.GUILD.__init__.__annotations__}
+    m["invite_track"] = (
+        lambda guild_: list(guild_.join_count.keys())
+    )
+    register_object_objectinfo_rule(
+        daf.guild.GUILD,
+        m
+    )
+    
+    # AutoGUILD
+    m = {k: k for k in daf.AutoGUILD.__init__.__annotations__}
+    m["invite_track"] = (
+        lambda guild_: list(guild_._invite_join_count.keys())
+    )
+    register_object_objectinfo_rule(
+        daf.guild.AutoGUILD,
+        m
+    )
+
+    register_object_objectinfo_rule(
+        daf.web.SeleniumCLIENT,
+        {k: f"_{k}" for k in get_annotations(daf.web.SeleniumCLIENT)}
+    )
+
+    sql = daf.sql
+    if sql.SQL_INSTALLED:
+        register_object_objectinfo_rule(
+            sql.MessageLOG,
+            {
+                "id": "id",
+                "timestamp": "timestamp",
+                "success_rate": "success_rate",
+            }
+        )
+
+        register_object_objectinfo_rule(
+            sql.InviteLOG,
+            {
+                "id": "id",
+                "timestamp": "timestamp",
+            }
+        )
+
+        for name, cls in getmembers(sql.tables, lambda x: isclass(x) and hasattr(x.__init__, "_sa_original_init")):
+            annots = cls.__init__._sa_original_init.__annotations__.copy()
+            annots.pop('return', None)
+            register_object_objectinfo_rule(
+                cls,
+                {k: k for k in annots}
+            )
+

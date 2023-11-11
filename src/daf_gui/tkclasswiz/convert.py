@@ -2,20 +2,19 @@
 Modules contains definitions related to GUI object transformations.
 """
 
-from typing import Any, Union, List, Generic, TypeVar, Mapping
+from typing import Any, Union, List, Generic, TypeVar, Mapping, Optional
 from contextlib import suppress
+from inspect import signature
 from enum import Enum
-from inspect import signature, getmembers, isclass
 
 from .utilities import import_class
 from .extensions import extendable
+from .cache import cache_result
 from .annotations import *
 
-import decimal
-import warnings
 import datetime as dt
-
-import daf
+import warnings
+import decimal
 
 
 __all__ = (
@@ -38,58 +37,65 @@ CONVERSION_ATTR_TO_PARAM = {
 }
 
 
-CONVERSION_ATTR_TO_PARAM[daf.client.ACCOUNT] = {k: k for k in daf.client.ACCOUNT.__init__.__annotations__}
-CONVERSION_ATTR_TO_PARAM[daf.client.ACCOUNT]["token"] = "_token"
-CONVERSION_ATTR_TO_PARAM[daf.client.ACCOUNT]["username"] = lambda account: account.selenium._username if account.selenium is not None else None
-CONVERSION_ATTR_TO_PARAM[daf.client.ACCOUNT]["password"] = lambda account: account.selenium._password if account.selenium is not None else None
+def register_object_objectinfo_rule(cls: type, mapping: Optional[dict] = {}, **kwargs):
+    """
+    Used for adding new conversion rules when converting from Python objects
+    into abstract ObjectInfo objects (GUI objects).
 
-CONVERSION_ATTR_TO_PARAM[daf.dtypes.FILE] = {k: k for k in daf.dtypes.FILE.__init__.__annotations__}
-CONVERSION_ATTR_TO_PARAM[daf.dtypes.FILE]["data"] = "hex"
-CONVERSION_ATTR_TO_PARAM[daf.dtypes.FILE]["filename"] = "fullpath"
+    These rules will be used when calling the ``convert_to_object_info`` function.
+
+    If rules for ``cls`` do not exist, the conversion function will assume parameters
+    are located under the same attribute name.
+
+    A neat way to avoid registering custom conversion rules, is to store the attributes either under
+    the same name as the parameter, or store them under a different name and create a ``@property``
+    getter which has the same name as the parameter.
+
+    Parameters
+    ------------
+    mapping: Optional[Dict[str, Union[Callable[[T], Any]], str]]
+        Mapping mapping the parameter name to attribute from which to obtain the value.
+        Values of mapping can also be a getter function, that accepts the object as parameter.
+    kwargs: Optional[Unpack[str, Union[Callable[[T], Any]], str]]
+        Keyword arguments mapping parameter name to attribute names from which to obtain the value.
+        Values of mapping can also be a getter function, that accepts the object as parameter.
+
+    Example
+    ----------
+    .. code-block:: python
+        class FILE:
+            def __init__(self, filename: str):
+                self.fullpath = filename
+
+        register_object_objectinfo_rule(
+            FILE,
+            filename="fullpath"
+        )
+
+        # Timezone
+        import datetime
+        register_object_objectinfo_rule(
+            datetime.timezone,
+            offset=lambda timezone: timezone.utcoffset(None)
+        )
+    """
+
+    if cls not in CONVERSION_ATTR_TO_PARAM:
+        CONVERSION_ATTR_TO_PARAM[cls] = {}
+
+    CONVERSION_ATTR_TO_PARAM[cls].update(**kwargs, **mapping)
 
 
-for item in {daf.TextMESSAGE, daf.VoiceMESSAGE, daf.DirectMESSAGE}:
-    CONVERSION_ATTR_TO_PARAM[item] = {k: k for k in item.__init__.__annotations__}
-    CONVERSION_ATTR_TO_PARAM[item]["data"] = "_data"
-    CONVERSION_ATTR_TO_PARAM[item]["start_in"] = "next_send_time"
+def get_object_objectinfo_rule_map(cls: type) -> dict:
+    """
+    Returns the conversion mapping for ``cls``
 
-
-CONVERSION_ATTR_TO_PARAM[daf.TextMESSAGE]["channels"] = (
-    lambda message_: [x if isinstance(x, int) else x.id for x in message_.channels] if not isinstance(message_.channels, daf.AutoCHANNEL) else message_.channels
-)
-CONVERSION_ATTR_TO_PARAM[daf.VoiceMESSAGE]["channels"] = CONVERSION_ATTR_TO_PARAM[daf.TextMESSAGE]["channels"]
-
-CONVERSION_ATTR_TO_PARAM[daf.GUILD] = {k: k for k in daf.GUILD.__init__.__annotations__}
-CONVERSION_ATTR_TO_PARAM[daf.GUILD]["invite_track"] = (
-    lambda guild_: list(guild_.join_count.keys())
-)
-
-CONVERSION_ATTR_TO_PARAM[daf.AutoGUILD] = {k: k for k in daf.AutoGUILD.__init__.__annotations__}
-CONVERSION_ATTR_TO_PARAM[daf.AutoGUILD]["invite_track"] = (
-    lambda guild_: list(guild_._invite_join_count.keys())
-)
-
-CONVERSION_ATTR_TO_PARAM[daf.web.SeleniumCLIENT] = {k: f"_{k}" for k in daf.web.SeleniumCLIENT.__init__.__annotations__}
-CONVERSION_ATTR_TO_PARAM[daf.web.SeleniumCLIENT].pop("return")
-
-sql = daf.sql
-if sql.SQL_INSTALLED:
-    for name, cls in getmembers(sql.tables, lambda x: isclass(x) and hasattr(x.__init__, "_sa_original_init")):
-        CONVERSION_ATTR_TO_PARAM[cls] = {k: k for k in cls.__init__._sa_original_init.__annotations__}
-
-
-    CONVERSION_ATTR_TO_PARAM[sql.MessageLOG] = {
-        "id": "id",
-        "timestamp": "timestamp",
-        "success_rate": "success_rate",
-        **CONVERSION_ATTR_TO_PARAM[sql.MessageLOG]
-    }
-
-    CONVERSION_ATTR_TO_PARAM[sql.InviteLOG] = {
-        "id": "id",
-        "timestamp": "timestamp",
-        **CONVERSION_ATTR_TO_PARAM[sql.InviteLOG]
-    }
+    Returns
+    ----------
+    Dict[str, Union[Callable[[T], Any]], str]
+        Mapping of parameter name to the attribute name or getter function.
+    """
+    return CONVERSION_ATTR_TO_PARAM.get(cls, {})
 
 
 @extendable
@@ -164,7 +170,7 @@ class ObjectInfo(Generic[TClass]):
         return _ret
 
 
-@daf.misc.cache.cache_result(max=1024)
+@cache_result(max=1024)
 def convert_objects_to_script(object: Union[ObjectInfo, list, tuple, set, str]):
     """
     Converts ObjectInfo objects into equivalent Python code.
@@ -218,7 +224,7 @@ def convert_objects_to_script(object: Union[ObjectInfo, list, tuple, set, str]):
 
 
 @extendable
-@daf.misc.cache.cache_result(16_384)
+@cache_result(16_384)
 def convert_to_object_info(object_: object, **kwargs):
     """
     Converts an object into ObjectInfo.
@@ -282,7 +288,7 @@ def convert_to_object_info(object_: object, **kwargs):
     return _convert_object_info(object_, object_type, attrs)
 
 
-@daf.misc.cache.cache_result()
+@cache_result()
 def _convert_to_objects_cached(*args, **kwargs):
     return convert_to_objects(*args, **kwargs)
 
@@ -326,7 +332,7 @@ def convert_to_objects(
     return d
 
 
-@daf.misc.cache.cache_result()
+@cache_result()
 def convert_to_json(d: Union[ObjectInfo, List[ObjectInfo], Any]):
     """
     Converts ObjectInfo into JSON representation.
@@ -344,7 +350,7 @@ def convert_to_json(d: Union[ObjectInfo, List[ObjectInfo], Any]):
     return d
 
 
-@daf.misc.cache.cache_result()
+@cache_result()
 def convert_from_json(d: Union[dict, List[dict], Any]) -> ObjectInfo:
     """
     Converts previously converted JSON back to ObjectInfo.

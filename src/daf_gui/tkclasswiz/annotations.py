@@ -51,6 +51,23 @@ def register_annotations(cls: type, mapping: Optional[dict] = {}, **annotations)
     ------------
     cls: type
         The class (or function) to register additional annotations on.
+    mapping: Optional[Dict[str, type]]
+        Mapping mapping the parameter name to it's type.
+    annotations: Optional[Unpack[str, type]]
+        Keyword arguments mapping parameter name to it's type (``name=type``).
+
+    Example
+    -----------
+    
+    .. code-block:: python
+
+        from datetime import timedelta, timezone
+
+        register_annotations(
+            timezone,
+            offset=timedelta,
+            name=str
+        )    
     """
     if cls not in ADDITIONAL_ANNOTATIONS:
         ADDITIONAL_ANNOTATIONS[cls] = {}
