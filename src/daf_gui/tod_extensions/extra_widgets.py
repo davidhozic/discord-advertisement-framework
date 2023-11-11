@@ -232,7 +232,7 @@ for name in dir(daf):
 
 
 
-def load_extension(frame: NewObjectFrameStruct):
+def load_extension(frame: NewObjectFrameStruct, *args, **kwargs):
     # Additional widgets
     add_widgets = ADDITIONAL_WIDGETS.get(frame.class_)
     if add_widgets is not None:

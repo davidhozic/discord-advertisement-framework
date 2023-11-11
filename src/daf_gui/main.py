@@ -3,7 +3,7 @@ Main file of the DAF GUI.
 """
 from importlib.util import find_spec
 from pathlib import Path
-from typing import List, Any, Union
+from typing import List
 
 from daf.misc import instance_track as it
 
@@ -69,12 +69,6 @@ OPTIONAL_MODULES = [
     ("SQL logging", "sql", daf.logging.sql.SQL_INSTALLED),
     ("Voice messages", "voice", daf.dtypes.GLOBALS.voice_installed),
     ("Web features (Chrome)", "web", daf.web.GLOBALS.selenium_installed),
-]
-
-
-STARTUP_MESSAGES = [
-    ("Welcome to DAF!", "If you need help please refer the 'About' tab."),
-    ("Deprecation notice [Youtube]", "Youtube streaming will be removed in version v2.10 in favor of faster loading times."),
 ]
 
 

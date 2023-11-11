@@ -201,6 +201,7 @@ class NewObjectFrameStruct(NewObjectFrameBase):
 
         self.remember_gui_data()
 
+    @extendable
     def load(self, old_data: ObjectInfo):
         data = old_data.data
         for attr, (widget, types_) in self._map.items():

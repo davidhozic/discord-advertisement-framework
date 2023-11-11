@@ -26,17 +26,20 @@ import daf
 
 
 def register_extensions():
-    NewObjectFrameStruct.register_extension(Extension("Deprecation notice", "1.0.0", deprecation_notice.load_extension))
-    NewObjectFrameStruct.register_extension(Extension("Extra widgets", "1.0.0", extra_widgets.load_extension))
-    NewObjectFrameStruct.register_extension(Extension("Help button", "1.0.0", help_button.load_extension))
-    NewObjectFrameStruct.register_extension(Extension("Method execution", "1.0.0", method_execution.load_extension))
-    NewObjectFrameStruct.to_object.register_extension(
+    NewObjectFrameStruct.register_post_extension(Extension("Deprecation notice", "1.0.0", deprecation_notice.load_extension))
+    NewObjectFrameStruct.register_post_extension(Extension("Extra widgets", "1.0.0", extra_widgets.load_extension))
+    NewObjectFrameStruct.register_post_extension(Extension("Help button", "1.0.0", help_button.load_extension))
+    NewObjectFrameStruct.register_post_extension(Extension("Method execution", "1.0.0", method_execution.load_extension))
+    NewObjectFrameStruct.to_object.register_post_extension(
         Extension("Live objects to_object", "1.0.0", live_objects.load_extension_oi_to_object),
     )
+    NewObjectFrameStruct.load.register_pre_extension(
+        Extension("Live Objects preserve after load", "1.0.0", live_objects.load_extension_oi_load)
+    )
 
-    ObjectInfo.register_extension(Extension("Live objects", "1.0.0", live_objects.load_extension_oi))
-    ObjectInfo.__eq__.register_extension(Extension("Live objects EQ", "1.0.0", live_objects.load_extension_oi_eq))
-    convert_to_object_info.register_extension(
+    ObjectInfo.register_post_extension(Extension("Live objects", "1.0.0", live_objects.load_extension_oi))
+    ObjectInfo.__eq__.register_post_extension(Extension("Live objects EQ", "1.0.0", live_objects.load_extension_oi_eq))
+    convert_to_object_info.register_post_extension(
         Extension("Live object save_original", "1.0.0", convert.load_extension_to_object_info)
     )
 

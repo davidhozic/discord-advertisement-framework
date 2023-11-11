@@ -55,27 +55,37 @@ def extendable(obj: Union[T, list]):
     if isclass(obj):
         @wraps(obj, updated=[])
         class ExtendableClass(obj):
-            __registered_tod_ext__ = []
+            __reg_post_ext__ = []
+            __reg_pre_ext__ = []
 
             def __init__(self, *args, **kwargs):
+                for extension in ExtendableClass.__reg_pre_ext__:
+                    extension(self, *args, **kwargs)
+
                 super().__init__(*args, **kwargs)
+
                 extension: Extension
-                for extension in ExtendableClass.__registered_tod_ext__:
-                    extension(self)
+                for extension in ExtendableClass.__reg_post_ext__:
+                    extension(self, *args, **kwargs)
 
             @classmethod
-            def register_extension(obj, extension: Extension):
-                obj.__registered_tod_ext__.append(extension)
+            def register_pre_extension(cls, extension: Extension):
+                cls.__reg_pre_ext__.append(extension)
+
+            @classmethod
+            def register_post_extension(obj, extension: Extension):
+                obj.__reg_post_ext__.append(extension)
 
             @classmethod
             def get_extensions(obj):
-                return obj.__registered_tod_ext__[:]
+                return obj.__reg_pre_ext__, obj.__reg_post_ext__[:]
 
         return ExtendableClass
     else:
         @wraps(obj, updated=[])
         class ExtendableFunction:
-            __registered_tod_ext__ = []
+            __reg_post_ext__ = []
+            __reg_pre_ext__ = []
 
             def __init__(self, bind: object = None) -> None:
                 self.bind = bind
@@ -86,8 +96,12 @@ def extendable(obj: Union[T, list]):
                 else:
                     extra_args = ()
 
+                for ext in ExtendableFunction.__reg_pre_ext__:
+                    ext(*extra_args, *args, **kwargs)
+
                 r = obj(*extra_args, *args, **kwargs)
-                for ext in ExtendableFunction.__registered_tod_ext__:
+                
+                for ext in ExtendableFunction.__reg_post_ext__:
                     r = ext(*extra_args, *args, r, **kwargs)
 
                 return r
@@ -97,12 +111,16 @@ def extendable(obj: Union[T, list]):
                 return ExtendableFunction(instance)
 
             @classmethod
-            def register_extension(cls, extension: Extension):
-                cls.__registered_tod_ext__.append(extension)
+            def register_pre_extension(cls, extension: Extension):
+                cls.__reg_pre_ext__.append(extension)
 
             @classmethod
-            def get_extensions(cls):
-                return cls.__registered_tod_ext__[:]
+            def register_post_extension(cls, extension: Extension):
+                cls.__reg_post_ext__.append(extension)
+
+            @classmethod
+            def get_extensions(obj):
+                return obj.__reg_pre_ext__, obj.__reg_post_ext__[:]
 
 
         return ExtendableFunction()

@@ -14,7 +14,7 @@ DEPRECATION_NOTICES = {
 }
 
 
-def load_extension(frame: NewObjectFrameStruct):
+def load_extension(frame: NewObjectFrameStruct, *args, **kwargs):
     if len(notices := DEPRECATION_NOTICES.get(frame.class_, [])):
         def show_deprecations():
             tkdiag.Messagebox.show_warning(

@@ -15,7 +15,7 @@ HELP_URLS = {
 }
 
 
-def load_extension(frame: NewObjectFrameStruct):
+def load_extension(frame: NewObjectFrameStruct, *args, **kwargs):
     package = frame.class_.__module__.split(".", 1)[0]
     help_url = HELP_URLS.get(package)
     if help_url is not None:

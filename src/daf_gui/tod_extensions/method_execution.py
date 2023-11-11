@@ -39,15 +39,15 @@ ADDITIONAL_PARAMETER_VALUES = {
 }
 
 
-def load_extension(frame: NewObjectFrameStruct):
+def load_extension(frame: NewObjectFrameStruct, *args, **kwargs):
     if (
-            frame.old_gui_data is None or
-            # getattr since class_ can also be non ObjectInfo
-            getattr(frame.old_gui_data, "real_object", None) is None or
-            (available_methods := EXECUTABLE_METHODS.get(frame.class_)) is None or
-            not frame.allow_save
-        ):
-            return
+        frame.old_gui_data is None or
+        # getattr since class_ can also be non ObjectInfo
+        getattr(frame.old_gui_data, "real_object", None) is None or
+        (available_methods := EXECUTABLE_METHODS.get(frame.class_)) is None or
+        not frame.allow_save
+    ):
+        return
 
     def execute_method():
         async def runner():
