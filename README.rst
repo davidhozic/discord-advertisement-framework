@@ -1,7 +1,7 @@
 =========================================================
 Discord Advertisement Framework
 =========================================================
-The Discord advertisement framework is a Python based automatic application that allows **easy automatic advertisement** (and much more) on Discord.
+The Discord advertisement framework is a Python based automatic application that allows **easy periodic advertisement** / **shilling** on Discord.
 
 
 .. image:: ./docs/images/daf-gui-front.png
