@@ -7,13 +7,14 @@ from typing import List, Optional, Literal, Awaitable
 from daf.logging.tracing import TraceLEVELS, trace
 from daf.misc import instance_track as it
 
-from .convert import *
-from .utilities import *
+from .tkclasswiz.convert import *
+from .tkclasswiz.utilities import *
 
 from aiohttp import ClientSession, BasicAuth, WSMsgType
 from aiohttp import web
 
 import daf
+import asyncio
 
 
 __all__ = (

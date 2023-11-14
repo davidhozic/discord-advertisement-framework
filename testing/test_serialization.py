@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 from test_util import *
-from daf_gui.convert import convert_to_object_info, convert_to_objects, ObjectInfo
+from daf_gui.tkclasswiz.convert import convert_to_object_info, convert_to_objects, ObjectInfo
 
 import pytest
 import daf

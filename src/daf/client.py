@@ -131,6 +131,8 @@ class ACCOUNT:
 
     _removed_servers: List[Union[guild.BaseGUILD, guild.AutoGUILD]]
 
+    __passwords__ = ("token",)
+    
     @typechecked
     def __init__(
         self,
