@@ -1,6 +1,10 @@
 """
 Extra widgets TOD extension.
 """
+from ttkbootstrap.tooltip import ToolTip
+from contextlib import suppress
+from functools import partial
+
 from ..tkclasswiz.convert import (
     convert_to_object_info,
     convert_to_objects,
@@ -9,10 +13,6 @@ from ..tkclasswiz.convert import (
 from ..tkclasswiz.object_frame.frame_struct import NewObjectFrameStruct
 from ..connector import get_connection
 from ..tkclasswiz.dpi import *
-
-
-from ttkbootstrap.tooltip import ToolTip
-from contextlib import suppress
 
 import ttkbootstrap.dialogs as tkdiag
 import daf.misc.instance_track as it
@@ -177,7 +177,7 @@ def setup_additional_live_properties(w: ttk.Menubutton, frame):
 
     menu = ttk.Menu(w, title="Property menu")
     for k in oi.property_map:
-        menu.add_command(command=frame._lambda(_callback, k), label=k)
+        menu.add_command(command=partial(_callback, k), label=k)
 
     w.configure(menu=menu)
     ToolTip(w, "Inspect additional properties of the object.", topmost=True)

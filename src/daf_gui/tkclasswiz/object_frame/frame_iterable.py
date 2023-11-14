@@ -1,4 +1,5 @@
 from typing import get_args, get_origin, Any, List, Union
+from functools import partial
 
 from ..convert import *
 from ..dpi import *
@@ -59,7 +60,7 @@ class NewObjectFrameIterable(NewObjectFrameBase):
             args = get_args(args[0])
 
         for arg in args:
-            menu.add_command(label=self.get_cls_name(arg), command=self._lambda(self.new_object_frame, arg, w))
+            menu.add_command(label=self.get_cls_name(arg), command=partial(self.new_object_frame, arg, w))
 
         w.pack(side="left", fill=tk.BOTH, expand=True)
 
@@ -97,7 +98,7 @@ class NewObjectFrameIterableView(NewObjectFrameIterable):
     """
     def __init__(self, class_: Any, return_widget: Any, parent=None, old_data: list = None, check_parameters: bool = True, allow_save=True):
         dpi_5 = dpi_scaled(5)
-        super(NewObjectFrameIterable, self).__init__(class_, return_widget, parent, old_data, check_parameters, allow_save)
+        super(NewObjectFrameBase, self).__init__(class_, return_widget, parent, old_data, check_parameters, allow_save)
         self.storage_widget = w = ListBoxScrolled(self.frame_main, height=20)
 
         frame_edit_remove = ttk.Frame(self.frame_main, padding=(dpi_5, 0))

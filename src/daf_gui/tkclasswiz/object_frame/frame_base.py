@@ -1,5 +1,6 @@
-from typing import get_args, get_origin, Iterable, Union, Literal, Any, TYPE_CHECKING
+from typing import get_args, get_origin, Iterable, Union, Literal, Any, TYPE_CHECKING, TypeVar
 from contextlib import suppress
+from functools import partial
 
 from ..convert import *
 from ..dpi import *
@@ -14,6 +15,9 @@ import tkinter as tk
 
 if TYPE_CHECKING:
     from .window import ObjectEditWindow
+
+
+T = TypeVar('T')
 
 
 __all__ = (
@@ -54,39 +58,46 @@ class NewObjectFrameBase(ttk.Frame):
         allow_save = True,
     ):
         self.class_ = class_
+        "The type (class) of object being creating"
+
         self.return_widget = return_widget
+        "The widget where the abstract object (ObjectInfo) will be stored"
+
         self._original_gui_data = None
         self.parent = parent
         self.check_parameters = check_parameters  # At save time
+        "Check for parameters on save"
+
         self.allow_save = allow_save  # Allow save or not allow (eg. viewing SQL data)
+        "Saving is allowed"
+
         self.old_gui_data = old_data  # Set in .load
+        "If editing, the value being edited"
 
         # If return_widget is None, it's a floating display with no return value
         editing_index = return_widget.current() if return_widget is not None else -1
         if editing_index == -1:
             editing_index = None
 
-        self.editing_index = editing_index  # The index of old_gui_data inside the return widget
+        self.editing_index = editing_index
+        "The index of object being edited"
 
         super().__init__(master=parent)
         self.init_toolbar_frame(class_)
         self.init_main_frame()
 
     @staticmethod
-    def get_cls_name(cls):
+    def get_cls_name(cls: T) -> Union[str, T]:
+        """
+        Returns the name of the class ``cls`` or
+        the original class when the name cannot be obtained.
+        """
         if hasattr(cls, "_name"):
             return cls._name
         if hasattr(cls, "__name__"):
             return cls.__name__
         else:
             return cls
-
-    @staticmethod
-    def _lambda(method, *args, **kwargs):
-        def _():
-            return method(*args, **kwargs)
-
-        return _
 
     @classmethod
     def set_origin_window(cls, window: "ObjectEditWindow"):

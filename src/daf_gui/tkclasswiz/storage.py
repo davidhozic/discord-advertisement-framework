@@ -100,7 +100,7 @@ class ListBoxObjects(tk.Listbox):
     def count(self) -> int:
         return len(self._original_items)
 
-    @gui_confirm_action(True)
+    @gui_confirm_action()
     def delete_selected(self):
         sel: List[int] = self.curselection()
         if len(sel):

@@ -1,7 +1,7 @@
 """
-Module contains interface to run async tasks from GUI.
+Utility module.
 """
-from typing import Any, Callable
+from typing import Any, Callable, Tuple
 from functools import wraps
 
 import importlib
@@ -16,7 +16,7 @@ __all__ = (
 )
 
 
-def import_class(path: str):
+def import_class(path: str) -> type:
     """
     Imports the class provided by it's ``path``.
     """
@@ -34,7 +34,18 @@ def import_class(path: str):
 
 def gui_except(window = None):
     """
-    Propagate any exceptions to the ``window``.
+    Function that returns a decorator.
+    The decorator returns a callable wrapper object.
+
+    When the wrapper is called, it calls the original callee, and in case an exception is raised,
+    the exception is displayed through a popup window.
+    If no exception is raised, the callee's result is returned.
+
+
+    Parameters
+    --------------
+    window: Optional[Any]
+        Optional parent widget, if not provided, the owner of callee method will be used.
     """
     def decorator(fnc: Callable):
         @wraps(fnc, updated=[])
@@ -49,7 +60,7 @@ def gui_except(window = None):
                 parent = window or self.inst
                 try:
                     if self.inst is not None:
-                        return fnc(self.inst, *args, **kwargs)
+                        args = (self.inst, *args)
 
                     return fnc(*args, **kwargs)
                 except Exception as exc:
@@ -60,29 +71,48 @@ def gui_except(window = None):
     return decorator
 
 
-def gui_confirm_action(self_parent = False):
+def gui_confirm_action(parent = None):
+    """
+    Function that returns a decorator.
+    The decorator returns a callable wrapper object.
+
+    When the wrapper is called, the user is asked to confirm the action and if the user confirms,
+    the original function is called and the wrapper returns the result.
+    If action is cancelled, None is returned by the wrapper.
+
+    Parameters
+    --------------
+    parent: Optional[Any]
+        Optional parent widget, if not provided, the owner of callee method will be used.
+    """
     def _gui_confirm_action(fnc: Callable):
-        """
-        Decorator that asks the user to confirm the action before calling the
-        targeted function (fnc).
-        """
-        def wrapper(self = None, *args, **kwargs):
-            result = Messagebox.yesnocancel("Confirm", "Are you sure?", parent=self if self_parent else None)
-            if result:
-                return fnc(self, *args, **kwargs) if self is not None else fnc(*args, **kwargs)
+        class wrapper:
+            def __init__(self, bind = None) -> None:
+                self.bind = bind
 
-        return wrapper
+            def __call__(self, *args, **kwargs):
+                result = Messagebox.yesnocancel("Confirm", "Are you sure?", parent=parent or self.bind)
 
-    if callable(self_parent):  # Function used as the decorator
-        fnc = self_parent
-        self_parent = None
-        return _gui_confirm_action(fnc)
+                if self.bind is not None:
+                    args = (self.bind, *args)  # self, *args
+
+                if result:
+                    return fnc(*args, **kwargs)
+                
+            def __get__(self, instance, cls = None):
+                return wrapper(instance)
+
+        return wrapper()
 
     return _gui_confirm_action
 
 
-def issubclass_noexcept(*args):
+def issubclass_noexcept(cls: type, bases: Tuple[type]):
+    """
+    Same as :func:`inspect.issubclass`, but instead of raising an exception
+    when the second argument is not a class, it returns False.
+    """
     try:
-        return issubclass(*args)
+        return issubclass(cls, bases)
     except Exception:
         return False

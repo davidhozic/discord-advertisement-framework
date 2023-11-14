@@ -1,6 +1,7 @@
 from typing import get_args, get_origin, Iterable, Union, Literal, Dict, Tuple
 
 from collections.abc import Iterable as ABCIterable
+from functools import partial
 from enum import Enum
 
 
@@ -142,7 +143,7 @@ class NewObjectFrameStruct(NewObjectFrameBase):
                     if self.allow_save:
                         menu.add_command(
                             label=f"New {self.get_cls_name(entry_type)}",
-                            command=self._lambda(self.new_object_frame, entry_type, combo)
+                            command=partial(self.new_object_frame, entry_type, combo)
                         )
 
             # Additional values to be inserted into ComboBox
@@ -174,7 +175,7 @@ class NewObjectFrameStruct(NewObjectFrameBase):
                 frame_annotated,
                 text="🖋️",
                 width=3,
-                command=self._lambda(self._edit_selected, k, w)
+                command=partial(self._edit_selected, k, w)
             )
 
             bnt_copy_paste = ttk.Menubutton(frame_annotated, text="C/P")

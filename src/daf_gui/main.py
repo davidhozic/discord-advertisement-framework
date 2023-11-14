@@ -223,7 +223,7 @@ class Application():
         self.lb_accounts = ListBoxScrolled(frame_tab_account)
 
         @gui_except()
-        @gui_confirm_action
+        @gui_confirm_action()
         def import_accounts():
             "Imports account from live view"
             async def import_accounts_async():
@@ -321,7 +321,7 @@ class Application():
         dpi_10 = dpi_scaled(10)
         dpi_5 = dpi_scaled(5)
 
-        @gui_confirm_action
+        @gui_confirm_action()
         def remove_account():
             selection = list_live_objects.curselection()
             if len(selection):
@@ -508,7 +508,7 @@ class Application():
                     primary_keys=primary_keys  # TODO: update on server
                 )
 
-            @gui_confirm_action
+            @gui_confirm_action()
             def delete_logs(listbox: ListBoxScrolled):
                 selection = listbox.curselection()
                 if len(selection):
