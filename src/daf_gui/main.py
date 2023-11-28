@@ -849,7 +849,7 @@ daf.run(
                 if selected_index >= 0:
                     self.combo_connection_edit.combo.current(selected_index)
 
-    @gui_except()
+    # @gui_except()
     def start_daf(self):
         # Initialize connection
         connection = convert_to_objects(self.combo_connection_edit.combo.get())
