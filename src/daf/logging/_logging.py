@@ -38,6 +38,17 @@ class GLOBAL:
     logger = None
 
 
+
+def _limit_dates(after, before):
+    if after is None:
+        after = datetime.min
+
+    if before is None:
+        before = datetime.max
+
+    return after, before
+
+
 @doc.doc_category("Logging reference", path="logging")
 class LoggerBASE:
     """
@@ -182,6 +193,7 @@ class LoggerBASE:
         await async_util.update_obj_param(self, **kwargs)
 
 
+@track_id
 @doc.doc_category("Logging reference", path="logging")
 class LoggerCSV(LoggerBASE):
     """
@@ -287,19 +299,70 @@ class LoggerCSV(LoggerBASE):
         ...
 
     async def analytic_get_message_log(
-            self,
-            guild: Union[int, None] = None,
-            author: Union[int, None] = None,
-            after: Union[datetime, None] = None,
-            before: Union[datetime, None] = None,
-            success_rate: Tuple[float, float] = (0, 100),
-            guild_type: Union[Literal["USER", "GUILD"], None] = None,
-            message_type: Union[Literal["TextMESSAGE", "VoiceMESSAGE", "DirectMESSAGE"], None] = None,
-            sort_by: Literal["timestamp", "success_rate"] = "timestamp",
-            sort_by_direction: Literal["asc", "desc"] = "desc",
-            limit: int = 500,
+        self,
+        guild: Union[int, None] = None,
+        author: Union[int, None] = None,
+        after: Union[datetime, None] = None,
+        before: Union[datetime, None] = None,
+        success_rate: Tuple[float, float] = (0, 100),
+        guild_type: Union[Literal["USER", "GUILD"], None] = None,
+        message_type: Union[Literal["TextMESSAGE", "VoiceMESSAGE", "DirectMESSAGE"], None] = None,
+        sort_by: Literal["timestamp", "success_rate"] = "timestamp",
+        sort_by_direction: Literal["asc", "desc"] = "desc",
+        limit: int = 500,
     ) -> list:
-        raise NotImplementedError
+        # TODO: filtering
+        after, before = _limit_dates(after, before)
+        logs = []
+        for filename in self._get_files():
+            with open(filename, encoding="utf-8") as file:
+                for (
+                    stamp, guild_type, guild_name, guild_id, author_name, author_id, message_type,
+                    sent_data, send_mode, channels, dm_success
+                ) in csv.reader(file, delimiter=self.delimiter):
+                    # Convert string date and time to datetime object
+                    date, time_d = stamp.split(' ')
+                    date = date.split('.')
+                    time_d = time_d.split(':')
+                    stamp = datetime(*map(int, reversed(date)), *map(int, time_d))
+
+                    # Convert string IDs to int
+                    guild_id = int(guild_id)
+                    author_id = int(author_id)
+
+                    # Convert JSON fields to dict
+                    sent_data = json.loads(sent_data)
+                    channels = json.loads(channels) if channels else None
+                    dm_success = json.loads(dm_success) if dm_success else None
+                    
+                    # Make structures
+                    guild_ctx = {"type": guild_type, "name": guild_name, "id": guild_id}
+                    author_ctx = {"name": author_name, "id": author_id}
+
+                    if dm_success is not None:
+                        calc_success_rate = 0.0 if not dm_success["success"] else 1.0
+                    else:
+                        calc_success_rate = (
+                            100.0 * len(channels["successful"]) /
+                            (len(channels["successful"]) + len(channels["failed"]))
+                        )
+
+                    logs.append({
+                        "timestamp": stamp,
+                        "sent_data": sent_data,
+                        "channels": channels,
+                        "type": message_type,
+                        "mode": send_mode,
+                        "author": author_ctx,
+                        "guild": guild_ctx,
+                        "success_rate": calc_success_rate
+                    })
+
+        sorted_ = sorted(logs, key=lambda log: log[sort_by], reverse=sort_by_direction == "desc")
+        if limit is not None:
+            sorted_ = sorted_[:limit]
+
+        return sorted_
 
     async def analytic_get_num_invites(
             self,
@@ -389,6 +452,11 @@ class LoggerCSV(LoggerBASE):
             except Exception as exc:
                 raise OSError(*exc.args) from exc  # Raise OSError for any type of exceptions
 
+    def _get_files(self) -> Iterator[str]:
+        for path, dirs, files in os.walk(self.path):
+            for filename in files:
+                if filename.endswith(".csv"):
+                    yield os.path.join(path, filename)
 
 @track_id
 @doc.doc_category("Logging reference", path="logging")
@@ -562,9 +630,9 @@ class LoggerJSON(LoggerBASE):
         sort_by_direction: Literal["asc", "desc"] = "desc",
         limit: Optional[int] = 500
     ):
-        after, before = self._limit_dates(after, before)
+        after, before = _limit_dates(after, before)
         logs = []
-        for filename in self._get_json_files():
+        for filename in self._get_files():
             with open(filename, 'r', encoding="utf-8") as reader:
                 data = json.load(reader)
 
@@ -677,9 +745,9 @@ class LoggerJSON(LoggerBASE):
         sort_by_direction: Literal['asc', 'desc'] = "desc",
         limit: Optional[int] = 50
     ) -> list:
-        after, before = self._limit_dates(after, before)
+        after, before = _limit_dates(after, before)
         logs = []
-        for filename in self._get_json_files():
+        for filename in self._get_files():
             with open(filename, 'r', encoding="utf-8") as reader:
                 data = json.load(reader)
 
@@ -804,20 +872,6 @@ class LoggerJSON(LoggerBASE):
 
                 logs.remove(log)
 
-    def _get_json_files(self) -> Iterator[str]:
-        for path, dirs, files in os.walk(self.path):
-            for filename in files:
-                if filename.endswith(".json"):
-                    yield os.path.join(path, filename)
-
-    def _limit_dates(self, after, before):
-        if after is None:
-            after = datetime.min
-
-        if before is None:
-            before = datetime.max
-        return after,before
-
     def _calc_success_rate(self, message: dict) -> float:
         channel_ctx = message.get("channels")
         if channel_ctx is not None:
@@ -827,6 +881,13 @@ class LoggerJSON(LoggerBASE):
             calc_success_rate = 100.00 if message["success_info"]["success"] else 0.0
 
         return calc_success_rate
+
+    def _get_files(self) -> Iterator[str]:
+        for path, dirs, files in os.walk(self.path):
+            for filename in files:
+                if filename.endswith(".json"):
+                    yield os.path.join(path, filename)
+
 
 async def initialize(logger: LoggerBASE) -> None:
     """

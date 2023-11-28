@@ -39,16 +39,23 @@ Releases
 
 v3.1.0
 ===================
-- JSON Analytics
 - GUI:
   
   - ViewOnly structured data will display only the data that is provided, meaning
     the GUI will not be constructed based on type annotations of an objects, but rather
     based on the data itself.
+  - Better toast notification format and compatibility across multiple DPI screens.
 
-- LoggerJSON ``index`` field of logs is now an unique snowflake like id.
-- |BREAK_CH| :class:`daf.logging.LoggerJSON`'s invite logs will now contain a "member" dictionary
+- :class:`daf.logging.LoggerJSON`:
+  - ``index`` field of logs is now an unique snowflake like id.
+  - |BREAK_CH| Invite logs will now contain a "member" dictionary
   for each invite log.
+  - Analytics are now supported.
+
+- LoggerCSV:
+  - Now has an ``index`` field which is a unique snowflake like id.
+  - Analytics are now supported.
+
 
 v3.0.4
 ====================
