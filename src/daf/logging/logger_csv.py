@@ -119,7 +119,7 @@ class LoggerCSV(LoggerBASE):
             - Author snowflake id,
             - Author name
         """
-        ...
+        raise NotImplementedError
 
     async def analytic_get_message_log(
         self,
