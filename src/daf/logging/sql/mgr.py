@@ -893,6 +893,7 @@ class LoggerSQL(logging.LoggerBASE):
         group_by: Literal["year", "month", "day"] = "day"
     ) -> List[Tuple[date, int, int, int, str, int, str]]:
         """
+        Counts all the messages in the configured group based on parameters.
 
         Parameters
         -----------

@@ -100,6 +100,49 @@ class LoggerBASE:
         limit: int = 500,
         group_by: Literal["year", "month", "day"] = "day"
     ) -> List[Tuple[date, int, int, int, str, int, str]]:
+        """
+        Counts all the messages in the configured group based on parameters.
+
+        Parameters
+        -----------
+        guild: int
+            The snowflake id of the guild.
+        author: int
+            The snowflake id of the author.
+        after: Union[datetime, None] = None
+            Only count messages sent after the datetime.
+        before: Union[datetime, None]
+            Only count messages sent before the datetime.
+        guild_type: Literal["USER", "GUILD"] | None,
+            Type of guild.
+        message_type: Literal["TextMESSAGE", "VoiceMESSAGE", "DirectMESSAGE"] | None,
+            Type of message.
+        sort_by: Literal["successful", "failed", "guild_snow", "guild_name", "author_snow", "author_name"],
+            Sort items by selected.
+            Defaults to "successful"
+        sort_by_direction: Literal["asc", "desc"]
+            Sort items by ``sort_by`` in selected direction (asc = ascending, desc = descending).
+            Defaults to "desc"
+        limit: int = 500
+            Limit of the rows to return. Defaults to 500.
+        group_by: Literal["year", "month", "day"]
+            Results returned are grouped by ``group_by``
+
+        Returns
+        --------
+        list[tuple[date, int, int, int, str, int, str]]
+            List of tuples.
+
+            Each tuple contains:
+
+            - Date
+            - Successful sends
+            - Failed sends
+            - Guild snowflake id,
+            - Guild name
+            - Author snowflake id,
+            - Author name
+        """
         raise NotImplementedError
 
     async def analytic_get_message_log(

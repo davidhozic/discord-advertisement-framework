@@ -47,14 +47,14 @@ v3.1.0
   - Better toast notification format and compatibility across multiple DPI screens.
 
 - :class:`daf.logging.LoggerJSON`:
-  - ``index`` field of logs is now an unique snowflake like id.
+  - ``index`` field is now a unique snowflake-like ID (used for removing logs).
   - |BREAK_CH| Invite logs will now contain a "member" dictionary
   for each invite log.
   - Analytics are now supported.
 
 - LoggerCSV:
-  - Now has an ``index`` field which is a unique snowflake like id.
   - Analytics are now supported.
+  - ``index`` field added in order to allow removal of logs.
 
 
 v3.0.4

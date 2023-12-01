@@ -6,6 +6,7 @@ from ..misc import doc
 from ..misc.instance_track import track_id
 
 from .logger_base import _limit_dates, LoggerBASE, C_FILE_NAME_FORBIDDEN_CHAR
+from .logger_file import LoggerFileBASE
 
 import json
 import csv
@@ -18,7 +19,7 @@ __all__ = ("LoggerCSV",)
 
 @track_id
 @doc.doc_category("Logging reference", path="logging")
-class LoggerCSV(LoggerBASE):
+class LoggerCSV(LoggerFileBASE):
     """
     .. versionadded:: v2.2
 
@@ -56,70 +57,8 @@ class LoggerCSV(LoggerBASE):
         delimiter: str = ';',
         fallback: Optional[LoggerBASE] = None
     ) -> None:
-        self.path = path
         self.delimiter = delimiter
-        super().__init__(fallback)
-    
-    def initialize(self):
-        trace(f"{type(self).__name__} logs will be saved to {self.path}")
-        return super().initialize()
-
-    async def analytic_get_num_messages(
-        self,
-        guild: Union[int, None] = None,
-        author: Union[int, None] = None,
-        after: Union[datetime, None] = None,
-        before: Union[datetime, None] = None,
-        guild_type: Union[Literal["USER", "GUILD"], None] = None,
-        message_type: Union[Literal["TextMESSAGE", "VoiceMESSAGE", "DirectMESSAGE"], None] = None,
-        sort_by: Literal["successful", "failed", "guild_snow", "guild_name", "author_snow", "author_name"] = "successful",
-        sort_by_direction: Literal["asc", "desc"] = "desc",
-        limit: int = 500,
-        group_by: Literal["year", "month", "day"] = "day"
-    ) -> List[Tuple[date, int, int, int, str, int, str]]:
-        """
-
-        Parameters
-        -----------
-        guild: int
-            The snowflake id of the guild.
-        author: int
-            The snowflake id of the author.
-        after: Union[datetime, None] = None
-            Only count messages sent after the datetime.
-        before: Union[datetime, None]
-            Only count messages sent before the datetime.
-        guild_type: Literal["USER", "GUILD"] | None,
-            Type of guild.
-        message_type: Literal["TextMESSAGE", "VoiceMESSAGE", "DirectMESSAGE"] | None,
-            Type of message.
-        sort_by: Literal["successful", "failed", "guild_snow", "guild_name", "author_snow", "author_name"],
-            Sort items by selected.
-            Defaults to "successful"
-        sort_by_direction: Literal["asc", "desc"]
-            Sort items by ``sort_by`` in selected direction (asc = ascending, desc = descending).
-            Defaults to "desc"
-        limit: int = 500
-            Limit of the rows to return. Defaults to 500.
-        group_by: Literal["year", "month", "day"]
-            Results returned are grouped by ``group_by``
-
-        Returns
-        --------
-        list[tuple[date, int, int, int, str, int, str]]
-            List of tuples.
-
-            Each tuple contains:
-
-            - Date
-            - Successfule sends
-            - Failed sends
-            - Guild snowflake id,
-            - Guild name
-            - Author snowflake id,
-            - Author name
-        """
-        raise NotImplementedError
+        super().__init__(path, fallback)
 
     async def analytic_get_message_log(
         self,
@@ -134,24 +73,38 @@ class LoggerCSV(LoggerBASE):
         sort_by_direction: Literal["asc", "desc"] = "desc",
         limit: int = 500,
     ) -> list:
-        # TODO: filtering
         after, before = _limit_dates(after, before)
         logs = []
-        for filename in self._get_files():
+        for filename in self._get_files(".csv"):
             with open(filename, encoding="utf-8") as file:
                 for (
-                    stamp, guild_type, guild_name, guild_id, author_name, author_id, message_type,
+                    index, stamp, guild_type_r, guild_name, guild_id, author_name, author_id, message_type_r,
                     sent_data, send_mode, channels, dm_success
                 ) in csv.reader(file, delimiter=self.delimiter):
+
+                    if guild_type is not None and guild_type != guild_type_r:
+                        continue
+
+                    if message_type is not None and message_type != message_type_r:
+                        continue
+
                     # Convert string date and time to datetime object
                     date, time_d = stamp.split(' ')
                     date = date.split('.')
                     time_d = time_d.split(':')
                     stamp = datetime(*map(int, reversed(date)), *map(int, time_d))
 
+                    if stamp > before or stamp < after:
+                        continue
+
                     # Convert string IDs to int
                     guild_id = int(guild_id)
+                    if guild is not None and guild != guild_id:
+                        continue
+
                     author_id = int(author_id)
+                    if author is not None and author != author_id:
+                        continue
 
                     # Convert JSON fields to dict
                     sent_data = json.loads(sent_data)
@@ -159,7 +112,7 @@ class LoggerCSV(LoggerBASE):
                     dm_success = json.loads(dm_success) if dm_success else None
                     
                     # Make structures
-                    guild_ctx = {"type": guild_type, "name": guild_name, "id": guild_id}
+                    guild_ctx = {"type": guild_type_r, "name": guild_name, "id": guild_id}
                     author_ctx = {"name": author_name, "id": author_id}
 
                     if dm_success is not None:
@@ -170,11 +123,15 @@ class LoggerCSV(LoggerBASE):
                             (len(channels["successful"]) + len(channels["failed"]))
                         )
 
+                    if calc_success_rate < success_rate[0] or calc_success_rate > success_rate[1]: 
+                        continue
+
                     logs.append({
+                        "index": index,
                         "timestamp": stamp,
                         "sent_data": sent_data,
                         "channels": channels,
-                        "type": message_type,
+                        "type": message_type_r,
                         "mode": send_mode,
                         "author": author_ctx,
                         "guild": guild_ctx,
@@ -186,30 +143,6 @@ class LoggerCSV(LoggerBASE):
             sorted_ = sorted_[:limit]
 
         return sorted_
-
-    async def analytic_get_num_invites(
-        self,
-        guild: Union[int, None] = None,
-        after: Union[datetime, None] = None,
-        before: Union[datetime, None] = None,
-        sort_by: Literal["count", "guild_snow", "guild_name", "invite_id"] = "count",
-        sort_by_direction: Literal["asc", "desc"] = "desc",
-        limit: int = 500,
-        group_by: Literal["year", "month", "day"] = "day"
-    ) -> list:
-        raise NotImplementedError
-
-    async def analytic_get_invite_log(
-        self,
-        guild: Union[int, None] = None,
-        invite: Union[str, None] = None,
-        after: Union[datetime, None] = None,
-        before: Union[datetime, None] = None,
-        sort_by: Literal["timestamp"] = "timestamp",
-        sort_by_direction: Literal["asc", "desc"] = "desc",
-        limit: int = 500,
-    ) -> list:
-        raise NotImplementedError
 
     async def delete_logs(self, table: Any, logs: List[Any]):
         """
@@ -225,11 +158,11 @@ class LoggerCSV(LoggerBASE):
         raise NotImplementedError
 
     async def _save_log(
-            self,
-            guild_context: dict,
-            message_context: Optional[dict] = None,
-            author_context: Optional[dict] = None,
-            invite_context: Optional[dict] = None
+        self,
+        guild_context: dict,
+        message_context: Optional[dict] = None,
+        author_context: Optional[dict] = None,
+        invite_context: Optional[dict] = None
     ):
         if invite_context is not None:  # Not implemented on CSV
             raise NotImplementedError("Invite tracking not available when using LoggerCSV")
@@ -259,13 +192,14 @@ class LoggerCSV(LoggerBASE):
                 channels_str = message_context.get("channels", "")
                 success_info_str = message_context.get("success_info", "")
 
-                if channels_str != "":
+                if channels_str:
                     channels_str = json.dumps(channels_str, ensure_ascii=False)
 
-                if success_info_str != "":
+                if success_info_str:
                     success_info_str = json.dumps(success_info_str, ensure_ascii=False)
 
                 csv_writer.writerow([
+                    self._generate_snowflake(),
                     timestamp, guild_context["type"], guild_context["name"], guild_context["id"],
                     *list(author_context.values()),
                     message_context["type"], json.dumps(message_context["sent_data"], ensure_ascii=False),
@@ -275,8 +209,3 @@ class LoggerCSV(LoggerBASE):
             except Exception as exc:
                 raise OSError(*exc.args) from exc  # Raise OSError for any type of exceptions
 
-    def _get_files(self) -> Iterator[str]:
-        for path, dirs, files in os.walk(self.path):
-            for filename in files:
-                if filename.endswith(".csv"):
-                    yield os.path.join(path, filename)
