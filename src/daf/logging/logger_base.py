@@ -20,16 +20,6 @@ C_FILE_NAME_FORBIDDEN_CHAR = ('<', '>', '"', '/', '\\', '|', '?', '*', ":")
 C_FILE_MAX_SIZE = 100000
 
 
-def _limit_dates(after, before):
-    if after is None:
-        after = datetime.min
-
-    if before is None:
-        before = datetime.max
-
-    return after, before
-
-
 @doc.doc_category("Logging reference", path="logging")
 class LoggerBASE:
     """

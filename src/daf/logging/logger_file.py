@@ -1,7 +1,7 @@
 """
 Implements common functionality of file-based loggers.
 """
-from typing import Union, Literal, Optional, Iterator, get_args
+from typing import Union, Tuple, Literal, Optional, Iterator, get_args
 from pathlib import Path
 from time import time
 from datetime import datetime
@@ -13,6 +13,8 @@ import os
 
 
 class LoggerFileBASE(LoggerBASE):
+    EXTENSION = NotImplemented
+
     def __init__(
         self,
         path: str = str(Path.home().joinpath("daf/History")),
@@ -48,6 +50,47 @@ class LoggerFileBASE(LoggerBASE):
             for filename in files:
                 if filename.endswith(filetype):
                     yield os.path.join(path, filename)
+
+    async def analytic_get_message_log(
+        self,
+        guild: Union[int, None] = None,
+        author: Union[int, None] = None,
+        after: Union[datetime, None] = None,
+        before: Union[datetime, None] = None,
+        success_rate: Tuple[float, float] = (0, 100),
+        guild_type: Union[Literal["USER", "GUILD"], None] = None,
+        message_type: Union[Literal["TextMESSAGE", "VoiceMESSAGE", "DirectMESSAGE"], None] = None,
+        sort_by: Literal["timestamp", "success_rate"] = "timestamp",
+        sort_by_direction: Literal["asc", "desc"] = "desc",
+        limit: Optional[int] = 500
+    ):
+        if after is None:
+            after = datetime.min
+
+        if before is None:
+            before = datetime.max
+
+        logs = []
+        for filename in self._get_files(self.EXTENSION):
+            logs.extend(
+                self._get_msg_log_process_file(
+                    guild,
+                    author,
+                    after,
+                    before,
+                    success_rate,
+                    guild_type,
+                    message_type,
+                    logs,
+                    filename
+                )
+            )
+
+        sorted_ = sorted(logs, key=lambda log: log[sort_by], reverse=sort_by_direction == "desc")
+        if limit is not None:
+            sorted_ = sorted_[:limit]
+
+        return sorted_
 
     async def analytic_get_num_messages(
         self,
@@ -112,3 +155,6 @@ class LoggerFileBASE(LoggerBASE):
             key=lambda row: row[sort_by_values.index(sort_by) + 1],
             reverse=sort_by_direction == "desc"
         )[:limit]
+
+    def _get_msg_log_process_file(self):
+        raise NotImplementedError

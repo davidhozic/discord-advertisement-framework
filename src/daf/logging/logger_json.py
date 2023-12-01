@@ -1,18 +1,17 @@
 from datetime import datetime
-from typing import Optional, Literal, Union, Tuple, List, Set, get_args, Iterator
+from typing import Optional, Literal, List, Set, get_args, Iterator
 
 from .tracing import trace
 from ..misc import doc, async_util
 from ..misc.instance_track import track_id
 
-from .logger_base import _limit_dates, C_FILE_NAME_FORBIDDEN_CHAR, C_FILE_MAX_SIZE, LoggerBASE
+from .logger_base import C_FILE_NAME_FORBIDDEN_CHAR, C_FILE_MAX_SIZE, LoggerBASE
 from .logger_file import LoggerFileBASE
 
 import json
 import pathlib
 import shutil
 import os
-import time
 
 
 __all__ = ("LoggerJSON",)
@@ -49,6 +48,9 @@ class LoggerJSON(LoggerFileBASE):
         Something went wrong at OS level (insufficient permissions?)
         and fallback failed as well.
     """
+
+    EXTENSION = ".json"
+
     def __init__(
         self,
         path: str = str(pathlib.Path.home().joinpath("daf/History")),
@@ -154,59 +156,41 @@ class LoggerJSON(LoggerFileBASE):
             json.dump(json_data, f_writer, indent=4, ensure_ascii=False)
             f_writer.truncate()  # Remove any old data
 
-    async def analytic_get_message_log(
-        self,
-        guild: Union[int, None] = None,
-        author: Union[int, None] = None,
-        after: Union[datetime, None] = None,
-        before: Union[datetime, None] = None,
-        success_rate: Tuple[float, float] = (0, 100),
-        guild_type: Union[Literal["USER", "GUILD"], None] = None,
-        message_type: Union[Literal["TextMESSAGE", "VoiceMESSAGE", "DirectMESSAGE"], None] = None,
-        sort_by: Literal["timestamp", "success_rate"] = "timestamp",
-        sort_by_direction: Literal["asc", "desc"] = "desc",
-        limit: Optional[int] = 500
-    ):
-        after, before = _limit_dates(after, before)
+    def _get_msg_log_process_file(self, guild, author, after, before, success_rate, guild_type, message_type, logs, filename):
         logs = []
-        for filename in self._get_files(".json"):
-            with open(filename, 'r', encoding="utf-8") as reader:
-                data = json.load(reader)
+        with open(filename, 'r', encoding="utf-8") as reader:
+            data = json.load(reader)
 
-            if guild_type is not None and data["type"] != guild_type or guild is not None and data["id"] != guild:
+        if guild_type is not None and data["type"] != guild_type or guild is not None and data["id"] != guild:
+            return logs
+
+        guild_dict = {"name": data["name"], "id": data["id"], "type": data["type"]}
+
+        for author_ctx in data["message_tracking"].values():
+            author_dict = {"name": author_ctx["name"], "id": author_ctx["id"]}
+            if author is not None and author_ctx["id"] != author:
                 continue
 
-            guild_dict = {"name": data["name"], "id": data["id"], "type": data["type"]}
-
-            for author_ctx in data["message_tracking"].values():
-                author_dict = {"name": author_ctx["name"], "id": author_ctx["id"]}
-                if author is not None and author_ctx["id"] != author:
+            for message in author_ctx["messages"]:
+                if message_type is not None and message["type"] != message_type:
                     continue
 
-                for message in author_ctx["messages"]:
-                    if message_type is not None and message["type"] != message_type:
-                        continue
+                stamp = self._datetime_from_stamp(message["timestamp"])
+                if before < stamp or stamp < after:
+                    continue
 
-                    stamp = self._datetime_from_stamp(message["timestamp"])
-                    if before < stamp or stamp < after:
-                        continue
+                calc_success_rate = self._calc_success_rate(message)
+                if success_rate[0] > calc_success_rate or calc_success_rate > success_rate[1]:
+                    continue
 
-                    calc_success_rate = self._calc_success_rate(message)
-                    if success_rate[0] > calc_success_rate or calc_success_rate > success_rate[1]:
-                        continue
+                del message["timestamp"]
+                message = {"timestamp": stamp, **message}
+                message["author"] = author_dict
+                message["guild"] = guild_dict
+                message["success_rate"] = calc_success_rate
+                logs.append(message)
 
-                    del message["timestamp"]
-                    message = {"timestamp": stamp, **message}
-                    message["author"] = author_dict
-                    message["guild"] = guild_dict
-                    message["success_rate"] = calc_success_rate
-                    logs.append(message)
-
-        sorted_ = sorted(logs, key=lambda log: log[sort_by], reverse=sort_by_direction == "desc")
-        if limit is not None:
-            sorted_ = sorted_[:limit]
-
-        return sorted_
+        return logs
     
     async def analytic_get_invite_log(
         self,
@@ -218,7 +202,13 @@ class LoggerJSON(LoggerFileBASE):
         sort_by_direction: Literal['asc', 'desc'] = "desc",
         limit: Optional[int] = 50
     ) -> list:
-        after, before = _limit_dates(after, before)
+
+        if after is None:
+            after = datetime.min
+
+        if before is None:
+            before = datetime.max
+
         logs = []
         for filename in self._get_files(".json"):
             with open(filename, 'r', encoding="utf-8") as reader:
@@ -354,9 +344,3 @@ class LoggerJSON(LoggerFileBASE):
             calc_success_rate = 100.00 if message["success_info"]["success"] else 0.0
 
         return calc_success_rate
-
-    def _get_files(self) -> Iterator[str]:
-        for path, dirs, files in os.walk(self.path):
-            for filename in files:
-                if filename.endswith(".json"):
-                    yield os.path.join(path, filename)
