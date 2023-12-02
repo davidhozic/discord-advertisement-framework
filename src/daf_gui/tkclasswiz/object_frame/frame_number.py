@@ -3,7 +3,7 @@ from typing import Union, Any
 from .frame_base import *
 from ..extensions import extendable
 import tkinter as tk
-
+import tkinter.ttk as ttk
 
 __all__ = (
     "NewObjectFrameNumber",
@@ -13,7 +13,7 @@ __all__ = (
 class NewObjectFrameNumber(NewObjectFrameBase):
     def __init__(self, class_: Any, return_widget: Any, parent=None, old_data: Any = None, check_parameters: bool = True, allow_save=True):
         super().__init__(class_, return_widget, parent, old_data, check_parameters, allow_save)
-        self.storage_widget = tk.Spinbox(self.frame_main, from_=-9999, to=9999)
+        self.storage_widget = ttk.Spinbox(self.frame_main, from_=-9999, to=9999)
         self.storage_widget.pack(fill=tk.X)
 
         if old_data is not None:  # Edit
