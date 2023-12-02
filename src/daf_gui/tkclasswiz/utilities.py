@@ -7,6 +7,8 @@ from functools import wraps
 import importlib
 from .messagebox import Messagebox
 
+import tkinter as tk
+
 
 __all__ = (
     "import_class",
@@ -58,6 +60,9 @@ def gui_except(window = None):
             
             def __call__(self, *args: Any, **kwargs: Any) -> Any:
                 parent = window or self.inst
+                if not isinstance(parent, tk.BaseWidget):
+                    parent = None
+
                 try:
                     if self.inst is not None:
                         args = (self.inst, *args)
