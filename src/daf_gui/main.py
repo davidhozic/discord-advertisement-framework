@@ -3,6 +3,7 @@ Main file of the DAF GUI.
 """
 from importlib.util import find_spec
 from pathlib import Path
+from typing import List
 
 from daf.misc import instance_track as it
 
@@ -24,13 +25,13 @@ if not installed:
     print("Auto installing requirements: ttkbootstrap")
     subprocess.check_call([sys.executable.replace("pythonw", "python"), "-m", "pip", "install", f"ttkbootstrap=={TTKBOOSTRAP_VERSION}"])
 
+import ttkbootstrap as ttk
 
-from .convert import *
-from .dpi import *
-from .extra import *
-from .object import *
-from .storage import *
-from .utilities import *
+from .tkclasswiz.convert import *
+from .tkclasswiz.dpi import *
+from .tkclasswiz.object_frame.window import ObjectEditWindow
+from .tkclasswiz.storage import *
+from .tkclasswiz.utilities import *
 from .connector import *
 
 from PIL import Image, ImageTk
@@ -39,7 +40,6 @@ from ttkbootstrap.toast import ToastNotification
 import tkinter as tk
 import tkinter.filedialog as tkfile
 import ttkbootstrap.dialogs.dialogs as tkdiag
-import ttkbootstrap as ttk
 import ttkbootstrap.tableview as tktw
 
 import json
@@ -69,12 +69,6 @@ OPTIONAL_MODULES = [
     ("SQL logging", "sql", daf.logging.sql.SQL_INSTALLED),
     ("Voice messages", "voice", daf.dtypes.GLOBALS.voice_installed),
     ("Web features (Chrome)", "web", daf.web.GLOBALS.selenium_installed),
-]
-
-
-STARTUP_MESSAGES = [
-    ("Welcome to DAF!", "If you need help please refer the 'About' tab."),
-    ("Deprecation notice [Youtube]", "Youtube streaming will be removed in version v2.10 in favor of faster loading times."),
 ]
 
 
@@ -172,13 +166,14 @@ class Application():
             daf.TraceLEVELS.ERROR: ttk.DANGER,
             daf.TraceLEVELS.DEPRECATED: ttk.DARK
         }
+        dpi_78, dpi_600 = dpi_scaled(78), dpi_scaled(600)
 
         def trace_listener(level: daf.TraceLEVELS, message: str):
             last_toast: ToastNotification = ToastNotification.last_toast
             if last_toast is not None and last_toast.toplevel.winfo_exists():
-                next_position = max((last_toast.position[1] + 150) % 1200, 150)
+                next_position = max((last_toast.position[1] + dpi_78) % dpi_600, dpi_78)
             else:
-                next_position = 150
+                next_position = dpi_78
 
             toast = ToastNotification(
                 level.name,
@@ -227,8 +222,8 @@ class Application():
         # Accounts list. Defined here since it's needed below
         self.lb_accounts = ListBoxScrolled(frame_tab_account)
 
-        @gui_except
-        @gui_confirm_action
+        @gui_except()
+        @gui_confirm_action()
         def import_accounts():
             "Imports account from live view"
             async def import_accounts_async():
@@ -236,7 +231,7 @@ class Application():
                 # for acc in accs:
                 #     acc.intents = None  # Intents cannot be loaded properly
 
-                values = convert_to_object_info(accs, save_original=False)
+                values = convert_to_object_info(accs)
                 if not len(values):
                     raise ValueError("Live view has no elements.")
 
@@ -326,7 +321,7 @@ class Application():
         dpi_10 = dpi_scaled(10)
         dpi_5 = dpi_scaled(5)
 
-        @gui_confirm_action
+        @gui_confirm_action()
         def remove_account():
             selection = list_live_objects.curselection()
             if len(selection):
@@ -342,7 +337,7 @@ class Application():
             else:
                 tkdiag.Messagebox.show_error("Select atlest one item!", "Select errror")
 
-        @gui_except
+        @gui_except()
         def add_account():
             gui_daf_assert_running()
             selection = combo_add_object_edit.combo.current()
@@ -459,11 +454,10 @@ class Application():
         self.tabman_mf.add(tab_analytics, text="Analytics")
 
         def create_analytic_frame(
-                getter_history: str,
-                getter_counts: str,
-                log_class: type,
-                counts_coldata: dict,
-                tab_name: str
+            getter_history: str,
+            getter_counts: str,
+            counts_coldata: dict,
+            tab_name: str
         ):
             """
             Creates a logging tab.
@@ -474,8 +468,6 @@ class Application():
                 The name of the LoggerBASE method that is used to retrieve actual logs.
             getter_counts: str
                 The name of the LoggerBASE method that is used to retrieve counts.
-            log_class: type
-                The class of the log entry class (xLOG).
             counts_coldata: dict
                 Column data for TableView used for counts.
             tab_name: str
@@ -484,22 +476,22 @@ class Application():
             async def analytics_load_history():
                 gui_daf_assert_running()
                 logger = await self.connection.get_logger()
-                if not isinstance(logger, daf.LoggerSQL):
-                    raise ValueError("Analytics only allowed when using LoggerSQL")
 
                 param_object = combo_history.combo.get()
                 param_object_params = convert_to_objects(param_object.data)
-                items = await self.connection.execute_method(it.ObjectReference(it.get_object_id(logger)), getter_history, **param_object_params)
+                items = await self.connection.execute_method(
+                    it.ObjectReference(it.get_object_id(logger)), getter_history, **param_object_params
+                )
                 items = convert_to_object_info(items)
                 lst_history.clear()
                 lst_history.insert(tk.END, *items)
 
-            def show_log(listbox: ListBoxScrolled, type_):
+            def show_log(listbox: ListBoxScrolled):
                 selection = listbox.curselection()
                 if len(selection) == 1:
                     object_: ObjectInfo = listbox.get()[selection[0]]
                     self.open_object_edit_window(
-                        type_,
+                        object_.class_,
                         listbox,
                         old_data=object_,
                         check_parameters=False,
@@ -508,18 +500,15 @@ class Application():
                 else:
                     tkdiag.Messagebox.show_error("Select ONE item!", "Empty list!")
 
-            async def delete_logs_async(logs: List[int]):
+            async def delete_logs_async(primary_keys: List[int]):
                 logger = await self.connection.get_logger()
-                if not isinstance(logger, daf.LoggerSQL):
-                    raise ValueError("Analytics only allowed when using LoggerSQL")
-
                 await self.connection.execute_method(
                     it.ObjectReference(it.get_object_id(logger)),
                     "delete_logs",
-                    table=log_class, primary_keys=logs
+                    primary_keys=primary_keys  # TODO: update on server
                 )
 
-            @gui_confirm_action
+            @gui_confirm_action()
             def delete_logs(listbox: ListBoxScrolled):
                 selection = listbox.curselection()
                 if len(selection):
@@ -554,7 +543,7 @@ class Application():
             ).pack(side="left", fill=tk.X)
             ttk.Button(
                 frame_msg_history_bnts,
-                command=lambda: show_log(lst_history, log_class),
+                command=lambda: show_log(lst_history),
                 text="View log"
             ).pack(side="left", fill=tk.X)
             ttk.Button(
@@ -573,9 +562,6 @@ class Application():
             async def analytics_load_num():
                 gui_daf_assert_running()
                 logger = await self.connection.get_logger()
-                if not isinstance(logger, daf.LoggerSQL):
-                    raise ValueError("Analytics only allowed when using LoggerSQL")
-
                 param_object = combo_count.combo.get()
                 parameters = convert_to_objects(param_object.data)
                 count = await self.connection.execute_method(it.ObjectReference(it.get_object_id(logger)), getter_counts, **parameters)
@@ -612,8 +598,6 @@ class Application():
         create_analytic_frame(
             "analytic_get_message_log",
             "analytic_get_num_messages",
-            # SQL is an optional feature so fake the object if not present
-            getattr(daf.logging.sql, "MessageLOG", object),
             [
                 {"text": "Date", "stretch": True},
                 {"text": "Number of successful", "stretch": True},
@@ -630,8 +614,6 @@ class Application():
         create_analytic_frame(
             "analytic_get_invite_log",
             "analytic_get_num_invites",
-            # SQL is an optional feature so fake the object if not present
-            getattr(daf.logging.sql, "InviteLOG", object),
             [
                 {"text": "Date", "stretch": True},
                 {"text": "Count", "stretch": True},
@@ -657,7 +639,7 @@ class Application():
         frame_optionals_packages.pack(fill=tk.BOTH, expand=True)
 
         def install_deps(optional: str, gauge: ttk.Floodgauge, bnt: ttk.Button):
-            @gui_except
+            @gui_except()
             def _installer():
                 subprocess.check_call([
                     sys.executable.replace("pythonw", "python"), "-m", "pip", "install",
@@ -687,7 +669,7 @@ class Application():
             tkdiag.Messagebox.show_error("Object edit window is already open, close it first.", "Already open")
             self.objects_edit_window.focus()
 
-    @gui_except
+    @gui_except()
     def load_live_accounts(self):
         async def load_accounts():
             gui_daf_assert_running()
@@ -797,7 +779,7 @@ daf.run(
 
         tkdiag.Messagebox.show_info(f"Saved to {filename}", "Finished", self.win_main)
 
-    @gui_except
+    @gui_except()
     def save_schema(self) -> bool:
         filename = tkfile.asksaveasfilename(filetypes=[("JSON", "*.json")])
         if filename == "":
@@ -826,7 +808,7 @@ daf.run(
 
         return True
 
-    @gui_except
+    @gui_except()
     def load_schema(self):
         filename = tkfile.askopenfilename(filetypes=[("JSON", "*.json")])
         if filename == "":
@@ -867,7 +849,7 @@ daf.run(
                 if selected_index >= 0:
                     self.combo_connection_edit.combo.current(selected_index)
 
-    @gui_except
+    # @gui_except()
     def start_daf(self):
         # Initialize connection
         connection = convert_to_objects(self.combo_connection_edit.combo.get())
@@ -906,7 +888,7 @@ daf.run(
         self.bnt_toolbar_stop_daf.configure(state="disabled")
         tae.async_execute(self.connection.shutdown(), wait=False, pop_up=True, master=self.win_main)
 
-    @gui_except
+    @gui_except()
     def add_accounts_daf(self, selection: bool = False):
         gui_daf_assert_running()
         accounts = self.lb_accounts.get()

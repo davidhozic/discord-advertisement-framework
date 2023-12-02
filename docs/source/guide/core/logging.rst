@@ -140,6 +140,7 @@ CSV structure
 
 The structure contains the following attributes:
 
+- Index (integer) - this is a unique ID,
 - Timestamp (string)
 - Guild Type (string),
 - Guild Name (string),

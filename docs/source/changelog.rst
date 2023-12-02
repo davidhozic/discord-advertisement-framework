@@ -37,6 +37,36 @@ Glossary
 Releases
 ---------------------
 
+v3.1.0
+===================
+- Compatible with Python 3.12
+- GUI:
+  
+  - ViewOnly structured data will display only the data that is provided, meaning
+    the GUI will not be constructed based on type annotations of an objects, but rather
+    based on the data itself.
+  - Better toast notification format and compatibility across multiple DPI screens.
+  - Graphical object library split into a separate package.
+
+- :class:`daf.logging.LoggerJSON`:
+  - ``index`` field is now a unique snowflake-like ID (used for removing logs).
+  - |BREAK_CH| Invite logs will now contain a "member" dictionary
+  for each invite log.
+  - Analytics are now supported.
+
+- LoggerCSV:
+  - Analytics are now supported.
+  - ``index`` field added in order to allow removal of logs.
+
+- |BREAK_CH| Removed long time deprecated package "framework", which was the original import.
+
+
+v3.0.4
+====================
+- Fixed AutoGUILD not working if the ``messages`` parameter is None.
+- Fixed ``verify_ssl`` being ignored on the WebSocket connection.
+
+
 v3.0.3
 ====================
 - Fixed "Loading from JSON template causes live object reference to be lost".
