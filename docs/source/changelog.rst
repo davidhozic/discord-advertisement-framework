@@ -37,6 +37,11 @@ Glossary
 Releases
 ---------------------
 
+v3.2.0
+===================
+- Moved library tkclasswiz to a separate library on PyPI and made it a requirement.
+
+
 v3.1.0
 ===================
 - Compatible with Python 3.12

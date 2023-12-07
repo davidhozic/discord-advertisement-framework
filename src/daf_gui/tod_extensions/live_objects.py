@@ -2,7 +2,7 @@
 Implements live object tracking to ObjectInfo.
 """
 from collections.abc import Mapping
-from ..tkclasswiz.convert import ObjectInfo
+from tkclasswiz.convert import ObjectInfo
 from daf.misc.instance_track import ObjectReference
 
 

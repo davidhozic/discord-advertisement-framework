@@ -1,7 +1,7 @@
 """
 Help button TOD extension.
 """
-from ..tkclasswiz.object_frame.frame_struct import NewObjectFrameStruct
+from tkclasswiz.object_frame.frame_struct import NewObjectFrameStruct
 
 import ttkbootstrap as ttk
 import webbrowser
