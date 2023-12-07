@@ -27,11 +27,11 @@ if not installed:
 
 import ttkbootstrap as ttk
 
-from .tkclasswiz.convert import *
-from .tkclasswiz.dpi import *
-from .tkclasswiz.object_frame.window import ObjectEditWindow
-from .tkclasswiz.storage import *
-from .tkclasswiz.utilities import *
+from tkclasswiz.convert import *
+from tkclasswiz.dpi import *
+from tkclasswiz.object_frame.window import ObjectEditWindow
+from tkclasswiz.storage import *
+from tkclasswiz.utilities import *
 from .connector import *
 
 from PIL import Image, ImageTk
@@ -787,13 +787,13 @@ daf.run(
 
         json_data = {
             "loggers": {
-                "all": convert_to_json(self.combo_logging_mgr["values"]),
+                "all": convert_to_dict(self.combo_logging_mgr["values"]),
                 "selected_index": self.combo_logging_mgr.current(),
             },
             "tracing": self.combo_tracing.current(),
-            "accounts": convert_to_json(self.lb_accounts.get()),
+            "accounts": convert_to_dict(self.lb_accounts.get()),
             "connection": {
-                "all": convert_to_json(self.combo_connection_edit.combo["values"]),
+                "all": convert_to_dict(self.combo_connection_edit.combo["values"]),
                 "selected_index": self.combo_connection_edit.combo.current()
             }
         }
@@ -820,14 +820,14 @@ daf.run(
             # Load accounts
             accounts = json_data.get("accounts")
             if accounts is not None:
-                accounts = convert_from_json(accounts)
+                accounts = convert_from_dict(accounts)
                 self.lb_accounts.clear()
                 self.lb_accounts.insert(tk.END, *accounts)
 
             # Load loggers
             logging_data = json_data.get("loggers")
             if logging_data is not None:
-                loggers = [convert_from_json(x) for x in logging_data["all"]]
+                loggers = [convert_from_dict(x) for x in logging_data["all"]]
 
                 self.combo_logging_mgr["values"] = loggers
                 selected_index = logging_data["selected_index"]
@@ -842,7 +842,7 @@ daf.run(
             # Remote client
             connection_data = json_data.get("connection")
             if connection_data is not None:
-                clients = [convert_from_json(x) for x in connection_data["all"]]
+                clients = [convert_from_dict(x) for x in connection_data["all"]]
 
                 self.combo_connection_edit.combo["values"] = clients
                 selected_index = connection_data["selected_index"]

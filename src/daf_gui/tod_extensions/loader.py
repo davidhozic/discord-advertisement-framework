@@ -5,14 +5,14 @@ from inspect import getmembers, isclass
 from typing import Union, List
 from datetime import datetime
 
-from ..tkclasswiz.convert import (
+from tkclasswiz.convert import (
     ObjectInfo,
     convert_to_object_info,
     register_object_objectinfo_rule,
 )
-from ..tkclasswiz.annotations import register_annotations as reg_annotations, get_annotations
-from ..tkclasswiz.object_frame.frame_struct import NewObjectFrameStruct
-from ..tkclasswiz.extensions import Extension
+from tkclasswiz.annotations import register_annotations as reg_annotations, get_annotations
+from tkclasswiz.object_frame.frame_struct import NewObjectFrameStruct
+from tkclasswiz.extensions import Extension
 
 from . import deprecation_notice
 from . import method_execution
@@ -166,6 +166,12 @@ def register_conv_guild():
     register_object_objectinfo_rule(
         daf.web.SeleniumCLIENT,
         {k: f"_{k}" for k in get_annotations(daf.web.SeleniumCLIENT)}
+    )
+
+
+    register_object_objectinfo_rule(
+        daf.discord.Guild,
+        {"name": "name", "id": "id"}
     )
 
 

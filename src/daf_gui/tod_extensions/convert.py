@@ -4,7 +4,7 @@ Module implements conversion extensions.
 from typing import get_type_hints
 from inspect import getmembers
 
-from ..tkclasswiz.convert import ObjectInfo, convert_to_object_info
+from tkclasswiz.convert import ObjectInfo, convert_to_object_info
 
 from daf.misc.instance_track import ObjectReference, get_object_id
 from daf.logging.tracing import *
