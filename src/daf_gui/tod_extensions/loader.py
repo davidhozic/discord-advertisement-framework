@@ -116,10 +116,21 @@ def register_conversions():
     # GUILD
     register_conv_guild()
 
+    # PyCord
+    reg_conv_pycord()
+
     sql = daf.sql
     if sql.SQL_INSTALLED:
         register_conv_sql(sql)
 
+
+def reg_conv_pycord():
+    for cls in (discord.TextChannel, discord.VoiceChannel, discord.Thread, discord.User, discord.Guild):
+        register_object_objectinfo_rule(
+            cls,
+            name="name",
+            id="id"
+        )
 
 def register_conv_clients():
     m = {k: k for k in daf.client.ACCOUNT.__init__.__annotations__}

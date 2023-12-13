@@ -17,4 +17,4 @@ from .convert import *
 from .remote import *
 
 
-VERSION = "3.1.0"
+VERSION = "3.1.1"
