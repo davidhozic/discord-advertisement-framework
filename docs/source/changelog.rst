@@ -37,6 +37,11 @@ Glossary
 Releases
 ---------------------
 
+v3.1.1
+===================
+- Fixed guild and text channels not fully visible in property view of GUI.
+
+
 v3.1.0
 ===================
 - Compatible with Python 3.12
