@@ -466,12 +466,15 @@ class AutoGUILD:
                 trace(f"Could not query top.gg, stopping auto join.", TraceLEVELS.ERROR, exc)
                 self.guild_query_iter = None
 
-        if (yielded := await get_next_guild()) is None:
-            return
+        
+        while True:
+            if (yielded := await get_next_guild()) is None:
+                return
 
-        no_error = True
-        # Not already joined in the guild
-        if client.get_guild(yielded.id) is None:
+            if client.get_guild(yielded.id) is not None:
+                self.guild_join_count += 1  # Guilds we are already joined also count
+                continue
+
             try:
                 invite_url = await selenium.fetch_invite_link(yielded.url)
                 if invite_url is None:
@@ -485,17 +488,16 @@ class AutoGUILD:
                         "No error detected in browser,"
                         "but the guild can not be seen by the API wrapper."
                     )
+                
+                self.guild_join_count += 1  # Increase only on success
             except Exception as exc:
-                no_error = False
                 trace(
                     f"Joining guild raised an error. (Guild '{yielded.name}')",
                     TraceLEVELS.ERROR,
                     exc
                 )
 
-        if no_error:
-            # Don't count errored joins but count guilds we are already joined if they match the pattern
-            self.guild_join_count += 1
+            break
 
         self._reset_auto_join_timer()
 
