@@ -21,7 +21,6 @@ import json
 import random as rd
 import aiohttp as http
 
-
 class GLOBALS:
     "Global variables of the web module"
     selenium_installed = False
