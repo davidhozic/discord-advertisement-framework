@@ -47,6 +47,7 @@ import sys
 import os
 import daf
 import webbrowser
+import warnings
 
 
 WIN_UPDATE_DELAY = 0.005
@@ -156,6 +157,15 @@ class Application():
 
         # Connection
         self.connection: AbstractConnectionCLIENT = None
+
+
+        if sys.version_info.minor == 12 and sys.version_info.major == 3:
+            tkdiag.Messagebox.show_warning(
+                "DAF's support on Python 3.12 is limited. Web browser features and"
+                " SQL logging are not supported in Python 3.12. Please install Python 3.11 instead.\n"
+                "Additional GUI can be unstable on Python 3.12",
+                "Compatibility warning!"
+            )
 
     def init_event_listeners(self):
         "Initializes event listeners."
