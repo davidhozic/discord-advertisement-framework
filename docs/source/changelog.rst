@@ -45,6 +45,9 @@ v3.2.0
 v3.1.2
 ===================
 - Fixed SQL compatibility
+- Fixed "TypeError: can't compare offset-naive and offset-aware datetimes" exception when
+  a rate limit happened (or slow mode).
+- Fixed selenium timer reset when no join attempt was triggered.
 
 
 v3.1.1
