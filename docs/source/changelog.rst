@@ -37,6 +37,11 @@ Glossary
 Releases
 ---------------------
 
+v3.1.2
+===================
+- Fixed SQL compatibility
+
+
 v3.1.1
 ===================
 - Fixed guild and text channels not fully visible in property view of GUI.
