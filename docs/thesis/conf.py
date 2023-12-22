@@ -140,6 +140,7 @@ latex_elements = {
     """.format(literal_block_str.get(language)),
     "fncychap": "",
     "babel": r"\usepackage[slovene]{babel}",
+    "inputenc": r"\usepackage[utf8]{inputenc}",
     'preamble':
         r'''
         % Packages

@@ -110,3 +110,6 @@ html_theme_options = {
 
 # ----------- Latex ----------- #
 latex_logo = html_logo
+latex_elements = {
+    "inputenc": r"\usepackage[utf8]{inputenc}",
+}
