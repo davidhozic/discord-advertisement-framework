@@ -40,6 +40,7 @@ Releases
 v3.2.0
 ===================
 - Moved library tkclasswiz to a separate library on PyPI and made it a requirement.
+- Object nicknaming (part of tkclasswiz)
 
 
 v3.1.2
