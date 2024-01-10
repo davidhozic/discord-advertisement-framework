@@ -5,14 +5,14 @@ from ttkbootstrap.tooltip import ToolTip
 from contextlib import suppress
 from functools import partial
 
-from ..tkclasswiz.convert import (
+from tkclasswiz.convert import (
     convert_to_object_info,
     convert_to_objects,
     ObjectInfo
 )
-from ..tkclasswiz.object_frame.frame_struct import NewObjectFrameStruct
+from tkclasswiz.object_frame.frame_struct import NewObjectFrameStruct
 from ..connector import get_connection
-from ..tkclasswiz.dpi import *
+from tkclasswiz.dpi import *
 
 import ttkbootstrap.dialogs as tkdiag
 import daf.misc.instance_track as it

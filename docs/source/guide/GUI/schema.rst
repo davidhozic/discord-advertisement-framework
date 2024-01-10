@@ -96,7 +96,7 @@ Depending on the datatype each parameter accepts, we can either:
 
 
 
-3. Edit current value by clicking on 🖋️ button.
+3. Edit current value by clicking on pencil button.
 
 .. grid:: 2
 

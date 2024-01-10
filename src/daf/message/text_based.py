@@ -355,7 +355,7 @@ class TextMESSAGE(BaseChannelMessage):
             elif ex.status == 429:  # Rate limit
                 retry_after = int(ex.response.headers["Retry-After"]) + 5
                 if ex.code == 20016:    # Slow Mode
-                    self.next_send_time = datetime.now() + timedelta(seconds=retry_after)
+                    self.next_send_time = datetime.now().astimezone() + timedelta(seconds=retry_after)
                     trace(f"{channel.name} is in slow mode, retrying in {retry_after} seconds", TraceLEVELS.WARNING)
                     self._check_period()  # Fix the period
 
@@ -368,13 +368,6 @@ class TextMESSAGE(BaseChannelMessage):
                 action = ChannelErrorAction.REMOVE_ACCOUNT
 
         return handled, action
-
-    def _calc_next_time(self):
-        super()._calc_next_time()
-        slowmode_delay = self._slowmode
-        current_time = datetime.now().astimezone()
-        if self.next_send_time - current_time < slowmode_delay:
-            self.next_send_time = current_time + slowmode_delay
 
     async def _send_channel(self,
                             channel: Union[discord.TextChannel, discord.Thread, None],

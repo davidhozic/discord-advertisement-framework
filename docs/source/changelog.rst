@@ -37,6 +37,27 @@ Glossary
 Releases
 ---------------------
 
+v3.2.0
+===================
+- GUI:
+
+  - Moved library tkclasswiz to a separate library on PyPI and made it a requirement.
+  - Object nicknaming (part of tkclasswiz)
+  - Type nicknaming (part of tkclasswiz)
+  - Fixed bug where the object edit window could not be closed after trying to edit a non-editable object.
+
+- |BREAK_CH| Minimum Python version bumped to **Python 3.9**.
+
+
+
+v3.1.2
+===================
+- Fixed SQL compatibility
+- Fixed "TypeError: can't compare offset-naive and offset-aware datetimes" exception when
+  a rate limit happened (or slow mode).
+- Fixed selenium timer reset when no join attempt was triggered.
+
+
 v3.1.1
 ===================
 - Fixed guild and text channels not fully visible in property view of GUI.
