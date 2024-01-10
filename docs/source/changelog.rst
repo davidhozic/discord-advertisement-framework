@@ -39,9 +39,15 @@ Releases
 
 v3.2.0
 ===================
-- Moved library tkclasswiz to a separate library on PyPI and made it a requirement.
-- Object nicknaming (part of tkclasswiz)
-- Type nicknaming (part of tkclasswiz)
+- GUI:
+
+  - Moved library tkclasswiz to a separate library on PyPI and made it a requirement.
+  - Object nicknaming (part of tkclasswiz)
+  - Type nicknaming (part of tkclasswiz)
+  - Fixed bug where the object edit window could not be closed after trying to edit a non-editable object.
+
+- |BREAK_CH| Minimum Python version bumped to **Python 3.9**.
+
 
 
 v3.1.2

@@ -34,7 +34,7 @@ Installation
 ----------------------
 DAF can be installed though command prompt/terminal using the bottom commands.
 
-Pre-requirement: `Python (minimum v3.8 and currently max 3.11; 3.12 support is pending) <https://www.python.org/downloads/>`_.
+Pre-requirement: `Python (minimum v3.9 and currently max 3.11; 3.12 support is pending) <https://www.python.org/downloads/>`_.
 
 **Main package**
 
