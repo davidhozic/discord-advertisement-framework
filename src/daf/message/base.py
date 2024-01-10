@@ -474,6 +474,7 @@ class AutoCHANNEL:
                 perms = channel.permissions_for(member)
                 name = channel.name
                 if (
+                    name is not None and
                     (perms.send_messages or (perms.connect and perms.stream and perms.speak)) and
                     re.search(self.include_pattern, name) is not None and
                     (self.exclude_pattern is None or re.search(self.exclude_pattern, name) is None)

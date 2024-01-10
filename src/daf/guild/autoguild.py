@@ -253,6 +253,7 @@ class AutoGUILD:
 
     def _check_name_match(self, name: str) -> bool:
         return (
+            name is not None and
             re.search(self.include_pattern, name) is not None and
             (self.exclude_pattern is None or re.search(self.exclude_pattern, name) is None)
         )
