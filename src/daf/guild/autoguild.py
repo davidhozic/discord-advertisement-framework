@@ -5,6 +5,7 @@ from contextlib import suppress
 from typing import Any, Union, List, Optional, Dict
 from typeguard import typechecked
 from datetime import timedelta, datetime
+from copy import deepcopy
 
 from ..message import TextMESSAGE, VoiceMESSAGE, BaseMESSAGE, BaseChannelMessage
 from ..logging.tracing import TraceLEVELS, trace
@@ -16,6 +17,7 @@ import asyncio
 
 from .. import web
 from .. import logging
+from .guilduser import GUILD
 
 import re
 
@@ -75,15 +77,14 @@ class AutoGUILD:
         "guild_query_iter",
         "guild_join_count",
         "_messages",
-        "_removed_messages",
         "removal_buffer_length",
         "_removal_timer_handle",
         "_guild_join_timer_handle",
         "_invite_join_count",
         "_cache",
         "_event_ctrl",
+        "_gen_guilds"
     )
-    _removed_messages: List[BaseMESSAGE]
 
     @typechecked
     def __init__(
@@ -117,26 +118,21 @@ class AutoGUILD:
         self._removal_timer_handle: asyncio.Task = None
         self._guild_join_timer_handle: asyncio.Task = None
         self._cache = []
+        self._gen_guilds: List[GUILD] = []
         self._event_ctrl: EventController = None
 
         self._invite_join_count = {invite.split("/")[-1]: 0 for invite in invite_track}
         attributes.write_non_exist(self, "update_semaphore", asyncio.Semaphore(1))
-        attributes.write_non_exist(self, "_removed_messages", [])
 
     def __repr__(self) -> str:
         return f"AutoGUILD(include_pattern='{self.include_pattern}', exclude_pattern='{self.exclude_pattern})'"
-
-    @property
-    def removed_messages(self) -> List[BaseMESSAGE]:
-        "Returns a list of messages that were removed from server (last ``removal_buffer_length`` messages)."
-        return self._removed_messages[:]
 
     @property
     def messages(self) -> List[Union[TextMESSAGE, VoiceMESSAGE]]:
         """
         .. versionadded:: 3.0
 
-        Returns all the (initialized) message objects.
+        Returns all the (template) message objects.
         """
         return self._messages[:]
 
@@ -190,38 +186,8 @@ class AutoGUILD:
         Other
             Raised from message.initialize() method.
         """
-        return self._event_ctrl.emit(EventID.message_added, self, message)
-
-    @typechecked
-    def remove_message(self, message: BaseMESSAGE) -> asyncio.Future:
-        """
-        Removes a message from the message list.
-
-        .. versionchanged:: 3.0
-
-            The function is now async.
-
-        |ASYNC_API|
-
-        Parameters
-        --------------
-        message: BaseMESSAGE
-            Message object to remove.
-
-        Returns
-        --------
-        Awaitable
-            An awaitable object which can be used to await for execution to finish.
-            To wait for the execution to finish, use ``await`` like so: ``await method_name()``.
-
-        Raises
-        --------------
-        TypeError
-            Raised when the message is not of type the guild allows.
-        ValueError
-            Raised when the message is not present in the list.
-        """
-        return self._event_ctrl.emit(EventID.message_removed, self, message)
+        self._messages.append(message)
+        return asyncio.gather(*(g.add_message(deepcopy(message)) for g in self._gen_guilds))
 
     def update(self, init_options = None, **kwargs) -> asyncio.Future:
         """
@@ -263,6 +229,7 @@ class AutoGUILD:
         """
         Initializes the object.
         """
+        client: discord.Client = parent.client
         self._event_ctrl = event_ctrl
         self.parent = parent
         if self.auto_join is not None:
@@ -301,9 +268,9 @@ class AutoGUILD:
                             TraceLEVELS.ERROR
                         )
 
-                    client: discord.Client = parent.client
                     client.add_listener(self._discord_on_member_join, "on_member_join")
                     client.add_listener(self._discord_on_invite_delete, "on_invite_delete")
+
                     self._event_ctrl.add_listener(
                         EventID.discord_member_join,
                         self._on_member_join,
@@ -321,15 +288,22 @@ class AutoGUILD:
             self._reset_auto_join_timer()
             event_ctrl.add_listener(EventID.auto_guild_start_join, self._join_guilds, lambda ag: ag is self)
 
-        event_ctrl.add_listener(EventID.message_ready, self._advertise, lambda server, m: server is self)
-        event_ctrl.add_listener(EventID.message_added, self._on_add_message, lambda server, m: server is self)
-        event_ctrl.add_listener(EventID.message_removed, self._on_remove_message, lambda server, m: server is self)
+        client.add_listener(self._discord_on_guild_join, "on_guild_join")
+        client.add_listener(self._discord_on_guild_remove, "on_guild_remove")
+        self._event_ctrl.add_listener(
+            EventID.discord_guild_join,
+            self._on_guild_join,
+            predicate=lambda guild: self._check_name_match(guild.name)
+        )
+        self._event_ctrl.add_listener(
+            EventID.discord_guild_remove,
+            self._on_guild_remove,
+        )
+
         event_ctrl.add_listener(EventID.server_update, self._on_update, lambda server, *args, **kwargs: server is self)
 
-        message: BaseChannelMessage
-        for message in self._messages:
-            if (await message.initialize(self, event_ctrl, self._get_channels)) is not None:
-                await self._on_remove_message(self, message)
+        for guild in self._get_guilds():
+            await self._make_new_guild(guild)
 
     def _generate_guild_log_context(self, guild: discord.Guild):
         return {
@@ -358,6 +332,13 @@ class AutoGUILD:
 
         return message_ctx if channel_ctx["successful"] or channel_ctx["failed"] else None
 
+    async def _make_new_guild(self, guild: discord.Guild):
+        new_guild = GUILD(guild, deepcopy(self._messages), self.logging, removal_buffer_length=0)
+        if (await new_guild.initialize(self.parent, self._event_ctrl)) is not None:  # not None == exc returned
+            return
+
+        self._gen_guilds.append(new_guild)
+
     async def _get_invites(self) -> List[discord.Invite]:
         client: discord.Client = self.parent.client
         invites = []
@@ -369,49 +350,7 @@ class AutoGUILD:
             except discord.HTTPException as exc:
                 trace(f"Error reading invite links for guild {guild.name}!", TraceLEVELS.ERROR, exc)
 
-        return invites
-
-    @async_util.with_semaphore("update_semaphore")
-    async def _advertise(self, _, message: BaseMESSAGE):
-        """
-        Advertises thru all the GUILDs.
-        """
-        author_ctx = self.parent.generate_log_context()
-        message_context = await message._send()
-        if message_context and self.logging:
-            for guild in self._get_guilds():
-                guild_ctx = self._generate_guild_log_context(guild)
-                message_guild_ctx = self._filter_message_context(guild, message_context)
-                if message_guild_ctx:
-                    await logging.save_log(guild_ctx, message_guild_ctx, author_ctx)
-
-        message._reset_timer()
-
-    def _get_channels(self, *types):
-        for guild in self._get_guilds():
-            for channel in guild.channels:
-                if isinstance(channel, types):
-                    yield channel
-
-    async def _on_add_message(self, _, message: BaseMESSAGE):
-        exc = await message.initialize(parent=self, event_ctrl=self._event_ctrl, channel_getter=self._get_channels)
-        if exc is not None:
-            raise exc
-
-        self._messages.append(message)
-        with suppress(ValueError):  # Readd the removed message
-            self._removed_messages.remove(message)
-
-    async def _on_remove_message(self, _, message: BaseMESSAGE):
-        "Event loop handler for removing messages"
-        trace(f"Removing message {message} from {self}", TraceLEVELS.NORMAL)
-        self._messages.remove(message)
-        self._removed_messages.append(message)
-        if len(self._removed_messages) > self.removal_buffer_length:
-            trace(f"Removing oldest record of removed messages {self._removed_messages[0]}", TraceLEVELS.DEBUG)
-            del self._removed_messages[0]
-
-        await message._close()
+        return invites        
 
     async def _on_update(self, _, init_options, **kwargs):
         await self._close()
@@ -524,12 +463,28 @@ class AutoGUILD:
                 TraceLEVELS.DEBUG
             )
 
+    async def _on_guild_join(self, guild: discord.Guild):
+        await self._make_new_guild(guild)
+
+    async def _on_guild_remove(self, guild: discord.Guild):
+        for g in self._gen_guilds:
+            if g.apiobject == guild:
+                await g._close()
+                self._gen_guilds.remove(g)
+                break
+
     # Safety wrappers to make sure the event gets emitted through the event loop for safety
     async def _discord_on_member_join(self, member: discord.Member):
         self._event_ctrl.emit(EventID.discord_member_join, member)
 
     async def _discord_on_invite_delete(self, invite: discord.Invite):
         self._event_ctrl.emit(EventID.discord_invite_delete, invite)
+
+    async def _discord_on_guild_join(self, guild: discord.Guild):
+        self._event_ctrl.emit(EventID.discord_guild_join, guild)
+    
+    async def _discord_on_guild_remove(self, guild: discord.Guild):
+        self._event_ctrl.emit(EventID.discord_guild_remove, guild)
 
     @async_util.with_semaphore("update_semaphore")
     async def _close(self):
@@ -539,10 +494,7 @@ class AutoGUILD:
         if self._event_ctrl is None:  # Not initialized or already closed
             return
 
-        self._event_ctrl.remove_listener(EventID.message_ready, self._advertise)
-        self._event_ctrl.remove_listener(EventID.message_removed, self._on_remove_message)
         self._event_ctrl.remove_listener(EventID.auto_guild_start_join, self._join_guilds)
-        self._event_ctrl.remove_listener(EventID.message_added, self._on_add_message)
         self._event_ctrl.remove_listener(EventID.server_update, self._on_update)
 
         # Remove PyCord API wrapper event handlers.
@@ -563,5 +515,5 @@ class AutoGUILD:
         if self.auto_join is not None:
             await self.auto_join._close()
 
-        for message in self._messages:
-            await message._close()
+        for guild in self._gen_guilds:
+            await guild._close()

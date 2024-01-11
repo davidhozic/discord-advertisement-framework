@@ -16,7 +16,7 @@ import daf
 EXECUTABLE_METHODS = {
     daf.guild.GUILD: [daf.guild.GUILD.add_message, daf.guild.GUILD.remove_message],
     daf.guild.USER: [daf.guild.USER.add_message, daf.guild.USER.remove_message],
-    daf.guild.AutoGUILD: [daf.guild.AutoGUILD.add_message, daf.guild.AutoGUILD.remove_message],
+    daf.guild.AutoGUILD: [daf.guild.AutoGUILD.add_message],
     daf.client.ACCOUNT: [daf.client.ACCOUNT.add_server, daf.client.ACCOUNT.remove_server]
 }
 ADDITIONAL_PARAMETER_VALUES = {
@@ -25,10 +25,6 @@ ADDITIONAL_PARAMETER_VALUES = {
         "message": lambda old_info: old_info.data["messages"]
     },
     daf.USER.remove_message: {
-        # GUILD.messages
-        "message": lambda old_info: old_info.data["messages"]
-    },
-    daf.AutoGUILD.remove_message: {
         # GUILD.messages
         "message": lambda old_info: old_info.data["messages"]
     },
