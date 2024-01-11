@@ -29,13 +29,20 @@ GUILD_MAX_AMOUNT = 100
 @doc.doc_category("Auto objects", path="guild")
 class AutoGUILD:
     """
-    .. versionchanged:: v3.0
+
+    .. versionchanged:: v3.3.0
+
+        - Restored original way AutoGUILD
+          works (as a GUILD generator)
+
+    .. versionchanged:: v3.0.0
 
         - Now works like GUILD and USER.
         - Removed ``created_at`` property.
 
 
     Represents multiple guilds (servers) based on a text pattern.
+    AutoGUILD generates :class:`daf.guild.GUILD` objects for each matched pattern.
 
     Parameters
     --------------
@@ -108,7 +115,7 @@ class AutoGUILD:
         self.include_pattern = re.sub(r"\s*\|\s*", '|', include_pattern) if include_pattern else None
         self.exclude_pattern = re.sub(r"\s*\|\s*", '|', exclude_pattern) if exclude_pattern else None
         self._remove_after = remove_after
-        self._messages: List[BaseMESSAGE] = messages
+        self._messages: List[BaseMESSAGE] = []
         self.logging = logging
         self.auto_join = auto_join
         self.parent = None
@@ -120,6 +127,9 @@ class AutoGUILD:
         self._cache = []
         self._gen_guilds: List[GUILD] = []
         self._event_ctrl: EventController = None
+
+        for message in messages:
+            self.add_message(message)
 
         self._invite_join_count = {invite.split("/")[-1]: 0 for invite in invite_track}
         attributes.write_non_exist(self, "update_semaphore", asyncio.Semaphore(1))
@@ -158,7 +168,7 @@ class AutoGUILD:
 
     # API
     @typechecked
-    def add_message(self, message: BaseMESSAGE) -> asyncio.Future:
+    def add_message(self, message: BaseChannelMessage) -> asyncio.Future:
         """
         Adds a message to the message list.
 
@@ -187,7 +197,21 @@ class AutoGUILD:
             Raised from message.initialize() method.
         """
         self._messages.append(message)
+        message._update_tracked_id(False)  # Don't allow remote operations, but still track
         return asyncio.gather(*(g.add_message(deepcopy(message)) for g in self._gen_guilds))
+    
+
+    @typechecked
+    def remove_message(self, message: BaseChannelMessage):
+        self._messages.remove(message)
+        for g in self._gen_guilds:
+            # Get the copied message index, all deep copied messages compare True, if they
+            # were copied from the same source message.
+            idx = g._messages.index(message)
+            if idx == -1:
+                continue
+
+            g.remove_message(g._messages[idx])
 
     def update(self, init_options = None, **kwargs) -> asyncio.Future:
         """

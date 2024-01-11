@@ -490,7 +490,7 @@ class Application():
                 param_object = combo_history.combo.get()
                 param_object_params = convert_to_objects(param_object.data)
                 items = await self.connection.execute_method(
-                    it.ObjectReference(it.get_object_id(logger)), getter_history, **param_object_params
+                    it.ObjectReference.from_object(logger), getter_history, **param_object_params
                 )
                 items = convert_to_object_info(items)
                 lst_history.clear()
@@ -513,7 +513,7 @@ class Application():
             async def delete_logs_async(primary_keys: List[int]):
                 logger = await self.connection.get_logger()
                 await self.connection.execute_method(
-                    it.ObjectReference(it.get_object_id(logger)),
+                    it.ObjectReference.from_object(logger),
                     "delete_logs",
                     primary_keys=primary_keys  # TODO: update on server
                 )
@@ -574,7 +574,11 @@ class Application():
                 logger = await self.connection.get_logger()
                 param_object = combo_count.combo.get()
                 parameters = convert_to_objects(param_object.data)
-                count = await self.connection.execute_method(it.ObjectReference(it.get_object_id(logger)), getter_counts, **parameters)
+                count = await self.connection.execute_method(
+                    it.ObjectReference.from_object(logger),
+                    getter_counts,
+                    **parameters
+                )
 
                 tw_num.delete_rows()
                 tw_num.insert_rows(0, count)

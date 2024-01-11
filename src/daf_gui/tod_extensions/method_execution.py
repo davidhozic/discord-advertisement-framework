@@ -16,7 +16,7 @@ import daf
 EXECUTABLE_METHODS = {
     daf.guild.GUILD: [daf.guild.GUILD.add_message, daf.guild.GUILD.remove_message],
     daf.guild.USER: [daf.guild.USER.add_message, daf.guild.USER.remove_message],
-    daf.guild.AutoGUILD: [daf.guild.AutoGUILD.add_message],
+    daf.guild.AutoGUILD: [daf.guild.AutoGUILD.add_message, daf.guild.AutoGUILD.remove_message],
     daf.client.ACCOUNT: [daf.client.ACCOUNT.add_server, daf.client.ACCOUNT.remove_server]
 }
 ADDITIONAL_PARAMETER_VALUES = {
@@ -26,6 +26,10 @@ ADDITIONAL_PARAMETER_VALUES = {
     },
     daf.USER.remove_message: {
         # GUILD.messages
+        "message": lambda old_info: old_info.data["messages"]
+    },
+    daf.AutoGUILD.remove_message: {
+        # AutoGUILD.messages
         "message": lambda old_info: old_info.data["messages"]
     },
     daf.ACCOUNT.remove_server: {
@@ -40,6 +44,7 @@ def load_extension(frame: NewObjectFrameStruct, *args, **kwargs):
         frame.old_gui_data is None or
         # getattr since class_ can also be non ObjectInfo
         getattr(frame.old_gui_data, "real_object", None) is None or
+        not frame.old_gui_data.real_object.remote_allowed or
         (available_methods := EXECUTABLE_METHODS.get(frame.class_)) is None or
         not frame.allow_save
     ):
