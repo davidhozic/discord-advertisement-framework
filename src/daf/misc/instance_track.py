@@ -48,8 +48,6 @@ class ObjectReference:
         return cls(get_object_id(obj), obj._tracked_allow_remote)
 
 
-
-
 def track_id(cls):
     """
     Decorator which replaces the __new__ method with a function that keeps a weak reference.
