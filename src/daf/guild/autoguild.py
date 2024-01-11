@@ -180,7 +180,7 @@ class AutoGUILD:
 
         Parameters
         --------------
-        message: BaseMESSAGE
+        message: BaseChannelMessage
             Message object to add.
 
         Returns
@@ -202,8 +202,25 @@ class AutoGUILD:
     
 
     @typechecked
-    def remove_message(self, message: BaseChannelMessage):
+    def remove_message(self, message: BaseChannelMessage) -> asyncio.Future:
+        """
+        Remove a ``message`` from the advertising list.
+
+        |ASYNC_API|
+
+        Parameters
+        --------------
+        message: BaseChannelMessage
+            Message object to remove.
+
+        Returns
+        --------
+        Awaitable
+            An awaitable object which can be used to await for execution to finish.
+            To wait for the execution to finish, use ``await`` like so: ``await method_name()``.
+        """
         self._messages.remove(message)
+        futures = []
         for g in self._gen_guilds:
             # Get the copied message index, all deep copied messages compare True, if they
             # were copied from the same source message.
@@ -211,7 +228,9 @@ class AutoGUILD:
             if idx == -1:
                 continue
 
-            g.remove_message(g._messages[idx])
+            futures.append(g.remove_message(g._messages[idx]))
+
+        return asyncio.gather(*futures)
 
     def update(self, init_options = None, **kwargs) -> asyncio.Future:
         """

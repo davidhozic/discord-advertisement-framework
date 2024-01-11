@@ -5,11 +5,13 @@
 from typing import Any, Callable, Coroutine, Union, Optional
 from os.path import basename
 from typeguard import typechecked
-import importlib.util as iu
-import io
+from functools import wraps
 
 from .logging.tracing import *
 from .misc import doc
+
+import importlib.util as iu
+import io
 
 
 __all__ = (
@@ -80,7 +82,7 @@ def data_function(fnc: Callable):
         :language: python
         :emphasize-lines: 12, 24
     """
-
+    @wraps(fnc, updated=[])
     class FunctionCLASS(_FunctionBaseCLASS):
         """
         Used for creating special classes that are then used to create objects in the daf.MESSAGE
