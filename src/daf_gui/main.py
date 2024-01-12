@@ -751,13 +751,11 @@ class Application():
 
         accounts: list[ObjectInfo] = self.lb_accounts.get()
 
-        accounts_str, imports, other_str = convert_objects_to_script(accounts)
+        accounts_str, imports = convert_objects_to_script(accounts)
         imports = "\n".join(set(imports))
-        if other_str != "":
-            other_str = "\n" + other_str
 
         if logger_is_present:
-            logger_str, logger_imports, _ = convert_objects_to_script(logger)
+            logger_str, logger_imports = convert_objects_to_script(logger)
             logger_imports = "\n".join(set(logger_imports))
         else:
             logger_imports = ""
@@ -769,7 +767,7 @@ class Application():
                 kwargs["username"] = connection_mgr.auth.login
                 kwargs["password"] = connection_mgr.auth.password
 
-            remote_str, remote_imports, _ = convert_objects_to_script(ObjectInfo(daf.RemoteAccessCLIENT, kwargs))
+            remote_str, remote_imports = convert_objects_to_script(ObjectInfo(daf.RemoteAccessCLIENT, kwargs))
             remote_imports = "\n".join(set(remote_imports))
         else:
             remote_str, remote_imports = "", ""
@@ -790,7 +788,7 @@ At the bottom of the file the framework is then started with the run function.
 {remote_imports}
 {imports}
 {f"from {tracing.__module__} import {tracing.__class__.__name__}" if tracing_is_present else ""}
-import daf{other_str}
+import daf
 
 # Define the logger
 {f"logger = {logger_str}" if logger_is_present else ""}
