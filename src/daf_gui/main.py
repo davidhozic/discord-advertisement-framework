@@ -41,6 +41,7 @@ import tkinter as tk
 import tkinter.filedialog as tkfile
 import ttkbootstrap.dialogs.dialogs as tkdiag
 import ttkbootstrap.tableview as tktw
+import ttkbootstrap.style as tkstyle
 
 import json
 import sys
@@ -148,6 +149,9 @@ class Application():
         # Credits tab
         self.init_credits_tab()
 
+        # GUI menu
+        self.init_menu()
+
         # Status variables
         self._daf_running = False
 
@@ -166,6 +170,21 @@ class Application():
                 "Additional GUI can be unstable on Python 3.12",
                 "Compatibility warning!"
             )
+
+    def init_menu(self):
+        "Initializes GUI toolbar menu"
+        menu = ttk.Menu(self.win_main)
+        theme_menu = ttk.Menu(menu)
+        menu.add_cascade(label="Theme", menu=theme_menu)
+
+        style = tkstyle.Style()
+        def use_theme(theme: str):
+            return lambda: style.theme_use(theme)
+
+        for theme in style.theme_names():
+            theme_menu.add_radiobutton(label=theme, command=use_theme(theme))
+
+        self.win_main.config(menu=menu)
 
     def init_event_listeners(self):
         "Initializes event listeners."

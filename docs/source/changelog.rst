@@ -44,6 +44,10 @@ v3.3.0
   guilds as well. The added benefit of creating :class:`~daf.guild.GUILD` is different randomized sending
   periods across multiple guilds (assuming randomized sending period was configured).
 
+- GUI:
+
+  - Theme selection support (top-left corner)
+
 
 v3.2.0
 ===================
