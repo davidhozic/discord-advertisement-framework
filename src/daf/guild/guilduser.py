@@ -274,7 +274,7 @@ class BaseGUILD:
 
         if _apiobject is None:
             trace(f"Invalid ID {self.snowflake} - {self}", TraceLEVELS.ERROR, exception_cls=ValueError)
-        
+
         self._apiobject = _apiobject
         if self._remove_after is not None:
             if isinstance(self._remove_after, timedelta):

@@ -367,7 +367,7 @@ def convert_object_to_semi_dict(to_convert: Any, only_ref: bool = False) -> Mapp
     if only_ref:
         # Don't serialize object completly, only ID is requested.
         # This prevents unnecessarily large data to be encoded
-        to_convert = ObjectReference(get_object_id(to_convert))
+        to_convert = ObjectReference.from_object(to_convert)
 
     return _convert_json_slots(to_convert)
 

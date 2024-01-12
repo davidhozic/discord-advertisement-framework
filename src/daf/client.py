@@ -436,7 +436,7 @@ class ACCOUNT:
         self._running = True
         async with self._event_ctrl.critical():
             for server in self._servers:
-                if (await server.initialize(self, self._event_ctrl)) is not None:
+                if (exc := await server.initialize(self, self._event_ctrl)) is not None:
                     await self._on_remove_server(server)
 
 

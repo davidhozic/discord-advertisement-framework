@@ -29,7 +29,7 @@ ADDITIONAL_PARAMETER_VALUES = {
         "message": lambda old_info: old_info.data["messages"]
     },
     daf.AutoGUILD.remove_message: {
-        # GUILD.messages
+        # AutoGUILD.messages
         "message": lambda old_info: old_info.data["messages"]
     },
     daf.ACCOUNT.remove_server: {
@@ -44,6 +44,7 @@ def load_extension(frame: NewObjectFrameStruct, *args, **kwargs):
         frame.old_gui_data is None or
         # getattr since class_ can also be non ObjectInfo
         getattr(frame.old_gui_data, "real_object", None) is None or
+        not frame.old_gui_data.real_object.remote_allowed or
         (available_methods := EXECUTABLE_METHODS.get(frame.class_)) is None or
         not frame.allow_save
     ):

@@ -27,8 +27,8 @@ def get_by_id(id_: int):
 
 
 def get_object_id(obj: object) -> int:
-    "Returns either internal daf's ID if it exist otherwise just the regular id()"
-    return getattr(obj, "_daf_id", -1)
+    "Returns either internal daf's ID"
+    return getattr(obj, "_daf_id")
 
 
 class ObjectReference:
@@ -36,8 +36,16 @@ class ObjectReference:
     Descriptive class that describes a reference to an object
     instead of the object itself. Useful for reducing unneeded storage.
     """
-    def __init__(self, ref: int) -> None:
+    def __init__(self, ref: int, remote_allowed = True) -> None:
         self.ref = ref
+        self.remote_allowed = remote_allowed  # Can be transferred, but not manipulated
+
+    @classmethod
+    def from_object(cls, obj: object):
+        if not hasattr(obj, "_daf_id") or obj._daf_id == -1:
+            return None
+
+        return cls(get_object_id(obj), obj._tracked_allow_remote)
 
 
 def track_id(cls):
@@ -47,10 +55,20 @@ def track_id(cls):
     @wraps(cls, updated=[])
     class TrackedClass(cls):
         if hasattr(cls, "__slots__"):  # Don't break classes without slots
-            __slots__ = ("__weakref__", "_daf_id")
+            __slots__ = ("__weakref__", "_daf_id", "_tracked_allow_remote")
 
-        def _update_tracked_id(self):
-            "Saves ID to the tracked dictionary"
+        def _update_tracked_id(self, allow_remote: bool = True):
+            """
+            Saves ID to the tracked dictionary
+
+            Parameters
+            --------------
+            allow_remote: bool
+                Should a remote client be able to manipulate the object.
+                If this is False, the object will be tracked but refresh,
+                update and method execution will not be available.
+            """
+            self._tracked_allow_remote = allow_remote
             value = id(self)
             self._daf_id = value
             OBJECT_ID_MAP[value] = self

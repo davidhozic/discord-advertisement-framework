@@ -22,27 +22,27 @@ async def test_http(accounts, guilds):
 
     # Execute method
     await client.execute_method(
-        it.ObjectReference(it.get_object_id(accounts[0])),
+        it.ObjectReference.from_object(accounts[0]),
         "add_server",
         server=daf.GUILD(guilds[0].id)
     )
-    new_object = await client.refresh(it.ObjectReference(it.get_object_id(accounts[0])))
+    new_object = await client.refresh(it.ObjectReference.from_object(accounts[0]))
     assert len(new_object.servers) == 1
 
     await client.execute_method(
-        it.ObjectReference(it.get_object_id(new_object)),
+        it.ObjectReference.from_object(new_object),
         "remove_server",
-        server=it.ObjectReference(it.get_object_id(new_object.servers[0]))
+        server=it.ObjectReference.from_object(new_object.servers[0])
     )
-    new_object = await client.refresh(it.ObjectReference(it.get_object_id(accounts[0])))
+    new_object = await client.refresh(it.ObjectReference.from_object(accounts[0]))
     assert len(new_object.servers) == 0
 
     # Test object retrieval
-    new_object = await client.refresh(it.ObjectReference(it.get_object_id(accounts[0])))
+    new_object = await client.refresh(it.ObjectReference.from_object(accounts[0]))
     assert new_object._daf_id == accounts[0]._daf_id
     # Test account removal
-    await client.remove_account(it.ObjectReference(it.get_object_id(accounts[0])))
-    await client.remove_account(it.ObjectReference(it.get_object_id(accounts[1])))
+    await client.remove_account(it.ObjectReference.from_object(accounts[0]))
+    await client.remove_account(it.ObjectReference.from_object(accounts[1]))
     # Test account addition
     await client.add_account(accounts[0])
     await client.add_account(accounts[1])
