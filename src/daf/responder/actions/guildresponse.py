@@ -6,9 +6,9 @@ import _discord as discord
 
 class GuildResponse(BaseResponse):
     async def perform(self, message: Message):
-        data = await self.datamgr._get_data()
+        data = await self.data.to_dict()
         await message.reply(
-            content=data["text"],
+            content=data["content"],
             embed=data["embed"],
             files=[discord.File(x) for x in data["files"]]
         )
