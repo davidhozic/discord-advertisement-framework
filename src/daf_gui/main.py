@@ -179,7 +179,7 @@ class Application():
 
         style = tkstyle.Style()
         def use_theme(theme: str):
-            return lambda: style.theme_use(theme); self.win_main.config(theme)
+            return lambda: style.theme_use(theme)
 
         for theme in style.theme_names():
             theme_menu.add_radiobutton(label=theme, command=use_theme(theme))
