@@ -6,6 +6,7 @@ from contextlib import suppress
 
 from . import guild
 from . import web
+from . import responder
 
 from .logging.tracing import TraceLEVELS, trace
 from .misc import async_util, instance_track, doc, attributes
@@ -16,6 +17,7 @@ from typeguard import typechecked
 import _discord as discord
 import asyncio
 import copy
+
 
 
 #######################################################################
@@ -126,7 +128,8 @@ class ACCOUNT:
         "_client",
         "_deleted",
         "_removed_servers",
-        "_event_ctrl"
+        "_event_ctrl",
+        "auto_responders"
     )
 
     _removed_servers: List[Union[guild.BaseGUILD, guild.AutoGUILD]]
@@ -143,7 +146,8 @@ class ACCOUNT:
         servers: Optional[List[Union[guild.GUILD, guild.USER, guild.AutoGUILD]]] = None,
         username: Optional[str] = None,
         password: Optional[str] = None,
-        removal_buffer_length: int = 50
+        removal_buffer_length: int = 50,
+        auto_responders: List[responder.ResponderBase] = None
     ) -> None:
 
         if proxy is not None:
@@ -163,6 +167,9 @@ class ACCOUNT:
         if servers is None:
             servers = []
 
+        if auto_responders is None:
+            auto_responders = []
+
         self._token = token
         self.is_user = is_user
         self.proxy = proxy
@@ -175,6 +182,8 @@ class ACCOUNT:
         self._deleted = False
         self._ws_task = None
         self._event_ctrl = EventController()
+        self.auto_responders = auto_responders
+
         attributes.write_non_exist(self, "_removed_servers", [])
 
     def __str__(self) -> str:
@@ -256,6 +265,10 @@ class ACCOUNT:
     def client(self) -> discord.Client:
         "Returns the API wrapper client"
         return self._client
+
+    async def _discord_on_message(self, message: discord.Message):
+        if message.author != self.client.user:
+            self._event_ctrl.emit(EventID.discord_message, message)
 
     # API methods
     @typechecked
@@ -429,6 +442,12 @@ class ACCOUNT:
             trace(f"Could not login to Discord - {self}", TraceLEVELS.ERROR, exc)
             raise exc
 
+        if self.auto_responders:
+            self._client.add_listener(self._discord_on_message, "on_message")
+
+        for responder in self.auto_responders:
+            responder.initialize(self._event_ctrl, self.client)
+
         self._event_ctrl.add_listener(EventID.account_update, self._on_update)
         self._event_ctrl.add_listener(EventID.server_removed, self._on_remove_server)
         self._event_ctrl.add_listener(EventID.server_added, self._on_add_server)
@@ -521,6 +540,12 @@ class ACCOUNT:
 
         trace(f"Logging out of {self.client.user.display_name}...")
         self._running = False
+
+        if self.auto_responders:
+            self._client.add_listener(self._discord_on_message, "on_message")
+
+        for responder in self.auto_responders:
+            responder.close()
 
         self._event_ctrl.remove_listener(EventID.server_removed, self._on_remove_server)
         self._event_ctrl.remove_listener(EventID.server_added, self._on_add_server)

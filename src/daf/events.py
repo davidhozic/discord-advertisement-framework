@@ -65,6 +65,7 @@ class EventID(Enum):
     discord_invite_delete = auto()
     discord_guild_join = auto()
     discord_guild_remove = auto()
+    discord_message = auto()
 
     _dummy = auto()  # For stopping the event loop
 
