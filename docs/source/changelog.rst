@@ -37,6 +37,11 @@ Glossary
 Releases
 ---------------------
 
+v3.2.1
+===================
+- GUI: Fixed conversion from GUI data to a Python daf core script.
+
+
 v3.2.0
 ===================
 - GUI:
