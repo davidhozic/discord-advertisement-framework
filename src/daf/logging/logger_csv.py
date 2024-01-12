@@ -203,3 +203,10 @@ class LoggerCSV(LoggerFileBASE):
                 })
 
         return logs
+    
+    async def analytic_get_invite_log(self, *arg, **kwargs):
+        raise NotImplementedError
+    
+    async def analytic_get_num_invites(self, *arg, **kwargs):
+        raise NotImplementedError
+    

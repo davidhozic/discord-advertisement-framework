@@ -6,6 +6,7 @@
 from typing import Any, Coroutine, Union, List, Optional, Dict, Callable
 from contextlib import suppress
 from datetime import timedelta, datetime
+from abc import ABC, abstractmethod
 
 from typeguard import typechecked
 
@@ -26,7 +27,7 @@ __all__ = (
 )
 
 
-class BaseGUILD:
+class BaseGUILD(ABC):
     """
     .. versionchanged:: v3.0
         
@@ -73,7 +74,7 @@ class BaseGUILD:
     def __init__(
         self,
         snowflake: Any,
-        messages: Optional[List] = None,
+        messages: Optional[List[BaseMESSAGE]] = None,
         logging: Optional[bool] = False,
         remove_after: Optional[Union[timedelta, datetime]] = None,
         removal_buffer_length: int = 50
@@ -141,6 +142,7 @@ class BaseGUILD:
         "Returns the timestamp at which object will be removed or None if it will not be removed."
         return self._remove_after
 
+    @abstractmethod
     def add_message(self, message: BaseMESSAGE) -> asyncio.Future:
         """
         Adds a message to the message list.
@@ -298,9 +300,6 @@ class BaseGUILD:
 
         await self._init_messages()
 
-    def generate_invite_log_context(self, member: discord.Member, invite_id: str) -> dict:
-        raise NotImplementedError
-
     def generate_log_context(self) -> Dict[str, Union[str, int]]:
         """
         Generates a dictionary of the guild's context,
@@ -317,9 +316,11 @@ class BaseGUILD:
         }
 
     # Event handlers
+    @abstractmethod
     async def _on_add_message(self, _, message: BaseMESSAGE):
         raise NotImplementedError
 
+    @abstractmethod
     async def _on_update(self, _, init_options, **kwargs):
         raise NotImplementedError
 
@@ -348,28 +349,6 @@ class BaseGUILD:
             await logging.save_log(guild_ctx, message_context, author_ctx)
 
         message._reset_timer()    
-
-    async def _on_member_join(self, member: discord.Member):
-        """
-        Event listener that get's called when a member joins a guild.
-
-        Parameters
-        ---------------
-        member: :class:`discord.Member`
-            The member who joined the guild.
-        """
-        raise NotImplementedError
-
-    async def _on_invite_delete(self, invite: discord.Invite):
-        """
-        Event listener that get's called when an invite has been deleted from a guild.
-
-        Parameters
-        --------------
-        invite: :class:`discord.Invite`
-            The invite that was deleted.
-        """
-        raise NotImplementedError
 
     @async_util.with_semaphore("update_semaphore")
     async def _close(self):
@@ -460,7 +439,7 @@ class GUILD(BaseGUILD):
     @typechecked
     def __init__(self,
                  snowflake: Union[int, discord.Guild],
-                 messages: Optional[List[Union[TextMESSAGE, VoiceMESSAGE]]] = None,
+                 messages: Optional[List[BaseChannelMessage]] = None,
                  logging: Optional[bool] = False,
                  remove_after: Optional[Union[timedelta, datetime]] = None,
                  invite_track: Optional[List[str]] = None,

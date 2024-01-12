@@ -5,6 +5,8 @@ It contains all the logging classes.
 from datetime import datetime, date
 from typing import Optional, Literal, Union, Tuple, List, Any
 
+from abc import ABC, abstractmethod
+
 from .tracing import trace, TraceLEVELS
 from ..misc import doc, async_util
 from ..misc import write_non_exist
@@ -21,7 +23,7 @@ C_FILE_MAX_SIZE = 100000
 
 
 @doc.doc_category("Logging reference", path="logging")
-class LoggerBASE:
+class LoggerBASE(ABC):
     """
     .. versionchanged:: v2.7
         Invite link tracking.
@@ -54,6 +56,7 @@ class LoggerBASE:
                       TraceLEVELS.WARNING, exc)
                 self.fallback = None
 
+    @abstractmethod
     async def _save_log(
         self,
         guild_context: dict,
@@ -77,6 +80,7 @@ class LoggerBASE:
         """
         raise NotImplementedError
 
+    @abstractmethod
     async def analytic_get_num_messages(
         self,
         guild: Union[int, None] = None,
@@ -135,6 +139,7 @@ class LoggerBASE:
         """
         raise NotImplementedError
 
+    @abstractmethod
     async def analytic_get_message_log(
             self,
             guild: Union[int, None] = None,
@@ -150,6 +155,7 @@ class LoggerBASE:
     ) -> list:
         raise NotImplementedError
 
+    @abstractmethod
     async def analytic_get_num_invites(
             self,
             guild: Union[int, None] = None,
@@ -162,6 +168,7 @@ class LoggerBASE:
     ) -> list:
         raise NotImplementedError
 
+    @abstractmethod
     async def analytic_get_invite_log(
         self,
         guild: Union[int, None] = None,
@@ -174,6 +181,7 @@ class LoggerBASE:
     ) -> list:
         raise NotImplementedError
 
+    @abstractmethod
     async def delete_logs(self, table: Any, logs: List[Any]):
         """
         Method used to delete log objects objects.

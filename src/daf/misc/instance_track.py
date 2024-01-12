@@ -55,7 +55,12 @@ def track_id(cls):
     @wraps(cls, updated=[])
     class TrackedClass(cls):
         if hasattr(cls, "__slots__"):  # Don't break classes without slots
-            __slots__ = ("__weakref__", "_daf_id", "_tracked_allow_remote")
+            __slots__ = ["_daf_id", "_tracked_allow_remote"]
+            if not hasattr(cls, "__weakref__"):
+                __slots__.append('__weakref__')
+
+            __slots__ = tuple(__slots__)
+
 
         def _update_tracked_id(self, allow_remote: bool = True):
             """
