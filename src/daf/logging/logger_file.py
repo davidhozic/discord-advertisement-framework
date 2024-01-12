@@ -5,6 +5,7 @@ from typing import Union, Tuple, Literal, Optional, Iterator, get_args
 from pathlib import Path
 from time import time
 from datetime import datetime
+from abc import abstractmethod
 
 from .logger_base import LoggerBASE
 from ..logging.tracing import trace
@@ -156,5 +157,6 @@ class LoggerFileBASE(LoggerBASE):
             reverse=sort_by_direction == "desc"
         )[:limit]
 
+    @abstractmethod
     def _get_msg_log_process_file(self):
         raise NotImplementedError

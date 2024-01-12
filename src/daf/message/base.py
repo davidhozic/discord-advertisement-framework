@@ -5,8 +5,9 @@
 from typing import Any, Set, List, Iterable, Union, TypeVar, Optional, Dict, Callable
 from functools import partial
 from datetime import timedelta, datetime
-from typeguard import check_type, typechecked
+from abc import ABC, abstractmethod
 from enum import Enum, auto
+from typeguard import check_type, typechecked
 
 from ..dtypes import *
 from ..events import *
@@ -43,7 +44,7 @@ class ChannelErrorAction(Enum):
     SKIP_CHANNELS = auto()
 
 
-class BaseMESSAGE:
+class BaseMESSAGE(ABC):
     """
     This is the base class for all the different classes that
     represent a message you want to be sent into discord.
@@ -202,6 +203,7 @@ class BaseMESSAGE:
         """
         return self._remove_after
 
+    @abstractmethod
     async def update(self, _init_options: dict = {}, **kwargs):
         """
         .. versionadded:: v2.0
@@ -238,6 +240,7 @@ class BaseMESSAGE:
         """
         raise NotImplementedError
 
+    @abstractmethod
     def _update_state(self):
         """
         Updates the internal counter for auto-removal
@@ -274,6 +277,7 @@ class BaseMESSAGE:
         resp = cls(resp, {"message": description, "code": code})
         return resp
 
+    @abstractmethod
     def generate_log_context(self):
         """
         This method is used for generating a dictionary (later converted to json) of the
@@ -296,6 +300,7 @@ class BaseMESSAGE:
 
         return self._data
 
+    @abstractmethod
     def _handle_error(self) -> bool:
         """
         This method handles the error that occurred during the execution of the function.
@@ -324,6 +329,7 @@ class BaseMESSAGE:
             EventID.message_ready, self.parent, self
         )
 
+    @abstractmethod
     async def _send_channel(self) -> dict:
         """
         Sends data to a specific channel, this is separate from send
@@ -333,6 +339,7 @@ class BaseMESSAGE:
         """
         raise NotImplementedError
 
+    @abstractmethod
     async def _send(self) -> Union[Dict, None]:
         """
         Sends a message to all the channels.
@@ -356,6 +363,7 @@ class BaseMESSAGE:
             lambda message, *args, **kwargs: message is self
         )
 
+    @abstractmethod
     async def _on_update(self, _, _init_options: Optional[dict], **kwargs):
         raise NotImplementedError
     

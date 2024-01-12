@@ -1,13 +1,12 @@
 """
 Automatic GUILD generation.
 """
-from contextlib import suppress
 from typing import Any, Union, List, Optional, Dict
 from typeguard import typechecked
 from datetime import timedelta, datetime
 from copy import deepcopy
 
-from ..message import TextMESSAGE, VoiceMESSAGE, BaseMESSAGE, BaseChannelMessage
+from ..message import BaseChannelMessage
 from ..logging.tracing import TraceLEVELS, trace
 from ..misc import async_util, instance_track, doc, attributes
 from ..events import *
@@ -99,7 +98,7 @@ class AutoGUILD:
         include_pattern: str,
         exclude_pattern: Optional[str] = None,
         remove_after: Optional[Union[timedelta, datetime]] = None,
-        messages: Optional[List[Union[TextMESSAGE, VoiceMESSAGE]]] = None,
+        messages: Optional[List[BaseChannelMessage]] = None,
         logging: Optional[bool] = False,
         auto_join: Optional[web.GuildDISCOVERY] = None,
         invite_track: Optional[List[str]] = None,
@@ -115,7 +114,7 @@ class AutoGUILD:
         self.include_pattern = re.sub(r"\s*\|\s*", '|', include_pattern) if include_pattern else None
         self.exclude_pattern = re.sub(r"\s*\|\s*", '|', exclude_pattern) if exclude_pattern else None
         self._remove_after = remove_after
-        self._messages: List[BaseMESSAGE] = []
+        self._messages: List[BaseChannelMessage] = []
         self.logging = logging
         self.auto_join = auto_join
         self.parent = None
@@ -138,7 +137,7 @@ class AutoGUILD:
         return f"AutoGUILD(include_pattern='{self.include_pattern}', exclude_pattern='{self.exclude_pattern})'"
 
     @property
-    def messages(self) -> List[Union[TextMESSAGE, VoiceMESSAGE]]:
+    def messages(self) -> List[BaseChannelMessage]:
         """
         .. versionadded:: 3.0
 
