@@ -49,6 +49,12 @@ v3.3.0
   - Theme selection support (top-left corner)
 
 
+v3.2.2
+===================
+- Fixed entire software not launching if SQL is not installed.
+  The problem was some SQL classes were not defined.
+
+
 v3.2.1
 ===================
 - GUI: Fixed conversion from GUI data to a Python daf core script.

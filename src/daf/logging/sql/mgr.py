@@ -63,6 +63,8 @@ except ImportError:
     Session = object
     SQLAlchemyError = Exception
     ORMBase = object
+    MessageLOG = object
+    InviteLOG = object
     SQL_INSTALLED = False
 # ----------------------------------------------------------------------------------
 
