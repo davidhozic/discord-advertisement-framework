@@ -10,5 +10,5 @@ class GuildResponse(BaseResponse):
         await message.reply(
             content=data["content"],
             embed=data["embed"],
-            files=[discord.File(x) for x in data["files"]]
+            files=[discord.File(x.stream, filename=x.filename) for x in data["files"]]
         )

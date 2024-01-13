@@ -129,7 +129,7 @@ class ACCOUNT:
         "_deleted",
         "_removed_servers",
         "_event_ctrl",
-        "auto_responders"
+        "responders"
     )
 
     _removed_servers: List[Union[guild.BaseGUILD, guild.AutoGUILD]]
@@ -147,7 +147,7 @@ class ACCOUNT:
         username: Optional[str] = None,
         password: Optional[str] = None,
         removal_buffer_length: int = 50,
-        auto_responders: List[responder.ResponderBase] = None
+        responders: List[responder.ResponderBase] = None
     ) -> None:
 
         if proxy is not None:
@@ -167,8 +167,8 @@ class ACCOUNT:
         if servers is None:
             servers = []
 
-        if auto_responders is None:
-            auto_responders = []
+        if responders is None:
+            responders = []
 
         self._token = token
         self.is_user = is_user
@@ -182,7 +182,7 @@ class ACCOUNT:
         self._deleted = False
         self._ws_task = None
         self._event_ctrl = EventController()
-        self.auto_responders = auto_responders
+        self.responders = responders
 
         attributes.write_non_exist(self, "_removed_servers", [])
 
@@ -442,10 +442,10 @@ class ACCOUNT:
             trace(f"Could not login to Discord - {self}", TraceLEVELS.ERROR, exc)
             raise exc
 
-        if self.auto_responders:
+        if self.responders:
             self._client.add_listener(self._discord_on_message, "on_message")
 
-        for responder in self.auto_responders:
+        for responder in self.responders:
             responder.initialize(self._event_ctrl, self.client)
 
         self._event_ctrl.add_listener(EventID.account_update, self._on_update)
@@ -541,10 +541,10 @@ class ACCOUNT:
         trace(f"Logging out of {self.client.user.display_name}...")
         self._running = False
 
-        if self.auto_responders:
+        if self.responders:
             self._client.add_listener(self._discord_on_message, "on_message")
 
-        for responder in self.auto_responders:
+        for responder in self.responders:
             responder.close()
 
         self._event_ctrl.remove_listener(EventID.server_removed, self._on_remove_server)
