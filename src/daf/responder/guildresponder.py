@@ -31,3 +31,4 @@ class GuildResponder(ResponderBase):
                 m.channel.permissions_for(member).send_messages
         )
         self.event_ctrl = event_ctrl
+        self.client = client

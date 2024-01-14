@@ -1,11 +1,8 @@
-from typing import List, Optional, Callable
-from dataclasses import dataclass, asdict, field
+from typing import List, Callable, Any, Dict
+from dataclasses import dataclass, asdict
 
 from ..dtypes import FILE
 from .basedata import BaseMessageData
-
-import _discord as discord
-
 
 __all__ = ("VoiceMessageData", "DynamicVoiceMessageData")
 
@@ -22,9 +19,16 @@ class VoiceMessageData(BaseTextData):
         return asdict(self)
 
 
-@dataclass
+@dataclass(init=False)
 class DynamicVoiceMessageData(BaseTextData):
     getter: Callable[[], VoiceMessageData]
+    args: List[Any]
+    kwargs: Dict[str, Any]
+
+    def __init__(self, getter: Callable[[], VoiceMessageData], *args, **kwargs):
+        self.getter = getter
+        self.args = args
+        self.kwargs = kwargs
 
     async def to_dict(self) -> dict:
         return asdict(self)

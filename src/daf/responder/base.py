@@ -21,13 +21,14 @@ class ResponderBase(ABC):
         self.constraints = constraints
         self.action = action
         self.event_ctrl: aeh.EventController = None
+        self.client: discord.Client = None
 
     async def handle_message(self, message: discord.Message):
         "Processes message and performs an action if all constraints satisfied."
         for const in self.constraints:  # Check constraints
-            if not const.check(message):
+            if not const.check(message, self.client):
                 return
-            
+
         # Check keywords
         for keyword in self.keywords:
             if keyword not in message.content.lower():

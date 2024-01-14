@@ -27,3 +27,4 @@ class DMResponder(ResponderBase):
             lambda m: isinstance(m.channel, discord.DMChannel)
         )
         self.event_ctrl = event_ctrl
+        self.client = client

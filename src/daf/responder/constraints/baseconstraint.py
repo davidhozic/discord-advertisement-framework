@@ -10,7 +10,7 @@ import _discord as discord
 class ConstraintBase(ABC):
 
     @abstractmethod
-    def check(self, message: discord.Message) -> bool:
+    def check(self, message: discord.Message, client: discord.Client) -> bool:
         """
         Verifies if the constraint is fulfilled.
 
