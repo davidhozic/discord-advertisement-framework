@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from typing import List
 
 from .constraints import ConstraintBase
+from .logic import *
 from .actions import BaseResponse
 from ..events import EventID
 
@@ -13,11 +14,11 @@ import re
 class ResponderBase(ABC):
     def __init__(
         self,
-        keywords: List[str],
+        condition: BaseLogic,
         action: BaseResponse,
         constraints: List[ConstraintBase]
     ) -> None:
-        self.keywords = list(map(str.lower, keywords))
+        self.condition = condition
         self.constraints = constraints
         self.action = action
         self.event_ctrl: aeh.EventController = None
@@ -30,9 +31,8 @@ class ResponderBase(ABC):
                 return
 
         # Check keywords
-        for keyword in self.keywords:
-            if keyword not in message.content.lower():
-                return
+        if not self.condition.check(message.content):
+            return
 
         await self.action.perform(message)  # All constraints satisfied
 

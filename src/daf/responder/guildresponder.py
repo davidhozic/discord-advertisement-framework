@@ -2,6 +2,7 @@ from typing import List
 from typeguard import typechecked
 
 from .base import ResponderBase
+from .logic import *
 from .constraints import BaseGuildConstraint
 from .actions import BaseResponse
 from ..events import EventID
@@ -14,11 +15,11 @@ class GuildResponder(ResponderBase):
     @typechecked
     def __init__(
         self,
-        keywords: List[str],    
+        condition: BaseLogic,
         action: BaseResponse,
         constraints: List[BaseGuildConstraint] = [],
     ) -> None:
-        super().__init__(keywords, action, constraints)
+        super().__init__(condition, action, constraints)
 
     def initialize(self, event_ctrl: aeh.EventController, client: discord.Client):
         event_ctrl.add_listener(
