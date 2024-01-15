@@ -1,14 +1,15 @@
 """
 Implements the base constraint.
 """
-
 from abc import ABC, abstractmethod
 
 import _discord as discord
 
 
-class ConstraintBase(ABC):
+__all__ = ("ConstraintBase", )
 
+
+class ConstraintBase(ABC):
     @abstractmethod
     def check(self, message: discord.Message, client: discord.Client) -> bool:
         """

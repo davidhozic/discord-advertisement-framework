@@ -2,7 +2,7 @@ from typing import List
 from typeguard import typechecked
 
 from .base import ResponderBase
-from .constraints import ConstraintBase
+from .constraints import BaseDMConstraint
 from .actions import DMResponse
 from ..events import EventID
 
@@ -16,7 +16,7 @@ class DMResponder(ResponderBase):
         self,
         keywords: List[str],    
         action: DMResponse,
-        constraints: List[ConstraintBase] = [], 
+        constraints: List[BaseDMConstraint] = [], 
     ) -> None:
         super().__init__(keywords, action, constraints)
 

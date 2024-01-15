@@ -1,8 +1,8 @@
-from typing import List, Union
+from typing import List
 from typeguard import typechecked
 
 from .base import ResponderBase
-from .constraints import ConstraintBase
+from .constraints import BaseGuildConstraint
 from .actions import BaseResponse
 from ..events import EventID
 
@@ -16,7 +16,7 @@ class GuildResponder(ResponderBase):
         self,
         keywords: List[str],    
         action: BaseResponse,
-        constraints: List[ConstraintBase] = [],
+        constraints: List[BaseGuildConstraint] = [],
     ) -> None:
         super().__init__(keywords, action, constraints)
 

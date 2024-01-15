@@ -1,2 +1,3 @@
 from .baseconstraint import ConstraintBase
-from .guildconstraint import GuildConstraint
+from .guildconstraint import *
+from .dmconstraint import *
