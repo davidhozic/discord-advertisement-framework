@@ -7,6 +7,7 @@ from .constraints import BaseGuildConstraint
 from .actions import BaseResponse
 from ..events import EventID
 from ..misc.doc import doc_category
+from ..misc.instance_track import track_id
 
 
 import asyncio_event_hub as aeh
@@ -16,6 +17,7 @@ import _discord as discord
 __all__ = ("GuildResponder",)
 
 
+@track_id
 @doc_category("Auto responder", path="responder")
 class GuildResponder(ResponderBase):
     __doc__ = "Guild responder implementation. " + ResponderBase.__doc__
@@ -29,7 +31,7 @@ class GuildResponder(ResponderBase):
     ) -> None:
         super().__init__(condition, action, constraints)
 
-    def initialize(self, event_ctrl: aeh.EventController, client: discord.Client):
+    async def initialize(self, event_ctrl: aeh.EventController, client: discord.Client):
         event_ctrl.add_listener(
             EventID.discord_message,
             self.handle_message,

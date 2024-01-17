@@ -57,9 +57,8 @@ class ResponderBase(ABC):
         await self.action.perform(message)  # All constraints satisfied
 
     @abstractmethod
-    def initialize(self, event_ctrl: aeh.EventController, client: discord.Client):
+    async def initialize(self, event_ctrl: aeh.EventController, client: discord.Client):
         pass
 
     def close(self):
         self.event_ctrl.remove_listener(EventID.discord_message, self.handle_message)
-

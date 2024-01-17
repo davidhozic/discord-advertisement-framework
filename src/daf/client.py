@@ -2,17 +2,17 @@
     This modules contains definitions related to the client (for API)
 """
 from typing import Optional, Union, List, Dict
+from aiohttp_socks import ProxyConnector
+from typeguard import typechecked
 from contextlib import suppress
 
+from . import responder
 from . import guild
 from . import web
-from . import responder
 
-from .logging.tracing import TraceLEVELS, trace
 from .misc import async_util, instance_track, doc, attributes
+from .logging.tracing import TraceLEVELS, trace
 from .events import *
-
-from typeguard import typechecked
 
 import _discord as discord
 import asyncio
@@ -30,20 +30,6 @@ TOKEN_MAX_PRINT_LEN = 5
 __all__ = (
     "ACCOUNT",
 )
-
-
-class GLOBALS:
-    "Storage class used for storing global variables"
-    proxy_installed = False
-
-
-# ----------------- OPTIONAL ----------------- #
-try:
-    from aiohttp_socks import ProxyConnector
-    GLOBALS.proxy_installed = True
-except ImportError:
-    GLOBALS.proxy_installed = False
-# -------------------------------------------- #
 
 
 @instance_track.track_id
@@ -73,7 +59,7 @@ class ACCOUNT:
         Declares that the ``token`` is a user account token ("self-bot")
     intents: Optional[discord.Intents]
         Discord Intents (settings of events that the client will subscribe to).
-        Defeaults to everything enabled except ``members``, ``presence`` and ``message_content``, as those
+        Defaults to everything enabled except ``members``, ``presence`` and ``message_content``, as those
         are privileged events, which need to be enabled though Discord's developer settings for each bot.
 
         .. warning::
@@ -83,7 +69,7 @@ class ACCOUNT:
             the ``intents`` parameter of :class:`~daf.client.ACCOUNT`.
 
             Intent ``guilds`` is also required for AutoGUILD and AutoCHANNEL, however it is automatically forced
-            to True, as it is not a priveleged intent.
+            to True, as it is not a privileged intent.
 
     proxy: Optional[str]=None
         The proxy to use when connecting to Discord.
@@ -133,7 +119,7 @@ class ACCOUNT:
         "_deleted",
         "_removed_servers",
         "_event_ctrl",
-        "responders"
+        "_responders"
     )
 
     _removed_servers: List[Union[guild.BaseGUILD, guild.AutoGUILD]]
@@ -153,10 +139,6 @@ class ACCOUNT:
         removal_buffer_length: int = 50,
         responders: List[responder.ResponderBase] = None
     ) -> None:
-
-        if proxy is not None:
-            if not GLOBALS.proxy_installed:
-                raise ModuleNotFoundError("Install extra requirements: pip install discord-advert-framework[proxy]")
 
         if token is not None and username is not None:  # Only one parameter of these at a time
             raise ValueError("'token' parameter not allowed if 'username' is given.")
@@ -186,7 +168,7 @@ class ACCOUNT:
         self._deleted = False
         self._ws_task = None
         self._event_ctrl = EventController()
-        self.responders = responders
+        self._responders = responders
 
         attributes.write_non_exist(self, "_removed_servers", [])
 
@@ -269,6 +251,11 @@ class ACCOUNT:
     def client(self) -> discord.Client:
         "Returns the API wrapper client"
         return self._client
+
+    @property
+    def responders(self):
+        "Returns the list of automatic message responders"
+        return self._responders[:]
 
     async def _discord_on_message(self, message: discord.Message):
         if message.author != self.client.user:
@@ -361,6 +348,50 @@ class ACCOUNT:
 
         return None
 
+    @typechecked
+    def add_responder(self, responder_to_add: responder.ResponderBase) -> asyncio.Future:
+        """
+        .. versionadded:: 3.3.0
+
+        Adds an automatic message responder to the account.
+
+        |ASYNC_API|
+
+        Parameters
+        ------------
+        responder_to_add: ResponderBase
+            Any inherited class of the :class:`daf.responder.ResponderBase` interface.
+
+        Returns
+        --------
+        Awaitable
+            An awaitable object which can be used to await for execution to finish.
+            To wait for the execution to finish, use ``await`` like so: ``await account.add_responder()``.
+        """
+        return self._event_ctrl.emit(EventID.auto_responder_add, responder_to_add)
+    
+    @typechecked
+    def remove_responder(self, responder_to_remove: responder.ResponderBase) -> asyncio.Future:
+        """
+        .. versionadded:: 3.3.0
+
+        Removes an automatic message responder from the account.
+
+        |ASYNC_API|
+
+        Parameters
+        ------------
+        responder_to_add: ResponderBase
+            Any inherited class of the :class:`daf.responder.ResponderBase` interface.
+
+        Returns
+        --------
+        Awaitable
+            An awaitable object which can be used to await for execution to finish.
+            To wait for the execution to finish, use ``await`` like so: ``await account.remove_responder()``.
+        """
+        return self._event_ctrl.emit(EventID.auto_responder_remove, responder_to_remove)
+
     def update(self, **kwargs) -> asyncio.Future:
         """
         Updates the object with new parameters and afterwards updates all lower layers (GUILD->MESSAGE->CHANNEL).
@@ -407,10 +438,33 @@ class ACCOUNT:
         """
         intents = self.intents
         if not intents.members:
-            trace("Members intent is disabled, it is needed for invite link tracking", TraceLEVELS.WARNING)
+            trace(
+                "Members intent is disabled, it is needed for automatic responders' constraints"
+                " and invite link tracking.",
+                TraceLEVELS.WARNING
+            )
+
+        if not intents.guild_messages:
+            trace(
+                "Guild messages intent is disabled, it is needed for guild automatic responders.",
+                TraceLEVELS.WARNING
+            )
+
+        if not intents.dm_messages:
+            trace(
+                "DM messages intent is disabled, it is needed for DM automatic responders.",
+                TraceLEVELS.WARNING
+            )
+
+        if not intents.message_content:
+            trace(
+                "Message content intent is disabled, it is needed for automatic responders.",
+                TraceLEVELS.WARNING
+            )
 
         if not intents.invites:
-            trace("Invites intent is disabled, it is needed for invite link tracking", TraceLEVELS.WARNING)
+            trace("Invites intent is disabled, it is needed for invite link tracking.", TraceLEVELS.WARNING)
+
 
         if not intents.guilds:
             self.intents.guilds = True
@@ -446,15 +500,15 @@ class ACCOUNT:
             trace(f"Could not login to Discord - {self}", TraceLEVELS.ERROR, exc)
             raise exc
 
-        if self.responders:
-            self._client.add_listener(self._discord_on_message, "on_message")
-
-        for responder in self.responders:
-            responder.initialize(self._event_ctrl, self.client)
+        self._client.add_listener(self._discord_on_message, "on_message")
+        for responder in self._responders:
+            await responder.initialize(self._event_ctrl, self.client)
 
         self._event_ctrl.add_listener(EventID.account_update, self._on_update)
         self._event_ctrl.add_listener(EventID.server_removed, self._on_remove_server)
         self._event_ctrl.add_listener(EventID.server_added, self._on_add_server)
+        self._event_ctrl.add_listener(EventID.auto_responder_add, self._on_add_responder)
+        self._event_ctrl.add_listener(EventID.auto_responder_remove, self._on_remove_responder)
         self._event_ctrl.start()
         self._running = True
         async with self._event_ctrl.critical():
@@ -509,6 +563,17 @@ class ACCOUNT:
 
         trace(f"Server {server} has been removed from account {self}", TraceLEVELS.NORMAL)
 
+    async def _on_add_responder(self, responder_to_add: responder.ResponderBase):
+        "Event handler that adds a responder"
+        await responder_to_add.initialize(self._event_ctrl, self._client)
+        self._responders.append(responder_to_add)
+
+    def _on_remove_responder(self, responder_to_remove: responder.ResponderBase):
+        "Event handler that adds a responder"
+        with suppress(ValueError):
+            self._responders.remove(responder_to_remove)
+            responder_to_remove.close()
+
     async def _on_update(self, **kwargs):
         await self._close()
 
@@ -532,7 +597,6 @@ class ACCOUNT:
             await self.initialize()  # re-login
             raise
 
-
     # Cleanup
     async def _close(self):
         """
@@ -545,15 +609,15 @@ class ACCOUNT:
         trace(f"Logging out of {self.client.user.display_name}...")
         self._running = False
 
-        if self.responders:
-            self._client.add_listener(self._discord_on_message, "on_message")
-
-        for responder in self.responders:
+        self._client.add_listener(self._discord_on_message, "on_message")
+        for responder in self._responders:
             responder.close()
 
         self._event_ctrl.remove_listener(EventID.server_removed, self._on_remove_server)
         self._event_ctrl.remove_listener(EventID.server_added, self._on_add_server)
         self._event_ctrl.remove_listener(EventID.server_update, self._on_remove_server)
+        self._event_ctrl.remove_listener(EventID.auto_responder_add, self._on_add_responder)
+        self._event_ctrl.remove_listener(EventID.auto_responder_remove, self._on_remove_responder)
 
         for guild_ in self.servers:
             await guild_._close()

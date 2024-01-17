@@ -67,6 +67,9 @@ class EventID(Enum):
     discord_guild_remove = auto()
     discord_message = auto()
 
+    auto_responder_add = auto()
+    auto_responder_remove = auto()
+
     _dummy = auto()  # For stopping the event loop
 
     # Events for use externally (not within daf)
@@ -194,4 +197,22 @@ async def auto_guild_start_join(auto_guild):
 
     :param auto_guild: The AutoGUILD responsible for the new server join.
     :type auto_guild: daf.guild.AutoGUILD
+    """
+
+@doc_category("Event reference")
+async def auto_responder_add(responder):
+    """
+    Event that is emitted before an automatic responder is added to an ACCOUNT.
+
+    :param responder: The responder being added.
+    :type auto_guild: daf.responder.ResponderBase
+    """
+
+@doc_category("Event reference")
+async def auto_responder_remove(responder):
+    """
+    Event that is emitted before an automatic responder is removed from an ACCOUNT.
+
+    :param responder: The responder being removed.
+    :type auto_guild: daf.responder.ResponderBase
     """
