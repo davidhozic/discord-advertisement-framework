@@ -104,9 +104,13 @@ class ACCOUNT:
     password: Optional[str]
         The password to login with.
     removal_buffer_length: Optional[int]
-        Maximum number of servers to keep in the removed_servers buffer.
-
         .. versionadded:: 3.0
+
+        Maximum number of servers to keep in the removed_servers buffer.        
+    responders: List[responder.ResponderBase]
+        .. versionadded:: 3.3
+
+        List of automatic responders. These will automatically respond to certain messages.
 
     Raises
     ---------------

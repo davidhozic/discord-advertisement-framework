@@ -2,6 +2,7 @@ from typing import Union
 from typeguard import typechecked
 
 from .baseconstraint import ConstraintBase
+from ...misc.doc import doc_category
 
 import _discord as discord
 
@@ -9,12 +10,13 @@ import _discord as discord
 __all__ = ("BaseDMConstraint", "MemberOfGuildConstraint")
 
 
+@doc_category("Auto responder")
 class BaseDMConstraint(ConstraintBase):
     """
     Base for constraints that are DM specific.
     """
 
-
+@doc_category("Auto responder")
 class MemberOfGuildConstraint(BaseDMConstraint):
     """
     Constraint that checks if the DM message author
@@ -23,7 +25,7 @@ class MemberOfGuildConstraint(BaseDMConstraint):
     Parameters
     ----------------
     guild: int | discord.Guild
-
+        The guild to which the message's author must belong for the constraint to be fulfilled.
     """
     @typechecked
     def __init__(self, guild: Union[int, discord.Guild]) -> None:

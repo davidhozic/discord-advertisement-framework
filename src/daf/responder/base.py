@@ -5,6 +5,7 @@ from .constraints import ConstraintBase
 from .logic import BaseLogic
 from .actions import BaseResponse
 from ..events import EventID
+from ..misc.doc import doc_category
 
 import _discord as discord
 import asyncio_event_hub as aeh
@@ -13,7 +14,24 @@ import asyncio_event_hub as aeh
 __all__ = ("ResponderBase",)
 
 
+@doc_category("Auto responder", path="responder")
 class ResponderBase(ABC):
+    """
+    The responder is an object capable of making automatic replies to messages based on some
+    keyword condition and constraints.
+
+    Parameters
+    --------------
+    condition: BaseLogic
+        The match condition. The condition represents the
+        match condition of message's text.
+    action: BaseResponse
+        Represents the action taken on both ``condition`` and ``constraints`` being fulfilled.
+    constraints: list[ConstraintBase]
+        In addition to ``condition``, constraints add additional checks that need to be fulfilled
+        before performing an action.
+        All of the constraints inside the ``constraints`` list need to be fulfilled.
+    """
     def __init__(
         self,
         condition: BaseLogic,

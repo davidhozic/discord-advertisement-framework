@@ -6,6 +6,8 @@ from typing import List, Optional
 from abc import ABC, abstractmethod
 from typeguard import typechecked
 
+from ..misc.doc import doc_category
+
 import re
 
 
@@ -18,6 +20,7 @@ __all__ = (
 )
 
 
+@doc_category("Auto responder")
 class BaseLogic(ABC):
     """
     A logic interface for building keyword expressions.
@@ -27,6 +30,7 @@ class BaseLogic(ABC):
         pass
 
 
+@doc_category("Auto responder")
 class BooleanLogic(BaseLogic):
     """
     A logic abstract class that accepts multiple logic elements.
@@ -40,6 +44,7 @@ class BooleanLogic(BaseLogic):
         self.operants = operants
 
 
+@doc_category("Auto responder")
 class and_(BooleanLogic):
     def check(self, input: str):
         for op in self.operants:
@@ -54,6 +59,7 @@ class and_(BooleanLogic):
         return True
 
 
+@doc_category("Auto responder")
 class or_(BooleanLogic):
     def check(self, input: str):
         for op in self.operants:
@@ -68,6 +74,7 @@ class or_(BooleanLogic):
         return False
 
 
+@doc_category("Auto responder")
 class not_(BooleanLogic):
     def __init__(self, operant: BaseLogic) -> None:
         super().__init__([operant])
@@ -80,14 +87,16 @@ class not_(BooleanLogic):
         return op not in input
 
 
+@doc_category("Auto responder")
 class contains(BaseLogic):
     def __init__(self, keyword: str) -> None:
-        self.keyword = keyword
+        self.keyword = keyword.lower()
 
     def check(self, input: str):
         return self.keyword in input.split()
 
 
+@doc_category("Auto responder")
 class regex(BaseLogic):
     def __init__(
         self,

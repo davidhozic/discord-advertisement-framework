@@ -6,6 +6,8 @@ from .logic import BaseLogic
 from .constraints import BaseGuildConstraint
 from .actions import BaseResponse
 from ..events import EventID
+from ..misc.doc import doc_category
+
 
 import asyncio_event_hub as aeh
 import _discord as discord
@@ -14,7 +16,10 @@ import _discord as discord
 __all__ = ("GuildResponder",)
 
 
+@doc_category("Auto responder", path="responder")
 class GuildResponder(ResponderBase):
+    __doc__ = "Guild responder implementation. " + ResponderBase.__doc__
+
     @typechecked
     def __init__(
         self,
