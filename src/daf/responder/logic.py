@@ -33,19 +33,33 @@ class BaseLogic(ABC):
 @doc_category("Auto responder")
 class BooleanLogic(BaseLogic):
     """
-    A logic abstract class that accepts multiple logic elements.
-    It represents boolean logic (and, or, not).
+    Represents boolean logic.
+
+    Parameters
+    -------------
+    args: Unpack[BaseLogic]
+        Arbitrary number of operants (either logic boolean or text operants).
     """
     @typechecked
     def __init__(
         self,
-        operants: List[BaseLogic]
+        *args,
+        operants: List[BaseLogic] = [],
     ) -> None:
-        self.operants = operants
+        self.operants = [*operants, *args]
 
 
 @doc_category("Auto responder")
 class and_(BooleanLogic):
+    """
+    Represents logical *AND* operator.
+
+    Parameters
+    -------------
+    args: Unpack[BaseLogic]
+        Arbitrary number of operants (either logic boolean or text operants).
+    """
+
     def check(self, input: str):
         for op in self.operants:
             if isinstance(op, BaseLogic):
@@ -61,6 +75,14 @@ class and_(BooleanLogic):
 
 @doc_category("Auto responder")
 class or_(BooleanLogic):
+    """
+    Represents logical *OR* operator.
+
+    Parameters
+    -------------
+    args: Unpack[BaseLogic]
+        Arbitrary number of operants (either logic boolean or text operants).
+    """
     def check(self, input: str):
         for op in self.operants:
             if isinstance(op, BaseLogic):
@@ -76,8 +98,17 @@ class or_(BooleanLogic):
 
 @doc_category("Auto responder")
 class not_(BooleanLogic):
+    """
+    Represents logical *NOT* operator.
+
+    Parameters
+    -------------
+    operant: BaseLogic
+        A single operant to negate.
+    """
+
     def __init__(self, operant: BaseLogic) -> None:
-        super().__init__([operant])
+        super().__init__(operant)
 
     def check(self, input: str):
         op = self.operants[0]

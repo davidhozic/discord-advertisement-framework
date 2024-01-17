@@ -10,12 +10,26 @@ The automated responder can promptly reply to messages directed to either the gu
 It can be customized to trigger based on specific keyword patterns within a message,
 provided the constrains are met.
 
-
 There are 2 responder classes:
 
 - :class:`daf.responder.DMResponder` - responds to messages sent into the bot's direct messages.
 - :class:`daf.responder.GuildResponder` - responds to messages sent into a guild channel.
   The bot must be joined into that guild, otherwise it will not see the message.
+
+
+They can be used on each account through the :class:`~daf.client.ACCOUNT`'s ``responders`` parameter.
+The parameter is a list of responders.
+
+.. code-block:: python
+  :linenos:
+
+  import daf
+  
+  daf.client.ACCOUNT(
+    ...,
+    responders=[daf.responder.DMResponder(...), ...]
+  )
+
 
 Both responders accept the following parameters:
 
@@ -86,15 +100,14 @@ Both responders accept the following parameters:
     :animate: fade-in-slide-down
 
     Logical operations are used to combine multiple text matching operations, as well as other
-    nested logical operations. They themselves, do not match the text inside a message.
-    They accept a list of operants (logical operations / matching operations).
+    nested logical operations. Themselves, they do not match the text inside a message.
 
     .. dropdown:: :class:`~daf.responder.logic.and_`
       :animate: fade-in-slide-down
       :icon: x
 
-      Represents a logical AND operation.
-      :class:`~daf.responder.logic.and_` evaluates to true when all of the operants inside are evaluate to true.
+      Represents a logical *AND* operation.
+      :class:`~daf.responder.logic.and_` evaluates to true when all of the operants inside evaluate to true.
       
       For example, if we write:
 
@@ -113,14 +126,85 @@ Both responders accept the following parameters:
       :animate: fade-in-slide-down
       :icon: plus
 
+      Represents a logical *OR* operation.
+      :class:`~daf.responder.logic.or_` evaluates to true when any of the operants inside evaluate to true.
+
+      For example, if we write:
+
+      .. code-block:: python
+        :linenos:
+
+        or_(contains('buy'), contains('nft'), contains('dragon'))
+
+      then the text message will be matched only if it contains any of the words "buy", "nft" and "dragon"
+      (in any order).
+      The above example would in a human-readable form look like
+      ``contains('buy') or contains('nft') or contains('dragon')``.
+
 
     .. dropdown:: :class:`~daf.responder.logic.not_`
       :animate: fade-in-slide-down
       :icon: horizontal-rule
 
+      Represents a logical *NOT* operation.
+      :class:`~daf.responder.logic.not_` accepts a single operant and evaluates to true when that operant is false.
+      Basically, it negates the operant.
 
+      For example, if we write:
+
+      .. code-block:: python
+        :linenos:
+
+        and_(contains('buy'), not_(contains('dragon')))
+
+      then the text message will be matched only if it contains the word "buy" but doesn't contain the word "dragon".
+      The above example would in a human-readable form look like ``contains('buy') and not contains('dragon')``.
 
 :action:
+
+  Represent the action taken upon message match (and constraint fulfillment).
+  Currently the only action is a message response.
+  There are 2 types of responses, which both send a message in response to the original trigger message.
+
+  .. grid:: 2
+
+    .. grid-item-card:: :class:`~daf.responder.actions.response.DMResponse`
+
+      Will send a reply to the message author's private messages.
+
+    .. grid-item-card:: :class:`~daf.responder.actions.response.GuildResponse`
+
+      Will send a reply to same channel as the trigger message.
+
+  Both response classes accept a single parameter ``data`` of base type
+  :class:`~daf.messagedata.BaseTextData`, which represents the data that will be sent in the response message.
+  The :class:`~daf.messagedata.BaseTextData` type has two different implementations:
+
+  - :class:`~daf.messagedata.TextMessageData` - for fixed data
+
+    .. code-block:: python
+
+      import daf
+
+      daf.responder.DMResponse(
+          data=daf.messagedata.TextMessageData("My content")
+      )
+      
+  - :class:`~daf.messagedata.DynamicTextMessageData` - for data obtained through a function.
+
+    .. code-block:: python
+
+      import daf
+      import requests
+
+      def get_data():
+          mydata = requests.get('https://daf.davidhozic.com').text
+          return daf.messagedata.TextMessageData(content=mydata)
+
+      daf.responder.DMResponse(
+          data=daf.messagedata.DynamicTextMessageData(get_data)
+      )
+
 :constraints:
 
 
