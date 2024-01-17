@@ -2,7 +2,7 @@
 Logical operations for keywords.
 """
 from __future__ import annotations
-from typing import List, Optional
+from typing import List
 from abc import ABC, abstractmethod
 from typeguard import typechecked
 
@@ -120,19 +120,42 @@ class not_(BooleanLogic):
 
 @doc_category("Auto responder")
 class contains(BaseLogic):
+    """
+    Text matching condition.
+
+    Parameters
+    ---------------
+    keyword: str
+        The keyword needed to be inside a text message.
+    """
     def __init__(self, keyword: str) -> None:
         self.keyword = keyword.lower()
 
     def check(self, input: str):
-        return self.keyword in input.split()
+        return self.keyword in re.findall(r'\w+', input)  # \w+ == match all words, including **bold**
 
 
 @doc_category("Auto responder")
 class regex(BaseLogic):
+    """
+    RegEx (regular expression) text matching condition.
+
+    Parameters
+    -------------
+    pattern: str
+        The RegEx pattern string.
+    flags: Optional[re.RegexFlag]
+        RegEx (binary) flags.
+        Defaults to re.MULTILINE.
+    full_match: Optional[bool]
+        Boolean parameter. If True, the ``pattern`` must capture
+        the entire text message string for a match.
+        Defaults to False.
+    """
     def __init__(
         self,
         pattern: str,
-        flags: Optional[re.RegexFlag] = re.DOTALL | re.MULTILINE,
+        flags: re.RegexFlag = re.MULTILINE,
         full_match: bool = False
     ) -> None:
         self._full_match = full_match

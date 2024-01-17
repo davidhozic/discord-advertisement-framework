@@ -51,7 +51,7 @@ class ResponderBase(ABC):
                 return
 
         # Check keywords
-        if not self.condition.check(message.content):
+        if not self.condition.check(message.clean_content.lower()):
             return
 
         await self.action.perform(message)  # All constraints satisfied
