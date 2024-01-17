@@ -2,13 +2,15 @@ from abc import ABC, abstractmethod
 from typing import List
 
 from .constraints import ConstraintBase
-from .logic import *
+from .logic import BaseLogic
 from .actions import BaseResponse
 from ..events import EventID
 
 import _discord as discord
 import asyncio_event_hub as aeh
-import re
+
+
+__all__ = ("ResponderBase",)
 
 
 class ResponderBase(ABC):

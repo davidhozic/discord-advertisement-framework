@@ -2,13 +2,16 @@ from typing import List
 from typeguard import typechecked
 
 from .base import ResponderBase
-from .logic import *
+from .logic import BaseLogic
 from .constraints import BaseDMConstraint
 from .actions import DMResponse
 from ..events import EventID
 
 import asyncio_event_hub as aeh
 import _discord as discord
+
+
+__all__ = ("DMResponder",)
 
 
 class DMResponder(ResponderBase):
