@@ -170,7 +170,6 @@ class ACCOUNT:
         self._event_ctrl = EventController()
         self._responders = responders
 
-        self._check_intents()
         attributes.write_non_exist(self, "_removed_servers", [])
 
     def __str__(self) -> str:
@@ -437,6 +436,8 @@ class ACCOUNT:
         """
         Initializes the API wrapper client layer.
         """
+        self._check_intents()
+
         if self._selenium is not None:
             await self._browser_login()
 
