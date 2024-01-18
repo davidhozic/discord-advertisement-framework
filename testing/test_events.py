@@ -23,7 +23,7 @@ async def CONTROLLERS():
             (EventID.g_daf_startup, {}),
             (EventID.g_daf_shutdown, {}),
             (
-                EventID.message_ready,
+                EventID._trigger_message_ready,
                 {"server": None, "message": daf.TextMESSAGE(None, timedelta(seconds=5), "Hello World", daf.AutoCHANNEL("test"))}
             ),
         ]
