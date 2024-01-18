@@ -310,16 +310,16 @@ class AutoGUILD:
                             TraceLEVELS.ERROR
                         )
 
-                    self._event_ctrl.add_listener(
-                        EventID.discord_member_join,
-                        self._on_member_join,
-                        predicate=lambda memb: self._check_name_match(memb.guild.name)
-                    )
-                    self._event_ctrl.add_listener(
-                        EventID.discord_invite_delete,
-                        self._on_invite_delete,
-                        predicate=lambda inv: self._check_name_match(inv.guild.name)
-                    )
+                self._event_ctrl.add_listener(
+                    EventID.discord_member_join,
+                    self._on_member_join,
+                    predicate=lambda memb: self._check_name_match(memb.guild.name)
+                )
+                self._event_ctrl.add_listener(
+                    EventID.discord_invite_delete,
+                    self._on_invite_delete,
+                    predicate=lambda inv: self._check_name_match(inv.guild.name)
+                )
             except discord.HTTPException as exc:
                 trace(f"Could not query invite links in {self}", TraceLEVELS.ERROR, exc)
 
