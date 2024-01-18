@@ -7,7 +7,7 @@ from ..misc.doc import doc_category
 from ..misc.async_util import except_return
 
 
-__all__ = ("VoiceMessageData", "DynamicVoiceMessageData")
+__all__ = ("BaseVoiceData", "VoiceMessageData", "DynamicVoiceMessageData")
 
 
 @doc_category("Message data", path="messagedata")

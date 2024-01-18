@@ -13,7 +13,7 @@ from ..events import *
 from ..logging.tracing import *
 from ..logging import sql
 from ..misc import doc, instance_track
-from ..misc import async_util
+from ..messagedata import BaseVoiceData
 
 from .. import dtypes
 
@@ -73,7 +73,7 @@ class VoiceMESSAGE(BaseChannelMessage):
 
             # Time between each send is somewhere between 5 seconds and 10 seconds.
             daf.VoiceMESSAGE(
-                start_period=timedelta(seconds=5), end_period=timedelta(seconds=10), data=daf.AUDIO("msg.mp3"),
+                start_period=timedelta(seconds=5), end_period=timedelta(seconds=10), data=daf.FILE("msg.mp3"),
                 channels=[12345], start_in=timedelta(seconds=0), volume=50
             )
 
@@ -82,7 +82,7 @@ class VoiceMESSAGE(BaseChannelMessage):
 
             # Time between each send is exactly 10 seconds.
             daf.VoiceMESSAGE(
-                start_period=None, end_period=timedelta(seconds=10), data=daf.AUDIO("msg.mp3"),
+                start_period=None, end_period=timedelta(seconds=10), data=daf.FILE("msg.mp3"),
                 channels=[12345], start_in=timedelta(seconds=0), volume=50
             )
     data: FILE
@@ -124,29 +124,37 @@ class VoiceMESSAGE(BaseChannelMessage):
         'options': '-vn'
     }
 
-    @typechecked
-    def __init__(self,
-                 start_period: Union[int, timedelta, None],
-                 end_period: Union[int, timedelta],
-                 data: Union[FILE, Iterable[FILE], _FunctionBaseCLASS],
-                 channels: Union[Iterable[Union[int, discord.VoiceChannel]], AutoCHANNEL],
-                 volume: Optional[int] = 50,
-                 start_in: Optional[Union[timedelta, datetime]] = timedelta(seconds=0),
-                 remove_after: Optional[Union[int, timedelta, datetime]] = None):
+    # Deprecated. TODO: Remove in the future
+    _old_data_type = Union[FILE, Iterable[FILE], _FunctionBaseCLASS]
 
+    @typechecked
+    def __init__(
+        self,
+        start_period: Union[int, timedelta, None],
+        end_period: Union[int, timedelta],
+        data: Union[BaseVoiceData, _old_data_type],
+        channels: Union[Iterable[Union[int, discord.VoiceChannel]], AutoCHANNEL],
+        volume: Optional[int] = 50,
+        start_in: Optional[Union[timedelta, datetime]] = timedelta(seconds=0),
+        remove_after: Optional[Union[int, timedelta, datetime]] = None
+    ):
         if not dtypes.GLOBALS.voice_installed:
             raise ModuleNotFoundError(
                 "You need to install extra requirements: pip install discord-advert-framework[voice]"
             )
 
-        if isinstance(data, Iterable) and len(data) > 1:
-            raise ValueError("Iterable was passed to 'data', which has length greater than 1. Only a single FILE object is allowed inside.")
+        if not isinstance(data, BaseVoiceData):
+            trace(
+                f"Using data types other than {[x.__name__ for x in BaseVoiceData.__subclasses__()]}, "
+                "is deprecated on TextMESSAGE's data parameter!",
+                TraceLEVELS.DEPRECATED
+            )
 
         super().__init__(start_period, end_period, data, channels, start_in, remove_after)
         self.volume = max(0, min(100, volume))  # Clamp the volume to 0-100 %
 
     def generate_log_context(self,
-                             audio: AUDIO,
+                             file: FILE,
                              succeeded_ch: List[discord.VoiceChannel],
                              failed_ch: List[Dict[str, Any]]) -> Dict[str, Any]:
         """
@@ -196,7 +204,7 @@ class VoiceMESSAGE(BaseChannelMessage):
                      "reason": str(entry["reason"])} for entry in failed_ch]
         return {
             "sent_data": {
-                "streamed_audio": audio.fullpath
+                "streamed_audio": file.fullpath
             },
             "channels": {
                 "successful": succeeded_ch,
@@ -204,27 +212,6 @@ class VoiceMESSAGE(BaseChannelMessage):
             },
             "type": type(self).__name__
         }
-
-    async def _get_data(self) -> dict:
-        """"
-        Returns a dictionary of keyword arguments that is then expanded
-        into other methods eg. `_send_channel, _generate_log`
-
-        .. versionchanged:: v2.3
-            Turned async.
-        """
-        data = None
-        _data_to_send = {}
-        data = await super()._get_data()
-        if data is not None:
-            if not isinstance(data, (list, tuple, set)):
-                data = (data,)
-            for element in data:
-                if isinstance(element, FILE):
-                    _data_to_send["audio"] = element
-                    break
-
-        return _data_to_send
 
     async def _handle_error(self, channel: discord.VoiceChannel, ex: Exception) -> Tuple[bool, ChannelErrorAction]:
         """
@@ -288,7 +275,7 @@ class VoiceMESSAGE(BaseChannelMessage):
 
     async def _send_channel(self,
                             channel: discord.VoiceChannel,
-                            audio: Optional[AUDIO]) -> dict:
+                            audio: Optional[FILE]) -> dict:
         """
         Sends data to specific channel
 
@@ -300,7 +287,7 @@ class VoiceMESSAGE(BaseChannelMessage):
         -------------
         channel: discord.VoiceChannel
             The channel in which to send the data.
-        audio: AUDIO
+        audio: FILE
             the audio to stream.
         """
         stream = None

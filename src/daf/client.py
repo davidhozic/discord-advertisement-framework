@@ -284,7 +284,7 @@ class ACCOUNT:
         RuntimeError
             Could not query Discord.
         """
-        return self._event_ctrl.emit(EventID.server_added, server)
+        return self._event_ctrl.emit(EventID._trigger_server_add, server)
 
     @typechecked
     def remove_server(self, server: Union[guild.GUILD, guild.USER, guild.AutoGUILD]) -> asyncio.Future:
@@ -313,7 +313,7 @@ class ACCOUNT:
         ValueError
             ``server`` is not in the shilling list.
         """
-        return self._event_ctrl.emit(EventID.server_removed, server)
+        return self._event_ctrl.emit(EventID._trigger_server_remove, server)
 
     @typechecked
     def get_server(
@@ -364,7 +364,7 @@ class ACCOUNT:
             An awaitable object which can be used to await for execution to finish.
             To wait for the execution to finish, use ``await`` like so: ``await account.add_responder()``.
         """
-        return self._event_ctrl.emit(EventID.auto_responder_add, resp)
+        return self._event_ctrl.emit(EventID._trigger_auto_responder_add, resp)
     
     @typechecked
     def remove_responder(self, resp: responder.ResponderBase) -> asyncio.Future:
@@ -386,7 +386,7 @@ class ACCOUNT:
             An awaitable object which can be used to await for execution to finish.
             To wait for the execution to finish, use ``await`` like so: ``await account.remove_responder()``.
         """
-        return self._event_ctrl.emit(EventID.auto_responder_remove, resp)
+        return self._event_ctrl.emit(EventID._trigger_auto_responder_remove, resp)
 
     def update(self, **kwargs) -> asyncio.Future:
         """
@@ -415,7 +415,7 @@ class ACCOUNT:
             raise ValueError("Account has been removed from the framework!")
 
         if self._running:
-            return self._event_ctrl.emit(EventID.account_update, **kwargs)
+            return self._event_ctrl.emit(EventID._trigger_account_update, **kwargs)
         else:
             return self._on_update(**kwargs)
 
@@ -631,21 +631,21 @@ class ACCOUNT:
         self._client.add_listener(self._discord_on_guild_remove, "on_guild_remove")
 
         # Client listeners
-        event_ctrl.add_listener(EventID.account_update, self._on_update)
-        event_ctrl.add_listener(EventID.server_removed, self._on_remove_server)
-        event_ctrl.add_listener(EventID.server_added, self._on_add_server)
-        event_ctrl.add_listener(EventID.auto_responder_add, self._on_add_responder)
-        event_ctrl.add_listener(EventID.auto_responder_remove, self._on_remove_responder)
+        event_ctrl.add_listener(EventID._trigger_account_update, self._on_update)
+        event_ctrl.add_listener(EventID._trigger_server_remove, self._on_remove_server)
+        event_ctrl.add_listener(EventID._trigger_server_add, self._on_add_server)
+        event_ctrl.add_listener(EventID._trigger_auto_responder_add, self._on_add_responder)
+        event_ctrl.add_listener(EventID._trigger_auto_responder_remove, self._on_remove_responder)
 
     def _remove_listeners(self):
         self._client._listeners.clear()
 
         event_ctrl = self._event_ctrl
-        event_ctrl.remove_listener(EventID.account_update, self._on_update)
-        event_ctrl.remove_listener(EventID.server_removed, self._on_remove_server)
-        event_ctrl.remove_listener(EventID.server_added, self._on_add_server)
-        event_ctrl.remove_listener(EventID.auto_responder_add, self._on_add_responder)
-        event_ctrl.remove_listener(EventID.auto_responder_remove, self._on_remove_responder)
+        event_ctrl.remove_listener(EventID._trigger_account_update, self._on_update)
+        event_ctrl.remove_listener(EventID._trigger_server_remove, self._on_remove_server)
+        event_ctrl.remove_listener(EventID._trigger_server_add, self._on_add_server)
+        event_ctrl.remove_listener(EventID._trigger_auto_responder_add, self._on_add_responder)
+        event_ctrl.remove_listener(EventID._trigger_auto_responder_remove, self._on_remove_responder)
 
     # Discord event wrapper listeners
     async def _discord_on_message(self, message: discord.Message):

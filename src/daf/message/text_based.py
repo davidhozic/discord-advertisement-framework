@@ -126,12 +126,14 @@ class TextMESSAGE(BaseChannelMessage):
         "auto_publish",
     )
 
+    _old_data_type = Union[Iterable[Union[str, discord.Embed, FILE]], str, discord.Embed, FILE, _FunctionBaseCLASS]
+
     @typechecked
     def __init__(
         self,
         start_period: Union[timedelta, int, None],
         end_period: Union[int, timedelta],
-        data: Union[BaseTextData, Iterable[Union[str, discord.Embed, FILE]], str, discord.Embed, FILE, _FunctionBaseCLASS],
+        data: Union[BaseTextData, _old_data_type],
         channels: Union[Iterable[Union[int, discord.TextChannel, discord.Thread]], AutoCHANNEL],
         mode: Literal["send", "edit", "clear-send"] = "send",
         start_in: Union[timedelta, datetime] = timedelta(seconds=0),
@@ -193,7 +195,7 @@ class TextMESSAGE(BaseChannelMessage):
         self.period = self.end_period
 
     def generate_log_context(self,
-                             text: Optional[str],
+                             content: Optional[str],
                              embed: discord.Embed,
                              files: List[FILE],
                              succeeded_ch: List[Union[discord.TextChannel, discord.Thread]],
@@ -256,8 +258,8 @@ class TextMESSAGE(BaseChannelMessage):
 
         files = [x.fullpath for x in files]
         sent_data_context = {}
-        if text is not None:
-            sent_data_context["text"] = text
+        if content is not None:
+            sent_data_context["text"] = content
         if embed is not None:
             sent_data_context["embed"] = embed
         if len(files):
@@ -273,28 +275,6 @@ class TextMESSAGE(BaseChannelMessage):
             "type": type(self).__name__,
             "mode": self.mode,
         }
-
-    async def _get_data(self) -> dict:
-        """"
-        Returns a dictionary of keyword arguments that is then expanded
-        into other methods eg. `_send_channel, _generate_log`.
-
-        .. versionchanged:: v2.3
-            Turned async.
-        """
-        data = await super()._get_data()
-        _data_to_send = {"embed": None, "text": None, "files": []}
-        if data is not None:
-            if not isinstance(data, (list, tuple, set)):
-                data = (data,)
-            for element in data:
-                if isinstance(element, str):
-                    _data_to_send["text"] = element
-                elif isinstance(element, discord.Embed):
-                    _data_to_send["embed"] = element
-                elif isinstance(element, FILE):
-                    _data_to_send["files"].append(element)
-        return _data_to_send
 
     def _get_channel_types(self):
         return {discord.TextChannel, discord.Thread}
@@ -378,11 +358,13 @@ class TextMESSAGE(BaseChannelMessage):
 
         return handled, action
 
-    async def _send_channel(self,
-                            channel: Union[discord.TextChannel, discord.Thread, None],
-                            text: Optional[str],
-                            embed: Optional[discord.Embed],
-                            files: List[FILE]) -> dict:
+    async def _send_channel(
+        self,
+        channel: Union[discord.TextChannel, discord.Thread, None],
+        content: Optional[str],
+        embed: Optional[discord.Embed],
+        files: List[FILE]
+    ) -> dict:
         """
         Sends data to specific channel
 
@@ -441,7 +423,7 @@ class TextMESSAGE(BaseChannelMessage):
                     self.mode == "edit" and self.sent_messages.get(channel.id, None) is None
                 ):
                     message = await channel.send(
-                        text,
+                        content,
                         embed=embed,
                         files=[discord.File(file.stream, file.filename) for file in files]
                     )
@@ -450,7 +432,7 @@ class TextMESSAGE(BaseChannelMessage):
 
                 # Mode is edit and message was already send to this channel
                 elif self.mode == "edit":
-                    await self.sent_messages[channel.id].edit(text, embed=embed)
+                    await self.sent_messages[channel.id].edit(content, embed=embed)
 
                 return {"success": True}
 
@@ -576,12 +558,12 @@ class DirectMESSAGE(BaseMESSAGE):
         if type(self._remove_after) is int:
             self._remove_after -= 1
             if not self._remove_after:
-                self._event_ctrl.emit(EventID.message_removed, self.parent, self)
+                self._event_ctrl.emit(EventID._trigger_message_remove, self.parent, self)
 
 
     def generate_log_context(self,
                              success_context: Dict[str, Union[bool, Optional[Exception]]],
-                             text: Optional[str],
+                             content: Optional[str],
                              embed: Optional[discord.Embed],
                              files: List[FILE]) -> Dict[str, Any]:
         """
@@ -629,8 +611,8 @@ class DirectMESSAGE(BaseMESSAGE):
             success_context["reason"] = str(success_context["reason"])
 
         sent_data_context = {}
-        if text is not None:
-            sent_data_context["text"] = text
+        if content is not None:
+            sent_data_context["text"] = content
         if embed is not None:
             sent_data_context["embed"] = embed
         if len(files):
@@ -645,29 +627,6 @@ class DirectMESSAGE(BaseMESSAGE):
             "type": type(self).__name__,
             "mode": self.mode
         }
-
-    async def _get_data(self) -> dict:
-        """
-        Returns a dictionary of keyword arguments that is then expanded
-        into other functions (_send_channel, _generate_log).
-        This is exactly the same as in :ref:`TextMESSAGE`.
-
-        .. versionchanged:: v2.3
-            Turned async.
-        """
-        data = await super()._get_data()
-        _data_to_send = {"embed": None, "text": None, "files": []}
-        if data is not None:
-            if not isinstance(data, (list, tuple, set)):
-                data = (data,)
-            for element in data:
-                if isinstance(element, str):
-                    _data_to_send["text"] = element
-                elif isinstance(element, discord.Embed):
-                    _data_to_send["embed"] = element
-                elif isinstance(element, FILE):
-                    _data_to_send["files"].append(element)
-        return _data_to_send
 
     @async_util.except_return
     async def initialize(self, parent: Any, event_ctrl: EventController, guild: discord.User):
@@ -716,7 +675,7 @@ class DirectMESSAGE(BaseMESSAGE):
         return handled
 
     async def _send_channel(self,
-                            text: Optional[str],
+                            content: Optional[str],
                             embed: Optional[discord.Embed],
                             files: List[FILE]) -> dict:
         """
@@ -742,14 +701,14 @@ class DirectMESSAGE(BaseMESSAGE):
                     self.mode == "edit" and self.previous_message is None
                 ):
                     self.previous_message = await self.dm_channel.send(
-                        text,
+                        content,
                         embed=embed,
                         files=[discord.File(fwFILE.stream, fwFILE.filename) for fwFILE in files]
                     )
 
                 # Mode is edit and message was already send to this channel
                 elif self.mode == "edit":
-                    await self.previous_message.edit(text, embed=embed)
+                    await self.previous_message.edit(content, embed=embed)
 
                 return {"success": True}
 
@@ -763,7 +722,7 @@ class DirectMESSAGE(BaseMESSAGE):
         Sends the data into the channels
         """
         # Parse data from the data parameter
-        data_to_send = await self._get_data()
+        data_to_send = await self._data.to_dict()
         if any(data_to_send.values()):
             channel_ctx = await self._send_channel(**data_to_send)
             self._update_state()
@@ -771,7 +730,7 @@ class DirectMESSAGE(BaseMESSAGE):
                 reason = channel_ctx["reason"]
                 if isinstance(reason, discord.HTTPException):
                     if reason.status in {400, 403}:  # Bad request, forbidden
-                        self._event_ctrl.emit(EventID.server_removed, self.parent)
+                        self._event_ctrl.emit(EventID._trigger_server_remove, self.parent)
                     elif reason.status == 401:  # Unauthorized (invalid token)
                         self._event_ctrl.emit(EventID.g_account_expired, self.parent.parent)
 
@@ -780,7 +739,7 @@ class DirectMESSAGE(BaseMESSAGE):
         return None
 
     def update(self, _init_options: Optional[dict] = None, **kwargs) -> asyncio.Future:
-        return self._event_ctrl.emit(EventID.message_update, self, _init_options, **kwargs)
+        return self._event_ctrl.emit(EventID._trigger_message_update, self, _init_options, **kwargs)
 
     async def _on_update(self, _, _init_options: Optional[dict], **kwargs):
         await self._close()
