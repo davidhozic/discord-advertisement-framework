@@ -26,7 +26,7 @@ class BaseLogic(ABC):
     A logic interface for building keyword expressions.
     """
     @abstractmethod
-    def check(self, input: str):
+    def check(self, input: str) -> bool:
         pass
 
 
@@ -175,4 +175,4 @@ class regex(BaseLogic):
         return self._full_match
 
     def check(self, input: str):
-        return self._checker(self._compiled, input)
+        return self._checker(self._compiled, input) is not None

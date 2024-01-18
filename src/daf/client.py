@@ -349,7 +349,7 @@ class ACCOUNT:
         return None
 
     @typechecked
-    def add_responder(self, responder_to_add: responder.ResponderBase) -> asyncio.Future:
+    def add_responder(self, resp: responder.ResponderBase) -> asyncio.Future:
         """
         .. versionadded:: 3.3.0
 
@@ -359,7 +359,7 @@ class ACCOUNT:
 
         Parameters
         ------------
-        responder_to_add: ResponderBase
+        resp: ResponderBase
             Any inherited class of the :class:`daf.responder.ResponderBase` interface.
 
         Returns
@@ -368,10 +368,10 @@ class ACCOUNT:
             An awaitable object which can be used to await for execution to finish.
             To wait for the execution to finish, use ``await`` like so: ``await account.add_responder()``.
         """
-        return self._event_ctrl.emit(EventID.auto_responder_add, responder_to_add)
+        return self._event_ctrl.emit(EventID.auto_responder_add, resp)
     
     @typechecked
-    def remove_responder(self, responder_to_remove: responder.ResponderBase) -> asyncio.Future:
+    def remove_responder(self, resp: responder.ResponderBase) -> asyncio.Future:
         """
         .. versionadded:: 3.3.0
 
@@ -381,7 +381,7 @@ class ACCOUNT:
 
         Parameters
         ------------
-        responder_to_add: ResponderBase
+        resp: ResponderBase
             Any inherited class of the :class:`daf.responder.ResponderBase` interface.
 
         Returns
@@ -390,7 +390,7 @@ class ACCOUNT:
             An awaitable object which can be used to await for execution to finish.
             To wait for the execution to finish, use ``await`` like so: ``await account.remove_responder()``.
         """
-        return self._event_ctrl.emit(EventID.auto_responder_remove, responder_to_remove)
+        return self._event_ctrl.emit(EventID.auto_responder_remove, resp)
 
     def update(self, **kwargs) -> asyncio.Future:
         """
@@ -519,16 +519,16 @@ class ACCOUNT:
 
         trace(f"Server {server} has been removed from account {self}", TraceLEVELS.NORMAL)
 
-    async def _on_add_responder(self, responder_to_add: responder.ResponderBase):
+    async def _on_add_responder(self, resp: responder.ResponderBase):
         "Event handler that adds a responder"
-        await responder_to_add.initialize(self._event_ctrl, self._client)
-        self._responders.append(responder_to_add)
+        await resp.initialize(self._event_ctrl, self._client)
+        self._responders.append(resp)
 
-    def _on_remove_responder(self, responder_to_remove: responder.ResponderBase):
+    def _on_remove_responder(self, resp: responder.ResponderBase):
         "Event handler that adds a responder"
         with suppress(ValueError):
-            self._responders.remove(responder_to_remove)
-            responder_to_remove.close()
+            self._responders.remove(resp)
+            resp.close()
 
     async def _on_update(self, **kwargs):
         await self._close()
