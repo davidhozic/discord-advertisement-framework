@@ -13,7 +13,7 @@ from ..events import *
 from ..logging.tracing import *
 from ..logging import sql
 from ..misc import doc, instance_track
-from ..messagedata import BaseVoiceData
+from ..messagedata import BaseVoiceData, VoiceMessageData, DynamicVoiceMessageData
 
 from .. import dtypes
 
@@ -149,6 +149,17 @@ class VoiceMESSAGE(BaseChannelMessage):
                 "is deprecated on TextMESSAGE's data parameter!",
                 TraceLEVELS.DEPRECATED
             )
+            # Transform to new data type            
+            if isinstance(data, _FunctionBaseCLASS):
+                data = DynamicVoiceMessageData(data.fnc, data.args, data.kwargs)
+            else:
+                if isinstance(data, FILE):
+                    data = [data]
+
+                if not data:
+                    raise ValueError("'data' cannot be an empty list, use daf.VoiceMessageData!")
+
+                data = VoiceMessageData(data[0])
 
         super().__init__(start_period, end_period, data, channels, start_in, remove_after)
         self.volume = max(0, min(100, volume))  # Clamp the volume to 0-100 %

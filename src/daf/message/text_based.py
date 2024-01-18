@@ -7,7 +7,7 @@ from typeguard import typechecked
 
 from .base import *
 from ..dtypes import *
-from ..messagedata import BaseTextData
+from ..messagedata import BaseTextData, TextMessageData, DynamicTextMessageData
 from ..logging.tracing import trace, TraceLEVELS
 
 from ..logging import sql
@@ -140,15 +140,33 @@ class TextMESSAGE(BaseChannelMessage):
         remove_after: Optional[Union[int, timedelta, datetime]] = None,
         auto_publish: bool = False
     ):
-        super().__init__(start_period, end_period, data, channels, start_in, remove_after)
-
         if not isinstance(data, BaseTextData):
             trace(
                 f"Using data types other than {[x.__name__ for x in BaseTextData.__subclasses__()]}, "
                 "is deprecated on TextMESSAGE's data parameter!",
                 TraceLEVELS.DEPRECATED
             )
+            # Transform to new data type            
+            if isinstance(data, _FunctionBaseCLASS):
+                data = DynamicTextMessageData(data.fnc, data.args, data.kwargs)
+            else:
+                if isinstance(data, (str, discord.Embed, FILE)):
+                    data = [data]
 
+                content = None
+                embed = None
+                files = []
+                for item in data:
+                    if isinstance(item, str):
+                        content = item
+                    elif isinstance(item, discord.Embed):
+                        embed = item
+                    else:
+                        files.append(item)
+
+                data = TextMessageData(content, embed, files)
+
+        super().__init__(start_period, end_period, data, channels, start_in, remove_after)
         self.mode = mode
         self.auto_publish = auto_publish
         # Dictionary for storing last sent message for each channel
@@ -537,15 +555,44 @@ class DirectMESSAGE(BaseMESSAGE):
         "previous_message",
         "dm_channel",
     )
+    
+    _old_data_type = Union[Iterable[Union[str, discord.Embed, FILE]], str, discord.Embed, FILE, _FunctionBaseCLASS]
 
     @typechecked
     def __init__(self,
                  start_period: Union[int, timedelta, None],
                  end_period: Union[int, timedelta],
-                 data: Union[str, discord.Embed, FILE, Iterable[Union[str, discord.Embed, FILE]], _FunctionBaseCLASS],
+                 data: Union[BaseTextData, _old_data_type],
                  mode: Optional[Literal["send", "edit", "clear-send"]] = "send",
                  start_in: Optional[Union[timedelta, datetime]] = timedelta(seconds=0),
                  remove_after: Optional[Union[int, timedelta, datetime]] = None):
+
+        if not isinstance(data, BaseTextData):
+            trace(
+                f"Using data types other than {[x.__name__ for x in BaseTextData.__subclasses__()]}, "
+                "is deprecated on TextMESSAGE's data parameter!",
+                TraceLEVELS.DEPRECATED
+            )
+            # Transform to new data type            
+            if isinstance(data, _FunctionBaseCLASS):
+                data = DynamicTextMessageData(data.fnc, data.args, data.kwargs)
+            else:
+                if isinstance(data, (str, discord.Embed, FILE)):
+                    data = [data]
+
+                content = None
+                embed = None
+                files = []
+                for item in data:
+                    if isinstance(item, str):
+                        content = item
+                    elif isinstance(item, discord.Embed):
+                        embed = item
+                    else:
+                        files.append(item)
+
+                data = TextMessageData(content, embed, files)
+
         super().__init__(start_period, end_period, data, start_in, remove_after)
         self.mode = mode
         self.dm_channel: discord.User = None

@@ -101,6 +101,7 @@ def data_function(fnc: Callable):
         )
 
         def __init__(self, *args: Any, **kwargs: Any):
+            self.fnc = fnc
             self.args = args
             self.kwargs = kwargs
             self.func_name = fnc.__name__
