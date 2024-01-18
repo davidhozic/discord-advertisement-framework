@@ -310,19 +310,16 @@ class AutoGUILD:
                             TraceLEVELS.ERROR
                         )
 
-                    client.add_listener(self._discord_on_member_join, "on_member_join")
-                    client.add_listener(self._discord_on_invite_delete, "on_invite_delete")
-
-                    self._event_ctrl.add_listener(
-                        EventID.discord_member_join,
-                        self._on_member_join,
-                        predicate=lambda memb: self._check_name_match(memb.guild.name)
-                    )
-                    self._event_ctrl.add_listener(
-                        EventID.discord_invite_delete,
-                        self._on_invite_delete,
-                        predicate=lambda inv: self._check_name_match(inv.guild.name)
-                    )
+                self._event_ctrl.add_listener(
+                    EventID.discord_member_join,
+                    self._on_member_join,
+                    predicate=lambda memb: self._check_name_match(memb.guild.name)
+                )
+                self._event_ctrl.add_listener(
+                    EventID.discord_invite_delete,
+                    self._on_invite_delete,
+                    predicate=lambda inv: self._check_name_match(inv.guild.name)
+                )
             except discord.HTTPException as exc:
                 trace(f"Could not query invite links in {self}", TraceLEVELS.ERROR, exc)
 
@@ -330,8 +327,6 @@ class AutoGUILD:
             self._reset_auto_join_timer()
             event_ctrl.add_listener(EventID.auto_guild_start_join, self._join_guilds, lambda ag: ag is self)
 
-        client.add_listener(self._discord_on_guild_join, "on_guild_join")
-        client.add_listener(self._discord_on_guild_remove, "on_guild_remove")
         self._event_ctrl.add_listener(
             EventID.discord_guild_join,
             self._on_guild_join,
@@ -515,19 +510,6 @@ class AutoGUILD:
                 self._gen_guilds.remove(g)
                 break
 
-    # Safety wrappers to make sure the event gets emitted through the event loop for safety
-    async def _discord_on_member_join(self, member: discord.Member):
-        self._event_ctrl.emit(EventID.discord_member_join, member)
-
-    async def _discord_on_invite_delete(self, invite: discord.Invite):
-        self._event_ctrl.emit(EventID.discord_invite_delete, invite)
-
-    async def _discord_on_guild_join(self, guild: discord.Guild):
-        self._event_ctrl.emit(EventID.discord_guild_join, guild)
-    
-    async def _discord_on_guild_remove(self, guild: discord.Guild):
-        self._event_ctrl.emit(EventID.discord_guild_remove, guild)
-
     @async_util.with_semaphore("update_semaphore")
     async def _close(self):
         """
@@ -540,9 +522,6 @@ class AutoGUILD:
         self._event_ctrl.remove_listener(EventID.server_update, self._on_update)
 
         # Remove PyCord API wrapper event handlers.
-        client: discord.Client = self.parent.client
-        client.remove_listener(self._discord_on_member_join, "on_member_join")
-        client.remove_listener(self._discord_on_invite_delete, "on_invite_delete")
         self._event_ctrl.remove_listener(EventID.discord_member_join, self._on_member_join)
         self._event_ctrl.remove_listener(EventID.discord_invite_delete, self._on_invite_delete)
 

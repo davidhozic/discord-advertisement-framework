@@ -257,10 +257,6 @@ class ACCOUNT:
         "Returns the list of automatic message responders"
         return self._responders[:]
 
-    async def _discord_on_message(self, message: discord.Message):
-        if message.author != self.client.user:
-            self._event_ctrl.emit(EventID.discord_message, message)
-
     # API methods
     @typechecked
     def add_server(self, server: Union[guild.GUILD, guild.USER, guild.AutoGUILD]) -> asyncio.Future:
@@ -626,18 +622,44 @@ class ACCOUNT:
             trace("Guilds intent is disabled. Enabling it since it's needed.", TraceLEVELS.WARNING)
 
     def _add_listeners(self):
+        event_ctrl = self._event_ctrl
+        # Discord wrapper listeners
         self._client.add_listener(self._discord_on_message, "on_message")
-        self._event_ctrl.add_listener(EventID.account_update, self._on_update)
-        self._event_ctrl.add_listener(EventID.server_removed, self._on_remove_server)
-        self._event_ctrl.add_listener(EventID.server_added, self._on_add_server)
-        self._event_ctrl.add_listener(EventID.auto_responder_add, self._on_add_responder)
-        self._event_ctrl.add_listener(EventID.auto_responder_remove, self._on_remove_responder)
+        self._client.add_listener(self._discord_on_member_join, "on_member_join")
+        self._client.add_listener(self._discord_on_invite_delete, "on_invite_delete")
+        self._client.add_listener(self._discord_on_guild_join, "on_guild_join")
+        self._client.add_listener(self._discord_on_guild_remove, "on_guild_remove")
+
+        # Client listeners
+        event_ctrl.add_listener(EventID.account_update, self._on_update)
+        event_ctrl.add_listener(EventID.server_removed, self._on_remove_server)
+        event_ctrl.add_listener(EventID.server_added, self._on_add_server)
+        event_ctrl.add_listener(EventID.auto_responder_add, self._on_add_responder)
+        event_ctrl.add_listener(EventID.auto_responder_remove, self._on_remove_responder)
 
     def _remove_listeners(self):
-        self._client.remove_listener(self._discord_on_message, "on_message")
-        self._event_ctrl.remove_listener(EventID.account_update, self._on_update)
-        self._event_ctrl.remove_listener(EventID.server_removed, self._on_remove_server)
-        self._event_ctrl.remove_listener(EventID.server_added, self._on_add_server)
-        self._event_ctrl.remove_listener(EventID.server_update, self._on_remove_server)
-        self._event_ctrl.remove_listener(EventID.auto_responder_add, self._on_add_responder)
-        self._event_ctrl.remove_listener(EventID.auto_responder_remove, self._on_remove_responder)
+        self._client._listeners.clear()
+
+        event_ctrl = self._event_ctrl
+        event_ctrl.remove_listener(EventID.account_update, self._on_update)
+        event_ctrl.remove_listener(EventID.server_removed, self._on_remove_server)
+        event_ctrl.remove_listener(EventID.server_added, self._on_add_server)
+        event_ctrl.remove_listener(EventID.auto_responder_add, self._on_add_responder)
+        event_ctrl.remove_listener(EventID.auto_responder_remove, self._on_remove_responder)
+
+    # Discord event wrapper listeners
+    async def _discord_on_message(self, message: discord.Message):
+        if message.author != self.client.user:
+            self._event_ctrl.emit(EventID.discord_message, message)
+
+    async def _discord_on_member_join(self, member: discord.Member):
+        self._event_ctrl.emit(EventID.discord_member_join, member)
+
+    async def _discord_on_invite_delete(self, invite: discord.Invite):
+        self._event_ctrl.emit(EventID.discord_invite_delete, invite)
+
+    async def _discord_on_guild_join(self, guild: discord.Guild):
+        self._event_ctrl.emit(EventID.discord_guild_join, guild)
+
+    async def _discord_on_guild_remove(self, guild: discord.Guild):
+        self._event_ctrl.emit(EventID.discord_guild_remove, guild)

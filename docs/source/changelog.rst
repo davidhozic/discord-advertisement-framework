@@ -39,11 +39,11 @@ Releases
 
 v3.3.0
 ===================
+- New automatic message responder (DM and guild) - :ref:`Automatic responder`.
 - |POTENT_BREAK_CH| Changed how :class:`daf.guild.AutoGUILD` works. It will now create :class:`daf.guild.GUILD` instances.
   This also prevents a "bug" that appeared if the user was timed-out in a guild, which reflected upon other
   guilds as well. The added benefit of creating :class:`~daf.guild.GUILD` is different randomized sending
   periods across multiple guilds (assuming randomized sending period was configured).
-
 - GUI:
 
   - Theme selection support (top-left corner)
