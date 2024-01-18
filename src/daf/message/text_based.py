@@ -7,6 +7,7 @@ from typeguard import typechecked
 
 from .base import *
 from ..dtypes import *
+from ..messagedata import BaseTextData
 from ..logging.tracing import trace, TraceLEVELS
 
 from ..logging import sql
@@ -130,7 +131,7 @@ class TextMESSAGE(BaseChannelMessage):
         self,
         start_period: Union[timedelta, int, None],
         end_period: Union[int, timedelta],
-        data: Union[Iterable[Union[str, discord.Embed, FILE]], str, discord.Embed, FILE, _FunctionBaseCLASS],
+        data: Union[BaseTextData, Iterable[Union[str, discord.Embed, FILE]], str, discord.Embed, FILE, _FunctionBaseCLASS],
         channels: Union[Iterable[Union[int, discord.TextChannel, discord.Thread]], AutoCHANNEL],
         mode: Literal["send", "edit", "clear-send"] = "send",
         start_in: Union[timedelta, datetime] = timedelta(seconds=0),
@@ -138,6 +139,14 @@ class TextMESSAGE(BaseChannelMessage):
         auto_publish: bool = False
     ):
         super().__init__(start_period, end_period, data, channels, start_in, remove_after)
+
+        if not isinstance(data, BaseTextData):
+            trace(
+                f"Using data types other than {[x.__name__ for x in BaseTextData.__subclasses__()]}, "
+                "is deprecated on TextMESSAGE's data parameter!",
+                TraceLEVELS.DEPRECATED
+            )
+
         self.mode = mode
         self.auto_publish = auto_publish
         # Dictionary for storing last sent message for each channel

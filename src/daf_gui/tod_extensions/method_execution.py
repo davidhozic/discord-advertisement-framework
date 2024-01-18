@@ -17,7 +17,12 @@ EXECUTABLE_METHODS = {
     daf.guild.GUILD: [daf.guild.GUILD.add_message, daf.guild.GUILD.remove_message],
     daf.guild.USER: [daf.guild.USER.add_message, daf.guild.USER.remove_message],
     daf.guild.AutoGUILD: [daf.guild.AutoGUILD.add_message, daf.guild.AutoGUILD.remove_message],
-    daf.client.ACCOUNT: [daf.client.ACCOUNT.add_server, daf.client.ACCOUNT.remove_server]
+    daf.client.ACCOUNT: [
+        daf.ACCOUNT.add_server,
+        daf.ACCOUNT.remove_server,
+        daf.ACCOUNT.add_responder,
+        daf.ACCOUNT.remove_responder
+    ]
 }
 ADDITIONAL_PARAMETER_VALUES = {
     daf.GUILD.remove_message: {
@@ -35,6 +40,10 @@ ADDITIONAL_PARAMETER_VALUES = {
     daf.ACCOUNT.remove_server: {
         # ACCOUNT.servers
         "server": lambda old_info: old_info.data["servers"]
+    },
+    daf.ACCOUNT.remove_responder: {
+        # ACCOUNT.servers
+        "responder_to_remove": lambda old_info: old_info.data["responders"]
     }
 }
 

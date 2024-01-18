@@ -2,20 +2,22 @@
     This modules contains definitions related to the client (for API)
 """
 from typing import Optional, Union, List, Dict
+from aiohttp_socks import ProxyConnector
+from typeguard import typechecked
 from contextlib import suppress
 
+from . import responder
 from . import guild
 from . import web
 
-from .logging.tracing import TraceLEVELS, trace
 from .misc import async_util, instance_track, doc, attributes
+from .logging.tracing import TraceLEVELS, trace
 from .events import *
-
-from typeguard import typechecked
 
 import _discord as discord
 import asyncio
 import copy
+
 
 
 #######################################################################
@@ -28,20 +30,6 @@ TOKEN_MAX_PRINT_LEN = 5
 __all__ = (
     "ACCOUNT",
 )
-
-
-class GLOBALS:
-    "Storage class used for storing global variables"
-    proxy_installed = False
-
-
-# ----------------- OPTIONAL ----------------- #
-try:
-    from aiohttp_socks import ProxyConnector
-    GLOBALS.proxy_installed = True
-except ImportError:
-    GLOBALS.proxy_installed = False
-# -------------------------------------------- #
 
 
 @instance_track.track_id
@@ -71,7 +59,7 @@ class ACCOUNT:
         Declares that the ``token`` is a user account token ("self-bot")
     intents: Optional[discord.Intents]
         Discord Intents (settings of events that the client will subscribe to).
-        Defeaults to everything enabled except ``members``, ``presence`` and ``message_content``, as those
+        Defaults to everything enabled except ``members``, ``presence`` and ``message_content``, as those
         are privileged events, which need to be enabled though Discord's developer settings for each bot.
 
         .. warning::
@@ -81,7 +69,7 @@ class ACCOUNT:
             the ``intents`` parameter of :class:`~daf.client.ACCOUNT`.
 
             Intent ``guilds`` is also required for AutoGUILD and AutoCHANNEL, however it is automatically forced
-            to True, as it is not a priveleged intent.
+            to True, as it is not a privileged intent.
 
     proxy: Optional[str]=None
         The proxy to use when connecting to Discord.
@@ -102,9 +90,13 @@ class ACCOUNT:
     password: Optional[str]
         The password to login with.
     removal_buffer_length: Optional[int]
-        Maximum number of servers to keep in the removed_servers buffer.
-
         .. versionadded:: 3.0
+
+        Maximum number of servers to keep in the removed_servers buffer.        
+    responders: List[responder.ResponderBase]
+        .. versionadded:: 3.3
+
+        List of automatic responders. These will automatically respond to certain messages.
 
     Raises
     ---------------
@@ -126,7 +118,8 @@ class ACCOUNT:
         "_client",
         "_deleted",
         "_removed_servers",
-        "_event_ctrl"
+        "_event_ctrl",
+        "_responders"
     )
 
     _removed_servers: List[Union[guild.BaseGUILD, guild.AutoGUILD]]
@@ -143,12 +136,9 @@ class ACCOUNT:
         servers: Optional[List[Union[guild.GUILD, guild.USER, guild.AutoGUILD]]] = None,
         username: Optional[str] = None,
         password: Optional[str] = None,
-        removal_buffer_length: int = 50
+        removal_buffer_length: int = 50,
+        responders: List[responder.ResponderBase] = None
     ) -> None:
-
-        if proxy is not None:
-            if not GLOBALS.proxy_installed:
-                raise ModuleNotFoundError("Install extra requirements: pip install discord-advert-framework[proxy]")
 
         if token is not None and username is not None:  # Only one parameter of these at a time
             raise ValueError("'token' parameter not allowed if 'username' is given.")
@@ -163,6 +153,9 @@ class ACCOUNT:
         if servers is None:
             servers = []
 
+        if responders is None:
+            responders = []
+
         self._token = token
         self.is_user = is_user
         self.proxy = proxy
@@ -175,6 +168,8 @@ class ACCOUNT:
         self._deleted = False
         self._ws_task = None
         self._event_ctrl = EventController()
+        self._responders = responders
+
         attributes.write_non_exist(self, "_removed_servers", [])
 
     def __str__(self) -> str:
@@ -256,6 +251,15 @@ class ACCOUNT:
     def client(self) -> discord.Client:
         "Returns the API wrapper client"
         return self._client
+
+    @property
+    def responders(self):
+        "Returns the list of automatic message responders"
+        return self._responders[:]
+
+    async def _discord_on_message(self, message: discord.Message):
+        if message.author != self.client.user:
+            self._event_ctrl.emit(EventID.discord_message, message)
 
     # API methods
     @typechecked
@@ -344,6 +348,50 @@ class ACCOUNT:
 
         return None
 
+    @typechecked
+    def add_responder(self, resp: responder.ResponderBase) -> asyncio.Future:
+        """
+        .. versionadded:: 3.3.0
+
+        Adds an automatic message responder to the account.
+
+        |ASYNC_API|
+
+        Parameters
+        ------------
+        resp: ResponderBase
+            Any inherited class of the :class:`daf.responder.ResponderBase` interface.
+
+        Returns
+        --------
+        Awaitable
+            An awaitable object which can be used to await for execution to finish.
+            To wait for the execution to finish, use ``await`` like so: ``await account.add_responder()``.
+        """
+        return self._event_ctrl.emit(EventID.auto_responder_add, resp)
+    
+    @typechecked
+    def remove_responder(self, resp: responder.ResponderBase) -> asyncio.Future:
+        """
+        .. versionadded:: 3.3.0
+
+        Removes an automatic message responder from the account.
+
+        |ASYNC_API|
+
+        Parameters
+        ------------
+        resp: ResponderBase
+            Any inherited class of the :class:`daf.responder.ResponderBase` interface.
+
+        Returns
+        --------
+        Awaitable
+            An awaitable object which can be used to await for execution to finish.
+            To wait for the execution to finish, use ``await`` like so: ``await account.remove_responder()``.
+        """
+        return self._event_ctrl.emit(EventID.auto_responder_remove, resp)
+
     def update(self, **kwargs) -> asyncio.Future:
         """
         Updates the object with new parameters and afterwards updates all lower layers (GUILD->MESSAGE->CHANNEL).
@@ -388,25 +436,10 @@ class ACCOUNT:
         """
         Initializes the API wrapper client layer.
         """
-        intents = self.intents
-        if not intents.members:
-            trace("Members intent is disabled, it is needed for invite link tracking", TraceLEVELS.WARNING)
-
-        if not intents.invites:
-            trace("Invites intent is disabled, it is needed for invite link tracking", TraceLEVELS.WARNING)
-
-        if not intents.guilds:
-            self.intents.guilds = True
-            trace("Guilds intent is disabled. Enabling it since it's needed.", TraceLEVELS.WARNING)
+        self._check_intents()
 
         if self._selenium is not None:
-            trace("Logging in thru browser and obtaining token")
-            if isinstance(result := await self._selenium.initialize(), Exception):
-                trace(f"Could not initialize browser in {self}.", TraceLEVELS.ERROR, result)
-                raise result
-
-            self._token = result
-            self.is_user = True
+            await self._browser_login()
 
         self._deleted = False
         connector = None
@@ -429,16 +462,16 @@ class ACCOUNT:
             trace(f"Could not login to Discord - {self}", TraceLEVELS.ERROR, exc)
             raise exc
 
-        self._event_ctrl.add_listener(EventID.account_update, self._on_update)
-        self._event_ctrl.add_listener(EventID.server_removed, self._on_remove_server)
-        self._event_ctrl.add_listener(EventID.server_added, self._on_add_server)
+        for responder in self._responders:
+            await responder.initialize(self._event_ctrl, self.client)
+
+        self._add_listeners()
         self._event_ctrl.start()
         self._running = True
         async with self._event_ctrl.critical():
             for server in self._servers:
                 if (exc := await server.initialize(self, self._event_ctrl)) is not None:
                     await self._on_remove_server(server)
-
 
     def generate_log_context(self) -> Dict[str, Union[str, int]]:
         """
@@ -486,6 +519,17 @@ class ACCOUNT:
 
         trace(f"Server {server} has been removed from account {self}", TraceLEVELS.NORMAL)
 
+    async def _on_add_responder(self, resp: responder.ResponderBase):
+        "Event handler that adds a responder"
+        await resp.initialize(self._event_ctrl, self._client)
+        self._responders.append(resp)
+
+    def _on_remove_responder(self, resp: responder.ResponderBase):
+        "Event handler that adds a responder"
+        with suppress(ValueError):
+            self._responders.remove(resp)
+            resp.close()
+
     async def _on_update(self, **kwargs):
         await self._close()
 
@@ -509,7 +553,6 @@ class ACCOUNT:
             await self.initialize()  # re-login
             raise
 
-
     # Cleanup
     async def _close(self):
         """
@@ -521,10 +564,10 @@ class ACCOUNT:
 
         trace(f"Logging out of {self.client.user.display_name}...")
         self._running = False
+        self._remove_listeners()
 
-        self._event_ctrl.remove_listener(EventID.server_removed, self._on_remove_server)
-        self._event_ctrl.remove_listener(EventID.server_added, self._on_add_server)
-        self._event_ctrl.remove_listener(EventID.server_update, self._on_remove_server)
+        for responder in self._responders:
+            responder.close()
 
         for guild_ in self.servers:
             await guild_._close()
@@ -536,3 +579,65 @@ class ACCOUNT:
         await self._client.close()
         await asyncio.gather(self._ws_task, return_exceptions=True)
         return self._event_ctrl.stop()
+
+    # Other private methods
+    async def _browser_login(self):
+        trace("Logging in thru browser and obtaining token")
+        if isinstance(result := await self._selenium.initialize(), Exception):
+            trace(f"Could not initialize browser in {self}.", TraceLEVELS.ERROR, result)
+            raise result
+
+        self._token = result
+        self.is_user = True
+
+    def _check_intents(self):
+        intents = self.intents
+        if not intents.members:
+            trace(
+                "Members intent is disabled, it is needed for automatic responders' constraints"
+                " and invite link tracking.",
+                TraceLEVELS.WARNING
+            )
+
+        if not intents.guild_messages:
+            trace(
+                "Guild messages intent is disabled, it is needed for guild automatic responders.",
+                TraceLEVELS.WARNING
+            )
+
+        if not intents.dm_messages:
+            trace(
+                "DM messages intent is disabled, it is needed for DM automatic responders.",
+                TraceLEVELS.WARNING
+            )
+
+        if not intents.message_content:
+            trace(
+                "Message content intent is disabled, it is needed for automatic responders.",
+                TraceLEVELS.WARNING
+            )
+
+        if not intents.invites:
+            trace("Invites intent is disabled, it is needed for invite link tracking.", TraceLEVELS.WARNING)
+
+
+        if not intents.guilds:
+            self.intents.guilds = True
+            trace("Guilds intent is disabled. Enabling it since it's needed.", TraceLEVELS.WARNING)
+
+    def _add_listeners(self):
+        self._client.add_listener(self._discord_on_message, "on_message")
+        self._event_ctrl.add_listener(EventID.account_update, self._on_update)
+        self._event_ctrl.add_listener(EventID.server_removed, self._on_remove_server)
+        self._event_ctrl.add_listener(EventID.server_added, self._on_add_server)
+        self._event_ctrl.add_listener(EventID.auto_responder_add, self._on_add_responder)
+        self._event_ctrl.add_listener(EventID.auto_responder_remove, self._on_remove_responder)
+
+    def _remove_listeners(self):
+        self._client.remove_listener(self._discord_on_message, "on_message")
+        self._event_ctrl.remove_listener(EventID.account_update, self._on_update)
+        self._event_ctrl.remove_listener(EventID.server_removed, self._on_remove_server)
+        self._event_ctrl.remove_listener(EventID.server_added, self._on_add_server)
+        self._event_ctrl.remove_listener(EventID.server_update, self._on_remove_server)
+        self._event_ctrl.remove_listener(EventID.auto_responder_add, self._on_add_responder)
+        self._event_ctrl.remove_listener(EventID.auto_responder_remove, self._on_remove_responder)
