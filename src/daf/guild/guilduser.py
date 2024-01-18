@@ -485,9 +485,6 @@ class GUILD(BaseGUILD):
 
         # Fill invite counts
         if len(self.join_count):  # Skip invite query from Discord
-            client: discord.Client = parent.client
-            client.add_listener(self._discord_on_member_join, "on_member_join")
-            client.add_listener(self._discord_on_invite_delete, "on_invite_delete")
             self._event_ctrl.add_listener(
                 EventID.discord_member_join,
                 self._on_member_join,
@@ -604,23 +601,10 @@ class GUILD(BaseGUILD):
                 TraceLEVELS.DEBUG
             )
 
-    # Safety wrappers to make sure the event gets emitted through the event loop for safety
-    async def _discord_on_member_join(self, member: discord.Member):
-        self._event_ctrl.emit(EventID.discord_member_join, member)
-
-    async def _discord_on_invite_delete(self, invite: discord.Invite):
-        self._event_ctrl.emit(EventID.discord_invite_delete, invite)
-
     def _close(self):
         if self._event_ctrl is None:  # Already closed
             return
 
-        client: discord.Client = self.parent.client
-        # Removing these listeners doesn't require a mutex as it does not interfere
-        # with any advertisement methods. These are only for processing
-        # events on the PyCord API wrapper level.
-        client.remove_listener(self._discord_on_member_join, "on_member_join")
-        client.remove_listener(self._discord_on_invite_delete, "on_invite_delete")
         self._event_ctrl.remove_listener(EventID.discord_member_join, self._on_member_join)
         self._event_ctrl.remove_listener(EventID.discord_invite_delete, self._on_invite_delete)
         return super()._close()
