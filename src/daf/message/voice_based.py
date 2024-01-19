@@ -3,23 +3,25 @@
 
 
 from typing import Any, Dict, List, Iterable, Optional, Union, Tuple, Callable
-from pathlib import Path
 from datetime import timedelta, datetime
 from typeguard import typechecked
+from pathlib import Path
 
-from .base import *
-from ..dtypes import *
-from ..events import *
-from ..logging.tracing import *
-from ..logging import sql
-from ..misc import doc, instance_track
 from ..messagedata import BaseVoiceData, VoiceMessageData, DynamicVoiceMessageData
-
+from ..misc import doc, instance_track
+from ..logging import sql
 from .. import dtypes
 
-import asyncio
+from ..logging.tracing import *
+from .messageperiod import *
+from ..dtypes import *
+from ..events import *
+from .base import *
+
 import _discord as discord
+import asyncio
 import os
+
 
 __all__ = (
     "VoiceMESSAGE",
@@ -130,13 +132,14 @@ class VoiceMESSAGE(BaseChannelMessage):
     @typechecked
     def __init__(
         self,
-        start_period: Union[int, timedelta, None],
-        end_period: Union[int, timedelta],
-        data: Union[BaseVoiceData, _old_data_type],
-        channels: Union[Iterable[Union[int, discord.VoiceChannel]], AutoCHANNEL],
+        start_period: Union[int, timedelta, None] = None,
+        end_period: Union[int, timedelta] = None,
+        data: Union[BaseVoiceData, _old_data_type] = None,
+        channels: Union[Iterable[Union[int, discord.VoiceChannel]], AutoCHANNEL] = None,
         volume: Optional[int] = 50,
         start_in: Optional[Union[timedelta, datetime]] = timedelta(seconds=0),
-        remove_after: Optional[Union[int, timedelta, datetime]] = None
+        remove_after: Optional[Union[int, timedelta, datetime]] = None,
+        period: BaseMessagePeriod = None
     ):
         if not dtypes.GLOBALS.voice_installed:
             raise ModuleNotFoundError(
@@ -161,7 +164,7 @@ class VoiceMESSAGE(BaseChannelMessage):
 
                 data = VoiceMessageData(data[0])
 
-        super().__init__(start_period, end_period, data, channels, start_in, remove_after)
+        super().__init__(start_period, end_period, data, channels, start_in, remove_after, period)
         self.volume = max(0, min(100, volume))  # Clamp the volume to 0-100 %
 
     def generate_log_context(self,

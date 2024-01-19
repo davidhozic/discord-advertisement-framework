@@ -1,26 +1,25 @@
 """
     Contains base definitions for different message classes.
 """
-
-from typing import Any, Set, List, Iterable, Union, TypeVar, Optional, Dict, Callable
-from functools import partial
+from typing import Any, Set, List, Union, TypeVar, Optional, Dict, Callable
 from datetime import timedelta, datetime
 from abc import ABC, abstractmethod
+from typeguard import typechecked
+from functools import partial
 from enum import Enum, auto
-from typeguard import check_type, typechecked
 
-
+from ..misc import doc, attributes, async_util, instance_track
+from ..logging.tracing import trace, TraceLEVELS
+from ..messagedata import BaseMessageData
+from .messageperiod import *
 from ..dtypes import *
 from ..events import *
-from ..logging.tracing import trace, TraceLEVELS
-from ..misc import doc, attributes, async_util, instance_track
-from ..messagedata import BaseMessageData
 
-import random
-import re
-import copy
-import asyncio
 import _discord as discord
+import asyncio
+import random
+import copy
+import re
 
 
 __all__ = (
@@ -29,6 +28,7 @@ __all__ = (
     "ChannelErrorAction",
     "BaseChannelMessage",
 )
+
 
 T = TypeVar("T")
 ChannelType = Union[discord.TextChannel, discord.Thread, discord.VoiceChannel]
@@ -91,8 +91,6 @@ class BaseMESSAGE(ABC):
     __slots__ = (
         "_id",
         "period",
-        "start_period",
-        "end_period",
         "next_send_time",
         "_data",
         "update_semaphore",
@@ -102,33 +100,47 @@ class BaseMESSAGE(ABC):
         "_removal_timer",
         "_event_ctrl",
     )
-
-    @typechecked
     def __init__(
         self,
         start_period: Optional[Union[int, timedelta]],
         end_period: Union[int, timedelta],
         data: BaseMessageData,
         start_in: Optional[Union[timedelta, datetime]],
-        remove_after: Optional[Union[int, timedelta, datetime]]
+        remove_after: Optional[Union[int, timedelta, datetime]],
+        period: BaseMessagePeriod
     ):
 
-        # Deprecated int since v2.1
         if isinstance(start_period, int):
-            trace("Using int on start_period is deprecated, use timedelta object instead.", TraceLEVELS.DEPRECATED)
             start_period = timedelta(seconds=start_period)
 
         if isinstance(end_period, int):
-            trace("Using int on end_period is deprecated, use timedelta object instead.", TraceLEVELS.DEPRECATED)
             end_period = timedelta(seconds=end_period)
 
-        if isinstance(start_period, timedelta) and start_period >= end_period:
+        # Due to compatibility when adding the new 'period' parameter, some parameters needed default
+        # values. The default values are all None for those parameters.
+        if (
+            start_period is None and end_period is None and period is None or
+            start_period is not None and end_period is None
+        ):
+            raise TypeError(f"{type(self).__name__} missing required parameter 'period'")
+
+        if start_period is not None and start_period >= end_period:
             raise ValueError("'start_period' must be less than 'end_period'")
 
-        # Clamp periods to minimum level (prevent infinite loops)
-        self.start_period = None if start_period is None else max(start_period, timedelta(seconds=C_PERIOD_MINIMUM_SEC))
-        self.end_period = max(end_period, timedelta(seconds=C_PERIOD_MINIMUM_SEC))
-        self.period = self.end_period  # This can randomize in _reset_timer
+        if start_period is not None or end_period is not None:
+            trace(
+                "'start_period' and 'end_period' are deprecated and will be removed in v4.1.0."
+                "\nUse 'period' instead.",
+                TraceLEVELS.DEPRECATED
+            )
+
+            if period is None:
+                if start_period is None:
+                    period = FixedDurationPeriod(end_period)
+                else:
+                    period = RandomizedDurationPeriod(start_period, end_period)
+            else:
+                trace("Ignoring 'start_period' / 'end_period' as period is given.", TraceLEVELS.DEPRECATED)
 
         if isinstance(start_in, datetime):
             self.next_send_time = start_in.astimezone()
@@ -139,6 +151,7 @@ class BaseMESSAGE(ABC):
 
         self._remove_after = remove_after
         self._data = data
+        self.period = period
 
         self._timer_handle: asyncio.Task = None
         self._removal_timer: asyncio.Task = None
@@ -289,14 +302,11 @@ class BaseMESSAGE(ABC):
         raise NotImplementedError
 
     def _calc_next_time(self):
-        if self.start_period is not None:
-            range = map(int, [self.start_period.total_seconds(), self.end_period.total_seconds()])
-            self.period = timedelta(seconds=random.randrange(*range))
-
+        wait_for = self.period.get()
         # Absolute timing instead of relative to prevent time slippage due to missed timer reset.
         current_stamp = datetime.now().astimezone()
         while self.next_send_time < current_stamp:
-            self.next_send_time += self.period
+            self.next_send_time += wait_for
 
     def _reset_timer(self) -> None:
         """
@@ -559,18 +569,32 @@ class BaseChannelMessage(BaseMESSAGE):
         "channel_getter",
         "_remove_after_original"
     )
-
-    @typechecked
     def __init__(
         self,
-        start_period: Union[timedelta, int, None],
-        end_period: Union[int, timedelta],
-        data: BaseMessageData,
-        channels: Union[List[Union[int, ChannelType]], AutoCHANNEL],
+        start_period: Union[timedelta, int, None] = None,
+        end_period: Union[int, timedelta] = None,
+        data: BaseMessageData = None,
+        channels: Union[List[Union[int, ChannelType]], AutoCHANNEL] = None,
         start_in: Optional[Union[timedelta, datetime]] = timedelta(seconds=0),
-        remove_after: Optional[Union[int, timedelta, datetime]] = None
+        remove_after: Optional[Union[int, timedelta, datetime]] = None,
+        period: BaseMessagePeriod = None
     ):
-        super().__init__(start_period, end_period, data, start_in, remove_after)
+        super().__init__(start_period, end_period, data, start_in, remove_after, period)
+
+        # Due to compatibility when adding the new 'period' parameter, some parameters needed default
+        # values. The default values are all None for those parameters.
+        if (
+            channels is None
+        ):
+            raise TypeError(f"{type(self).__name__} missing required parameter 'channels'")
+
+        # Due to compatibility when adding the new 'period' parameter, some parameters needed default
+        # values. The default values are all None for those parameters.
+        if (
+            data is None
+        ):
+            raise TypeError(f"{type(self).__name__} missing required parameter 'data'")
+
         self.channels = channels
         self.channel_getter = None
 

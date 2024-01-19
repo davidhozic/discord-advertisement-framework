@@ -3,7 +3,7 @@ Extension loader method.
 """
 from inspect import getmembers, isclass
 from typing import Union, List
-from datetime import datetime
+from datetime import datetime, time, timezone
 
 from tkclasswiz.convert import (
     ObjectInfo,
@@ -45,6 +45,11 @@ def register_extensions():
 
 
 def register_annotations():
+    reg_annotations(
+        time,
+        hour=int, minute=int, second=int, microsecond=int, tzinfo=timezone
+    )
+
     reg_annotations(
         discord.Embed,
         {

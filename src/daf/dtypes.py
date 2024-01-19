@@ -81,6 +81,11 @@ def data_function(fnc: Callable):
         :language: python
         :emphasize-lines: 12, 24
     """
+    trace(
+        "Using @data_function is deprecated. Use DynamicTextMessageData / DynamicVoiceMessageData instead.",
+        TraceLEVELS.DEPRECATED
+    )
+
     @wraps(fnc, updated=[])
     class FunctionCLASS(_FunctionBaseCLASS):
         """
