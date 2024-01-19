@@ -54,7 +54,7 @@ async def test_autochannel(guilds, channels, accounts):
             guild,
             messages=[
                 tm := daf.TextMESSAGE(None, timedelta(seconds=20), "Hello World", auto_channel),
-                vc := daf.VoiceMESSAGE(None, timedelta(seconds=20), daf.AUDIO("testing123.mp3"), auto_channel2)
+                vc := daf.VoiceMESSAGE(None, timedelta(seconds=20), daf.FILE("testing123.mp3"), auto_channel2)
             ]
         )
 

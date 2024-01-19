@@ -104,7 +104,6 @@ async def test_voice_message_update(VOICE_MESSAGE: daf.VoiceMESSAGE):
     VOICE_MESSAGE_TEST_MESSAGE = [
         (4.5, daf.FILE("test.mp3", fdata)),
         (4.5, daf.FILE("test.mp3", fdata.hex())),
-        (4.5, daf.AUDIO("testing123.mp3"))
     ]
 
     os.chdir(cwd)

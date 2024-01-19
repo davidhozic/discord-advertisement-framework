@@ -148,7 +148,7 @@ class TextMESSAGE(BaseChannelMessage):
             )
             # Transform to new data type            
             if isinstance(data, _FunctionBaseCLASS):
-                data = DynamicTextMessageData(data.fnc, data.args, data.kwargs)
+                data = DynamicTextMessageData(data.fnc, *data.args, **data.kwargs)
             else:
                 if isinstance(data, (str, discord.Embed, FILE)):
                     data = [data]
@@ -575,7 +575,7 @@ class DirectMESSAGE(BaseMESSAGE):
             )
             # Transform to new data type            
             if isinstance(data, _FunctionBaseCLASS):
-                data = DynamicTextMessageData(data.fnc, data.args, data.kwargs)
+                data = DynamicTextMessageData(data.fnc, *data.args, *data.kwargs)
             else:
                 if isinstance(data, (str, discord.Embed, FILE)):
                     data = [data]

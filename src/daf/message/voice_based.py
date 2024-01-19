@@ -151,7 +151,7 @@ class VoiceMESSAGE(BaseChannelMessage):
             )
             # Transform to new data type            
             if isinstance(data, _FunctionBaseCLASS):
-                data = DynamicVoiceMessageData(data.fnc, data.args, data.kwargs)
+                data = DynamicVoiceMessageData(data.fnc, *data.args, **data.kwargs)
             else:
                 if isinstance(data, FILE):
                     data = [data]
@@ -286,7 +286,7 @@ class VoiceMESSAGE(BaseChannelMessage):
 
     async def _send_channel(self,
                             channel: discord.VoiceChannel,
-                            audio: Optional[FILE]) -> dict:
+                            file: Optional[FILE]) -> dict:
         """
         Sends data to specific channel
 
@@ -332,7 +332,7 @@ class VoiceMESSAGE(BaseChannelMessage):
             # Write data to file instead of directly sending it to FFMPEG.
             # This is needed due to a bug in the API wrapper, which only seems to appear on Linux.
             # TODO: When fixed, replace with audio.stream.
-            raw_data = audio.data
+            raw_data = file.data
             filename = Path.home().joinpath(f"daf/tmp_{id(raw_data)}")
             filename.parent.mkdir(exist_ok=True, parents=True)
 

@@ -135,7 +135,6 @@ async def test_voice_period(
     cwd = os.getcwd()
     os.chdir(os.path.dirname(__file__))
     data_ = [
-        (8, daf.AUDIO("testing123.mp3")),
         (8, daf.FILE("testing123.mp3"))
     ]
     VOICE_MESSAGE_TEST_MESSAGE = dynamic_getter(data_.copy())
