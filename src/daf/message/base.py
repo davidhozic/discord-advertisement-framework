@@ -90,7 +90,6 @@ class BaseMESSAGE(ABC):
     """
     __slots__ = (
         "_id",
-        "period",
         "next_send_time",
         "_data",
         "update_semaphore",
@@ -99,6 +98,7 @@ class BaseMESSAGE(ABC):
         "_timer_handle",
         "_removal_timer",
         "_event_ctrl",
+        "period",
     )
     def __init__(
         self,
@@ -156,6 +156,7 @@ class BaseMESSAGE(ABC):
         self._timer_handle: asyncio.Task = None
         self._removal_timer: asyncio.Task = None
         self._event_ctrl: EventController = None
+
         # Attributes created with this function will not be re-referenced to a different object
         # if the function is called again, ensuring safety (.update_method)
         attributes.write_non_exist(self, "update_semaphore", asyncio.Semaphore(1))
@@ -777,6 +778,12 @@ class BaseChannelMessage(BaseMESSAGE):
         if "start_in" not in kwargs:
             # This parameter does not appear as attribute, manual setting necessary
             kwargs["start_in"] = self.next_send_time
+
+        if "start_period" not in kwargs:  # DEPRECATED, TODO: REMOVE IN FUTURE
+            kwargs["start_period"] = None
+
+        if "end_period" not in kwargs:  # DEPRECATED, TODO: REMOVE IN FUTURE
+            kwargs["end_period"] = None
 
         if "data" not in kwargs:
             kwargs["data"] = self._data

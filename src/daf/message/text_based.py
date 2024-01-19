@@ -786,6 +786,12 @@ class DirectMESSAGE(BaseMESSAGE):
             # This parameter does not appear as attribute, manual setting necessary
             kwargs["start_in"] = self.next_send_time
 
+        if "start_period" not in kwargs:  # DEPRECATED, TODO: REMOVE IN FUTURE
+            kwargs["start_period"] = None
+
+        if "end_period" not in kwargs:  # DEPRECATED, TODO: REMOVE IN FUTURE
+            kwargs["end_period"] = None
+
         if "data" not in kwargs:
             kwargs["data"] = self._data
 
