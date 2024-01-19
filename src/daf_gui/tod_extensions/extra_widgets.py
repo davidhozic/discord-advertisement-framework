@@ -154,8 +154,6 @@ def setup_additional_live_properties(w: ttk.Menubutton, frame):
     oi: ObjectInfo
     if (
         (oi := frame.old_gui_data) is None or
-        oi.real_object is None or
-        not oi.real_object.remote_allowed or
         not oi.property_map  # No properties
     ):
         return
@@ -206,7 +204,6 @@ ADDITIONAL_WIDGETS = {
     daf.FILE: [(ttk.Button, setup_additional_widget_file_chooser, {"text": "File browse"})],
     daf.LoggerJSON: [(ttk.Button, setup_additional_widget_file_chooser_logger, {"text": "Select folder"})],
     daf.LoggerCSV: [(ttk.Button, setup_additional_widget_file_chooser_logger, {"text": "Select folder"})],
-    daf.AUDIO: [(ttk.Button, setup_additional_widget_file_chooser, {"text": "File browse"})],
     _discord.Intents: [(ttk.Button, setup_additional_widget_default_intents, {"text": "Load default"})]
 }
 

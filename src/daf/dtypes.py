@@ -18,7 +18,6 @@ __all__ = (
     "data_function",
     "_FunctionBaseCLASS",
     "FILE",
-    "AUDIO"
 )
 
 
@@ -102,6 +101,7 @@ def data_function(fnc: Callable):
         )
 
         def __init__(self, *args: Any, **kwargs: Any):
+            self.fnc = fnc
             self.args = args
             self.kwargs = kwargs
             self.func_name = fnc.__name__
@@ -218,35 +218,3 @@ class FILE:
             "type:": "File",
             "filename": self.fullpath
         }
-
-
-@typechecked
-@doc.doc_category("Types")
-class AUDIO(FILE):
-    """
-    Used for streaming audio from file.
-
-    .. deprecated:: 2.10
-
-        Use :class:`daf.dtypes.FILE` instead.
-
-    Parameters
-    -----------------
-    filename: str
-        Path to the file you want streamed.
-
-    Raises
-    ----------
-    FileNotFoundError
-        Raised when the file not found.
-    OSError
-        Could not load audio file.
-    """
-
-    def __init__(self, filename: str) -> None:
-        trace("AUDIO is deprecated, use FILE instead.", TraceLEVELS.DEPRECATED)
-        return super().__init__(filename)
-
-    @property
-    def url(self):
-        return self.filename

@@ -1,10 +1,11 @@
 from typing import List, Optional, Callable, Any, Dict, Coroutine
 from dataclasses import dataclass, asdict, field
+from contextlib import suppress
 
 from ..dtypes import FILE
 from .basedata import BaseMessageData
 from ..misc.doc import doc_category
-from ..misc.async_util import except_return
+from ..logging.tracing import trace, TraceLEVELS
 
 import _discord as discord
 
@@ -49,13 +50,31 @@ class DynamicTextMessageData(BaseTextData):
         self.args = args
         self.kwargs = kwargs
 
-    @except_return
     async def to_dict(self) -> dict:
-        result = self.getter(*self.args, **self.kwargs)
-        if isinstance(result, Coroutine):
-            result = await result
+        try:
+            result = self.getter(*self.args, **self.kwargs)
+            if isinstance(result, Coroutine):
+                result = await result
+    
+            if isinstance(result, TextMessageData):
+                return await result.to_dict()
 
-        if isinstance(result, TextMessageData):
-            return await result.to_dict()
+            elif result is not None:
+                # Compatibility with older type of 'data' parameter. TODO: Remove in future version (v4.2.0).
+                if not isinstance(result, (list, tuple, set)):
+                    result = [result]
 
-        return None
+                content, embed, files = None, None, []
+                for item in result:
+                    if isinstance(item, str):
+                        content = item
+                    elif isinstance(item, discord.Embed):
+                        embed = item
+                    elif isinstance(item, FILE):
+                        files.append(item)
+
+                return await TextMessageData(content, embed, files).to_dict()
+        except Exception as exc:
+            trace("Error dynamically obtaining data", TraceLEVELS.ERROR, exc)
+
+        return {}

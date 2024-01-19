@@ -202,7 +202,7 @@ class BaseGUILD(ABC):
         ValueError
             Raised when the message is not present in the list.
         """
-        return self._event_ctrl.emit(EventID.message_removed, self, message)
+        return self._event_ctrl.emit(EventID._trigger_message_remove, self, message)
 
     def update(self, init_options = None, **kwargs) -> asyncio.Future:
         """
@@ -236,7 +236,7 @@ class BaseGUILD(ABC):
         Union[TypeError, ValueError]
             Invalid keyword argument was passed.
         """
-        return self._event_ctrl.emit(EventID.server_update, self, init_options, **kwargs)
+        return self._event_ctrl.emit(EventID._trigger_server_update, self, init_options, **kwargs)
 
     async def _init_messages(self):
         raise NotImplementedError
@@ -288,15 +288,15 @@ class BaseGUILD(ABC):
                 async_util.call_at(
                     event_ctrl.emit,
                     self._remove_after,
-                    EventID.server_removed,
+                    EventID._trigger_server_remove,
                     self
                 )
             )
 
-        event_ctrl.add_listener(EventID.message_ready, self._advertise, lambda server, m: server is self)
-        event_ctrl.add_listener(EventID.message_removed, self._on_message_removed, lambda server, m: server is self)
-        event_ctrl.add_listener(EventID.message_added, self._on_add_message, lambda server, m: server is self)
-        event_ctrl.add_listener(EventID.server_update, self._on_update, lambda server, *h, **k: server is self)
+        event_ctrl.add_listener(EventID._trigger_message_ready, self._advertise, lambda server, m: server is self)
+        event_ctrl.add_listener(EventID._trigger_message_remove, self._on_message_removed, lambda server, m: server is self)
+        event_ctrl.add_listener(EventID._trigger_message_add, self._on_add_message, lambda server, m: server is self)
+        event_ctrl.add_listener(EventID._trigger_server_update, self._on_update, lambda server, *h, **k: server is self)
 
         await self._init_messages()
 
@@ -326,6 +326,7 @@ class BaseGUILD(ABC):
 
     async def _on_message_removed(self, _, message: BaseMESSAGE):
         trace(f"Removing message {message} from {self}", TraceLEVELS.NORMAL)
+        self._event_ctrl.emit(EventID.message_removed, self, message)
         self._messages.remove(message)
         self._removed_messages.append(message)
         if len(self._removed_messages) > self.removal_buffer_length:
@@ -359,10 +360,10 @@ class BaseGUILD(ABC):
         if self._event_ctrl is None:  # Already closed
             return
 
-        self._event_ctrl.remove_listener(EventID.message_ready, self._advertise)
-        self._event_ctrl.remove_listener(EventID.message_removed, self._on_message_removed)
-        self._event_ctrl.remove_listener(EventID.server_update, self._on_update)
-        self._event_ctrl.remove_listener(EventID.message_added, self._on_add_message)
+        self._event_ctrl.remove_listener(EventID._trigger_message_ready, self._advertise)
+        self._event_ctrl.remove_listener(EventID._trigger_message_remove, self._on_message_removed)
+        self._event_ctrl.remove_listener(EventID._trigger_server_update, self._on_update)
+        self._event_ctrl.remove_listener(EventID._trigger_message_add, self._on_add_message)
         for message in self.messages:
             await message._close()
 
@@ -515,7 +516,7 @@ class GUILD(BaseGUILD):
     # API
     @typechecked
     def add_message(self, message: Union[TextMESSAGE, VoiceMESSAGE]):
-        return self._event_ctrl.emit(EventID.message_added, self, message)
+        return self._event_ctrl.emit(EventID._trigger_message_add, self, message)
 
     def generate_invite_log_context(self, member: discord.Member, invite_id: str) -> dict:
         """
@@ -663,7 +664,7 @@ class USER(BaseGUILD):
 
     @typechecked
     def add_message(self, message: DirectMESSAGE) -> asyncio.Future:
-        return self._event_ctrl.emit(EventID.message_added, self, message)
+        return self._event_ctrl.emit(EventID._trigger_message_add, self, message)
 
     def _check_state(self) -> bool:
         """

@@ -17,7 +17,7 @@ VOICE_MESSAGE_TEST_LENGTH = 4.5  # Test if entire message is played
 async def TEXT_MESSAGE(channels, guilds, accounts: List[daf.ACCOUNT]):
     guild = daf.GUILD(guilds[0], logging=True)
     await accounts[0].add_server(guild)
-    guild._event_ctrl.remove_listener(EventID.message_ready, guild._advertise)
+    guild._event_ctrl.remove_listener(EventID._trigger_message_ready, guild._advertise)
     await guild.add_message(tm := daf.TextMESSAGE(None, timedelta(seconds=5), data="Hello World", channels=channels[0]))
     yield tm
     await accounts[0].remove_server(guild)
@@ -27,7 +27,7 @@ async def TEXT_MESSAGE(channels, guilds, accounts: List[daf.ACCOUNT]):
 async def DIRECT_MESSAGE(accounts: List[daf.ACCOUNT]):
     user = daf.USER(TEST_USER_ID)
     await accounts[0].add_server(user)
-    user._event_ctrl.remove_listener(EventID.message_ready, user._advertise)
+    user._event_ctrl.remove_listener(EventID._trigger_message_ready, user._advertise)
     TEXT_MESSAGE_TEST_MESSAGE = "Hello world", daf.discord.Embed(title="Hello world")
     direct_message = daf.message.DirectMESSAGE(None, timedelta(seconds=5), TEXT_MESSAGE_TEST_MESSAGE, "send",
                                                 start_in=timedelta(0), remove_after=None)
@@ -40,7 +40,7 @@ async def DIRECT_MESSAGE(accounts: List[daf.ACCOUNT]):
 async def VOICE_MESSAGE(channels, guilds, accounts: List[daf.ACCOUNT]):
     guild = daf.GUILD(guilds[0], logging=True)
     await accounts[0].add_server(guild)
-    guild._event_ctrl.remove_listener(EventID.message_ready, guild._advertise)
+    guild._event_ctrl.remove_listener(EventID._trigger_message_ready, guild._advertise)
 
     cwd = os.getcwd()
     os.chdir(os.path.dirname(__file__))

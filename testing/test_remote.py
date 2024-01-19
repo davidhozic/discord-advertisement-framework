@@ -3,6 +3,7 @@ Testing module used to test the remote control server.
 """
 from daf_gui.connector import RemoteConnectionCLIENT
 from daf.misc import instance_track as it
+from daf import discord
 from test_util import *
 
 import daf
@@ -10,7 +11,7 @@ import pytest
 
 
 @pytest.mark.group_remote
-async def test_http(accounts, guilds):
+async def test_http(accounts: list[daf.ACCOUNT], guilds: list[discord.Guild]):
     client = RemoteConnectionCLIENT("http://127.0.0.1", 8080, "Hello", "World")
     await client.initialize(debug=daf.TraceLEVELS.DEPRECATED)
 
@@ -50,4 +51,4 @@ async def test_http(accounts, guilds):
     # Test get_accounts
     new_accounts = await client.get_accounts()
     for i in range(len(new_accounts)):
-        compare_objects(new_accounts[i], accounts[i], {"_deleted", "_client", "_daf_id", "_ws_task"})
+        compare_objects(new_accounts[i], accounts[i], {"_deleted", "_client", "_daf_id", "_ws_task", "parent"})

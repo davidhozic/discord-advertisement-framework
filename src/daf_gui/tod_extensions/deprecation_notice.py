@@ -9,8 +9,7 @@ import daf
 
 
 DEPRECATION_NOTICES = {
-    daf.AUDIO: [("daf.dtypes.AUDIO", "2.12", "Replaced with daf.dtypes.FILE")],
-    daf.VoiceMESSAGE: [("daf.dtypes.AUDIO as type for data parameter", "2.12", "Replaced with daf.dtypes.FILE")],
+    # daf.VoiceMESSAGE: [("daf.dtypes.AUDIO as type for data parameter", "2.12", "Replaced with daf.dtypes.FILE")],
 }
 
 

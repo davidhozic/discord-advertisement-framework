@@ -9,10 +9,12 @@ from abc import ABC, abstractmethod
 from enum import Enum, auto
 from typeguard import check_type, typechecked
 
+
 from ..dtypes import *
 from ..events import *
 from ..logging.tracing import trace, TraceLEVELS
 from ..misc import doc, attributes, async_util, instance_track
+from ..messagedata import BaseMessageData
 
 import random
 import re
@@ -93,33 +95,23 @@ class BaseMESSAGE(ABC):
         "end_period",
         "next_send_time",
         "_data",
-        "_fbcdata",
         "update_semaphore",
         "parent",
         "_remove_after",
         "_timer_handle",
+        "_removal_timer",
         "_event_ctrl",
     )
 
     @typechecked
-    def __init__(self,
-                 start_period: Optional[Union[int, timedelta]],
-                 end_period: Union[int, timedelta],
-                 data: Any,
-                 start_in: Optional[Union[timedelta, datetime]],
-                 remove_after: Optional[Union[int, timedelta, datetime]]):
-        # Data parameter checks
-        if isinstance(data, Iterable):
-            if not len(data):
-                raise TypeError(f"data parameter cannot be an empty iterable. Got: '{data}.'")
-
-            annots = self.__init__.__annotations__["data"]
-            for element in data:
-                if isinstance(element, _FunctionBaseCLASS):  # Check if function is being used standalone
-                    raise TypeError(f"{element} can be only used directly (data={element}()), not in a iterable.")
-
-                # Check if the list elements are of correct type (typeguard does not protect iterable's elements)
-                check_type("data", element, annots)
+    def __init__(
+        self,
+        start_period: Optional[Union[int, timedelta]],
+        end_period: Union[int, timedelta],
+        data: BaseMessageData,
+        start_in: Optional[Union[timedelta, datetime]],
+        remove_after: Optional[Union[int, timedelta, datetime]]
+    ):
 
         # Deprecated int since v2.1
         if isinstance(start_period, int):
@@ -144,10 +136,12 @@ class BaseMESSAGE(ABC):
             self.next_send_time = datetime.now().astimezone() + start_in
 
         self.parent = None  # The xGUILD object this message is in (needed for update method).
-        self._remove_after = remove_after  # Remove the message from the list after this
+
+        self._remove_after = remove_after
         self._data = data
-        self._fbcdata = isinstance(data, _FunctionBaseCLASS)
+
         self._timer_handle: asyncio.Task = None
+        self._removal_timer: asyncio.Task = None
         self._event_ctrl: EventController = None
         # Attributes created with this function will not be re-referenced to a different object
         # if the function is called again, ensuring safety (.update_method)
@@ -286,20 +280,6 @@ class BaseMESSAGE(ABC):
         """
         raise NotImplementedError
 
-    async def _get_data(self) -> dict:
-        """
-        Returns a dictionary of keyword arguments that is then expanded
-        into other functions (_send_channel, _generate_log)
-        This is to be additionally implemented in inherited classes due to different data_types
-
-        .. versionchanged:: v2.3
-            Turned async.
-        """
-        if self._fbcdata:
-            return await self._data.retrieve()
-
-        return self._data
-
     @abstractmethod
     def _handle_error(self) -> bool:
         """
@@ -326,7 +306,7 @@ class BaseMESSAGE(ABC):
         self._timer_handle = async_util.call_at(
             self._event_ctrl.emit,
             self.next_send_time,
-            EventID.message_ready, self.parent, self
+            EventID._trigger_message_ready, self.parent, self
         )
 
     @abstractmethod
@@ -355,13 +335,26 @@ class BaseMESSAGE(ABC):
         self._timer_handle = async_util.call_at(
             event_ctrl.emit,
             self.next_send_time,
-            EventID.message_ready, self.parent, self
+            EventID._trigger_message_ready, self.parent, self
         )
         self._event_ctrl.add_listener(
-            EventID.message_update,
+            EventID._trigger_message_update,
             self._on_update,
             lambda message, *args, **kwargs: message is self
         )
+
+        # Calculate actual datetime of when the message is going to be removed,
+        # so that the time can be viewed instead of just constantly returning the same timedelta object.
+        if isinstance(self._remove_after, timedelta):
+            self._remove_after = datetime.now().astimezone() + self._remove_after
+
+        # Setup remove_after schedule (in case it is datetime)
+        if isinstance(self._remove_after, datetime):
+            self._removal_timer = async_util.call_at(
+                event_ctrl.emit,
+                self._remove_after,
+                EventID._trigger_message_remove, self.parent, self
+            )
 
     @abstractmethod
     async def _on_update(self, _, _init_options: Optional[dict], **kwargs):
@@ -379,7 +372,11 @@ class BaseMESSAGE(ABC):
             self._timer_handle.cancel()
             await asyncio.gather(self._timer_handle, return_exceptions=True)
 
-        self._event_ctrl.remove_listener(EventID.message_update, self._on_update)
+        if self._removal_timer is not None and not self._removal_timer.cancelled():
+            self._removal_timer.cancel()
+            await asyncio.gather(self._removal_timer, return_exceptions=True)
+
+        self._event_ctrl.remove_listener(EventID._trigger_message_update, self._on_update)
 
 
 @instance_track.track_id
@@ -568,7 +565,7 @@ class BaseChannelMessage(BaseMESSAGE):
         self,
         start_period: Union[timedelta, int, None],
         end_period: Union[int, timedelta],
-        data: Any,
+        data: BaseMessageData,
         channels: Union[List[Union[int, ChannelType]], AutoCHANNEL],
         start_in: Optional[Union[timedelta, datetime]] = timedelta(seconds=0),
         remove_after: Optional[Union[int, timedelta, datetime]] = None
@@ -600,7 +597,7 @@ class BaseChannelMessage(BaseMESSAGE):
 
     @typechecked
     def update(self, _init_options: Optional[dict] = None, **kwargs: Any) -> asyncio.Future:
-        return self._event_ctrl.emit(EventID.message_update, self, _init_options, **kwargs)
+        return self._event_ctrl.emit(EventID._trigger_message_update, self, _init_options, **kwargs)
 
     def _update_state(self, succeeded_channels: List[ChannelType], err_channels: List[dict]):
         "Updates internal remove_after counter and checks if any channels need to be remove."
@@ -620,9 +617,12 @@ class BaseChannelMessage(BaseMESSAGE):
                     )
                     self.channels.remove(channel)
                     del self._remove_after[snowflake]
-                
-            if not self._remove_after:  # All channel counts expired
-                self._event_ctrl.emit(EventID.message_removed, self.parent, self)
+
+            # All channel counts expired + at least one succeeded channel.
+            # If not succeeded channel was passed, then the counters could not decrement, meaning
+            # message was never advertise. If message was never advertised then the remove_after counter is invalid.
+            if not self._remove_after and succeeded_channels:
+                self._event_ctrl.emit(EventID._trigger_message_remove, self.parent, self)
                 # Prevent dual removal events, errored channels also don't need to be removed if the message is removed
                 return
 
@@ -642,7 +642,7 @@ class BaseChannelMessage(BaseMESSAGE):
                     self.channels.remove(channel)
 
         if not self.channels:
-            self._event_ctrl.emit(EventID.message_removed, self.parent, self)
+            self._event_ctrl.emit(EventID._trigger_message_remove, self.parent, self)
 
     def _get_channel_types(self) -> Set[ChannelType]:
         "Returns a set of valid channels types. Implement in subclasses."
@@ -719,7 +719,7 @@ class BaseChannelMessage(BaseMESSAGE):
         Sends the data into the channels.
         """
         # Acquire mutex to prevent update method from writing while sending
-        data_to_send = await self._get_data()
+        data_to_send = await self._data.to_dict()
         if any(data_to_send.values()):  # There is data to be send
             errored_channels = []
             succeeded_channels = []

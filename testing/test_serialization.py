@@ -18,6 +18,16 @@ import daf
         daf.SeleniumCLIENT("12345", "12345", None),
         daf.ACCOUNT(username="hello", password="world"),
         daf.VoiceMESSAGE(None, 5, daf.dtypes.FILE("Test", b'\xff\x51\x55'), daf.AutoCHANNEL("test"), 5, remove_after=5),
+        daf.DMResponder(
+            daf.responder.logic.regex("nft.*buy"),
+            daf.DMResponse(daf.TextMessageData("Hello")),
+            [daf.MemberOfGuildConstraint(32323)]
+        ),
+        daf.GuildResponder(
+            daf.or_(daf.contains("hello"), daf.contains("world")),
+            daf.GuildResponse(daf.TextMessageData("Goodbye")),
+            [daf.GuildConstraint(32323)]
+        )
     ]
 )
 def test_remote_serialization(test_obj):

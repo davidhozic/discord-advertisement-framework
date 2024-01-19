@@ -6,7 +6,7 @@ It is also responsible for doing the reverse, which is converting those other fo
 from typing import Union, Any, Mapping
 from contextlib import suppress
 from enum import Enum
-from inspect import isclass, signature, _empty
+from inspect import isclass, isfunction, signature, _empty
 
 from daf.logging.tracing import TraceLEVELS, trace
 
@@ -250,7 +250,8 @@ CONVERSION_ATTRS[message.TextMESSAGE] = {
         "sent_messages": {},
         "channel_getter": None,
         "_event_ctrl": None,
-        "_timer_handle": None
+        "_timer_handle": None,
+        "_removal_timer": None,
     },
     "attrs_convert": {
         "channels": CHANNEL_LAMBDA
@@ -264,7 +265,8 @@ CONVERSION_ATTRS[message.VoiceMESSAGE] = {
         "parent": None,
         "channel_getter": None,
         "_event_ctrl": None,
-        "_timer_handle": None
+        "_timer_handle": None,
+        "_removal_timer": None,
     },
     "attrs_convert": {
         "channels": CHANNEL_LAMBDA
@@ -280,7 +282,8 @@ CONVERSION_ATTRS[message.DirectMESSAGE] = {
         "previous_message": None,
         "dm_channel": None,
         "_event_ctrl": None,
-        "_timer_handle": None
+        "_timer_handle": None,
+        "_removal_timer": None,
     },
 }
 
@@ -302,7 +305,13 @@ def convert_object_to_semi_dict(to_convert: Any, only_ref: bool = False) -> Mapp
         if attrs is None:
             # No custom rules defined, try to convert normally with either vars or __slots__
             try:
-                attrs = {"attrs": attributes.get_all_slots(type_object) if hasattr(to_convert, "__slots__") else vars(to_convert)}
+                attrs = {}
+                if hasattr(to_convert, "__slots__"):
+                    attrs["attrs"] = attributes.get_all_slots(type_object)
+                
+                if not attrs.get("attrs"):  # Either key doesn't exist or __slots__ was empty
+                    attrs["attrs"] = vars(to_convert)
+
             except TypeError:
                 return to_convert  # Not structured object or does not have overrides defined, return the object itself
 
@@ -361,7 +370,8 @@ def convert_object_to_semi_dict(to_convert: Any, only_ref: bool = False) -> Mapp
     if isinstance(to_convert, Enum):
         return {"enum_type": f"{object_type.__module__}.{object_type.__name__}", "value": to_convert.value}
 
-    if isclass(to_convert):  # Class itself, not an actual isntance
+    # Class itself, not an actual instance. Can also be function as it only imports.
+    if isclass(to_convert) or isfunction(to_convert):
         return {"class_path": f"{to_convert.__module__}.{to_convert.__name__}"}
 
     if only_ref:
