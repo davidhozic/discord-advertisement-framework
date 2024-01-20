@@ -1,7 +1,8 @@
+from __future__ import annotations
+from typing import Union, Literal, get_args
 from datetime import datetime, timedelta, time
 from abc import ABC, abstractmethod
 from random import randrange
-from typing import Union
 
 
 __all__ = (
@@ -10,6 +11,7 @@ __all__ = (
     "EveryXPeriod",
     "FixedDurationPeriod",
     "RandomizedDurationPeriod",
+    "DaysOfWeekPeriod",
     "DailyPeriod",
 )
 
@@ -82,7 +84,9 @@ class EveryXPeriod(BaseMessagePeriod):
     Base for every-x-like message periods.
     The X can be Day, Month, Year, ...
     """
-    pass
+    def defer(self, dt: datetime):
+        self.next_send_time = dt
+        self.calculate()
 
 
 class FixedDurationPeriod(DurationPeriod):
@@ -140,25 +144,44 @@ class RandomizedDurationPeriod(DurationPeriod):
         self.minimum = minimum
 
 
-class DailyPeriod(EveryXPeriod):
+class DaysOfWeekPeriod(EveryXPeriod):
     """
-    Represents a daily send period.
-    Messages will be sent every day at ``time``.
+    Represents a period that will send on ``days`` at specific ``time``.
+    
+    E. g., parameters ``days=["Mon", "Wed"]`` and ``time=time(hour=12, minute=0)``
+    produce a behavior that will send a message every Monday and Wednesday at 12:00.
+
+    Parameters
+    --------------
+    days: ``list[Literal["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]]``
+        List of day abbreviations on which the message will be sent.
+    time: :class:`datetime.time`
+        The time on which the message will be sent (every day of ``days``).
+
+    Raises
+    -----------
+    ValueError
+        The ``days`` parameter was an empty list.
     """
-    def __init__(
+    _WEEK_DAYS = Literal["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+    WEEK_DAYS = tuple(get_args(_WEEK_DAYS))
+
+    def  __init__(
         self,
+        days: list[DaysOfWeekPeriod._WEEK_DAYS],
         time: time,
-        next_send_time: Union[datetime, timedelta]  = None
+        next_send_time: Union[datetime, timedelta] = None
     ) -> None:
+        if not days:
+            raise ValueError(f"'days' parameter must be a list of day literals {DaysOfWeekPeriod.WEEK_DAYS}.")
+        
         if time.tzinfo is None:
             time = time.replace(tzinfo=datetime.now().astimezone().tzinfo)
 
+        self.days = days
+        self._days_enum = tuple(set(DaysOfWeekPeriod.WEEK_DAYS.index(day) for day in days))
         self.time = time
         super().__init__(next_send_time)
-
-    def defer(self, dt: datetime):
-        self.next_send_time = dt
-        self.calculate()
 
     def calculate(self):
         # In case of deferral, the next_send_time will be greater,
@@ -166,21 +189,56 @@ class DailyPeriod(EveryXPeriod):
         now = max(datetime.now().astimezone(), self.next_send_time)
         now_time = now.timetz()
         self_time = self.time
-        if now_time >= self_time:
-            next_datetime = (now + timedelta(days=1))  # Go to next day
-        else:
-            next_datetime = now
 
+        if now_time > self_time:
+            # If current day already passed, assume the next day
+            # to prevent the current day from being selected again
+            now += timedelta(days=1)
+
+        # Find next possible day
+        now_weekday = now.weekday()
+        for day_i in self._days_enum:
+            if day_i >= now_weekday:
+                next_weekday = day_i
+                break
+        else:
+            next_weekday = self._days_enum[0]
+
+        # In case next_weekday is less than current weekday, add 7.
+        # Then do modulus in case it wasn't less.
+        offset = (next_weekday - now_weekday + 7) % 7
+
+        now += timedelta(days=offset)
         # Replace the hour of either today / next day and then calculate
         # the difference from current datetime
-        next_datetime = next_datetime.replace(
+        next_datetime = now.replace(
             hour=self_time.hour,
             minute=self_time.minute,
             second=self_time.second,
-            microsecond=self_time.microsecond + 100  # + 100 to prevent instant refire
+            microsecond=self_time.microsecond,
         )
         self.next_send_time = next_datetime
         return next_datetime
 
     def adjust(self, minimum: timedelta) -> None:
-        pass  # Slow-mode can be max 6 hours. EveryDayPeriod will be 24 hours.
+        # The minium between sends will always be 24 hours.
+        # Slow-mode minimum is maximum 6 hours, thus this is not needed.
+        pass
+
+
+class DailyPeriod(DaysOfWeekPeriod):
+    """
+    Represents a daily send period.
+    Messages will be sent every day at ``time``.
+
+    Parameters
+    --------------
+    The time on which the message will be sent.
+    """
+    def __init__(
+        self,
+        time: time,
+        next_send_time: Union[datetime, timedelta]  = None
+    ) -> None:
+        super().__init__(DaysOfWeekPeriod.WEEK_DAYS, time, next_send_time)
+
