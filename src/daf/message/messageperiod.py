@@ -4,6 +4,8 @@ from datetime import datetime, timedelta, time
 from abc import ABC, abstractmethod
 from random import randrange
 
+from ..misc.doc import doc_category
+
 
 __all__ = (
     "BaseMessagePeriod",
@@ -89,6 +91,7 @@ class EveryXPeriod(BaseMessagePeriod):
         self.calculate()
 
 
+@doc_category("Message period")
 class FixedDurationPeriod(DurationPeriod):
     """
     A fixed message (sending) period.
@@ -109,6 +112,7 @@ class FixedDurationPeriod(DurationPeriod):
         self.duration = max(minimum, self.duration)
 
 
+@doc_category("Message period")
 class RandomizedDurationPeriod(DurationPeriod):
     """
     A randomized message (sending) period.
@@ -144,6 +148,7 @@ class RandomizedDurationPeriod(DurationPeriod):
         self.minimum = minimum
 
 
+@doc_category("Message period")
 class DaysOfWeekPeriod(EveryXPeriod):
     """
     Represents a period that will send on ``days`` at specific ``time``.
@@ -226,6 +231,7 @@ class DaysOfWeekPeriod(EveryXPeriod):
         pass
 
 
+@doc_category("Message period")
 class DailyPeriod(DaysOfWeekPeriod):
     """
     Represents a daily send period.

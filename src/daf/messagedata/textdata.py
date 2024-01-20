@@ -1,6 +1,6 @@
-from typing import List, Optional, Callable, Any, Dict, Coroutine
+from typing import List, Optional, Callable, Any, Dict, Coroutine, Optional
 from dataclasses import dataclass, asdict, field
-from contextlib import suppress
+from datetime import timedelta, datetime
 
 from ..dtypes import FILE
 from .basedata import BaseMessageData
@@ -78,3 +78,58 @@ class DynamicTextMessageData(BaseTextData):
             trace("Error dynamically obtaining data", TraceLEVELS.ERROR, exc)
 
         return {}
+
+
+class CountdownTextMessageData(DynamicTextMessageData):
+    """
+    Dynamic text message data that counts down.
+    The countdown timer is added next to the original text message data.
+
+    Parameters
+    --------------
+    countdown: timedelta
+    static: Optional[TextMessageData]
+        Static data that is going to be send.
+    """
+    def __init__(self, delta: timedelta, static: Optional[TextMessageData] = None):
+        super().__init__(self._get_next_count)
+
+        if static is None:
+            static = TextMessageData()
+
+        self.delta = delta
+
+        if static.content is None:
+            static.content = ""  # Prevent unnecessary checks when obtaining
+
+        self.static = static
+
+        self._last_time = None
+        self._countdown_live = delta
+
+    async def _get_next_count(self):
+        static = await self.static.to_dict()
+        now_time = datetime.now()
+        if self._last_time is None:
+            self._last_time = now_time
+
+        self._countdown_live = max(self._countdown_live - (now_time - self._last_time), timedelta())
+        self._last_time = now_time
+        countdown = self._countdown_live
+        info = (
+            countdown.days,
+            countdown.seconds // 3600,
+            (countdown.seconds // 60) % 60,
+            countdown.seconds % 60
+        )
+        info_names = ("day", "hour", "minute", "second")
+        static["content"] += ' '.join(
+            f"{info[i]} {name + ('s' if info[i] != 1 else '')}"
+            for i, name in enumerate(info_names) if info[i]
+        )
+        if static["content"] != '':
+            static["content"] = '\n' + static["content"]
+        else:
+            static["content"] = None
+
+        return TextMessageData(**static)
