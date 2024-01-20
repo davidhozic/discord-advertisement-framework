@@ -137,7 +137,7 @@ class VoiceMESSAGE(BaseChannelMessage):
         data: Union[BaseVoiceData, _old_data_type] = None,
         channels: Union[Iterable[Union[int, discord.VoiceChannel]], AutoCHANNEL] = None,
         volume: Optional[int] = 50,
-        start_in: Optional[Union[timedelta, datetime]] = timedelta(seconds=0),
+        start_in: Optional[Union[timedelta, datetime]] = None,
         remove_after: Optional[Union[int, timedelta, datetime]] = None,
         period: BaseMessagePeriod = None
     ):
@@ -256,10 +256,10 @@ class VoiceMESSAGE(BaseChannelMessage):
 
         # Timeout handling
         elif member is not None and member.timed_out:
-            self.next_send_time = member.communication_disabled_until.astimezone() + timedelta(minutes=1)
+            self.period.defer(member.communication_disabled_until.astimezone() + timedelta(minutes=1))
             trace(
                 f"User '{member.name}' has been timed-out in guild '{guild.name}'.\n"
-                f"Retrying after {self.next_send_time} (1 minute after expiry)",
+                f"Retrying after {self.period.get()} (1 minute after expiry)",
                 TraceLEVELS.WARNING
             )
 

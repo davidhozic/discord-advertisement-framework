@@ -90,7 +90,6 @@ class BaseMESSAGE(ABC):
     """
     __slots__ = (
         "_id",
-        "next_send_time",
         "_data",
         "update_semaphore",
         "parent",
@@ -119,7 +118,7 @@ class BaseMESSAGE(ABC):
         # Due to compatibility when adding the new 'period' parameter, some parameters needed default
         # values. The default values are all None for those parameters.
         if (
-            start_period is None and end_period is None and period is None or
+            end_period is None and period is None or
             start_period is not None and end_period is None
         ):
             raise TypeError(f"{type(self).__name__} missing required parameter 'period'")
@@ -127,28 +126,44 @@ class BaseMESSAGE(ABC):
         if start_period is not None and start_period >= end_period:
             raise ValueError("'start_period' must be less than 'end_period'")
 
-        if start_period is not None or end_period is not None:
+        if end_period is not None:
             trace(
                 "'start_period' and 'end_period' are deprecated and will be removed in v4.1.0."
-                "\nUse 'period' instead.",
+                " Use 'period' instead.",
                 TraceLEVELS.DEPRECATED
             )
 
             if period is None:
-                if start_period is None:
-                    period = FixedDurationPeriod(end_period)
-                else:
-                    period = RandomizedDurationPeriod(start_period, end_period)
-            else:
-                trace("Ignoring 'start_period' / 'end_period' as period is given.", TraceLEVELS.DEPRECATED)
+                if start_in is not None:
+                    trace(
+                        f"'start_in' parameter is deprecated in {type(self).__name__}. "
+                        " Use the 'period' parameter to set both period and initial sending time.",
+                        TraceLEVELS.DEPRECATED
+                    )
+                    if isinstance(start_in, datetime):
+                        start_in = start_in.astimezone()
+                    else:
+                        start_in = datetime.now().astimezone() + start_in
 
-        if isinstance(start_in, datetime):
-            self.next_send_time = start_in.astimezone()
-        else:
-            self.next_send_time = datetime.now().astimezone() + start_in
+                if start_period is None:
+                    period = FixedDurationPeriod(end_period, start_in)
+                else:
+                    period = RandomizedDurationPeriod(start_period, end_period, start_in)
+            else:
+                raise TypeError(
+                    "Deprecated parameter 'start_period' / 'end_period' is given"
+                    " alongside the new'period' parameter."
+                    " DO NOT USE 'start_period' and 'end_period', they will be removed in the future."
+                )
+
+        elif start_in is not None:
+            raise TypeError(
+                "Deprecated parameter 'start_in' is given"
+                " alongside the new 'period' parameter."
+                " DO NOT USE 'start_in', it will be removed in the future."
+            )
 
         self.parent = None  # The xGUILD object this message is in (needed for update method).
-
         self._remove_after = remove_after
         self._data = data
         self.period = period
@@ -302,21 +317,13 @@ class BaseMESSAGE(ABC):
         """
         raise NotImplementedError
 
-    def _calc_next_time(self):
-        wait_for = self.period.get()
-        # Absolute timing instead of relative to prevent time slippage due to missed timer reset.
-        current_stamp = datetime.now().astimezone()
-        while self.next_send_time < current_stamp:
-            self.next_send_time += wait_for
-
     def _reset_timer(self) -> None:
         """
         Resets internal timer.
         """
-        self._calc_next_time()
         self._timer_handle = async_util.call_at(
             self._event_ctrl.emit,
-            self.next_send_time,
+            self.period.calculate(),
             EventID._trigger_message_ready, self.parent, self
         )
 
@@ -345,7 +352,7 @@ class BaseMESSAGE(ABC):
         self._event_ctrl = event_ctrl
         self._timer_handle = async_util.call_at(
             event_ctrl.emit,
-            self.next_send_time,
+            self.period.get(),
             EventID._trigger_message_ready, self.parent, self
         )
         self._event_ctrl.add_listener(
@@ -576,7 +583,7 @@ class BaseChannelMessage(BaseMESSAGE):
         end_period: Union[int, timedelta] = None,
         data: BaseMessageData = None,
         channels: Union[List[Union[int, ChannelType]], AutoCHANNEL] = None,
-        start_in: Optional[Union[timedelta, datetime]] = timedelta(seconds=0),
+        start_in: Optional[Union[timedelta, datetime]] = None,
         remove_after: Optional[Union[int, timedelta, datetime]] = None,
         period: BaseMessagePeriod = None
     ):
@@ -777,7 +784,7 @@ class BaseChannelMessage(BaseMESSAGE):
         await self._close()
         if "start_in" not in kwargs:
             # This parameter does not appear as attribute, manual setting necessary
-            kwargs["start_in"] = self.next_send_time
+            kwargs["start_in"] = self.period.get()
 
         if "start_period" not in kwargs:  # DEPRECATED, TODO: REMOVE IN FUTURE
             kwargs["start_period"] = None

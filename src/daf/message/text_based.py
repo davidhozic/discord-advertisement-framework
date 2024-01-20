@@ -137,7 +137,7 @@ class TextMESSAGE(BaseChannelMessage):
         data: Union[BaseTextData, _old_data_type] = None,
         channels: Union[Iterable[Union[int, discord.TextChannel, discord.Thread]], AutoCHANNEL] = None,
         mode: Literal["send", "edit", "clear-send"] = "send",
-        start_in: Union[timedelta, datetime] = timedelta(seconds=0),
+        start_in: Optional[Union[timedelta, datetime]] = None,
         remove_after: Optional[Union[int, timedelta, datetime]] = None,
         auto_publish: bool = False,
         period: BaseMessagePeriod = None
@@ -337,10 +337,9 @@ class TextMESSAGE(BaseChannelMessage):
                 guild = channel.guild
                 member = guild.get_member(self.parent.parent.client.user.id)
                 if member is not None and member.timed_out:
-                    self.next_send_time = member.communication_disabled_until.astimezone() + timedelta(minutes=1)
+                    self.period.defer(member.communication_disabled_until.astimezone() + timedelta(minutes=1))
                     trace(
-                        f"User '{member.name}' has been timed-out in guild '{guild.name}'.\n"
-                        f"Retrying after {self.next_send_time} (1 minute after expiry)",
+                        f"User '{member.name}' has been timed-out in guild '{guild.name}'.\n",
                         TraceLEVELS.WARNING
                     )
                     # Prevent channel removal by the cleanup process
@@ -349,10 +348,12 @@ class TextMESSAGE(BaseChannelMessage):
                     action = ChannelErrorAction.SKIP_CHANNELS  # Don't try to send to other channels as it would yield the same result.
 
             elif ex.status == 429:  # Rate limit
-                retry_after = int(ex.response.headers["Retry-After"]) + 5
                 if ex.code == 20016:    # Slow Mode
-                    self.next_send_time = datetime.now().astimezone() + timedelta(seconds=retry_after)
-                    trace(f"{channel.name} is in slow mode, retrying in {retry_after} seconds", TraceLEVELS.WARNING)
+                    self.period.defer(
+                        datetime.now().astimezone() +
+                        timedelta(seconds=int(ex.response.headers["Retry-After"]) + 5)
+                    )
+                    trace(f"{channel.name} is in slow mode. Retrying on {self.period.get()}", TraceLEVELS.WARNING)
                     self._check_period()  # Fix the period
 
             elif ex.status == 404:      # Unknown object
@@ -554,7 +555,7 @@ class DirectMESSAGE(BaseMESSAGE):
         end_period: Union[int, timedelta] = None,
         data: Union[BaseTextData, _old_data_type] = None,
         mode: Optional[Literal["send", "edit", "clear-send"]] = "send",
-        start_in: Optional[Union[timedelta, datetime]] = timedelta(seconds=0),
+        start_in: Optional[Union[timedelta, datetime]] = None,
         remove_after: Optional[Union[int, timedelta, datetime]] = None,
         period: BaseMessagePeriod = None
     ):
@@ -784,7 +785,7 @@ class DirectMESSAGE(BaseMESSAGE):
         await self._close()
         if "start_in" not in kwargs:
             # This parameter does not appear as attribute, manual setting necessary
-            kwargs["start_in"] = self.next_send_time
+            kwargs["start_in"] = self.period.get()
 
         if "start_period" not in kwargs:  # DEPRECATED, TODO: REMOVE IN FUTURE
             kwargs["start_period"] = None

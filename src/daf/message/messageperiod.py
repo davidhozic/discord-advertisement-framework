@@ -1,6 +1,7 @@
-from abc import ABC, abstractmethod
 from datetime import datetime, timedelta, time
+from abc import ABC, abstractmethod
 from random import randrange
+from typing import Union
 
 
 __all__ = (
@@ -15,12 +16,34 @@ __all__ = (
 
 class BaseMessagePeriod(ABC):
     """
-    Interface for implementing message periods.
+    Base for implementing message periods.
     Subclasses can be passed to ``xMESSAGE``'s ``period`` parameter.
     """
+    def __init__(self, next_send_time: Union[datetime, timedelta]) -> None:
+        if next_send_time is None:
+            next_send_time = datetime.now()
+        elif isinstance(next_send_time, timedelta):
+            next_send_time = datetime.now() + next_send_time
+
+        self.next_send_time: datetime = next_send_time.astimezone()
+        self.calculate()  # Correct the next time to confirm with the period type
+
     @abstractmethod
-    def get(self) -> timedelta:
-        "Returns the message (sendoing) period."
+    def defer(self, dt: datetime):
+        """
+        Defers advertising until ``dt``
+        This should be used for overriding the normal next datetime
+        the message was supposed to be sent on.
+        """
+        pass
+
+    def get(self) -> datetime:
+        "Returns the next datetime the message is going to be sent."
+        return self.next_send_time
+
+    @abstractmethod
+    def calculate(self) -> datetime:
+        "Calculates the next datetime the message is going to be sent."
         pass
 
     @abstractmethod
@@ -33,14 +56,29 @@ class BaseMessagePeriod(ABC):
 
 class DurationPeriod(BaseMessagePeriod):
     """
-    Interface for duration-like message periods.
-    """
-    pass
+    Base for duration-like message periods.
+    """    
+    @abstractmethod
+    def _get_period(self) -> timedelta:
+        "Get's the calculated relative period (offset) from previous scheduled time."
+        pass
+
+    def defer(self, dt: datetime):
+        while (self.next_send_time) < dt:
+            self.calculate()
+
+    def calculate(self):
+        current_stamp = datetime.now().astimezone()
+        duration = self._get_period()
+        while self.next_send_time < current_stamp:
+            self.next_send_time += duration
+
+        return self.next_send_time
 
 
 class EveryXPeriod(BaseMessagePeriod):
     """
-    Interface for every-x-like message periods.
+    Base for every-x-like message periods.
     The X can be Day, Month, Year, ...
     """
     pass
@@ -55,12 +93,13 @@ class FixedDurationPeriod(DurationPeriod):
     duration: timedelta
         The period duration (how much time to wait after every send).
     """
-    def __init__(self, duration: timedelta) -> None:
+    def __init__(self, duration: timedelta, next_send_time: Union[datetime, timedelta]  = None) -> None:
         self.duration = duration
+        super().__init__(next_send_time)
 
-    def get(self):
+    def _get_period(self):
         return self.duration
-    
+
     def adjust(self, minimum: timedelta) -> None:
         self.duration = max(minimum, self.duration)
 
@@ -78,12 +117,19 @@ class RandomizedDurationPeriod(DurationPeriod):
     maximum: timedelta
         Upper limit of the randomized period.
     """
-    def __init__(self, minimum: timedelta, maximum: timedelta) -> None:
+    def __init__(
+        self,
+        minimum: timedelta,
+        maximum: timedelta,
+        next_send_time: Union[datetime, timedelta]  = None
+    ) -> None:
         self.minimum = minimum
         self.maximum = maximum
+        super().__init__(next_send_time)
+
     
-    def get(self):
-        return timedelta(seconds=randrange(*self.minimum.total_seconds(), self.maximum.total_seconds()))
+    def _get_period(self):
+        return timedelta(seconds=randrange(self.minimum.total_seconds(), self.maximum.total_seconds()))
 
     def adjust(self, minimum: timedelta) -> None:
         if self.minimum >= minimum:
@@ -98,14 +144,25 @@ class DailyPeriod(EveryXPeriod):
     Represents a daily send period.
     Messages will be sent every day at ``time``.
     """
-    def __init__(self, time: time) -> None:
+    def __init__(
+        self,
+        time: time,
+        next_send_time: Union[datetime, timedelta]  = None
+    ) -> None:
         if time.tzinfo is None:
             time = time.replace(tzinfo=datetime.now().astimezone().tzinfo)
 
         self.time = time
-    
-    def get(self) -> timedelta:
-        now = datetime.now().astimezone()
+        super().__init__(next_send_time)
+
+    def defer(self, dt: datetime):
+        self.next_send_time = dt
+        self.calculate()
+
+    def calculate(self):
+        # In case of deferral, the next_send_time will be greater,
+        # thus next send time should be relative to that instead of now.
+        now = max(datetime.now().astimezone(), self.next_send_time)
         now_time = now.timetz()
         self_time = self.time
         if now_time >= self_time:
@@ -115,14 +172,14 @@ class DailyPeriod(EveryXPeriod):
 
         # Replace the hour of either today / next day and then calculate
         # the difference from current datetime
-        delta = next_datetime.replace(
+        next_datetime = next_datetime.replace(
             hour=self_time.hour,
             minute=self_time.minute,
             second=self_time.second,
-            microsecond=self_time.microsecond
-        ) - now
-
-        return delta
+            microsecond=self_time.microsecond + 100  # + 100 to prevent instant refire
+        )
+        self.next_send_time = next_datetime
+        return next_datetime
 
     def adjust(self, minimum: timedelta) -> None:
         pass  # Slow-mode can be max 6 hours. EveryDayPeriod will be 24 hours.
