@@ -204,13 +204,14 @@ class BaseMESSAGE(ABC):
     def __deepcopy__(self, *args):
         "Duplicates the object (for use in AutoGUILD)"
         new = copy.copy(self)
+        new.parent = None  # Prevent loops and pickling issues
         for slot in attributes.get_all_slots(type(self)):
-            self_val = getattr(self, slot)
+            self_val = getattr(new, slot)
             if isinstance(self_val, (asyncio.Semaphore, asyncio.Lock)):
                 # Hack to copy semaphores since not all of it can be copied directly
                 copied = type(self_val)(self_val._value)
             else:
-                copied = copy.deepcopy((self_val))
+                copied = copy.deepcopy(self_val)
 
             setattr(new, slot, copied)
 
@@ -784,7 +785,7 @@ class BaseChannelMessage(BaseMESSAGE):
         await self._close()
         if "start_in" not in kwargs:
             # This parameter does not appear as attribute, manual setting necessary
-            kwargs["start_in"] = self.period.get()
+            kwargs["start_in"] = None
 
         if "start_period" not in kwargs:  # DEPRECATED, TODO: REMOVE IN FUTURE
             kwargs["start_period"] = None

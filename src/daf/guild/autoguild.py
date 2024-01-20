@@ -226,10 +226,10 @@ class AutoGUILD:
             Raised from message.initialize() method.
         """
         message._update_tracked_id(False)  # Don't allow remote operations, but still track
+        message.parent = self  # Since it won't be "initialized", set parent here
         duplicator = MessageDuplicator(message)
         self._messages.append(duplicator)
         return asyncio.gather(*(g.add_message(duplicator.duplicate()) for g in self._cache))
-
 
     @typechecked
     def remove_message(self, message: BaseChannelMessage) -> asyncio.Future:

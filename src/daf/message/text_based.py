@@ -785,7 +785,7 @@ class DirectMESSAGE(BaseMESSAGE):
         await self._close()
         if "start_in" not in kwargs:
             # This parameter does not appear as attribute, manual setting necessary
-            kwargs["start_in"] = self.period.get()
+            kwargs["start_in"] = None
 
         if "start_period" not in kwargs:  # DEPRECATED, TODO: REMOVE IN FUTURE
             kwargs["start_period"] = None

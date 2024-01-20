@@ -192,25 +192,29 @@ def register_conv_guild():
 
 
 def register_conv_message():
-    def get_start_in(message: daf.BaseMESSAGE):
+    def get_period(message: daf.BaseMESSAGE):
         if isinstance(message.parent, daf.AutoGUILD):
             # Convert the start_in to the highest possible next_send_time
             # of any message copies inside AutoGUILD
             ag = message.parent
-            max_next_send = datetime.now()
+            max_next_send = datetime.now().astimezone().replace(year=1970)
+            max_period_obj = None
             m: daf.BaseMESSAGE
             for guild in ag.guilds:
                 for m in guild.messages:
                     if message == m and (period := m.period.get()) > max_next_send:
                         max_next_send = period
+                        max_period_obj = m.period
+
+            return max_period_obj
 
         # Not in AutoGUILD => Initialized, next_send_time should be start_in
-        return message.period.get()
+        return message.period
 
     for item in {daf.TextMESSAGE, daf.VoiceMESSAGE, daf.DirectMESSAGE}:
         m = {k: k for k in item.__init__.__annotations__}
         m["data"] = "_data"
-        m["start_in"] = get_start_in
+        m["period"] = get_period
         register_object_objectinfo_rule(item, m)
 
     channels = lambda message_: (
