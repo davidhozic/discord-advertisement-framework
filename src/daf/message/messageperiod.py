@@ -25,8 +25,9 @@ class BaseMessagePeriod(ABC):
         elif isinstance(next_send_time, timedelta):
             next_send_time = datetime.now() + next_send_time
 
-        self.next_send_time: datetime = next_send_time.astimezone()
-        self.calculate()  # Correct the next time to confirm with the period type
+        next_send_time = next_send_time.astimezone()
+        self.next_send_time: datetime = next_send_time
+        self.defer(next_send_time)  # Correct the next time to confirm with the period type
 
     @abstractmethod
     def defer(self, dt: datetime):
