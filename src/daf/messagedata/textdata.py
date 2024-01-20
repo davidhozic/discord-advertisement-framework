@@ -123,13 +123,13 @@ class CountdownTextMessageData(DynamicTextMessageData):
             countdown.seconds % 60
         )
         info_names = ("day", "hour", "minute", "second")
-        static["content"] += ' '.join(
+        time_str = ' '.join(
             f"{info[i]} {name + ('s' if info[i] != 1 else '')}"
             for i, name in enumerate(info_names) if info[i]
         )
-        if static["content"] != '':
-            static["content"] = '\n' + static["content"]
-        else:
-            static["content"] = None
 
+        if not time_str:
+            time_str = "0 seconds"
+
+        static["content"] = static["content"] + "\n\n" + time_str
         return TextMessageData(**static)
