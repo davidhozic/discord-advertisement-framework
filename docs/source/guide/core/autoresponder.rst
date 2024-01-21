@@ -126,7 +126,7 @@ Both responders accept the following parameters:
       :icon: x
 
       Represents a logical *AND* operation.
-      :class:`~daf.responder.logic.and_` evaluates to true when all of the operants inside evaluate to true.
+      :class:`~daf.responder.logic.and_` evaluates to true when all of the operands inside evaluate to true.
       
       For example, if we write:
 
@@ -146,7 +146,7 @@ Both responders accept the following parameters:
       :icon: plus
 
       Represents a logical *OR* operation.
-      :class:`~daf.responder.logic.or_` evaluates to true when any of the operants inside evaluate to true.
+      :class:`~daf.responder.logic.or_` evaluates to true when any of the operands inside evaluate to true.
 
       For example, if we write:
 
@@ -166,8 +166,8 @@ Both responders accept the following parameters:
       :icon: horizontal-rule
 
       Represents a logical *NOT* operation.
-      :class:`~daf.responder.logic.not_` accepts a single operant and evaluates to true when that operant is false.
-      Basically, it negates the operant.
+      :class:`~daf.responder.logic.not_` accepts a single operand and evaluates to true when that operand is false.
+      Basically, it negates the operand.
 
       For example, if we write:
 

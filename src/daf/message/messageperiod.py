@@ -18,6 +18,7 @@ __all__ = (
 )
 
 
+@doc_category("Message period")
 class BaseMessagePeriod(ABC):
     """
     Base for implementing message periods.
@@ -59,6 +60,7 @@ class BaseMessagePeriod(ABC):
         pass
 
 
+@doc_category("Message period")
 class DurationPeriod(BaseMessagePeriod):
     """
     Base for duration-like message periods.
@@ -80,7 +82,7 @@ class DurationPeriod(BaseMessagePeriod):
 
         return self.next_send_time
 
-
+@doc_category("Message period")
 class EveryXPeriod(BaseMessagePeriod):
     """
     Base for every-x-like message periods.

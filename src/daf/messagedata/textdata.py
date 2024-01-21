@@ -10,7 +10,7 @@ from ..logging.tracing import trace, TraceLEVELS
 import _discord as discord
 
 
-__all__ = ("BaseTextData", "TextMessageData", "DynamicTextMessageData")
+__all__ = ("BaseTextData", "TextMessageData", "DynamicTextMessageData", "CountdownTextMessageData")
 
 
 @doc_category("Message data", path="messagedata")
@@ -80,6 +80,7 @@ class DynamicTextMessageData(BaseTextData):
         return {}
 
 
+@doc_category("Message data", path="messagedata")
 class CountdownTextMessageData(DynamicTextMessageData):
     """
     Dynamic text message data that counts down.

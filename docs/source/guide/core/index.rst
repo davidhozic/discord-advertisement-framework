@@ -7,8 +7,8 @@ words, running it directly by Python and providing all the required information 
 
 .. toctree::
 
-    quickstart
-    messages
+    control
+    shilldefine
     logging
     autogen
     autoresponder

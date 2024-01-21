@@ -1,6 +1,6 @@
-=======================
-Automatic generation
-=======================
+============================
+Automatic Generation (core)
+============================
 This documents describes mechanisms that can be used to automatically generate objects.
 
 ---------------------------

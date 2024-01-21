@@ -38,15 +38,15 @@ class BooleanLogic(BaseLogic):
     Parameters
     -------------
     args: Unpack[BaseLogic]
-        Arbitrary number of operants (either logic boolean or text operants).
+        Arbitrary number of operands (either logic boolean or text operands).
     """
     @typechecked
     def __init__(
         self,
         *args,
-        operants: List[BaseLogic] = [],
+        operands: List[BaseLogic] = [],
     ) -> None:
-        self.operants = [*operants, *args]
+        self.operands = [*operands, *args]
 
 
 @doc_category("Auto responder")
@@ -57,11 +57,11 @@ class and_(BooleanLogic):
     Parameters
     -------------
     args: Unpack[BaseLogic]
-        Arbitrary number of operants (either logic boolean or text operants).
+        Arbitrary number of operands (either logic boolean or text operands).
     """
 
     def check(self, input: str):
-        for op in self.operants:
+        for op in self.operands:
             if isinstance(op, BaseLogic):
                 check = op.check(input)
             else:
@@ -81,10 +81,10 @@ class or_(BooleanLogic):
     Parameters
     -------------
     args: Unpack[BaseLogic]
-        Arbitrary number of operants (either logic boolean or text operants).
+        Arbitrary number of operands (either logic boolean or text operands).
     """
     def check(self, input: str):
-        for op in self.operants:
+        for op in self.operands:
             if isinstance(op, BaseLogic):
                 check = op.check(input)
             else:
@@ -103,15 +103,15 @@ class not_(BooleanLogic):
 
     Parameters
     -------------
-    operant: BaseLogic
-        A single operant to negate.
+    operand: BaseLogic
+        A single operand to negate.
     """
 
-    def __init__(self, operant: BaseLogic) -> None:
-        super().__init__(operant)
+    def __init__(self, operand: BaseLogic) -> None:
+        super().__init__(operand)
 
     def check(self, input: str):
-        op = self.operants[0]
+        op = self.operands[0]
         if isinstance(op, BaseLogic):
             return not op.check(input)
 
