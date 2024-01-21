@@ -85,9 +85,14 @@ class CountdownTextMessageData(DynamicTextMessageData):
     Dynamic text message data that counts down.
     The countdown timer is added next to the original text message data.
 
+    **NOTE** - This should only be used on xMESSAGE objects. Using it on an automatic responder will NOT
+    produce a continuous timer output but rather a single message per each response, where each response
+    will send the current countdown value.
+
     Parameters
     --------------
-    countdown: timedelta
+    delta: timedelta
+        The countdown's initial value.
     static: Optional[TextMessageData]
         Static data that is going to be send.
     """
@@ -123,13 +128,15 @@ class CountdownTextMessageData(DynamicTextMessageData):
             countdown.seconds % 60
         )
         info_names = ("day", "hour", "minute", "second")
+        first_non_zero = 3
+        for i, num in enumerate(info):
+            if num != 0:
+                first_non_zero = i
+                break
+
         time_str = ' '.join(
-            f"{info[i]} {name + ('s' if info[i] != 1 else '')}"
-            for i, name in enumerate(info_names) if info[i]
+            f"{info[i]} {info_names[i] + ('s' if info[i] != 1 else '')}"
+            for i in range(first_non_zero, len(info))
         )
-
-        if not time_str:
-            time_str = "0 seconds"
-
         static["content"] = static["content"] + "\n\n" + time_str
         return TextMessageData(**static)
