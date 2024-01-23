@@ -368,7 +368,7 @@ class TextMESSAGE(BaseChannelMessage):
                 action = ChannelErrorAction.REMOVE_ACCOUNT
 
         return handled, action
- 
+
     def _verify_data(self, data: dict) -> bool:
         return super()._verify_data(TextMessageData, data)
 
@@ -772,9 +772,7 @@ class DirectMESSAGE(BaseMESSAGE):
         """
         # Parse data from the data parameter
         data_to_send = await self._data.to_dict()
-
-        BaseChannelMessage._verify_data()
-        if any(data_to_send.values()):
+        if self._verify_data(data_to_send):
             channel_ctx = await self._send_channel(**data_to_send)
             self._update_state()
             if channel_ctx["success"] is False:

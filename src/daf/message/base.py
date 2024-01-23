@@ -3,7 +3,7 @@
 """
 from typing import Any, Set, List, Union, TypeVar, Optional, Dict, Callable, get_type_hints
 from datetime import timedelta, datetime
-from abc import ABC, abstractstaticmethod, abstractmethod
+from abc import ABC, abstractmethod
 from typeguard import typechecked
 from functools import partial
 from enum import Enum, auto
@@ -328,8 +328,8 @@ class BaseMESSAGE(ABC):
             EventID._trigger_message_ready, self.parent, self
         )
 
-    @abstractstaticmethod
-    def _verify_data(type_: type[BaseMessageData], data: dict) -> bool:
+    @abstractmethod
+    def _verify_data(self, type_: type[BaseMessageData], data: dict) -> bool:
         """
         Verifies is the data is valid. Returns True on successful verification.
 
@@ -344,7 +344,7 @@ class BaseMESSAGE(ABC):
             The data being checked.
         """
         hints = get_type_hints(type_)
-        if len(data) != len(hints):
+        if data is None or len(data) != len(hints):
             return False
 
         for k in hints:
