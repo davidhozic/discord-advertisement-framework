@@ -2,10 +2,13 @@ from typing import Coroutine
 from abc import abstractmethod
 
 from .basedata import BaseMessageData
-from .textdata import BaseTextData
-from .voicedata import BaseVoiceData
+from .textdata import BaseTextData, TextMessageData
+from .voicedata import BaseVoiceData, VoiceMessageData
 from ..misc.doc import doc_category
 from ..logging.tracing import trace, TraceLEVELS
+
+from ..dtypes import FILE
+from _discord import Embed
 
 
 __all__ = ("DynamicMessageData",)
@@ -61,7 +64,40 @@ class DynamicMessageData(BaseTextData, BaseVoiceData):
                 result = await result
     
             if result is not None:
-                return await result.to_dict()
+                if isinstance(result, BaseMessageData):
+                    return await result.to_dict()
+                else:
+                    ########################################################
+                    # DEPRECATED, compatibility only code! TODO: remove!
+                    if not isinstance(result, (list, tuple, set)):
+                        result = [result]
+
+                    items = [str, Embed, FILE]  # Order to solve the ambiguous case
+                    result = sorted(result, key=lambda x: items.index(type(x)))
+                    print(result)
+
+                    audio_data = dict(file=None)
+                    text_data = dict(content=None, embed=None, files=[])
+                    for item in result:
+                        if isinstance(item, str):
+                            text_data["content"] = item
+                        elif isinstance(item, Embed):
+                            text_data["embed"] = item
+                        elif isinstance(item, FILE):
+                            # A bit ambiguous, assume (because of above ordering)
+                            # text message if content or embed given, otherwise audio
+                            if text_data["content"] or text_data["embed"]:
+                                text_data["files"].append(item)
+                            else:
+                                audio_data["file"] = item
+                                break
+
+                    if text_data:
+                        return await TextMessageData(**text_data).to_dict()
+                    if audio_data:
+                        return await VoiceMessageData(**audio_data).to_dict()
+                    ########################################################
+
         except Exception as exc:
             trace("Error dynamically obtaining data", TraceLEVELS.ERROR, exc)
 
