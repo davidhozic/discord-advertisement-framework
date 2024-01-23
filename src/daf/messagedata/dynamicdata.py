@@ -87,9 +87,9 @@ class DynamicMessageData(BaseTextData, BaseVoiceData):
                             else:
                                 text_data["files"].append(item)
 
-                    if all(text_data.values()):
+                    if any(text_data.values()):
                         return await TextMessageData(**text_data).to_dict()
-                    if all(audio_data.values()):
+                    if any(audio_data.values()):
                         return await VoiceMessageData(**audio_data).to_dict()
                     ########################################################
 

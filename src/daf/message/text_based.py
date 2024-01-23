@@ -720,6 +720,9 @@ class DirectMESSAGE(BaseMESSAGE):
 
         return handled
 
+    def _verify_data(self, data: dict) -> bool:
+        return super()._verify_data(TextMessageData, data)
+
     async def _send_channel(self,
                             content: Optional[str],
                             embed: Optional[discord.Embed],
@@ -769,6 +772,8 @@ class DirectMESSAGE(BaseMESSAGE):
         """
         # Parse data from the data parameter
         data_to_send = await self._data.to_dict()
+
+        BaseChannelMessage._verify_data()
         if any(data_to_send.values()):
             channel_ctx = await self._send_channel(**data_to_send)
             self._update_state()

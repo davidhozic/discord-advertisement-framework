@@ -3,7 +3,7 @@
 """
 from typing import Any, Set, List, Union, TypeVar, Optional, Dict, Callable, get_type_hints
 from datetime import timedelta, datetime
-from abc import ABC, abstractmethod
+from abc import ABC, abstractstaticmethod, abstractmethod
 from typeguard import typechecked
 from functools import partial
 from enum import Enum, auto
@@ -327,6 +327,31 @@ class BaseMESSAGE(ABC):
             self.period.calculate(),
             EventID._trigger_message_ready, self.parent, self
         )
+
+    @abstractstaticmethod
+    def _verify_data(type_: type[BaseMessageData], data: dict) -> bool:
+        """
+        Verifies is the data is valid. Returns True on successful verification.
+
+        This needs to be subclassed and the subclass's method needs relay the call to this
+        method, providing the type.
+
+        Parameters
+        ------------
+        type_: type[BaseMessageData]
+            The class representing the message data.
+        data: dict
+            The data being checked.
+        """
+        hints = get_type_hints(type_)
+        if len(data) != len(hints):
+            return False
+
+        for k in hints:
+            if k not in data:
+                return False
+
+        return True
 
     @abstractmethod
     async def _send_channel(self) -> dict:
@@ -745,31 +770,6 @@ class BaseChannelMessage(BaseMESSAGE):
 
         self.parent = parent
         return await super().initialize(event_ctrl)
-
-    @abstractmethod
-    def _verify_data(self, type_: type[BaseMessageData], data: dict) -> bool:
-        """
-        Verifies is the data is valid. Returns True on successful verification.
-
-        This needs to be subclassed and the subclass's method needs relay the call to this
-        method, providing the type.
-
-        Parameters
-        ------------
-        type_: type[BaseMessageData]
-            The class representing the message data.
-        data: dict
-            The data being checked.
-        """
-        hints = get_type_hints(type_)
-        if len(data) != len(hints):
-            return False
-
-        for k in hints:
-            if k not in data:
-                return False
-
-        return True
 
     @async_util.with_semaphore("update_semaphore")
     async def _send(self):
