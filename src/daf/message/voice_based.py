@@ -7,7 +7,7 @@ from datetime import timedelta, datetime
 from typeguard import typechecked
 from pathlib import Path
 
-from ..messagedata import BaseVoiceData, VoiceMessageData, DynamicVoiceMessageData
+from ..messagedata import BaseVoiceData, VoiceMessageData, DynamicMessageData
 from ..misc import doc, instance_track
 from ..logging import sql
 from .. import dtypes
@@ -154,7 +154,7 @@ class VoiceMESSAGE(BaseChannelMessage):
             )
             # Transform to new data type            
             if isinstance(data, _FunctionBaseCLASS):
-                data = DynamicVoiceMessageData(data.fnc, *data.args, **data.kwargs)
+                data = DynamicMessageData(data.fnc, *data.args, **data.kwargs)
             else:
                 if isinstance(data, FILE):
                     data = [data]
@@ -286,6 +286,9 @@ class VoiceMESSAGE(BaseChannelMessage):
             The GUILD this message is in
         """
         return super().initialize(parent, event_ctrl, channel_getter)
+
+    def _verify_data(self, data: dict) -> bool:
+        return super()._verify_data(VoiceMessageData, data)
 
     async def _send_channel(self,
                             channel: discord.VoiceChannel,

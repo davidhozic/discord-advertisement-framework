@@ -28,8 +28,8 @@ The logging module is responsible for 2 types of logging:
     Invite link tracking is **bot account** only and does not work on user accounts.
 
 
-Logging can be enabled for each :class:`~daf.guild.GUILD` / :class:`~daf.guild.USER` if the ``logging`` parameter is
-set to ``True``.
+Logging can be enabled for each :class:`~daf.guild.GUILD` / :class:`~daf.guild.USER` / :class:`~daf.guild.AutoGUILD`
+if the ``logging`` parameter is set to ``True``.
 
 .. note:: 
     

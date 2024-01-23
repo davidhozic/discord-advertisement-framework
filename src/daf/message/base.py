@@ -1,7 +1,7 @@
 """
     Contains base definitions for different message classes.
 """
-from typing import Any, Set, List, Union, TypeVar, Optional, Dict, Callable
+from typing import Any, Set, List, Union, TypeVar, Optional, Dict, Callable, get_type_hints
 from datetime import timedelta, datetime
 from abc import ABC, abstractmethod
 from typeguard import typechecked
@@ -746,6 +746,31 @@ class BaseChannelMessage(BaseMESSAGE):
         self.parent = parent
         return await super().initialize(event_ctrl)
 
+    @abstractmethod
+    def _verify_data(self, type_: type[BaseMessageData], data: dict) -> bool:
+        """
+        Verifies is the data is valid. Returns True on successful verification.
+
+        This needs to be subclassed and the subclass's method needs relay the call to this
+        method, providing the type.
+
+        Parameters
+        ------------
+        type_: type[BaseMessageData]
+            The class representing the message data.
+        data: dict
+            The data being checked.
+        """
+        hints = get_type_hints(type_)
+        if len(data) != len(hints):
+            return False
+
+        for k, v in hints.items():
+            if v != type(data[k]):
+                return False
+            
+        return True
+
     @async_util.with_semaphore("update_semaphore")
     async def _send(self):
         """
@@ -753,7 +778,7 @@ class BaseChannelMessage(BaseMESSAGE):
         """
         # Acquire mutex to prevent update method from writing while sending
         data_to_send = await self._data.to_dict()
-        if any(data_to_send.values()):  # There is data to be send
+        if self._verify_data(data_to_send):  # There is data to be send
             errored_channels = []
             succeeded_channels = []
 

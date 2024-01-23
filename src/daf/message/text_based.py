@@ -1,11 +1,12 @@
 """
 Contains definitions for message classes that are text based."""
 
-from typing import Any, Dict, List, Iterable, Optional, Union, Literal, Tuple, Callable
+from typing import Any, Dict, List, Iterable, Optional, Union, Literal, Tuple, Callable, get_type_hints
 from datetime import datetime, timedelta
 from typeguard import typechecked
 
-from ..messagedata import BaseTextData, TextMessageData, DynamicTextMessageData
+from ..messagedata import BaseTextData, TextMessageData
+from ..messagedata import DynamicMessageData
 from ..logging.tracing import trace, TraceLEVELS
 from .messageperiod import *
 from ..dtypes import *
@@ -150,7 +151,7 @@ class TextMESSAGE(BaseChannelMessage):
             )
             # Transform to new data type            
             if isinstance(data, _FunctionBaseCLASS):
-                data = DynamicTextMessageData(data.fnc, *data.args, **data.kwargs)
+                data = DynamicMessageData(data.fnc, *data.args, **data.kwargs)
             elif data is not None:
                 if isinstance(data, (str, discord.Embed, FILE)):
                     data = [data]
@@ -365,6 +366,9 @@ class TextMESSAGE(BaseChannelMessage):
                 action = ChannelErrorAction.REMOVE_ACCOUNT
 
         return handled, action
+ 
+    def _verify_data(self, data: dict) -> bool:
+        return super()._verify_data(TextMessageData, data)
 
     async def _send_channel(
         self,
@@ -568,7 +572,7 @@ class DirectMESSAGE(BaseMESSAGE):
             )
             # Transform to new data type            
             if isinstance(data, _FunctionBaseCLASS):
-                data = DynamicTextMessageData(data.fnc, *data.args, *data.kwargs)
+                data = DynamicMessageData(data.fnc, *data.args, *data.kwargs)
             elif data is not None:
                 if isinstance(data, (str, discord.Embed, FILE)):
                     data = [data]

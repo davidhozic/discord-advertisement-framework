@@ -127,6 +127,11 @@ class RandomizedDurationPeriod(DurationPeriod):
         Bottom limit of the randomized period.
     maximum: timedelta
         Upper limit of the randomized period.
+    next_send_time: datetime | timedelta
+        Represents the time at which the message should first be sent.
+        Use ``datetime`` to specify the exact date and time at which the message should start being sent.
+        Use ``timedelta`` to specify how soon (after creation of the object) the message
+        should start being sent.
     """
     def __init__(
         self,

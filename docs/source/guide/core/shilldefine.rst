@@ -161,21 +161,16 @@ The only way it differs from the two channel message types, is that it doesn't h
 Now let's describe some parameters.
 The most important parameters inside :class:`daf.message.TextMESSAGE` are:
 
-- ``data``: Any object inherited from :class:`daf.messagedata.BaseTextData` class.
+- ``data``: A :class:`~daf.messagedata.TextMessageData` object or
+  a :class:`~daf.messagedata.DynamicMessageData` (Dynamically obtained data) inherited object.
   It represents the data that will be sent into our text channels.
-  It can be one of the following types:
-
-  - :class:`~daf.messagedata.TextMessageData`:  Fixed data.
-  - :class:`~daf.messagedata.DynamicTextMessageData`: Dynamically obtained data.
-  - :class:`~daf.messagedata.CountdownTextMessageData`: Fixed data + a countdown.
 
 - ``channels``: A list of integers or a single :class:`~daf.message.AutoCHANNEL` object. The integers
   inside a list represents channel snowflake IDs. Obtaining the IDs is the same as for
   :ref:`guilds <Definition of servers / guilds (core)>`.
   See :ref:`Automatic Generation (core)` for information about :class:`~daf.message.AutoCHANNEL`.
 
-- ``period``: Any object inherited from :class:`daf.message.messageperiod.BaseMessagePeriod`.
-  It represents the time period at which messages will be periodically sent.
+- ``period``: It represents the time period at which messages will be periodically sent.
   It can be one of the following types:
 
   - :class:`~daf.message.messageperiod.FixedDurationPeriod`: A fixed time period.
@@ -231,7 +226,7 @@ Similarly to text messages, voice messages can be defined with :class:`daf.messa
 Definition is very similar to :class:`daf.message.TextMESSAGE`. The only thing that differs from the above
 example is the ``data`` parameter. That parameter is with :class:`~daf.message.VoiceMESSAGE` of type
 :class:`~daf.messagedata.VoiceMessageData` (Fixed data) or
-:class:`~daf.messagedata.DynamicVoiceMessageData` (Dynamically obtained data).
+:class:`~daf.messagedata.DynamicMessageData` (Dynamically obtained data).
 Additionally, it contains a ``volume`` parameter.
 
 
