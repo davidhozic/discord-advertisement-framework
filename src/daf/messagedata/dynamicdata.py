@@ -66,3 +66,14 @@ class DynamicMessageData(BaseTextData, BaseVoiceData):
             trace("Error dynamically obtaining data", TraceLEVELS.ERROR, exc)
 
         return {}
+
+
+
+class _DeprecatedDynamic(DynamicMessageData):
+    def __init__(self, fnc, *args, **kwargs) -> None:
+        self.args = args
+        self.kwargs = kwargs
+        self.fnc = fnc
+    
+    def get_data(self):
+        return self.fnc(*self.args, **self.kwargs)

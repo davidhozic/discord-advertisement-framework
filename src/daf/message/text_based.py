@@ -5,8 +5,10 @@ from typing import Any, Dict, List, Iterable, Optional, Union, Literal, Tuple, C
 from datetime import datetime, timedelta
 from typeguard import typechecked
 
+
+from ..messagedata.dynamicdata import _DeprecatedDynamic
+
 from ..messagedata import BaseTextData, TextMessageData
-from ..messagedata import DynamicMessageData
 from ..logging.tracing import trace, TraceLEVELS
 from .messageperiod import *
 from ..dtypes import *
@@ -151,7 +153,7 @@ class TextMESSAGE(BaseChannelMessage):
             )
             # Transform to new data type            
             if isinstance(data, _FunctionBaseCLASS):
-                data = DynamicMessageData(data.fnc, *data.args, **data.kwargs)
+                data = _DeprecatedDynamic(data.fnc, *data.args, **data.kwargs)
             elif data is not None:
                 if isinstance(data, (str, discord.Embed, FILE)):
                     data = [data]
@@ -572,7 +574,7 @@ class DirectMESSAGE(BaseMESSAGE):
             )
             # Transform to new data type            
             if isinstance(data, _FunctionBaseCLASS):
-                data = DynamicMessageData(data.fnc, *data.args, *data.kwargs)
+                data = _DeprecatedDynamic(data.fnc, *data.args, *data.kwargs)
             elif data is not None:
                 if isinstance(data, (str, discord.Embed, FILE)):
                     data = [data]

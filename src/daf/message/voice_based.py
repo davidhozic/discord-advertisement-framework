@@ -7,7 +7,9 @@ from datetime import timedelta, datetime
 from typeguard import typechecked
 from pathlib import Path
 
-from ..messagedata import BaseVoiceData, VoiceMessageData, DynamicMessageData
+from ..messagedata.dynamicdata import _DeprecatedDynamic
+
+from ..messagedata import BaseVoiceData, VoiceMessageData
 from ..misc import doc, instance_track
 from ..logging import sql
 from .. import dtypes
@@ -154,7 +156,7 @@ class VoiceMESSAGE(BaseChannelMessage):
             )
             # Transform to new data type            
             if isinstance(data, _FunctionBaseCLASS):
-                data = DynamicMessageData(data.fnc, *data.args, **data.kwargs)
+                data = _DeprecatedDynamic(data.fnc, *data.args, **data.kwargs)
             else:
                 if isinstance(data, FILE):
                     data = [data]
