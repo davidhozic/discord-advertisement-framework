@@ -765,10 +765,10 @@ class BaseChannelMessage(BaseMESSAGE):
         if len(data) != len(hints):
             return False
 
-        for k, v in hints.items():
-            if v != type(data[k]):
+        for k in hints:
+            if k not in data:
                 return False
-            
+
         return True
 
     @async_util.with_semaphore("update_semaphore")
