@@ -82,7 +82,7 @@ def data_function(fnc: Callable):
         :emphasize-lines: 12, 24
     """
     trace(
-        "Using @data_function is deprecated. Use DynamicTextMessageData / DynamicVoiceMessageData instead.",
+        "Using @data_function is deprecated. Use DynamicMessageData / DynamicMessageData instead.",
         TraceLEVELS.DEPRECATED
     )
 
