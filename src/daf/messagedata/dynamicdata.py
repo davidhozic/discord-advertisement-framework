@@ -72,10 +72,6 @@ class DynamicMessageData(BaseTextData, BaseVoiceData):
                     if not isinstance(result, (list, tuple, set)):
                         result = [result]
 
-                    items = [str, Embed, FILE]  # Order to solve the ambiguous case
-                    result = sorted(result, key=lambda x: items.index(type(x)))
-                    print(result)
-
                     audio_data = dict(file=None)
                     text_data = dict(content=None, embed=None, files=[])
                     for item in result:
@@ -84,13 +80,12 @@ class DynamicMessageData(BaseTextData, BaseVoiceData):
                         elif isinstance(item, Embed):
                             text_data["embed"] = item
                         elif isinstance(item, FILE):
-                            # A bit ambiguous, assume (because of above ordering)
-                            # text message if content or embed given, otherwise audio
-                            if text_data["content"] or text_data["embed"]:
-                                text_data["files"].append(item)
-                            else:
+                            # A bit ambiguous, assume audio files are always mp3
+                            if item.filename.endswith(".mp3"):
                                 audio_data["file"] = item
                                 break
+                            else:
+                                text_data["files"].append(item)
 
                     if text_data:
                         return await TextMessageData(**text_data).to_dict()
