@@ -17,7 +17,6 @@ from ..events import *
 
 import _discord as discord
 import asyncio
-import random
 import copy
 import re
 
