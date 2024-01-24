@@ -75,11 +75,6 @@ def data_function(fnc: Callable):
     FunctionCLASS
         A class for creating wrapper objects is returned. These wrapper objects can be used as
         a ``data`` parameter to the :ref:`Messages` objects.
-
-
-    .. literalinclude:: ../../DEP/main_data_function.py
-        :language: python
-        :emphasize-lines: 12, 24
     """
     trace(
         "Using @data_function is deprecated. Use DynamicMessageData / DynamicMessageData instead.",

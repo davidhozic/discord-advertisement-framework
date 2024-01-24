@@ -280,11 +280,11 @@ Both responders accept the following parameters:
 
 Here is a full example of a DM responder:
 
-.. image:: ./DEP/auto_dm_responder_example.png
+.. image:: ./DEP/Examples/AutoResponder/auto_dm_responder_example.png
   :width: 20cm
 
 
-.. literalinclude:: ./DEP/auto_dm_responder.py
+.. literalinclude:: ./DEP/Examples/AutoResponder/auto_dm_responder.py
   :language: python
   :linenos:
 

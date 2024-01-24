@@ -115,8 +115,8 @@ Let's define our :class:`daf.guild.GUILD` object now. Its most important paramet
   `enabling the developer mode <https://beebom.com/how-enable-disable-developer-mode-discord/>`_,
   right-clicking on the guild of interest, and then left-clicking on *Copy Server ID*.
 - ``messages``: A list parameter of our message objects. Message objects represent the content that will be sent
-  into specific channels, with a specific period. For our :class:`daf.guild.GUILD`, objects can
-  be anything inherited from :class:`daf.guild.BaseChannelMESSAGE`. Two types of channel messages exist:
+  into specific channels, with a specific period. For our :class:`daf.guild.GUILD`, messages can be
+  the following classes:
 
   - :class:`daf.message.TextMESSAGE`: Message type for sending textual data. Data includes files as well.
   - :class:`daf.message.VoiceMESSAGE`: Message type for sending audio data / playing audio to voice channels.
@@ -156,7 +156,8 @@ Definition of messages (core)
 Three kinds of messages exist. Additional to :class:`daf.message.TextMESSAGE`
 and :class:`daf.message.VoiceMESSAGE`, is the :class:`daf.message.DirectMESSAGE` message type.
 This message type is used together with :class:`daf.guild.USER` for sending messages into DMs.
-The only way it differs from the two channel message types, is that it doesn't have a ``channels`` parameter.
+Unlike the previously mentioned message types, :class:`~daf.message.DirectMESSAGE` does not have
+the ``channels`` parameter.
 
 Now let's describe some parameters.
 The most important parameters inside :class:`daf.message.TextMESSAGE` are:
@@ -228,6 +229,15 @@ example is the ``data`` parameter. That parameter is with :class:`~daf.message.V
 :class:`~daf.messagedata.VoiceMessageData` (Fixed data) or
 :class:`~daf.messagedata.DynamicMessageData` (Dynamically obtained data).
 Additionally, it contains a ``volume`` parameter.
+
+
+.. literalinclude:: ./DEP/Examples/MessageTypes/TextMESSAGE/main_send_multiple.py
+  :caption: TextMESSAGE full example
+  :linenos:
+
+.. literalinclude:: ./DEP/Examples/MessageTypes/VoiceMESSAGE/main_send.py
+  :caption: VoiceMESSAGE full example
+  :linenos:
 
 
 Next up, we will take a look how to setup and use :ref:`message logging <Logging (core)>`.

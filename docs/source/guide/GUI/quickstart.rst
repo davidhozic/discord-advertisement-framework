@@ -28,7 +28,7 @@ On Windows it can also be started though the Run (Win + R) menu.
 
 This will open up (after a few seconds) a graphical display you can use to control the framework.
 
-.. image:: ./DEP/daf-gui-front.png
+.. image:: ./DEP/images/daf-gui-front.png
     :width: 20cm
     :align: center
 

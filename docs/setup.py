@@ -6,11 +6,11 @@ from pathlib import Path
 from argparse import ArgumentParser
 
 import runpy
-import re
 import os
 import glob
 import shutil
 import json
+import re
 
 
 parse = ArgumentParser()
@@ -25,6 +25,11 @@ START_DIR_ARG: str = args.start_dir
 # Work relatively to the setup script location
 os.chdir(os.path.dirname(__file__))
 
+
+def strip_leading_dots(files: list[str]):
+    return [re.sub(r'\.\.\/', '', f) for f in files]
+
+
 for path, dirs, files in os.walk(START_DIR_ARG):
     for file in files:
         if file == "dep_local.json":
@@ -37,27 +42,36 @@ for path, dirs, files in os.walk(START_DIR_ARG):
             # While copying change to dep-files cwd
             cwd = os.getcwd()
             os.chdir(os.path.abspath(os.path.dirname(file)))
-            # [(from, to), (from, to)]
-            destinations = setup_file_data["copy"]
-            for dest in destinations:
-                cp_from = dest["from"]
-                cp_to = dest["to"]
-                if re.search(r"\.[A-z]+$", cp_to) is None:  # The path does not have extension -> assume a dir
-                    _src = [x for x in glob.glob(cp_from, recursive=True) if os.path.isfile(x)]
-                    _dest = [os.path.join(cp_to, os.path.basename(m)) for m in _src]
-                else:
-                    _src = [cp_from]
-                    _dest = [cp_to]
 
-                srcdest = zip(_src, _dest)
-                for fromf, tof in srcdest:
-                    if CLEAN_ARG:
-                        if os.path.exists(tof):
-                            os.remove(tof)
+            for rule in setup_file_data["copy"]:
+                src_path, dst_path = Path(rule["from"]), Path(rule["to"])
+                # Check if glob
+                src_files = list(filter(os.path.isfile, glob.glob(src_path.as_posix(), recursive=True)))
+                dst_files = []
+                if src_files:  # Glob found => copy all files matched directly to destination
+                    dst_files.extend(
+                        [
+                            dst_path.joinpath(os.path.basename(f))
+                            for f in strip_leading_dots(src_files)
+                        ]
+                    )
+                elif src_path.exists():  # Not a glob pattern -> copy entire subdirs
+                    if src_path.is_dir():
+                        src_files = glob.glob(src_path.as_posix() + "/**", recursive=True)
+                        src_files = list(filter(os.path.isfile, src_files))
                     else:
-                        tof_dir = Path(os.path.dirname(tof))
-                        tof_dir.mkdir(parents=True, exist_ok=True)
-                        shutil.copy2(fromf, tof)
+                        src_files = [src_path.as_posix()]
+
+                    dst_files.extend(map(dst_path.joinpath, strip_leading_dots(src_files)))
+
+                if CLEAN_ARG:
+                    for s, d in zip(src_files, dst_files):
+                        if d.exists():
+                            os.remove(d)
+                else:
+                    for s, d in zip(src_files, dst_files):  # Create
+                        d.parent.mkdir(parents=True, exist_ok=True)
+                        shutil.copy2(s, d)
 
             # Run scripts
             if CLEAN_ARG:
