@@ -1,0 +1,32 @@
+{
+    "name": "zajcek's dungeon",
+    "id": 863071397207212052,
+    "type": "GUILD",
+    "invite_tracking": {},
+    "message_tracking": {
+        "936739431073865789": {
+            "name": "Aproksimacka",
+            "id": 936739431073865789,
+            "messages": [
+                {
+                    "sent_data": {
+                        "text": "📣 Boost Your Discord Shilling Game! 🚀\n\nIntroducing the Ultimate Advertising Framework:\n\n✅ Automate Periodic Messages\n✅ Error Checking & Recovery\n✅ Message Logging & Stats\n✅ Multi-Account Support\n✅ GUI / Console Interface\n✅ Easy Setup & Programmatic Usage\n\nGet it now on GitHub: 👉 [https://github.com/davidhozic/discord-advertisement-framework]\n\nFull Documentation: 📚 [https://daf.davidhozic.com/en/v2.10.x/]\n\nUnleash the Power of Shilling Today! 💪\n\n#DiscordAdvertising #ShillingFramework #AutomateYourAds"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 435588272653568,
+                    "timestamp": "02.12.2023 12:31:30"
+                }
+            ]
+        }
+    }
+}

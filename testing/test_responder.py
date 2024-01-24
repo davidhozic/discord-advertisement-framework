@@ -1,5 +1,6 @@
+
 from daf.responder.constraints import GuildConstraint, MemberOfGuildConstraint
-from daf.responder.logic import and_, or_, not_, regex, contains, BaseLogic
+from daf.logic import and_, or_, not_, regex, contains, BaseLogic
 from daf.responder.actions import DMResponse, GuildResponse
 from daf.responder import GuildResponder, DMResponder
 from daf.messagedata import TextMessageData

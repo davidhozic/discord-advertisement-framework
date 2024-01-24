@@ -231,13 +231,28 @@ example is the ``data`` parameter. That parameter is with :class:`~daf.message.V
 Additionally, it contains a ``volume`` parameter.
 
 
-.. literalinclude:: ./DEP/Examples/MessageTypes/TextMESSAGE/main_send_multiple.py
-  :caption: TextMESSAGE full example
-  :linenos:
+--------------------------------------
+Message advertisement examples
+--------------------------------------
 
-.. literalinclude:: ./DEP/Examples/MessageTypes/VoiceMESSAGE/main_send.py
-  :caption: VoiceMESSAGE full example
-  :linenos:
+The following examples show a complete core script setup needed to advertise periodic messages.
 
+.. dropdown:: TextMESSAGE
+
+  .. literalinclude:: ./DEP/Examples/MessageTypes/TextMESSAGE/main_send_multiple.py
+    :caption: TextMESSAGE full example
+    :linenos:
+
+.. dropdown:: VoiceMESSAGE
+
+  .. literalinclude:: ./DEP/Examples/MessageTypes/VoiceMESSAGE/main_send.py
+    :caption: VoiceMESSAGE full example
+    :linenos:
+
+.. dropdown:: DirectMESSAGE
+
+  .. literalinclude:: ./DEP/Examples/MessageTypes/DirectMESSAGE/main_send_multiple.py
+    :caption: DirectMESSAGE full example
+    :linenos:
 
 Next up, we will take a look how to setup and use :ref:`message logging <Logging (core)>`.

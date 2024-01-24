@@ -1,0 +1,48 @@
+{
+    "name": "zajcek",
+    "id": 145196308985020416,
+    "type": "USER",
+    "invite_tracking": {},
+    "message_tracking": {
+        "936739431073865789": {
+            "name": "Aproksimacka",
+            "id": 936739431073865789,
+            "messages": [
+                {
+                    "sent_data": {
+                        "text": "Buy our red dragon NFTs today!",
+                        "files": [
+                            "C:/Users/david/Downloads/Picture1.png",
+                            "H:/My Drive/PR/okroznice/2023/2023_01_28 - Skiing.md",
+                            "H:/My Drive/PR/okroznice/2023/2023_10_16 - Volitve SSFE.md"
+                        ]
+                    },
+                    "success_info": {
+                        "success": true
+                    },
+                    "type": "DirectMESSAGE",
+                    "mode": "send",
+                    "index": 436765914881537,
+                    "timestamp": "24.01.2024 18:20:55"
+                },
+                {
+                    "sent_data": {
+                        "text": "Buy our red dragon NFTs today!",
+                        "files": [
+                            "C:/Users/david/Downloads/Picture1.png",
+                            "H:/My Drive/PR/okroznice/2023/2023_01_28 - Skiing.md",
+                            "H:/My Drive/PR/okroznice/2023/2023_10_16 - Volitve SSFE.md"
+                        ]
+                    },
+                    "success_info": {
+                        "success": true
+                    },
+                    "type": "DirectMESSAGE",
+                    "mode": "send",
+                    "index": 436765913238528,
+                    "timestamp": "24.01.2024 18:20:48"
+                }
+            ]
+        }
+    }
+}

@@ -1,0 +1,2130 @@
+{
+    "name": "zajcek's dungeon",
+    "id": 863071397207212052,
+    "type": "GUILD",
+    "invite_tracking": {},
+    "message_tracking": {
+        "936739431073865789": {
+            "name": "Aproksimacka",
+            "id": 936739431073865789,
+            "messages": [
+                {
+                    "sent_data": {
+                        "embed": {
+                            "footer": {
+                                "text": "Some footer text"
+                            },
+                            "author": {
+                                "name": "Author name"
+                            },
+                            "fields": [
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                }
+                            ],
+                            "color": 1555432,
+                            "timestamp": "2024-01-11T11:42:00+00:00",
+                            "type": "article",
+                            "description": "The quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.",
+                            "title": "Some embed message"
+                        }
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436473284942465,
+                    "timestamp": "11.01.2024 12:49:29"
+                },
+                {
+                    "sent_data": {
+                        "embed": {
+                            "footer": {
+                                "text": "Some footer text"
+                            },
+                            "author": {
+                                "name": "Author name"
+                            },
+                            "fields": [
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                }
+                            ],
+                            "color": 1555432,
+                            "timestamp": "2024-01-11T11:42:00+00:00",
+                            "type": "article",
+                            "description": "The quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.",
+                            "title": "Some embed message"
+                        }
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436473284874624,
+                    "timestamp": "11.01.2024 12:49:29"
+                },
+                {
+                    "sent_data": {
+                        "embed": {
+                            "footer": {
+                                "text": "Some footer text"
+                            },
+                            "author": {
+                                "name": "Author name"
+                            },
+                            "fields": [
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                }
+                            ],
+                            "color": 1555432,
+                            "timestamp": "2024-01-11T11:42:00+00:00",
+                            "type": "article",
+                            "description": "The quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.",
+                            "title": "Some embed message"
+                        }
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436473283678335,
+                    "timestamp": "11.01.2024 12:49:24"
+                },
+                {
+                    "sent_data": {
+                        "embed": {
+                            "footer": {
+                                "text": "Some footer text"
+                            },
+                            "author": {
+                                "name": "Author name"
+                            },
+                            "fields": [
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                }
+                            ],
+                            "color": 1555432,
+                            "timestamp": "2024-01-11T11:42:00+00:00",
+                            "type": "article",
+                            "description": "The quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.",
+                            "title": "Some embed message"
+                        }
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436473283564670,
+                    "timestamp": "11.01.2024 12:49:23"
+                },
+                {
+                    "sent_data": {
+                        "embed": {
+                            "footer": {
+                                "text": "Some footer text"
+                            },
+                            "author": {
+                                "name": "Author name"
+                            },
+                            "fields": [
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                }
+                            ],
+                            "color": 1555432,
+                            "timestamp": "2024-01-11T11:42:00+00:00",
+                            "type": "article",
+                            "description": "The quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.",
+                            "title": "Some embed message"
+                        }
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436473283480189,
+                    "timestamp": "11.01.2024 12:49:23"
+                },
+                {
+                    "sent_data": {
+                        "embed": {
+                            "footer": {
+                                "text": "Some footer text"
+                            },
+                            "author": {
+                                "name": "Author name"
+                            },
+                            "fields": [
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                }
+                            ],
+                            "color": 1555432,
+                            "timestamp": "2024-01-11T11:42:00+00:00",
+                            "type": "article",
+                            "description": "The quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.",
+                            "title": "Some embed message"
+                        }
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436473283379580,
+                    "timestamp": "11.01.2024 12:49:23"
+                },
+                {
+                    "sent_data": {
+                        "embed": {
+                            "footer": {
+                                "text": "Some footer text"
+                            },
+                            "author": {
+                                "name": "Author name"
+                            },
+                            "fields": [
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                }
+                            ],
+                            "color": 1555432,
+                            "timestamp": "2024-01-11T11:42:00+00:00",
+                            "type": "article",
+                            "description": "The quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.",
+                            "title": "Some embed message"
+                        }
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436473283302779,
+                    "timestamp": "11.01.2024 12:49:22"
+                },
+                {
+                    "sent_data": {
+                        "embed": {
+                            "footer": {
+                                "text": "Some footer text"
+                            },
+                            "author": {
+                                "name": "Author name"
+                            },
+                            "fields": [
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                }
+                            ],
+                            "color": 1555432,
+                            "timestamp": "2024-01-11T11:42:00+00:00",
+                            "type": "article",
+                            "description": "The quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.",
+                            "title": "Some embed message"
+                        }
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436473283234170,
+                    "timestamp": "11.01.2024 12:49:22"
+                },
+                {
+                    "sent_data": {
+                        "embed": {
+                            "footer": {
+                                "text": "Some footer text"
+                            },
+                            "author": {
+                                "name": "Author name"
+                            },
+                            "fields": [
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                }
+                            ],
+                            "color": 1555432,
+                            "timestamp": "2024-01-11T11:42:00+00:00",
+                            "type": "article",
+                            "description": "The quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.",
+                            "title": "Some embed message"
+                        }
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436473282650233,
+                    "timestamp": "11.01.2024 12:49:20"
+                },
+                {
+                    "sent_data": {
+                        "embed": {
+                            "footer": {
+                                "text": "Some footer text"
+                            },
+                            "author": {
+                                "name": "Author name"
+                            },
+                            "fields": [
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                }
+                            ],
+                            "color": 1555432,
+                            "timestamp": "2024-01-11T11:42:00+00:00",
+                            "type": "article",
+                            "description": "The quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.",
+                            "title": "Some embed message"
+                        }
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436473282582904,
+                    "timestamp": "11.01.2024 12:49:20"
+                },
+                {
+                    "sent_data": {
+                        "embed": {
+                            "footer": {
+                                "text": "Some footer text"
+                            },
+                            "author": {
+                                "name": "Author name"
+                            },
+                            "fields": [
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                }
+                            ],
+                            "color": 1555432,
+                            "timestamp": "2024-01-11T11:42:00+00:00",
+                            "type": "article",
+                            "description": "The quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.",
+                            "title": "Some embed message"
+                        }
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436473281274999,
+                    "timestamp": "11.01.2024 12:49:14"
+                },
+                {
+                    "sent_data": {
+                        "embed": {
+                            "footer": {
+                                "text": "Some footer text"
+                            },
+                            "author": {
+                                "name": "Author name"
+                            },
+                            "fields": [
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                }
+                            ],
+                            "color": 1555432,
+                            "timestamp": "2024-01-11T11:42:00+00:00",
+                            "type": "article",
+                            "description": "The quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.",
+                            "title": "Some embed message"
+                        }
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436473281188982,
+                    "timestamp": "11.01.2024 12:49:14"
+                },
+                {
+                    "sent_data": {
+                        "embed": {
+                            "footer": {
+                                "text": "Some footer text"
+                            },
+                            "author": {
+                                "name": "Author name"
+                            },
+                            "fields": [
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                }
+                            ],
+                            "color": 1555432,
+                            "timestamp": "2024-01-11T11:42:00+00:00",
+                            "type": "article",
+                            "description": "The quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.",
+                            "title": "Some embed message"
+                        }
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436473281123701,
+                    "timestamp": "11.01.2024 12:49:14"
+                },
+                {
+                    "sent_data": {
+                        "embed": {
+                            "footer": {
+                                "text": "Some footer text"
+                            },
+                            "author": {
+                                "name": "Author name"
+                            },
+                            "fields": [
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                }
+                            ],
+                            "color": 1555432,
+                            "timestamp": "2024-01-11T11:42:00+00:00",
+                            "type": "article",
+                            "description": "The quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.",
+                            "title": "Some embed message"
+                        }
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436473281004148,
+                    "timestamp": "11.01.2024 12:49:13"
+                },
+                {
+                    "sent_data": {
+                        "embed": {
+                            "footer": {
+                                "text": "Some footer text"
+                            },
+                            "author": {
+                                "name": "Author name"
+                            },
+                            "fields": [
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                }
+                            ],
+                            "color": 1555432,
+                            "timestamp": "2024-01-11T11:42:00+00:00",
+                            "type": "article",
+                            "description": "The quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.",
+                            "title": "Some embed message"
+                        }
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436473280903539,
+                    "timestamp": "11.01.2024 12:49:13"
+                },
+                {
+                    "sent_data": {
+                        "embed": {
+                            "footer": {
+                                "text": "Some footer text"
+                            },
+                            "author": {
+                                "name": "Author name"
+                            },
+                            "fields": [
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                }
+                            ],
+                            "color": 1555432,
+                            "timestamp": "2024-01-11T11:42:00+00:00",
+                            "type": "article",
+                            "description": "The quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.",
+                            "title": "Some embed message"
+                        }
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436473280790386,
+                    "timestamp": "11.01.2024 12:49:13"
+                },
+                {
+                    "sent_data": {
+                        "embed": {
+                            "footer": {
+                                "text": "Some footer text"
+                            },
+                            "author": {
+                                "name": "Author name"
+                            },
+                            "fields": [
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                }
+                            ],
+                            "color": 1555432,
+                            "timestamp": "2024-01-11T11:42:00+00:00",
+                            "type": "article",
+                            "description": "The quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.",
+                            "title": "Some embed message"
+                        }
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436473280681073,
+                    "timestamp": "11.01.2024 12:49:12"
+                },
+                {
+                    "sent_data": {
+                        "embed": {
+                            "footer": {
+                                "text": "Some footer text"
+                            },
+                            "author": {
+                                "name": "Author name"
+                            },
+                            "fields": [
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                }
+                            ],
+                            "color": 1555432,
+                            "timestamp": "2024-01-11T11:42:00+00:00",
+                            "type": "article",
+                            "description": "The quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.",
+                            "title": "Some embed message"
+                        }
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436473280274032,
+                    "timestamp": "11.01.2024 12:49:11"
+                },
+                {
+                    "sent_data": {
+                        "embed": {
+                            "footer": {
+                                "text": "Some footer text"
+                            },
+                            "author": {
+                                "name": "Author name"
+                            },
+                            "fields": [
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                }
+                            ],
+                            "color": 1555432,
+                            "timestamp": "2024-01-11T11:42:00+00:00",
+                            "type": "article",
+                            "description": "The quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.",
+                            "title": "Some embed message"
+                        }
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436473280193135,
+                    "timestamp": "11.01.2024 12:49:10"
+                },
+                {
+                    "sent_data": {
+                        "embed": {
+                            "footer": {
+                                "text": "Some footer text"
+                            },
+                            "author": {
+                                "name": "Author name"
+                            },
+                            "fields": [
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                }
+                            ],
+                            "color": 1555432,
+                            "timestamp": "2024-01-11T11:42:00+00:00",
+                            "type": "article",
+                            "description": "The quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.",
+                            "title": "Some embed message"
+                        }
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436473278974318,
+                    "timestamp": "11.01.2024 12:49:05"
+                },
+                {
+                    "sent_data": {
+                        "embed": {
+                            "footer": {
+                                "text": "Some footer text"
+                            },
+                            "author": {
+                                "name": "Author name"
+                            },
+                            "fields": [
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                }
+                            ],
+                            "color": 1555432,
+                            "timestamp": "2024-01-11T11:42:00+00:00",
+                            "type": "article",
+                            "description": "The quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.",
+                            "title": "Some embed message"
+                        }
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436473278796653,
+                    "timestamp": "11.01.2024 12:49:05"
+                },
+                {
+                    "sent_data": {
+                        "embed": {
+                            "footer": {
+                                "text": "Some footer text"
+                            },
+                            "author": {
+                                "name": "Author name"
+                            },
+                            "fields": [
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                }
+                            ],
+                            "color": 1555432,
+                            "timestamp": "2024-01-11T11:42:00+00:00",
+                            "type": "article",
+                            "description": "The quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.",
+                            "title": "Some embed message"
+                        }
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436473278727020,
+                    "timestamp": "11.01.2024 12:49:05"
+                },
+                {
+                    "sent_data": {
+                        "embed": {
+                            "footer": {
+                                "text": "Some footer text"
+                            },
+                            "author": {
+                                "name": "Author name"
+                            },
+                            "fields": [
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                }
+                            ],
+                            "color": 1555432,
+                            "timestamp": "2024-01-11T11:42:00+00:00",
+                            "type": "article",
+                            "description": "The quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.",
+                            "title": "Some embed message"
+                        }
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436473278661739,
+                    "timestamp": "11.01.2024 12:49:04"
+                }
+            ]
+        }
+    }
+}

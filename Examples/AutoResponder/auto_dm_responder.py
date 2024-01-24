@@ -14,7 +14,7 @@ from daf.responder.constraints.dmconstraint import MemberOfGuildConstraint
 from daf.client import ACCOUNT
 from daf.responder.dmresponder import DMResponder
 from daf.responder.actions.response import DMResponse
-from daf.responder.logic import regex
+from daf.logic import regex
 import daf
 
 

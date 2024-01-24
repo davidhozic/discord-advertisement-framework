@@ -6,7 +6,7 @@ from typing import List
 from abc import ABC, abstractmethod
 from typeguard import typechecked
 
-from ..misc.doc import doc_category
+from .misc.doc import doc_category
 
 import re
 

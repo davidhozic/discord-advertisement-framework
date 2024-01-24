@@ -1,0 +1,160 @@
+{
+    "name": "zajcek's dungeon",
+    "id": 863071397207212052,
+    "type": "GUILD",
+    "invite_tracking": {},
+    "message_tracking": {
+        "936739431073865789": {
+            "name": "Aproksimacka",
+            "id": 936739431073865789,
+            "messages": [
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436475548155906,
+                    "timestamp": "11.01.2024 15:16:49"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436475545594625,
+                    "timestamp": "11.01.2024 15:16:39"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436475543844352,
+                    "timestamp": "11.01.2024 15:16:33"
+                },
+                {
+                    "sent_data": {
+                        "embed": {
+                            "footer": {
+                                "text": "Some footer text"
+                            },
+                            "author": {
+                                "name": "Author name"
+                            },
+                            "fields": [
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                },
+                                {
+                                    "name": "Field",
+                                    "value": "Value",
+                                    "inline": true
+                                }
+                            ],
+                            "color": 1555432,
+                            "timestamp": "2024-01-11T11:42:00+00:00",
+                            "type": "article",
+                            "description": "The quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.\nThe quick brown fox jumped the fence.",
+                            "title": "Some embed message"
+                        }
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436473285243266,
+                    "timestamp": "11.01.2024 12:49:30"
+                }
+            ]
+        }
+    }
+}

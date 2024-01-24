@@ -2,7 +2,7 @@ from typing import List
 from typeguard import typechecked
 
 from .base import ResponderBase
-from .logic import BaseLogic
+from ..logic import BaseLogic
 from .constraints import BaseDMConstraint
 from .actions import DMResponse
 from ..events import EventID

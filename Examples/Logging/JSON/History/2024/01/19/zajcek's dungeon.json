@@ -1,0 +1,590 @@
+{
+    "name": "zajcek's dungeon",
+    "id": 863071397207212052,
+    "type": "GUILD",
+    "invite_tracking": {},
+    "message_tracking": {
+        "936739431073865789": {
+            "name": "Aproksimacka",
+            "id": 936739431073865789,
+            "messages": [
+                {
+                    "sent_data": {
+                        "text": "Hello World"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436660263030294,
+                    "timestamp": "19.01.2024 23:42:32"
+                },
+                {
+                    "sent_data": {
+                        "text": "Hello World"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436660254783765,
+                    "timestamp": "19.01.2024 23:42:00"
+                },
+                {
+                    "sent_data": {
+                        "text": "Hello World"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436660239487764,
+                    "timestamp": "19.01.2024 23:41:00"
+                },
+                {
+                    "sent_data": {
+                        "text": "Hello World"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436660224093459,
+                    "timestamp": "19.01.2024 23:40:00"
+                },
+                {
+                    "sent_data": {
+                        "text": "Hello World"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436660208716562,
+                    "timestamp": "19.01.2024 23:39:00"
+                },
+                {
+                    "sent_data": {
+                        "text": "Hello World"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436660193375249,
+                    "timestamp": "19.01.2024 23:38:00"
+                },
+                {
+                    "sent_data": {
+                        "text": "Hello World"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436660178011920,
+                    "timestamp": "19.01.2024 23:37:00"
+                },
+                {
+                    "sent_data": {
+                        "text": "Hello World"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436660162663951,
+                    "timestamp": "19.01.2024 23:36:00"
+                },
+                {
+                    "sent_data": {
+                        "text": "Hello World"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436660147290382,
+                    "timestamp": "19.01.2024 23:35:00"
+                },
+                {
+                    "sent_data": {
+                        "text": "Hello World"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436660131958797,
+                    "timestamp": "19.01.2024 23:34:00"
+                },
+                {
+                    "sent_data": {
+                        "text": "Hello World"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436660116593164,
+                    "timestamp": "19.01.2024 23:33:00"
+                },
+                {
+                    "sent_data": {
+                        "text": "Hello World"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436660101215499,
+                    "timestamp": "19.01.2024 23:32:00"
+                },
+                {
+                    "sent_data": {
+                        "text": "Hello World"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436660085849610,
+                    "timestamp": "19.01.2024 23:31:00"
+                },
+                {
+                    "sent_data": {
+                        "text": "Hello World"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436660070479881,
+                    "timestamp": "19.01.2024 23:30:00"
+                },
+                {
+                    "sent_data": {
+                        "text": "Hello World"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436660055112200,
+                    "timestamp": "19.01.2024 23:29:00"
+                },
+                {
+                    "sent_data": {
+                        "text": "Hello World"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436660039764231,
+                    "timestamp": "19.01.2024 23:28:00"
+                },
+                {
+                    "sent_data": {
+                        "text": "Hello World"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436660024393222,
+                    "timestamp": "19.01.2024 23:27:00"
+                },
+                {
+                    "sent_data": {
+                        "text": "Hello World"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436660009073925,
+                    "timestamp": "19.01.2024 23:26:00"
+                },
+                {
+                    "sent_data": {
+                        "text": "Hello World"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436659993687300,
+                    "timestamp": "19.01.2024 23:25:00"
+                },
+                {
+                    "sent_data": {
+                        "text": "Hello World"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436659991334915,
+                    "timestamp": "19.01.2024 23:24:51"
+                },
+                {
+                    "sent_data": {
+                        "text": "Hello World"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436659987519234,
+                    "timestamp": "19.01.2024 23:24:36"
+                },
+                {
+                    "sent_data": {
+                        "text": "Hello World"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436659983717377,
+                    "timestamp": "19.01.2024 23:24:21"
+                },
+                {
+                    "sent_data": {
+                        "text": "Hello World"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436659979824384,
+                    "timestamp": "19.01.2024 23:24:06"
+                },
+                {
+                    "sent_data": {
+                        "text": "Hello World"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436659923578368,
+                    "timestamp": "19.01.2024 23:20:26"
+                },
+                {
+                    "sent_data": {
+                        "text": "Hello World"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436659801840896,
+                    "timestamp": "19.01.2024 23:12:30"
+                },
+                {
+                    "sent_data": {
+                        "text": "Hello World"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436659472455937,
+                    "timestamp": "19.01.2024 22:51:04"
+                },
+                {
+                    "sent_data": {
+                        "text": "Hello World"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436659456167424,
+                    "timestamp": "19.01.2024 22:50:00"
+                },
+                {
+                    "sent_data": {
+                        "text": "Hello World"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436659333216001,
+                    "timestamp": "19.01.2024 22:42:00"
+                },
+                {
+                    "sent_data": {
+                        "text": "Hello World"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436659296224000,
+                    "timestamp": "19.01.2024 22:39:35"
+                },
+                {
+                    "sent_data": {
+                        "text": "Hello World"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436659070374656,
+                    "timestamp": "19.01.2024 22:24:53"
+                },
+                {
+                    "sent_data": {
+                        "text": "Hello World"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436658979099649,
+                    "timestamp": "19.01.2024 22:18:57"
+                },
+                {
+                    "sent_data": {
+                        "text": "Hello World"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436658958276352,
+                    "timestamp": "19.01.2024 22:17:35"
+                }
+            ]
+        }
+    }
+}
