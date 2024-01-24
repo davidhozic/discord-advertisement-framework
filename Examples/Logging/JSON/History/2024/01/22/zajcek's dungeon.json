@@ -1,0 +1,245 @@
+{
+    "name": "zajcek's dungeon",
+    "id": 863071397207212052,
+    "type": "GUILD",
+    "invite_tracking": {},
+    "message_tracking": {
+        "936739431073865789": {
+            "name": "Aproksimacka",
+            "id": 936739431073865789,
+            "messages": [
+                {
+                    "sent_data": {
+                        "streamed_audio": "./VoiceMESSAGE.mp3"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test3",
+                                "id": 1136787403588255784
+                            },
+                            {
+                                "name": "tesr4",
+                                "id": 1199125280149733449
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "VoiceMESSAGE",
+                    "index": 436726857060609,
+                    "timestamp": "22.01.2024 23:58:05"
+                },
+                {
+                    "sent_data": {
+                        "streamed_audio": "./VoiceMESSAGE.mp3"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test3",
+                                "id": 1136787403588255784
+                            },
+                            {
+                                "name": "tesr4",
+                                "id": 1199125280149733449
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "VoiceMESSAGE",
+                    "index": 436726849874176,
+                    "timestamp": "22.01.2024 23:57:37"
+                },
+                {
+                    "sent_data": {
+                        "text": "New blue dragon!",
+                        "files": [
+                            "main_send_multiple.py"
+                        ]
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436726616001537,
+                    "timestamp": "22.01.2024 23:42:23"
+                },
+                {
+                    "sent_data": {
+                        "text": "Look at this amazing dragon!",
+                        "files": [
+                            "main_send_multiple.py"
+                        ]
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436726614638848,
+                    "timestamp": "22.01.2024 23:42:18"
+                },
+                {
+                    "sent_data": {
+                        "text": "Look at this amazing dragon!",
+                        "files": [
+                            "main_send_multiple.py"
+                        ]
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436726611163650,
+                    "timestamp": "22.01.2024 23:42:04"
+                },
+                {
+                    "sent_data": {
+                        "text": "New blue dragon!",
+                        "files": [
+                            "main_send_multiple.py"
+                        ]
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436726608784641,
+                    "timestamp": "22.01.2024 23:41:55"
+                },
+                {
+                    "sent_data": {
+                        "text": "Golden dragon. Limited!",
+                        "files": [
+                            "main_send_multiple.py"
+                        ]
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436726606661120,
+                    "timestamp": "22.01.2024 23:41:47"
+                },
+                {
+                    "sent_data": {
+                        "text": "Look at this amazing dragon!",
+                        "files": [
+                            "main_send_multiple.py"
+                        ]
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436726468623875,
+                    "timestamp": "22.01.2024 23:32:48"
+                },
+                {
+                    "sent_data": {
+                        "text": "Golden dragon. Limited!",
+                        "files": [
+                            "main_send_multiple.py"
+                        ]
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436726466525442,
+                    "timestamp": "22.01.2024 23:32:39"
+                },
+                {
+                    "sent_data": {
+                        "text": "New blue dragon!",
+                        "files": [
+                            "main_send_multiple.py"
+                        ]
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436726463698177,
+                    "timestamp": "22.01.2024 23:32:28"
+                },
+                {
+                    "sent_data": {
+                        "text": "Look at this amazing dragon!",
+                        "files": [
+                            "main_send_multiple.py"
+                        ]
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436726461848576,
+                    "timestamp": "22.01.2024 23:32:21"
+                }
+            ]
+        }
+    }
+}

@@ -1,21 +1,25 @@
 """
 Contains definitions for message classes that are text based."""
 
-from typing import Any, Dict, List, Iterable, Optional, Union, Literal, Tuple, Callable
+from typing import Any, Dict, List, Iterable, Optional, Union, Literal, Tuple, Callable, get_type_hints
 from datetime import datetime, timedelta
 from typeguard import typechecked
 
-from .base import *
-from ..dtypes import *
-from ..messagedata import BaseTextData, TextMessageData, DynamicTextMessageData
-from ..logging.tracing import trace, TraceLEVELS
 
-from ..logging import sql
+from ..messagedata.dynamicdata import _DeprecatedDynamic
+
+from ..messagedata import BaseTextData, TextMessageData
+from ..logging.tracing import trace, TraceLEVELS
+from .messageperiod import *
+from ..dtypes import *
+from .base import *
+
 from ..misc import doc, instance_track, async_util
+from ..logging import sql
 from ..events import *
 
-import asyncio
 import _discord as discord
+import asyncio
 
 
 __all__ = (
@@ -131,14 +135,15 @@ class TextMESSAGE(BaseChannelMessage):
     @typechecked
     def __init__(
         self,
-        start_period: Union[timedelta, int, None],
-        end_period: Union[int, timedelta],
-        data: Union[BaseTextData, _old_data_type],
-        channels: Union[Iterable[Union[int, discord.TextChannel, discord.Thread]], AutoCHANNEL],
+        start_period: Union[timedelta, int, None] = None,
+        end_period: Union[int, timedelta] = None,
+        data: Union[BaseTextData, _old_data_type] = None,
+        channels: Union[Iterable[Union[int, discord.TextChannel, discord.Thread]], AutoCHANNEL] = None,
         mode: Literal["send", "edit", "clear-send"] = "send",
-        start_in: Union[timedelta, datetime] = timedelta(seconds=0),
+        start_in: Optional[Union[timedelta, datetime]] = None,
         remove_after: Optional[Union[int, timedelta, datetime]] = None,
-        auto_publish: bool = False
+        auto_publish: bool = False,
+        period: BaseMessagePeriod = None
     ):
         if not isinstance(data, BaseTextData):
             trace(
@@ -148,8 +153,8 @@ class TextMESSAGE(BaseChannelMessage):
             )
             # Transform to new data type            
             if isinstance(data, _FunctionBaseCLASS):
-                data = DynamicTextMessageData(data.fnc, *data.args, **data.kwargs)
-            else:
+                data = _DeprecatedDynamic(data.fnc, *data.args, **data.kwargs)
+            elif data is not None:
                 if isinstance(data, (str, discord.Embed, FILE)):
                     data = [data]
 
@@ -166,7 +171,7 @@ class TextMESSAGE(BaseChannelMessage):
 
                 data = TextMessageData(content, embed, files)
 
-        super().__init__(start_period, end_period, data, channels, start_in, remove_after)
+        super().__init__(start_period, end_period, data, channels, start_in, remove_after, period)
         self.mode = mode
         self.auto_publish = auto_publish
         # Dictionary for storing last sent message for each channel
@@ -190,27 +195,14 @@ class TextMESSAGE(BaseChannelMessage):
 
     def _check_period(self):
         """
+        .. versionchanged:: 4.0.0
+
+            Changed to body to just call ``self.period.adjust``.
+
         Helper function used for checking the the period is lower
         than the slow mode delay.
-
-        .. versionadded:: v2.3
-
-        Parameters
-        --------------
-        slowmode_delay: timedelta
-            The (maximum) slowmode delay.
         """
-        slowmode_delay = self._slowmode
-        if self.start_period is not None:
-            if self.start_period < slowmode_delay:
-                self.start_period, self.end_period = (
-                    slowmode_delay,
-                    slowmode_delay + self.end_period - self.start_period
-                )
-        elif self.end_period < slowmode_delay:
-            self.end_period = slowmode_delay
-
-        self.period = self.end_period
+        self.period.adjust(self._slowmode)
 
     def generate_log_context(self,
                              content: Optional[str],
@@ -348,10 +340,9 @@ class TextMESSAGE(BaseChannelMessage):
                 guild = channel.guild
                 member = guild.get_member(self.parent.parent.client.user.id)
                 if member is not None and member.timed_out:
-                    self.next_send_time = member.communication_disabled_until.astimezone() + timedelta(minutes=1)
+                    self.period.defer(member.communication_disabled_until.astimezone() + timedelta(minutes=1))
                     trace(
-                        f"User '{member.name}' has been timed-out in guild '{guild.name}'.\n"
-                        f"Retrying after {self.next_send_time} (1 minute after expiry)",
+                        f"User '{member.name}' has been timed-out in guild '{guild.name}'.\n",
                         TraceLEVELS.WARNING
                     )
                     # Prevent channel removal by the cleanup process
@@ -360,10 +351,12 @@ class TextMESSAGE(BaseChannelMessage):
                     action = ChannelErrorAction.SKIP_CHANNELS  # Don't try to send to other channels as it would yield the same result.
 
             elif ex.status == 429:  # Rate limit
-                retry_after = int(ex.response.headers["Retry-After"]) + 5
                 if ex.code == 20016:    # Slow Mode
-                    self.next_send_time = datetime.now().astimezone() + timedelta(seconds=retry_after)
-                    trace(f"{channel.name} is in slow mode, retrying in {retry_after} seconds", TraceLEVELS.WARNING)
+                    self.period.defer(
+                        datetime.now().astimezone() +
+                        timedelta(seconds=int(ex.response.headers["Retry-After"]) + 5)
+                    )
+                    trace(f"{channel.name} is in slow mode. Retrying on {self.period.get()}", TraceLEVELS.WARNING)
                     self._check_period()  # Fix the period
 
             elif ex.status == 404:      # Unknown object
@@ -375,6 +368,9 @@ class TextMESSAGE(BaseChannelMessage):
                 action = ChannelErrorAction.REMOVE_ACCOUNT
 
         return handled, action
+
+    def _verify_data(self, data: dict) -> bool:
+        return super()._verify_data(TextMessageData, data)
 
     async def _send_channel(
         self,
@@ -559,13 +555,16 @@ class DirectMESSAGE(BaseMESSAGE):
     _old_data_type = Union[Iterable[Union[str, discord.Embed, FILE]], str, discord.Embed, FILE, _FunctionBaseCLASS]
 
     @typechecked
-    def __init__(self,
-                 start_period: Union[int, timedelta, None],
-                 end_period: Union[int, timedelta],
-                 data: Union[BaseTextData, _old_data_type],
-                 mode: Optional[Literal["send", "edit", "clear-send"]] = "send",
-                 start_in: Optional[Union[timedelta, datetime]] = timedelta(seconds=0),
-                 remove_after: Optional[Union[int, timedelta, datetime]] = None):
+    def __init__(
+        self,
+        start_period: Union[int, timedelta, None] = None,
+        end_period: Union[int, timedelta] = None,
+        data: Union[BaseTextData, _old_data_type] = None,
+        mode: Optional[Literal["send", "edit", "clear-send"]] = "send",
+        start_in: Optional[Union[timedelta, datetime]] = None,
+        remove_after: Optional[Union[int, timedelta, datetime]] = None,
+        period: BaseMessagePeriod = None
+    ):
 
         if not isinstance(data, BaseTextData):
             trace(
@@ -575,8 +574,8 @@ class DirectMESSAGE(BaseMESSAGE):
             )
             # Transform to new data type            
             if isinstance(data, _FunctionBaseCLASS):
-                data = DynamicTextMessageData(data.fnc, *data.args, *data.kwargs)
-            else:
+                data = _DeprecatedDynamic(data.fnc, *data.args, *data.kwargs)
+            elif data is not None:
                 if isinstance(data, (str, discord.Embed, FILE)):
                     data = [data]
 
@@ -593,7 +592,7 @@ class DirectMESSAGE(BaseMESSAGE):
 
                 data = TextMessageData(content, embed, files)
 
-        super().__init__(start_period, end_period, data, start_in, remove_after)
+        super().__init__(start_period, end_period, data, start_in, remove_after, period)
         self.mode = mode
         self.dm_channel: discord.User = None
         self.previous_message: discord.Message = None
@@ -721,6 +720,9 @@ class DirectMESSAGE(BaseMESSAGE):
 
         return handled
 
+    def _verify_data(self, data: dict) -> bool:
+        return super()._verify_data(TextMessageData, data)
+
     async def _send_channel(self,
                             content: Optional[str],
                             embed: Optional[discord.Embed],
@@ -770,7 +772,7 @@ class DirectMESSAGE(BaseMESSAGE):
         """
         # Parse data from the data parameter
         data_to_send = await self._data.to_dict()
-        if any(data_to_send.values()):
+        if self._verify_data(data_to_send):
             channel_ctx = await self._send_channel(**data_to_send)
             self._update_state()
             if channel_ctx["success"] is False:
@@ -792,7 +794,13 @@ class DirectMESSAGE(BaseMESSAGE):
         await self._close()
         if "start_in" not in kwargs:
             # This parameter does not appear as attribute, manual setting necessary
-            kwargs["start_in"] = self.next_send_time
+            kwargs["start_in"] = None
+
+        if "start_period" not in kwargs:  # DEPRECATED, TODO: REMOVE IN FUTURE
+            kwargs["start_period"] = None
+
+        if "end_period" not in kwargs:  # DEPRECATED, TODO: REMOVE IN FUTURE
+            kwargs["end_period"] = None
 
         if "data" not in kwargs:
             kwargs["data"] = self._data

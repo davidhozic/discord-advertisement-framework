@@ -2,7 +2,7 @@ from typing import List
 from typeguard import typechecked
 
 from .base import ResponderBase
-from .logic import BaseLogic
+from ..logic import BaseLogic
 from .constraints import BaseGuildConstraint
 from .actions import BaseResponse
 from ..events import EventID

@@ -1,26 +1,24 @@
 """
     Contains base definitions for different message classes.
 """
-
-from typing import Any, Set, List, Iterable, Union, TypeVar, Optional, Dict, Callable
-from functools import partial
+from typing import Any, Set, List, Union, TypeVar, Optional, Dict, Callable, get_type_hints
 from datetime import timedelta, datetime
 from abc import ABC, abstractmethod
+from typeguard import typechecked
+from functools import partial
 from enum import Enum, auto
-from typeguard import check_type, typechecked
 
-
+from ..misc import doc, attributes, async_util, instance_track
+from ..logging.tracing import trace, TraceLEVELS
+from ..messagedata import BaseMessageData
+from .messageperiod import *
 from ..dtypes import *
 from ..events import *
-from ..logging.tracing import trace, TraceLEVELS
-from ..misc import doc, attributes, async_util, instance_track
-from ..messagedata import BaseMessageData
 
-import random
-import re
-import copy
-import asyncio
 import _discord as discord
+import asyncio
+import copy
+import re
 
 
 __all__ = (
@@ -29,6 +27,7 @@ __all__ = (
     "ChannelErrorAction",
     "BaseChannelMessage",
 )
+
 
 T = TypeVar("T")
 ChannelType = Union[discord.TextChannel, discord.Thread, discord.VoiceChannel]
@@ -90,10 +89,6 @@ class BaseMESSAGE(ABC):
     """
     __slots__ = (
         "_id",
-        "period",
-        "start_period",
-        "end_period",
-        "next_send_time",
         "_data",
         "update_semaphore",
         "parent",
@@ -101,48 +96,81 @@ class BaseMESSAGE(ABC):
         "_timer_handle",
         "_removal_timer",
         "_event_ctrl",
+        "period",
     )
-
-    @typechecked
     def __init__(
         self,
         start_period: Optional[Union[int, timedelta]],
         end_period: Union[int, timedelta],
         data: BaseMessageData,
         start_in: Optional[Union[timedelta, datetime]],
-        remove_after: Optional[Union[int, timedelta, datetime]]
+        remove_after: Optional[Union[int, timedelta, datetime]],
+        period: BaseMessagePeriod
     ):
 
-        # Deprecated int since v2.1
         if isinstance(start_period, int):
-            trace("Using int on start_period is deprecated, use timedelta object instead.", TraceLEVELS.DEPRECATED)
             start_period = timedelta(seconds=start_period)
 
         if isinstance(end_period, int):
-            trace("Using int on end_period is deprecated, use timedelta object instead.", TraceLEVELS.DEPRECATED)
             end_period = timedelta(seconds=end_period)
 
-        if isinstance(start_period, timedelta) and start_period >= end_period:
+        # Due to compatibility when adding the new 'period' parameter, some parameters needed default
+        # values. The default values are all None for those parameters.
+        if (
+            end_period is None and period is None or
+            start_period is not None and end_period is None
+        ):
+            raise TypeError(f"{type(self).__name__} missing required parameter 'period'")
+
+        if start_period is not None and start_period >= end_period:
             raise ValueError("'start_period' must be less than 'end_period'")
 
-        # Clamp periods to minimum level (prevent infinite loops)
-        self.start_period = None if start_period is None else max(start_period, timedelta(seconds=C_PERIOD_MINIMUM_SEC))
-        self.end_period = max(end_period, timedelta(seconds=C_PERIOD_MINIMUM_SEC))
-        self.period = self.end_period  # This can randomize in _reset_timer
+        if end_period is not None:
+            trace(
+                "'start_period' and 'end_period' are deprecated and will be removed in v4.1.0."
+                " Use 'period' instead.",
+                TraceLEVELS.DEPRECATED
+            )
 
-        if isinstance(start_in, datetime):
-            self.next_send_time = start_in.astimezone()
-        else:
-            self.next_send_time = datetime.now().astimezone() + start_in
+            if period is None:
+                if start_in is not None:
+                    trace(
+                        f"'start_in' parameter is deprecated in {type(self).__name__}. "
+                        " Use the 'period' parameter to set both period and initial sending time.",
+                        TraceLEVELS.DEPRECATED
+                    )
+                    if isinstance(start_in, datetime):
+                        start_in = start_in.astimezone()
+                    else:
+                        start_in = datetime.now().astimezone() + start_in
+
+                if start_period is None:
+                    period = FixedDurationPeriod(end_period, start_in)
+                else:
+                    period = RandomizedDurationPeriod(start_period, end_period, start_in)
+            else:
+                raise TypeError(
+                    "Deprecated parameter 'start_period' / 'end_period' is given"
+                    " alongside the new'period' parameter."
+                    " DO NOT USE 'start_period' and 'end_period', they will be removed in the future."
+                )
+
+        elif start_in is not None:
+            raise TypeError(
+                "Deprecated parameter 'start_in' is given"
+                " alongside the new 'period' parameter."
+                " DO NOT USE 'start_in', it will be removed in the future."
+            )
 
         self.parent = None  # The xGUILD object this message is in (needed for update method).
-
         self._remove_after = remove_after
         self._data = data
+        self.period = period
 
         self._timer_handle: asyncio.Task = None
         self._removal_timer: asyncio.Task = None
         self._event_ctrl: EventController = None
+
         # Attributes created with this function will not be re-referenced to a different object
         # if the function is called again, ensuring safety (.update_method)
         attributes.write_non_exist(self, "update_semaphore", asyncio.Semaphore(1))
@@ -175,13 +203,14 @@ class BaseMESSAGE(ABC):
     def __deepcopy__(self, *args):
         "Duplicates the object (for use in AutoGUILD)"
         new = copy.copy(self)
+        new.parent = None  # Prevent loops and pickling issues
         for slot in attributes.get_all_slots(type(self)):
-            self_val = getattr(self, slot)
+            self_val = getattr(new, slot)
             if isinstance(self_val, (asyncio.Semaphore, asyncio.Lock)):
                 # Hack to copy semaphores since not all of it can be copied directly
                 copied = type(self_val)(self_val._value)
             else:
-                copied = copy.deepcopy((self_val))
+                copied = copy.deepcopy(self_val)
 
             setattr(new, slot, copied)
 
@@ -288,26 +317,40 @@ class BaseMESSAGE(ABC):
         """
         raise NotImplementedError
 
-    def _calc_next_time(self):
-        if self.start_period is not None:
-            range = map(int, [self.start_period.total_seconds(), self.end_period.total_seconds()])
-            self.period = timedelta(seconds=random.randrange(*range))
-
-        # Absolute timing instead of relative to prevent time slippage due to missed timer reset.
-        current_stamp = datetime.now().astimezone()
-        while self.next_send_time < current_stamp:
-            self.next_send_time += self.period
-
     def _reset_timer(self) -> None:
         """
         Resets internal timer.
         """
-        self._calc_next_time()
         self._timer_handle = async_util.call_at(
             self._event_ctrl.emit,
-            self.next_send_time,
+            self.period.calculate(),
             EventID._trigger_message_ready, self.parent, self
         )
+
+    @abstractmethod
+    def _verify_data(self, type_: type[BaseMessageData], data: dict) -> bool:
+        """
+        Verifies is the data is valid. Returns True on successful verification.
+
+        This needs to be subclassed and the subclass's method needs relay the call to this
+        method, providing the type.
+
+        Parameters
+        ------------
+        type_: type[BaseMessageData]
+            The class representing the message data.
+        data: dict
+            The data being checked.
+        """
+        hints = get_type_hints(type_)
+        if data is None or len(data) != len(hints):
+            return False
+
+        for k in hints:
+            if k not in data:
+                return False
+
+        return True
 
     @abstractmethod
     async def _send_channel(self) -> dict:
@@ -334,7 +377,7 @@ class BaseMESSAGE(ABC):
         self._event_ctrl = event_ctrl
         self._timer_handle = async_util.call_at(
             event_ctrl.emit,
-            self.next_send_time,
+            self.period.get(),
             EventID._trigger_message_ready, self.parent, self
         )
         self._event_ctrl.add_listener(
@@ -559,18 +602,32 @@ class BaseChannelMessage(BaseMESSAGE):
         "channel_getter",
         "_remove_after_original"
     )
-
-    @typechecked
     def __init__(
         self,
-        start_period: Union[timedelta, int, None],
-        end_period: Union[int, timedelta],
-        data: BaseMessageData,
-        channels: Union[List[Union[int, ChannelType]], AutoCHANNEL],
-        start_in: Optional[Union[timedelta, datetime]] = timedelta(seconds=0),
-        remove_after: Optional[Union[int, timedelta, datetime]] = None
+        start_period: Union[timedelta, int, None] = None,
+        end_period: Union[int, timedelta] = None,
+        data: BaseMessageData = None,
+        channels: Union[List[Union[int, ChannelType]], AutoCHANNEL] = None,
+        start_in: Optional[Union[timedelta, datetime]] = None,
+        remove_after: Optional[Union[int, timedelta, datetime]] = None,
+        period: BaseMessagePeriod = None
     ):
-        super().__init__(start_period, end_period, data, start_in, remove_after)
+        super().__init__(start_period, end_period, data, start_in, remove_after, period)
+
+        # Due to compatibility when adding the new 'period' parameter, some parameters needed default
+        # values. The default values are all None for those parameters.
+        if (
+            channels is None
+        ):
+            raise TypeError(f"{type(self).__name__} missing required parameter 'channels'")
+
+        # Due to compatibility when adding the new 'period' parameter, some parameters needed default
+        # values. The default values are all None for those parameters.
+        if (
+            data is None
+        ):
+            raise TypeError(f"{type(self).__name__} missing required parameter 'data'")
+
         self.channels = channels
         self.channel_getter = None
 
@@ -720,7 +777,7 @@ class BaseChannelMessage(BaseMESSAGE):
         """
         # Acquire mutex to prevent update method from writing while sending
         data_to_send = await self._data.to_dict()
-        if any(data_to_send.values()):  # There is data to be send
+        if self._verify_data(data_to_send):  # There is data to be send
             errored_channels = []
             succeeded_channels = []
 
@@ -752,7 +809,13 @@ class BaseChannelMessage(BaseMESSAGE):
         await self._close()
         if "start_in" not in kwargs:
             # This parameter does not appear as attribute, manual setting necessary
-            kwargs["start_in"] = self.next_send_time
+            kwargs["start_in"] = None
+
+        if "start_period" not in kwargs:  # DEPRECATED, TODO: REMOVE IN FUTURE
+            kwargs["start_period"] = None
+
+        if "end_period" not in kwargs:  # DEPRECATED, TODO: REMOVE IN FUTURE
+            kwargs["end_period"] = None
 
         if "data" not in kwargs:
             kwargs["data"] = self._data

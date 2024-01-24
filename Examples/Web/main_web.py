@@ -1,30 +1,41 @@
+
 """
-This example shows how the user can use username and password to login into Discord and
-it also shows how to configure the automatic guild discovery and join feature (auto_join parameter)
+Example shows login with email and password.
+The AutoGUILD defines an auto_join parameter, which will be used to (semi) automatically
+join new guilds based on a prompt. You as a user still need to solve any CAPTCHA challenges.
 """
 
-from daf import QuerySortBy, QueryMembers
+# Import the necessary items
+from daf.web import QueryMembers
+from daf.client import ACCOUNT
+from daf.web import GuildDISCOVERY
+from daf.web import QuerySortBy
+from daf.guild.autoguild import AutoGUILD
+from daf.logging.tracing import TraceLEVELS
 import daf
 
+
+# Defined accounts
 accounts = [
-    daf.ACCOUNT(
-        username="email@gmail.com",
-        password="Password6745;*",
+    ACCOUNT(
         servers=[
-            daf.AutoGUILD(
+            AutoGUILD(
                 include_pattern=".*",
-                auto_join=daf.GuildDISCOVERY(prompt="NFT arts",
-                                             sort_by=QuerySortBy.TOP,
-                                             total_members=QueryMembers.ALL,
-                                             limit=20),
+                auto_join=GuildDISCOVERY(
+                    prompt="NFT arts",
+                    sort_by=QuerySortBy.TOP,
+                    total_members=QueryMembers.B100_1k,
+                    limit=30,
+                ),
             ),
         ],
-        proxy="protocol://ip:port"
-    )
+        username="username@email.com",
+        password="password",
+    ),
 ]
 
-
+# Run the framework (blocking)
 daf.run(
     accounts=accounts,
-    debug=daf.TraceLEVELS.NORMAL
+    debug=TraceLEVELS.NORMAL,
 )

@@ -1,8 +1,9 @@
+
 from abc import ABC, abstractmethod
 from typing import List
 
 from .constraints import ConstraintBase
-from .logic import BaseLogic
+from ..logic import BaseLogic
 from .actions import BaseResponse
 from ..events import EventID
 from ..misc.doc import doc_category

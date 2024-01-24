@@ -1,0 +1,225 @@
+{
+    "name": "zajcek's dungeon",
+    "id": 863071397207212052,
+    "type": "GUILD",
+    "invite_tracking": {
+        "DEnvahb2Sw": [
+            {
+                "member": {
+                    "id": 1118595892707086418,
+                    "name": "daafy5578"
+                },
+                "index": 436766271324167,
+                "timestamp": "24.01.2024 18:44:07"
+            }
+        ]
+    },
+    "message_tracking": {
+        "936739431073865789": {
+            "name": "Aproksimacka",
+            "id": 936739431073865789,
+            "messages": [
+                {
+                    "sent_data": {
+                        "text": "Buy our NFT today!",
+                        "files": [
+                            "C:/Users/david/Downloads/display.jpg"
+                        ]
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            },
+                            {
+                                "name": "test-general",
+                                "id": 1199770792695705732
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436766274224648,
+                    "timestamp": "24.01.2024 18:44:18"
+                },
+                {
+                    "sent_data": {
+                        "text": "Buy our NFT today!",
+                        "files": [
+                            "C:/Users/david/Downloads/display.jpg"
+                        ]
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            },
+                            {
+                                "name": "test-general",
+                                "id": 1199770792695705732
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436766270407430,
+                    "timestamp": "24.01.2024 18:44:03"
+                },
+                {
+                    "sent_data": {
+                        "text": "Buy our NFT today!",
+                        "files": [
+                            "C:/Users/david/Downloads/display.jpg"
+                        ]
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            },
+                            {
+                                "name": "test-general",
+                                "id": 1199770792695705732
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436766266521349,
+                    "timestamp": "24.01.2024 18:43:48"
+                },
+                {
+                    "sent_data": {
+                        "text": "Buy our NFT today!",
+                        "files": [
+                            "C:/Users/david/Downloads/display.jpg"
+                        ]
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            },
+                            {
+                                "name": "test-general",
+                                "id": 1199770792695705732
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436766262658564,
+                    "timestamp": "24.01.2024 18:43:33"
+                },
+                {
+                    "sent_data": {
+                        "text": "Buy our NFT today!",
+                        "files": [
+                            "C:/Users/david/Downloads/display.jpg"
+                        ]
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            },
+                            {
+                                "name": "test-general",
+                                "id": 1199770792695705732
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436766258745859,
+                    "timestamp": "24.01.2024 18:43:18"
+                },
+                {
+                    "sent_data": {
+                        "text": "Buy our NFT today!",
+                        "files": [
+                            "C:/Users/david/Downloads/display.jpg"
+                        ]
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            },
+                            {
+                                "name": "test-general",
+                                "id": 1199770792695705732
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436766255005954,
+                    "timestamp": "24.01.2024 18:43:03"
+                },
+                {
+                    "sent_data": {
+                        "text": "Buy our NFT today!",
+                        "files": [
+                            "C:/Users/david/Downloads/display.jpg"
+                        ]
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            },
+                            {
+                                "name": "test-general",
+                                "id": 1199770792695705732
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436766251103233,
+                    "timestamp": "24.01.2024 18:42:48"
+                },
+                {
+                    "sent_data": {
+                        "text": "Buy our NFT today!",
+                        "files": [
+                            "C:/Users/david/Downloads/display.jpg"
+                        ]
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            },
+                            {
+                                "name": "test-general",
+                                "id": 1199770792695705732
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436766248725760,
+                    "timestamp": "24.01.2024 18:42:39"
+                }
+            ]
+        }
+    }
+}

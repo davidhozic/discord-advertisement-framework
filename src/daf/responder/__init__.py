@@ -7,4 +7,4 @@ from .guildresponder import GuildResponder
 
 from .constraints import *
 from .actions import *
-from .logic import *
+from ..logic import *

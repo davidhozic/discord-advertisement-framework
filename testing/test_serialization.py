@@ -1,3 +1,4 @@
+
 from datetime import datetime, timedelta
 from test_util import *
 from tkclasswiz.convert import convert_to_object_info, convert_to_objects, ObjectInfo
@@ -19,7 +20,7 @@ import daf
         daf.ACCOUNT(username="hello", password="world"),
         daf.VoiceMESSAGE(None, 5, daf.dtypes.FILE("Test", b'\xff\x51\x55'), daf.AutoCHANNEL("test"), 5, remove_after=5),
         daf.DMResponder(
-            daf.responder.logic.regex("nft.*buy"),
+            daf.logic.regex("nft.*buy"),
             daf.DMResponse(daf.TextMessageData("Hello")),
             [daf.MemberOfGuildConstraint(32323)]
         ),

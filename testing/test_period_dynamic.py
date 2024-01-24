@@ -17,7 +17,7 @@ TEST_USER_ID = 145196308985020416
 TEST_SEND_PERIOD_TEXT = timedelta(seconds=10)
 TEST_SEND_PERIOD_VOICE = timedelta(seconds=10)
 TEST_PERIOD_MAX_VARIATION = 0.12 # Relative variation from period allowed
-TEST_MAX_WAIT_TIME = 15 # Maximum wait for message
+TEST_MAX_WAIT_TIME = 15  # Maximum wait for message
 
 
 @pytest.fixture(scope="module")

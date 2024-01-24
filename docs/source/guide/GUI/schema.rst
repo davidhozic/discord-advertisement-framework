@@ -22,7 +22,7 @@ Some **important terms** that users need to know if they wish to define objects:
         To obtain it, first enable `developer mode <https://beebom.com/how-enable-disable-developer-mode-discord/>`_.
         Then you can right click on the wanted resource (eg. channel) and left click on *Copy ID*.
 
-        .. image:: ./DEP/copy-snowflake-id.png
+        .. image:: ./DEP/images/copy-snowflake-id.png
             :height: 300
 
 
@@ -35,7 +35,7 @@ In the schema tab we can define:
 3. Connection manager, however this is not inside the schema tab but rather on the top of the GUI.
 
 
-.. image:: ./DEP/daf-gui-front.png
+.. image:: ./DEP/images/daf-gui-front.png
     :width: 20cm
     :align: center
 

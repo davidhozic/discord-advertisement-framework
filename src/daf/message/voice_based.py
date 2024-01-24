@@ -3,23 +3,27 @@
 
 
 from typing import Any, Dict, List, Iterable, Optional, Union, Tuple, Callable
-from pathlib import Path
 from datetime import timedelta, datetime
 from typeguard import typechecked
+from pathlib import Path
 
-from .base import *
-from ..dtypes import *
-from ..events import *
-from ..logging.tracing import *
-from ..logging import sql
+from ..messagedata.dynamicdata import _DeprecatedDynamic
+
+from ..messagedata import BaseVoiceData, VoiceMessageData
 from ..misc import doc, instance_track
-from ..messagedata import BaseVoiceData, VoiceMessageData, DynamicVoiceMessageData
-
+from ..logging import sql
 from .. import dtypes
 
-import asyncio
+from ..logging.tracing import *
+from .messageperiod import *
+from ..dtypes import *
+from ..events import *
+from .base import *
+
 import _discord as discord
+import asyncio
 import os
+
 
 __all__ = (
     "VoiceMESSAGE",
@@ -130,13 +134,14 @@ class VoiceMESSAGE(BaseChannelMessage):
     @typechecked
     def __init__(
         self,
-        start_period: Union[int, timedelta, None],
-        end_period: Union[int, timedelta],
-        data: Union[BaseVoiceData, _old_data_type],
-        channels: Union[Iterable[Union[int, discord.VoiceChannel]], AutoCHANNEL],
+        start_period: Union[int, timedelta, None] = None,
+        end_period: Union[int, timedelta] = None,
+        data: Union[BaseVoiceData, _old_data_type] = None,
+        channels: Union[Iterable[Union[int, discord.VoiceChannel]], AutoCHANNEL] = None,
         volume: Optional[int] = 50,
-        start_in: Optional[Union[timedelta, datetime]] = timedelta(seconds=0),
-        remove_after: Optional[Union[int, timedelta, datetime]] = None
+        start_in: Optional[Union[timedelta, datetime]] = None,
+        remove_after: Optional[Union[int, timedelta, datetime]] = None,
+        period: BaseMessagePeriod = None
     ):
         if not dtypes.GLOBALS.voice_installed:
             raise ModuleNotFoundError(
@@ -151,7 +156,7 @@ class VoiceMESSAGE(BaseChannelMessage):
             )
             # Transform to new data type            
             if isinstance(data, _FunctionBaseCLASS):
-                data = DynamicVoiceMessageData(data.fnc, *data.args, **data.kwargs)
+                data = _DeprecatedDynamic(data.fnc, *data.args, **data.kwargs)
             else:
                 if isinstance(data, FILE):
                     data = [data]
@@ -161,7 +166,7 @@ class VoiceMESSAGE(BaseChannelMessage):
 
                 data = VoiceMessageData(data[0])
 
-        super().__init__(start_period, end_period, data, channels, start_in, remove_after)
+        super().__init__(start_period, end_period, data, channels, start_in, remove_after, period)
         self.volume = max(0, min(100, volume))  # Clamp the volume to 0-100 %
 
     def generate_log_context(self,
@@ -253,10 +258,10 @@ class VoiceMESSAGE(BaseChannelMessage):
 
         # Timeout handling
         elif member is not None and member.timed_out:
-            self.next_send_time = member.communication_disabled_until.astimezone() + timedelta(minutes=1)
+            self.period.defer(member.communication_disabled_until.astimezone() + timedelta(minutes=1))
             trace(
                 f"User '{member.name}' has been timed-out in guild '{guild.name}'.\n"
-                f"Retrying after {self.next_send_time} (1 minute after expiry)",
+                f"Retrying after {self.period.get()} (1 minute after expiry)",
                 TraceLEVELS.WARNING
             )
 
@@ -283,6 +288,9 @@ class VoiceMESSAGE(BaseChannelMessage):
             The GUILD this message is in
         """
         return super().initialize(parent, event_ctrl, channel_getter)
+
+    def _verify_data(self, data: dict) -> bool:
+        return super()._verify_data(VoiceMessageData, data)
 
     async def _send_channel(self,
                             channel: discord.VoiceChannel,

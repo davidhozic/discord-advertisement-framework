@@ -40,6 +40,9 @@ Releases
 v4.0.0
 ===================
 - New automatic message responder (DM and guild) - :ref:`Automatic responder`.
+- Upon slow-mode / timeout, messages will now longer wait until the end of slow-mode / timeout.
+  Instead, they will defer until the next period that is not within slow-mode / timeout.
+  The period will however still auto-correct itself to be above the slow-mode.
 - |POTENT_BREAK_CH| Changed how :class:`daf.guild.AutoGUILD` works. It will now create :class:`daf.guild.GUILD` instances.
   This also prevents a "bug" that appeared if the user was timed-out in a guild, which reflected upon other
   guilds as well. The added benefit of creating :class:`~daf.guild.GUILD` is different randomized sending

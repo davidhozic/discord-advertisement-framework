@@ -1,0 +1,662 @@
+{
+    "name": "magic-123-magic",
+    "id": 1136698956496261301,
+    "type": "GUILD",
+    "invite_tracking": {},
+    "message_tracking": {
+        "936739431073865789": {
+            "name": "Aproksimacka",
+            "id": 936739431073865789,
+            "messages": [
+                {
+                    "sent_data": {
+                        "text": "Hello world"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "testpy-0",
+                                "id": 1197993193132785664
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436657739601408,
+                    "timestamp": "19.01.2024 20:58:15"
+                },
+                {
+                    "sent_data": {
+                        "embed": {
+                            "fields": [],
+                            "type": "rich",
+                            "title": "Goodbye world"
+                        }
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "testpy-0",
+                                "id": 1197989862930907139
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436657532793859,
+                    "timestamp": "19.01.2024 20:44:47"
+                },
+                {
+                    "sent_data": {
+                        "text": "Goodbye world"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "testpy-0",
+                                "id": 1197989862930907139
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436657530202882,
+                    "timestamp": "19.01.2024 20:44:37"
+                },
+                {
+                    "sent_data": {
+                        "embed": {
+                            "fields": [],
+                            "type": "rich",
+                            "title": "Hello world"
+                        }
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "testpy-0",
+                                "id": 1197989862930907139
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436657527662337,
+                    "timestamp": "19.01.2024 20:44:27"
+                },
+                {
+                    "sent_data": {
+                        "text": "Hello world"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "testpy-0",
+                                "id": 1197989862930907139
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436657525094656,
+                    "timestamp": "19.01.2024 20:44:17"
+                },
+                {
+                    "sent_data": {
+                        "text": "Hello world"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "testpy-0",
+                                "id": 1197987594684878999
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436657415543296,
+                    "timestamp": "19.01.2024 20:37:09"
+                },
+                {
+                    "sent_data": {
+                        "embed": {
+                            "fields": [],
+                            "type": "rich",
+                            "title": "Goodbye world"
+                        }
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "testpy-0",
+                                "id": 1197930691745296457
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436653921636355,
+                    "timestamp": "19.01.2024 16:49:41"
+                },
+                {
+                    "sent_data": {
+                        "text": "Goodbye world"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "testpy-0",
+                                "id": 1197930691745296457
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436653919083266,
+                    "timestamp": "19.01.2024 16:49:31"
+                },
+                {
+                    "sent_data": {
+                        "embed": {
+                            "fields": [],
+                            "type": "rich",
+                            "title": "Hello world"
+                        }
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "testpy-0",
+                                "id": 1197930691745296457
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436653916514561,
+                    "timestamp": "19.01.2024 16:49:21"
+                },
+                {
+                    "sent_data": {
+                        "text": "Hello world"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "testpy-0",
+                                "id": 1197930691745296457
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436653913994752,
+                    "timestamp": "19.01.2024 16:49:11"
+                },
+                {
+                    "sent_data": {
+                        "embed": {
+                            "fields": [],
+                            "type": "rich",
+                            "title": "Goodbye world"
+                        }
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "testpy-0",
+                                "id": 1197930067850961017
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436653883278595,
+                    "timestamp": "19.01.2024 16:47:11"
+                },
+                {
+                    "sent_data": {
+                        "text": "Goodbye world"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "testpy-0",
+                                "id": 1197930067850961017
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436653880733698,
+                    "timestamp": "19.01.2024 16:47:01"
+                },
+                {
+                    "sent_data": {
+                        "embed": {
+                            "fields": [],
+                            "type": "rich",
+                            "title": "Hello world"
+                        }
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "testpy-0",
+                                "id": 1197930067850961017
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436653878167297,
+                    "timestamp": "19.01.2024 16:46:51"
+                },
+                {
+                    "sent_data": {
+                        "text": "Hello world"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "testpy-0",
+                                "id": 1197930067850961017
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436653875710720,
+                    "timestamp": "19.01.2024 16:46:41"
+                },
+                {
+                    "sent_data": {
+                        "streamed_audio": "testing123.mp3"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "testpy-0",
+                                "id": 1197929802766766221
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "VoiceMESSAGE",
+                    "index": 436653861842176,
+                    "timestamp": "19.01.2024 16:45:47"
+                },
+                {
+                    "sent_data": {
+                        "streamed_audio": "testing123.mp3"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "testpy-0",
+                                "id": 1197929600798425108
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "VoiceMESSAGE",
+                    "index": 436653849492992,
+                    "timestamp": "19.01.2024 16:44:59"
+                },
+                {
+                    "sent_data": {
+                        "text": "Hello world"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "testpy-0",
+                                "id": 1197928381166137445
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436653772621568,
+                    "timestamp": "19.01.2024 16:39:59"
+                },
+                {
+                    "sent_data": {
+                        "embed": {
+                            "fields": [],
+                            "type": "rich",
+                            "title": "Goodbye world"
+                        }
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "testpy-0",
+                                "id": 1197927912175849595
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436653751760387,
+                    "timestamp": "19.01.2024 16:38:37"
+                },
+                {
+                    "sent_data": {
+                        "text": "Goodbye world"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "testpy-0",
+                                "id": 1197927912175849595
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436653749186562,
+                    "timestamp": "19.01.2024 16:38:27"
+                },
+                {
+                    "sent_data": {
+                        "embed": {
+                            "fields": [],
+                            "type": "rich",
+                            "title": "Hello world"
+                        }
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "testpy-0",
+                                "id": 1197927912175849595
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436653746643969,
+                    "timestamp": "19.01.2024 16:38:17"
+                },
+                {
+                    "sent_data": {
+                        "text": "Hello world"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "testpy-0",
+                                "id": 1197927912175849595
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436653744134656,
+                    "timestamp": "19.01.2024 16:38:08"
+                },
+                {
+                    "sent_data": {
+                        "embed": {
+                            "fields": [],
+                            "type": "rich",
+                            "title": "Goodbye world"
+                        }
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "testpy-0",
+                                "id": 1197927099479101461
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436653702130435,
+                    "timestamp": "19.01.2024 16:35:23"
+                },
+                {
+                    "sent_data": {
+                        "text": "Goodbye world"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "testpy-0",
+                                "id": 1197927099479101461
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436653699566082,
+                    "timestamp": "19.01.2024 16:35:13"
+                },
+                {
+                    "sent_data": {
+                        "embed": {
+                            "fields": [],
+                            "type": "rich",
+                            "title": "Hello world"
+                        }
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "testpy-0",
+                                "id": 1197927099479101461
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436653697004033,
+                    "timestamp": "19.01.2024 16:35:03"
+                },
+                {
+                    "sent_data": {
+                        "text": "Hello world"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "testpy-0",
+                                "id": 1197927099479101461
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436653694484224,
+                    "timestamp": "19.01.2024 16:34:54"
+                },
+                {
+                    "sent_data": {
+                        "embed": {
+                            "fields": [],
+                            "type": "rich",
+                            "title": "Goodbye world"
+                        }
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "testpy-0",
+                                "id": 1197924546641133711
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436653546390275,
+                    "timestamp": "19.01.2024 16:25:15"
+                },
+                {
+                    "sent_data": {
+                        "text": "Goodbye world"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "testpy-0",
+                                "id": 1197924546641133711
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436653543833858,
+                    "timestamp": "19.01.2024 16:25:05"
+                },
+                {
+                    "sent_data": {
+                        "embed": {
+                            "fields": [],
+                            "type": "rich",
+                            "title": "Hello world"
+                        }
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "testpy-0",
+                                "id": 1197924546641133711
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436653541261825,
+                    "timestamp": "19.01.2024 16:24:55"
+                },
+                {
+                    "sent_data": {
+                        "text": "Hello world"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "testpy-0",
+                                "id": 1197924546641133711
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436653538717184,
+                    "timestamp": "19.01.2024 16:24:45"
+                },
+                {
+                    "sent_data": {
+                        "embed": {
+                            "fields": [],
+                            "type": "rich",
+                            "title": "Goodbye world"
+                        }
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "testpy-0",
+                                "id": 1197921779847536700
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436653395344643,
+                    "timestamp": "19.01.2024 16:15:25"
+                },
+                {
+                    "sent_data": {
+                        "text": "Goodbye world"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "testpy-0",
+                                "id": 1197921779847536700
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436653392769026,
+                    "timestamp": "19.01.2024 16:15:15"
+                },
+                {
+                    "sent_data": {
+                        "embed": {
+                            "fields": [],
+                            "type": "rich",
+                            "title": "Hello world"
+                        }
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "testpy-0",
+                                "id": 1197921779847536700
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436653391538945,
+                    "timestamp": "19.01.2024 16:15:10"
+                },
+                {
+                    "sent_data": {
+                        "text": "Hello world"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "testpy-0",
+                                "id": 1197921779847536700
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436653389405184,
+                    "timestamp": "19.01.2024 16:15:02"
+                }
+            ]
+        }
+    }
+}
