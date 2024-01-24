@@ -1,12 +1,10 @@
 from abc import abstractmethod, ABC
 from typing import TypedDict
 
-from ..misc.doc import doc_category
-
 
 __all__ = ("BaseMessageData",)
 
-@doc_category("Message data", path="messagedata")
+
 class BaseMessageData(ABC):
     """
     Interface for message data.

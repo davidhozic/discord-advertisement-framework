@@ -101,7 +101,7 @@ class AbstractConnectionCLIENT:
         """
         Executes a method inside object and returns the result.
 
-        Parameter
+        Parameters
         -----------
         object_ref
             Reference to an object to execute method on.

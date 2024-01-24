@@ -18,7 +18,6 @@ __all__ = (
 )
 
 
-@doc_category("Message period")
 class BaseMessagePeriod(ABC):
     """
     Base for implementing message periods.
@@ -59,8 +58,6 @@ class BaseMessagePeriod(ABC):
         """
         pass
 
-
-@doc_category("Message period")
 class DurationPeriod(BaseMessagePeriod):
     """
     Base for duration-like message periods.
@@ -82,7 +79,6 @@ class DurationPeriod(BaseMessagePeriod):
 
         return self.next_send_time
 
-@doc_category("Message period")
 class EveryXPeriod(BaseMessagePeriod):
     """
     Base for every-x-like message periods.
@@ -98,10 +94,15 @@ class FixedDurationPeriod(DurationPeriod):
     """
     A fixed message (sending) period.
 
-    Parameter
+    Parameters
     ---------------
     duration: timedelta
         The period duration (how much time to wait after every send).
+    next_send_time: datetime | timedelta
+        Represents the time at which the message should first be sent.
+        Use ``datetime`` to specify the exact date and time at which the message should start being sent.
+        Use ``timedelta`` to specify how soon (after creation of the object) the message
+        should start being sent.
     """
     def __init__(self, duration: timedelta, next_send_time: Union[datetime, timedelta]  = None) -> None:
         self.duration = duration
@@ -165,10 +166,15 @@ class DaysOfWeekPeriod(EveryXPeriod):
 
     Parameters
     --------------
-    days: ``list[Literal["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]]``
+    days: list[Literal["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]]
         List of day abbreviations on which the message will be sent.
     time: :class:`datetime.time`
         The time on which the message will be sent (every day of ``days``).
+    next_send_time: datetime | timedelta
+        Represents the time at which the message should first be sent.
+        Use ``datetime`` to specify the exact date and time at which the message should start being sent.
+        Use ``timedelta`` to specify how soon (after creation of the object) the message
+        should start being sent.
 
     Raises
     -----------
@@ -246,7 +252,13 @@ class DailyPeriod(DaysOfWeekPeriod):
 
     Parameters
     --------------
-    The time on which the message will be sent.
+    time: time
+        The time on which the message will be sent.
+    next_send_time: datetime | timedelta
+        Represents the time at which the message should first be sent.
+        Use ``datetime`` to specify the exact date and time at which the message should start being sent.
+        Use ``timedelta`` to specify how soon (after creation of the object) the message
+        should start being sent.
     """
     def __init__(
         self,

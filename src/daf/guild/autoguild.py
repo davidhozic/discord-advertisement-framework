@@ -3,23 +3,24 @@ Automatic GUILD generation.
 """
 from __future__ import annotations
 from typing import Any, Union, List, Optional, Dict
-from typeguard import typechecked
 from datetime import timedelta, datetime
-from copy import deepcopy
+from typeguard import typechecked
 from contextlib import suppress
+from copy import deepcopy
 
-from ..message import BaseChannelMessage
-from ..logging.tracing import TraceLEVELS, trace
 from ..misc import async_util, instance_track, doc, attributes
+from ..logging.tracing import TraceLEVELS, trace
+from ..message import BaseChannelMessage
+from ..logic import BaseLogic
 from ..events import *
+from ..logic import *
+
+from .guilduser import GUILD
+from .. import logging
+from .. import web
 
 import _discord as discord
 import asyncio
-
-from .. import web
-from .. import logging
-from .guilduser import GUILD
-
 import re
 
 
@@ -62,39 +63,25 @@ class MessageDuplicator:
 class AutoGUILD:
     """
 
-    .. versionchanged:: v3.3.0
+    .. versionchanged:: v4.0.0
 
         - Restored original way AutoGUILD
           works (as a GUILD generator)
-
-    .. versionchanged:: v3.0.0
-
-        - Now works like GUILD and USER.
-        - Removed ``created_at`` property.
-
+        - Include and exclude patterns now accept a daf.logic.BaseLogic
+          object for more flexible matching. Using strings (text) is deprecated
+          and will be removed.
 
     Represents multiple guilds (servers) based on a text pattern.
     AutoGUILD generates :class:`daf.guild.GUILD` objects for each matched pattern.
 
     Parameters
     --------------
-    include_pattern: str
-        Regex pattern to use for searching guild names that are to be included.
-        This is also checked before joining a new guild if ``auto_guild`` is given.
-
-        For example you can do write ``.*`` to match ALL guilds you are joined into or specify
-        (parts of) guild names separated with ``|`` like so: "name1|name2|name3|name4"
-
-    exclude_pattern: Optional[str] = None
-        Regex pattern to use for searching guild names that are
-        **NOT** to be excluded.
-
-        .. note::
-            If both include_pattern and exclude_pattern yield a match,
-            the guild will be excluded from match.
-
+    include_pattern: BaseLogic
+        Matching condition, which checks if the name of guilds matches defined condition.
     remove_after: Optional[Union[timedelta, datetime]] = None
         When to remove this object from the shilling list.
+    messages: List[BaseChannelMessage]
+        List of messages with channels. This includes TextMESSAGE and VoiceMESSAGE.
     logging: Optional[bool] = False
         Set to True if you want the guilds generated to log
         sent messages.
@@ -104,10 +91,16 @@ class AutoGUILD:
         Optional :class:`~daf.web.GuildDISCOVERY` object which will automatically discover
         and join guilds though the browser.
         This will open a Google Chrome session.
+    invite_track: Optional[List[str]]
+        List of invite links (or invite codes) to track.
+    removal_buffer_length: int
+        The size of removed messages buffer.
+        A message is added to this buffer when remove_message is called by the user or a message
+        automatically removes itself for any reason.
+        Defaults to 50.
     """
     __slots__ = (
         "include_pattern",
-        "exclude_pattern",
         "_remove_after",
         "logging",
         "update_semaphore",
@@ -127,7 +120,7 @@ class AutoGUILD:
     @typechecked
     def __init__(
         self,
-        include_pattern: str,
+        include_pattern: Union[BaseLogic, str],
         exclude_pattern: Optional[str] = None,
         remove_after: Optional[Union[timedelta, datetime]] = None,
         messages: Optional[List[BaseChannelMessage]] = None,
@@ -142,9 +135,23 @@ class AutoGUILD:
         if invite_track is None:
             invite_track = []
 
-        # Remove spaces around OR
-        self.include_pattern = re.sub(r"\s*\|\s*", '|', include_pattern) if include_pattern else None
-        self.exclude_pattern = re.sub(r"\s*\|\s*", '|', exclude_pattern) if exclude_pattern else None
+        if isinstance(include_pattern, str):
+            trace(
+                "Using text (str) on 'include_pattern' parameter of AutoGUILD is deprecated (planned for removal in 4.2.0)!\n"
+                "Use logical operators instead (daf.logic). E. g., regex, contains, or_, ...\n",
+                TraceLEVELS.DEPRECATED
+            )
+            include_pattern = regex(re.sub(r"\s*\|\s*", '', include_pattern))
+
+        if exclude_pattern is not None:
+            trace(
+                "'exclude_pattern' parameter is deprecated (planned for removal in 4.2.0)!\n",
+                TraceLEVELS.DEPRECATED
+            )
+            exclude_pattern = regex(re.sub(r"\s*\|\s*", '', exclude_pattern))
+            include_pattern = and_(include_pattern, not_(exclude_pattern))
+
+        self.include_pattern = include_pattern
         self._remove_after = remove_after
         self._messages: List[MessageDuplicator] = []
         self.logging = logging
@@ -165,7 +172,7 @@ class AutoGUILD:
         attributes.write_non_exist(self, "update_semaphore", asyncio.Semaphore(1))
 
     def __repr__(self) -> str:
-        return f"AutoGUILD(include_pattern='{self.include_pattern}', exclude_pattern='{self.exclude_pattern})'"
+        return f"AutoGUILD(include_pattern='{self.include_pattern}'"
 
     @property
     def messages(self) -> List[BaseChannelMessage]:
@@ -187,11 +194,11 @@ class AutoGUILD:
         return self._remove_after
 
     def _get_guilds(self):
-        "Returns all the guilds that match the include_pattern and not exclude_pattern"
+        "Returns all the guilds that match the include_pattern"
         client: discord.Client = self.parent.client
         guilds = [
             g for g in client.guilds
-            if self._check_name_match(g.name)
+            if self.include_pattern.check(g.name.lower())
         ]
         return guilds
 
@@ -288,13 +295,6 @@ class AutoGUILD:
             self
         )
 
-    def _check_name_match(self, name: str) -> bool:
-        return (
-            name is not None and
-            re.search(self.include_pattern, name) is not None and
-            (self.exclude_pattern is None or re.search(self.exclude_pattern, name) is None)
-        )
-
     @async_util.except_return
     async def initialize(self, parent: Any, event_ctrl: EventController):
         """
@@ -341,12 +341,12 @@ class AutoGUILD:
                 self._event_ctrl.add_listener(
                     EventID.discord_member_join,
                     self._on_member_join,
-                    predicate=lambda memb: self._check_name_match(memb.guild.name)
+                    predicate=lambda memb: self.include_pattern.check(memb.guild.name.lower())
                 )
                 self._event_ctrl.add_listener(
                     EventID.discord_invite_delete,
                     self._on_invite_delete,
-                    predicate=lambda inv: self._check_name_match(inv.guild.name)
+                    predicate=lambda inv: self.include_pattern.check(inv.guild.name.lower())
                 )
             except discord.HTTPException as exc:
                 trace(f"Could not query invite links in {self}", TraceLEVELS.ERROR, exc)
@@ -358,7 +358,7 @@ class AutoGUILD:
         self._event_ctrl.add_listener(
             EventID.discord_guild_join,
             self._on_guild_join,
-            predicate=lambda guild: self._check_name_match(guild.name)
+            predicate=lambda guild: self.include_pattern.check(guild.name.lower())
         )
 
         self._event_ctrl.add_listener(
@@ -431,6 +431,9 @@ class AutoGUILD:
             if "invite_track" not in kwargs:
                 kwargs["invite_track"] = self.invite_track
 
+            if "exclude_pattern" not in kwargs: # DEPRECATED; TODO: remove in 4.2.0
+                kwargs["exclude_pattern"] = None
+
             kwargs["messages"] = kwargs.pop("messages", self._messages)
             if init_options is None:
                 init_options = {"parent": self.parent, "event_ctrl": self._event_ctrl}
@@ -468,16 +471,8 @@ class AutoGUILD:
             try:
                 # Get next result from top.gg
                 yielded: web.QueryResult = await self.guild_query_iter.__anext__()
-                if (
-                    re.search(self.include_pattern, yielded.name) is None or
-                    (
-                        self.exclude_pattern is not None and
-                        re.search(self.exclude_pattern, yielded.name) is not None
-                    )
-                ):
-                    return None
-
-                return yielded
+                if self.include_pattern.check(yielded.name.lower()):
+                    return yielded
             except StopAsyncIteration:
                 trace(f"Iterated though all found guilds -> stopping guild join in {self}.", TraceLEVELS.NORMAL)
                 self.guild_query_iter = None
@@ -485,7 +480,8 @@ class AutoGUILD:
                 trace(f"Could not query top.gg, stopping auto join.", TraceLEVELS.ERROR, exc)
                 self.guild_query_iter = None
 
-        
+            return None
+
         while True:
             if (yielded := await get_next_guild()) is None:
                 return

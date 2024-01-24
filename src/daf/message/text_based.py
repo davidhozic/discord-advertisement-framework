@@ -1,16 +1,17 @@
 """
 Contains definitions for message classes that are text based."""
 
-from typing import Any, Dict, List, Iterable, Optional, Union, Literal, Tuple, Callable, get_type_hints
+from typing import Any, Dict, List, Iterable, Optional, Union, Literal, Tuple, Callable
 from datetime import datetime, timedelta
 from typeguard import typechecked
 
 
 from ..messagedata.dynamicdata import _DeprecatedDynamic
 
-from ..messagedata import BaseTextData, TextMessageData
+from ..messagedata import BaseTextData, TextMessageData, FILE
 from ..logging.tracing import trace, TraceLEVELS
 from .messageperiod import *
+from .autochannel import *
 from ..dtypes import *
 from .base import *
 
@@ -43,45 +44,8 @@ class TextMESSAGE(BaseChannelMessage):
 
     Parameters
     ------------
-    start_period: Union[int, timedelta, None]
-        The value of this parameter can be:
-
-        - None - Use this value for a fixed (not randomized) sending period
-        - timedelta object - object describing time difference,
-          if this is used, then the parameter represents the bottom limit of the **randomized** sending period.
-    end_period: Union[int, timedelta]
-        If ``start_period`` is not None,
-        then this represents the upper limit of randomized time period in which messages will be sent.
-        If ``start_period`` is None, then this represents the actual time period between each message send.
-
-        .. CAUTION::
-            When the period is lower than the remaining time, the framework will start
-            incrementing the original period by original period until it is larger then
-            the slow mode remaining time.
-
-        .. code-block:: python
-            :caption: **Randomized** sending period between **5** seconds and **10** seconds.
-
-            # Time between each send is somewhere between 5 seconds and 10 seconds.
-            daf.TextMESSAGE(start_period=timedelta(seconds=5), end_period=timedelta(seconds=10), data="Second Message",
-                            channels=[12345], mode="send", start_in=timedelta(seconds=0))
-
-        .. code-block:: python
-            :caption: **Fixed** sending period at **10** seconds
-
-            # Time between each send is exactly 10 seconds.
-            daf.TextMESSAGE(start_period=None, end_period=timedelta(seconds=10), data="Second Message",
-                            channels=[12345], mode="send", start_in=timedelta(seconds=0))
-    data: Union[str, discord.Embed, FILE, List[Union[str, discord.Embed, FILE]], _FunctionBaseCLASS]
-        The data parameter is the actual data that will be sent using discord's API.
-        The data types of this parameter can be:
-
-            - str (normal text),
-            - :class:`discord.Embed`,
-            - :ref:`FILE`,
-            - List/Tuple containing any of the above arguments (There can up to 1 string, up to 1 :class:`discord.Embed` and up to 10 :ref:`FILE` objects.
-            - Function that accepts any amount of parameters and returns any of the above types. To pass a function, YOU MUST USE THE :ref:`data_function` decorator on the function before passing the function to the daf.
-
+    data: BaseTextData
+        The data to be sent. Can be TextMessageData or class inherited from DynamicMessageData
     channels: Union[Iterable[Union[int, discord.TextChannel, discord.Thread]], daf.message.AutoCHANNEL]
         Channels that it will be advertised into (Can be snowflake ID or channel objects from PyCord).
 
@@ -99,9 +63,6 @@ class TextMESSAGE(BaseChannelMessage):
         - "send" -    each period a new message will be sent,
         - "edit" -    each period the previously send message will be edited (if it exists)
         - "clear-send" -    previous message will be deleted and a new one sent.
-    start_in: Optional[timedelta | datetime]
-        When should the message be first sent.
-        *timedelta* means the difference from current time, while *datetime* means actual first send time.
     remove_after: Optional[Union[int, timedelta, datetime]]
         Deletes the message after:
 
@@ -148,7 +109,7 @@ class TextMESSAGE(BaseChannelMessage):
         if not isinstance(data, BaseTextData):
             trace(
                 f"Using data types other than {[x.__name__ for x in BaseTextData.__subclasses__()]}, "
-                "is deprecated on TextMESSAGE's data parameter!",
+                "is deprecated on TextMESSAGE's data parameter! Planned for removal in 4.2.0",
                 TraceLEVELS.DEPRECATED
             )
             # Transform to new data type            
@@ -485,48 +446,8 @@ class DirectMESSAGE(BaseMESSAGE):
 
     Parameters
     ------------
-    start_period: Union[int, timedelta, None]
-        The value of this parameter can be:
-
-        - None - Use this value for a fixed (not randomized) sending period
-        - timedelta object - object describing time difference, if this is used,
-          then the parameter represents the bottom limit of the **randomized** sending period.
-
-    end_period: Union[int, timedelta]
-        If ``start_period`` is not None, then this represents the upper limit of randomized time period
-        in which messages will be sent.
-        If ``start_period`` is None, then this represents the actual time period between each message send.
-
-        .. code-block:: python
-            :caption: **Randomized** sending period between **5** seconds and **10** seconds.
-
-            # Time between each send is somewhere between 5 seconds and 10 seconds.
-            daf.DirectMESSAGE(
-                start_period=timedelta(seconds=5), end_period=timedelta(seconds=10), data="Second Message",
-                mode="send", start_in=timedelta(seconds=0)
-            )
-
-        .. code-block:: python
-            :caption: **Fixed** sending period at **10** seconds
-
-            # Time between each send is exactly 10 seconds.
-            daf.DirectMESSAGE(
-                start_period=None, end_period=timedelta(seconds=10), data="Second Message",
-                mode="send", start_in=timedelta(seconds=0)
-            )
-
-    data: Union[str, discord.Embed FILE, List[Union[str, discord.Embed, FILE]], _FunctionBaseCLASS]
-        The data parameter is the actual data that will be sent using discord's API.
-        The data types of this parameter can be:
-
-        - str (normal text),
-        - :class:`discord.Embed`,
-        - :ref:`FILE`,
-        - List/Tuple containing any of the above arguments
-          (There can up to 1 string, up to 1 :class:`discord.Embed` and up to 10 :ref:`FILE` objects.
-        - Function that accepts any amount of parameters and returns any of the above types.
-          To pass a function, YOU MUST USE THE :ref:`data_function` decorator on the function.
-
+    data: BaseTextData
+        The data to be sent. Can be TextMessageData or class inherited from DynamicMessageData
     mode: Optional[str]
         Parameter that defines how message will be sent to a channel.
         It can be:
@@ -534,10 +455,6 @@ class DirectMESSAGE(BaseMESSAGE):
         - "send" -    each period a new message will be sent,
         - "edit" -    each period the previously send message will be edited (if it exists)
         - "clear-send" -    previous message will be deleted and a new one sent.
-
-    start_in: Optional[timedelta | datetime]
-        When should the message be first sent.
-        *timedelta* means the difference from current time, while *datetime* means actual first send time.
     remove_after: Optional[Union[int, timedelta, datetime]]
         Deletes the guild after:
 
@@ -569,7 +486,7 @@ class DirectMESSAGE(BaseMESSAGE):
         if not isinstance(data, BaseTextData):
             trace(
                 f"Using data types other than {[x.__name__ for x in BaseTextData.__subclasses__()]}, "
-                "is deprecated on TextMESSAGE's data parameter!",
+                "is deprecated on DirectMESSAGE's data parameter! Planned for removal in 4.2.0",
                 TraceLEVELS.DEPRECATED
             )
             # Transform to new data type            

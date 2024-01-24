@@ -18,7 +18,7 @@ import daf
         daf.discord.Embed(color=daf.discord.Color.red()),
         daf.SeleniumCLIENT("12345", "12345", None),
         daf.ACCOUNT(username="hello", password="world"),
-        daf.VoiceMESSAGE(None, 5, daf.dtypes.FILE("Test", b'\xff\x51\x55'), daf.AutoCHANNEL("test"), 5, remove_after=5),
+        daf.VoiceMESSAGE(None, 5, daf.FILE("Test", b'\xff\x51\x55'), daf.AutoCHANNEL("test"), 5, remove_after=5),
         daf.DMResponder(
             daf.logic.regex("nft.*buy"),
             daf.DMResponse(daf.TextMessageData("Hello")),

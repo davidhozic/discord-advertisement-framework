@@ -4,16 +4,16 @@
     BaseGUILD class.
 """
 from typing import Any, Coroutine, Union, List, Optional, Dict, Callable
-from contextlib import suppress
+from ..misc import async_util, instance_track, doc, attributes
+from ..logging.tracing import TraceLEVELS, trace
 from datetime import timedelta, datetime
+from contextlib import suppress
 from abc import ABC, abstractmethod
 
 from typeguard import typechecked
 
 from ..message import *
 from ..events import *
-from ..logging.tracing import TraceLEVELS, trace
-from ..misc import async_util, instance_track, doc, attributes
 from .. import logging
 
 import _discord as discord

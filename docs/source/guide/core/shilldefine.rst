@@ -9,8 +9,6 @@ This document holds information regarding shilling with message objects.
 .. |GUILD| replace:: :class:`~daf.guild.GUILD`
 .. |USER| replace:: :class:`~daf.guild.USER`
 
-
-On the :ref:`Quickstart (core)` page we saw how to start the framework.
 We will now see how our shilling / advertisement list can be defined.
 
 ----------------------------------

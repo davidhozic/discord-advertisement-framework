@@ -1,13 +1,13 @@
-from typing import Coroutine
 from abc import abstractmethod
+from typing import Coroutine
 
-from .basedata import BaseMessageData
-from .textdata import BaseTextData, TextMessageData
 from .voicedata import BaseVoiceData, VoiceMessageData
-from ..misc.doc import doc_category
+from .textdata import BaseTextData, TextMessageData
 from ..logging.tracing import trace, TraceLEVELS
+from .basedata import BaseMessageData
+from ..misc.doc import doc_category
+from .file import FILE
 
-from ..dtypes import FILE
 from _discord import Embed
 
 
@@ -18,15 +18,15 @@ __all__ = ("DynamicMessageData",)
 class DynamicMessageData(BaseTextData, BaseVoiceData):
     """
     Represents dynamic message data. Can be both text or voice,
-    but make sure text is only used on ``TextMESSAGE`` and voice on ``VoiceMESSAGE``
+    but make sure text is only used on :class:`~daf.message.TextMESSAGE` and
+    voice on :class:`~daf.message.VoiceMESSAGE`.
 
     This needs to be inherited and the subclass needs to implement
-    the ``get_data`` method, which accepts no parameters (pass those through the class) and
-    returns :class:`daf.messagedata.TextMessageData`.
+    the ``get_data`` method, which accepts no parameters (pass those through the class).
+
 
     Example
     -------------
-
     .. code-block:: python
 
         class MyCustomText(DynamicMessageData):
@@ -52,7 +52,8 @@ class DynamicMessageData(BaseTextData, BaseVoiceData):
         The data getter method.
         Needs to be implemented in a subclass.
         
-        The method must return either a ``TextMessageData`` or a ``VoiceMessageData`` object.
+        The method must return either a :class:`~daf.messagedata.TextMessageData` or
+        a :class:`~daf.messagedata.VoiceMessageData` instance.
         It can also return ``None`` if no data is to be sent.
         """
         pass
@@ -97,7 +98,6 @@ class DynamicMessageData(BaseTextData, BaseVoiceData):
             trace("Error dynamically obtaining data", TraceLEVELS.ERROR, exc)
 
         return {}
-
 
 
 class _DeprecatedDynamic(DynamicMessageData):

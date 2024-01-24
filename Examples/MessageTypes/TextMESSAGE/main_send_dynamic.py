@@ -5,13 +5,13 @@ The message will be first sent in 4 hours. After that period will be randomly ch
 between 8 and 12 hours (after each send to all channels).
 
 The message content is dynamically obtained through the get_data method of MyDynamicData.
-The custom data class must inherit the DynamicTextMessageData class.
+The custom data class must inherit the TextMessageData class.
 """
 
 # Import the necessary items
 from daf.logging.logger_json import LoggerJSON
 
-from daf.dtypes import FILE
+from daf.messagedata import FILE
 from daf.messagedata.textdata import TextMessageData
 from daf.messagedata.dynamicdata import DynamicMessageData
 from datetime import timedelta

@@ -2,10 +2,9 @@
 Module used to support listening and emitting events.
 It also contains the event loop definitions.
 """
+from asyncio_event_hub import EventController
 from enum import Enum, auto
 
-from .misc.doc import doc_category
-from asyncio_event_hub import EventController
 
 
 __all__ = (
@@ -27,13 +26,11 @@ def initialize():
     GLOBAL.g_controller.start()
 
 
-@doc_category("Event reference")
 def get_global_event_ctrl() -> EventController:
     "Returns the global event controller"
     return GLOBAL.g_controller
 
 
-@doc_category("Event reference")
 class EventID(Enum):
     """
     Enum of all available events.
@@ -78,37 +75,3 @@ class EventID(Enum):
 
     # Events for use externally (not within daf)
     _ws_disconnect = auto()
-
-
-@doc_category("Event reference")
-async def g_daf_startup():
-    """
-    Event that is emitted after DAF has started.
-    """
-
-@doc_category("Event reference")
-async def g_daf_shutdown():
-    """
-    Event that is emitted after DAF has shutdown.
-    """
-
-@doc_category("Event reference")
-async def g_trace(level, message: str):
-    """
-    Event that is emitted when a message has been printed with :func:`~daf.logging.tracing.trace`.
-
-    :param level: The trace detail.
-    :type level: TraceLEVELS
-    :param message: The message traced.
-    :type message: str
-    """
-
-@doc_category("Event reference")
-async def g_account_expired(account):
-    """
-    Event that is emitted when an account has it's token invalidated
-    and is being forcefully removed.
-
-    :param account: The account updated
-    :type account: daf.client.ACCOUNT
-    """

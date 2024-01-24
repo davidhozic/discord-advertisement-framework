@@ -150,11 +150,11 @@ def register_conv_clients():
 
 
 def register_conv_datatypes():
-    m = {k: k for k in daf.dtypes.FILE.__init__.__annotations__}
+    m = {k: k for k in daf.FILE.__init__.__annotations__}
     m["data"] = "hex"
     m["filename"] = "fullpath"
     register_object_objectinfo_rule(
-        daf.dtypes.FILE,
+        daf.FILE,
         m
     )
 

@@ -2,7 +2,7 @@
 Automatic responder
 ======================
 
-.. versionadded:: 3.3.0
+.. versionadded:: 4.0.0
 
 Discord Advertisement Framework also supports the so called automatic responder.
 
@@ -211,7 +211,7 @@ Both responders accept the following parameters:
           data=daf.messagedata.TextMessageData("My content")
       )
       
-  - :class:`~daf.messagedata.DynamicTextMessageData` - for data obtained through a function.
+  - :class:`~daf.messagedata.DynamicMessageData` - for data obtained through a function.
 
     .. code-block:: python
 
@@ -223,7 +223,7 @@ Both responders accept the following parameters:
           return daf.messagedata.TextMessageData(content=mydata)
 
       daf.responder.DMResponse(
-          data=daf.messagedata.DynamicTextMessageData(get_data)
+          data=daf.messagedata.DynamicMessageData(get_data)
       )
 
 :constraints:

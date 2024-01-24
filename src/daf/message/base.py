@@ -8,9 +8,10 @@ from typeguard import typechecked
 from functools import partial
 from enum import Enum, auto
 
-from ..misc import doc, attributes, async_util, instance_track
 from ..logging.tracing import trace, TraceLEVELS
+from ..misc import doc, attributes, async_util
 from ..messagedata import BaseMessageData
+from .autochannel import AutoCHANNEL
 from .messageperiod import *
 from ..dtypes import *
 from ..events import *
@@ -18,12 +19,10 @@ from ..events import *
 import _discord as discord
 import asyncio
 import copy
-import re
 
 
 __all__ = (
     "BaseMESSAGE",
-    "AutoCHANNEL",
     "ChannelErrorAction",
     "BaseChannelMessage",
 )
@@ -127,7 +126,7 @@ class BaseMESSAGE(ABC):
 
         if end_period is not None:
             trace(
-                "'start_period' and 'end_period' are deprecated and will be removed in v4.1.0."
+                "'start_period' and 'end_period' are deprecated and will be removed in v4.2.0."
                 " Use 'period' instead.",
                 TraceLEVELS.DEPRECATED
             )
@@ -420,175 +419,6 @@ class BaseMESSAGE(ABC):
             await asyncio.gather(self._removal_timer, return_exceptions=True)
 
         self._event_ctrl.remove_listener(EventID._trigger_message_update, self._on_update)
-
-
-@instance_track.track_id
-@doc.doc_category("Auto objects", path="message")
-class AutoCHANNEL:
-    """
-    .. versionadded:: v2.3
-
-    .. versionchanged:: v2.10
-
-        :py:meth:`daf.message.AutoCHANNEL.remove` will now
-        prevent the channel from being readded again.
-
-    Used for creating instances of automatically managed channels.
-    The objects created with this will automatically add new channels
-    at creation and dynamically while the framework is already running,
-    if they match the patterns.
-
-    .. code-block:: python
-       :caption: Usage
-       :emphasize-lines: 4
-
-       # TextMESSAGE is used here, but works for others too
-       daf.message.TextMESSAGE(
-            ..., # Other parameters
-            channels=daf.message.AutoCHANNEL(...)
-        )
-
-
-    Parameters
-    --------------
-    include_pattern: str
-        Regex pattern to match for the channel to be considered.
-
-        For example you can do write ``.*`` to match ALL channels you are joined into or specify
-        (parts of) channel names separated with ``|`` like so: "name1|name2|name3|name4"
-    exclude_pattern: str
-        Regex pattern to match for the channel to be excluded
-        from the consideration.
-
-        .. note::
-            If both include_pattern and exclude_pattern yield a match, the guild will be
-            excluded from match.
-
-    interval: Optional[timedelta] = timedelta(minutes=5)
-        Interval at which to scan for new channels.
-    """
-
-    __slots__ = (
-        "include_pattern",
-        "exclude_pattern",
-        "parent",
-        "removed_channels",
-        "channel_getter",
-        "_cache"
-    )
-
-    def __init__(
-        self,
-        include_pattern: str,
-        exclude_pattern: Optional[str] = None
-    ) -> None:
-        # Remove spaces around OR
-        self.include_pattern = re.sub(r"\s*\|\s*", '|', include_pattern) if include_pattern else None
-        self.exclude_pattern = re.sub(r"\s*\|\s*", '|', exclude_pattern) if exclude_pattern else None
-        self.parent = None
-        self.channel_getter: Callable = None
-        self.removed_channels: Set[int] = set()
-        self._cache = []
-
-    def __iter__(self):
-        "Returns the channel iterator."
-        return iter(self._get_channels())
-
-    def __len__(self):
-        "Returns number of channels found."
-        return len(self._cache)
-
-    def __bool__(self) -> bool:
-        "Prevents removal of xMESSAGE by always returning True"
-        return True
-
-    @property
-    def channels(self) -> List[ChannelType]:
-        "Return a list of found channels"
-        return self._cache[:]
-
-    def _get_channels(self) -> List[ChannelType]:
-        """
-        Property that returns a list of :class:`discord.TextChannel` or :class:`discord.VoiceChannel`
-        (depends on the xMESSAGE type this is in) objects in cache.
-        """
-        channel: ChannelType
-        _found = []
-        for channel in self.channel_getter():
-            if channel.id not in self.removed_channels:
-                if (member := channel.guild.get_member(channel._state.user.id)) is None:  # Invalid intents?
-                    return
-
-                perms = channel.permissions_for(member)
-                name = channel.name
-                if (
-                    name is not None and
-                    (perms.send_messages or (perms.connect and perms.stream and perms.speak)) and
-                    re.search(self.include_pattern, name) is not None and
-                    (self.exclude_pattern is None or re.search(self.exclude_pattern, name) is None)
-                ):
-                    _found.append(channel)
-
-        self._cache = _found
-        return _found
-
-    async def initialize(self, parent, channel_getter: Callable):
-        """
-        Initializes async parts of the instance.
-        This method should be called by ``parent``.
-
-        .. versionchanged:: v2.10
-
-            Changed the channel ``channel_type`` into ``channel_getter``, which is now
-            a function that can be used to get a list of all the correct channels.
-
-        Parameters
-        -----------
-        parent: message.BaseMESSAGE
-            The message object this AutoCHANNEL instance is in.
-        channel_type: str
-            The channel type to look for when searching for channels
-        """
-        self.parent = parent
-        self.channel_getter = channel_getter
-
-    def remove(self, channel: ChannelType):
-        """
-        Removes channel from cache.
-
-        Parameters
-        -----------
-        channel: Union[discord.TextChannel, discord.VoiceChannel]
-            The channel to remove from cache.
-
-        Raises
-        -----------
-        KeyError
-            The channel is not in cache.
-        """
-        self.removed_channels.add(channel.id)
-
-    async def update(self, init_options = None, **kwargs):
-        """
-        Updates the object with new initialization parameters.
-
-        Parameters
-        ------------
-        kwargs: Any
-            Any number of keyword arguments that appear in the
-            object initialization.
-
-        Raises
-        -----------
-        Any
-            Raised from :py:meth:`~daf.message.AutoCHANNEL.initialize` method.
-        """
-        if init_options is None:
-            init_options = {}
-            init_options["parent"] = self.parent
-            init_options["channel_getter"] = self.channel_getter
-
-        return await async_util.update_obj_param(self, init_options=init_options, **kwargs)
 
 
 class BaseChannelMessage(BaseMESSAGE):

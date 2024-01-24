@@ -1,9 +1,9 @@
 from typing import List, Optional, Optional
 from dataclasses import dataclass, asdict, field
 
-from ..dtypes import FILE
 from .basedata import BaseMessageData
 from ..misc.doc import doc_category
+from .file import FILE
 
 import _discord as discord
 
@@ -11,7 +11,6 @@ import _discord as discord
 __all__ = ("BaseTextData", "TextMessageData",)
 
 
-@doc_category("Message data", path="messagedata")
 class BaseTextData(BaseMessageData):
     """
     Interface for text message data.
