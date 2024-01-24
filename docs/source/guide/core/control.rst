@@ -1,7 +1,7 @@
 
-======================
-Framework control
-======================
+=========================
+Framework control (core)
+=========================
 The following section shows how DAF's core can be started / stopped.
 The first thing you need is the library installed, see :ref:`Installation`.
 

@@ -3,19 +3,17 @@ from abc import ABC, abstractmethod
 from typing import List
 
 from .constraints import ConstraintBase
-from ..logic import BaseLogic
 from .actions import BaseResponse
+from ..logic import BaseLogic
 from ..events import EventID
-from ..misc.doc import doc_category
 
-import _discord as discord
 import asyncio_event_hub as aeh
+import _discord as discord
 
 
 __all__ = ("ResponderBase",)
 
 
-@doc_category("Auto responder", path="responder")
 class ResponderBase(ABC):
     """
     The responder is an object capable of making automatic replies to messages based on some

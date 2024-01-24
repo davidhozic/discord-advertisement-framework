@@ -20,7 +20,6 @@ __all__ = (
 )
 
 
-@doc_category("Auto responder")
 class BaseLogic(ABC):
     """
     A logic interface for building keyword expressions.
@@ -30,10 +29,9 @@ class BaseLogic(ABC):
         pass
 
 
-@doc_category("Auto responder")
 class BooleanLogic(BaseLogic):
     """
-    Represents boolean logic.
+    Interface. Represents boolean logic.
 
     Parameters
     -------------
@@ -49,7 +47,7 @@ class BooleanLogic(BaseLogic):
         self.operands = [*operands, *args]
 
 
-@doc_category("Auto responder")
+@doc_category("Text matching (logic)")
 class and_(BooleanLogic):
     """
     Represents logical *AND* operator.
@@ -73,7 +71,7 @@ class and_(BooleanLogic):
         return True
 
 
-@doc_category("Auto responder")
+@doc_category("Text matching (logic)")
 class or_(BooleanLogic):
     """
     Represents logical *OR* operator.
@@ -96,7 +94,7 @@ class or_(BooleanLogic):
         return False
 
 
-@doc_category("Auto responder")
+@doc_category("Text matching (logic)")
 class not_(BooleanLogic):
     """
     Represents logical *NOT* operator.
@@ -118,7 +116,7 @@ class not_(BooleanLogic):
         return op not in input
 
 
-@doc_category("Auto responder")
+@doc_category("Text matching (logic)")
 class contains(BaseLogic):
     """
     Text matching condition.
@@ -135,7 +133,7 @@ class contains(BaseLogic):
         return self.keyword in re.findall(r'\w+', input)  # \w+ == match all words, including **bold**
 
 
-@doc_category("Auto responder")
+@doc_category("Text matching (logic)")
 class regex(BaseLogic):
     """
     RegEx (regular expression) text matching condition.

@@ -1,14 +1,13 @@
-from typing import List
 from typeguard import typechecked
+from typing import List
 
+from ..misc.instance_track import track_id
+from .constraints import BaseDMConstraint
+from ..misc.doc import doc_category
+from .actions import DMResponse
 from .base import ResponderBase
 from ..logic import BaseLogic
-from .constraints import BaseDMConstraint
-from .actions import DMResponse
 from ..events import EventID
-
-from ..misc.doc import doc_category
-from ..misc.instance_track import track_id
 
 import asyncio_event_hub as aeh
 import _discord as discord

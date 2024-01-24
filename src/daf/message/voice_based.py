@@ -9,17 +9,19 @@ from pathlib import Path
 
 from ..messagedata.dynamicdata import _DeprecatedDynamic
 
-from ..messagedata import BaseVoiceData, VoiceMessageData
+from ..messagedata import BaseVoiceData, VoiceMessageData, FILE
 from ..misc import doc, instance_track
 from ..logging import sql
 from .. import dtypes
 
 from ..logging.tracing import *
 from .messageperiod import *
+from .autochannel import *
 from ..dtypes import *
 from ..events import *
 from .base import *
 
+import importlib.util as import_util
 import _discord as discord
 import asyncio
 import os
@@ -35,6 +37,10 @@ __all__ = (
 C_VC_CONNECT_TIMEOUT = 7  # Timeout of voice channels
 
 
+class GLOBAL:
+    voice_installed: bool = import_util.find_spec("nacl") is not None
+
+
 @instance_track.track_id
 @doc.doc_category("Messages", path="message")
 @sql.register_type("MessageTYPE")
@@ -44,82 +50,27 @@ class VoiceMESSAGE(BaseChannelMessage):
 
     .. warning::
 
-        This additionaly requires FFMPEG to be installed on your system.
+        This additionally requires FFMPEG to be installed on your system.
 
-    .. deprecated:: 2.1
-
-        - start_period, end_period - Using int values, use ``timedelta`` object instead.
-
-    .. versionchanged:: 2.10
-
-        'data' parameter no longer accepets :class:`daf.dtypes.AUDIO` and no longer allows YouTube streaming.
-        Instead it accepts :class:`daf.dtypes.FILE`.
-
-    .. versionchanged:: 2.7
-
-        *start_in* now accepts datetime object
 
     Parameters
     ------------
-    start_period: Union[int, timedelta, None]
-        The value of this parameter can be:
-
-        - None - Use this value for a fixed (not randomized) sending period
-        - timedelta object - object describing time difference, if this is used,
-          then the parameter represents the bottom limit of the **randomized** sending period.
-    end_period: Union[int, timedelta]
-        If ``start_period`` is not None,
-        then this represents the upper limit of randomized time period in which messages will be sent.
-        If ``start_period`` is None, then this represents the actual time period between each message send.
-
-        .. code-block:: python
-            :caption: **Randomized** sending period between **5** seconds and **10** seconds.
-
-            # Time between each send is somewhere between 5 seconds and 10 seconds.
-            daf.VoiceMESSAGE(
-                start_period=timedelta(seconds=5), end_period=timedelta(seconds=10), data=daf.FILE("msg.mp3"),
-                channels=[12345], start_in=timedelta(seconds=0), volume=50
-            )
-
-        .. code-block:: python
-            :caption: **Fixed** sending period at **10** seconds
-
-            # Time between each send is exactly 10 seconds.
-            daf.VoiceMESSAGE(
-                start_period=None, end_period=timedelta(seconds=10), data=daf.FILE("msg.mp3"),
-                channels=[12345], start_in=timedelta(seconds=0), volume=50
-            )
-    data: FILE
-        The data parameter is the actual data that will be sent using discord's API.
-        The data types of this parameter can be:
-
-            - FILE object.
-            - Function that accepts any amount of parameters and returns an FILE object. To pass a function, YOU MUST USE THE :ref:`data_function` decorator on the function.
-
+    data: BaseVoiceData
+        The actual data streamed to voice channels.
+        Can be VoiceMessageData or a class inherited from DynamicMessageData.
     channels: Union[Iterable[Union[int, discord.VoiceChannel]], daf.message.AutoCHANNEL]
         Channels that it will be advertised into (Can be snowflake ID or channel objects from PyCord).
-
-        .. versionchanged:: v2.3
-            Can also be :class:`~daf.message.AutoCHANNEL`
-
     volume: Optional[int]
         The volume (0-100%) at which to play the audio. Defaults to 50%. This was added in v2.0.0
-    start_in: Optional[timedelta | datetime]
-        When should the message be first sent.
-        *timedelta* means the difference from current time, while *datetime* means actual first send time.
     remove_after: Optional[Union[int, timedelta, datetime]]
         Deletes the message after:
 
-        * int - provided amounts of successful sends to seperate channels.
+        * int - provided amounts of successful sends to separate channels.
         * timedelta - the specified time difference
         * datetime - specific date & time
-
-        .. versionchanged:: v2.10
-
-            Parameter ``remove_after`` of int type will now work at a channel level and
-            it nows means the SUCCESSFUL number of sends into each channel.
+    period: BaseMessagePeriod
+        The sending period.
     """
-
     __slots__ = (
         "volume",
     )
@@ -143,7 +94,7 @@ class VoiceMESSAGE(BaseChannelMessage):
         remove_after: Optional[Union[int, timedelta, datetime]] = None,
         period: BaseMessagePeriod = None
     ):
-        if not dtypes.GLOBALS.voice_installed:
+        if not GLOBAL.voice_installed:
             raise ModuleNotFoundError(
                 "You need to install extra requirements: pip install discord-advert-framework[voice]"
             )
@@ -151,7 +102,7 @@ class VoiceMESSAGE(BaseChannelMessage):
         if not isinstance(data, BaseVoiceData):
             trace(
                 f"Using data types other than {[x.__name__ for x in BaseVoiceData.__subclasses__()]}, "
-                "is deprecated on TextMESSAGE's data parameter!",
+                "is deprecated on VoiceMESSAGE's data parameter! Planned for removal in 4.2.0",
                 TraceLEVELS.DEPRECATED
             )
             # Transform to new data type            

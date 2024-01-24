@@ -16,7 +16,7 @@ If you just want to respond to DM messages, the DMResponder is a better example.
 # Import the necessary items
 from daf.logging.logger_json import LoggerJSON
 
-from daf.dtypes import FILE
+from daf.messagedata import FILE import FILE
 from daf.messagedata.textdata import TextMessageData
 from datetime import timedelta
 from daf.client import ACCOUNT

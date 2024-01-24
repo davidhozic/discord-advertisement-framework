@@ -1,14 +1,13 @@
 from dataclasses import dataclass, asdict
 
-from ..dtypes import FILE
 from .basedata import BaseMessageData
 from ..misc.doc import doc_category
+from .file import FILE
 
 
 __all__ = ("BaseVoiceData", "VoiceMessageData",)
 
 
-@doc_category("Message data", path="messagedata")
 class BaseVoiceData(BaseMessageData):
     """
     Interface for voice-like / audio-like data.

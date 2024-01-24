@@ -69,7 +69,7 @@ DISCORD_URL = "https://discord.gg/DEnvahb2Sw"
 OPTIONAL_MODULES = [
     # Label, optional name, installed var
     ("SQL logging", "sql", daf.logging.sql.SQL_INSTALLED),
-    ("Voice messages", "voice", daf.dtypes.GLOBALS.voice_installed),
+    ("Voice messages", "voice", daf.message.voice_based.GLOBAL.voice_installed),
     ("Web features (Chrome)", "web", daf.web.GLOBALS.selenium_installed),
 ]
 

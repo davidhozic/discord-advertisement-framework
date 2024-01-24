@@ -39,7 +39,7 @@ It can be passed to the framework exactly the same way as |GUILD|
     otherwise you will be spammed with warnings and only one guild will be shilled.
 
 
-.. literalinclude:: ./DEP/Examples/AutomaticGeneration/autoguild.py
+.. literalinclude:: ./DEP/Examples/AutomaticGeneration/main_autoguild.py
 
 
 Automatic channel generation
@@ -47,5 +47,5 @@ Automatic channel generation
 For a auto-managed channel list use |AUTOCHANNEL| instances.
 It can be passed to xMESSAGE objects into the ``channels`` parameters instead of a list.
 
-.. literalinclude:: ./DEP/Examples/AutomaticGeneration/autochannel.py
+.. literalinclude:: ./DEP/Examples/AutomaticGeneration/main_autochannel.py
     :caption: AutoCHANNEL example

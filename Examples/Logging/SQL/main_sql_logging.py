@@ -14,7 +14,7 @@ from daf.logging.sql.mgr import LoggerSQL
 from daf.messagedata.textdata import TextMessageData
 from daf.message.text_based import TextMESSAGE
 from daf.client import ACCOUNT
-from daf.dtypes import FILE
+from daf.messagedata import FILE import FILE
 from daf.message.messageperiod import FixedDurationPeriod
 from datetime import timedelta
 from daf.guild.guilduser import GUILD
