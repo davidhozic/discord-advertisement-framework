@@ -2,8 +2,9 @@
 Main file of the DAF GUI.
 """
 from importlib.util import find_spec
+from typing import List, Iterable
 from pathlib import Path
-from typing import List
+
 
 from daf.misc import instance_track as it
 
@@ -13,17 +14,19 @@ import sys
 import tk_async_execute as tae
 
 
-installed = find_spec("ttkbootstrap") is not None
+installed = find_spec("ttkbootstrap") is not None and find_spec("tkclasswiz") is not None
 
 
 # Automatically install GUI requirements if GUI is requested to avoid making it an optional dependency
 # One other way would be to create a completely different package on pypi for the core daf, but that is a lot of
 # work to be done. It is better to auto install.
 TTKBOOSTRAP_VERSION = "1.10.1"
+WIZ_VERSION = ">=1.4,<1.5"
 
 if not installed:
-    print("Auto installing requirements: ttkbootstrap")
+    print("Auto installing requirements: ttkbootstrap, tkclasswiz")
     subprocess.check_call([sys.executable.replace("pythonw", "python"), "-m", "pip", "install", f"ttkbootstrap=={TTKBOOSTRAP_VERSION}"])
+    subprocess.check_call([sys.executable.replace("pythonw", "python"), "-m", "pip", "install", f"tkclasswiz{WIZ_VERSION}"])
 
 import ttkbootstrap as ttk
 
@@ -43,12 +46,12 @@ import ttkbootstrap.dialogs.dialogs as tkdiag
 import ttkbootstrap.tableview as tktw
 import ttkbootstrap.style as tkstyle
 
+import tkclasswiz as wiz
+import webbrowser
 import json
 import sys
 import os
 import daf
-import webbrowser
-import warnings
 
 
 WIN_UPDATE_DELAY = 0.005

@@ -13,6 +13,7 @@ from tkclasswiz.convert import (
 from tkclasswiz.annotations import register_annotations as reg_annotations, get_annotations
 from tkclasswiz.object_frame.frame_struct import NewObjectFrameStruct
 from tkclasswiz.extensions import Extension
+from tkclasswiz.deprecation import register_deprecated
 
 from . import deprecation_notice
 from . import method_execution
@@ -41,6 +42,25 @@ def register_extensions():
     ObjectInfo.__eq__.register_post_extension(Extension("Live objects EQ", "1.0.0", live_objects.load_extension_oi_eq))
     convert_to_object_info.register_post_extension(
         Extension("Live object save_original", "1.0.0", convert.load_extension_to_object_info)
+    )
+
+
+def register_deprecations():
+    register_deprecated(daf.AutoGUILD, "include_pattern", str)
+    register_deprecated(daf.AutoGUILD, "exclude_pattern")
+
+    register_deprecated(daf.AutoCHANNEL, "include_pattern", str)
+    register_deprecated(daf.AutoCHANNEL, "exclude_pattern")
+
+    register_deprecated(daf.BaseMESSAGE, "start_period")
+    register_deprecated(daf.BaseMESSAGE, "end_period")
+    register_deprecated(daf.BaseMESSAGE, "start_in")
+    register_deprecated(daf.messagedata.dynamicdata._DeprecatedDynamic)
+    register_deprecated(daf._FunctionBaseCLASS)
+    register_deprecated(
+        daf.BaseMESSAGE,
+        "data",
+        str, daf.discord.Embed, daf.FILE
     )
 
 
