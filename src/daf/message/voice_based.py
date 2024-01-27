@@ -58,7 +58,7 @@ class VoiceMESSAGE(BaseChannelMessage):
     data: BaseVoiceData
         The actual data streamed to voice channels.
         Can be VoiceMessageData or a class inherited from DynamicMessageData.
-    channels: Union[Iterable[Union[int, discord.VoiceChannel]], daf.message.AutoCHANNEL]
+    channels: Union[list[Union[int, discord.VoiceChannel]], daf.message.AutoCHANNEL]
         Channels that it will be advertised into (Can be snowflake ID or channel objects from PyCord).
     volume: Optional[int]
         The volume (0-100%) at which to play the audio. Defaults to 50%. This was added in v2.0.0
@@ -88,7 +88,7 @@ class VoiceMESSAGE(BaseChannelMessage):
         start_period: Union[int, timedelta, None] = None,
         end_period: Union[int, timedelta] = None,
         data: Union[BaseVoiceData, _old_data_type] = None,
-        channels: Union[Iterable[Union[int, discord.VoiceChannel]], AutoCHANNEL] = None,
+        channels: Union[list[Union[int, discord.VoiceChannel]], AutoCHANNEL] = None,
         volume: Optional[int] = 50,
         start_in: Optional[Union[timedelta, datetime]] = None,
         remove_after: Optional[Union[int, timedelta, datetime]] = None,

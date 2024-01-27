@@ -2,7 +2,7 @@
 Main file of the DAF GUI.
 """
 from importlib.util import find_spec
-from typing import List, Iterable
+from typing import List
 from pathlib import Path
 
 
