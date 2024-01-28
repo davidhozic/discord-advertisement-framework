@@ -12,21 +12,42 @@ import subprocess
 import sys
 
 import tk_async_execute as tae
-
-
-installed = find_spec("ttkbootstrap") is not None and find_spec("tkclasswiz") is not None
+import json
 
 
 # Automatically install GUI requirements if GUI is requested to avoid making it an optional dependency
 # One other way would be to create a completely different package on pypi for the core daf, but that is a lot of
 # work to be done. It is better to auto install.
-TTKBOOSTRAP_VERSION = "1.10.1"
-WIZ_VERSION = ">=1.4,<1.5"
+to_install = [
+    ("ttkbootstrap", "==1.10.1"),
+    ("tkclasswiz", ">=1.4,<1.5")
+]
+version_path = Path.home().joinpath("./gui_versions.json")
+if not version_path.exists():
+    version_path.touch()
 
-if not installed:
-    print("Auto installing requirements: ttkbootstrap, tkclasswiz")
-    subprocess.check_call([sys.executable.replace("pythonw", "python"), "-m", "pip", "install", f"ttkbootstrap=={TTKBOOSTRAP_VERSION}"])
-    subprocess.check_call([sys.executable.replace("pythonw", "python"), "-m", "pip", "install", f"tkclasswiz{WIZ_VERSION}"])
+with open(version_path, "r") as file:
+    try:
+        version_data = json.load(file)
+    except json.JSONDecodeError as exc:
+        version_data = {}
+
+for package, version in to_install:
+    installed_version = version_data.get(package, "0")
+    if installed_version != version:
+        print(f"Auto installing {package}{version}")
+        subprocess.check_call(
+            [
+                sys.executable.replace("pythonw", "python"),
+                "-m", "pip", "install", "-U",
+                package + version
+            ]
+        )
+        version_data[package] = version
+
+with open(version_path, "w") as file:
+    json.dump(version_data, file)
+
 
 import ttkbootstrap as ttk
 
@@ -48,7 +69,6 @@ import ttkbootstrap.style as tkstyle
 
 import tkclasswiz as wiz
 import webbrowser
-import json
 import sys
 import os
 import daf
