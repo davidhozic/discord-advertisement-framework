@@ -46,7 +46,7 @@ class TextMESSAGE(BaseChannelMessage):
     ------------
     data: BaseTextData
         The data to be sent. Can be TextMessageData or class inherited from DynamicMessageData
-    channels: Union[Iterable[Union[int, discord.TextChannel, discord.Thread]], daf.message.AutoCHANNEL]
+    channels: Union[list[Union[int, discord.TextChannel, discord.Thread]], daf.message.AutoCHANNEL]
         Channels that it will be advertised into (Can be snowflake ID or channel objects from PyCord).
 
         .. versionchanged:: v2.3
@@ -91,7 +91,7 @@ class TextMESSAGE(BaseChannelMessage):
         "auto_publish",
     )
 
-    _old_data_type = Union[Iterable[Union[str, discord.Embed, FILE]], str, discord.Embed, FILE, _FunctionBaseCLASS]
+    _old_data_type = Union[list, tuple, set, str, discord.Embed, FILE, _FunctionBaseCLASS]
 
     @typechecked
     def __init__(
@@ -99,7 +99,7 @@ class TextMESSAGE(BaseChannelMessage):
         start_period: Union[timedelta, int, None] = None,
         end_period: Union[int, timedelta] = None,
         data: Union[BaseTextData, _old_data_type] = None,
-        channels: Union[Iterable[Union[int, discord.TextChannel, discord.Thread]], AutoCHANNEL] = None,
+        channels: Union[list[Union[int, discord.TextChannel, discord.Thread]], AutoCHANNEL] = None,
         mode: Literal["send", "edit", "clear-send"] = "send",
         start_in: Optional[Union[timedelta, datetime]] = None,
         remove_after: Optional[Union[int, timedelta, datetime]] = None,
@@ -469,7 +469,7 @@ class DirectMESSAGE(BaseMESSAGE):
         "dm_channel",
     )
     
-    _old_data_type = Union[Iterable[Union[str, discord.Embed, FILE]], str, discord.Embed, FILE, _FunctionBaseCLASS]
+    _old_data_type = Union[list, tuple, set, str, discord.Embed, FILE, _FunctionBaseCLASS]
 
     @typechecked
     def __init__(

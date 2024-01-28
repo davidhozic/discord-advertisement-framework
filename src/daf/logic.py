@@ -107,6 +107,10 @@ class not_(BooleanLogic):
 
     def __init__(self, operand: BaseLogic) -> None:
         super().__init__(operand)
+    
+    @property
+    def operand(self):
+        return self.operands[0]
 
     def check(self, input: str):
         op = self.operands[0]
