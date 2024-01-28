@@ -154,6 +154,8 @@ def setup_additional_live_properties(w: ttk.Menubutton, frame):
     oi: ObjectInfo
     if (
         (oi := frame.old_gui_data) is None or
+        oi.real_object is None or
+        not oi.real_object.remote_allowed or
         not oi.property_map  # No properties
     ):
         return

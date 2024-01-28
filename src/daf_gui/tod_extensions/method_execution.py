@@ -81,6 +81,7 @@ def load_extension(frame: NewObjectFrameStruct, *args, **kwargs):
         tae.async_execute(runner(), wait=False, pop_up=True, master=frame.origin_window)
 
     dpi_5, dpi_10 = dpi_scaled(5), dpi_scaled(10)
+    ttk.Separator(frame).pack(fill=tk.X, pady=dpi_10)
     frame_method = ttk.LabelFrame(
         frame,
         text="Method execution (WARNING! Method data is NOT preserved when closing / saving the frame!)",
