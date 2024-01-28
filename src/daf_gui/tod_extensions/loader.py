@@ -60,9 +60,8 @@ def register_deprecations():
     register_deprecated(
         daf.BaseMESSAGE,
         "data",
-        str, daf.discord.Embed, daf.FILE
+        str, daf.discord.Embed, daf.FILE, list, tuple, set
     )
-
 
 def register_annotations():
     reg_annotations(

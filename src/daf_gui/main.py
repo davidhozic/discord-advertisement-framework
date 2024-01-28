@@ -20,8 +20,8 @@ import json
 # work to be done. It is better to auto install.
 to_install = [
     ("ttkbootstrap", "==1.10.1"),
-    ("tkclasswiz", ">=1.4,<1.5")
 ]
+
 version_path = Path.home().joinpath("./gui_versions.json")
 if not version_path.exists():
     version_path.touch()
@@ -34,7 +34,7 @@ with open(version_path, "r") as file:
 
 for package, version in to_install:
     installed_version = version_data.get(package, "0")
-    if installed_version != version:
+    if find_spec(package) is None or installed_version != version:
         print(f"Auto installing {package}{version}")
         subprocess.check_call(
             [

@@ -80,7 +80,7 @@ class VoiceMESSAGE(BaseChannelMessage):
     }
 
     # Deprecated. TODO: Remove in the future
-    _old_data_type = Union[FILE, Iterable[FILE], _FunctionBaseCLASS]
+    _old_data_type = Union[FILE, list, tuple, set, _FunctionBaseCLASS]
 
     @typechecked
     def __init__(

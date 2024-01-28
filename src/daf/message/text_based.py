@@ -91,7 +91,7 @@ class TextMESSAGE(BaseChannelMessage):
         "auto_publish",
     )
 
-    _old_data_type = Union[Iterable[Union[str, discord.Embed, FILE]], str, discord.Embed, FILE, _FunctionBaseCLASS]
+    _old_data_type = Union[list, tuple, set, str, discord.Embed, FILE, _FunctionBaseCLASS]
 
     @typechecked
     def __init__(
@@ -469,7 +469,7 @@ class DirectMESSAGE(BaseMESSAGE):
         "dm_channel",
     )
     
-    _old_data_type = Union[Iterable[Union[str, discord.Embed, FILE]], str, discord.Embed, FILE, _FunctionBaseCLASS]
+    _old_data_type = Union[list, tuple, set, str, discord.Embed, FILE, _FunctionBaseCLASS]
 
     @typechecked
     def __init__(
