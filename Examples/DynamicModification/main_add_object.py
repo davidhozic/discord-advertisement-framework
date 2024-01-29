@@ -9,11 +9,16 @@ import daf
 async def user_task():
     # Returns the client to send commands to discord, for more info about client see https://docs.pycord.dev/en/master/api.html?highlight=discord%20client#discord.Client
     account = daf.ACCOUNT(token="ASDASJDAKDK", is_user=False)
-    
     guild = daf.GUILD(snowflake=123456)
-    
-    data_to_shill = ( "Hello World", daf.discord.Embed(title="Example Embed", color=daf.discord.Color.blue(), description="This is a test embed") )
-    text_msg = daf.TextMESSAGE(None, timedelta(seconds=5), data_to_shill, [12345, 6789], "send", timedelta(seconds=0))
+    data_to_shill = daf.TextMessageData(
+        "Hello World",
+        daf.discord.Embed(title="Example Embed", color=daf.discord.Color.blue(), description="This is a test embed")
+    )
+    text_msg = daf.TextMESSAGE(
+        data=data_to_shill,
+        channels=[12345, 6789],
+        period=daf.FixedDurationPeriod(timedelta(minutes=1))
+    )
 
     # Dynamically add account
     await daf.add_object(account)

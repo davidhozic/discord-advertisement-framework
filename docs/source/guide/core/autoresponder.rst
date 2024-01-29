@@ -55,10 +55,10 @@ Both responders accept the following parameters:
 :condition:
 
   Represents the message match condition.
-  If both the condition and the constraints are met, then a action (response)
+  If both the condition and the constraints are met, then an action (response)
   will be triggered.
 
-  The :ref:`previous chapter <Matching logic>` explains how matching is done (same as :class:`daf.guild.AutoGUILD`
+  The :ref:`Matching logic` chapter explains how matching is done (same as :class:`daf.guild.AutoGUILD`
   and :class:`daf.message.AutoCHANNEL`)
 
 :action:
@@ -140,8 +140,7 @@ Both responders accept the following parameters:
 
 
   In addition to the built-in implementations, custom constrains can be made
-  by implementing one of the two interfaces. This can be done by implementing the correct interface.
-  For example:
+  by implementing one of the two interfaces.
 
   .. code-block:: python
     :caption: Custom constraint implementation

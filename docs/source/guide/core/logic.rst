@@ -1,11 +1,11 @@
 ======================
 Matching logic
 ======================
-Before going into the automatic guild detection and automatic channel detection,
+Before going into the automatic guild definition and automatic channel definition,
 we first need to explain how their patterns are matched.
-Automatic guild detection, automatic channel detection (generation) and also :ref:`Automatic responder` determine
+Automatic guild definition, automatic channel definition and also :ref:`Automatic responder` determine
 the match by considering a logic pattern.
-The logic pattern can either be an actual logical operations (and, or, not) or text-matching operation.
+The logic pattern can either be an actual logical operations (and, or, not) or a text-matching operation.
 
 
 .. dropdown:: Text matching operations

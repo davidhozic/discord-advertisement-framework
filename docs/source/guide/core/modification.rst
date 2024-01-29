@@ -66,11 +66,11 @@ The function can be used to add the following object types:
             await my_guild.add_message(daf.TextMESSAGE(...))
             ...
 
-.. only:: html
 
-    .. literalinclude:: ./DEP/Examples/DynamicModification/main_add_object.py
-        :language: python
-
+.. literalinclude:: ./DEP/Examples/DynamicModification/main_add_object.py
+    :language: python
+    :linenos:
+    :emphasize-lines: 24, 27, 31
 
 
 Dynamically removing objects
@@ -78,13 +78,10 @@ Dynamically removing objects
 As the framework supports dynamically adding new objects to the shilling list, it also supports dynamically removing those objects.
 Objects can be removed with the :func:`daf.core.remove_object`.
 
-.. only:: html
-
-    .. literalinclude:: ./DEP/Examples/DynamicModification/main_remove_object.py
-        :language: python
-
-
-
+.. literalinclude:: ./DEP/Examples/DynamicModification/main_remove_object.py
+    :language: python
+    :linenos:
+    :emphasize-lines: 20
 
 ----------------------------
 Modifying objects
@@ -98,38 +95,17 @@ updates the original parameters that can be passed during object creation.
     This completely resets the state of the object you are updating, meaning that if you do call the 
     ``.update()`` method, the object will act like it was recreated.
 
-For example if I wanted to change the shilling period of a :class:`daf.message.TextMESSAGE`, I would call the :py:meth:`daf.message.TextMESSAGE.update` method
+For example if I wanted to change the shilling period of a :class:`daf.message.TextMESSAGE`,
+I would call the :py:meth:`daf.message.TextMESSAGE.update` method
 in the following way:
-
-.. code-block:: python
-    :emphasize-lines: 13
-
-    ... # Other code
-    # Fixed sending period of 5 seconds
-    my_message = daf.message.TextMESSAGE(
-                                            start_period=None,
-                                            end_period=timedelta(seconds=5),
-                                            ... # Other parameters
-                                        )
-
-
-    await daf.add_object(my_message, some_GUILD_object)
     
-    # Randomized sending period between 3 and 5 seconds
-    await my_message.update(start_period=timedelta(seconds=3)) 
-    ... # Other code
-
+.. literalinclude:: ./DEP/Examples/DynamicModification/main_update.py
+    :language: python
+    :linenos:
+    :emphasize-lines: 34-36
 
 For a full list of objects that support ``.update`` search ".update" in the search bar 
 **or click on the image below**.
 
 .. image:: ./images/search_update_method.png
     :target: ../search.html?q=.update&check_keywords=yes&area=default 
-
-
-.. only:: html
-    
-    .. literalinclude:: ./DEP/Examples/DynamicModification/main_update.py
-        :language: python
-        
-
