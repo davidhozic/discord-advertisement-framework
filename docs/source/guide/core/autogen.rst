@@ -6,14 +6,11 @@ This documents describes mechanisms that can be used to automatically generate o
 ---------------------------
 Shilling scheme generation
 ---------------------------
-While the framework supports to manually define a schema, which can be time consuming if you have a lot of 
-guilds to shill into and harder to manage, the framework also supports automatic generation of the schema.
+While the servers can be manually defined and configured, which can be time consuming if you have a lot of 
+guilds to shill into, DAF also supports automatic definition of servers and channels.
+Servers and channels can be automatically defined by creating some matching rules described in the
+:ref:`Matching logic` chapter of this guide.
 
-.. _regex: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions
-
-Using this method allows you to have a completely automatically managed system of finding guilds and channels that match 
-a specific regex_ pattern. It automatically finds new guilds/channels at initialization and also during normal framework operation.
-This is great because it means you don't have to do much but it gives very little control of into what to shill.
 
 
 Automatic GUILD generation
@@ -28,10 +25,9 @@ Automatic GUILD generation
 .. |GUILD| replace:: :class:`~daf.guild.GUILD`
 .. |AUTOCHANNEL| replace:: :class:`~daf.message.AutoCHANNEL`
 
-For a auto-managed GUILD list, use |AUTOGUILD| which internally generates |GUILD| instances.
-Simply create a list of |AUTOGUILD| objects and then pass it to the framework.
-It can be passed to the framework exactly the same way as |GUILD|
-(see :ref:`quickstart` (``accounts``) and :ref:`Dynamically adding objects`).
+For a automatically managed servers, use |AUTOGUILD| which internally generates |GUILD| instances.
+Simply create a list of |AUTOGUILD| objects and then pass it to the ``servers`` parameter of
+:class:`daf.client.ACCOUNT`.
 
 .. WARNING::
 
@@ -44,8 +40,8 @@ It can be passed to the framework exactly the same way as |GUILD|
 
 Automatic channel generation
 ==============================
-For a auto-managed channel list use |AUTOCHANNEL| instances.
-It can be passed to xMESSAGE objects into the ``channels`` parameters instead of a list.
+For a automatically managed channels, use |AUTOCHANNEL|.
+It can be passed to xMESSAGE objects to the ``channels`` parameters.
 
 .. literalinclude:: ./DEP/Examples/AutomaticGeneration/main_autochannel.py
     :caption: AutoCHANNEL example

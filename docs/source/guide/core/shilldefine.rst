@@ -25,7 +25,7 @@ It accepts many parameters, out of which these are the most important:
 - ``is_user``:  An optional ``True`` / ``False`` parameter. Discord has 2 types of clients - user accounts and  bots.
   Set this to True when the above ``token`` belongs to a user and not a bot.
 - ``proxy``: An optional string (text) parameter. Represents a proxy URL used to access Discord.
-- ``servers``: A list of servers. In DAF servers are talked about with the word "guild", which was Discord's original
+- ``servers``: A list of servers. In DAF, servers are referred to as "guild", which was Discord's original
   name for a server. Elements inside this list can be any objects inherited from :class:`daf.guild.BaseGUILD` class.
   Three types of servers exist (are inherited from  :class:`daf.guild.BaseGUILD`):
   
@@ -176,7 +176,7 @@ The most important parameters inside :class:`daf.message.TextMESSAGE` are:
   - :class:`~daf.message.messageperiod.RandomizedDurationPeriod`: A randomized (within a certain range) time period.
   - :class:`~daf.message.messageperiod.DaysOfWeekPeriod`: A period that sends at
     multiple specified days at a specific time.
-  - :class:`~daf.message.messageperiod.DailyPeriod`: A period that sends every day at specific time.
+  - :class:`~daf.message.messageperiod.DailyPeriod`: A period that sends every day at a specific time.
 
 Now that we have an overview of the most important parameters, let's define our message.
 We will define a message that sends fixed data into a single channel, with a fixed time (duration) period.

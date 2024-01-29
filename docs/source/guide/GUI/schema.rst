@@ -166,6 +166,12 @@ For more information about the parameters and definition for other objects click
 the object in :ref:`API reference` or read the :ref:`core guide <Guide (core)>`.
 
 
+To define other objects (such as messages), please refer to the :ref:`Shilling list definition (core)` documentation,
+part of the DAF's core guide. When reading the core documentation, just define everything inside the GUI the same way
+as it is done in the example code.
+
+
+
 Successful account definition
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

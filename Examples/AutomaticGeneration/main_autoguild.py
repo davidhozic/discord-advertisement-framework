@@ -1,25 +1,10 @@
-
-"""
-Automatically generated file for Discord Advertisement Framework 4.0.0.
-This can be run eg. 24/7 on a server without graphical interface.
-
-The file has the required classes and functions imported, then the logger is defined and the
-accounts list is defined.
-
-At the bottom of the file the framework is then started with the run function.
-"""
-
 # Import the necessary items
 from daf.logging.logger_json import LoggerJSON
 
-from daf.messagedata.textdata import TextMessageData
-from daf.message.text_based import TextMESSAGE
 from daf.client import ACCOUNT
-from daf.messagedata import FILE
-from daf.message.messageperiod import FixedDurationPeriod
+from daf.logic import contains
 from daf.guild.autoguild import AutoGUILD
-from datetime import timedelta
-from daf.message.base import AutoCHANNEL
+from daf.logic import or_
 from daf.logging.tracing import TraceLEVELS
 import daf
 
@@ -38,27 +23,14 @@ accounts = [
         is_user=True,
         servers=[
             AutoGUILD(
-                include_pattern="NFT-Dragons",
-                exclude_pattern="NonFunctionalTesticle",
-                messages=[
-                    TextMESSAGE(
-                        data=TextMessageData(
-                            content="[LIMITED TIME ONLY] The greatest ever NFT created! Buy today.",
-                            files=[
-                                FILE(filename="C:/Users/david/OneDrive/Slike/Screenshots/nft_preview.png"),
-                            ],
-                        ),
-                        channels=AutoCHANNEL(
-                            include_pattern="shill|promo",
-                            exclude_pattern="projects",
-                        ),
-                        period=FixedDurationPeriod(
-                            duration=timedelta(
-                                minutes=30.0,
-                            ),
-                        ),
-                    ),
-                ],
+                include_pattern=or_(
+                    operands=[
+                        contains(keyword="shill"),
+                        contains(keyword="NFT"),
+                        contains(keyword="dragon"),
+                        contains(keyword="promo"),
+                    ],
+                ),
                 logging=True,
             ),
         ],

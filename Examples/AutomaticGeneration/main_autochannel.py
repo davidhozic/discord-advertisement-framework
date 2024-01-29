@@ -1,25 +1,15 @@
-
-"""
-Automatically generated file for Discord Advertisement Framework 4.0.0.
-This can be run eg. 24/7 on a server without graphical interface.
-
-The file has the required classes and functions imported, then the logger is defined and the
-accounts list is defined.
-
-At the bottom of the file the framework is then started with the run function.
-"""
-
 # Import the necessary items
 from daf.logging.logger_json import LoggerJSON
 
+from daf.guild.autoguild import AutoGUILD
+from daf.logic import or_
 from daf.messagedata.textdata import TextMessageData
-from daf.message.text_based import TextMESSAGE
-from daf.client import ACCOUNT
-from daf.messagedata import FILE
-from daf.message.messageperiod import FixedDurationPeriod
 from datetime import timedelta
-from daf.guild.guilduser import GUILD
-from daf.message.base import AutoCHANNEL
+from daf.message.autochannel import AutoCHANNEL
+from daf.message.messageperiod import FixedDurationPeriod
+from daf.message.text_based import TextMESSAGE
+from daf.logic import contains
+from daf.client import ACCOUNT
 from daf.logging.tracing import TraceLEVELS
 import daf
 
@@ -37,25 +27,30 @@ accounts = [
         token="TOKEN_HERE",
         is_user=True,
         servers=[
-            GUILD(
-                snowflake=24141241241231,
+            AutoGUILD(
+                include_pattern=or_(
+                    operands=[
+                        contains(keyword="shill"),
+                        contains(keyword="NFT"),
+                        contains(keyword="dragon"),
+                        contains(keyword="promo"),
+                    ],
+                ),
                 messages=[
                     TextMESSAGE(
-                        data=TextMessageData(
-                            content="[LIMITED TIME ONLY] The greatest ever NFT created! Buy today.",
-                            files=[
-                                FILE(filename="C:/Users/david/OneDrive/Slike/Screenshots/nft_preview.png"),
-                            ],
-                        ),
+                        data=TextMessageData(content="Checkout my  new Red Dragon NFT! Additionaly, we also have the Golden Dragon - limited time only!"),
                         channels=AutoCHANNEL(
-                            include_pattern="shill|promo",
-                            exclude_pattern="projects",
-                        ),
-                        period=FixedDurationPeriod(
-                            duration=timedelta(
-                                minutes=30.0,
+                            include_pattern=or_(
+                                operands=[
+                                    contains(keyword="nft"),
+                                    contains(keyword="shill"),
+                                    contains(keyword="self-promo"),
+                                    contains(keyword="projects"),
+                                    contains(keyword="marketing"),
+                                ],
                             ),
                         ),
+                        period=FixedDurationPeriod(duration=timedelta(seconds=5.0)),
                     ),
                 ],
                 logging=True,

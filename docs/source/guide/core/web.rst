@@ -8,8 +8,9 @@ Web browser (core)
     environment. You cannot use it eg. on a Ubuntu server.
 
 
-DAF includes optional functionality that allows automatic guild joins and login with username and password instead
-of token.
+The web browser functionality includes the login (via browser) with email and password as well as the automatic
+guild join (also via browser).
+
 
 To use the web functionality, users need to install the optional packages with:
 
