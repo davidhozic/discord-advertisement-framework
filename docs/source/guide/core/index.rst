@@ -10,6 +10,7 @@ words, running it directly by Python and providing all the required information 
     control
     shilldefine
     logging
+    logic
     autogen
     autoresponder
     web
