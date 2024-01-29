@@ -1,1 +1,1 @@
-pyinstaller --one-file --windowed test.py --add-data src/daf_gui/img/:daf_gui/img/
+pyinstaller --onefile --windowed test.py --add-data src/daf_gui/img/:daf_gui/img/
