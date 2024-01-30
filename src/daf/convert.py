@@ -27,6 +27,7 @@ from . import message
 from . import logging
 from . import web
 from . import events
+from . import responder
 
 
 __all__ = (
@@ -155,6 +156,9 @@ CONVERSION_ATTRS = {
     re.Pattern: {
         "custom_encoder": lambda data: {"pattern": convert_object_to_semi_dict(data.pattern), "flags": data.flags},
         "custom_decoder": lambda data: re.compile(data["pattern"], data.get("flags", 0))
+    },
+    responder.DMResponder: {
+        "attrs": ["condition", "action", "constraints"]
     }
 }
 

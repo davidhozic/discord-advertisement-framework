@@ -37,6 +37,10 @@ Glossary
 Releases
 ---------------------
 
+v4.0.2
+====================
+- Fixed automatic responders not being serializable.
+
 v4.0.1
 ====================
 - Fixed remote serialization of regex and time.
