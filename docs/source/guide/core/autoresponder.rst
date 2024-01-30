@@ -97,16 +97,20 @@ Both responders accept the following parameters:
 
     .. code-block:: python
 
-      import daf
-      import requests
+        import daf
+        import requests
 
-      def get_data():
-          mydata = requests.get('https://daf.davidhozic.com').text
-          return daf.messagedata.TextMessageData(content=mydata)
+        class MyCustomText(DynamicMessageData):
+            def __init__(self, a: int):
+                self.a = a
 
-      daf.responder.DMResponse(
-          data=daf.messagedata.DynamicMessageData(get_data)
-      )
+            def get_data(self):  # Can also be async
+                mydata = requests.get('https://daf.davidhozic.com').text
+                return TextMessageData(content=mydata)
+
+        daf.responder.DMResponse(
+            data=MyCustomText(5)
+        )
 
 :constraints:
 

@@ -11,7 +11,7 @@ The custom data class must inherit the DynamicVoiceMessageData class.
 # Import the necessary items
 from daf.logging.logger_json import LoggerJSON
 
-from daf.messagedata import FILE import FILE
+from daf.messagedata import FILE
 from daf.messagedata.voicedata import VoiceMessageData
 from daf.messagedata.dynamicdata import DynamicMessageData
 from datetime import timedelta

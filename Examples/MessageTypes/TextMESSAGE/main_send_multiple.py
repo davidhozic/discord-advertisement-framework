@@ -8,7 +8,7 @@ The message will be first sent in 4 hours.
 # Import the necessary items
 from daf.logging.logger_json import LoggerJSON
 
-from daf.messagedata import FILE import FILE
+from daf.messagedata import FILE
 from daf.messagedata.textdata import TextMessageData
 from datetime import timedelta
 from daf.client import ACCOUNT
