@@ -1,1 +1,1 @@
-pyinstaller --onefile --windowed test.py --add-data src/daf_gui/img/:daf_gui/img/ --icon src/daf_gui/img/logo.png
+pyinstaller --onefile --windowed test.py --add-data src/daf_gui/img/:daf_gui/img/ --icon src/daf_gui/img/logo.png --add-data src/_discord/bin/:_discord/bin/
