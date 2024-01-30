@@ -5,7 +5,7 @@ It is also responsible for doing the reverse, which is converting those other fo
 
 from typing import Union, Any, Mapping
 from contextlib import suppress
-from enum import Enum
+from enum import Enum, Flag
 from inspect import isclass, isfunction, signature, _empty
 
 from daf.logging.tracing import TraceLEVELS, trace
@@ -15,6 +15,7 @@ import importlib
 import copy
 import asyncio
 import datetime
+import re
 
 import _discord as discord
 
@@ -123,6 +124,10 @@ CONVERSION_ATTRS = {
         "custom_encoder": lambda object: object.total_seconds(),
         "custom_decoder": lambda seconds: datetime.timedelta(seconds=seconds)
     },
+    datetime.time: {
+        "custom_encoder": lambda object: object.isoformat(),
+        "custom_decoder": lambda string: datetime.time.fromisoformat(string)
+    },
     bytes: {
         "custom_encoder": lambda data: data.hex(),
         "custom_decoder": lambda hex_str: bytes.fromhex(hex_str)
@@ -146,8 +151,13 @@ CONVERSION_ATTRS = {
     },
     discord.VoiceChannel: {
         "attrs": ["name", "id"],
+    },
+    re.Pattern: {
+        "custom_encoder": lambda data: {"pattern": convert_object_to_semi_dict(data.pattern), "flags": data.flags},
+        "custom_decoder": lambda data: re.compile(data["pattern"], data.get("flags", 0))
     }
 }
+
 """
 This is a custom conversion dictionary.
 It's values are datatypes of objects which cannot be normally converted to JSON, so custom rules are required.
@@ -367,7 +377,7 @@ def convert_object_to_semi_dict(to_convert: Any, only_ref: bool = False) -> Mapp
         to_convert = [convert_object_to_semi_dict(value) for value in to_convert]
         return to_convert
 
-    if isinstance(to_convert, Enum):
+    if isinstance(to_convert, (Enum, Flag)):
         return {"enum_type": f"{object_type.__module__}.{object_type.__name__}", "value": to_convert.value}
 
     # Class itself, not an actual instance. Can also be function as it only imports.
