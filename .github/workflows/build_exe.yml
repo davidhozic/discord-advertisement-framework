@@ -21,7 +21,7 @@ jobs:
           pip install pyinstaller
       - name: Build
         run: |
-          import daf_gui;daf_gui.run() > daf.py
+          echo "import daf_gui;daf_gui.run()" > daf.py
           pyinstaller --onefile --windowed daf.py --add-data src/daf_gui/img/:daf_gui/img/ --icon src/daf_gui/img/logo.png --add-data src/_discord/bin/:_discord/bin/
       - name: Upload
         uses: softprops/action-gh-release@v1
