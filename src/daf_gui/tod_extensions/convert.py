@@ -6,7 +6,7 @@ from inspect import getmembers
 
 from tkclasswiz.convert import ObjectInfo, convert_to_object_info
 
-from daf.misc.instance_track import ObjectReference, get_object_id
+from daf.misc.instance_track import ObjectReference
 from daf.logging.tracing import *
 
 
