@@ -34,7 +34,7 @@ help:
 # "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).
 
 clean:
-	python3 ./setup.py --clean --start-dir $(SOURCEDIR)
+	python ./setup.py --clean --start-dir $(SOURCEDIR)
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(_BUILD_DIR)" $(SPHINXOPTS) $(O)
 
 pdf: latex

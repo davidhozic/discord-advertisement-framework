@@ -55,54 +55,63 @@ Key features
 ----------------------
 Installation
 ----------------------
-DAF can be installed though command prompt/terminal using the bottom commands.
 
-.. tab-set::
+DAF can be installed in one of the two ways:
 
-    .. tab-item:: Main package
-        
-        Pre-requirement: `Python (minimum v3.9) <https://www.python.org/downloads/>`_
+1.  As a standalone EXE on Windows.
+    It can be downloaded in `releases <https://github.com/davidhozic/discord-advertisement-framework/releases>`_.
+    Please note that antivirus software might detect this as a virus. This is because
+    the exe bundles a Python interpreter alongside the Python package. If that happens, disable
+    your antivirus or consider installing the software as a Python package (explained in the following bullet point).
+   
+2.  Installed as a Python package through the terminal / PowerShell / cmd.
 
-        .. code-block:: bash
+    .. tab-set::
 
-            pip install discord-advert-framework
+        .. tab-item:: Main package
+            
+            Pre-requirement: `Python (minimum v3.9; recommended 3.11) <https://www.python.org/downloads/>`_
 
-    .. tab-item:: Additional functionality
-        
-        Some functionality needs to be installed separately.
-        This was done to reduce the needed space by the daf.
-        
-        .. tab-set::
-        
-            .. tab-item:: Voice
-                
-                - .. code-block:: bash
-                    :caption: Voice Messaging / AUDIO
+            .. code-block:: bash
 
-                    pip install discord-advert-framework[voice]
+                pip install discord-advert-framework
 
-            .. tab-item:: SQL
-                
-                - .. code-block:: bash
-                    :caption: SQL logging
+        .. tab-item:: Additional functionality
+            
+            Some functionality needs to be installed separately.
+            This was done to reduce the needed space by the daf.
+            
+            .. tab-set::
+            
+                .. tab-item:: Voice
+                    
+                    - .. code-block:: bash
+                        :caption: Voice Messaging / AUDIO
 
-                    pip install discord-advert-framework[sql]
+                        pip install discord-advert-framework[voice]
 
-            .. tab-item:: Chrome integration
+                .. tab-item:: SQL
+                    
+                    - .. code-block:: bash
+                        :caption: SQL logging
 
-                - .. code-block:: bash
-                     :caption: Chrome integration
-                     
-                     pip install discord-advert-framework[web]
+                        pip install discord-advert-framework[sql]
 
-            .. tab-item:: All
-                
-                Install all of the (left) optional dependencies
+                .. tab-item:: Chrome integration
 
-                - .. code-block:: bash
-                    :caption: All
+                    - .. code-block:: bash
+                        :caption: Chrome integration
+                        
+                        pip install discord-advert-framework[web]
 
-                    pip install discord-advert-framework[all]
+                .. tab-item:: All
+                    
+                    Install all of the (left) optional dependencies
+
+                    - .. code-block:: bash
+                        :caption: All
+
+                        pip install discord-advert-framework[all]
 
 
 ----------------------
