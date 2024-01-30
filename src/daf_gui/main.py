@@ -2,8 +2,9 @@
 Main file of the DAF GUI.
 """
 from importlib.util import find_spec
-from pathlib import Path
 from typing import List
+from pathlib import Path
+
 
 from daf.misc import instance_track as it
 
@@ -11,19 +12,42 @@ import subprocess
 import sys
 
 import tk_async_execute as tae
-
-
-installed = find_spec("ttkbootstrap") is not None
+import json
 
 
 # Automatically install GUI requirements if GUI is requested to avoid making it an optional dependency
 # One other way would be to create a completely different package on pypi for the core daf, but that is a lot of
 # work to be done. It is better to auto install.
-TTKBOOSTRAP_VERSION = "1.10.1"
+to_install = [
+    ("ttkbootstrap", "==1.10.1"),
+]
 
-if not installed:
-    print("Auto installing requirements: ttkbootstrap")
-    subprocess.check_call([sys.executable.replace("pythonw", "python"), "-m", "pip", "install", f"ttkbootstrap=={TTKBOOSTRAP_VERSION}"])
+version_path = Path.home().joinpath("./gui_versions.json")
+if not version_path.exists():
+    version_path.touch()
+
+with open(version_path, "r") as file:
+    try:
+        version_data = json.load(file)
+    except json.JSONDecodeError as exc:
+        version_data = {}
+
+for package, version in to_install:
+    installed_version = version_data.get(package, "0")
+    if find_spec(package) is None or installed_version != version:
+        print(f"Auto installing {package}{version}")
+        subprocess.check_call(
+            [
+                sys.executable.replace("pythonw", "python"),
+                "-m", "pip", "install", "-U",
+                package + version
+            ]
+        )
+        version_data[package] = version
+
+with open(version_path, "w") as file:
+    json.dump(version_data, file)
+
 
 import ttkbootstrap as ttk
 
@@ -41,13 +65,13 @@ import tkinter as tk
 import tkinter.filedialog as tkfile
 import ttkbootstrap.dialogs.dialogs as tkdiag
 import ttkbootstrap.tableview as tktw
+import ttkbootstrap.style as tkstyle
 
-import json
+import tkclasswiz as wiz
+import webbrowser
 import sys
 import os
 import daf
-import webbrowser
-import warnings
 
 
 WIN_UPDATE_DELAY = 0.005
@@ -68,7 +92,7 @@ DISCORD_URL = "https://discord.gg/DEnvahb2Sw"
 OPTIONAL_MODULES = [
     # Label, optional name, installed var
     ("SQL logging", "sql", daf.logging.sql.SQL_INSTALLED),
-    ("Voice messages", "voice", daf.dtypes.GLOBALS.voice_installed),
+    ("Voice messages", "voice", daf.message.voice_based.GLOBAL.voice_installed),
     ("Web features (Chrome)", "web", daf.web.GLOBALS.selenium_installed),
 ]
 
@@ -148,6 +172,9 @@ class Application():
         # Credits tab
         self.init_credits_tab()
 
+        # GUI menu
+        self.init_menu()
+
         # Status variables
         self._daf_running = False
 
@@ -166,6 +193,21 @@ class Application():
                 "Additional GUI can be unstable on Python 3.12",
                 "Compatibility warning!"
             )
+
+    def init_menu(self):
+        "Initializes GUI toolbar menu"
+        menu = ttk.Menu(self.win_main)
+        theme_menu = ttk.Menu(menu)
+        menu.add_cascade(label="Theme", menu=theme_menu)
+
+        style = tkstyle.Style()
+        def use_theme(theme: str):
+            return lambda: style.theme_use(theme)
+
+        for theme in style.theme_names():
+            theme_menu.add_radiobutton(label=theme, command=use_theme(theme))
+
+        self.win_main.config(menu=menu)
 
     def init_event_listeners(self):
         "Initializes event listeners."
@@ -490,7 +532,7 @@ class Application():
                 param_object = combo_history.combo.get()
                 param_object_params = convert_to_objects(param_object.data)
                 items = await self.connection.execute_method(
-                    it.ObjectReference(it.get_object_id(logger)), getter_history, **param_object_params
+                    it.ObjectReference.from_object(logger), getter_history, **param_object_params
                 )
                 items = convert_to_object_info(items)
                 lst_history.clear()
@@ -513,7 +555,7 @@ class Application():
             async def delete_logs_async(primary_keys: List[int]):
                 logger = await self.connection.get_logger()
                 await self.connection.execute_method(
-                    it.ObjectReference(it.get_object_id(logger)),
+                    it.ObjectReference.from_object(logger),
                     "delete_logs",
                     primary_keys=primary_keys  # TODO: update on server
                 )
@@ -574,7 +616,11 @@ class Application():
                 logger = await self.connection.get_logger()
                 param_object = combo_count.combo.get()
                 parameters = convert_to_objects(param_object.data)
-                count = await self.connection.execute_method(it.ObjectReference(it.get_object_id(logger)), getter_counts, **parameters)
+                count = await self.connection.execute_method(
+                    it.ObjectReference.from_object(logger),
+                    getter_counts,
+                    **parameters
+                )
 
                 tw_num.delete_rows()
                 tw_num.insert_rows(0, count)

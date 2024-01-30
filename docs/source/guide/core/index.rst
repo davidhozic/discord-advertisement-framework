@@ -7,10 +7,12 @@ words, running it directly by Python and providing all the required information 
 
 .. toctree::
 
-    quickstart
-    messages
+    control
+    shilldefine
     logging
-    remote
-    modification
+    logic
     autogen
+    autoresponder
     web
+    modification
+    remote

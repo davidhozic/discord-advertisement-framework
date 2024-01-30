@@ -1,0 +1,31 @@
+name: Build DAF.exe
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: 'pip'
+      - name: Install required
+        run: |
+          pip install .[all]
+          pip install pyinstaller
+          pip install ttkbootstrap==1.10.1
+      - name: Build
+        run: |
+          echo "from daf_gui import run;run()" > discord-advert-framework.py
+          pyinstaller --onefile --windowed discord-advert-framework.py --add-data src/daf_gui/img/:daf_gui/img/ --icon src/daf_gui/img/logo.png --add-data src/_discord/bin/:_discord/bin/
+      - name: Upload
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            dist/discord-advert-framework.exe

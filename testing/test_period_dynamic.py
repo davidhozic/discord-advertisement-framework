@@ -17,7 +17,7 @@ TEST_USER_ID = 145196308985020416
 TEST_SEND_PERIOD_TEXT = timedelta(seconds=10)
 TEST_SEND_PERIOD_VOICE = timedelta(seconds=10)
 TEST_PERIOD_MAX_VARIATION = 0.12 # Relative variation from period allowed
-TEST_MAX_WAIT_TIME = 15 # Maximum wait for message
+TEST_MAX_WAIT_TIME = 15  # Maximum wait for message
 
 
 @pytest.fixture(scope="module")
@@ -135,7 +135,6 @@ async def test_voice_period(
     cwd = os.getcwd()
     os.chdir(os.path.dirname(__file__))
     data_ = [
-        (8, daf.AUDIO("testing123.mp3")),
         (8, daf.FILE("testing123.mp3"))
     ]
     VOICE_MESSAGE_TEST_MESSAGE = dynamic_getter(data_.copy())

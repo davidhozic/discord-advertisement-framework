@@ -37,6 +37,59 @@ Glossary
 Releases
 ---------------------
 
+v4.0.0
+===================
+- New automatic message responder (DM and guild) - :ref:`Automatic responder`.
+- Changed message's parameters:
+
+  + Deprecated:
+  
+    * ``start_in``
+    * ``start_period``
+    * ``end_period``
+    * All existing ``data`` types. They have been replaced with :class:`daf.messagedata.TextMessageData`
+      and :class:`daf.messagedata.DynamicMessageData`
+
+- Changed :class:`~daf.guild.AutoGUILD`'s parameters:
+
+  + Deprecated:
+  
+    * ``exclude_pattern``
+    * Using :class:`str` on ``include_pattern``
+  
+  + Changed:
+
+    * Made ``include_pattern`` accept :ref:`logic classes <Text matching (logic)>`
+      (``and_``, ``or_``, ``contains``, ...)
+
+- Changed :class:`~daf.message.autochannel.AutoCHANNEL`'s parameters:
+
+  + Deprecated:
+  
+    * ``exclude_pattern``
+    * Using :class:`str` on ``include_pattern``
+  
+  + Changed:
+
+    * Made ``include_pattern`` accept :ref:`logic classes <Text matching (logic)>`
+      (``and_``, ``or_``, ``contains``, ...)
+
+- Upon slow-mode / timeout, messages will now longer wait until the end of slow-mode / timeout.
+  Instead, they will defer until the next period that is not within slow-mode / timeout.
+  The period will however still auto-correct itself to be above the slow-mode.
+- |BREAK_CH| Changed how :class:`daf.guild.AutoGUILD` works. It will now create :class:`daf.guild.GUILD` instances.
+  :py:attr:`daf.guild.AutoGUILD.guilds` will also now return a list of generated :class:`daf.guild.GUILD` objects instead
+  of a list of :class:`discord.Guild` objects.
+  This also prevents a "bug" that appeared if the user was timed-out in a guild, which reflected upon other
+  guilds as well. The added benefit of creating :class:`~daf.guild.GUILD` is different randomized sending
+  periods across multiple guilds (assuming randomized sending period was configured).
+- |BREAK_CH| Removed the deprecated ``daf.dtypes.AUDIO``, which has been replaced with :class:`daf.dtypes.FILE`.
+- |POTENT_BREAK_CH| Changed event names
+- GUI:
+
+  - Theme selection support (top-left corner)
+
+
 v3.2.2
 ===================
 - Fixed entire software not launching if SQL is not installed.
@@ -139,7 +192,7 @@ v3.0.0
 
 - Core:
 
-  - New events system and module :ref:`Event reference`  
+  - New events system and module
   - Updated PyCord API wrapper to 2.5.0 RC5
   - New property :py:attr:`daf.client.ACCOUNT.removed_servers` for tracking removed servers.
   - New property :py:attr:`daf.guild.GUILD.removed_messages` :py:attr:`daf.guild.USER.removed_messages`
@@ -517,7 +570,7 @@ v2.3
     what level trace should be displayed.
 
 - :ref:`Messages` objects period automatically increases if it is less than slow-mode timeout.
-- The :ref:`data_function`'s input function can now also be async.
+- The ``data_function``'s input function can now also be async.
 
 v2.2
 ===========

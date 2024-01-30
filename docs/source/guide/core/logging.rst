@@ -28,8 +28,8 @@ The logging module is responsible for 2 types of logging:
     Invite link tracking is **bot account** only and does not work on user accounts.
 
 
-Logging can be enabled for each :class:`~daf.guild.GUILD` / :class:`~daf.guild.USER` if the ``logging`` parameter is
-set to ``True``.
+Logging can be enabled for each :class:`~daf.guild.GUILD` / :class:`~daf.guild.USER` / :class:`~daf.guild.AutoGUILD`
+if the ``logging`` parameter is set to ``True``.
 
 .. note:: 
     
@@ -105,13 +105,13 @@ All logs will contain keys:
     + :py:meth:`daf.message.DirectMESSAGE.generate_log_context`
 
 .. seealso::
-    :download:`Example structure <./DEP/David's py dungeon.json>`
+    :download:`Example structure <./DEP/Examples/Logging/JSON/History/2024/01/24/zajcek's dungeon.json>`
 
 .. only:: html
 
     JSON code example
     -----------------
-    .. literalinclude:: ./DEP/main_rickroll.py
+    .. literalinclude:: ./DEP/Examples/Logging/JSON/main_json_logging.py
         :language: python
         :caption: Code to produce JSON logs
         
@@ -158,20 +158,16 @@ The structure contains the following attributes:
     Attributes marked with ``(json)`` are the same as in :ref:`JSON Logging (file)`
 
 .. seealso::
-    :download:`Structure example <./DEP/David's py dungeon.csv>`
-
+    :download:`Structure example <./DEP/Examples/Logging/CSV/History/2024/01/24/zajcek's dungeon.csv>`
 
 .. only:: html
 
     CSV code example
     -----------------
-    .. literalinclude:: ./DEP/main_rickroll.py
+    .. literalinclude:: ./DEP/Examples/Logging/CSV/main_csv_logging.py
         :language: python
-        :caption: Code to produce JSON logs
-        
-
-
-
+        :caption: Code to produce CSV logs
+      
 
 
 Relational Database Log (SQL)
@@ -197,7 +193,7 @@ For daf to use SQL logging, you need to pass the :func:`~daf.core.run` function 
 
 .. only:: html
 
-    .. literalinclude:: ./DEP/rolls.py
+    .. literalinclude:: ./DEP/Examples/Logging/SQL/main_sql_logging.py
         :language: python
         
 
@@ -217,7 +213,7 @@ Features
 
 ER diagram
 --------------------------------
-.. image:: ./DEP/sql_er.drawio.svg
+.. image:: ./DEP/images/sql_er.drawio.svg
     :width: 1440
 
 

@@ -6,14 +6,14 @@ from inspect import getmembers
 
 from tkclasswiz.convert import ObjectInfo, convert_to_object_info
 
-from daf.misc.instance_track import ObjectReference, get_object_id
+from daf.misc.instance_track import ObjectReference
 from daf.logging.tracing import *
 
 
 
-def load_extension_to_object_info(object_, ret: ObjectInfo, *, save_original = False):
+def load_extension_to_object_info(object_, ret: ObjectInfo, *, save_original = False):    
     if save_original and isinstance(ret, ObjectInfo):
-        ret.real_object = ObjectReference(get_object_id(object_))
+        ret.real_object = ObjectReference.from_object(object_)
 
         # Convert object properties
         # This will only be aviable for live objects, since it has no configuration value,

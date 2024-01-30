@@ -86,13 +86,23 @@ async def channels(guilds):
     for channel in guild.channels:
         await channel.delete()
 
+    made_t_channels = {c.name: c for c in guild.text_channels}
+    made_v_channels = {c.name: c for c in guild.voice_channels}
+
     for i in range(TEST_TEXT_CHANNEL_NUM):
-        t_channels.append(await guild.create_text_channel(f"testpy-{i}"))
+        name = f"testpy-{i}"
+        channel = made_t_channels.get(name)
+        if channel is None:
+            channel = await guild.create_text_channel(name)
+
+        t_channels.append(channel)
 
     for i in range(TEST_VOICE_CHANNEL_NUM):
-        v_channels.append(await guild.create_voice_channel(f"testpy-{i}"))
+        name = f"testpy-{i}"
+        channel = made_v_channels.get(name)
+        if channel is None:
+            channel = await guild.create_voice_channel(name)
+
+        v_channels.append(channel)
 
     yield t_channels, v_channels
-    for channel in t_channels + v_channels:
-        with suppress(daf.discord.HTTPException):
-            await channel.delete()

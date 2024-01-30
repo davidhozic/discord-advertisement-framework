@@ -17,7 +17,12 @@ EXECUTABLE_METHODS = {
     daf.guild.GUILD: [daf.guild.GUILD.add_message, daf.guild.GUILD.remove_message],
     daf.guild.USER: [daf.guild.USER.add_message, daf.guild.USER.remove_message],
     daf.guild.AutoGUILD: [daf.guild.AutoGUILD.add_message, daf.guild.AutoGUILD.remove_message],
-    daf.client.ACCOUNT: [daf.client.ACCOUNT.add_server, daf.client.ACCOUNT.remove_server]
+    daf.client.ACCOUNT: [
+        daf.ACCOUNT.add_server,
+        daf.ACCOUNT.remove_server,
+        daf.ACCOUNT.add_responder,
+        daf.ACCOUNT.remove_responder
+    ]
 }
 ADDITIONAL_PARAMETER_VALUES = {
     daf.GUILD.remove_message: {
@@ -29,12 +34,16 @@ ADDITIONAL_PARAMETER_VALUES = {
         "message": lambda old_info: old_info.data["messages"]
     },
     daf.AutoGUILD.remove_message: {
-        # GUILD.messages
+        # AutoGUILD.messages
         "message": lambda old_info: old_info.data["messages"]
     },
     daf.ACCOUNT.remove_server: {
         # ACCOUNT.servers
         "server": lambda old_info: old_info.data["servers"]
+    },
+    daf.ACCOUNT.remove_responder: {
+        # ACCOUNT.servers
+        "responder_to_remove": lambda old_info: old_info.data["responders"]
     }
 }
 
@@ -44,6 +53,7 @@ def load_extension(frame: NewObjectFrameStruct, *args, **kwargs):
         frame.old_gui_data is None or
         # getattr since class_ can also be non ObjectInfo
         getattr(frame.old_gui_data, "real_object", None) is None or
+        not frame.old_gui_data.real_object.remote_allowed or
         (available_methods := EXECUTABLE_METHODS.get(frame.class_)) is None or
         not frame.allow_save
     ):
@@ -71,6 +81,7 @@ def load_extension(frame: NewObjectFrameStruct, *args, **kwargs):
         tae.async_execute(runner(), wait=False, pop_up=True, master=frame.origin_window)
 
     dpi_5, dpi_10 = dpi_scaled(5), dpi_scaled(10)
+    ttk.Separator(frame).pack(fill=tk.X, pady=dpi_10)
     frame_method = ttk.LabelFrame(
         frame,
         text="Method execution (WARNING! Method data is NOT preserved when closing / saving the frame!)",

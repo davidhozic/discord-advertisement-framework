@@ -230,6 +230,9 @@ async def http_execute_method(object_id: int, method_name: str, **kwargs):
     """
     object = it.get_by_id(object_id)
     try:
+        if not object._tracked_allow_remote:  # Can't type check attribute because it's part of a wrapper class.
+            raise TypeError(f"Method execution not available on {object.__name__}")
+
         result = getattr(object, method_name)(**convert.convert_from_semi_dict(kwargs))
         if isinstance(result, Awaitable):
             result = await result

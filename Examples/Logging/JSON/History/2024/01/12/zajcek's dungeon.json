@@ -1,0 +1,1670 @@
+{
+    "name": "zajcek's dungeon",
+    "id": 863071397207212052,
+    "type": "GUILD",
+    "invite_tracking": {},
+    "message_tracking": {
+        "936739431073865789": {
+            "name": "Aproksimacka",
+            "id": 936739431073865789,
+            "messages": [
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503785220626,
+                    "timestamp": "12.01.2024 21:55:11"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503782665745,
+                    "timestamp": "12.01.2024 21:55:01"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503780123152,
+                    "timestamp": "12.01.2024 21:54:51"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503777497615,
+                    "timestamp": "12.01.2024 21:54:40"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503774946318,
+                    "timestamp": "12.01.2024 21:54:30"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503772444941,
+                    "timestamp": "12.01.2024 21:54:21"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503769911308,
+                    "timestamp": "12.01.2024 21:54:11"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503767263755,
+                    "timestamp": "12.01.2024 21:54:00"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503764706570,
+                    "timestamp": "12.01.2024 21:53:50"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503762143497,
+                    "timestamp": "12.01.2024 21:53:40"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503759601928,
+                    "timestamp": "12.01.2024 21:53:30"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503757018631,
+                    "timestamp": "12.01.2024 21:53:20"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503754460934,
+                    "timestamp": "12.01.2024 21:53:10"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503751910405,
+                    "timestamp": "12.01.2024 21:53:00"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503749366276,
+                    "timestamp": "12.01.2024 21:52:50"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503746801155,
+                    "timestamp": "12.01.2024 21:52:40"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503744217858,
+                    "timestamp": "12.01.2024 21:52:30"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503741672193,
+                    "timestamp": "12.01.2024 21:52:20"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503741216256,
+                    "timestamp": "12.01.2024 21:52:19"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503739099154,
+                    "timestamp": "12.01.2024 21:52:10"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503736568593,
+                    "timestamp": "12.01.2024 21:52:00"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503733998096,
+                    "timestamp": "12.01.2024 21:51:50"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503731423247,
+                    "timestamp": "12.01.2024 21:51:40"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503728851982,
+                    "timestamp": "12.01.2024 21:51:30"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503726341901,
+                    "timestamp": "12.01.2024 21:51:21"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503723753740,
+                    "timestamp": "12.01.2024 21:51:10"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503721225739,
+                    "timestamp": "12.01.2024 21:51:01"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503718634506,
+                    "timestamp": "12.01.2024 21:50:50"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503716061449,
+                    "timestamp": "12.01.2024 21:50:40"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503713514248,
+                    "timestamp": "12.01.2024 21:50:30"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503711196423,
+                    "timestamp": "12.01.2024 21:50:21"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503708412934,
+                    "timestamp": "12.01.2024 21:50:10"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503705825285,
+                    "timestamp": "12.01.2024 21:50:00"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503703290116,
+                    "timestamp": "12.01.2024 21:49:50"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503700707843,
+                    "timestamp": "12.01.2024 21:49:40"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503698157570,
+                    "timestamp": "12.01.2024 21:49:30"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503695580929,
+                    "timestamp": "12.01.2024 21:49:20"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503694264576,
+                    "timestamp": "12.01.2024 21:49:15"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503693028618,
+                    "timestamp": "12.01.2024 21:49:10"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503690468361,
+                    "timestamp": "12.01.2024 21:49:00"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503687937288,
+                    "timestamp": "12.01.2024 21:48:51"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503685351175,
+                    "timestamp": "12.01.2024 21:48:40"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503682786822,
+                    "timestamp": "12.01.2024 21:48:30"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503680238853,
+                    "timestamp": "12.01.2024 21:48:20"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503677675780,
+                    "timestamp": "12.01.2024 21:48:10"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503675117059,
+                    "timestamp": "12.01.2024 21:48:00"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503672572930,
+                    "timestamp": "12.01.2024 21:47:50"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503670009857,
+                    "timestamp": "12.01.2024 21:47:40"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503669569792,
+                    "timestamp": "12.01.2024 21:47:39"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503664871453,
+                    "timestamp": "12.01.2024 21:47:20"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503662319388,
+                    "timestamp": "12.01.2024 21:47:10"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503659823387,
+                    "timestamp": "12.01.2024 21:47:01"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503657253658,
+                    "timestamp": "12.01.2024 21:46:51"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503654635545,
+                    "timestamp": "12.01.2024 21:46:40"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503652064536,
+                    "timestamp": "12.01.2024 21:46:30"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503649496087,
+                    "timestamp": "12.01.2024 21:46:20"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503646939158,
+                    "timestamp": "12.01.2024 21:46:10"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503644399637,
+                    "timestamp": "12.01.2024 21:46:00"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503641816596,
+                    "timestamp": "12.01.2024 21:45:50"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503639261459,
+                    "timestamp": "12.01.2024 21:45:40"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503636717330,
+                    "timestamp": "12.01.2024 21:45:30"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503634144017,
+                    "timestamp": "12.01.2024 21:45:20"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503631590160,
+                    "timestamp": "12.01.2024 21:45:10"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503629043471,
+                    "timestamp": "12.01.2024 21:45:00"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503626462734,
+                    "timestamp": "12.01.2024 21:44:50"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503623944973,
+                    "timestamp": "12.01.2024 21:44:41"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503621333516,
+                    "timestamp": "12.01.2024 21:44:30"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503618820363,
+                    "timestamp": "12.01.2024 21:44:21"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503616256010,
+                    "timestamp": "12.01.2024 21:44:11"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503613664777,
+                    "timestamp": "12.01.2024 21:44:00"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503611108872,
+                    "timestamp": "12.01.2024 21:43:50"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503608541959,
+                    "timestamp": "12.01.2024 21:43:40"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503605986822,
+                    "timestamp": "12.01.2024 21:43:30"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503603412997,
+                    "timestamp": "12.01.2024 21:43:20"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503600886532,
+                    "timestamp": "12.01.2024 21:43:10"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503598319363,
+                    "timestamp": "12.01.2024 21:43:00"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503595793154,
+                    "timestamp": "12.01.2024 21:42:51"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503593215745,
+                    "timestamp": "12.01.2024 21:42:40"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503591070720,
+                    "timestamp": "12.01.2024 21:42:32"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503588078850,
+                    "timestamp": "12.01.2024 21:42:20"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503585497345,
+                    "timestamp": "12.01.2024 21:42:10"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503583126272,
+                    "timestamp": "12.01.2024 21:42:01"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503454955783,
+                    "timestamp": "12.01.2024 21:33:40"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503452397830,
+                    "timestamp": "12.01.2024 21:33:30"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503449888005,
+                    "timestamp": "12.01.2024 21:33:21"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503447264260,
+                    "timestamp": "12.01.2024 21:33:10"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503444739331,
+                    "timestamp": "12.01.2024 21:33:01"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503442157570,
+                    "timestamp": "12.01.2024 21:32:50"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503439821057,
+                    "timestamp": "12.01.2024 21:32:41"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503437219328,
+                    "timestamp": "12.01.2024 21:32:31"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503375624720,
+                    "timestamp": "12.01.2024 21:28:31"
+                },
+                {
+                    "sent_data": {
+                        "text": "Test123"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "test",
+                                "id": 1159224699830677685
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436503373049615,
+                    "timestamp": "12.01.2024 21:28:20"
+                }
+            ]
+        }
+    }
+}

@@ -9,8 +9,17 @@ import daf
 
 
 DEPRECATION_NOTICES = {
-    daf.AUDIO: [("daf.dtypes.AUDIO", "2.12", "Replaced with daf.dtypes.FILE")],
-    daf.VoiceMESSAGE: [("daf.dtypes.AUDIO as type for data parameter", "2.12", "Replaced with daf.dtypes.FILE")],
+    daf.AutoGUILD: [
+        ("Using text (str) on 'include_pattern'", "4.2.0", "AutoGUILD's include_pattern now accepts a BaseLogic object."),
+        ("'exclude_pattern' parameter", "4.2.0", "Exclusion can now be done with 'include_pattern'")
+    ],
+    daf.AutoCHANNEL: [
+        ("Using text (str) on 'include_pattern'", "4.2.0", "AutoCHANNEL's include_pattern now accepts a BaseLogic object."),
+        ("'exclude_pattern' parameter", "4.2.0", "Exclusion can now be done with 'include_pattern'")
+    ],
+    daf.TextMESSAGE: [("'start_period' & 'end_period' & 'start_in'", "4.2.0", "Replaced with 'period' parameter")],
+    daf.VoiceMESSAGE: [("'start_period' & 'end_period' & 'start_in'", "4.2.0", "Replaced with 'period' parameter")],
+    daf.DirectMESSAGE: [("'start_period' & 'end_period' & 'start_in'", "4.2.0", "Replaced with 'period' parameter")],
 }
 
 

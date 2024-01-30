@@ -1,0 +1,126 @@
+{
+    "name": "zajcek",
+    "id": 145196308985020416,
+    "type": "USER",
+    "invite_tracking": {},
+    "message_tracking": {
+        "936739431073865789": {
+            "name": "Aproksimacka",
+            "id": 936739431073865789,
+            "messages": [
+                {
+                    "sent_data": {
+                        "embed": {
+                            "fields": [],
+                            "type": "rich",
+                            "title": "Goodbye world"
+                        }
+                    },
+                    "success_info": {
+                        "success": true
+                    },
+                    "type": "DirectMESSAGE",
+                    "mode": "send",
+                    "index": 436657544393991,
+                    "timestamp": "19.01.2024 20:45:32"
+                },
+                {
+                    "sent_data": {
+                        "text": "Goodbye world"
+                    },
+                    "success_info": {
+                        "success": true
+                    },
+                    "type": "DirectMESSAGE",
+                    "mode": "send",
+                    "index": 436657541825542,
+                    "timestamp": "19.01.2024 20:45:22"
+                },
+                {
+                    "sent_data": {
+                        "embed": {
+                            "fields": [],
+                            "type": "rich",
+                            "title": "Hello world"
+                        }
+                    },
+                    "success_info": {
+                        "success": true
+                    },
+                    "type": "DirectMESSAGE",
+                    "mode": "send",
+                    "index": 436657539284229,
+                    "timestamp": "19.01.2024 20:45:12"
+                },
+                {
+                    "sent_data": {
+                        "text": "Hello world"
+                    },
+                    "success_info": {
+                        "success": true
+                    },
+                    "type": "DirectMESSAGE",
+                    "mode": "send",
+                    "index": 436657536699140,
+                    "timestamp": "19.01.2024 20:45:02"
+                },
+                {
+                    "sent_data": {
+                        "embed": {
+                            "fields": [],
+                            "type": "rich",
+                            "title": "Goodbye world"
+                        }
+                    },
+                    "success_info": {
+                        "success": true
+                    },
+                    "type": "DirectMESSAGE",
+                    "mode": "send",
+                    "index": 436653933256199,
+                    "timestamp": "19.01.2024 16:50:26"
+                },
+                {
+                    "sent_data": {
+                        "text": "Goodbye world"
+                    },
+                    "success_info": {
+                        "success": true
+                    },
+                    "type": "DirectMESSAGE",
+                    "mode": "send",
+                    "index": 436653930696966,
+                    "timestamp": "19.01.2024 16:50:16"
+                },
+                {
+                    "sent_data": {
+                        "embed": {
+                            "fields": [],
+                            "type": "rich",
+                            "title": "Hello world"
+                        }
+                    },
+                    "success_info": {
+                        "success": true
+                    },
+                    "type": "DirectMESSAGE",
+                    "mode": "send",
+                    "index": 436653928150789,
+                    "timestamp": "19.01.2024 16:50:06"
+                },
+                {
+                    "sent_data": {
+                        "text": "Hello world"
+                    },
+                    "success_info": {
+                        "success": true
+                    },
+                    "type": "DirectMESSAGE",
+                    "mode": "send",
+                    "index": 436653925572100,
+                    "timestamp": "19.01.2024 16:49:56"
+                }
+            ]
+        }
+    }
+}

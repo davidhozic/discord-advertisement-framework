@@ -3,7 +3,7 @@ Extension loader method.
 """
 from inspect import getmembers, isclass
 from typing import Union, List
-from datetime import datetime
+from datetime import datetime, time, timezone
 
 from tkclasswiz.convert import (
     ObjectInfo,
@@ -13,6 +13,7 @@ from tkclasswiz.convert import (
 from tkclasswiz.annotations import register_annotations as reg_annotations, get_annotations
 from tkclasswiz.object_frame.frame_struct import NewObjectFrameStruct
 from tkclasswiz.extensions import Extension
+from tkclasswiz.deprecation import register_deprecated
 
 from . import deprecation_notice
 from . import method_execution
@@ -44,7 +45,30 @@ def register_extensions():
     )
 
 
+def register_deprecations():
+    register_deprecated(daf.AutoGUILD, "include_pattern", str)
+    register_deprecated(daf.AutoGUILD, "exclude_pattern")
+
+    register_deprecated(daf.AutoCHANNEL, "include_pattern", str)
+    register_deprecated(daf.AutoCHANNEL, "exclude_pattern")
+
+    register_deprecated(daf.BaseMESSAGE, "start_period")
+    register_deprecated(daf.BaseMESSAGE, "end_period")
+    register_deprecated(daf.BaseMESSAGE, "start_in")
+    register_deprecated(daf.messagedata.dynamicdata._DeprecatedDynamic)
+    register_deprecated(daf._FunctionBaseCLASS)
+    register_deprecated(
+        daf.BaseMESSAGE,
+        "data",
+        str, daf.discord.Embed, daf.FILE, list, tuple, set
+    )
+
 def register_annotations():
+    reg_annotations(
+        time,
+        hour=int, minute=int, second=int, microsecond=int, tzinfo=timezone
+    )
+
     reg_annotations(
         discord.Embed,
         {
@@ -145,11 +169,11 @@ def register_conv_clients():
 
 
 def register_conv_datatypes():
-    m = {k: k for k in daf.dtypes.FILE.__init__.__annotations__}
+    m = {k: k for k in daf.FILE.__init__.__annotations__}
     m["data"] = "hex"
     m["filename"] = "fullpath"
     register_object_objectinfo_rule(
-        daf.dtypes.FILE,
+        daf.FILE,
         m
     )
 
@@ -187,12 +211,30 @@ def register_conv_guild():
 
 
 def register_conv_message():
+    def get_period(message: daf.BaseMESSAGE):
+        if isinstance(message.parent, daf.AutoGUILD):
+            # Convert the start_in to the highest possible next_send_time
+            # of any message copies inside AutoGUILD
+            ag = message.parent
+            max_next_send = datetime.now().astimezone().replace(year=1970)
+            max_period_obj = None
+            m: daf.BaseMESSAGE
+            for guild in ag.guilds:
+                for m in guild.messages:
+                    if message == m and (period := m.period.get()) > max_next_send:
+                        max_next_send = period
+                        max_period_obj = m.period
+
+            return max_period_obj
+
+        # Not in AutoGUILD => Initialized, next_send_time should be start_in
+        return message.period
+
     for item in {daf.TextMESSAGE, daf.VoiceMESSAGE, daf.DirectMESSAGE}:
         m = {k: k for k in item.__init__.__annotations__}
         m["data"] = "_data"
-        m["start_in"] = "next_send_time"
+        m["period"] = get_period
         register_object_objectinfo_rule(item, m)
-
 
     channels = lambda message_: (
         [x if isinstance(x, int) else x.id for x in message_.channels]

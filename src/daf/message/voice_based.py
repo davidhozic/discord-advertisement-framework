@@ -3,23 +3,29 @@
 
 
 from typing import Any, Dict, List, Iterable, Optional, Union, Tuple, Callable
-from pathlib import Path
 from datetime import timedelta, datetime
 from typeguard import typechecked
+from pathlib import Path
 
-from .base import *
-from ..dtypes import *
-from ..events import *
-from ..logging.tracing import *
-from ..logging import sql
+from ..messagedata.dynamicdata import _DeprecatedDynamic
+
+from ..messagedata import BaseVoiceData, VoiceMessageData, FILE
 from ..misc import doc, instance_track
-from ..misc import async_util
-
+from ..logging import sql
 from .. import dtypes
 
-import asyncio
+from ..logging.tracing import *
+from .messageperiod import *
+from .autochannel import *
+from ..dtypes import *
+from ..events import *
+from .base import *
+
+import importlib.util as import_util
 import _discord as discord
+import asyncio
 import os
+
 
 __all__ = (
     "VoiceMESSAGE",
@@ -31,6 +37,10 @@ __all__ = (
 C_VC_CONNECT_TIMEOUT = 7  # Timeout of voice channels
 
 
+class GLOBAL:
+    voice_installed: bool = import_util.find_spec("nacl") is not None
+
+
 @instance_track.track_id
 @doc.doc_category("Messages", path="message")
 @sql.register_type("MessageTYPE")
@@ -40,82 +50,27 @@ class VoiceMESSAGE(BaseChannelMessage):
 
     .. warning::
 
-        This additionaly requires FFMPEG to be installed on your system.
+        This additionally requires FFMPEG to be installed on your system.
 
-    .. deprecated:: 2.1
-
-        - start_period, end_period - Using int values, use ``timedelta`` object instead.
-
-    .. versionchanged:: 2.10
-
-        'data' parameter no longer accepets :class:`daf.dtypes.AUDIO` and no longer allows YouTube streaming.
-        Instead it accepts :class:`daf.dtypes.FILE`.
-
-    .. versionchanged:: 2.7
-
-        *start_in* now accepts datetime object
 
     Parameters
     ------------
-    start_period: Union[int, timedelta, None]
-        The value of this parameter can be:
-
-        - None - Use this value for a fixed (not randomized) sending period
-        - timedelta object - object describing time difference, if this is used,
-          then the parameter represents the bottom limit of the **randomized** sending period.
-    end_period: Union[int, timedelta]
-        If ``start_period`` is not None,
-        then this represents the upper limit of randomized time period in which messages will be sent.
-        If ``start_period`` is None, then this represents the actual time period between each message send.
-
-        .. code-block:: python
-            :caption: **Randomized** sending period between **5** seconds and **10** seconds.
-
-            # Time between each send is somewhere between 5 seconds and 10 seconds.
-            daf.VoiceMESSAGE(
-                start_period=timedelta(seconds=5), end_period=timedelta(seconds=10), data=daf.AUDIO("msg.mp3"),
-                channels=[12345], start_in=timedelta(seconds=0), volume=50
-            )
-
-        .. code-block:: python
-            :caption: **Fixed** sending period at **10** seconds
-
-            # Time between each send is exactly 10 seconds.
-            daf.VoiceMESSAGE(
-                start_period=None, end_period=timedelta(seconds=10), data=daf.AUDIO("msg.mp3"),
-                channels=[12345], start_in=timedelta(seconds=0), volume=50
-            )
-    data: FILE
-        The data parameter is the actual data that will be sent using discord's API.
-        The data types of this parameter can be:
-
-            - FILE object.
-            - Function that accepts any amount of parameters and returns an FILE object. To pass a function, YOU MUST USE THE :ref:`data_function` decorator on the function.
-
-    channels: Union[Iterable[Union[int, discord.VoiceChannel]], daf.message.AutoCHANNEL]
+    data: BaseVoiceData
+        The actual data streamed to voice channels.
+        Can be VoiceMessageData or a class inherited from DynamicMessageData.
+    channels: Union[list[Union[int, discord.VoiceChannel]], daf.message.AutoCHANNEL]
         Channels that it will be advertised into (Can be snowflake ID or channel objects from PyCord).
-
-        .. versionchanged:: v2.3
-            Can also be :class:`~daf.message.AutoCHANNEL`
-
     volume: Optional[int]
         The volume (0-100%) at which to play the audio. Defaults to 50%. This was added in v2.0.0
-    start_in: Optional[timedelta | datetime]
-        When should the message be first sent.
-        *timedelta* means the difference from current time, while *datetime* means actual first send time.
     remove_after: Optional[Union[int, timedelta, datetime]]
         Deletes the message after:
 
-        * int - provided amounts of successful sends to seperate channels.
+        * int - provided amounts of successful sends to separate channels.
         * timedelta - the specified time difference
         * datetime - specific date & time
-
-        .. versionchanged:: v2.10
-
-            Parameter ``remove_after`` of int type will now work at a channel level and
-            it nows means the SUCCESSFUL number of sends into each channel.
+    period: BaseMessagePeriod
+        The sending period.
     """
-
     __slots__ = (
         "volume",
     )
@@ -124,29 +79,49 @@ class VoiceMESSAGE(BaseChannelMessage):
         'options': '-vn'
     }
 
-    @typechecked
-    def __init__(self,
-                 start_period: Union[int, timedelta, None],
-                 end_period: Union[int, timedelta],
-                 data: Union[FILE, Iterable[FILE], _FunctionBaseCLASS],
-                 channels: Union[Iterable[Union[int, discord.VoiceChannel]], AutoCHANNEL],
-                 volume: Optional[int] = 50,
-                 start_in: Optional[Union[timedelta, datetime]] = timedelta(seconds=0),
-                 remove_after: Optional[Union[int, timedelta, datetime]] = None):
+    # Deprecated. TODO: Remove in the future
+    _old_data_type = Union[FILE, list, tuple, set, _FunctionBaseCLASS]
 
-        if not dtypes.GLOBALS.voice_installed:
+    @typechecked
+    def __init__(
+        self,
+        start_period: Union[int, timedelta, None] = None,
+        end_period: Union[int, timedelta] = None,
+        data: Union[BaseVoiceData, _old_data_type] = None,
+        channels: Union[list[Union[int, discord.VoiceChannel]], AutoCHANNEL] = None,
+        volume: Optional[int] = 50,
+        start_in: Optional[Union[timedelta, datetime]] = None,
+        remove_after: Optional[Union[int, timedelta, datetime]] = None,
+        period: BaseMessagePeriod = None
+    ):
+        if not GLOBAL.voice_installed:
             raise ModuleNotFoundError(
                 "You need to install extra requirements: pip install discord-advert-framework[voice]"
             )
 
-        if isinstance(data, Iterable) and len(data) > 1:
-            raise ValueError("Iterable was passed to 'data', which has length greater than 1. Only a single FILE object is allowed inside.")
+        if not isinstance(data, BaseVoiceData):
+            trace(
+                f"Using data types other than {[x.__name__ for x in BaseVoiceData.__subclasses__()]}, "
+                "is deprecated on VoiceMESSAGE's data parameter! Planned for removal in 4.2.0",
+                TraceLEVELS.DEPRECATED
+            )
+            # Transform to new data type            
+            if isinstance(data, _FunctionBaseCLASS):
+                data = _DeprecatedDynamic(data.fnc, *data.args, **data.kwargs)
+            else:
+                if isinstance(data, FILE):
+                    data = [data]
 
-        super().__init__(start_period, end_period, data, channels, start_in, remove_after)
+                if not data:
+                    raise ValueError("'data' cannot be an empty list, use daf.VoiceMessageData!")
+
+                data = VoiceMessageData(data[0])
+
+        super().__init__(start_period, end_period, data, channels, start_in, remove_after, period)
         self.volume = max(0, min(100, volume))  # Clamp the volume to 0-100 %
 
     def generate_log_context(self,
-                             audio: AUDIO,
+                             file: FILE,
                              succeeded_ch: List[discord.VoiceChannel],
                              failed_ch: List[Dict[str, Any]]) -> Dict[str, Any]:
         """
@@ -196,7 +171,7 @@ class VoiceMESSAGE(BaseChannelMessage):
                      "reason": str(entry["reason"])} for entry in failed_ch]
         return {
             "sent_data": {
-                "streamed_audio": audio.fullpath
+                "streamed_audio": file.fullpath
             },
             "channels": {
                 "successful": succeeded_ch,
@@ -204,27 +179,6 @@ class VoiceMESSAGE(BaseChannelMessage):
             },
             "type": type(self).__name__
         }
-
-    async def _get_data(self) -> dict:
-        """"
-        Returns a dictionary of keyword arguments that is then expanded
-        into other methods eg. `_send_channel, _generate_log`
-
-        .. versionchanged:: v2.3
-            Turned async.
-        """
-        data = None
-        _data_to_send = {}
-        data = await super()._get_data()
-        if data is not None:
-            if not isinstance(data, (list, tuple, set)):
-                data = (data,)
-            for element in data:
-                if isinstance(element, FILE):
-                    _data_to_send["audio"] = element
-                    break
-
-        return _data_to_send
 
     async def _handle_error(self, channel: discord.VoiceChannel, ex: Exception) -> Tuple[bool, ChannelErrorAction]:
         """
@@ -255,10 +209,10 @@ class VoiceMESSAGE(BaseChannelMessage):
 
         # Timeout handling
         elif member is not None and member.timed_out:
-            self.next_send_time = member.communication_disabled_until.astimezone() + timedelta(minutes=1)
+            self.period.defer(member.communication_disabled_until.astimezone() + timedelta(minutes=1))
             trace(
                 f"User '{member.name}' has been timed-out in guild '{guild.name}'.\n"
-                f"Retrying after {self.next_send_time} (1 minute after expiry)",
+                f"Retrying after {self.period.get()} (1 minute after expiry)",
                 TraceLEVELS.WARNING
             )
 
@@ -286,9 +240,12 @@ class VoiceMESSAGE(BaseChannelMessage):
         """
         return super().initialize(parent, event_ctrl, channel_getter)
 
+    def _verify_data(self, data: dict) -> bool:
+        return super()._verify_data(VoiceMessageData, data)
+
     async def _send_channel(self,
                             channel: discord.VoiceChannel,
-                            audio: Optional[AUDIO]) -> dict:
+                            file: Optional[FILE]) -> dict:
         """
         Sends data to specific channel
 
@@ -300,7 +257,7 @@ class VoiceMESSAGE(BaseChannelMessage):
         -------------
         channel: discord.VoiceChannel
             The channel in which to send the data.
-        audio: AUDIO
+        audio: FILE
             the audio to stream.
         """
         stream = None
@@ -334,7 +291,7 @@ class VoiceMESSAGE(BaseChannelMessage):
             # Write data to file instead of directly sending it to FFMPEG.
             # This is needed due to a bug in the API wrapper, which only seems to appear on Linux.
             # TODO: When fixed, replace with audio.stream.
-            raw_data = audio.data
+            raw_data = file.data
             filename = Path.home().joinpath(f"daf/tmp_{id(raw_data)}")
             filename.parent.mkdir(exist_ok=True, parents=True)
 

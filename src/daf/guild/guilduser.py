@@ -4,15 +4,16 @@
     BaseGUILD class.
 """
 from typing import Any, Coroutine, Union, List, Optional, Dict, Callable
-from contextlib import suppress
+from ..misc import async_util, instance_track, doc, attributes
+from ..logging.tracing import TraceLEVELS, trace
 from datetime import timedelta, datetime
+from contextlib import suppress
+from abc import ABC, abstractmethod
 
 from typeguard import typechecked
 
 from ..message import *
 from ..events import *
-from ..logging.tracing import TraceLEVELS, trace
-from ..misc import async_util, instance_track, doc, attributes
 from .. import logging
 
 import _discord as discord
@@ -26,7 +27,7 @@ __all__ = (
 )
 
 
-class BaseGUILD:
+class BaseGUILD(ABC):
     """
     .. versionchanged:: v3.0
         
@@ -73,7 +74,7 @@ class BaseGUILD:
     def __init__(
         self,
         snowflake: Any,
-        messages: Optional[List] = None,
+        messages: Optional[List[BaseMESSAGE]] = None,
         logging: Optional[bool] = False,
         remove_after: Optional[Union[timedelta, datetime]] = None,
         removal_buffer_length: int = 50
@@ -141,6 +142,7 @@ class BaseGUILD:
         "Returns the timestamp at which object will be removed or None if it will not be removed."
         return self._remove_after
 
+    @abstractmethod
     def add_message(self, message: BaseMESSAGE) -> asyncio.Future:
         """
         Adds a message to the message list.
@@ -200,7 +202,7 @@ class BaseGUILD:
         ValueError
             Raised when the message is not present in the list.
         """
-        return self._event_ctrl.emit(EventID.message_removed, self, message)
+        return self._event_ctrl.emit(EventID._trigger_message_remove, self, message)
 
     def update(self, init_options = None, **kwargs) -> asyncio.Future:
         """
@@ -234,7 +236,7 @@ class BaseGUILD:
         Union[TypeError, ValueError]
             Invalid keyword argument was passed.
         """
-        return self._event_ctrl.emit(EventID.server_update, self, init_options, **kwargs)
+        return self._event_ctrl.emit(EventID._trigger_server_update, self, init_options, **kwargs)
 
     async def _init_messages(self):
         raise NotImplementedError
@@ -274,7 +276,7 @@ class BaseGUILD:
 
         if _apiobject is None:
             trace(f"Invalid ID {self.snowflake} - {self}", TraceLEVELS.ERROR, exception_cls=ValueError)
-        
+
         self._apiobject = _apiobject
         if self._remove_after is not None:
             if isinstance(self._remove_after, timedelta):
@@ -286,20 +288,17 @@ class BaseGUILD:
                 async_util.call_at(
                     event_ctrl.emit,
                     self._remove_after,
-                    EventID.server_removed,
+                    EventID._trigger_server_remove,
                     self
                 )
             )
 
-        event_ctrl.add_listener(EventID.message_ready, self._advertise, lambda server, m: server is self)
-        event_ctrl.add_listener(EventID.message_removed, self._on_message_removed, lambda server, m: server is self)
-        event_ctrl.add_listener(EventID.message_added, self._on_add_message, lambda server, m: server is self)
-        event_ctrl.add_listener(EventID.server_update, self._on_update, lambda server, *h, **k: server is self)
+        event_ctrl.add_listener(EventID._trigger_message_ready, self._advertise, lambda server, m: server is self)
+        event_ctrl.add_listener(EventID._trigger_message_remove, self._on_message_removed, lambda server, m: server is self)
+        event_ctrl.add_listener(EventID._trigger_message_add, self._on_add_message, lambda server, m: server is self)
+        event_ctrl.add_listener(EventID._trigger_server_update, self._on_update, lambda server, *h, **k: server is self)
 
         await self._init_messages()
-
-    def generate_invite_log_context(self, member: discord.Member, invite_id: str) -> dict:
-        raise NotImplementedError
 
     def generate_log_context(self) -> Dict[str, Union[str, int]]:
         """
@@ -317,14 +316,17 @@ class BaseGUILD:
         }
 
     # Event handlers
+    @abstractmethod
     async def _on_add_message(self, _, message: BaseMESSAGE):
         raise NotImplementedError
 
+    @abstractmethod
     async def _on_update(self, _, init_options, **kwargs):
         raise NotImplementedError
 
     async def _on_message_removed(self, _, message: BaseMESSAGE):
         trace(f"Removing message {message} from {self}", TraceLEVELS.NORMAL)
+        self._event_ctrl.emit(EventID.message_removed, self, message)
         self._messages.remove(message)
         self._removed_messages.append(message)
         if len(self._removed_messages) > self.removal_buffer_length:
@@ -349,28 +351,6 @@ class BaseGUILD:
 
         message._reset_timer()    
 
-    async def _on_member_join(self, member: discord.Member):
-        """
-        Event listener that get's called when a member joins a guild.
-
-        Parameters
-        ---------------
-        member: :class:`discord.Member`
-            The member who joined the guild.
-        """
-        raise NotImplementedError
-
-    async def _on_invite_delete(self, invite: discord.Invite):
-        """
-        Event listener that get's called when an invite has been deleted from a guild.
-
-        Parameters
-        --------------
-        invite: :class:`discord.Invite`
-            The invite that was deleted.
-        """
-        raise NotImplementedError
-
     @async_util.with_semaphore("update_semaphore")
     async def _close(self):
         """
@@ -380,10 +360,10 @@ class BaseGUILD:
         if self._event_ctrl is None:  # Already closed
             return
 
-        self._event_ctrl.remove_listener(EventID.message_ready, self._advertise)
-        self._event_ctrl.remove_listener(EventID.message_removed, self._on_message_removed)
-        self._event_ctrl.remove_listener(EventID.server_update, self._on_update)
-        self._event_ctrl.remove_listener(EventID.message_added, self._on_add_message)
+        self._event_ctrl.remove_listener(EventID._trigger_message_ready, self._advertise)
+        self._event_ctrl.remove_listener(EventID._trigger_message_remove, self._on_message_removed)
+        self._event_ctrl.remove_listener(EventID._trigger_server_update, self._on_update)
+        self._event_ctrl.remove_listener(EventID._trigger_message_add, self._on_add_message)
         for message in self.messages:
             await message._close()
 
@@ -460,7 +440,7 @@ class GUILD(BaseGUILD):
     @typechecked
     def __init__(self,
                  snowflake: Union[int, discord.Guild],
-                 messages: Optional[List[Union[TextMESSAGE, VoiceMESSAGE]]] = None,
+                 messages: Optional[List[BaseChannelMessage]] = None,
                  logging: Optional[bool] = False,
                  remove_after: Optional[Union[timedelta, datetime]] = None,
                  invite_track: Optional[List[str]] = None,
@@ -506,9 +486,6 @@ class GUILD(BaseGUILD):
 
         # Fill invite counts
         if len(self.join_count):  # Skip invite query from Discord
-            client: discord.Client = parent.client
-            client.add_listener(self._discord_on_member_join, "on_member_join")
-            client.add_listener(self._discord_on_invite_delete, "on_invite_delete")
             self._event_ctrl.add_listener(
                 EventID.discord_member_join,
                 self._on_member_join,
@@ -539,7 +516,7 @@ class GUILD(BaseGUILD):
     # API
     @typechecked
     def add_message(self, message: Union[TextMESSAGE, VoiceMESSAGE]):
-        return self._event_ctrl.emit(EventID.message_added, self, message)
+        return self._event_ctrl.emit(EventID._trigger_message_add, self, message)
 
     def generate_invite_log_context(self, member: discord.Member, invite_id: str) -> dict:
         """
@@ -625,23 +602,10 @@ class GUILD(BaseGUILD):
                 TraceLEVELS.DEBUG
             )
 
-    # Safety wrappers to make sure the event gets emitted through the event loop for safety
-    async def _discord_on_member_join(self, member: discord.Member):
-        self._event_ctrl.emit(EventID.discord_member_join, member)
-
-    async def _discord_on_invite_delete(self, invite: discord.Invite):
-        self._event_ctrl.emit(EventID.discord_invite_delete, invite)
-
     def _close(self):
         if self._event_ctrl is None:  # Already closed
             return
 
-        client: discord.Client = self.parent.client
-        # Removing these listeners doesn't require a mutex as it does not interfere
-        # with any advertisement methods. These are only for processing
-        # events on the PyCord API wrapper level.
-        client.remove_listener(self._discord_on_member_join, "on_member_join")
-        client.remove_listener(self._discord_on_invite_delete, "on_invite_delete")
         self._event_ctrl.remove_listener(EventID.discord_member_join, self._on_member_join)
         self._event_ctrl.remove_listener(EventID.discord_invite_delete, self._on_invite_delete)
         return super()._close()
@@ -700,7 +664,7 @@ class USER(BaseGUILD):
 
     @typechecked
     def add_message(self, message: DirectMESSAGE) -> asyncio.Future:
-        return self._event_ctrl.emit(EventID.message_added, self, message)
+        return self._event_ctrl.emit(EventID._trigger_message_add, self, message)
 
     def _check_state(self) -> bool:
         """

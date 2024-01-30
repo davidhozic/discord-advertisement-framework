@@ -28,9 +28,19 @@ On Windows it can also be started though the Run (Win + R) menu.
 
 This will open up (after a few seconds) a graphical display you can use to control the framework.
 
-.. image:: ./DEP/daf-gui-front.png
+.. image:: ./DEP/images/daf-gui-front.png
     :width: 20cm
     :align: center
+
+
+
+Before going forward, please note that the GUI is just an extra layer above the actual DAF core, which can be
+configured and controlled with a Python script. The GUI basically just passes
+everything down to the core and thus works exactly the same as the core. Every object defined in the GUI is converted
+into a real Python object, the same way as it would be done in a Python script that defines the core.
+Thus, the **documentation of the core** is almost entirely relevant when using the GUI. If you feel
+like something explained in the GUI does not make sense or is missing something, please refer to the
+:ref:`core documentation <Shilling list definition (core)>`.
 
 
 GUI structure

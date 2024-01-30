@@ -1,3 +1,4 @@
+
 from datetime import datetime, timedelta
 from test_util import *
 from tkclasswiz.convert import convert_to_object_info, convert_to_objects, ObjectInfo
@@ -17,7 +18,17 @@ import daf
         daf.discord.Embed(color=daf.discord.Color.red()),
         daf.SeleniumCLIENT("12345", "12345", None),
         daf.ACCOUNT(username="hello", password="world"),
-        daf.VoiceMESSAGE(None, 5, daf.dtypes.FILE("Test", b'\xff\x51\x55'), daf.AutoCHANNEL("test"), 5, remove_after=5),
+        daf.VoiceMESSAGE(None, 5, daf.FILE("Test", b'\xff\x51\x55'), daf.AutoCHANNEL("test"), 5, remove_after=5),
+        daf.DMResponder(
+            daf.logic.regex("nft.*buy"),
+            daf.DMResponse(daf.TextMessageData("Hello")),
+            [daf.MemberOfGuildConstraint(32323)]
+        ),
+        daf.GuildResponder(
+            daf.or_(daf.contains("hello"), daf.contains("world")),
+            daf.GuildResponse(daf.TextMessageData("Goodbye")),
+            [daf.GuildConstraint(32323)]
+        )
     ]
 )
 def test_remote_serialization(test_obj):

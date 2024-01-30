@@ -5,16 +5,22 @@ from typing import Any, Dict, List, Iterable, Optional, Union, Literal, Tuple, C
 from datetime import datetime, timedelta
 from typeguard import typechecked
 
-from .base import *
-from ..dtypes import *
-from ..logging.tracing import trace, TraceLEVELS
 
-from ..logging import sql
+from ..messagedata.dynamicdata import _DeprecatedDynamic
+
+from ..messagedata import BaseTextData, TextMessageData, FILE
+from ..logging.tracing import trace, TraceLEVELS
+from .messageperiod import *
+from .autochannel import *
+from ..dtypes import *
+from .base import *
+
 from ..misc import doc, instance_track, async_util
+from ..logging import sql
 from ..events import *
 
-import asyncio
 import _discord as discord
+import asyncio
 
 
 __all__ = (
@@ -38,46 +44,9 @@ class TextMESSAGE(BaseChannelMessage):
 
     Parameters
     ------------
-    start_period: Union[int, timedelta, None]
-        The value of this parameter can be:
-
-        - None - Use this value for a fixed (not randomized) sending period
-        - timedelta object - object describing time difference,
-          if this is used, then the parameter represents the bottom limit of the **randomized** sending period.
-    end_period: Union[int, timedelta]
-        If ``start_period`` is not None,
-        then this represents the upper limit of randomized time period in which messages will be sent.
-        If ``start_period`` is None, then this represents the actual time period between each message send.
-
-        .. CAUTION::
-            When the period is lower than the remaining time, the framework will start
-            incrementing the original period by original period until it is larger then
-            the slow mode remaining time.
-
-        .. code-block:: python
-            :caption: **Randomized** sending period between **5** seconds and **10** seconds.
-
-            # Time between each send is somewhere between 5 seconds and 10 seconds.
-            daf.TextMESSAGE(start_period=timedelta(seconds=5), end_period=timedelta(seconds=10), data="Second Message",
-                            channels=[12345], mode="send", start_in=timedelta(seconds=0))
-
-        .. code-block:: python
-            :caption: **Fixed** sending period at **10** seconds
-
-            # Time between each send is exactly 10 seconds.
-            daf.TextMESSAGE(start_period=None, end_period=timedelta(seconds=10), data="Second Message",
-                            channels=[12345], mode="send", start_in=timedelta(seconds=0))
-    data: Union[str, discord.Embed, FILE, List[Union[str, discord.Embed, FILE]], _FunctionBaseCLASS]
-        The data parameter is the actual data that will be sent using discord's API.
-        The data types of this parameter can be:
-
-            - str (normal text),
-            - :class:`discord.Embed`,
-            - :ref:`FILE`,
-            - List/Tuple containing any of the above arguments (There can up to 1 string, up to 1 :class:`discord.Embed` and up to 10 :ref:`FILE` objects.
-            - Function that accepts any amount of parameters and returns any of the above types. To pass a function, YOU MUST USE THE :ref:`data_function` decorator on the function before passing the function to the daf.
-
-    channels: Union[Iterable[Union[int, discord.TextChannel, discord.Thread]], daf.message.AutoCHANNEL]
+    data: BaseTextData
+        The data to be sent. Can be TextMessageData or class inherited from DynamicMessageData
+    channels: Union[list[Union[int, discord.TextChannel, discord.Thread]], daf.message.AutoCHANNEL]
         Channels that it will be advertised into (Can be snowflake ID or channel objects from PyCord).
 
         .. versionchanged:: v2.3
@@ -94,9 +63,6 @@ class TextMESSAGE(BaseChannelMessage):
         - "send" -    each period a new message will be sent,
         - "edit" -    each period the previously send message will be edited (if it exists)
         - "clear-send" -    previous message will be deleted and a new one sent.
-    start_in: Optional[timedelta | datetime]
-        When should the message be first sent.
-        *timedelta* means the difference from current time, while *datetime* means actual first send time.
     remove_after: Optional[Union[int, timedelta, datetime]]
         Deletes the message after:
 
@@ -125,19 +91,48 @@ class TextMESSAGE(BaseChannelMessage):
         "auto_publish",
     )
 
+    _old_data_type = Union[list, tuple, set, str, discord.Embed, FILE, _FunctionBaseCLASS]
+
     @typechecked
     def __init__(
         self,
-        start_period: Union[timedelta, int, None],
-        end_period: Union[int, timedelta],
-        data: Union[Iterable[Union[str, discord.Embed, FILE]], str, discord.Embed, FILE, _FunctionBaseCLASS],
-        channels: Union[Iterable[Union[int, discord.TextChannel, discord.Thread]], AutoCHANNEL],
+        start_period: Union[timedelta, int, None] = None,
+        end_period: Union[int, timedelta] = None,
+        data: Union[BaseTextData, _old_data_type] = None,
+        channels: Union[list[Union[int, discord.TextChannel, discord.Thread]], AutoCHANNEL] = None,
         mode: Literal["send", "edit", "clear-send"] = "send",
-        start_in: Union[timedelta, datetime] = timedelta(seconds=0),
+        start_in: Optional[Union[timedelta, datetime]] = None,
         remove_after: Optional[Union[int, timedelta, datetime]] = None,
-        auto_publish: bool = False
+        auto_publish: bool = False,
+        period: BaseMessagePeriod = None
     ):
-        super().__init__(start_period, end_period, data, channels, start_in, remove_after)
+        if not isinstance(data, BaseTextData):
+            trace(
+                f"Using data types other than {[x.__name__ for x in BaseTextData.__subclasses__()]}, "
+                "is deprecated on TextMESSAGE's data parameter! Planned for removal in 4.2.0",
+                TraceLEVELS.DEPRECATED
+            )
+            # Transform to new data type            
+            if isinstance(data, _FunctionBaseCLASS):
+                data = _DeprecatedDynamic(data.fnc, *data.args, **data.kwargs)
+            elif data is not None:
+                if isinstance(data, (str, discord.Embed, FILE)):
+                    data = [data]
+
+                content = None
+                embed = None
+                files = []
+                for item in data:
+                    if isinstance(item, str):
+                        content = item
+                    elif isinstance(item, discord.Embed):
+                        embed = item
+                    else:
+                        files.append(item)
+
+                data = TextMessageData(content, embed, files)
+
+        super().__init__(start_period, end_period, data, channels, start_in, remove_after, period)
         self.mode = mode
         self.auto_publish = auto_publish
         # Dictionary for storing last sent message for each channel
@@ -161,30 +156,17 @@ class TextMESSAGE(BaseChannelMessage):
 
     def _check_period(self):
         """
+        .. versionchanged:: 4.0.0
+
+            Changed to body to just call ``self.period.adjust``.
+
         Helper function used for checking the the period is lower
         than the slow mode delay.
-
-        .. versionadded:: v2.3
-
-        Parameters
-        --------------
-        slowmode_delay: timedelta
-            The (maximum) slowmode delay.
         """
-        slowmode_delay = self._slowmode
-        if self.start_period is not None:
-            if self.start_period < slowmode_delay:
-                self.start_period, self.end_period = (
-                    slowmode_delay,
-                    slowmode_delay + self.end_period - self.start_period
-                )
-        elif self.end_period < slowmode_delay:
-            self.end_period = slowmode_delay
-
-        self.period = self.end_period
+        self.period.adjust(self._slowmode)
 
     def generate_log_context(self,
-                             text: Optional[str],
+                             content: Optional[str],
                              embed: discord.Embed,
                              files: List[FILE],
                              succeeded_ch: List[Union[discord.TextChannel, discord.Thread]],
@@ -247,8 +229,8 @@ class TextMESSAGE(BaseChannelMessage):
 
         files = [x.fullpath for x in files]
         sent_data_context = {}
-        if text is not None:
-            sent_data_context["text"] = text
+        if content is not None:
+            sent_data_context["text"] = content
         if embed is not None:
             sent_data_context["embed"] = embed
         if len(files):
@@ -264,28 +246,6 @@ class TextMESSAGE(BaseChannelMessage):
             "type": type(self).__name__,
             "mode": self.mode,
         }
-
-    async def _get_data(self) -> dict:
-        """"
-        Returns a dictionary of keyword arguments that is then expanded
-        into other methods eg. `_send_channel, _generate_log`.
-
-        .. versionchanged:: v2.3
-            Turned async.
-        """
-        data = await super()._get_data()
-        _data_to_send = {"embed": None, "text": None, "files": []}
-        if data is not None:
-            if not isinstance(data, (list, tuple, set)):
-                data = (data,)
-            for element in data:
-                if isinstance(element, str):
-                    _data_to_send["text"] = element
-                elif isinstance(element, discord.Embed):
-                    _data_to_send["embed"] = element
-                elif isinstance(element, FILE):
-                    _data_to_send["files"].append(element)
-        return _data_to_send
 
     def _get_channel_types(self):
         return {discord.TextChannel, discord.Thread}
@@ -341,10 +301,9 @@ class TextMESSAGE(BaseChannelMessage):
                 guild = channel.guild
                 member = guild.get_member(self.parent.parent.client.user.id)
                 if member is not None and member.timed_out:
-                    self.next_send_time = member.communication_disabled_until.astimezone() + timedelta(minutes=1)
+                    self.period.defer(member.communication_disabled_until.astimezone() + timedelta(minutes=1))
                     trace(
-                        f"User '{member.name}' has been timed-out in guild '{guild.name}'.\n"
-                        f"Retrying after {self.next_send_time} (1 minute after expiry)",
+                        f"User '{member.name}' has been timed-out in guild '{guild.name}'.\n",
                         TraceLEVELS.WARNING
                     )
                     # Prevent channel removal by the cleanup process
@@ -353,10 +312,12 @@ class TextMESSAGE(BaseChannelMessage):
                     action = ChannelErrorAction.SKIP_CHANNELS  # Don't try to send to other channels as it would yield the same result.
 
             elif ex.status == 429:  # Rate limit
-                retry_after = int(ex.response.headers["Retry-After"]) + 5
                 if ex.code == 20016:    # Slow Mode
-                    self.next_send_time = datetime.now().astimezone() + timedelta(seconds=retry_after)
-                    trace(f"{channel.name} is in slow mode, retrying in {retry_after} seconds", TraceLEVELS.WARNING)
+                    self.period.defer(
+                        datetime.now().astimezone() +
+                        timedelta(seconds=int(ex.response.headers["Retry-After"]) + 5)
+                    )
+                    trace(f"{channel.name} is in slow mode. Retrying on {self.period.get()}", TraceLEVELS.WARNING)
                     self._check_period()  # Fix the period
 
             elif ex.status == 404:      # Unknown object
@@ -369,11 +330,16 @@ class TextMESSAGE(BaseChannelMessage):
 
         return handled, action
 
-    async def _send_channel(self,
-                            channel: Union[discord.TextChannel, discord.Thread, None],
-                            text: Optional[str],
-                            embed: Optional[discord.Embed],
-                            files: List[FILE]) -> dict:
+    def _verify_data(self, data: dict) -> bool:
+        return super()._verify_data(TextMessageData, data)
+
+    async def _send_channel(
+        self,
+        channel: Union[discord.TextChannel, discord.Thread, None],
+        content: Optional[str],
+        embed: Optional[discord.Embed],
+        files: List[FILE]
+    ) -> dict:
         """
         Sends data to specific channel
 
@@ -432,7 +398,7 @@ class TextMESSAGE(BaseChannelMessage):
                     self.mode == "edit" and self.sent_messages.get(channel.id, None) is None
                 ):
                     message = await channel.send(
-                        text,
+                        content,
                         embed=embed,
                         files=[discord.File(file.stream, file.filename) for file in files]
                     )
@@ -441,7 +407,7 @@ class TextMESSAGE(BaseChannelMessage):
 
                 # Mode is edit and message was already send to this channel
                 elif self.mode == "edit":
-                    await self.sent_messages[channel.id].edit(text, embed=embed)
+                    await self.sent_messages[channel.id].edit(content, embed=embed)
 
                 return {"success": True}
 
@@ -480,48 +446,8 @@ class DirectMESSAGE(BaseMESSAGE):
 
     Parameters
     ------------
-    start_period: Union[int, timedelta, None]
-        The value of this parameter can be:
-
-        - None - Use this value for a fixed (not randomized) sending period
-        - timedelta object - object describing time difference, if this is used,
-          then the parameter represents the bottom limit of the **randomized** sending period.
-
-    end_period: Union[int, timedelta]
-        If ``start_period`` is not None, then this represents the upper limit of randomized time period
-        in which messages will be sent.
-        If ``start_period`` is None, then this represents the actual time period between each message send.
-
-        .. code-block:: python
-            :caption: **Randomized** sending period between **5** seconds and **10** seconds.
-
-            # Time between each send is somewhere between 5 seconds and 10 seconds.
-            daf.DirectMESSAGE(
-                start_period=timedelta(seconds=5), end_period=timedelta(seconds=10), data="Second Message",
-                mode="send", start_in=timedelta(seconds=0)
-            )
-
-        .. code-block:: python
-            :caption: **Fixed** sending period at **10** seconds
-
-            # Time between each send is exactly 10 seconds.
-            daf.DirectMESSAGE(
-                start_period=None, end_period=timedelta(seconds=10), data="Second Message",
-                mode="send", start_in=timedelta(seconds=0)
-            )
-
-    data: Union[str, discord.Embed FILE, List[Union[str, discord.Embed, FILE]], _FunctionBaseCLASS]
-        The data parameter is the actual data that will be sent using discord's API.
-        The data types of this parameter can be:
-
-        - str (normal text),
-        - :class:`discord.Embed`,
-        - :ref:`FILE`,
-        - List/Tuple containing any of the above arguments
-          (There can up to 1 string, up to 1 :class:`discord.Embed` and up to 10 :ref:`FILE` objects.
-        - Function that accepts any amount of parameters and returns any of the above types.
-          To pass a function, YOU MUST USE THE :ref:`data_function` decorator on the function.
-
+    data: BaseTextData
+        The data to be sent. Can be TextMessageData or class inherited from DynamicMessageData
     mode: Optional[str]
         Parameter that defines how message will be sent to a channel.
         It can be:
@@ -529,10 +455,6 @@ class DirectMESSAGE(BaseMESSAGE):
         - "send" -    each period a new message will be sent,
         - "edit" -    each period the previously send message will be edited (if it exists)
         - "clear-send" -    previous message will be deleted and a new one sent.
-
-    start_in: Optional[timedelta | datetime]
-        When should the message be first sent.
-        *timedelta* means the difference from current time, while *datetime* means actual first send time.
     remove_after: Optional[Union[int, timedelta, datetime]]
         Deletes the guild after:
 
@@ -546,16 +468,48 @@ class DirectMESSAGE(BaseMESSAGE):
         "previous_message",
         "dm_channel",
     )
+    
+    _old_data_type = Union[list, tuple, set, str, discord.Embed, FILE, _FunctionBaseCLASS]
 
     @typechecked
-    def __init__(self,
-                 start_period: Union[int, timedelta, None],
-                 end_period: Union[int, timedelta],
-                 data: Union[str, discord.Embed, FILE, Iterable[Union[str, discord.Embed, FILE]], _FunctionBaseCLASS],
-                 mode: Optional[Literal["send", "edit", "clear-send"]] = "send",
-                 start_in: Optional[Union[timedelta, datetime]] = timedelta(seconds=0),
-                 remove_after: Optional[Union[int, timedelta, datetime]] = None):
-        super().__init__(start_period, end_period, data, start_in, remove_after)
+    def __init__(
+        self,
+        start_period: Union[int, timedelta, None] = None,
+        end_period: Union[int, timedelta] = None,
+        data: Union[BaseTextData, _old_data_type] = None,
+        mode: Optional[Literal["send", "edit", "clear-send"]] = "send",
+        start_in: Optional[Union[timedelta, datetime]] = None,
+        remove_after: Optional[Union[int, timedelta, datetime]] = None,
+        period: BaseMessagePeriod = None
+    ):
+
+        if not isinstance(data, BaseTextData):
+            trace(
+                f"Using data types other than {[x.__name__ for x in BaseTextData.__subclasses__()]}, "
+                "is deprecated on DirectMESSAGE's data parameter! Planned for removal in 4.2.0",
+                TraceLEVELS.DEPRECATED
+            )
+            # Transform to new data type            
+            if isinstance(data, _FunctionBaseCLASS):
+                data = _DeprecatedDynamic(data.fnc, *data.args, *data.kwargs)
+            elif data is not None:
+                if isinstance(data, (str, discord.Embed, FILE)):
+                    data = [data]
+
+                content = None
+                embed = None
+                files = []
+                for item in data:
+                    if isinstance(item, str):
+                        content = item
+                    elif isinstance(item, discord.Embed):
+                        embed = item
+                    else:
+                        files.append(item)
+
+                data = TextMessageData(content, embed, files)
+
+        super().__init__(start_period, end_period, data, start_in, remove_after, period)
         self.mode = mode
         self.dm_channel: discord.User = None
         self.previous_message: discord.Message = None
@@ -567,12 +521,12 @@ class DirectMESSAGE(BaseMESSAGE):
         if type(self._remove_after) is int:
             self._remove_after -= 1
             if not self._remove_after:
-                self._event_ctrl.emit(EventID.message_removed, self.parent, self)
+                self._event_ctrl.emit(EventID._trigger_message_remove, self.parent, self)
 
 
     def generate_log_context(self,
                              success_context: Dict[str, Union[bool, Optional[Exception]]],
-                             text: Optional[str],
+                             content: Optional[str],
                              embed: Optional[discord.Embed],
                              files: List[FILE]) -> Dict[str, Any]:
         """
@@ -620,8 +574,8 @@ class DirectMESSAGE(BaseMESSAGE):
             success_context["reason"] = str(success_context["reason"])
 
         sent_data_context = {}
-        if text is not None:
-            sent_data_context["text"] = text
+        if content is not None:
+            sent_data_context["text"] = content
         if embed is not None:
             sent_data_context["embed"] = embed
         if len(files):
@@ -636,29 +590,6 @@ class DirectMESSAGE(BaseMESSAGE):
             "type": type(self).__name__,
             "mode": self.mode
         }
-
-    async def _get_data(self) -> dict:
-        """
-        Returns a dictionary of keyword arguments that is then expanded
-        into other functions (_send_channel, _generate_log).
-        This is exactly the same as in :ref:`TextMESSAGE`.
-
-        .. versionchanged:: v2.3
-            Turned async.
-        """
-        data = await super()._get_data()
-        _data_to_send = {"embed": None, "text": None, "files": []}
-        if data is not None:
-            if not isinstance(data, (list, tuple, set)):
-                data = (data,)
-            for element in data:
-                if isinstance(element, str):
-                    _data_to_send["text"] = element
-                elif isinstance(element, discord.Embed):
-                    _data_to_send["embed"] = element
-                elif isinstance(element, FILE):
-                    _data_to_send["files"].append(element)
-        return _data_to_send
 
     @async_util.except_return
     async def initialize(self, parent: Any, event_ctrl: EventController, guild: discord.User):
@@ -706,8 +637,11 @@ class DirectMESSAGE(BaseMESSAGE):
 
         return handled
 
+    def _verify_data(self, data: dict) -> bool:
+        return super()._verify_data(TextMessageData, data)
+
     async def _send_channel(self,
-                            text: Optional[str],
+                            content: Optional[str],
                             embed: Optional[discord.Embed],
                             files: List[FILE]) -> dict:
         """
@@ -733,14 +667,14 @@ class DirectMESSAGE(BaseMESSAGE):
                     self.mode == "edit" and self.previous_message is None
                 ):
                     self.previous_message = await self.dm_channel.send(
-                        text,
+                        content,
                         embed=embed,
                         files=[discord.File(fwFILE.stream, fwFILE.filename) for fwFILE in files]
                     )
 
                 # Mode is edit and message was already send to this channel
                 elif self.mode == "edit":
-                    await self.previous_message.edit(text, embed=embed)
+                    await self.previous_message.edit(content, embed=embed)
 
                 return {"success": True}
 
@@ -754,15 +688,15 @@ class DirectMESSAGE(BaseMESSAGE):
         Sends the data into the channels
         """
         # Parse data from the data parameter
-        data_to_send = await self._get_data()
-        if any(data_to_send.values()):
+        data_to_send = await self._data.to_dict()
+        if self._verify_data(data_to_send):
             channel_ctx = await self._send_channel(**data_to_send)
             self._update_state()
             if channel_ctx["success"] is False:
                 reason = channel_ctx["reason"]
                 if isinstance(reason, discord.HTTPException):
                     if reason.status in {400, 403}:  # Bad request, forbidden
-                        self._event_ctrl.emit(EventID.server_removed, self.parent)
+                        self._event_ctrl.emit(EventID._trigger_server_remove, self.parent)
                     elif reason.status == 401:  # Unauthorized (invalid token)
                         self._event_ctrl.emit(EventID.g_account_expired, self.parent.parent)
 
@@ -771,13 +705,19 @@ class DirectMESSAGE(BaseMESSAGE):
         return None
 
     def update(self, _init_options: Optional[dict] = None, **kwargs) -> asyncio.Future:
-        return self._event_ctrl.emit(EventID.message_update, self, _init_options, **kwargs)
+        return self._event_ctrl.emit(EventID._trigger_message_update, self, _init_options, **kwargs)
 
     async def _on_update(self, _, _init_options: Optional[dict], **kwargs):
         await self._close()
         if "start_in" not in kwargs:
             # This parameter does not appear as attribute, manual setting necessary
-            kwargs["start_in"] = self.next_send_time
+            kwargs["start_in"] = None
+
+        if "start_period" not in kwargs:  # DEPRECATED, TODO: REMOVE IN FUTURE
+            kwargs["start_period"] = None
+
+        if "end_period" not in kwargs:  # DEPRECATED, TODO: REMOVE IN FUTURE
+            kwargs["end_period"] = None
 
         if "data" not in kwargs:
             kwargs["data"] = self._data

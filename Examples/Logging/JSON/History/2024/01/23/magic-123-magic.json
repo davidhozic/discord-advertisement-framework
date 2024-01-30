@@ -1,0 +1,524 @@
+{
+    "name": "magic-123-magic",
+    "id": 1197989196493762642,
+    "type": "GUILD",
+    "invite_tracking": {},
+    "message_tracking": {
+        "936739431073865789": {
+            "name": "Aproksimacka",
+            "id": 936739431073865789,
+            "messages": [
+                {
+                    "sent_data": {
+                        "streamed_audio": "testing123.mp3"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "testpy-0",
+                                "id": 1199316163340017728
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "VoiceMESSAGE",
+                    "index": 436738502017802,
+                    "timestamp": "23.01.2024 12:36:13"
+                },
+                {
+                    "sent_data": {
+                        "embed": {
+                            "fields": [],
+                            "type": "rich",
+                            "title": "Goodbye world"
+                        }
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "testpy-0",
+                                "id": 1199316159502241832
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436738483751683,
+                    "timestamp": "23.01.2024 12:35:02"
+                },
+                {
+                    "sent_data": {
+                        "text": "Goodbye world"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "testpy-0",
+                                "id": 1199316159502241832
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436738481219586,
+                    "timestamp": "23.01.2024 12:34:52"
+                },
+                {
+                    "sent_data": {
+                        "embed": {
+                            "fields": [],
+                            "type": "rich",
+                            "title": "Hello world"
+                        }
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "testpy-0",
+                                "id": 1199316159502241832
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436738478633985,
+                    "timestamp": "23.01.2024 12:34:42"
+                },
+                {
+                    "sent_data": {
+                        "text": "Hello world"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "testpy-0",
+                                "id": 1199316159502241832
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436738476085248,
+                    "timestamp": "23.01.2024 12:34:32"
+                },
+                {
+                    "sent_data": {
+                        "streamed_audio": "testing123.mp3"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "testpy-0",
+                                "id": 1199313532668366968
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "VoiceMESSAGE",
+                    "index": 436738336329476,
+                    "timestamp": "23.01.2024 12:25:26"
+                },
+                {
+                    "sent_data": {
+                        "embed": {
+                            "fields": [],
+                            "type": "rich",
+                            "title": "Goodbye world"
+                        }
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "testpy-0",
+                                "id": 1199313529203867668
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436738323162115,
+                    "timestamp": "23.01.2024 12:24:34"
+                },
+                {
+                    "sent_data": {
+                        "text": "Goodbye world"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "testpy-0",
+                                "id": 1199313529203867668
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436738320595458,
+                    "timestamp": "23.01.2024 12:24:24"
+                },
+                {
+                    "sent_data": {
+                        "embed": {
+                            "fields": [],
+                            "type": "rich",
+                            "title": "Hello world"
+                        }
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "testpy-0",
+                                "id": 1199313529203867668
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436738318062081,
+                    "timestamp": "23.01.2024 12:24:14"
+                },
+                {
+                    "sent_data": {
+                        "text": "Hello world"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "testpy-0",
+                                "id": 1199313529203867668
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436738315473664,
+                    "timestamp": "23.01.2024 12:24:04"
+                },
+                {
+                    "sent_data": {
+                        "text": "Hello world"
+                    },
+                    "channels": {
+                        "successful": [],
+                        "failed": [
+                            {
+                                "name": "testpy-0",
+                                "id": 1199312019552227429,
+                                "reason": "404 NotFound (error code: -1): Client user could not be found in guild members"
+                            }
+                        ]
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436738231016197,
+                    "timestamp": "23.01.2024 12:18:34"
+                },
+                {
+                    "sent_data": {
+                        "streamed_audio": "testing123.mp3"
+                    },
+                    "channels": {
+                        "successful": [],
+                        "failed": [
+                            {
+                                "name": "testpy-0",
+                                "id": 1199312023914303548,
+                                "reason": "404 NotFound (error code: -1): Client user could not be found in guild members"
+                            }
+                        ]
+                    },
+                    "type": "VoiceMESSAGE",
+                    "index": 436738229853444,
+                    "timestamp": "23.01.2024 12:18:30"
+                },
+                {
+                    "sent_data": {
+                        "embed": {
+                            "fields": [],
+                            "type": "rich",
+                            "title": "Goodbye world"
+                        }
+                    },
+                    "channels": {
+                        "successful": [],
+                        "failed": [
+                            {
+                                "name": "testpy-0",
+                                "id": 1199312019552227429,
+                                "reason": "404 NotFound (error code: -1): Client user could not be found in guild members"
+                            }
+                        ]
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436738228457987,
+                    "timestamp": "23.01.2024 12:18:24"
+                },
+                {
+                    "sent_data": {
+                        "text": "Goodbye world"
+                    },
+                    "channels": {
+                        "successful": [],
+                        "failed": [
+                            {
+                                "name": "testpy-0",
+                                "id": 1199312019552227429,
+                                "reason": "404 NotFound (error code: -1): Client user could not be found in guild members"
+                            }
+                        ]
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436738225896450,
+                    "timestamp": "23.01.2024 12:18:14"
+                },
+                {
+                    "sent_data": {
+                        "embed": {
+                            "fields": [],
+                            "type": "rich",
+                            "title": "Hello world"
+                        }
+                    },
+                    "channels": {
+                        "successful": [],
+                        "failed": [
+                            {
+                                "name": "testpy-0",
+                                "id": 1199312019552227429,
+                                "reason": "404 NotFound (error code: -1): Client user could not be found in guild members"
+                            }
+                        ]
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436738225892609,
+                    "timestamp": "23.01.2024 12:18:14"
+                },
+                {
+                    "sent_data": {
+                        "text": "Hello world"
+                    },
+                    "channels": {
+                        "successful": [],
+                        "failed": [
+                            {
+                                "name": "testpy-0",
+                                "id": 1199312019552227429,
+                                "reason": "404 NotFound (error code: -1): Client user could not be found in guild members"
+                            }
+                        ]
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436738223337472,
+                    "timestamp": "23.01.2024 12:18:04"
+                },
+                {
+                    "sent_data": {
+                        "text": "Hello world"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "testpy-0",
+                                "id": 1199310434671538216
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436738132709888,
+                    "timestamp": "23.01.2024 12:12:10"
+                },
+                {
+                    "sent_data": {
+                        "embed": {
+                            "fields": [],
+                            "type": "rich",
+                            "title": "Goodbye world"
+                        }
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "testpy-0",
+                                "id": 1199309860941082655
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436738099500803,
+                    "timestamp": "23.01.2024 12:10:01"
+                },
+                {
+                    "sent_data": {
+                        "text": "Goodbye world"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "testpy-0",
+                                "id": 1199309860941082655
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436738096961026,
+                    "timestamp": "23.01.2024 12:09:51"
+                },
+                {
+                    "sent_data": {
+                        "embed": {
+                            "fields": [],
+                            "type": "rich",
+                            "title": "Hello world"
+                        }
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "testpy-0",
+                                "id": 1199309860941082655
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436738094386689,
+                    "timestamp": "23.01.2024 12:09:41"
+                },
+                {
+                    "sent_data": {
+                        "text": "Hello world"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "testpy-0",
+                                "id": 1199309860941082655
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436738091825664,
+                    "timestamp": "23.01.2024 12:09:31"
+                },
+                {
+                    "sent_data": {
+                        "streamed_audio": "testing123.mp3"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "testpy-0",
+                                "id": 1199158063979036693
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "VoiceMESSAGE",
+                    "index": 436728832054784,
+                    "timestamp": "23.01.2024 02:06:40"
+                },
+                {
+                    "sent_data": {
+                        "embed": {
+                            "fields": [],
+                            "type": "rich",
+                            "title": "Goodbye world"
+                        }
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "testpy-0",
+                                "id": 1199152176619069440
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436728474659331,
+                    "timestamp": "23.01.2024 01:43:24"
+                },
+                {
+                    "sent_data": {
+                        "text": "Goodbye world"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "testpy-0",
+                                "id": 1199152176619069440
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436728472132866,
+                    "timestamp": "23.01.2024 01:43:14"
+                },
+                {
+                    "sent_data": {
+                        "embed": {
+                            "fields": [],
+                            "type": "rich",
+                            "title": "Hello world"
+                        }
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "testpy-0",
+                                "id": 1199152176619069440
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436728469539329,
+                    "timestamp": "23.01.2024 01:43:04"
+                },
+                {
+                    "sent_data": {
+                        "text": "Hello world"
+                    },
+                    "channels": {
+                        "successful": [
+                            {
+                                "name": "testpy-0",
+                                "id": 1199152176619069440
+                            }
+                        ],
+                        "failed": []
+                    },
+                    "type": "TextMESSAGE",
+                    "mode": "send",
+                    "index": 436728466980608,
+                    "timestamp": "23.01.2024 01:42:54"
+                }
+            ]
+        }
+    }
+}
