@@ -23,7 +23,7 @@ jobs:
       - name: Build
         run: |
           echo "from daf_gui import run;run()" > discord-advert-framework.py
-          pyinstaller --onefile --windowed daf.py --add-data src/daf_gui/img/:daf_gui/img/ --icon src/daf_gui/img/logo.png --add-data src/_discord/bin/:_discord/bin/
+          pyinstaller --onefile --windowed discord-advert-framework.py --add-data src/daf_gui/img/:daf_gui/img/ --icon src/daf_gui/img/logo.png --add-data src/_discord/bin/:_discord/bin/
       - name: Upload
         uses: softprops/action-gh-release@v1
         with:
