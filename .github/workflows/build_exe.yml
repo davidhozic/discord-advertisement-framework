@@ -16,7 +16,9 @@ jobs:
           python-version: "3.11"
           cache: 'pip'
       - name: Install required
-        run: pip install .[all]
+        run: |
+          pip install .[all]
+          pip install pyinstaller
       - name: Build
         run: |
           import daf_gui;daf_gui.run() > daf.py
