@@ -170,7 +170,7 @@ class regex(BaseLogic):
 
     @property
     def flags(self):
-        return self._compiled.flags
+        return re.RegexFlag(self._compiled.flags)
 
     @property
     def full_match(self):

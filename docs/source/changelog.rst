@@ -37,6 +37,10 @@ Glossary
 Releases
 ---------------------
 
+v4.0.1
+====================
+- Fixed remote serialization of regex and time.
+
 v4.0.0
 ===================
 - New automatic message responder (DM and guild) - :ref:`Automatic responder`.
