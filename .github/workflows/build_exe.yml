@@ -1,0 +1,28 @@
+name: Build DAF.exe
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: 'pip'
+      - name: Install required
+        run: pip install .[all]
+      - name: Build
+        run: |
+          import daf_gui;daf_gui.run() > daf.py
+          pyinstaller --onefile --windowed daf.py --add-data src/daf_gui/img/:daf_gui/img/ --icon src/daf_gui/img/logo.png --add-data src/_discord/bin/:_discord/bin/
+      - name: Upload
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            dist/daf.exe
