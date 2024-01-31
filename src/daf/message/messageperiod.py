@@ -15,7 +15,8 @@ __all__ = (
     "RandomizedDurationPeriod",
     "DaysOfWeekPeriod",
     "DailyPeriod",
-    "TimeDayWeekMonthPeriod",
+    "NamedDayOfYearPeriod",
+    "NamedDayOfMonthPeriod",
 )
 
 
@@ -270,7 +271,7 @@ class DailyPeriod(DaysOfWeekPeriod):
 
 
 @doc_category("Message period")
-class TimeDayWeekMonthPeriod(EveryXPeriod):
+class NamedDayOfYearPeriod(EveryXPeriod):
     """
     .. versionadded:: 4.1
 
@@ -300,7 +301,7 @@ class TimeDayWeekMonthPeriod(EveryXPeriod):
     .. code-block:: python
 
         #  Every second monday of December at 12:00.
-         TimeDayWeekMonthPeriod(
+         NamedDayOfYearPeriod(
             time=time(hour=12),  # Time
             day="Mon",  # Day (Monday)
             week=2,  # Which week (second monday)
@@ -313,15 +314,16 @@ class TimeDayWeekMonthPeriod(EveryXPeriod):
     def __init__(
         self,
         time: time,
-        day: TimeDayWeekMonthPeriod.DAYS,
+        day: NamedDayOfYearPeriod.DAYS,
         week: Literal[1, 2, 3, 4, 5],
         month: Literal[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
         next_send_time: Union[datetime, timedelta] = None
     ) -> None:
         self.time = time
-        self.day = TimeDayWeekMonthPeriod._DAYS_ARGS.index(day) + 1
+        self.day = day
         self.week = week
         self.month = month
+        self.isoday = NamedDayOfYearPeriod._DAYS_ARGS.index(day) + 1
         super().__init__(next_send_time)
 
     def calculate(self) -> datetime:
@@ -329,18 +331,22 @@ class TimeDayWeekMonthPeriod(EveryXPeriod):
         # thus next send time should be relative to that instead of now.
         now = max(datetime.now().astimezone(), self.next_send_time)
         self_time = self.time
-        next = now
+        next = now.replace(
+            day=1,
+            month=self.month,
+            hour=self_time.hour,
+            minute=self_time.minute,
+            second=self_time.second,
+            microsecond=self_time.microsecond
+        )
+
         while True:
-            next = next.replace(
-                day=1,
-                month=self.month,
-                hour=self_time.hour,
-                minute=self_time.minute,
-                second=self_time.second,
-                microsecond=self_time.microsecond
-            )
             isoday = next.isoweekday()
-            next = next.replace(day=max((1 + self.day - isoday + 7) % 7, 1))
+            if isoday > self.isoday:
+                next = next.replace(day=1 + 7 + self.isoday - isoday)
+            else:
+                next = next.replace(day=1 + self.isoday - isoday)
+            
             next += timedelta(days=7 * (self.week - 1))
 
             if next >= now:
@@ -349,6 +355,87 @@ class TimeDayWeekMonthPeriod(EveryXPeriod):
             next = next.replace(year=next.year + 1)
 
         return next
+
+    def adjust(self, minimum: timedelta) -> None:
+        pass
+
+
+class NamedDayOfMonthPeriod(EveryXPeriod):
+    """
+    .. versionadded:: 4.1
+
+    This period type enables messages to be sent on specific ``week``\ th ``day`` each month at a specific ``time``.
+
+    E.g., each year on second Monday in December at 12 noon (example below).
+
+    Parameters
+    ---------------
+    time: time
+        The time at which to send.
+    day: 'Mon'-'Sun'
+        The day of week when to send.
+    week: int
+        The week number of which to send. E.g., 1 for 1st week, 2 for second week.
+    month: 1 - 12
+        The month in which to send.
+    next_send_time: datetime | timedelta
+        Represents the time at which the message should first be sent.
+        Use ``datetime`` to specify the exact date and time at which the message should start being sent.
+        Use ``timedelta`` to specify how soon (after creation of the object) the message
+        should start being sent.
+    
+    Example
+    ----------
+    .. code-block:: python
+
+        #  Every second monday of December at 12:00.
+         NamedDayOfYearPeriod(
+            time=time(hour=12),  # Time
+            day="Mon",  # Day (Monday)
+            week=2,  # Which week (second monday)
+            month=12  # Month (December)
+        )
+    """
+    DAYS = Literal["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+    _DAYS_ARGS = get_args(DAYS)
+
+    def __init__(
+        self,
+        time: time,
+        day: NamedDayOfMonthPeriod.DAYS,
+        week: int,
+        next_send_time: Union[datetime, timedelta] = None
+    ) -> None:
+        self.time = time
+        self.day = day
+        self.week = week
+        self.isoday = NamedDayOfMonthPeriod._DAYS_ARGS.index(day) + 1
+        super().__init__(next_send_time)
+    
+    def calculate(self) -> datetime:
+        now = max(datetime.now().astimezone(), self.next_send_time)
+        self_time = self.time
+        next = now.replace(
+            day=1,
+            hour=self_time.hour,
+            minute=self_time.minute,
+            second=self_time.second,
+            microsecond=self_time.microsecond
+        )
+
+        while True:
+            isoday = next.isoweekday()
+            if isoday > self.isoday:
+                next = next.replace(day=1 + 7 + self.isoday - isoday)
+            else:
+                next = next.replace(day=1 + self.isoday - isoday)
+
+            next += timedelta(days=7 * (self.week - 1))
+
+            if next >= now:
+                break
+
+            next = next.replace(month=next.month + 1)
 
     def adjust(self, minimum: timedelta) -> None:
         pass

@@ -41,7 +41,8 @@ v4.1.0
 =====================
 - New message period types:
   
-  + :class:`daf.message.messageperiod.TimeDayWeekMonthPeriod`
+  + :class:`daf.message.messageperiod.NamedDayOfYearPeriod`
+  + :class:`daf.message.messageperiod.NamedDayOfMonthPeriod`
 
       
 
