@@ -37,6 +37,14 @@ Glossary
 Releases
 ---------------------
 
+v4.1.0
+=====================
+- New message period types:
+  
+  + :class:`daf.message.messageperiod.TimeDayWeekMonthPeriod`
+
+      
+
 v4.0.2
 ====================
 - Fixed automatic responders not being serializable.

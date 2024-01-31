@@ -15,6 +15,7 @@ __all__ = (
     "RandomizedDurationPeriod",
     "DaysOfWeekPeriod",
     "DailyPeriod",
+    "TimeDayWeekMonthPeriod",
 )
 
 
@@ -160,7 +161,7 @@ class RandomizedDurationPeriod(DurationPeriod):
 class DaysOfWeekPeriod(EveryXPeriod):
     """
     Represents a period that will send on ``days`` at specific ``time``.
-    
+
     E. g., parameters ``days=["Mon", "Wed"]`` and ``time=time(hour=12, minute=0)``
     produce a behavior that will send a message every Monday and Wednesday at 12:00.
 
@@ -267,3 +268,87 @@ class DailyPeriod(DaysOfWeekPeriod):
     ) -> None:
         super().__init__(DaysOfWeekPeriod.WEEK_DAYS, time, next_send_time)
 
+
+@doc_category("Message period")
+class TimeDayWeekMonthPeriod(EveryXPeriod):
+    """
+    .. versionadded:: 4.1
+
+    This period type enables messages to be sent on specific ``week``\ th ``day`` of a ``month`` each year on
+    a specific ``time``.
+
+    E.g., each year on second Monday in December at 12 noon (example below).
+
+    Parameters
+    ---------------
+    time: time
+        The time at which to send.
+    day: 'Mon'-'Sun'
+        The day of week when to send.
+    week: int
+        The week number of which to send. E.g., 1 for 1st week, 2 for second week.
+    month: 1 - 12
+        The month in which to send.
+    next_send_time: datetime | timedelta
+        Represents the time at which the message should first be sent.
+        Use ``datetime`` to specify the exact date and time at which the message should start being sent.
+        Use ``timedelta`` to specify how soon (after creation of the object) the message
+        should start being sent.
+    
+    Example
+    ----------
+    .. code-block:: python
+
+        #  Every second monday of December at 12:00.
+         TimeDayWeekMonthPeriod(
+            time=time(hour=12),  # Time
+            day="Mon",  # Day (Monday)
+            week=2,  # Which week (second monday)
+            month=12  # Month (December)
+        )
+    """
+    DAYS = Literal["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+    _DAYS_ARGS = get_args(DAYS)
+
+    def __init__(
+        self,
+        time: time,
+        day: TimeDayWeekMonthPeriod.DAYS,
+        week: Literal[1, 2, 3, 4, 5],
+        month: Literal[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+        next_send_time: Union[datetime, timedelta] = None
+    ) -> None:
+        self.time = time
+        self.day = TimeDayWeekMonthPeriod._DAYS_ARGS.index(day) + 1
+        self.week = week
+        self.month = month
+        super().__init__(next_send_time)
+
+    def calculate(self) -> datetime:
+        # In case of deferral, the next_send_time will be greater,
+        # thus next send time should be relative to that instead of now.
+        now = max(datetime.now().astimezone(), self.next_send_time)
+        self_time = self.time
+        next = now
+        while True:
+            next = next.replace(
+                day=1,
+                month=self.month,
+                hour=self_time.hour,
+                minute=self_time.minute,
+                second=self_time.second,
+                microsecond=self_time.microsecond
+            )
+            isoday = next.isoweekday()
+            next = next.replace(day=max((1 + self.day - isoday + 7) % 7, 1))
+            next += timedelta(days=7 * (self.week - 1))
+
+            if next >= now:
+                break
+
+            next = next.replace(year=next.year + 1)
+
+        return next
+
+    def adjust(self, minimum: timedelta) -> None:
+        pass
