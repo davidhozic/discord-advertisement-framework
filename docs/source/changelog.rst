@@ -37,6 +37,11 @@ Glossary
 Releases
 ---------------------
 
+v4.0.3
+====================
+- Fixed object editing window saving to an incorrect index (and removing other objects).
+
+
 v4.0.2
 ====================
 - Fixed automatic responders not being serializable.
