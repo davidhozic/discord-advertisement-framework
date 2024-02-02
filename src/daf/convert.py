@@ -158,7 +158,18 @@ CONVERSION_ATTRS = {
         "custom_decoder": lambda data: re.compile(data["pattern"], data.get("flags", 0))
     },
     responder.DMResponder: {
-        "attrs": ["condition", "action", "constraints"]
+        "attrs": attributes.get_all_slots(responder.DMResponder),
+        "attrs_restore": {
+            "client": None,
+            "event_ctrl": None
+        }
+    },
+    responder.GuildResponder: {
+        "attrs": attributes.get_all_slots(responder.GuildResponder),
+        "attrs_restore": {
+            "client": None,
+            "event_ctrl": None
+        }
     }
 }
 

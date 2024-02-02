@@ -37,6 +37,11 @@ Glossary
 Releases
 ---------------------
 
+|UNRELEASED| v4.0.4
+=====================
+- Fixed automatic responder's not being removable over a remote connection.
+
+
 v4.0.3
 ====================
 - Fixed object editing window saving to an incorrect index (and removing other objects).

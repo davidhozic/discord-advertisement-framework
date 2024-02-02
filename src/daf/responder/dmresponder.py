@@ -20,6 +20,7 @@ __all__ = ("DMResponder",)
 @doc_category("Auto responder", path="responder")
 class DMResponder(ResponderBase):
     __doc__ = "DM responder implementation. " + ResponderBase.__doc__
+    __slots__ = tuple()
 
     @typechecked
     def __init__(
