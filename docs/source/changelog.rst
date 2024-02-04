@@ -37,10 +37,11 @@ Glossary
 Releases
 ---------------------
 
-|UNRELEASED| v4.0.4
+v4.0.4
 =====================
 - Fixed automatic responder's not being removable over a remote connection.
 - Fixed casting error when trying to update objects with ``Literal`` parameters.
+- Other GUI fixes (from tkclasswiz library)
 
 
 v4.0.3
