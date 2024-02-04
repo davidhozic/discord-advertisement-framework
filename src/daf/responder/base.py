@@ -31,6 +31,14 @@ class ResponderBase(ABC):
         before performing an action.
         All of the constraints inside the ``constraints`` list need to be fulfilled.
     """
+    __slots__ = (
+        "condition",
+        "constraints",
+        "action",
+        "event_ctrl",
+        "client",
+    )
+
     def __init__(
         self,
         condition: BaseLogic,

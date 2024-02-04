@@ -43,7 +43,7 @@ ADDITIONAL_PARAMETER_VALUES = {
     },
     daf.ACCOUNT.remove_responder: {
         # ACCOUNT.servers
-        "responder_to_remove": lambda old_info: old_info.data["responders"]
+        "resp": lambda old_info: old_info.data["responders"]
     }
 }
 

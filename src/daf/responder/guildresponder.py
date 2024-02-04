@@ -20,6 +20,7 @@ __all__ = ("GuildResponder",)
 @doc_category("Auto responder", path="responder")
 class GuildResponder(ResponderBase):
     __doc__ = "Guild responder implementation. " + ResponderBase.__doc__
+    __slots__ = tuple()
 
     @typechecked
     def __init__(
