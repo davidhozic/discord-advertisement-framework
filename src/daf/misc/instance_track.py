@@ -5,6 +5,8 @@ based on ID.
 from weakref import WeakValueDictionary
 from functools import wraps
 
+from .attributes import get_all_slots
+
 
 __all__ = (
     "get_by_id",
@@ -59,7 +61,7 @@ def track_id(cls):
     """
     @wraps(cls, updated=[])
     class TrackedClass(cls):
-        if hasattr(cls, "__slots__") and cls.__slots__:  # Don't break classes without slots
+        if hasattr(cls, "__slots__") and get_all_slots(cls):  # Don't break classes without slots
             __slots__ = ["_daf_id", "_tracked_allow_remote"]
             if not hasattr(cls, "__weakref__"):
                 __slots__.append('__weakref__')
