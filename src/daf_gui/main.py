@@ -61,26 +61,9 @@ import tkinter as tk
 import ttkbootstrap.dialogs.dialogs as tkdiag
 import ttkbootstrap.style as tkstyle
 
-import webbrowser
 import sys
 import os
 import daf
-
-
-WIN_UPDATE_DELAY = 0.005
-CREDITS_TEXT = \
-"""
-Welcome to Discord Advertisement Framework - UI mode.
-The UI runs on top of Discord Advertisement Framework and allows easier usage for those who
-don't want to write Python code to use the software.
-
-This is written as part of my bachelor thesis as a degree finishing project
-"Framework for advertising NFT on social network Discord".
-"""
-
-GITHUB_URL = "https://github.com/davidhozic/discord-advertisement-framework"
-DOC_URL = f"https://daf.davidhozic.com/en/v{'.'.join(daf.VERSION.split('.')[:2])}.x/"
-DISCORD_URL = "https://discord.gg/DEnvahb2Sw"
 
 
 class GLOBAL:
@@ -155,8 +138,8 @@ class Application():
         # Analytics
         self.tabman_mf.add(AnalyticsTab(self.edit_mgr, padding=(dpi_10, dpi_10)), text="Analytics")
 
-        # Credits tab
-        self.init_credits_tab()
+        # About tab
+        self.tabman_mf.add(AboutTab(), text="About")
 
         # GUI menu
         self.init_menu()
@@ -262,36 +245,6 @@ class Application():
 
         self._oldstdout = sys.stdout
         sys.stdout = STDIOOutput()
-
-    def init_credits_tab(self):
-        dpi_10 = dpi_scaled(10)
-        dpi_30 = dpi_scaled(30)
-        logo_img = Image.open(f"{os.path.dirname(__file__)}/img/logo.png")
-        logo_img = logo_img.resize(
-            (dpi_scaled(400), dpi_scaled(400)),
-            resample=0
-        )
-        logo = ImageTk.PhotoImage(logo_img)
-        self.tab_info = ttk.Frame(self.tabman_mf)
-        self.tabman_mf.add(self.tab_info, text="About")
-        info_bnts_frame = ttk.Frame(self.tab_info)
-        info_bnts_frame.pack(pady=dpi_30)
-        ttk.Button(info_bnts_frame, text="Github", command=lambda: webbrowser.open(GITHUB_URL)).grid(row=0, column=0)
-        ttk.Button(
-            info_bnts_frame,
-            text="Documentation",
-            command=lambda: webbrowser.open(DOC_URL)
-        ).grid(row=0, column=1)
-        ttk.Button(
-            info_bnts_frame,
-            text="My Discord server",
-            command=lambda: webbrowser.open(DISCORD_URL)
-        ).grid(row=0, column=2)
-        ttk.Label(self.tab_info, text="Like the app? Give it a star :) on GitHub (^)").pack(pady=dpi_10)
-        ttk.Label(self.tab_info, text=CREDITS_TEXT).pack()
-        label_logo = ttk.Label(self.tab_info, image=logo)
-        label_logo.image = logo
-        label_logo.pack()
 
     @gui_except()
     def load_live_accounts(self):
