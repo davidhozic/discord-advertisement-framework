@@ -88,13 +88,6 @@ GITHUB_URL = "https://github.com/davidhozic/discord-advertisement-framework"
 DOC_URL = f"https://daf.davidhozic.com/en/v{'.'.join(daf.VERSION.split('.')[:2])}.x/"
 DISCORD_URL = "https://discord.gg/DEnvahb2Sw"
 
-OPTIONAL_MODULES = [
-    # Label, optional name, installed var
-    ("SQL logging", "sql", daf.logging.sql.SQL_INSTALLED),
-    ("Voice messages", "voice", daf.message.voice_based.GLOBAL.voice_installed),
-    ("Web features (Chrome)", "web", daf.web.GLOBALS.selenium_installed),
-]
-
 
 class GLOBAL:
     app: "Application" = None
@@ -153,7 +146,7 @@ class Application():
         self.init_event_listeners()
 
         # Optional dependencies tab
-        self.init_optional_dep_tab()
+        self.tabman_mf.add(OptionalTab(padding=(dpi_10, dpi_10)), text="Optional modules")
 
         # Objects tab
         self.tab_schema = SchemaTab(self.edit_mgr, self.combo_connection_edit, master=tabman_mf, padding=(dpi_10, dpi_10))
@@ -375,43 +368,6 @@ class Application():
         label_logo = ttk.Label(self.tab_info, image=logo)
         label_logo.image = logo
         label_logo.pack()
-
-    def init_optional_dep_tab(self):
-        dpi_10 = dpi_scaled(10)
-        dpi_5 = dpi_scaled(5)
-        frame_optionals = ttk.Frame(self.tabman_mf, padding=(dpi_10, dpi_10))
-        self.tabman_mf.add(frame_optionals, text="Optional modules")
-        ttk.Label(
-            frame_optionals,
-            text=
-            "This section allows you to install optional packages available inside DAF\n"
-            "Be aware that loading may be slower when installing these."
-        ).pack(anchor=tk.NW)
-        frame_optionals_packages = ttk.Frame(frame_optionals)
-        frame_optionals_packages.pack(fill=tk.BOTH, expand=True)
-
-        def install_deps(optional: str, gauge: ttk.Floodgauge, bnt: ttk.Button):
-            @gui_except()
-            def _installer():
-                subprocess.check_call([
-                    sys.executable.replace("pythonw", "python"), "-m", "pip", "install",
-                    f"discord-advert-framework[{optional}]=={daf.VERSION}"
-                ])
-                tkdiag.Messagebox.show_info("To apply the changes, restart the program!")
-
-            return _installer
-
-        for row, (title, optional_name, installed_flag) in enumerate(OPTIONAL_MODULES):
-            ttk.Label(frame_optionals_packages, text=title).grid(row=row, column=0)
-            gauge = ttk.Floodgauge(
-                frame_optionals_packages, bootstyle=ttk.SUCCESS if installed_flag else ttk.DANGER, value=0
-            )
-            gauge.grid(pady=dpi_5, row=row, column=1)
-            if not installed_flag:
-                gauge.start()
-                bnt_install = ttk.Button(frame_optionals_packages, text="Install")
-                bnt_install.configure(command=install_deps(optional_name, gauge, bnt_install))
-                bnt_install.grid(row=row, column=1)
 
     @gui_except()
     def load_live_accounts(self):
