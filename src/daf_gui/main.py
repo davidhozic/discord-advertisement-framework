@@ -4,14 +4,13 @@ Main file of the DAF GUI.
 from importlib.util import find_spec
 from pathlib import Path
 
-from .tabs import *
 from .edit_window_manager import *
-
-import subprocess
-import sys
+from .tabs import *
 
 import tk_async_execute as tae
+import subprocess
 import json
+import sys
 
 
 # Automatically install GUI requirements if GUI is requested to avoid making it an optional dependency
@@ -52,21 +51,16 @@ import ttkbootstrap as ttk
 
 from tkclasswiz.convert import *
 from tkclasswiz.dpi import *
-from tkclasswiz.object_frame.window import ObjectEditWindow
 from tkclasswiz.storage import *
 from tkclasswiz.utilities import *
 from .connector import *
 
 from PIL import Image, ImageTk
-from ttkbootstrap.tooltip import ToolTip
 from ttkbootstrap.toast import ToastNotification
 import tkinter as tk
-import tkinter.filedialog as tkfile
 import ttkbootstrap.dialogs.dialogs as tkdiag
-import ttkbootstrap.tableview as tktw
 import ttkbootstrap.style as tkstyle
 
-import tkclasswiz as wiz
 import webbrowser
 import sys
 import os
@@ -97,6 +91,7 @@ class Application():
     def __init__(self) -> None:
         # Window initialization
         win_main = ttk.Window(themename="cosmo")
+        self.win_main = win_main
         
         # Object edit
         self.edit_mgr = EditWindowManager()
@@ -110,7 +105,6 @@ class Application():
         photo = ImageTk.PhotoImage(file=path)
         win_main.iconphoto(0, photo)
 
-        self.win_main = win_main
         screen_res = int(win_main.winfo_screenwidth() / 1.25), int(win_main.winfo_screenheight() / 1.375)
         win_main.wm_title(f"Discord Advert Framework {daf.VERSION}")
         win_main.wm_minsize(*screen_res)
@@ -153,13 +147,13 @@ class Application():
         tabman_mf.add(self.tab_schema, text="Schema definition")
 
         # Live inspect tab
-        self.init_live_inspect_tab()
+        self.tabman_mf.add(LiveTab(self.edit_mgr, padding=(dpi_10, dpi_10)), text="Live view")
 
         # Output tab
         self.init_output_tab()
 
         # Analytics
-        self.tabman_mf.add(AnalyticsTab(self.edit_mgr,padding=(dpi_5, dpi_5)), text="Analytics")
+        self.tabman_mf.add(AnalyticsTab(self.edit_mgr, padding=(dpi_10, dpi_10)), text="Analytics")
 
         # Credits tab
         self.init_credits_tab()
@@ -239,76 +233,6 @@ class Application():
         evt.add_listener(
             daf.EventID._ws_disconnect, lambda: self.win_main.after_idle(self.stop_daf)
         )
-
-    def init_live_inspect_tab(self):
-        dpi_10 = dpi_scaled(10)
-        dpi_5 = dpi_scaled(5)
-
-        @gui_confirm_action()
-        def remove_account():
-            selection = list_live_objects.curselection()
-            if len(selection):
-                values = list_live_objects.get()
-                for i in selection:
-                    tae.async_execute(
-                        self.connection.remove_account(values[i].real_object),
-                        wait=False,
-                        pop_up=True,
-                        callback=self.load_live_accounts,
-                        master=self.win_main
-                    )
-            else:
-                tkdiag.Messagebox.show_error("Select atlest one item!", "Select errror")
-
-        @gui_except()
-        def add_account():
-            selection = combo_add_object_edit.combo.current()
-            if selection >= 0:
-                fnc: ObjectInfo = combo_add_object_edit.combo.get()
-                fnc_data = convert_to_objects(fnc.data)
-                tae.async_execute(self.connection.add_account(**fnc_data), wait=False, pop_up=True, master=self.win_main)
-            else:
-                tkdiag.Messagebox.show_error("Combobox does not have valid selection.", "Combo invalid selection")
-
-        def view_live_account():
-            selection = list_live_objects.curselection()
-            if len(selection) == 1:
-                object_: ObjectInfo = list_live_objects.get()[selection[0]]
-                self.edit_mgr.open_object_edit_window(
-                    daf.ACCOUNT,
-                    list_live_objects,
-                    old_data=object_
-                )
-            else:
-                tkdiag.Messagebox.show_error("Select one item!", "Empty list!")
-
-        tab_live = ttk.Frame(self.tabman_mf, padding=(dpi_10, dpi_10))
-        self.tabman_mf.add(tab_live, text="Live view")
-        frame_add_account = ttk.Frame(tab_live)
-        frame_add_account.pack(fill=tk.X, pady=dpi_10)
-
-        combo_add_object_edit = ComboEditFrame(
-            self.edit_mgr.open_object_edit_window,
-            [ObjectInfo(daf.add_object, {})],
-            master=frame_add_account,
-        )
-        ttk.Button(frame_add_account, text="Execute", command=add_account).pack(side="left")
-        combo_add_object_edit.pack(side="left", fill=tk.X, expand=True)
-
-        frame_account_opts = ttk.Frame(tab_live)
-        frame_account_opts.pack(fill=tk.X, pady=dpi_5)
-        ttk.Button(frame_account_opts, text="Refresh", command=self.load_live_accounts).pack(side="left")
-        ttk.Button(frame_account_opts, text="Edit", command=view_live_account).pack(side="left")
-        ttk.Button(frame_account_opts, text="Remove", command=remove_account).pack(side="left")
-
-        list_live_objects = ListBoxScrolled(tab_live)
-        list_live_objects.pack(fill=tk.BOTH, expand=True)
-        self.list_live_objects = list_live_objects
-        # The default bind is removal from list and not from actual daf.
-        list_live_objects.listbox.unbind_all("<BackSpace>")
-        list_live_objects.listbox.unbind_all("<Delete>")
-        list_live_objects.listbox.bind("<BackSpace>", lambda e: remove_account())
-        list_live_objects.listbox.bind("<Delete>", lambda e: remove_account())
 
     def init_output_tab(self):
         self.tab_output = ttk.Frame(self.tabman_mf)

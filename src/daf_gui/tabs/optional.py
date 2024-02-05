@@ -5,7 +5,6 @@ from tkclasswiz.dpi import dpi_scaled
 from tkclasswiz.convert import *
 from tkclasswiz.storage import *
 
-from ..edit_window_manager import *
 from ..connector import *
 
 import ttkbootstrap.dialogs as tkdiag
