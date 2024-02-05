@@ -1,20 +1,20 @@
-from typing import List
+from ttkbootstrap.tableview import Tableview
 from tkclasswiz.utilities import gui_confirm_action
 from tkclasswiz.dpi import dpi_scaled
 from tkclasswiz.convert import *
 from tkclasswiz.storage import *
+from typing import List
 
 from ..edit_window_manager import *
 from ..connector import *
 
 import ttkbootstrap.dialogs as tkdiag
-from ttkbootstrap.tableview import Tableview
 import ttkbootstrap as ttk
 import tkinter as tk
 
+import daf.misc.instance_track as it
 import tk_async_execute as tae
 import daf
-import daf.misc.instance_track as it
 
 __all__ = (
     "AnalyticsTab",
@@ -25,7 +25,6 @@ __all__ = (
 class AnalyticsTab(ttk.Notebook):
     def __init__(self, edit_mgr: EditWindowManager, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-
         dpi_10 = dpi_scaled(10)
 
         self.add(

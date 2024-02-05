@@ -4,9 +4,6 @@ Main file of the DAF GUI.
 from importlib.util import find_spec
 from pathlib import Path
 
-from .edit_window_manager import *
-from .tabs import *
-
 import tk_async_execute as tae
 import subprocess
 import json
@@ -49,14 +46,17 @@ with open(version_path, "w") as file:
 
 import ttkbootstrap as ttk
 
+from ttkbootstrap.toast import ToastNotification
+from tkclasswiz.utilities import *
+from tkclasswiz.storage import *
 from tkclasswiz.convert import *
 from tkclasswiz.dpi import *
-from tkclasswiz.storage import *
-from tkclasswiz.utilities import *
-from .connector import *
+from PIL import ImageTk
 
-from PIL import Image, ImageTk
-from ttkbootstrap.toast import ToastNotification
+from .edit_window_manager import *
+from .connector import *
+from .tabs import *
+
 import tkinter as tk
 import ttkbootstrap.dialogs.dialogs as tkdiag
 import ttkbootstrap.style as tkstyle
@@ -133,7 +133,7 @@ class Application():
         self.tabman_mf.add(LiveTab(self.edit_mgr, padding=(dpi_10, dpi_10)), text="Live view")
 
         # Output tab
-        self.init_output_tab()
+        self.tabman_mf.add(DebugTab(), text="Output")
 
         # Analytics
         self.tabman_mf.add(AnalyticsTab(self.edit_mgr, padding=(dpi_10, dpi_10)), text="Analytics")
@@ -150,10 +150,6 @@ class Application():
         # Window config
         self.win_main.protocol("WM_DELETE_WINDOW", self.close_window)
         self.tabman_mf.select(1)
-
-        # Connection
-        self.connection: AbstractConnectionCLIENT = None
-
 
         if sys.version_info.minor == 12 and sys.version_info.major == 3:
             tkdiag.Messagebox.show_warning(
@@ -217,44 +213,6 @@ class Application():
             daf.EventID._ws_disconnect, lambda: self.win_main.after_idle(self.stop_daf)
         )
 
-    def init_output_tab(self):
-        self.tab_output = ttk.Frame(self.tabman_mf)
-        self.tabman_mf.add(self.tab_output, text="Output")
-        text_output = ListBoxScrolled(self.tab_output)
-        text_output.unbind("<Control-c>")
-        text_output.unbind("<BackSpace>")
-        text_output.unbind("<Delete>")
-        text_output.pack(fill=tk.BOTH, expand=True)
-
-        class STDIOOutput:
-            def flush(self_):
-                pass
-
-            def write(self_, data: str):
-                if data == '\n':
-                    return
-
-                for r in daf.tracing.TRACE_COLOR_MAP.values():
-                    data = data.replace(r, "")
-
-                text_output.insert(tk.END, data.replace("\033[0m", ""))
-                if len(text_output.get()) > 1000:
-                    text_output.delete(0, 500)
-
-                text_output.see(tk.END)
-
-        self._oldstdout = sys.stdout
-        sys.stdout = STDIOOutput()
-
-    @gui_except()
-    def load_live_accounts(self):
-        async def load_accounts():
-            object_infos = convert_to_object_info(await self.connection.get_accounts(), save_original=True)
-            self.list_live_objects.clear()
-            self.list_live_objects.insert(tk.END, *object_infos)
-
-        tae.async_execute(load_accounts(), wait=False, pop_up=True, master=self.win_main)
-
     def start_daf(self):
         # Initialize connection
         connection: AbstractConnectionCLIENT = convert_to_objects(self.combo_connection_edit.combo.get())
@@ -286,7 +244,7 @@ class Application():
         self._daf_running = False
         self.bnt_toolbar_start_daf.configure(state="enabled")
         self.bnt_toolbar_stop_daf.configure(state="disabled")
-        tae.async_execute(self.connection.shutdown(), wait=False, pop_up=True, master=self.win_main)
+        tae.async_execute(get_connection().shutdown(), pop_up=True)
 
     def close_window(self):
         resp = tkdiag.Messagebox.yesnocancel("Do you wish to save?", "Save?", alert=True, parent=self.win_main)
@@ -294,9 +252,8 @@ class Application():
             return
 
         if self._daf_running:
-            tae.async_execute(self.connection.shutdown(), pop_up=True)
+            self.stop_daf()
 
-        sys.stdout = self._oldstdout
         self.win_main.quit()
 
     def until_closed(self):
