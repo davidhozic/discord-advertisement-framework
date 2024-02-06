@@ -3,6 +3,7 @@ Module contains definitions related to different connection
 clients.
 """
 from typing import List, Optional, Literal, Awaitable
+from abc import ABC, abstractmethod
 
 from daf.logging.tracing import TraceLEVELS, trace
 from daf.misc import instance_track as it
@@ -29,10 +30,13 @@ class GLOBALS:
     connection: "AbstractConnectionCLIENT" = None
 
 
-class AbstractConnectionCLIENT:
+class AbstractConnectionCLIENT(ABC):
     """
     Interface for connection clients.
     """
+    connected: bool
+
+    @abstractmethod
     async def initialize(self, *args, **kwargs):
         """
         Method for initializing DAF.
@@ -46,12 +50,14 @@ class AbstractConnectionCLIENT:
         """
         raise NotImplementedError
 
+    @abstractmethod
     async def shutdown(self):
         """
         Method calls DAF's shutdown core function.
         """
         raise NotImplementedError
 
+    @abstractmethod
     async def add_account(self, obj: daf.client.ACCOUNT):
         """
         Adds and initializes a new account into DAF.
@@ -63,6 +69,7 @@ class AbstractConnectionCLIENT:
         """
         raise NotImplementedError
 
+    @abstractmethod
     async def remove_account(self, account_ref: it.ObjectReference):
         """
         Logs out and removes account from DAF.
@@ -74,18 +81,21 @@ class AbstractConnectionCLIENT:
         """
         raise NotImplementedError
 
+    @abstractmethod
     async def get_accounts(self) -> List[daf.client.ACCOUNT]:
         """
         Retrieves a list of all accounts in DAF.
         """
         raise NotImplementedError
 
+    @abstractmethod
     async def get_logger(self) -> daf.logging.LoggerBASE:
         """
         Returns the logger object used in DAF.
         """
         raise NotImplementedError
 
+    @abstractmethod
     async def refresh(self, object_ref: it.ObjectReference) -> object:
         """
         Returns updated state of the object.
@@ -97,6 +107,7 @@ class AbstractConnectionCLIENT:
         """
         raise NotImplementedError
 
+    @abstractmethod
     async def execute_method(self, object_ref: it.ObjectReference, method_name: str, **kwargs):
         """
         Executes a method inside object and returns the result.
@@ -113,7 +124,6 @@ class AbstractConnectionCLIENT:
             Custom number of keyword arguments to pass to the method.
         """
         raise NotImplementedError
-
 
 class LocalConnectionCLIENT(AbstractConnectionCLIENT):
     """
@@ -312,4 +322,12 @@ class RemoteConnectionCLIENT(AbstractConnectionCLIENT):
 
 
 def get_connection() -> AbstractConnectionCLIENT:
-    return GLOBALS.connection
+    """
+    Returns the active connection client.
+    If the client is disconnected / does not exist, a ConnectionError is raised.
+    """
+    conn = GLOBALS.connection
+    if conn is None or not conn.connected:
+        raise ConnectionError("DAF is not started / connected to. Click the (top-left corner) START button first!")
+
+    return conn
