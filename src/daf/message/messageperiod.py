@@ -243,7 +243,7 @@ class DaysOfWeekPeriod(EveryXPeriod):
     def adjust(self, minimum: timedelta) -> None:
         # The minium between sends will always be 24 hours.
         # Slow-mode minimum is maximum 6 hours, thus this is not needed.
-        pass
+        raise NotImplementedError("Setting minimal period would break the definition of class.")
 
 
 @doc_category("Message period")
@@ -357,7 +357,7 @@ class NamedDayOfYearPeriod(EveryXPeriod):
         return next
 
     def adjust(self, minimum: timedelta) -> None:
-        pass
+        raise NotImplementedError("Setting minimal period would break the definition of class.")
 
 
 class NamedDayOfMonthPeriod(EveryXPeriod):
@@ -438,4 +438,4 @@ class NamedDayOfMonthPeriod(EveryXPeriod):
             next = next.replace(month=next.month + 1)
 
     def adjust(self, minimum: timedelta) -> None:
-        pass
+        raise NotImplementedError("Setting minimal period would break the definition of class.")
