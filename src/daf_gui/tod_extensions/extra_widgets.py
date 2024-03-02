@@ -106,7 +106,16 @@ def setup_additional_live_update(w: ttk.Button, frame):
             values = {}
             for k, v in frame.get_gui_data().items():
                 if isinstance(v, str):
-                    v = frame.cast_type(v, frame._map[k][1])
+                    types_ = frame._map[k][1]
+                    try:
+                        frame.cast_type(v, types_)
+                    except TypeError as exc:
+                        # Perhaps it's a valid literal:
+                        literal_types = frame.filter_literals(types_)
+                        if not literal_types:
+                            raise
+
+                        frame.check_literals(v, literal_types)
 
                 values[k] = convert_to_objects(v)
 

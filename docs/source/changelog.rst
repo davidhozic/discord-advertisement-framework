@@ -45,6 +45,22 @@ v4.1.0
   + :class:`daf.message.messageperiod.NamedDayOfMonthPeriod`
 
       
+v4.0.5
+=====================
+- Fixed exe build.
+
+
+v4.0.4
+=====================
+- Fixed automatic responder's not being removable over a remote connection.
+- Fixed casting error when trying to update objects with ``Literal`` parameters.
+- Other GUI fixes (from tkclasswiz library)
+
+
+v4.0.3
+====================
+- Fixed object editing window saving to an incorrect index (and removing other objects).
+
 
 v4.0.2
 ====================
