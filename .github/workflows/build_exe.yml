@@ -19,7 +19,6 @@ jobs:
         run: |
           pip install .[all]
           pip install pyinstaller
-          pip install ttkbootstrap==1.10.1
       - name: Build
         run: |
           echo "from daf_gui import run;run()" > discord-advert-framework.py
