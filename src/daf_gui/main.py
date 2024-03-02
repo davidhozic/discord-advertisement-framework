@@ -14,41 +14,6 @@ import sys
 import tk_async_execute as tae
 import json
 
-
-# Automatically install GUI requirements if GUI is requested to avoid making it an optional dependency
-# One other way would be to create a completely different package on pypi for the core daf, but that is a lot of
-# work to be done. It is better to auto install.
-to_install = [
-    ("ttkbootstrap", "==1.10.1"),
-]
-
-version_path = Path.home().joinpath("./gui_versions.json")
-if not version_path.exists():
-    version_path.touch()
-
-with open(version_path, "r") as file:
-    try:
-        version_data = json.load(file)
-    except json.JSONDecodeError as exc:
-        version_data = {}
-
-for package, version in to_install:
-    installed_version = version_data.get(package, "0")
-    if find_spec(package) is None or installed_version != version:
-        print(f"Auto installing {package}{version}")
-        subprocess.check_call(
-            [
-                sys.executable.replace("pythonw", "python"),
-                "-m", "pip", "install", "-U",
-                package + version
-            ]
-        )
-        version_data[package] = version
-
-with open(version_path, "w") as file:
-    json.dump(version_data, file)
-
-
 import ttkbootstrap as ttk
 
 from tkclasswiz.convert import *
