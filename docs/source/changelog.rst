@@ -37,9 +37,18 @@ Glossary
 Releases
 ---------------------
 
+v4.1.0
+=====================
+- New message period types:
+  
+  + :class:`daf.message.messageperiod.NamedDayOfYearPeriod`
+  + :class:`daf.message.messageperiod.NamedDayOfMonthPeriod`
+
+      
 v4.0.5
 =====================
 - Fixed exe build.
+
 
 v4.0.4
 =====================

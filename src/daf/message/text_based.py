@@ -468,7 +468,7 @@ class DirectMESSAGE(BaseMESSAGE):
         "previous_message",
         "dm_channel",
     )
-    
+
     _old_data_type = Union[list, tuple, set, str, discord.Embed, FILE, _FunctionBaseCLASS]
 
     @typechecked
@@ -482,7 +482,6 @@ class DirectMESSAGE(BaseMESSAGE):
         remove_after: Optional[Union[int, timedelta, datetime]] = None,
         period: BaseMessagePeriod = None
     ):
-
         if not isinstance(data, BaseTextData):
             trace(
                 f"Using data types other than {[x.__name__ for x in BaseTextData.__subclasses__()]}, "
