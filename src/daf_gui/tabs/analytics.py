@@ -109,13 +109,14 @@ class AnalyticFrame(ttk.Frame):
             else:
                 tkdiag.Messagebox.show_error("Select ONE item!", "Empty list!")
 
-        async def delete_logs_async(primary_keys: List[int]):
+        async def delete_logs_async(table, keys: List[int]):
             connection = get_connection()
             logger = await connection.get_logger()
             await connection.execute_method(
                 it.ObjectReference.from_object(logger),
                 "delete_logs",
-                primary_keys=primary_keys  # TODO: update on server
+                primary_keys=keys,
+                table=table
             )
 
         @gui_confirm_action()
@@ -124,7 +125,7 @@ class AnalyticFrame(ttk.Frame):
             if len(selection):
                 all_ = listbox.get()
                 tae.async_execute(
-                    delete_logs_async([all_[i].data["id"] for i in selection]),
+                    delete_logs_async(all_[0].class_, [all_[i].data["id"] for i in selection]),
                     wait=False,
                     pop_up=True,
                     master=self
