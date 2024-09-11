@@ -130,10 +130,17 @@ class contains(BaseLogic):
     keyword: str
         The keyword needed to be inside a text message.
     """
-    def __init__(self, keyword: str) -> None:
-        self.keyword = keyword.lower()
+    def __init__(self, keyword: str, case_sensitive: bool = False) -> None:
+        self.case_sensitive = case_sensitive
+        if not case_sensitive:
+            keyword = keyword.lower()
+
+        self.keyword = keyword
 
     def check(self, input: str):
+        if not self.case_sensitive:
+            input = input.lower()
+
         return self.keyword in re.findall(r'\w+', input)  # \w+ == match all words, including **bold**
 
 
@@ -157,7 +164,7 @@ class regex(BaseLogic):
     def __init__(
         self,
         pattern: str,
-        flags: re.RegexFlag = re.MULTILINE,
+        flags: re.RegexFlag = re.MULTILINE | re.IGNORECASE,
         full_match: bool = False
     ) -> None:
         self._full_match = full_match
