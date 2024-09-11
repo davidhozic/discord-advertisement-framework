@@ -360,6 +360,7 @@ class NamedDayOfYearPeriod(EveryXPeriod):
         raise NotImplementedError("Setting minimal period would break the definition of class.")
 
 
+@doc_category("Message period")
 class NamedDayOfMonthPeriod(EveryXPeriod):
     """
     .. versionadded:: 4.1
