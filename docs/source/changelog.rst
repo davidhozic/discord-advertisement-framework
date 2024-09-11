@@ -44,6 +44,9 @@ v4.1.0
   + :class:`daf.message.messageperiod.NamedDayOfYearPeriod`
   + :class:`daf.message.messageperiod.NamedDayOfMonthPeriod`
 
+- Fixed SQL log removal through the GUI.
+- Fixed CSV and JSON reading through remote.
+
       
 v4.0.5
 =====================
