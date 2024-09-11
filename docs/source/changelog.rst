@@ -44,6 +44,8 @@ v4.1.0
   + :class:`daf.message.messageperiod.NamedDayOfYearPeriod`
   + :class:`daf.message.messageperiod.NamedDayOfMonthPeriod`
 
+- Added optional case-sensitive matching to :class:`daf.logic.contains` and :class:`daf.logic.regex`. The default
+  is still case-insensitive.
 - Fixed SQL log removal through the GUI.
 - Fixed CSV and JSON reading through remote.
 

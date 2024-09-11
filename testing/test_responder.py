@@ -7,6 +7,7 @@ from daf.messagedata import TextMessageData
 from daf.client import ACCOUNT
 
 import pytest
+import re
 
 
 async def test_dm_responder():
@@ -17,6 +18,9 @@ async def test_dm_responder():
     ("condition", "input", "should_match"),
     [
         # RegEx
+        (regex("(buy|sell).*nft"), "I want to buy some NFT", True),
+        (regex("(buy|sell).*nft", flags=re.MULTILINE), "I want to buy some NFT", False),
+        (regex("(buy|sell).*NFT", flags=re.MULTILINE), "I want to buy some NFT", True),
         (regex("(buy|sell).*nft"), "I want to buy some nfts", True),
         (regex("(buy|sell).*nft"), "I want to sell some nfts", True),
         (regex("(buy|sell).*nft"), "I want to get some nfts", False),
@@ -25,6 +29,9 @@ async def test_dm_responder():
         # Contains
         (contains('car'), "I want to buy a NFT", False),
         (contains('car'), "I want to buy a car", True),
+        (contains('car'), "I want to buy a Car", True),
+        (contains('car', case_sensitive=True), "I want to buy a Car", False),
+        (contains('Car', case_sensitive=True), "I want to buy a Car", True),
         (contains('nfts'), "can I get some sweet NFTs my way please?", True),
         # Boolean mixed
         (and_(contains("buy"), contains("nfts"), contains("dragon")), "I want to buy some nfts.", False),
@@ -112,7 +119,7 @@ def test_responder_conditions(condition: BaseLogic, input: str, should_match: bo
     """
     Tests the text-matching condition logic.
     """
-    assert condition.check(input.lower()) == should_match, "Condition failed"
+    assert condition.check(input) == should_match, "Condition failed"
 
 
 async def test_guild_responder():
