@@ -1,5 +1,5 @@
 from ttkbootstrap.tableview import Tableview
-from tkclasswiz.utilities import gui_confirm_action
+from tkclasswiz.utilities import gui_confirm_action, gui_except
 from tkclasswiz.dpi import dpi_scaled
 from tkclasswiz.convert import *
 from tkclasswiz.storage import *
@@ -120,10 +120,14 @@ class AnalyticFrame(ttk.Frame):
             )
 
         @gui_confirm_action()
+        @gui_except()
         def delete_logs(listbox: ListBoxScrolled):
             selection = listbox.curselection()
             if len(selection):
                 all_ = listbox.get()
+                if issubclass(all_[0].class_, dict):
+                    raise ValueError("Only SQL logs can be deleted through the GUI at the moment.")
+
                 tae.async_execute(
                     delete_logs_async(all_[0].class_, [all_[i].data["id"] for i in selection]),
                     wait=False,
