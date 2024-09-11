@@ -8,6 +8,7 @@ from typeguard import typechecked
 
 from ..messagedata.dynamicdata import _DeprecatedDynamic
 
+from .constraints import BaseMessageConstraint
 from ..messagedata import BaseTextData, TextMessageData, FILE
 from ..logging.tracing import trace, TraceLEVELS
 from .messageperiod import *
@@ -89,6 +90,7 @@ class TextMESSAGE(BaseChannelMessage):
         "mode",
         "sent_messages",
         "auto_publish",
+        "constraints",
     )
 
     _old_data_type = Union[list, tuple, set, str, discord.Embed, FILE, _FunctionBaseCLASS]
@@ -104,7 +106,8 @@ class TextMESSAGE(BaseChannelMessage):
         start_in: Optional[Union[timedelta, datetime]] = None,
         remove_after: Optional[Union[int, timedelta, datetime]] = None,
         auto_publish: bool = False,
-        period: BaseMessagePeriod = None
+        period: BaseMessagePeriod = None,
+        constraints: List[BaseMessageConstraint] = None
     ):
         if not isinstance(data, BaseTextData):
             trace(
@@ -133,6 +136,11 @@ class TextMESSAGE(BaseChannelMessage):
                 data = TextMessageData(content, embed, files)
 
         super().__init__(start_period, end_period, data, channels, start_in, remove_after, period)
+
+        if constraints is None:
+            constraints = []
+
+        self.constraints = constraints
         self.mode = mode
         self.auto_publish = auto_publish
         # Dictionary for storing last sent message for each channel
@@ -332,6 +340,45 @@ class TextMESSAGE(BaseChannelMessage):
 
     def _verify_data(self, data: dict) -> bool:
         return super()._verify_data(TextMessageData, data)
+
+    @async_util.with_semaphore("update_semaphore")
+    async def _send(self):
+        """
+        Sends the data into the channels.
+        """
+        # Acquire mutex to prevent update method from writing while sending
+        data_to_send = await self._data.to_dict()
+        if self._verify_data(data_to_send):  # There is data to be send
+            errored_channels = []
+            succeeded_channels = []
+
+            channels = self.channels
+            for constraint in self.constraints:
+                channels = constraint.check(channels)
+
+            # Send to channels
+            for channel in channels:
+                # Clear previous messages sent to channel if mode is MODE_DELETE_SEND
+                context = await self._send_channel(channel, **data_to_send)
+                if context["success"]:
+                    succeeded_channels.append(channel)
+                else:
+                    errored_channels.append({"channel": channel, "reason": context["reason"]})
+                    action = context["action"]
+                    if action is ChannelErrorAction.SKIP_CHANNELS:  # Don't try to send to other channels
+                        break
+
+                    elif action is ChannelErrorAction.REMOVE_ACCOUNT:
+                        self._event_ctrl.emit(EventID.g_account_expired, self.parent.parent)
+                        break
+
+            self._update_state(succeeded_channels, errored_channels)
+            if errored_channels or succeeded_channels:
+                return self.generate_log_context(
+                    **data_to_send, succeeded_ch=succeeded_channels, failed_ch=errored_channels
+                )
+
+        return None
 
     async def _send_channel(
         self,
