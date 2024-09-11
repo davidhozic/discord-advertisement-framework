@@ -1250,7 +1250,7 @@ class LoggerSQL(logging.LoggerBASE):
             )
             return list(*zip(*logs.unique().all()))
 
-    async def delete_logs(self, logs: List[Union[MessageLOG, InviteLOG]]):
+    async def delete_logs(self, table: Union[MessageLOG, InviteLOG], primary_keys: List[int]):
         """
         Method used to delete log objects objects.
 
@@ -1262,9 +1262,8 @@ class LoggerSQL(logging.LoggerBASE):
             List of Primary Key IDs that match the rows of the table to delete.
         """
         session: Union[AsyncSession, Session]
-        table = type(logs[0])
         async with self.session_maker() as session:
-            await self._run_async(session.execute, delete(table).where(table.id.in_([log.id for log in logs])))
+            await self._run_async(session.execute, delete(table).where(table.id.in_(primary_keys)))
             await self._run_async(session.commit)
 
     @async_util.with_semaphore("_mutex")
