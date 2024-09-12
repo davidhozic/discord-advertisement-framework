@@ -300,7 +300,7 @@ class NamedDayOfYearPeriod(EveryXPeriod):
     ----------
     .. code-block:: python
 
-        #  Every second monday of December at 12:00.
+        #  Every second Monday of December at 12:00.
          NamedDayOfYearPeriod(
             time=time(hour=12),  # Time
             day="Mon",  # Day (Monday)
@@ -377,8 +377,6 @@ class NamedDayOfMonthPeriod(EveryXPeriod):
         The day of week when to send.
     week: int
         The week number of which to send. E.g., 1 for 1st week, 2 for second week.
-    month: 1 - 12
-        The month in which to send.
     next_send_time: datetime | timedelta
         Represents the time at which the message should first be sent.
         Use ``datetime`` to specify the exact date and time at which the message should start being sent.
@@ -389,12 +387,11 @@ class NamedDayOfMonthPeriod(EveryXPeriod):
     ----------
     .. code-block:: python
 
-        #  Every second monday of December at 12:00.
-         NamedDayOfYearPeriod(
+        #  Second Monday of every month at 12:00.
+         NamedDayOfMonthPeriod(
             time=time(hour=12),  # Time
             day="Mon",  # Day (Monday)
             week=2,  # Which week (second monday)
-            month=12  # Month (December)
         )
     """
     DAYS = Literal["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
