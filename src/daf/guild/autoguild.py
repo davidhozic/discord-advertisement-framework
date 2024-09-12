@@ -88,6 +88,10 @@ class AutoGUILD:
     auto_join: Optional[web.GuildDISCOVERY] = None
         .. versionadded:: v2.5
 
+        .. warning::
+            This is temporarily disabled until a new guild provider is found.
+            It will be reenabled in a future version.
+
         Optional :class:`~daf.web.GuildDISCOVERY` object which will automatically discover
         and join guilds though the browser.
         This will open a Google Chrome session.
@@ -155,6 +159,14 @@ class AutoGUILD:
         self._remove_after = remove_after
         self._messages: List[MessageDuplicator] = []
         self.logging = logging
+
+        if auto_join is not None:  # TODO: remove in future after feature is reenabled.
+            auto_join = None
+            trace(
+                "Automatic join feature is currently disabled and will not work. It will be reenabled in a future version.",
+                TraceLEVELS.WARNING
+            )
+
         self.auto_join = auto_join
         self.parent = None
         self.guild_query_iter = None
