@@ -50,7 +50,8 @@ v4.1.0
   information.
 - Fixed SQL log removal through the GUI.
 - Fixed CSV and JSON reading through remote.
-- Disabled the :ref:`Automatic guild discovery and join` features due to the search provider shutting down its
+- Fixed exception when GUI tried to print a message.
+- |BREAK_CH| Disabled the :ref:`Automatic guild discovery and join` features due to the search provider shutting down its
   services. It will be reenabled in a future version.
 
 
