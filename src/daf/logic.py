@@ -44,7 +44,7 @@ class BooleanLogic(BaseLogic):
         *args,
         operands: List[BaseLogic] = [],
     ) -> None:
-        self.operands = [*operands, *args]
+        self.operands: List[BaseLogic] = [*operands, *args]
 
 
 @doc_category("Text matching (logic)")
@@ -60,12 +60,7 @@ class and_(BooleanLogic):
 
     def check(self, input: str):
         for op in self.operands:
-            if isinstance(op, BaseLogic):
-                check = op.check(input)
-            else:
-                check = op in input
-
-            if not check:
+            if not op.check(input):
                 return False
 
         return True
@@ -83,12 +78,7 @@ class or_(BooleanLogic):
     """
     def check(self, input: str):
         for op in self.operands:
-            if isinstance(op, BaseLogic):
-                check = op.check(input)
-            else:
-                check = op in input
-
-            if check:
+            if op.check(input):
                 return True
 
         return False
@@ -113,11 +103,8 @@ class not_(BooleanLogic):
         return self.operands[0]
 
     def check(self, input: str):
-        op = self.operands[0]
-        if isinstance(op, BaseLogic):
-            return not op.check(input)
+        return not self.operand.check(input)
 
-        return op not in input
 
 
 @doc_category("Text matching (logic)")

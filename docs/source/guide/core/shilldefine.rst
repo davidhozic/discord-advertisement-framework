@@ -106,7 +106,7 @@ We will not cover :class:`daf.guild.USER` separately as the definition process i
 the same.
 We will also not cover :class:`daf.guild.AutoGUILD` here, as it is covered in :ref:`Automatic Generation (core)`.
 
-Let's define our :class:`daf.guild.GUILD` object now. Its most important parameters are:
+Let's define our :class:`daf.guild.GUILD` object now. Its most important (but not all) parameters are:
 
 - ``snowflake``: An integer parameter. Represents a unique identifier, which identifies every Discord resource.
   Snowflake can be obtained by
@@ -146,6 +146,8 @@ Let's expand our example from :ref:`Definition of accounts (core)`.
   daf.run(accounts=accounts)
 
 
+
+
 Now let's define our messages.
 
 --------------------------------------
@@ -178,13 +180,20 @@ The most important parameters inside :class:`daf.message.TextMESSAGE` are:
     multiple specified days at a specific time.
   - :class:`~daf.message.messageperiod.DailyPeriod`: A period that sends every day at a specific time.
 
+- ``constraints``: A list of constraints that only allow a message to be sent when they are fulfilled. This can for
+  example be used to only send messages to channels when the last message in that channel is not or own, thus
+  **preventing unnecessary spam**. Currently a single constraint is supported:
+
+  - :class:`daf.message.constraints.AntiSpamMessageConstraint`
+
 Now that we have an overview of the most important parameters, let's define our message.
 We will define a message that sends fixed data into a single channel, with a fixed time (duration) period.
 
 .. code-block:: python
   :linenos:
-  :emphasize-lines: 1-3, 19-23
+  :emphasize-lines: 1-4, 19-24
 
+  from daf.message.constraints import AntiSpamMessageConstraint
   from daf.message.messageperiod import FixedDurationPeriod
   from daf.messagedata import TextMessageData
   from daf.message import TextMESSAGE
@@ -201,12 +210,13 @@ We will define a message that sends fixed data into a single channel, with a fix
           is_user=False,  # Above token is user account's token and not a bot token.
           servers=[
               GUILD(
-                  snowflake=863071397207212052,
+                  snowflake=2312312312312312313123,
                   messages=[
                       TextMESSAGE(
                           data=TextMessageData(content="Looking for NFT?"),
-                          channels=[1159224699830677685],
-                          period=FixedDurationPeriod(duration=timedelta(seconds=15))
+                          channels=[3215125123123123123123],
+                          period=FixedDurationPeriod(duration=timedelta(seconds=5)),
+                          constraints=[AntiSpamMessageConstraint(per_channel=True)]
                       )
                   ]
               )
@@ -215,6 +225,7 @@ We will define a message that sends fixed data into a single channel, with a fix
   ]
 
   daf.run(accounts=accounts)
+
 
 
 .. image:: ./images/message_definition_example_output.png
@@ -233,7 +244,7 @@ Additionally, it contains a ``volume`` parameter.
 Message advertisement examples
 --------------------------------------
 
-The following examples show a complete core script setup needed to advertise periodic messages.
+The following examples show a complete core script (without message constraints) setup needed to advertise periodic messages.
 
 .. dropdown:: TextMESSAGE
 
