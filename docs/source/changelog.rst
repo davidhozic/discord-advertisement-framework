@@ -37,6 +37,23 @@ Glossary
 Releases
 ---------------------
 
+v4.1.0
+=====================
+- New message period types:
+  
+  + :class:`daf.message.messageperiod.NamedDayOfYearPeriod`
+  + :class:`daf.message.messageperiod.NamedDayOfMonthPeriod`
+
+- Added optional case-sensitive matching to :class:`daf.logic.contains` and :class:`daf.logic.regex`. The default
+  is still case-insensitive.
+- Added ``constraints`` parameter to :class:`daf.message.TextMESSAGE`. See :ref:`Message constraints` for more
+  information.
+- Fixed SQL log removal through the GUI.
+- Fixed CSV and JSON reading through remote.
+- Disabled the :ref:`Automatic guild discovery and join` features due to the search provider shutting down its
+  services. It will be reenabled in a future version.
+
+
 v4.0.5
 =====================
 - Fixed exe build.

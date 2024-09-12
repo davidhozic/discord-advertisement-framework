@@ -88,6 +88,10 @@ class AutoGUILD:
     auto_join: Optional[web.GuildDISCOVERY] = None
         .. versionadded:: v2.5
 
+        .. warning::
+            This is temporarily disabled until a new guild provider is found.
+            It will be reenabled in a future version.
+
         Optional :class:`~daf.web.GuildDISCOVERY` object which will automatically discover
         and join guilds though the browser.
         This will open a Google Chrome session.
@@ -155,6 +159,14 @@ class AutoGUILD:
         self._remove_after = remove_after
         self._messages: List[MessageDuplicator] = []
         self.logging = logging
+
+        if auto_join is not None:  # TODO: remove in future after feature is reenabled.
+            auto_join = None
+            trace(
+                "Automatic join feature is currently disabled and will not work. It will be reenabled in a future version.",
+                TraceLEVELS.WARNING
+            )
+
         self.auto_join = auto_join
         self.parent = None
         self.guild_query_iter = None
@@ -198,7 +210,7 @@ class AutoGUILD:
         client: discord.Client = self.parent.client
         guilds = [
             g for g in client.guilds
-            if self.include_pattern.check(g.name.lower())
+            if self.include_pattern.check(g.name)
         ]
         return guilds
 
@@ -341,12 +353,12 @@ class AutoGUILD:
                 self._event_ctrl.add_listener(
                     EventID.discord_member_join,
                     self._on_member_join,
-                    predicate=lambda memb: self.include_pattern.check(memb.guild.name.lower())
+                    predicate=lambda memb: self.include_pattern.check(memb.guild.name)
                 )
                 self._event_ctrl.add_listener(
                     EventID.discord_invite_delete,
                     self._on_invite_delete,
-                    predicate=lambda inv: self.include_pattern.check(inv.guild.name.lower())
+                    predicate=lambda inv: self.include_pattern.check(inv.guild.name)
                 )
             except discord.HTTPException as exc:
                 trace(f"Could not query invite links in {self}", TraceLEVELS.ERROR, exc)
@@ -358,7 +370,7 @@ class AutoGUILD:
         self._event_ctrl.add_listener(
             EventID.discord_guild_join,
             self._on_guild_join,
-            predicate=lambda guild: self.include_pattern.check(guild.name.lower())
+            predicate=lambda guild: self.include_pattern.check(guild.name)
         )
 
         self._event_ctrl.add_listener(
@@ -471,7 +483,7 @@ class AutoGUILD:
             try:
                 # Get next result from top.gg
                 yielded: web.QueryResult = await self.guild_query_iter.__anext__()
-                if self.include_pattern.check(yielded.name.lower()):
+                if self.include_pattern.check(yielded.name):
                     return yielded
             except StopAsyncIteration:
                 trace(f"Iterated though all found guilds -> stopping guild join in {self}.", TraceLEVELS.NORMAL)

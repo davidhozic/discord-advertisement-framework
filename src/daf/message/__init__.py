@@ -5,6 +5,7 @@ from .base import *
 from .text_based import *
 from .messageperiod import *
 from .autochannel import *
+from .constraints import *
 
 try:
     from .voice_based import *

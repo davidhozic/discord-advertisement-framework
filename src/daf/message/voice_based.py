@@ -10,7 +10,7 @@ from pathlib import Path
 from ..messagedata.dynamicdata import _DeprecatedDynamic
 
 from ..messagedata import BaseVoiceData, VoiceMessageData, FILE
-from ..misc import doc, instance_track
+from ..misc import doc, instance_track, async_util
 from ..logging import sql
 from .. import dtypes
 
@@ -69,7 +69,7 @@ class VoiceMESSAGE(BaseChannelMessage):
         * timedelta - the specified time difference
         * datetime - specific date & time
     period: BaseMessagePeriod
-        The sending period.
+        The sending period. See :ref:`Message period` for possible types.
     """
     __slots__ = (
         "volume",
@@ -242,6 +242,41 @@ class VoiceMESSAGE(BaseChannelMessage):
 
     def _verify_data(self, data: dict) -> bool:
         return super()._verify_data(VoiceMessageData, data)
+
+    @async_util.with_semaphore("update_semaphore")
+    async def _send(self):
+        """
+        Sends the data into the channels.
+        """
+        # Acquire mutex to prevent update method from writing while sending
+        data_to_send = await self._data.to_dict()
+        if self._verify_data(data_to_send):  # There is data to be send
+            errored_channels = []
+            succeeded_channels = []
+
+            # Send to channels
+            for channel in self.channels:
+                # Clear previous messages sent to channel if mode is MODE_DELETE_SEND
+                context = await self._send_channel(channel, **data_to_send)
+                if context["success"]:
+                    succeeded_channels.append(channel)
+                else:
+                    errored_channels.append({"channel": channel, "reason": context["reason"]})
+                    action = context["action"]
+                    if action is ChannelErrorAction.SKIP_CHANNELS:  # Don't try to send to other channels
+                        break
+
+                    elif action is ChannelErrorAction.REMOVE_ACCOUNT:
+                        self._event_ctrl.emit(EventID.g_account_expired, self.parent.parent)
+                        break
+
+            self._update_state(succeeded_channels, errored_channels)
+            if errored_channels or succeeded_channels:
+                return self.generate_log_context(
+                    **data_to_send, succeeded_ch=succeeded_channels, failed_ch=errored_channels
+                )
+
+        return None
 
     async def _send_channel(self,
                             channel: discord.VoiceChannel,

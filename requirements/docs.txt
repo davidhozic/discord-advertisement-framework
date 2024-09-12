@@ -1,8 +1,8 @@
-sphinx==7.1.2
-sphinx-autobuild==2021.3.14
+sphinx==7.3.7
+sphinx-autobuild==2024.9.3
 sphinx-copybutton==0.5.2
-furo==2024.1.29
-enum-tools[sphinx]==0.11.0
-sphinx-design[furo]==0.5.0
+furo==2024.8.6
+enum-tools[sphinx]==0.12.0
+sphinx-design[furo]==0.6.1
 readthedocs-sphinx-search==0.3.2
 sphinxcontrib-svg2pdfconverter==1.2.2

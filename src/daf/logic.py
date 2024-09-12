@@ -44,7 +44,7 @@ class BooleanLogic(BaseLogic):
         *args,
         operands: List[BaseLogic] = [],
     ) -> None:
-        self.operands = [*operands, *args]
+        self.operands: List[BaseLogic] = [*operands, *args]
 
 
 @doc_category("Text matching (logic)")
@@ -60,12 +60,7 @@ class and_(BooleanLogic):
 
     def check(self, input: str):
         for op in self.operands:
-            if isinstance(op, BaseLogic):
-                check = op.check(input)
-            else:
-                check = op in input
-
-            if not check:
+            if not op.check(input):
                 return False
 
         return True
@@ -83,12 +78,7 @@ class or_(BooleanLogic):
     """
     def check(self, input: str):
         for op in self.operands:
-            if isinstance(op, BaseLogic):
-                check = op.check(input)
-            else:
-                check = op in input
-
-            if check:
+            if op.check(input):
                 return True
 
         return False
@@ -113,11 +103,8 @@ class not_(BooleanLogic):
         return self.operands[0]
 
     def check(self, input: str):
-        op = self.operands[0]
-        if isinstance(op, BaseLogic):
-            return not op.check(input)
+        return not self.operand.check(input)
 
-        return op not in input
 
 
 @doc_category("Text matching (logic)")
@@ -130,10 +117,17 @@ class contains(BaseLogic):
     keyword: str
         The keyword needed to be inside a text message.
     """
-    def __init__(self, keyword: str) -> None:
-        self.keyword = keyword.lower()
+    def __init__(self, keyword: str, case_sensitive: bool = False) -> None:
+        self.case_sensitive = case_sensitive
+        if not case_sensitive:
+            keyword = keyword.lower()
+
+        self.keyword = keyword
 
     def check(self, input: str):
+        if not self.case_sensitive:
+            input = input.lower()
+
         return self.keyword in re.findall(r'\w+', input)  # \w+ == match all words, including **bold**
 
 
@@ -157,7 +151,7 @@ class regex(BaseLogic):
     def __init__(
         self,
         pattern: str,
-        flags: re.RegexFlag = re.MULTILINE,
+        flags: re.RegexFlag = re.MULTILINE | re.IGNORECASE,
         full_match: bool = False
     ) -> None:
         self._full_match = full_match

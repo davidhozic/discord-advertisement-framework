@@ -728,6 +728,10 @@ class QueryResult:
 @doc.doc_category("Web")
 class GuildDISCOVERY:
     """
+    .. warning::
+
+        This is temporarily disabled (since v4.1) until a new guild provider is found.
+
     Client used for searching servers.
     To be used with :class:`daf.guild.AutoGUILD`.
 

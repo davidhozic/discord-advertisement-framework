@@ -104,10 +104,10 @@ CONVERSION_ATTRS = {
         "attrs": ["_daf_id"]
     },
     logging.LoggerJSON: {
-        "attrs": []
+        "attrs": ["_daf_id"]
     },
     logging.LoggerCSV: {
-        "attrs": []
+        "attrs": ["_daf_id"]
     },
     discord.Embed: {
         "custom_encoder": lambda embed: embed.to_dict(),
