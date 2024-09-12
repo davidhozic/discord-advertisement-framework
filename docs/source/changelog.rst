@@ -58,7 +58,6 @@ v4.0.5
 =====================
 - Fixed exe build.
 
-
 v4.0.4
 =====================
 - Fixed automatic responder's not being removable over a remote connection.

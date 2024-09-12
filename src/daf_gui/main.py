@@ -7,7 +7,6 @@ from pathlib import Path
 import tk_async_execute as tae
 import subprocess
 import json
-import sys
 
 import ttkbootstrap as ttk
 
