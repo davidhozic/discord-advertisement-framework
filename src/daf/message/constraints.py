@@ -3,9 +3,10 @@ Implements additional message constraints, that are required to pass
 for a message to be sent.
 """
 from __future__ import annotations
-from _discord import TextChannel, VoiceChannel, User
 from abc import abstractmethod, ABC
+from _discord import TextChannel
 
+from .autochannel import AutoCHANNEL
 from ..misc import doc_category
 
 
@@ -30,7 +31,7 @@ class AntiSpamMessageConstraint(BaseMessageConstraint):
         self.per_channel = per_channel
         super().__init__()
 
-    def check(self, channels: list[TextChannel]) -> list[TextChannel]:
+    def check(self, channels: list[TextChannel | AutoCHANNEL]) -> list[TextChannel]:
         allowed = list(filter(
             lambda channel: channel.last_message is None or
             channel.last_message.author.id != channel._state.user.id, channels
