@@ -63,7 +63,7 @@ class BaseMessagePeriod(ABC):
 class DurationPeriod(BaseMessagePeriod):
     """
     Base for duration-like message periods.
-    """    
+    """
     @abstractmethod
     def _get_period(self) -> timedelta:
         "Get's the calculated relative period (offset) from previous scheduled time."
@@ -146,14 +146,14 @@ class RandomizedDurationPeriod(DurationPeriod):
         self.maximum = maximum
         super().__init__(next_send_time)
 
-    
+
     def _get_period(self):
         return timedelta(seconds=randrange(self.minimum.total_seconds(), self.maximum.total_seconds()))
 
     def adjust(self, minimum: timedelta) -> None:
         if self.minimum >= minimum:
             return
-        
+
         self.maximum = minimum + (self.maximum - self.minimum)  # Preserve the period band's width
         self.minimum = minimum
 
@@ -194,7 +194,7 @@ class DaysOfWeekPeriod(EveryXPeriod):
     ) -> None:
         if not days:
             raise ValueError(f"'days' parameter must be a list of day literals {DaysOfWeekPeriod.WEEK_DAYS}.")
-        
+
         if time.tzinfo is None:
             time = time.replace(tzinfo=datetime.now().astimezone().tzinfo)
 
@@ -243,7 +243,7 @@ class DaysOfWeekPeriod(EveryXPeriod):
     def adjust(self, minimum: timedelta) -> None:
         # The minium between sends will always be 24 hours.
         # Slow-mode minimum is maximum 6 hours, thus this is not needed.
-        raise NotImplementedError("Setting minimal period would break the definition of class.")
+        pass
 
 
 @doc_category("Message period")
@@ -295,7 +295,7 @@ class NamedDayOfYearPeriod(EveryXPeriod):
         Use ``datetime`` to specify the exact date and time at which the message should start being sent.
         Use ``timedelta`` to specify how soon (after creation of the object) the message
         should start being sent.
-    
+
     Example
     ----------
     .. code-block:: python
@@ -332,7 +332,6 @@ class NamedDayOfYearPeriod(EveryXPeriod):
         now = max(datetime.now().astimezone(), self.next_send_time)
         self_time = self.time
         next = now.replace(
-            day=1,
             month=self.month,
             hour=self_time.hour,
             minute=self_time.minute,
@@ -341,23 +340,18 @@ class NamedDayOfYearPeriod(EveryXPeriod):
         )
 
         while True:
-            isoday = next.isoweekday()
-            if isoday > self.isoday:
-                next = next.replace(day=1 + 7 + self.isoday - isoday)
-            else:
-                next = next.replace(day=1 + self.isoday - isoday)
-            
-            next += timedelta(days=7 * (self.week - 1))
-
+            next += timedelta(self.isoday - next.isoweekday())  # Move to the named day (e.g., Monday)
+            next += timedelta(days=7 * (self.week - next.day // 7 - 1))  # Move to the specified weekday (e.g., 2nd (Monday))
             if next >= now:
                 break
 
             next = next.replace(year=next.year + 1)
 
+        self.next_send_time = next
         return next
 
     def adjust(self, minimum: timedelta) -> None:
-        raise NotImplementedError("Setting minimal period would break the definition of class.")
+        pass  # Slow-mode can't be one year long
 
 
 @doc_category("Message period")
@@ -382,7 +376,7 @@ class NamedDayOfMonthPeriod(EveryXPeriod):
         Use ``datetime`` to specify the exact date and time at which the message should start being sent.
         Use ``timedelta`` to specify how soon (after creation of the object) the message
         should start being sent.
-    
+
     Example
     ----------
     .. code-block:: python
@@ -401,7 +395,7 @@ class NamedDayOfMonthPeriod(EveryXPeriod):
         self,
         time: time,
         day: NamedDayOfMonthPeriod.DAYS,
-        week: int,
+        week: Literal[1, 2, 3, 4, 5],
         next_send_time: Union[datetime, timedelta] = None
     ) -> None:
         self.time = time
@@ -409,12 +403,11 @@ class NamedDayOfMonthPeriod(EveryXPeriod):
         self.week = week
         self.isoday = NamedDayOfMonthPeriod._DAYS_ARGS.index(day) + 1
         super().__init__(next_send_time)
-    
+
     def calculate(self) -> datetime:
         now = max(datetime.now().astimezone(), self.next_send_time)
         self_time = self.time
         next = now.replace(
-            day=1,
             hour=self_time.hour,
             minute=self_time.minute,
             second=self_time.second,
@@ -422,18 +415,21 @@ class NamedDayOfMonthPeriod(EveryXPeriod):
         )
 
         while True:
-            isoday = next.isoweekday()
-            if isoday > self.isoday:
-                next = next.replace(day=1 + 7 + self.isoday - isoday)
-            else:
-                next = next.replace(day=1 + self.isoday - isoday)
-
-            next += timedelta(days=7 * (self.week - 1))
-
+            next += timedelta(self.isoday - next.isoweekday())  # Move to the named day (e.g., Monday)
+            next += timedelta(days=7 * (self.week - next.day // 7 - 1))  # Move to the specified weekday (e.g., 2nd (Monday))
             if next >= now:
                 break
 
-            next = next.replace(month=next.month + 1)
+            next_month = next.month + 1
+            next_year = next.year
+            if next_month > 12:
+                next_year += 1
+                next_month = 1
+
+            next = next.replace(year=next_year, month=next_month)
+
+        self.next_send_time = next
+        return next
 
     def adjust(self, minimum: timedelta) -> None:
-        raise NotImplementedError("Setting minimal period would break the definition of class.")
+        pass  # Slow-mode can't be one month long
