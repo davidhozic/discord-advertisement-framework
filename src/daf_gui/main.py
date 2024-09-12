@@ -149,9 +149,17 @@ class Application():
         }
         dpi_78, dpi_600 = dpi_scaled(78), dpi_scaled(600)
 
+        last_toast: ToastNotification = None
         def trace_listener(level: daf.TraceLEVELS, message: str):
-            last_toast: ToastNotification = ToastNotification.last_toast
-            if last_toast is not None and last_toast.toplevel.winfo_exists():
+            nonlocal last_toast
+       
+            if last_toast is None:
+                next_position = dpi_78
+            elif last_toast.toplevel is None or last_toast.toplevel.winfo_exists():
+                # If toplevel is None, that means that tkinter re-entered the its event loop in the
+                # toast.show_toast() call before that same function was able to set the toplevel attribute.
+                # This happens due to ttkbootstrap library providing the 'alpha' parameter to Tkinter's TopLevel class,
+                # which causes Tkinter to re-enter its event loop and process another after_idle(trace_listener, ...) command.
                 next_position = max((last_toast.position[1] + dpi_78) % dpi_600, dpi_78)
             else:
                 next_position = dpi_78
@@ -165,10 +173,9 @@ class Application():
                 position=(10, next_position, "se"),
                 topmost=True
             )
-            ToastNotification.last_toast = toast
+            last_toast = toast
             toast.show_toast()
 
-        ToastNotification.last_toast = None
         evt = daf.get_global_event_ctrl()
         evt.add_listener(
             daf.EventID.g_trace, lambda level, message: self.win_main.after_idle(trace_listener, level, message)
