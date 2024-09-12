@@ -66,7 +66,7 @@ Automatic guild discovery and join
 
 .. error::
 
-    This feature is currently **disabled** due to the search provider going down its
+    This feature is currently **disabled** due to the search provider shutting down its
     services. It will be reenabled in a future version.
 
 The web layer beside login with username and password, also allows (semi) automatic guild discovery and join.
