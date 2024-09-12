@@ -1,6 +1,8 @@
 """
 Implements additional message constraints, that are required to pass
 for a message to be sent.
+
+.. versionadded:: 4.1
 """
 from __future__ import annotations
 from abc import abstractmethod, ABC
@@ -21,11 +23,13 @@ class BaseMessageConstraint(ABC):
         """
 
 
-@doc_category("Message checks")
+@doc_category("Message constraints")
 class AntiSpamMessageConstraint(BaseMessageConstraint):
     """
     Prevents a new message to be sent if the last message in the same channel was
     sent by us, thus preventing spam on inactivate channels.
+
+    .. versionadded:: 4.1
     """
     def __init__(self, per_channel: bool = True) -> None:
         self.per_channel = per_channel

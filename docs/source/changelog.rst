@@ -46,6 +46,8 @@ v4.1.0
 
 - Added optional case-sensitive matching to :class:`daf.logic.contains` and :class:`daf.logic.regex`. The default
   is still case-insensitive.
+- Added ``constraints`` parameter to :class:`daf.message.TextMESSAGE`. See :ref:`Message constraints` for more
+  information.
 - Fixed SQL log removal through the GUI.
 - Fixed CSV and JSON reading through remote.
 

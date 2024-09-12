@@ -84,6 +84,14 @@ class TextMESSAGE(BaseChannelMessage):
         printed to the console instead of message being published to the follower channels.
 
         .. versionadded:: 2.10
+
+    period: BaseMessagePeriod
+        The sending period. See :ref:`Message period` for possible types.
+    constraints: Optional[List[BaseMessageConstraint]]
+        List of constraints that prevents a message from being sent unless all of them
+        are fulfilled. See :ref:`Message constraints` for possible types.
+
+        .. versionadded:: 4.1
     """
 
     __slots__ = (
@@ -508,6 +516,8 @@ class DirectMESSAGE(BaseMESSAGE):
         * int - provided amounts of successful sends
         * timedelta - the specified time difference
         * datetime - specific date & time
+    period: BaseMessagePeriod
+        The sending period. See :ref:`Message period` for possible types.
     """
 
     __slots__ = (

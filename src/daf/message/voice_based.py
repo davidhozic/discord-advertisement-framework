@@ -69,7 +69,7 @@ class VoiceMESSAGE(BaseChannelMessage):
         * timedelta - the specified time difference
         * datetime - specific date & time
     period: BaseMessagePeriod
-        The sending period.
+        The sending period. See :ref:`Message period` for possible types.
     """
     __slots__ = (
         "volume",
