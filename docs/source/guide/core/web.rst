@@ -63,6 +63,12 @@ If you restart DAF, it will not re-login, but will just load the data from the s
 
 Automatic guild discovery and join
 ======================================
+
+.. error::
+
+    This feature is currently **disabled** due to the search provider going down its
+    services. It will be reenabled in a future version.
+
 The web layer beside login with username and password, also allows (semi) automatic guild discovery and join.
 
 To use this feature, users need to create an :class:`~daf.guild.AutoGUILD` instance, where they pass the ``auto_join``
