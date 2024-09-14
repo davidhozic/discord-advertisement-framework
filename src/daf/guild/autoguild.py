@@ -441,7 +441,7 @@ class AutoGUILD:
         try:
             # Update the guild
             if "invite_track" not in kwargs:
-                kwargs["invite_track"] = self.invite_track
+                kwargs["invite_track"] = list(self._invite_join_count.keys())
 
             if "exclude_pattern" not in kwargs: # DEPRECATED; TODO: remove in 4.2.0
                 kwargs["exclude_pattern"] = None

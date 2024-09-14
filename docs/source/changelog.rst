@@ -51,6 +51,7 @@ v4.1.0
 - Fixed SQL log removal through the GUI.
 - Fixed CSV and JSON reading through remote.
 - Fixed exception when GUI tried to print a message.
+- Fixed invite ``invite_track`` attribute error in :class:`daf.guild.AutoGUILD`.
 - |BREAK_CH| Disabled the :ref:`Automatic guild discovery and join` features due to the search provider shutting down its
   services. It will be reenabled in a future version.
 
