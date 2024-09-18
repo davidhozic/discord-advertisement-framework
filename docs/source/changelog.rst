@@ -37,7 +37,7 @@ Glossary
 Releases
 ---------------------
 
-v4.1.0
+|UNRELEASED| v4.1.0
 =====================
 - New message period types:
   
