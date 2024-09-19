@@ -1,5 +1,5 @@
 sphinx==7.3.7
-sphinx-autobuild==2024.9.3
+sphinx-autobuild==2024.9.19
 sphinx-copybutton==0.5.2
 furo==2024.8.6
 enum-tools[sphinx]==0.12.0
