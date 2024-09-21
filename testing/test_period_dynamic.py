@@ -73,7 +73,6 @@ async def test_text_period(GUILD: daf.GUILD, USER: daf.USER, channels):
                                                         and message.channel == text_channels[0],
                                                         timeout=TEST_MAX_WAIT_TIME)
     # Test TextMESSAGE
-    
     assert len(guild.parent.servers) == 2
     await asyncio.sleep(10)
     text_message = daf.message.TextMESSAGE(None, TEST_SEND_PERIOD_TEXT, TEXT_MESSAGE_TEST_MESSAGE, [text_channels[0]],
