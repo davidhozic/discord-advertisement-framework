@@ -75,7 +75,7 @@ async def test_text_period(GUILD: daf.GUILD, USER: daf.USER, channels):
     # Test TextMESSAGE
     
     assert len(guild.parent.servers) == 2
-    await asyncio.sleep(5)
+    await asyncio.sleep(10)
     text_message = daf.message.TextMESSAGE(None, TEST_SEND_PERIOD_TEXT, TEXT_MESSAGE_TEST_MESSAGE, [text_channels[0]],
                                         "send", start_in=TEST_SEND_PERIOD_TEXT, remove_after=None)
     await guild.add_message(text_message)
@@ -93,7 +93,7 @@ async def test_text_period(GUILD: daf.GUILD, USER: daf.USER, channels):
             assert item.to_dict() in embeds, "TextMESSAGE embed not in message embeds"
 
     await guild.remove_message(text_message)
-    await asyncio.sleep(5)
+    await asyncio.sleep(10)
     # Test DirectMESSAGE
     direct_message = daf.message.DirectMESSAGE(None, TEST_SEND_PERIOD_TEXT, DIRECT_MESSAGE_TEST_MESSAGE, "send",
                                                 start_in=TEST_SEND_PERIOD_TEXT, remove_after=None)

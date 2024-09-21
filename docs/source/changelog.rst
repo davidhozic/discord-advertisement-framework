@@ -46,12 +46,15 @@ Releases
 
 - Added optional case-sensitive matching to :class:`daf.logic.contains` and :class:`daf.logic.regex`. The default
   is still case-insensitive.
+- For word matching, the :class:`daf.logic.contains` now accepts multiple words inside seperated by a space.
 - Added ``constraints`` parameter to :class:`daf.message.TextMESSAGE`. See :ref:`Message constraints` for more
   information.
 - Fixed SQL log removal through the GUI.
 - Fixed CSV and JSON reading through remote.
 - Fixed exception when GUI tried to print a message.
 - Fixed invite ``invite_track`` attribute error in :class:`daf.guild.AutoGUILD`.
+- Fixed properties not being refreshed when pressing the ``Refresh`` button inside the GUI (``Live view`` tab).
+- Fixed update failure when using :class:`daf.guild.AutoGUILD` (cache was not invalidated).
 - |BREAK_CH| Disabled the :ref:`Automatic guild discovery and join` features due to the search provider shutting down its
   services. It will be reenabled in a future version.
 
