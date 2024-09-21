@@ -128,7 +128,7 @@ class contains(BaseLogic):
         if not self.case_sensitive:
             input = input.lower()
 
-        return self.keyword in re.findall(r'\w+', input)  # \w+ == match all words, including **bold**
+        return set(self.keyword.split(' ')).issubset(set(re.findall(r'\w+', input)))  # \w+ == match all words, including **bold**
 
 
 @doc_category("Text matching (logic)")

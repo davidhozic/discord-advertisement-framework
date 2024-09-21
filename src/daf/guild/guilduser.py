@@ -602,13 +602,13 @@ class GUILD(BaseGUILD):
                 TraceLEVELS.DEBUG
             )
 
-    def _close(self):
+    async def _close(self):
         if self._event_ctrl is None:  # Already closed
             return
 
         self._event_ctrl.remove_listener(EventID.discord_member_join, self._on_member_join)
         self._event_ctrl.remove_listener(EventID.discord_invite_delete, self._on_invite_delete)
-        return super()._close()
+        return await super()._close()
 
 
 @instance_track.track_id

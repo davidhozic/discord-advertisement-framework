@@ -565,6 +565,7 @@ class AutoGUILD:
         """
         Closes any lower-level async objects.
         """
+        self._cache.clear()
         if self._event_ctrl is None:  # Not initialized or already closed
             return
 
@@ -591,5 +592,3 @@ class AutoGUILD:
 
         for guild in self._cache:
             await guild._close()
-        
-        self._cache.clear()
