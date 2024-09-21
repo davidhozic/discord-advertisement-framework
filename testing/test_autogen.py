@@ -45,8 +45,8 @@ async def test_autochannel(guilds, channels, accounts):
         guild: daf.discord.Guild
         guild, _ = guilds
         text_channels, voice_channels = channels
-        auto_channel = daf.message.AutoCHANNEL("testpy-[0-9]", "testpy-[5-9]")
-        auto_channel2 = daf.message.AutoCHANNEL("testpy-[0-9]", "testpy-[5-9]")
+        auto_channel = daf.message.AutoCHANNEL("testpy-[0-2]", "testpy-[2-9]")
+        auto_channel2 = daf.message.AutoCHANNEL("testpy-[0-1]", "testpy-[1-9]")
 
         cwd = os.getcwd()
         os.chdir(os.path.dirname(__file__))
@@ -64,11 +64,11 @@ async def test_autochannel(guilds, channels, accounts):
         sort_key = lambda x: x.name
         auto_channel._get_channels()
         auto_channel2._get_channels()
-        assert sorted(text_channels[:5], key=sort_key) == sorted(auto_channel.channels, key=sort_key), "Correct behavior would be for AutoCHANNEL to only find first 5 text channels"
-        assert sorted(voice_channels[:5], key=sort_key) == sorted(auto_channel2.channels, key=sort_key), "Correct behavior would be for AutoCHANNEL to only find first 5 voice channels"
+        assert sorted(text_channels[:2], key=sort_key) == sorted(auto_channel.channels, key=sort_key), "Correct behavior would be for AutoCHANNEL to only find first 5 text channels"
+        assert sorted(voice_channels[:1], key=sort_key) == sorted(auto_channel2.channels, key=sort_key), "Correct behavior would be for AutoCHANNEL to only find first 5 voice channels"
 
-        await auto_channel.update(exclude_pattern=None)
-        await auto_channel2.update(exclude_pattern=None)
+        await auto_channel.update(include_pattern=daf.regex("testpy-[0-2]"))  # Removes the original exclude pattern
+        await auto_channel2.update(include_pattern=daf.regex("testpy-[0-1]"))  # Removes the original exclude pattern
         auto_channel._get_channels()
         auto_channel2._get_channels()
         assert sorted(text_channels, key=sort_key) == sorted(auto_channel.channels, key=sort_key), "Correct behavior would be for AutoCHANNEL to find all text channels"
