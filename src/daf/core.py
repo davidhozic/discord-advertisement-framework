@@ -198,12 +198,7 @@ async def schema_load_from_file() -> None:
     trace("Updating accounts.", TraceLEVELS.DEBUG)
     for account in accounts:
         try:
-            await account.update()  # Refresh without __init__ call
-            for guild in account.servers:
-                guild.update()
-                for message in guild.messages:
-                    message.update()
-
+            await account.update()
             account._event_ctrl.start()
         except Exception as exc:
             trace(
