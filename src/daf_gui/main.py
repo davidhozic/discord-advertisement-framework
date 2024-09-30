@@ -1,13 +1,7 @@
 """
 Main file of the DAF GUI.
 """
-from importlib.util import find_spec
-from pathlib import Path
-
 import tk_async_execute as tae
-import subprocess
-import json
-
 import ttkbootstrap as ttk
 
 from ttkbootstrap.toast import ToastNotification
@@ -21,11 +15,10 @@ from .edit_window_manager import *
 from .connector import *
 from .tabs import *
 
-import tkinter as tk
 import ttkbootstrap.dialogs.dialogs as tkdiag
 import ttkbootstrap.style as tkstyle
+import tkinter as tk
 
-import sys
 import os
 import daf
 
@@ -114,14 +107,6 @@ class Application():
         # Window config
         self.win_main.protocol("WM_DELETE_WINDOW", self.close_window)
         self.tabman_mf.select(1)
-
-        if sys.version_info.minor == 12 and sys.version_info.major == 3:
-            tkdiag.Messagebox.show_warning(
-                "DAF's support on Python 3.12 is limited. Web browser features and"
-                " SQL logging are not supported in Python 3.12. Please install Python 3.11 instead.\n"
-                "Additional GUI can be unstable on Python 3.12",
-                "Compatibility warning!"
-            )
 
     def init_menu(self):
         "Initializes GUI toolbar menu"
