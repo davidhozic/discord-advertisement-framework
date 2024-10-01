@@ -92,8 +92,8 @@ class AnalyticFrame(ttk.Frame):
                 it.ObjectReference.from_object(logger), getter_history, **param_object_params
             )
             items = convert_to_object_info(items)
-            lst_history.clear()
-            lst_history.insert(tk.END, *items)
+            tae.tk_execute(lst_history.clear)
+            tae.tk_execute(lst_history.insert, tk.END, *items)
 
         def show_log(listbox: ListBoxScrolled):
             selection = listbox.curselection()
