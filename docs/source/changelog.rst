@@ -37,6 +37,11 @@ Glossary
 Releases
 ---------------------
 
+v4.1.1
+=====================
+- Fixed segmentation-fault crash when using Python 3.12+.
+
+
 v4.1.0
 =====================
 - New message period types:
