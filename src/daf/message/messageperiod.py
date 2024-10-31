@@ -275,7 +275,7 @@ class NamedDayOfYearPeriod(EveryXPeriod):
     """
     .. versionadded:: 4.1
 
-    This period type enables messages to be sent on specific ``week``\ th ``day`` of a ``month`` each year on
+    This period type enables messages to be sent on specific ``week`` and ``day`` of a ``month`` each year on
     a specific ``time``.
 
     E.g., each year on second Monday in December at 12 noon (example below).
@@ -359,7 +359,7 @@ class NamedDayOfMonthPeriod(EveryXPeriod):
     """
     .. versionadded:: 4.1
 
-    This period type enables messages to be sent on specific ``week``\ th ``day`` each month at a specific ``time``.
+    This period type enables messages to be sent on specific ``week`` and ``day`` each month at a specific ``time``.
 
     E.g., each year on second Monday in December at 12 noon (example below).
 
