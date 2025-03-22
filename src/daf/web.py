@@ -114,7 +114,7 @@ class SeleniumCLIENT:
         The Discord username to login with.
     password: str
         The Discord password to login with.
-    proxy: str
+    proxy: Optional[str]
         The proxy url to use when connecting to Chrome.
     """
     __slots__ = (
@@ -128,7 +128,7 @@ class SeleniumCLIENT:
     def __init__(self,
                  username: str,
                  password: str,
-                 proxy: str) -> None:
+                 proxy: Optional[str] = None) -> None:
 
         if not GLOBALS.selenium_installed:
             raise ModuleNotFoundError(

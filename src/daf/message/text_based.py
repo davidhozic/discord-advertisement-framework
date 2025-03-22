@@ -5,9 +5,6 @@ from typing import Any, Dict, List, Iterable, Optional, Union, Literal, Tuple, C
 from datetime import datetime, timedelta
 from typeguard import typechecked
 
-
-from ..messagedata.dynamicdata import _DeprecatedDynamic
-
 from .constraints import BaseMessageConstraint
 from ..messagedata import BaseTextData, TextMessageData, FILE
 from ..logging.tracing import trace, TraceLEVELS
@@ -41,6 +38,13 @@ sql.register_type("MessageMODE", "clear-send")
 @sql.register_type("MessageTYPE")
 class TextMESSAGE(BaseChannelMessage):
     """
+    .. versionchanged:: v4.2.0
+
+        - Removed deprecated ``start_in``,
+        ``start_period`` and ``end_period`` parameters.
+        - Removed support for ``data``'s datatypes that are not
+        :class:`daf.messagedata.BaseTextData`.
+
     This class is used for creating objects that represent messages which will be sent to Discord's TEXT CHANNELS.
 
     Parameters
@@ -101,7 +105,7 @@ class TextMESSAGE(BaseChannelMessage):
         "constraints",
     )
 
-    _old_data_type = Union[list, tuple, set, str, discord.Embed, FILE, _FunctionBaseCLASS]
+    _old_data_type = Union[list, tuple, set, str, discord.Embed, FILE]
 
     @typechecked
     def __init__(
@@ -120,28 +124,10 @@ class TextMESSAGE(BaseChannelMessage):
         if not isinstance(data, BaseTextData):
             trace(
                 f"Using data types other than {[x.__name__ for x in BaseTextData.__subclasses__()]}, "
-                "is deprecated on TextMESSAGE's data parameter! Planned for removal in 4.2.0",
-                TraceLEVELS.DEPRECATED
+                "is deprecated on TextMESSAGE's data parameter! And has been removed",
+                TraceLEVELS.ERROR,
+                exception_cls=TypeError
             )
-            # Transform to new data type            
-            if isinstance(data, _FunctionBaseCLASS):
-                data = _DeprecatedDynamic(data.fnc, *data.args, **data.kwargs)
-            elif data is not None:
-                if isinstance(data, (str, discord.Embed, FILE)):
-                    data = [data]
-
-                content = None
-                embed = None
-                files = []
-                for item in data:
-                    if isinstance(item, str):
-                        content = item
-                    elif isinstance(item, discord.Embed):
-                        embed = item
-                    else:
-                        files.append(item)
-
-                data = TextMessageData(content, embed, files)
 
         super().__init__(start_period, end_period, data, channels, start_in, remove_after, period)
 
@@ -491,6 +477,13 @@ class DirectMESSAGE(BaseMESSAGE):
     """
     This class is used for creating objects that represent messages which will be sent to user's private messages.
 
+    .. versionchanged:: v4.2.0
+
+        - Removed deprecated ``start_in``,
+        ``start_period`` and ``end_period`` parameters.
+        - Removed support for ``data``'s datatypes that are not
+        :class:`daf.messagedata.BaseTextData`.
+
     .. deprecated:: v2.1
 
         - start_period, end_period - Using int values, use ``timedelta`` object instead.
@@ -526,7 +519,7 @@ class DirectMESSAGE(BaseMESSAGE):
         "dm_channel",
     )
 
-    _old_data_type = Union[list, tuple, set, str, discord.Embed, FILE, _FunctionBaseCLASS]
+    _old_data_type = Union[list, tuple, set, str, discord.Embed, FILE]
 
     @typechecked
     def __init__(
@@ -542,28 +535,10 @@ class DirectMESSAGE(BaseMESSAGE):
         if not isinstance(data, BaseTextData):
             trace(
                 f"Using data types other than {[x.__name__ for x in BaseTextData.__subclasses__()]}, "
-                "is deprecated on DirectMESSAGE's data parameter! Planned for removal in 4.2.0",
-                TraceLEVELS.DEPRECATED
+                "is deprecated on TextMESSAGE's data parameter! And has been removed",
+                TraceLEVELS.ERROR,
+                exception_cls=TypeError
             )
-            # Transform to new data type            
-            if isinstance(data, _FunctionBaseCLASS):
-                data = _DeprecatedDynamic(data.fnc, *data.args, *data.kwargs)
-            elif data is not None:
-                if isinstance(data, (str, discord.Embed, FILE)):
-                    data = [data]
-
-                content = None
-                embed = None
-                files = []
-                for item in data:
-                    if isinstance(item, str):
-                        content = item
-                    elif isinstance(item, discord.Embed):
-                        embed = item
-                    else:
-                        files.append(item)
-
-                data = TextMessageData(content, embed, files)
 
         super().__init__(start_period, end_period, data, start_in, remove_after, period)
         self.mode = mode
@@ -578,7 +553,6 @@ class DirectMESSAGE(BaseMESSAGE):
             self._remove_after -= 1
             if not self._remove_after:
                 self._event_ctrl.emit(EventID._trigger_message_remove, self.parent, self)
-
 
     def generate_log_context(self,
                              success_context: Dict[str, Union[bool, Optional[Exception]]],
@@ -765,15 +739,11 @@ class DirectMESSAGE(BaseMESSAGE):
 
     async def _on_update(self, _, _init_options: Optional[dict], **kwargs):
         await self._close()
-        if "start_in" not in kwargs:
-            # This parameter does not appear as attribute, manual setting necessary
-            kwargs["start_in"] = None
 
-        if "start_period" not in kwargs:  # DEPRECATED, TODO: REMOVE IN FUTURE
-            kwargs["start_period"] = None
-
-        if "end_period" not in kwargs:  # DEPRECATED, TODO: REMOVE IN FUTURE
-            kwargs["end_period"] = None
+        # DEPRECATED => TODO: REMOVE in the future when this parameter is completely removed.
+        kwargs["start_in"] = None
+        kwargs["start_period"] = None
+        kwargs["end_period"] = None
 
         if "data" not in kwargs:
             kwargs["data"] = self._data

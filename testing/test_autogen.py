@@ -10,8 +10,6 @@ from daf.events import *
 
 import os
 import daf
-import asyncio
-import pytest
 
 
 async def test_autoguild(guilds, accounts: List[daf.ACCOUNT]):
@@ -21,9 +19,13 @@ async def test_autoguild(guilds, accounts: List[daf.ACCOUNT]):
     account = accounts[0]
     guild_include, guild_exclude = guilds
     auto_guild = daf.AutoGUILD(
-        "magic-.*-magic", "-321-",
+        include_pattern=daf.and_(daf.regex("magic-.*-magic"), daf.not_(daf.regex("-321-"))),
         messages=[
-            daf.TextMESSAGE(None, timedelta(seconds=1), "Hello World", daf.message.AutoCHANNEL("testpy-[0-9]", "testpy-[5-9]"))
+            daf.TextMESSAGE(
+                period=daf.FixedDurationPeriod(timedelta(seconds=1)),
+                data=daf.TextMessageData("Hello World"),
+                channels=daf.message.AutoCHANNEL(daf.and_(daf.regex("testpy-[0-9]"), daf.not_(daf.regex("testpy-[5-9]"))))
+            )
         ]
     )
     await account.add_server(auto_guild)
@@ -45,16 +47,16 @@ async def test_autochannel(guilds, channels, accounts):
         guild: daf.discord.Guild
         guild, _ = guilds
         text_channels, voice_channels = channels
-        auto_channel = daf.message.AutoCHANNEL("testpy-[0-2]", "testpy-[2-9]")
-        auto_channel2 = daf.message.AutoCHANNEL("testpy-[0-1]", "testpy-[1-9]")
+        auto_channel = daf.message.AutoCHANNEL(daf.and_(daf.regex("testpy-[0-2]"), daf.not_(daf.regex("testpy-[2-9]"))))
+        auto_channel2 = daf.message.AutoCHANNEL(daf.and_(daf.regex("testpy-[0-1]"), daf.not_(daf.regex("testpy-[1-9]"))))
 
         cwd = os.getcwd()
         os.chdir(os.path.dirname(__file__))
         daf_guild = daf.GUILD(
             guild,
             messages=[
-                tm := daf.TextMESSAGE(None, timedelta(seconds=20), "Hello World", auto_channel),
-                vc := daf.VoiceMESSAGE(None, timedelta(seconds=20), daf.FILE("testing123.mp3"), auto_channel2)
+                tm := daf.TextMESSAGE(period=daf.FixedDurationPeriod(timedelta(seconds=20)), data=daf.TextMessageData("Hello World"), channels=auto_channel),
+                vc := daf.VoiceMESSAGE(period=daf.FixedDurationPeriod(timedelta(seconds=20)), data=daf.VoiceMessageData(daf.FILE("testing123.mp3")), channels=auto_channel2)
             ]
         )
 

@@ -19,7 +19,11 @@ async def TEXT_MESSAGE(channels, guilds, accounts: List[daf.ACCOUNT]):
     guild = daf.GUILD(guilds[0], logging=True)
     await accounts[0].add_server(guild)
     guild._event_ctrl.remove_listener(EventID._trigger_message_ready, guild._advertise)
-    await guild.add_message(tm := daf.TextMESSAGE(None, timedelta(seconds=5), data="Hello World", channels=channels[0]))
+    await guild.add_message(tm := daf.TextMESSAGE(
+        period=daf.FixedDurationPeriod(timedelta(seconds=5)),
+        data=daf.TextMessageData("Hello World"),
+        channels=channels[0]
+    ))
     yield tm
     await accounts[0].remove_server(guild)
 
@@ -61,9 +65,9 @@ async def test_logging_json(TEXT_MESSAGE: daf.TextMESSAGE):
 
 
         data = [
-            "Hello World",
-            (daf.discord.Embed(title="Test"), "ABCD"),
-            (daf.discord.Embed(title="Test2"), "ABCDEFU"),
+            daf.TextMessageData("Hello World"),
+            daf.TextMessageData("ABCD", daf.discord.Embed(title="Test")),
+            daf.TextMessageData("ABCDEFU", daf.discord.Embed(title="Test2")),
         ]
 
         for d in data:
@@ -97,9 +101,9 @@ async def test_logging_sql(TEXT_MESSAGE: daf.TextMESSAGE):
         account_context = tm.parent.parent.generate_log_context()
 
         data = [
-            "Hello World",
-            (daf.discord.Embed(title="Test"), "ABCD"),
-            (daf.discord.Embed(title="Test2"), "ABCDEFU"),
+            daf.TextMessageData("Hello World"),
+            daf.TextMessageData("ABCD", daf.discord.Embed(title="Test")),
+            daf.TextMessageData("ABCDEFU", daf.discord.Embed(title="Test2")),
         ]
 
         for d in data:

@@ -18,7 +18,7 @@ async def TEXT_MESSAGE(channels, guilds, accounts: List[daf.ACCOUNT]):
     guild = daf.GUILD(guilds[0], logging=True)
     await accounts[0].add_server(guild)
     guild._event_ctrl.remove_listener(EventID._trigger_message_ready, guild._advertise)
-    await guild.add_message(tm := daf.TextMESSAGE(None, timedelta(seconds=5), data="Hello World", channels=channels[0]))
+    await guild.add_message(tm := daf.TextMESSAGE(period=daf.FixedDurationPeriod(timedelta(seconds=5)), data=daf.TextMessageData("Hello World"), channels=channels[0]))
     yield tm
     await accounts[0].remove_server(guild)
 
@@ -28,9 +28,8 @@ async def DIRECT_MESSAGE(accounts: List[daf.ACCOUNT]):
     user = daf.USER(TEST_USER_ID)
     await accounts[0].add_server(user)
     user._event_ctrl.remove_listener(EventID._trigger_message_ready, user._advertise)
-    TEXT_MESSAGE_TEST_MESSAGE = "Hello world", daf.discord.Embed(title="Hello world")
-    direct_message = daf.message.DirectMESSAGE(None, timedelta(seconds=5), TEXT_MESSAGE_TEST_MESSAGE, "send",
-                                                start_in=timedelta(0), remove_after=None)
+    TEXT_MESSAGE_TEST_MESSAGE = daf.TextMessageData("Hello world", daf.discord.Embed(title="Hello world"))
+    direct_message = daf.message.DirectMESSAGE(period=daf.FixedDurationPeriod(timedelta(seconds=5)), data=TEXT_MESSAGE_TEST_MESSAGE)
     await user.add_message(direct_message)
     yield direct_message
     await accounts[0].remove_server(user)
@@ -44,11 +43,15 @@ async def VOICE_MESSAGE(channels, guilds, accounts: List[daf.ACCOUNT]):
 
     cwd = os.getcwd()
     os.chdir(os.path.dirname(__file__))
-    VOICE_MESSAGE_TEST_MESSAGE = daf.FILE("testing123.mp3")
+    VOICE_MESSAGE_TEST_MESSAGE = daf.VoiceMessageData(daf.FILE("testing123.mp3"))
     os.chdir(cwd)
 
-    voice_message = daf.message.VoiceMESSAGE(None, timedelta(seconds=20), VOICE_MESSAGE_TEST_MESSAGE, channels[1],
-                                            volume=50, start_in=timedelta(), remove_after=None)
+    voice_message = daf.message.VoiceMESSAGE(
+        period=daf.FixedDurationPeriod(timedelta(seconds=20)),
+        data=VOICE_MESSAGE_TEST_MESSAGE,
+        channels=channels[1],
+        volume=50
+    )
     await guild.add_message(voice_message)
     yield voice_message
     await accounts[0].remove_server(guild)

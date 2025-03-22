@@ -18,5 +18,4 @@ from .remote import *
 from .responder import *
 from .messagedata import *
 
-
-VERSION = "4.1.2"
+VERSION = "4.2.0"
