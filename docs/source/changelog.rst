@@ -43,7 +43,7 @@ v4.2.0
 
   - :class:`daf.guild.AutoGUILD` and :class:`daf.message.AutoCHANNEL`:
 
-    - ``include_pattern``: :class:`TypeError` when using :class:`str`.
+    - ``include_pattern``: :class:`TypeError` when using :class:`str`. Logical operators are now required.
     - ``exclude_pattern``: :class:`NameError` when used.
 
   - :class:`daf.message.TextMESSAGE`,
@@ -53,6 +53,10 @@ v4.2.0
     - ``start_period``: :class:`NameError` when used.
     - ``end_period``: :class:`NameError` when used.
     - ``start_in``: :class:`NameError` when used.
+    - ``data`` parameter now requires subclasses of ``BaseMessageData`` instead of plain types.
+      Additionally, the ``data_function`` can no longer be used and has been removed completely.
+
+
 
 v4.1.1
 =====================
