@@ -144,7 +144,7 @@ class AutoGUILD:
             trace(
                 "Using text (str) on 'include_pattern' parameter of AutoGUILD is deprecated and has been removed!\n"
                 "Use logical operators instead (daf.logic). E. g., regex, contains, or_, ...\n"
-                f"E. g., use  {include_pattern} as the include_pattern parameter.",
+                f"E. g., use {include_pattern.__class__} as the include_pattern parameter.",
                 TraceLEVELS.ERROR,
                 exception_cls=TypeError
             )
@@ -154,7 +154,7 @@ class AutoGUILD:
             include_pattern = and_(include_pattern, not_(exclude_pattern))
             trace(
                 "'exclude_pattern' parameter is deprecated and has been removed!\n"
-                f"Use {include_pattern} instead at the include_pattern parameter.",
+                f"Use {include_pattern.__class__} instead at the include_pattern parameter.",
                 TraceLEVELS.ERROR,
                 exception_cls=NameError
             )

@@ -7,8 +7,6 @@ from datetime import timedelta, datetime
 from typeguard import typechecked
 from pathlib import Path
 
-from ..messagedata.dynamicdata import _DeprecatedDynamic
-
 from ..messagedata import BaseVoiceData, VoiceMessageData, FILE
 from ..misc import doc, instance_track, async_util
 from ..logging import sql
@@ -105,17 +103,6 @@ class VoiceMESSAGE(BaseChannelMessage):
                 "is deprecated on VoiceMESSAGE's data parameter! Planned for removal in 4.2.0",
                 TraceLEVELS.DEPRECATED
             )
-            # Transform to new data type            
-            if isinstance(data, _FunctionBaseCLASS):
-                data = _DeprecatedDynamic(data.fnc, *data.args, **data.kwargs)
-            else:
-                if isinstance(data, FILE):
-                    data = [data]
-
-                if not data:
-                    raise ValueError("'data' cannot be an empty list, use daf.VoiceMessageData!")
-
-                data = VoiceMessageData(data[0])
 
         super().__init__(start_period, end_period, data, channels, start_in, remove_after, period)
         self.volume = max(0, min(100, volume))  # Clamp the volume to 0-100 %

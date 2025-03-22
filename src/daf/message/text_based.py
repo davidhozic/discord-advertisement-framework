@@ -5,9 +5,6 @@ from typing import Any, Dict, List, Iterable, Optional, Union, Literal, Tuple, C
 from datetime import datetime, timedelta
 from typeguard import typechecked
 
-
-from ..messagedata.dynamicdata import _DeprecatedDynamic
-
 from .constraints import BaseMessageConstraint
 from ..messagedata import BaseTextData, TextMessageData, FILE
 from ..logging.tracing import trace, TraceLEVELS

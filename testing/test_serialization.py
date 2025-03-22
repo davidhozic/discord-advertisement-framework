@@ -3,22 +3,22 @@ from datetime import datetime, timedelta
 from test_util import *
 from tkclasswiz.convert import convert_to_object_info, convert_to_objects, ObjectInfo
 
+import daf_gui
 import pytest
 import daf
-
 
 @pytest.mark.parametrize(
     "test_obj",
     [
         daf.ACCOUNT("BB"),
         daf.GUILD(1),
-        daf.TextMESSAGE(None, 5, "Hello World", [1, 2]),
-        daf.AutoCHANNEL("HH"),
-        daf.AutoGUILD("test123"),
+        daf.TextMESSAGE(period=daf.FixedDurationPeriod(timedelta(seconds=5)), data=daf.TextMessageData("Hello World"), channels=[1, 2]),
+        daf.AutoCHANNEL(daf.regex("HH")),
+        daf.AutoGUILD(daf.regex("test123")),
         daf.discord.Embed(color=daf.discord.Color.red()),
-        daf.SeleniumCLIENT("12345", "12345", None),
+        daf.SeleniumCLIENT("12345", "12345"),
         daf.ACCOUNT(username="hello", password="world"),
-        daf.VoiceMESSAGE(None, 5, daf.FILE("Test", b'\xff\x51\x55'), daf.AutoCHANNEL("test"), 5, remove_after=5),
+        daf.VoiceMESSAGE(period=daf.FixedDurationPeriod(timedelta(seconds=5)), data=daf.VoiceMessageData(daf.FILE("Test", b'\xff\x51\x55')), channels=daf.AutoCHANNEL("test"), volume=5, remove_after=5),
         daf.DMResponder(
             daf.logic.regex("nft.*buy"),
             daf.DMResponse(daf.TextMessageData("Hello")),
