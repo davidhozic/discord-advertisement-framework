@@ -48,7 +48,6 @@ def register_extensions():
 def register_deprecations():
     register_deprecated(daf.AutoGUILD, "include_pattern", str)
     register_deprecated(daf.AutoGUILD, "exclude_pattern")
-    register_deprecated(daf.AutoGUILD, "auto_join")
 
     register_deprecated(daf.AutoCHANNEL, "include_pattern", str)
     register_deprecated(daf.AutoCHANNEL, "exclude_pattern")

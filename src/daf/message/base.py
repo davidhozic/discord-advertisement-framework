@@ -49,7 +49,11 @@ class BaseMESSAGE(ABC):
     This is the base class for all the different classes that
     represent a message you want to be sent into discord.
 
+    .. versionchanged:: v4.2.0
 
+        An exception will be raised when using ``start_period`` or ``end_period``.
+        The parameters have been deprecated since v4.0.0.
+    
     .. versionchanged:: v3.0
     
         - New ``remove_after`` property.
@@ -67,24 +71,21 @@ class BaseMESSAGE(ABC):
 
     Parameters
     -----------------
-    start_period: Union[int, timedelta, None]
-        If this this is not None, then it dictates the bottom limit for range of the randomized period. Set this to None
-                                         for a fixed sending period.
-    end_period: Union[int, timedelta],
-        If start_period is not None, this dictates the upper limit for range of the randomized period.
-        If start_period is None, then this dictates a fixed sending period in SECONDS,
-        eg. if you pass the value `5`, that means the message will be sent every 5 seconds.
-    data: inherited class dependant
-        The data to be sent to discord.
-    start_in: Optional[timedelta | datetime]
-        When should the message be first sent.
-        *timedelta* means the difference from current time, while *datetime* means actual first send time.
+    data: BaseTextData
+        The data to be sent. Can be TextMessageData or class inherited from DynamicMessageData
     remove_after: Optional[Union[int, timedelta, datetime]]
         Deletes the message after:
 
-        * int - provided amounts of sends
+        * int - provided amounts of successful sends to seperate channels.
         * timedelta - the specified time difference
         * datetime - specific date & time
+
+        .. versionchanged:: 2.10
+
+            Parameter ``remove_after`` of int type will now work at a channel level and
+            it nows means the SUCCESSFUL number of sends into each channel.
+    period: BaseMessagePeriod
+        The sending period. See :ref:`Message period` for possible types.
     """
     __slots__ = (
         "_id",
@@ -124,41 +125,19 @@ class BaseMESSAGE(ABC):
         if start_period is not None and start_period >= end_period:
             raise ValueError("'start_period' must be less than 'end_period'")
 
-        if end_period is not None:
+        if end_period is not None or start_period is not None:
             trace(
-                "'start_period' and 'end_period' are deprecated and will be removed in v4.2.0."
+                "'start_period' and 'end_period' are deprecated and have been removed."
                 " Use 'period' instead.",
-                TraceLEVELS.DEPRECATED
+                TraceLEVELS.ERROR,
+                exception_cls=NameError
             )
 
-            if period is None:
-                if start_in is not None:
-                    trace(
-                        f"'start_in' parameter is deprecated in {type(self).__name__}. "
-                        " Use the 'period' parameter to set both period and initial sending time.",
-                        TraceLEVELS.DEPRECATED
-                    )
-                    if isinstance(start_in, datetime):
-                        start_in = start_in.astimezone()
-                    else:
-                        start_in = datetime.now().astimezone() + start_in
-
-                if start_period is None:
-                    period = FixedDurationPeriod(end_period, start_in)
-                else:
-                    period = RandomizedDurationPeriod(start_period, end_period, start_in)
-            else:
-                raise TypeError(
-                    "Deprecated parameter 'start_period' / 'end_period' is given"
-                    " alongside the new'period' parameter."
-                    " DO NOT USE 'start_period' and 'end_period', they will be removed in the future."
-                )
-
-        elif start_in is not None:
-            raise TypeError(
-                "Deprecated parameter 'start_in' is given"
-                " alongside the new 'period' parameter."
-                " DO NOT USE 'start_in', it will be removed in the future."
+        if start_in is not None:
+            trace(
+                "'start_in' is deprecated and has been removed.",
+                TraceLEVELS.ERROR,
+                exception_cls=NameError
             )
 
         self.parent = None  # The xGUILD object this message is in (needed for update method).
@@ -401,7 +380,7 @@ class BaseMESSAGE(ABC):
     @abstractmethod
     async def _on_update(self, _, _init_options: Optional[dict], **kwargs):
         raise NotImplementedError
-    
+
     @async_util.with_semaphore("update_semaphore")
     async def _close(self):
         """
@@ -602,15 +581,12 @@ class BaseChannelMessage(BaseMESSAGE):
 
     async def _on_update(self, _, _init_options: Optional[dict], **kwargs):
         await self._close()
-        if "start_in" not in kwargs:
-            # This parameter does not appear as attribute, manual setting necessary
-            kwargs["start_in"] = None
 
-        if "start_period" not in kwargs:  # DEPRECATED, TODO: REMOVE IN FUTURE
-            kwargs["start_period"] = None
-
-        if "end_period" not in kwargs:  # DEPRECATED, TODO: REMOVE IN FUTURE
-            kwargs["end_period"] = None
+        # DEPRECATED, TODO: REMOVE IN FUTURE
+        # These parameters do not appear as attribute, manual setting necessary.
+        kwargs["start_in"] = None
+        kwargs["start_period"] = None
+        kwargs["end_period"] = None
 
         if "data" not in kwargs:
             kwargs["data"] = self._data

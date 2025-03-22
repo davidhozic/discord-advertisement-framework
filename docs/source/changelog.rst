@@ -37,6 +37,23 @@ Glossary
 Releases
 ---------------------
 
+v4.2.0
+=====================
+- Deprecated parameters will now raise an exception:
+
+  - :class:`daf.guild.AutoGUILD` and :class:`daf.message.AutoCHANNEL`:
+
+    - ``include_pattern``: :class:`TypeError` when using :class:`str`.
+    - ``exclude_pattern``: :class:`NameError` when used.
+
+  - :class:`daf.message.TextMESSAGE`,
+    :class:`daf.message.VoiceMESSAGE` and
+    :class:`daf.message.DirectMESSAGE`:
+
+    - ``start_period``: :class:`NameError` when used.
+    - ``end_period``: :class:`NameError` when used.
+    - ``start_in``: :class:`NameError` when used.
+
 v4.1.1
 =====================
 - Fixed segmentation-fault crash when using Python 3.12+.
