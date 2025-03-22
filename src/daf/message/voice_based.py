@@ -78,7 +78,7 @@ class VoiceMESSAGE(BaseChannelMessage):
     }
 
     # Deprecated. TODO: Remove in the future
-    _old_data_type = Union[FILE, list, tuple, set, _FunctionBaseCLASS]
+    _old_data_type = Union[FILE, list, tuple, set]
 
     @typechecked
     def __init__(
@@ -100,8 +100,9 @@ class VoiceMESSAGE(BaseChannelMessage):
         if not isinstance(data, BaseVoiceData):
             trace(
                 f"Using data types other than {[x.__name__ for x in BaseVoiceData.__subclasses__()]}, "
-                "is deprecated on VoiceMESSAGE's data parameter! Planned for removal in 4.2.0",
-                TraceLEVELS.DEPRECATED
+                "is deprecated on TextMESSAGE's data parameter! And has been removed",
+                TraceLEVELS.ERROR,
+                exception_cls=TypeError
             )
 
         super().__init__(start_period, end_period, data, channels, start_in, remove_after, period)

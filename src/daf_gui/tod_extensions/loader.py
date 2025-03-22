@@ -55,7 +55,6 @@ def register_deprecations():
     register_deprecated(daf.BaseMESSAGE, "start_period")
     register_deprecated(daf.BaseMESSAGE, "end_period")
     register_deprecated(daf.BaseMESSAGE, "start_in")
-    register_deprecated(daf._FunctionBaseCLASS)
     register_deprecated(
         daf.BaseMESSAGE,
         "data",

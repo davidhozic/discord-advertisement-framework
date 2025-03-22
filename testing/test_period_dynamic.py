@@ -43,12 +43,6 @@ async def test_text_period(GUILD: daf.GUILD, USER: daf.USER, channels):
 
     guild = GUILD
     user = USER
-
-    @daf.data_function
-    async def dynamic_getter_async(items: list):
-        item = items.pop(0)
-        items.append(item)
-        return item
     
     class SyncDynamicData(daf.DynamicMessageData):
         def __init__(self, items: list):

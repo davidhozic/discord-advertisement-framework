@@ -186,7 +186,7 @@ class AutoCHANNEL:
             init_options["parent"] = self.parent
             init_options["channel_getter"] = self.channel_getter
 
-        if "exclude_pattern" not in kwargs: # DEPRECATED; TODO: remove in 4.2.0
-            kwargs["exclude_pattern"] = None
+        # DEPRECATED => TODO: REMOVE in the future when this parameter is completely removed.
+        kwargs["exclude_pattern"] = None
 
         return await async_util.update_obj_param(self, init_options=init_options, **kwargs)

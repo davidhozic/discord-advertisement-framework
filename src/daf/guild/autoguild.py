@@ -448,6 +448,7 @@ class AutoGUILD:
             if "invite_track" not in kwargs:
                 kwargs["invite_track"] = list(self._invite_join_count.keys())
 
+            kwargs["exclude_pattern"] = None
             kwargs["messages"] = kwargs.pop("messages", self._messages)
             if init_options is None:
                 init_options = {"parent": self.parent, "event_ctrl": self._event_ctrl}

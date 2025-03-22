@@ -582,8 +582,7 @@ class BaseChannelMessage(BaseMESSAGE):
     async def _on_update(self, _, _init_options: Optional[dict], **kwargs):
         await self._close()
 
-        # DEPRECATED, TODO: REMOVE IN FUTURE
-        # These parameters do not appear as attribute, manual setting necessary.
+        # DEPRECATED => TODO: REMOVE in the future when this parameter is completely removed.
         kwargs["start_in"] = None
         kwargs["start_period"] = None
         kwargs["end_period"] = None
