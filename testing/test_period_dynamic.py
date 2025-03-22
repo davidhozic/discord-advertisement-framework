@@ -44,24 +44,32 @@ async def test_text_period(GUILD: daf.GUILD, USER: daf.USER, channels):
     guild = GUILD
     user = USER
     
-    @daf.data_function
-    def dynamic_getter(items: list):
-        item = items.pop(0)
-        items.append(item)
-        return item
-
-    @daf.data_function
-    async def dynamic_getter_async(items: list):
-        item = items.pop(0)
-        items.append(item)
-        return item
+    class SyncDynamicData(daf.DynamicMessageData):
+        def __init__(self, items: list):
+            super().__init__()
+            self.items = items
         
+        def get_data(self):
+            item = self.items.pop(0)
+            self.items.append(item)
+            return item
+
+    class AsyncDynamicData(daf.DynamicMessageData):
+        def __init__(self, items: list):
+            super().__init__()
+            self.items = items
+
+        async def get_data(self):
+            item = self.items.pop(0)
+            self.items.append(item)
+            return item
+
     data_ = [
-        "Hello world", daf.discord.Embed(title="Hello world"),
-        "Goodbye world", daf.discord.Embed(title="Goodbye world"),
+        daf.TextMessageData("Hello world", daf.discord.Embed(title="Hello world")),
+        daf.TextMessageData("Goodbye world", daf.discord.Embed(title="Goodbye world")),
     ]
-    TEXT_MESSAGE_TEST_MESSAGE = dynamic_getter(data_.copy())
-    DIRECT_MESSAGE_TEST_MESSAGE = dynamic_getter_async(data_.copy())
+    TEXT_MESSAGE_TEST_MESSAGE = SyncDynamicData(data_.copy())
+    DIRECT_MESSAGE_TEST_MESSAGE = AsyncDynamicData(data_.copy())
 
     # Preparation
     test_period_secs = TEST_SEND_PERIOD_TEXT.total_seconds()
@@ -75,8 +83,11 @@ async def test_text_period(GUILD: daf.GUILD, USER: daf.USER, channels):
     # Test TextMESSAGE
     assert len(guild.parent.servers) == 2
     await asyncio.sleep(10)
-    text_message = daf.message.TextMESSAGE(None, TEST_SEND_PERIOD_TEXT, TEXT_MESSAGE_TEST_MESSAGE, [text_channels[0]],
-                                        "send", start_in=TEST_SEND_PERIOD_TEXT, remove_after=None)
+    text_message = daf.message.TextMESSAGE(
+        period=daf.FixedDurationPeriod(TEST_SEND_PERIOD_TEXT, next_send_time=TEST_SEND_PERIOD_TEXT),
+        data=TEXT_MESSAGE_TEST_MESSAGE,
+        channels=[text_channels[0]]
+    )
     await guild.add_message(text_message)
     for item in data_:
         start = time.time()
@@ -94,8 +105,10 @@ async def test_text_period(GUILD: daf.GUILD, USER: daf.USER, channels):
     await guild.remove_message(text_message)
     await asyncio.sleep(10)
     # Test DirectMESSAGE
-    direct_message = daf.message.DirectMESSAGE(None, TEST_SEND_PERIOD_TEXT, DIRECT_MESSAGE_TEST_MESSAGE, "send",
-                                                start_in=TEST_SEND_PERIOD_TEXT, remove_after=None)
+    direct_message = daf.message.DirectMESSAGE(
+        period=daf.FixedDurationPeriod(TEST_SEND_PERIOD_TEXT, next_send_time=TEST_SEND_PERIOD_TEXT),
+        data=DIRECT_MESSAGE_TEST_MESSAGE,
+    )
     await user.add_message(direct_message)
     wait_for_message = lambda: client.wait_for("message",
                                         check=lambda message: 
@@ -124,19 +137,23 @@ async def test_voice_period(
     client: daf.discord.Client = GUILD.parent.client
     voice_channels = channels[1]
     guild = GUILD
+    
+    class AsyncDynamicData(daf.DynamicMessageData):
+        def __init__(self, items: list):
+            super().__init__()
+            self.items = items
 
-    @daf.data_function
-    def dynamic_getter(items: list):
-        item = items.pop(0)
-        items.append(item)
-        return item[1]
+        async def get_data(self):
+            item = self.items.pop(0)
+            self.items.append(item)
+            return item
 
     cwd = os.getcwd()
     os.chdir(os.path.dirname(__file__))
     data_ = [
-        (8, daf.FILE("testing123.mp3"))
+        daf.VoiceMessageData(daf.FILE("testing123.mp3"))
     ]
-    VOICE_MESSAGE_TEST_MESSAGE = dynamic_getter(data_.copy())
+    VOICE_MESSAGE_TEST_MESSAGE = AsyncDynamicData(data_.copy())
     os.chdir(cwd)
 
     test_period_secs = TEST_SEND_PERIOD_VOICE.total_seconds()
@@ -146,8 +163,12 @@ async def test_voice_period(
 
     # Test VoiceMESSAGE
     await asyncio.sleep(10)
-    voice_message = daf.message.VoiceMESSAGE(None, TEST_SEND_PERIOD_VOICE, VOICE_MESSAGE_TEST_MESSAGE, [voice_channels[0]],
-                                            volume=50, start_in=TEST_SEND_PERIOD_VOICE, remove_after=None)
+    voice_message = daf.message.VoiceMESSAGE(
+        period=daf.FixedDurationPeriod(TEST_SEND_PERIOD_VOICE, TEST_SEND_PERIOD_VOICE),
+        data=VOICE_MESSAGE_TEST_MESSAGE,
+        channels=[voice_channels[0]],
+        volume=50
+    )
     await guild.add_message(voice_message)
     for item in data_:
         start = time.time()

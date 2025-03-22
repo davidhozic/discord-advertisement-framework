@@ -64,20 +64,24 @@ class AutoCHANNEL:
         exclude_pattern: Optional[str] = None,
     ) -> None:
         if isinstance(include_pattern, str):
-            trace(
-                "Using text (str) on 'include_pattern' parameter of AutoGUILD is deprecated (planned for removal in 4.2.0)!\n"
-                "Use logical operators instead (daf.logic). E. g., regex, contains, or_, ...\n",
-                TraceLEVELS.DEPRECATED
-            )
             include_pattern = regex(re.sub(r"\s*\|\s*", '', include_pattern))
+            trace(
+                "Using text (str) on 'include_pattern' parameter of AutoCHANNEL is deprecated and has been removed!\n"
+                "Use logical operators instead (daf.logic). E. g., regex, contains, or_, ...\n"
+                f"E. g., use {include_pattern.__class__} as the include_pattern parameter.",
+                TraceLEVELS.ERROR,
+                exception_cls=TypeError
+            )
 
         if exclude_pattern is not None:
-            trace(
-                "'exclude_pattern' parameter is deprecated (planned for removal in 4.2.0)!\n",
-                TraceLEVELS.DEPRECATED
-            )
             exclude_pattern = regex(re.sub(r"\s*\|\s*", '', exclude_pattern))
             include_pattern = and_(include_pattern, not_(exclude_pattern))
+            trace(
+                "'exclude_pattern' parameter is deprecated and has been removed!\n"
+                f"Use {include_pattern.__class__} instead at the include_pattern parameter.",
+                TraceLEVELS.ERROR,
+                exception_cls=NameError
+            )
 
         self.include_pattern = include_pattern
         self.parent = None
@@ -182,7 +186,7 @@ class AutoCHANNEL:
             init_options["parent"] = self.parent
             init_options["channel_getter"] = self.channel_getter
 
-        if "exclude_pattern" not in kwargs: # DEPRECATED; TODO: remove in 4.2.0
-            kwargs["exclude_pattern"] = None
+        # DEPRECATED => TODO: REMOVE in the future when this parameter is completely removed.
+        kwargs["exclude_pattern"] = None
 
         return await async_util.update_obj_param(self, init_options=init_options, **kwargs)

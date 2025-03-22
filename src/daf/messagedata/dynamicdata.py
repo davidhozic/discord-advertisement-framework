@@ -24,6 +24,11 @@ class DynamicMessageData(BaseTextData, BaseVoiceData):
     This needs to be inherited and the subclass needs to implement
     the ``get_data`` method, which accepts no parameters (pass those through the class).
 
+    .. versionchanged:: v4.2.0
+
+        The method ``get_data`` no longer allows data to be returned in the deprecated format.
+        Now :class:`daf.messagedata.TextMessageData` or :class:`daf.messagedata.VoiceMessageData`
+        must be returned.
 
     Example
     -------------
@@ -68,43 +73,13 @@ class DynamicMessageData(BaseTextData, BaseVoiceData):
                 if isinstance(result, BaseMessageData):
                     return await result.to_dict()
                 else:
-                    ########################################################
-                    # DEPRECATED, compatibility only code! TODO: remove!
-                    if not isinstance(result, (list, tuple, set)):
-                        result = [result]
-
-                    audio_data = dict(file=None)
-                    text_data = dict(content=None, embed=None, files=[])
-                    for item in result:
-                        if isinstance(item, str):
-                            text_data["content"] = item
-                        elif isinstance(item, Embed):
-                            text_data["embed"] = item
-                        elif isinstance(item, FILE):
-                            # A bit ambiguous, assume audio files are always mp3
-                            if item.filename.endswith(".mp3"):
-                                audio_data["file"] = item
-                                break
-                            else:
-                                text_data["files"].append(item)
-
-                    if any(text_data.values()):
-                        return await TextMessageData(**text_data).to_dict()
-                    if any(audio_data.values()):
-                        return await VoiceMessageData(**audio_data).to_dict()
-                    ########################################################
+                    trace(
+                        "Instance of DynamicMessageData returned invalid data.\n"
+                        "Only None (to ignore), TextMessageData or VoiceMessageData are allowed.",
+                        TraceLEVELS.ERROR,
+                    )
 
         except Exception as exc:
             trace("Error dynamically obtaining data", TraceLEVELS.ERROR, exc)
 
         return {}
-
-
-class _DeprecatedDynamic(DynamicMessageData):
-    def __init__(self, fnc, *args, **kwargs) -> None:
-        self.args = args
-        self.kwargs = kwargs
-        self.fnc = fnc
-    
-    def get_data(self):
-        return self.fnc(*self.args, **self.kwargs)

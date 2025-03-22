@@ -48,7 +48,6 @@ def register_extensions():
 def register_deprecations():
     register_deprecated(daf.AutoGUILD, "include_pattern", str)
     register_deprecated(daf.AutoGUILD, "exclude_pattern")
-    register_deprecated(daf.AutoGUILD, "auto_join")
 
     register_deprecated(daf.AutoCHANNEL, "include_pattern", str)
     register_deprecated(daf.AutoCHANNEL, "exclude_pattern")
@@ -56,8 +55,6 @@ def register_deprecations():
     register_deprecated(daf.BaseMESSAGE, "start_period")
     register_deprecated(daf.BaseMESSAGE, "end_period")
     register_deprecated(daf.BaseMESSAGE, "start_in")
-    register_deprecated(daf.messagedata.dynamicdata._DeprecatedDynamic)
-    register_deprecated(daf._FunctionBaseCLASS)
     register_deprecated(
         daf.BaseMESSAGE,
         "data",
@@ -203,7 +200,6 @@ def register_conv_guild():
         daf.web.SeleniumCLIENT,
         {k: f"_{k}" for k in get_annotations(daf.web.SeleniumCLIENT)}
     )
-
 
     register_object_objectinfo_rule(
         daf.discord.Guild,

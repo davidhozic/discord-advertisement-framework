@@ -85,8 +85,8 @@ async def test_removal_messages(GUILDSUSER: Tuple[GUILD, GUILD, USER]):
     await G1.update(removal_buffer_length=0)
     await U1.update(removal_buffer_length=0)
 
-    await G1.add_message(TM := TextMESSAGE(None, timedelta(seconds=5), "Test", daf.AutoCHANNEL("test")))
-    await U1.add_message(DM := DirectMESSAGE(None, timedelta(seconds=5), "Test"))
+    await G1.add_message(TM := TextMESSAGE(period=daf.FixedDurationPeriod(timedelta(seconds=5)), data=daf.TextMessageData("Test"), channels=daf.AutoCHANNEL(daf.regex("test"))))
+    await U1.add_message(DM := DirectMESSAGE(period=daf.FixedDurationPeriod(timedelta(seconds=5)), data=daf.TextMessageData("Test")))
 
     for GG, MM in ((G1, TM), (U1, DM)):
         assert len(GG.removed_messages) == 0

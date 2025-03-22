@@ -140,20 +140,24 @@ class AutoGUILD:
             invite_track = []
 
         if isinstance(include_pattern, str):
-            trace(
-                "Using text (str) on 'include_pattern' parameter of AutoGUILD is deprecated (planned for removal in 4.2.0)!\n"
-                "Use logical operators instead (daf.logic). E. g., regex, contains, or_, ...\n",
-                TraceLEVELS.DEPRECATED
-            )
             include_pattern = regex(re.sub(r"\s*\|\s*", '', include_pattern))
+            trace(
+                "Using text (str) on 'include_pattern' parameter of AutoGUILD is deprecated and has been removed!\n"
+                "Use logical operators instead (daf.logic). E. g., regex, contains, or_, ...\n"
+                f"E. g., use {include_pattern.__class__} as the include_pattern parameter.",
+                TraceLEVELS.ERROR,
+                exception_cls=TypeError
+            )
 
         if exclude_pattern is not None:
-            trace(
-                "'exclude_pattern' parameter is deprecated (planned for removal in 4.2.0)!\n",
-                TraceLEVELS.DEPRECATED
-            )
             exclude_pattern = regex(re.sub(r"\s*\|\s*", '', exclude_pattern))
             include_pattern = and_(include_pattern, not_(exclude_pattern))
+            trace(
+                "'exclude_pattern' parameter is deprecated and has been removed!\n"
+                f"Use {include_pattern.__class__} instead at the include_pattern parameter.",
+                TraceLEVELS.ERROR,
+                exception_cls=NameError
+            )
 
         self.include_pattern = include_pattern
         self._remove_after = remove_after
@@ -163,7 +167,8 @@ class AutoGUILD:
         if auto_join is not None:  # TODO: remove in future after feature is reenabled.
             auto_join = None
             trace(
-                "Automatic join feature is currently disabled and will not work. It will be reenabled in a future version.",
+                "Automatic join feature is currently disabled and will not work. It will be reenabled in a future version\n"
+                "when a suitable new server provider is found",
                 TraceLEVELS.WARNING
             )
 
@@ -443,9 +448,7 @@ class AutoGUILD:
             if "invite_track" not in kwargs:
                 kwargs["invite_track"] = list(self._invite_join_count.keys())
 
-            if "exclude_pattern" not in kwargs: # DEPRECATED; TODO: remove in 4.2.0
-                kwargs["exclude_pattern"] = None
-
+            kwargs["exclude_pattern"] = None
             kwargs["messages"] = kwargs.pop("messages", self._messages)
             if init_options is None:
                 init_options = {"parent": self.parent, "event_ctrl": self._event_ctrl}

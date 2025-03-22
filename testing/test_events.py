@@ -24,7 +24,11 @@ async def CONTROLLERS():
             (EventID.g_daf_shutdown, {}),
             (
                 EventID._trigger_message_ready,
-                {"server": None, "message": daf.TextMESSAGE(None, timedelta(seconds=5), "Hello World", daf.AutoCHANNEL("test"))}
+                {"server": None, "message": daf.TextMESSAGE(
+                        period=daf.FixedDurationPeriod(timedelta(seconds=5)),
+                        data=daf.TextMessageData("Hello World"),
+                        channels=daf.message.AutoCHANNEL(daf.regex("test"))
+                    )}
             ),
         ]
 )
