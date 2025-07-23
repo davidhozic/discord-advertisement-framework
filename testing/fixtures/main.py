@@ -9,10 +9,7 @@ import daf
 
 TEST_TOKEN1, TEST_TOKEN2 = os.environ.get("DISCORD_TOKEN", None).split(';')
 TEST_GUILD_ID = 863071397207212052
-TEST_CATEGORY_NAME = "RUNNING-TEST"
-TEST_TEXT_CHANNEL_NAME_FORM = "PYTEST"
 TEST_TEXT_CHANNEL_NUM = 3
-TEST_VOICE_CHANNEL_NAME_FORM = "PYTEST_VOICE"
 TEST_VOICE_CHANNEL_NUM = 2
 
 
@@ -65,14 +62,14 @@ async def guilds(accounts: List[daf.ACCOUNT]):
             guild_include = guild
             break
     else:
-        guild_include = await client.create_guild(name="magic-123-magic")
+        raise RuntimeError("Unable to find guild magic-123-magic")
 
     for guild in client.guilds:
         if guild.name == "magic-321-magic":
             guild_exclude = guild
             break
     else:
-        guild_exclude = await client.create_guild(name="magic-321-magic")
+        raise RuntimeError("Unable to find guild magic-321-magic")
 
     return guild_include, guild_exclude
 
