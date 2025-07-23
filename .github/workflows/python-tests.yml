@@ -37,13 +37,13 @@ jobs:
     - name: Test version compatibility
       env:
         DISCORD_TOKEN: ${{secrets.DATT}}
-      if: ${{ matrix.python-version != 3.9 }}
+      if: ${{ matrix.python-version != 3.10 }}
       run: |
         pytest -v testing/test_period_dynamic.py  
     - name: Test all
       env:
         DISCORD_TOKEN: ${{secrets.DATT}}
-      if: ${{ matrix.python-version == 3.9 }}
+      if: ${{ matrix.python-version == 3.13 }}
       run: |
         pytest -v -m "not group_remote"
         pytest -v -m "group_remote"
