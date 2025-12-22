@@ -36,8 +36,7 @@ SQL_TABLE_CACHE_SIZE = 1000
 DIALECT_CONN_MAP = {
     "sqlite": "aiosqlite",
     "mssql": "pymssql",
-    "postgresql": "asyncpg",
-    "mysql": "asyncmy"
+    "postgresql": "asyncpg"
 }
 # ------------------------------------ Optional ------------------------------------
 try:
@@ -252,7 +251,7 @@ class LoggerSQL(logging.LoggerBASE):
                  server: Optional[str] = None,
                  port: Optional[int] = None,
                  database: Optional[str] = None,
-                 dialect: Literal["sqlite", "mssql", "postgresql", "mysql"] = None,
+                 dialect: Literal["sqlite", "mssql", "postgresql"] = None,
                  fallback: Optional[logging.LoggerBASE] = ...):
 
         if not SQL_INSTALLED:

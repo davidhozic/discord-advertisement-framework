@@ -183,8 +183,7 @@ The following dialects are supported:
 
 - Microsoft SQL Server
 - PostgreSQL
-- SQLite,
-- MySQL
+- SQLite
 
 
 Usage
@@ -199,7 +198,7 @@ For daf to use SQL logging, you need to pass the :func:`~daf.core.run` function 
 
 Features
 --------------------------------
-- Multiple dialects (sqlite, mssql, postgresql, mysql)
+- Multiple dialects (sqlite, mssql, postgresql)
 - Automatic creation of the schema
 - Caching for faster logging
 - Low redundancy for reduced file size

@@ -37,6 +37,13 @@ Glossary
 Releases
 ---------------------
 
+v5.0.0
+=====================
+- |BREAK_CH| Removed MySQL database support from :class:`~daf.logging.sql.LoggerSQL` due to the ``asyncmy`` 
+  dependency no longer being maintained. The following dialects are now supported: ``sqlite``, ``mssql``, 
+  and ``postgresql``.
+
+
 v4.2.0
 =====================
 - Deprecated parameters will now raise an exception:
