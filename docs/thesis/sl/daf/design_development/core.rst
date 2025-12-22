@@ -280,12 +280,11 @@ SQL beleženje
 SQL beleženje deluje precej drugače kot delujeta JSON beleženje in CSV beleženje, saj se podatki shranjujejo
 v podatkovno bazo, ki je v primeru uporabe SQLite dialekta lahko tudi datoteka.
 
-Beleženje je omogočeno v štirih SQL dialektih:
+Beleženje je omogočeno v treh SQL dialektih:
 
 1. SQLite,
 2. Microsoft SQL Server (T-SQL),
-3. PostgreSQL,
-4. MySQL/MariaDB.
+3. PostgreSQL.
 
 Za čim bolj univerzalno implementacijo na vseh dialektih je bila pri razvoju uporabljena knjižnica :mod:`SQLAlchemy`.
 
