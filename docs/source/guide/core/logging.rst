@@ -181,9 +181,9 @@ Dialects
 The dialect is selected via the ``dialect`` parameter in :class:`~daf.logging.sql.LoggerSQL`.
 The following dialects are supported:
 
+- SQLite
 - Microsoft SQL Server
 - PostgreSQL
-- SQLite
 
 
 Usage
