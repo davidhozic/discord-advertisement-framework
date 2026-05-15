@@ -81,7 +81,7 @@ class AutoGUILD:
     remove_after: Optional[Union[timedelta, datetime]] = None
         When to remove this object from the shilling list.
     messages: List[BaseChannelMessage]
-        List of messages with channels. This includes TextMESSAGE and VoiceMESSAGE.
+        List of messages with channels. This includes TextMESSAGE.
     logging: Optional[bool] = False
         Set to True if you want the guilds generated to log
         sent messages.

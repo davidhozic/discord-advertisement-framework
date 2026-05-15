@@ -18,7 +18,6 @@ DEPRECATION_NOTICES = {
         ("'exclude_pattern' parameter", "4.2.0", "Exclusion can now be done with 'include_pattern'")
     ],
     daf.TextMESSAGE: [("'start_period' & 'end_period' & 'start_in'", "4.2.0", "Replaced with 'period' parameter")],
-    daf.VoiceMESSAGE: [("'start_period' & 'end_period' & 'start_in'", "4.2.0", "Replaced with 'period' parameter")],
     daf.DirectMESSAGE: [("'start_period' & 'end_period' & 'start_in'", "4.2.0", "Replaced with 'period' parameter")],
 }
 

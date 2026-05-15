@@ -227,7 +227,7 @@ def register_conv_message():
         # Not in AutoGUILD => Initialized, next_send_time should be start_in
         return message.period
 
-    for item in {daf.TextMESSAGE, daf.VoiceMESSAGE, daf.DirectMESSAGE}:
+    for item in {daf.TextMESSAGE, daf.DirectMESSAGE}:
         m = {k: k for k in item.__init__.__annotations__}
         m["data"] = "_data"
         m["period"] = get_period
@@ -241,11 +241,6 @@ def register_conv_message():
     register_object_objectinfo_rule(
         daf.TextMESSAGE, 
         channels=channels
-    )
-
-    register_object_objectinfo_rule(
-        daf.VoiceMESSAGE,
-        channels=channels        
     )
 
 
