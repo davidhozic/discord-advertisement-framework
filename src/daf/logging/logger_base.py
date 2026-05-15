@@ -88,7 +88,7 @@ class LoggerBASE(ABC):
         after: Union[datetime, None] = None,
         before: Union[datetime, None] = None,
         guild_type: Union[Literal["USER", "GUILD"], None] = None,
-        message_type: Union[Literal["TextMESSAGE", "VoiceMESSAGE", "DirectMESSAGE"], None] = None,
+        message_type: Union[Literal["TextMESSAGE", "DirectMESSAGE"], None] = None,
         sort_by: Literal["successful", "failed", "guild_snow", "guild_name", "author_snow", "author_name"] = "successful",
         sort_by_direction: Literal["asc", "desc"] = "desc",
         limit: int = 500,
@@ -109,7 +109,7 @@ class LoggerBASE(ABC):
             Only count messages sent before the datetime.
         guild_type: Literal["USER", "GUILD"] | None,
             Type of guild.
-        message_type: Literal["TextMESSAGE", "VoiceMESSAGE", "DirectMESSAGE"] | None,
+        message_type: Literal["TextMESSAGE", "DirectMESSAGE"] | None,
             Type of message.
         sort_by: Literal["successful", "failed", "guild_snow", "guild_name", "author_snow", "author_name"],
             Sort items by selected.
@@ -148,7 +148,7 @@ class LoggerBASE(ABC):
             before: Union[datetime, None] = None,
             success_rate: Tuple[float, float] = (0, 100),
             guild_type: Union[Literal["USER", "GUILD"], None] = None,
-            message_type: Union[Literal["TextMESSAGE", "VoiceMESSAGE", "DirectMESSAGE"], None] = None,
+            message_type: Union[Literal["TextMESSAGE", "DirectMESSAGE"], None] = None,
             sort_by: Literal["timestamp", "success_rate"] = "timestamp",
             sort_by_direction: Literal["asc", "desc"] = "desc",
             limit: int = 500,

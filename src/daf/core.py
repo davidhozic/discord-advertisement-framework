@@ -356,14 +356,14 @@ async def add_object(obj: Union[guild.USER, guild.GUILD, guild.AutoGUILD],
 
 @overload
 @doc.doc_category("Dynamic mod.", True)
-async def add_object(obj: Union[message.DirectMESSAGE, message.TextMESSAGE, message.VoiceMESSAGE],
+async def add_object(obj: Union[message.DirectMESSAGE, message.TextMESSAGE],
                      snowflake: Union[guild.GUILD, guild.USER]) -> None:
     """
     Adds a message to the daf.
 
     Parameters
     -----------
-    obj: message.DirectMESSAGE | message.TextMESSAGE | message.VoiceMESSAGE
+    obj: message.DirectMESSAGE | message.TextMESSAGE
         The message object to add into the daf.
     snowflake: guild.GUILD | guild.USER
         Which guild/user to add it to (can be snowflake id or a framework BaseGUILD object or

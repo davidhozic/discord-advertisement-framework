@@ -392,8 +392,8 @@ class GUILD(BaseGUILD):
     ------------
     snowflake: Union[int, discord.Guild]
         Discord's snowflake ID of the guild or discord.Guild object.
-    messages: Optional[List[Union[TextMESSAGE, VoiceMESSAGE]]]
-        Optional list of TextMESSAGE/VoiceMESSAGE objects.
+    messages: Optional[List[TextMESSAGE]]
+        Optional list of TextMESSAGE objects.
     logging: Optional[bool]
         Optional variable dictating whatever to log
         sent messages inside this guild.
@@ -515,7 +515,7 @@ class GUILD(BaseGUILD):
 
     # API
     @typechecked
-    def add_message(self, message: Union[TextMESSAGE, VoiceMESSAGE]):
+    def add_message(self, message: TextMESSAGE):
         return self._event_ctrl.emit(EventID._trigger_message_add, self, message)
 
     def generate_invite_log_context(self, member: discord.Member, invite_id: str) -> dict:
@@ -549,7 +549,7 @@ class GUILD(BaseGUILD):
         }
 
     # Event Handlers
-    async def _on_add_message(self, _, message: Union[TextMESSAGE, VoiceMESSAGE]):
+    async def _on_add_message(self, _, message: TextMESSAGE):
         exc = await message.initialize(
             parent=self,
             event_ctrl=self._event_ctrl,
@@ -697,7 +697,7 @@ class USER(BaseGUILD):
         )
 
     # Event Handlers
-    async def _on_add_message(self, _, message: Union[VoiceMESSAGE, VoiceMESSAGE]):
+    async def _on_add_message(self, _, message: DirectMESSAGE):
         exc = await message.initialize(parent=self, event_ctrl=self._event_ctrl, guild=self._apiobject)
         if exc is not None:
             raise exc

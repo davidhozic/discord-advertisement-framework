@@ -283,22 +283,6 @@ CONVERSION_ATTRS[message.TextMESSAGE] = {
     },
 }
 
-CONVERSION_ATTRS[message.VoiceMESSAGE] = {
-    "attrs": attributes.get_all_slots(message.VoiceMESSAGE),
-    "attrs_restore": {
-        "update_semaphore": asyncio.Semaphore(1),
-        "parent": None,
-        "channel_getter": None,
-        "_event_ctrl": None,
-        "_timer_handle": None,
-        "_removal_timer": None,
-    },
-    "attrs_convert": {
-        "channels": CHANNEL_LAMBDA
-    },
-}
-
-
 CONVERSION_ATTRS[message.DirectMESSAGE] = {
     "attrs": attributes.get_all_slots(message.DirectMESSAGE),
     "attrs_restore": {
@@ -311,7 +295,6 @@ CONVERSION_ATTRS[message.DirectMESSAGE] = {
         "_removal_timer": None,
     },
 }
-
 
 def convert_object_to_semi_dict(to_convert: Any, only_ref: bool = False) -> Mapping:
     """
