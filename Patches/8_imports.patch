@@ -76,6 +76,52 @@ index b9d6f8e..a310c50 100644
  
  if TYPE_CHECKING:
      from typing import Awaitable, Callable
+diff --git a/src/_discord/commands/permissions.py b/src/_discord/commands/permissions.py
+index daf633b..08c2713 100644
+--- a/src/_discord/commands/permissions.py
++++ b/src/_discord/commands/permissions.py
+@@ -54,7 +54,7 @@ def default_permissions(**perms: bool) -> Callable:
+ 
+     .. code-block:: python3
+ 
+-        from discord import default_permissions
++        from _discord import default_permissions
+ 
+         @bot.slash_command()
+         @default_permissions(manage_messages=True)
+@@ -89,7 +89,7 @@ def guild_only() -> Callable:
+ 
+     .. code-block:: python3
+ 
+-        from discord import guild_only
++        from _discord import guild_only
+ 
+         @bot.slash_command()
+         @guild_only()
+@@ -120,7 +120,7 @@ def is_nsfw() -> Callable:
+ 
+     .. code-block:: python3
+ 
+-        from discord import is_nsfw
++        from _discord import is_nsfw
+ 
+         @bot.slash_command()
+         @is_nsfw()
+diff --git a/src/_discord/components.py b/src/_discord/components.py
+index b0672c0..a221b3e 100644
+--- a/src/_discord/components.py
++++ b/src/_discord/components.py
+@@ -604,8 +604,8 @@ class SelectDefaultValue:
+         inst: SelectDefaultValue | None = None,
+     ) -> SelectDefaultValue:
+         # preventing >circular imports<
+-        from discord import Member, Object, Role, User, abc
+-        from discord.user import _UserTag
++        from _discord import Member, Object, Role, User, abc
++        from _discord.user import _UserTag
+ 
+         instances_mapping: dict[
+             type, tuple[tuple[ComponentType, ...], SelectDefaultValueType]
 diff --git a/src/_discord/ext/bridge/bot.py b/src/_discord/ext/bridge/bot.py
 index 9e2c619..12071d3 100644
 --- a/src/_discord/ext/bridge/bot.py
@@ -115,18 +161,20 @@ index 8e7f941..f771b5f 100644
  from ..commands import Context
  
 diff --git a/src/_discord/ext/bridge/core.py b/src/_discord/ext/bridge/core.py
-index e61daa5..31aa6ec 100644
+index e61daa5..ab8b260 100644
 --- a/src/_discord/ext/bridge/core.py
 +++ b/src/_discord/ext/bridge/core.py
-@@ -29,7 +29,7 @@ import inspect
+@@ -29,8 +29,8 @@ import inspect
  from collections.abc import Iterator
  from typing import TYPE_CHECKING, Any, Callable
  
 -import discord.commands.options
+-from discord import (
 +import _discord.commands.options
- from discord import (
++from _discord import (
      ApplicationCommand,
      Attachment,
+     Option,
 diff --git a/src/_discord/ext/commands/bot.py b/src/_discord/ext/commands/bot.py
 index d348b6c..0e750cf 100644
 --- a/src/_discord/ext/commands/bot.py
@@ -345,3 +393,56 @@ index 0c57392..7090dfb 100644
  
  from .asset import Asset
  from .collectibles import Nameplate
+diff --git a/src/_discord/utils.py b/src/_discord/utils.py
+index 37b7c5f..78002f5 100644
+--- a/src/_discord/utils.py
++++ b/src/_discord/utils.py
+@@ -65,7 +65,7 @@ from typing import (
+ )
+ 
+ if TYPE_CHECKING:
+-    from discord import (
++    from _discord import (
+         Client,
+         VoiceChannel,
+         TextChannel,
+@@ -674,7 +674,7 @@ async def get_or_fetch(
+     :exc:`InvalidData`
+         Raised when the object resolves to a different guild.
+     """
+-    from discord import AppEmoji, Client, Guild, Member, Role, User
++    from _discord import AppEmoji, Client, Guild, Member, Role, User
+ 
+     if object_id is None:
+         return default if default is not MISSING else None
+@@ -744,7 +744,7 @@ async def get_or_fetch(
+ @functools.lru_cache(maxsize=1)
+ def _get_string_to_type_map() -> dict[str, type]:
+     """Return a cached map of lowercase strings -> discord types."""
+-    from discord import AppEmoji, Guild, Member, Role, User, abc, emoji
++    from _discord import AppEmoji, Guild, Member, Role, User, abc, emoji
+ 
+     return {
+         "channel": abc.GuildChannel,
+@@ -760,7 +760,7 @@ def _get_string_to_type_map() -> dict[str, type]:
+ @functools.lru_cache(maxsize=1)
+ def _get_getter_fetcher_map() -> dict[type, tuple[_Getter, _Fetcher]]:
+     """Return a cached map of type names -> (getter, fetcher) functions."""
+-    from discord import Guild, Member, Role, User, abc, emoji
++    from _discord import Guild, Member, Role, User, abc, emoji
+ 
+     base_map: dict[type, tuple[_Getter, _Fetcher]] = {
+         Member: (
+diff --git a/src/_discord/webhook/async_.py b/src/_discord/webhook/async_.py
+index c9093f7..6fb075b 100644
+--- a/src/_discord/webhook/async_.py
++++ b/src/_discord/webhook/async_.py
+@@ -1146,7 +1146,7 @@ class Webhook(BaseWebhook):
+ 
+     .. code-block:: python3
+ 
+-        from discord import Webhook
++        from _discord import Webhook
+         import aiohttp
+ 
+         async def foo():
