@@ -29,7 +29,7 @@ __all__ = (
 
 
 T = TypeVar("T")
-ChannelType = Union[discord.TextChannel, discord.Thread, discord.VoiceChannel]
+ChannelType = Union[discord.TextChannel, discord.Thread]
 
 # Configuration
 # ----------------------

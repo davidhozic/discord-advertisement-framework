@@ -37,6 +37,16 @@ Glossary
 Releases
 ---------------------
 
+|UNRELEASED|
+=====================
+
+.. rubric:: Removed:
+
+- Voice functionality. It was hard to properly maintain, nor did it add any real value, as
+  voice advertisements aren't effective as it requires users to be present in the voice channel
+  at the time of sending.
+
+
 v4.2.0
 =====================
 - Deprecated parameters will now raise an exception:

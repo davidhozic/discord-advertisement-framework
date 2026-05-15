@@ -46,9 +46,8 @@ async def test_autochannel(guilds, channels, accounts):
     try:
         guild: daf.discord.Guild
         guild, _ = guilds
-        text_channels, voice_channels = channels
+        text_channels, _ = channels
         auto_channel = daf.message.AutoCHANNEL(daf.and_(daf.regex("testpy-[0-2]"), daf.not_(daf.regex("testpy-[2-9]"))))
-        auto_channel2 = daf.message.AutoCHANNEL(daf.and_(daf.regex("testpy-[0-1]"), daf.not_(daf.regex("testpy-[1-9]"))))
 
         cwd = os.getcwd()
         os.chdir(os.path.dirname(__file__))
@@ -64,21 +63,15 @@ async def test_autochannel(guilds, channels, accounts):
 
         sort_key = lambda x: x.name
         auto_channel._get_channels()
-        auto_channel2._get_channels()
         assert sorted(text_channels[:2], key=sort_key) == sorted(auto_channel.channels, key=sort_key), "Correct behavior would be for AutoCHANNEL to only find first 5 text channels"
-        assert sorted(voice_channels[:1], key=sort_key) == sorted(auto_channel2.channels, key=sort_key), "Correct behavior would be for AutoCHANNEL to only find first 5 voice channels"
 
         await auto_channel.update(include_pattern=daf.regex("testpy-[0-2]"))  # Removes the original exclude pattern
-        await auto_channel2.update(include_pattern=daf.regex("testpy-[0-1]"))  # Removes the original exclude pattern
         auto_channel._get_channels()
-        auto_channel2._get_channels()
         assert sorted(text_channels, key=sort_key) == sorted(auto_channel.channels, key=sort_key), "Correct behavior would be for AutoCHANNEL to find all text channels"
-        assert sorted(voice_channels, key=sort_key) == sorted(auto_channel2.channels, key=sort_key), "Correct behavior would be for AutoCHANNEL to find all voice channels"
 
         # Test update
         await daf_guild.update()
         await tm.update()
         await auto_channel.update()
-        await auto_channel2.update()
     finally:
         await account.remove_server(daf_guild)

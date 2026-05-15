@@ -14,7 +14,7 @@ import re
 __all__ = ("AutoCHANNEL",)
 
 
-ChannelType = Union[discord.TextChannel, discord.Thread, discord.VoiceChannel]
+ChannelType = Union[discord.TextChannel, discord.Thread]
 
 
 @instance_track.track_id
@@ -108,8 +108,7 @@ class AutoCHANNEL:
 
     def _get_channels(self) -> List[ChannelType]:
         """
-        Property that returns a list of :class:`discord.TextChannel` or :class:`discord.VoiceChannel`
-        (depends on the xMESSAGE type this is in) objects in cache.
+        Returns a list of :class:`discord.TextChannel` or :class:`discord.Thread` objects in cache.
         """
         channel: ChannelType
         _found = []
@@ -122,7 +121,7 @@ class AutoCHANNEL:
                 name = channel.name
                 if (
                     name is not None and
-                    (perms.send_messages or (perms.connect and perms.stream and perms.speak)) and
+                    perms.send_messages and
                     self.include_pattern.check(name)
                 ):
                     _found.append(channel)
@@ -156,7 +155,7 @@ class AutoCHANNEL:
 
         Parameters
         -----------
-        channel: Union[discord.TextChannel, discord.VoiceChannel]
+        channel: Union[discord.TextChannel, discord.Thread]
             The channel to remove from cache.
 
         Raises
