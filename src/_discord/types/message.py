@@ -32,15 +32,16 @@ from .components import Component
 from .embed import Embed
 from .emoji import PartialEmoji
 from .member import Member, UserWithMember
+from .poll import Poll
 from .snowflake import Snowflake, SnowflakeList
 from .sticker import StickerItem
 from .threads import Thread
 from .user import User
 
 if TYPE_CHECKING:
-    from .interactions import MessageInteraction
+    from .interactions import InteractionMetadata, MessageInteraction
 
-from .._typed_dict import NotRequired, TypedDict
+from typing_extensions import NotRequired, TypedDict
 
 
 class ChannelMention(TypedDict):
@@ -54,12 +55,22 @@ class Reaction(TypedDict):
     count: int
     me: bool
     emoji: PartialEmoji
+    burst: bool
+    me_burst: bool
+    burst_colors: list[str]
+    count_details: ReactionCountDetails
+
+
+class ReactionCountDetails(TypedDict):
+    normal: int
+    burst: int
 
 
 class Attachment(TypedDict):
     height: NotRequired[int | None]
     width: NotRequired[int | None]
     content_type: NotRequired[str]
+    description: NotRequired[str]
     spoiler: NotRequired[bool]
     id: Snowflake
     filename: str
@@ -68,6 +79,9 @@ class Attachment(TypedDict):
     proxy_url: str
     duration_secs: NotRequired[float]
     waveform: NotRequired[str]
+    flags: NotRequired[int]
+    title: NotRequired[str]
+    ephemeral: NotRequired[bool]
 
 
 MessageActivityType = Literal[1, 2, 3, 5]
@@ -86,7 +100,11 @@ class MessageApplication(TypedDict):
     name: str
 
 
+MessageReferenceType = Literal[0, 1]
+
+
 class MessageReference(TypedDict, total=False):
+    type: NotRequired[MessageReferenceType]
     message_id: Snowflake
     channel_id: Snowflake
     guild_id: Snowflake
@@ -96,6 +114,29 @@ class MessageReference(TypedDict, total=False):
 MessageType = Literal[
     0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 15, 18, 19, 20, 21, 22, 23, 24
 ]
+
+
+class MessageCall(TypedDict):
+    participants: SnowflakeList
+    ended_timestamp: NotRequired[str]
+
+
+class ForwardedMessage(TypedDict):
+    type: MessageType
+    content: str
+    embeds: list[Embed]
+    attachments: list[Attachment]
+    timestamp: str
+    edited_timestamp: str | None
+    flags: NotRequired[int]
+    mentions: list[UserWithMember]
+    mention_roles: SnowflakeList
+    sticker_items: NotRequired[list[StickerItem]]
+    components: NotRequired[list[Component]]
+
+
+class MessageSnapshot(TypedDict):
+    message: ForwardedMessage
 
 
 class Message(TypedDict):
@@ -113,6 +154,7 @@ class Message(TypedDict):
     sticker_items: NotRequired[list[StickerItem]]
     referenced_message: NotRequired[Message | None]
     interaction: NotRequired[MessageInteraction]
+    interaction_metadata: NotRequired[InteractionMetadata]
     components: NotRequired[list[Component]]
     thread: NotRequired[Thread | None]
     id: Snowflake
@@ -129,6 +171,19 @@ class Message(TypedDict):
     embeds: list[Embed]
     pinned: bool
     type: MessageType
+    poll: Poll
+    call: MessageCall
+    message_snapshots: NotRequired[list[MessageSnapshot]]
+
+
+class MessagePin(TypedDict):
+    pinned_at: str
+    message: Message
+
+
+class MessagePinPagination(TypedDict):
+    items: list[MessagePin]
+    has_more: bool
 
 
 AllowedMentionType = Literal["roles", "users", "everyone"]

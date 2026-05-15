@@ -22,6 +22,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 """
+
 from __future__ import annotations
 
 import datetime
@@ -29,7 +30,7 @@ import re
 import warnings
 from importlib.metadata import PackageNotFoundError, version
 
-from ._typed_dict import TypedDict
+from typing_extensions import TypedDict
 
 __all__ = ("__version__", "VersionInfo", "version_info")
 
@@ -37,7 +38,7 @@ from typing import Literal, NamedTuple
 
 from .utils import deprecated
 
-__version__ = "2.5.0"
+__version__ = "2.7.2"
 
 
 class AdvancedVersionInfo(TypedDict):

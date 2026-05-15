@@ -22,6 +22,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 """
+
 from __future__ import annotations
 
 import inspect
@@ -39,8 +40,10 @@ from _discord import (
     SlashCommandOptionType,
 )
 
-from ...utils import MISSING, find, get
-from ..commands import BadArgument
+from ...utils import MISSING, find, get, warn_deprecated
+from ..commands import (
+    BadArgument,
+)
 from ..commands import Bot as ExtBot
 from ..commands import (
     Command,
@@ -48,6 +51,7 @@ from ..commands import (
     Converter,
     Group,
     GuildChannelConverter,
+    MemberConverter,
     RoleConverter,
     UserConverter,
 )
@@ -62,10 +66,12 @@ __all__ = (
     "BridgeCommandGroup",
     "bridge_command",
     "bridge_group",
+    "bridge_option",
     "BridgeExtCommand",
     "BridgeSlashCommand",
     "BridgeExtGroup",
     "BridgeSlashGroup",
+    "BridgeOption",
     "map_to",
     "guild_only",
     "has_permissions",
@@ -92,6 +98,14 @@ class BridgeExtCommand(Command):
 
     def __init__(self, func, **kwargs):
         super().__init__(func, **kwargs)
+
+        for option in self.params.values():
+            if isinstance(option.annotation, Option) and not isinstance(
+                option.annotation, BridgeOption
+            ):
+                raise TypeError(
+                    f"{option.annotation.__class__.__name__} is not supported in bridge commands. Use BridgeOption instead."
+                )
 
     async def dispatch_error(self, ctx: BridgeExtContext, error: Exception) -> None:
         await super().dispatch_error(ctx, error)
@@ -157,6 +171,8 @@ class BridgeCommand:
         The prefix-based version of this bridge command.
     """
 
+    __bridge__: bool = True
+
     __special_attrs__ = ["slash_variant", "ext_variant", "parent"]
 
     def __init__(self, callback, **kwargs):
@@ -171,8 +187,10 @@ class BridgeCommand:
     @property
     def name_localizations(self) -> dict[str, str] | None:
         """Returns name_localizations from :attr:`slash_variant`
-        You can edit/set name_localizations directly with
+           You can edit/set name_localizations directly with
+
         .. code-block:: python3
+
             bridge_command.name_localizations["en-UK"] = ...  # or any other locale
             # or
             bridge_command.name_localizations = {"en-UK": ..., "fr-FR": ...}
@@ -186,8 +204,10 @@ class BridgeCommand:
     @property
     def description_localizations(self) -> dict[str, str] | None:
         """Returns description_localizations from :attr:`slash_variant`
-        You can edit/set description_localizations directly with
+           You can edit/set description_localizations directly with
+
         .. code-block:: python3
+
             bridge_command.description_localizations["en-UK"] = ...  # or any other locale
             # or
             bridge_command.description_localizations = {"en-UK": ..., "fr-FR": ...}
@@ -205,7 +225,7 @@ class BridgeCommand:
         except AttributeError as e:
             # if it doesn't exist, check this list, if the name of
             # the parameter is here
-            if name is self.__special_attrs__:
+            if name in self.__special_attrs__:
                 raise e
 
             # looks up the result in the variants.
@@ -523,7 +543,7 @@ def is_nsfw():
     return predicate
 
 
-def has_permissions(**perms: dict[str, bool]):
+def has_permissions(**perms: bool):
     r"""Intended to work with :class:`.SlashCommand` and :class:`BridgeCommand`, adds a
     :func:`~ext.commands.check` that locks the command to be run by people with certain
     permissions inside guilds, and also registers the command as locked behind said permissions.
@@ -553,13 +573,21 @@ def has_permissions(**perms: dict[str, bool]):
 
 
 class MentionableConverter(Converter):
-    """A converter that can convert a mention to a user or a role."""
+    """A converter that can convert a mention to a member, a user or a role."""
 
     async def convert(self, ctx, argument):
         try:
             return await RoleConverter().convert(ctx, argument)
         except BadArgument:
-            return await UserConverter().convert(ctx, argument)
+            pass
+
+        if ctx.guild:
+            try:
+                return await MemberConverter().convert(ctx, argument)
+            except BadArgument:
+                pass
+
+        return await UserConverter().convert(ctx, argument)
 
 
 class AttachmentConverter(Converter):
@@ -587,20 +615,33 @@ BRIDGE_CONVERTER_MAPPING = {
     SlashCommandOptionType.mentionable: MentionableConverter,
     SlashCommandOptionType.number: float,
     SlashCommandOptionType.attachment: AttachmentConverter,
+    discord.Member: MemberConverter,
 }
 
 
 class BridgeOption(Option, Converter):
+    """A subclass of :class:`discord.Option` which represents a selectable slash
+    command option and a prefixed command argument for bridge commands.
+    """
+
+    def __init__(self, input_type, *args, **kwargs):
+        self.converter = kwargs.pop("converter", None)
+        super().__init__(input_type, *args, **kwargs)
+
+        self.converter = self.converter or BRIDGE_CONVERTER_MAPPING.get(input_type)
+
     async def convert(self, ctx, argument: str) -> Any:
         try:
             if self.converter is not None:
-                converted = await self.converter.convert(ctx, argument)
+                converted = await self.converter().convert(ctx, argument)
             else:
-                converter = BRIDGE_CONVERTER_MAPPING[self.input_type]
-                if issubclass(converter, Converter):
+                converter = BRIDGE_CONVERTER_MAPPING.get(self.input_type)
+                if isinstance(converter, type) and issubclass(converter, Converter):
                     converted = await converter().convert(ctx, argument)  # type: ignore # protocol class
-                else:
+                elif callable(converter):
                     converted = converter(argument)
+                else:
+                    raise TypeError(f"Invalid converter: {converter}")
 
             if self.choices:
                 choices_names: list[str | int | float] = [
@@ -623,5 +664,26 @@ class BridgeOption(Option, Converter):
             raise BadArgument() from exc
 
 
-_discord.commands.options.Option = BridgeOption
-_discord.Option = BridgeOption
+def bridge_option(name, input_type=None, **kwargs):
+    """A decorator that can be used instead of typehinting :class:`.BridgeOption`.
+
+    .. versionadded:: 2.6
+
+    Attributes
+    ----------
+    parameter_name: :class:`str`
+        The name of the target function parameter this option is mapped to.
+        This allows you to have a separate UI ``name`` and parameter name.
+    """
+
+    def decorator(func):
+        resolved_name = kwargs.pop("parameter_name", None) or name
+        itype = (
+            kwargs.pop("type", None)
+            or input_type
+            or func.__annotations__.get(resolved_name, str)
+        )
+        func.__annotations__[resolved_name] = BridgeOption(itype, name=name, **kwargs)
+        return func
+
+    return decorator

@@ -24,15 +24,15 @@ DEALINGS IN THE SOFTWARE.
 """
 
 import argparse
+import importlib.metadata
 import platform
 import sys
 from pathlib import Path
 from typing import Tuple
 
 import aiohttp
-import pkg_resources
 
-import _discord
+import _discord as discord
 
 
 def show_version() -> None:
@@ -42,14 +42,14 @@ def show_version() -> None:
         )
     ]
 
-    version_info = _discord.version_info
+    version_info = discord.version_info
     entries.append(
-        "- py-cord-dev v{0.major}.{0.minor}.{0.micro}-{0.releaselevel}".format(version_info)
+        "- py-cord v{0.major}.{0.minor}.{0.micro}-{0.releaselevel}".format(version_info)
     )
     if version_info.releaselevel != "final":
-        pkg = pkg_resources.get_distribution("py-cord-dev")
-        if pkg:
-            entries.append(f"    - py-cord-dev pkg_resources: v{pkg.version}")
+        version = importlib.metadata.version("py-cord")
+        if version:
+            entries.append(f"    - py-cord importlib.metadata: v{version}")
 
     entries.append(f"- aiohttp v{aiohttp.__version__}")
     uname = platform.uname()
@@ -64,8 +64,8 @@ def core(parser, args) -> None:
 
 _bot_template = """#!/usr/bin/env python3
 
-from discord.ext import commands
-import discord
+from _discord.ext import commands
+import _discord as discord
 import config
 
 class Bot(commands.{base}):
@@ -118,8 +118,8 @@ var/
 config.py
 """
 
-_cog_template = '''from discord.ext import commands
-import discord
+_cog_template = '''from _discord.ext import commands
+import _discord as discord
 
 class {name}(commands.Cog{attrs}):
     """The description for {name} goes here."""

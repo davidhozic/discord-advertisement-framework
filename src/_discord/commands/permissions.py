@@ -25,6 +25,7 @@ DEALINGS IN THE SOFTWARE.
 
 from typing import Callable
 
+from ..enums import InteractionContextType
 from ..permissions import Permissions
 from .core import ApplicationCommand
 
@@ -32,7 +33,7 @@ __all__ = ("default_permissions", "guild_only", "is_nsfw")
 
 
 def default_permissions(**perms: bool) -> Callable:
-    """A decorator that limits the usage of a slash command to members with certain
+    """A decorator that limits the usage of an application command to members with certain
     permissions.
 
     The permissions passed in must be exactly like the properties shown under
@@ -53,7 +54,7 @@ def default_permissions(**perms: bool) -> Callable:
 
     .. code-block:: python3
 
-        from discord import default_permissions
+        from _discord import default_permissions
 
         @bot.slash_command()
         @default_permissions(manage_messages=True)
@@ -80,7 +81,7 @@ def default_permissions(**perms: bool) -> Callable:
 
 
 def guild_only() -> Callable:
-    """A decorator that limits the usage of a slash command to guild contexts.
+    """A decorator that limits the usage of an application command to guild contexts.
     The command won't be able to be used in private message channels.
 
     Example
@@ -88,7 +89,7 @@ def guild_only() -> Callable:
 
     .. code-block:: python3
 
-        from discord import guild_only
+        from _discord import guild_only
 
         @bot.slash_command()
         @guild_only()
@@ -98,9 +99,9 @@ def guild_only() -> Callable:
 
     def inner(command: Callable):
         if isinstance(command, ApplicationCommand):
-            command.guild_only = True
+            command.contexts = {InteractionContextType.guild}
         else:
-            command.__guild_only__ = True
+            command.__contexts__ = {InteractionContextType.guild}
 
         return command
 
@@ -108,7 +109,7 @@ def guild_only() -> Callable:
 
 
 def is_nsfw() -> Callable:
-    """A decorator that limits the usage of a slash command to 18+ channels and users.
+    """A decorator that limits the usage of an application command to 18+ channels and users.
     In guilds, the command will only be able to be used in channels marked as NSFW.
     In DMs, users must have opted into age-restricted commands via privacy settings.
 
@@ -119,7 +120,7 @@ def is_nsfw() -> Callable:
 
     .. code-block:: python3
 
-        from discord import is_nsfw
+        from _discord import is_nsfw
 
         @bot.slash_command()
         @is_nsfw()

@@ -27,7 +27,8 @@ from __future__ import annotations
 
 from typing import Literal, Union
 
-from .._typed_dict import NotRequired, TypedDict
+from typing_extensions import NotRequired, TypedDict
+
 from .automod import AutoModRule
 from .channel import ChannelType, PermissionOverwrite, VideoQualityMode
 from .guild import (
@@ -112,6 +113,7 @@ class _AuditLogChange_Str(TypedDict):
         "deny",
         "permissions",
         "tags",
+        "status",
     ]
     new_value: str
     old_value: str
@@ -270,6 +272,8 @@ class AuditEntryInfo(TypedDict):
     application_id: Snowflake
     auto_moderation_rule_name: str
     auto_moderation_rule_trigger_type: str
+    # TODO: add integration_type
+    status: str
 
 
 class AuditLogEntry(TypedDict):

@@ -25,6 +25,8 @@ DEALINGS IN THE SOFTWARE.
 
 from __future__ import annotations
 
+import datetime
+from functools import cached_property
 from typing import TYPE_CHECKING, Any, Callable, ClassVar, Generator, TypeVar
 
 from . import enums, utils
@@ -44,10 +46,8 @@ __all__ = (
 
 
 if TYPE_CHECKING:
-    import datetime
-
     from . import abc
-    from .emoji import Emoji
+    from .emoji import GuildEmoji
     from .guild import Guild
     from .member import Member
     from .role import Role
@@ -153,12 +153,12 @@ def _transform_avatar(entry: AuditLogEntry, data: str | None) -> Asset | None:
     return Asset._from_avatar(entry._state, entry._target_id, data)  # type: ignore
 
 
-def _transform_scheduled_event_cover(
+def _transform_scheduled_event_image(
     entry: AuditLogEntry, data: str | None
 ) -> Asset | None:
     if data is None:
         return None
-    return Asset._from_scheduled_event_cover(entry._state, entry._target_id, data)
+    return Asset._from_scheduled_event_image(entry._state, entry._target_id, data)
 
 
 def _guild_hash_transformer(
@@ -193,7 +193,7 @@ def _transform_type(
 
 def _transform_actions(
     entry: AuditLogEntry, data: list[AutoModActionPayload] | None
-) -> AutoModAction | None:
+) -> list[AutoModAction] | None:
     if data is None:
         return None
     else:
@@ -201,19 +201,27 @@ def _transform_actions(
 
 
 def _transform_trigger_metadata(
-    entry: AuditLogEntry, data: list[AutoModActionPayload] | None
-) -> AutoModAction | None:
+    entry: AuditLogEntry, data: AutoModTriggerMetadataPayload | None
+) -> AutoModTriggerMetadata | None:
     if data is None:
         return None
     else:
         return AutoModTriggerMetadata.from_dict(data)
 
 
+def _transform_communication_disabled_until(
+    entry: AuditLogEntry, data: str
+) -> datetime.datetime | None:
+    if data:
+        return datetime.datetime.fromisoformat(data)
+    return None
+
+
 class AuditLogDiff:
     def __len__(self) -> int:
         return len(self.__dict__)
 
-    def __iter__(self) -> Generator[tuple[str, Any], None, None]:
+    def __iter__(self) -> Generator[tuple[str, Any]]:
         yield from self.__dict__.items()
 
     def __repr__(self) -> str:
@@ -222,11 +230,9 @@ class AuditLogDiff:
 
     if TYPE_CHECKING:
 
-        def __getattr__(self, item: str) -> Any:
-            ...
+        def __getattr__(self, item: str) -> Any: ...
 
-        def __setattr__(self, key: str, value: Any) -> Any:
-            ...
+        def __setattr__(self, key: str, value: Any) -> Any: ...
 
 
 Transformer = Callable[["AuditLogEntry", Any], Any]
@@ -276,13 +282,14 @@ class AuditLogChanges:
             _enum_transformer(enums.ScheduledEventLocationType),
         ),
         "command_id": ("command_id", _transform_snowflake),
-        "image_hash": ("cover", _transform_scheduled_event_cover),
+        "image_hash": ("image", _transform_scheduled_event_image),
         "trigger_type": (None, _enum_transformer(enums.AutoModTriggerType)),
         "event_type": (None, _enum_transformer(enums.AutoModEventType)),
         "actions": (None, _transform_actions),
         "trigger_metadata": (None, _transform_trigger_metadata),
         "exempt_roles": (None, _transform_roles),
         "exempt_channels": (None, _transform_channels),
+        "communication_disabled_until": (None, _transform_communication_disabled_until),
     }
 
     def __init__(
@@ -311,7 +318,7 @@ class AuditLogChanges:
                 "$add_allow_list",
             ]:
                 self._handle_trigger_metadata(
-                    self.before, self.after, entry, elem["new_value"], attr
+                    self.before, self.after, entry, elem["new_value"], attr  # type: ignore
                 )
                 continue
             elif attr in [
@@ -320,7 +327,7 @@ class AuditLogChanges:
                 "$remove_allow_list",
             ]:
                 self._handle_trigger_metadata(
-                    self.after, self.before, entry, elem["new_value"], attr
+                    self.after, self.before, entry, elem["new_value"], attr  # type: ignore
                 )
                 continue
 
@@ -604,12 +611,12 @@ class AuditLogEntry(Hashable):
     def __repr__(self) -> str:
         return f"<AuditLogEntry id={self.id} action={self.action} user={self.user!r}>"
 
-    @utils.cached_property
+    @property
     def created_at(self) -> datetime.datetime:
         """Returns the entry's creation time in UTC."""
         return utils.snowflake_time(self.id)
 
-    @utils.cached_property
+    @property
     def target(
         self,
     ) -> (
@@ -619,7 +626,7 @@ class AuditLogEntry(Hashable):
         | User
         | Role
         | Invite
-        | Emoji
+        | GuildEmoji
         | StageInstance
         | GuildSticker
         | Thread
@@ -633,24 +640,24 @@ class AuditLogEntry(Hashable):
         else:
             return converter(self._target_id)
 
-    @utils.cached_property
+    @property
     def category(self) -> enums.AuditLogActionCategory:
         """The category of the action, if applicable."""
         return self.action.category
 
-    @utils.cached_property
+    @cached_property
     def changes(self) -> AuditLogChanges:
         """The list of changes this entry has."""
         obj = AuditLogChanges(self, self._changes, state=self._state)
         del self._changes
         return obj
 
-    @utils.cached_property
+    @property
     def before(self) -> AuditLogDiff:
         """The target's prior state."""
         return self.changes.before
 
-    @utils.cached_property
+    @property
     def after(self) -> AuditLogDiff:
         """The target's subsequent state."""
         return self.changes.after
@@ -691,7 +698,7 @@ class AuditLogEntry(Hashable):
             pass
         return obj
 
-    def _convert_target_emoji(self, target_id: int) -> Emoji | Object:
+    def _convert_target_emoji(self, target_id: int) -> GuildEmoji | Object:
         return self._state.get_emoji(target_id) or Object(id=target_id)
 
     def _convert_target_message(self, target_id: int) -> Member | User | None:

@@ -30,17 +30,20 @@ import inspect
 import itertools
 import sys
 from operator import attrgetter
-from typing import TYPE_CHECKING, Any, Literal, TypeVar, Union
+from typing import TYPE_CHECKING, Any, TypeVar, Union
 
-import _discord.abc
+import _discord as discord
 
 from . import utils
 from .activity import ActivityTypes, create_activity
 from .asset import Asset
 from .colour import Colour
 from .enums import Status, try_enum
+from .errors import InvalidArgument
+from .flags import MemberFlags
 from .object import Object
 from .permissions import Permissions
+from .primary_guild import PrimaryGuild
 from .user import BaseUser, User, _UserTag
 from .utils import MISSING
 
@@ -62,6 +65,7 @@ if TYPE_CHECKING:
     from .types.member import MemberWithUser as MemberWithUserPayload
     from .types.member import UserWithMember as UserWithMemberPayload
     from .types.user import User as UserPayload
+    from .types.voice import GuildVoiceState as GuildVoiceStatePayload
     from .types.voice import VoiceState as VoiceStatePayload
 
     VocalGuildChannel = Union[VoiceChannel, StageChannel]
@@ -125,12 +129,19 @@ class VoiceState:
     )
 
     def __init__(
-        self, *, data: VoiceStatePayload, channel: VocalGuildChannel | None = None
+        self,
+        *,
+        data: VoiceStatePayload | GuildVoiceStatePayload,
+        channel: VocalGuildChannel | None = None,
     ):
         self.session_id: str = data.get("session_id")
         self._update(data, channel)
 
-    def _update(self, data: VoiceStatePayload, channel: VocalGuildChannel | None):
+    def _update(
+        self,
+        data: VoiceStatePayload | GuildVoiceStatePayload,
+        channel: VocalGuildChannel | None,
+    ):
         self.self_mute: bool = data.get("self_mute", False)
         self.self_deaf: bool = data.get("self_deaf", False)
         self.self_stream: bool = data.get("self_stream", False)
@@ -207,7 +218,7 @@ M = TypeVar("M", bound="Member")
 
 
 @flatten_user
-class Member(_discord.abc.Messageable, _UserTag):
+class Member(discord.abc.Messageable, _UserTag):
     """Represents a Discord member to a :class:`Guild`.
 
     This implements a lot of the functionality of :class:`User`.
@@ -261,6 +272,10 @@ class Member(_discord.abc.Messageable, _UserTag):
         An aware datetime object that specifies the date and time in UTC when the member will be removed from timeout.
 
         .. versionadded:: 2.0
+    flags: :class:`MemberFlags`
+        Extra attributes of the member.
+
+        .. versionadded:: 2.6
     """
 
     __slots__ = (
@@ -275,7 +290,9 @@ class Member(_discord.abc.Messageable, _UserTag):
         "_user",
         "_state",
         "_avatar",
+        "_banner",
         "communication_disabled_until",
+        "flags",
     )
 
     if TYPE_CHECKING:
@@ -295,6 +312,7 @@ class Member(_discord.abc.Messageable, _UserTag):
         accent_color: Colour | None
         accent_colour: Colour | None
         communication_disabled_until: datetime.datetime | None
+        primary_guild: PrimaryGuild | None
 
     def __init__(
         self, *, data: MemberWithUserPayload, guild: Guild, state: ConnectionState
@@ -314,9 +332,11 @@ class Member(_discord.abc.Messageable, _UserTag):
         self.nick: str | None = data.get("nick", None)
         self.pending: bool = data.get("pending", False)
         self._avatar: str | None = data.get("avatar")
+        self._banner: str | None = data.get("banner")
         self.communication_disabled_until: datetime.datetime | None = utils.parse_time(
             data.get("communication_disabled_until")
         )
+        self.flags: MemberFlags = MemberFlags._from_value(data.get("flags", 0))
 
     def __str__(self) -> str:
         return str(self._user)
@@ -391,7 +411,9 @@ class Member(_discord.abc.Messageable, _UserTag):
         self.activities = member.activities
         self._state = member._state
         self._avatar = member._avatar
+        self._banner = member._banner
         self.communication_disabled_until = member.communication_disabled_until
+        self.flags = member.flags
 
         # Reference will not be copied unless necessary by PRESENCE_UPDATE
         # See below
@@ -418,16 +440,19 @@ class Member(_discord.abc.Messageable, _UserTag):
         self.premium_since = utils.parse_time(data.get("premium_since"))
         self._roles = utils.SnowflakeList(map(int, data["roles"]))
         self._avatar = data.get("avatar")
+        self._banner = data.get("banner")
         self.communication_disabled_until = utils.parse_time(
             data.get("communication_disabled_until")
         )
+        self.flags = MemberFlags._from_value(data.get("flags", 0))
 
     def _presence_update(
         self, data: PartialPresenceUpdate, user: UserPayload
     ) -> tuple[User, User] | None:
         self.activities = tuple(map(create_activity, data["activities"]))
         self._client_status = {
-            sys.intern(key): sys.intern(value) for key, value in data.get("client_status", {}).items()  # type: ignore
+            sys.intern(key): sys.intern(value)
+            for key, value in data.get("client_status", {}).items()  # type: ignore
         }
         self._client_status[None] = sys.intern(data["status"])
 
@@ -437,14 +462,30 @@ class Member(_discord.abc.Messageable, _UserTag):
 
     def _update_inner_user(self, user: UserPayload) -> tuple[User, User] | None:
         u = self._user
-        original = (u.name, u._avatar, u.discriminator, u.global_name, u._public_flags)
+        original = (
+            u.name,
+            u._avatar,
+            u.discriminator,
+            u.global_name,
+            u._public_flags,
+            u.primary_guild,
+        )
         # These keys seem to always be available
+        if (
+            new_primary_guild_data := user.get("primary_guild")
+        ) and new_primary_guild_data.get("identity_enabled"):
+            new_primary_guild: PrimaryGuild | None = PrimaryGuild(
+                new_primary_guild_data, state=self._state
+            )
+        else:
+            new_primary_guild = None
         modified = (
             user["username"],
             user["avatar"],
             user["discriminator"],
             user.get("global_name", None) or None,
             user.get("public_flags", 0),
+            new_primary_guild,
         )
         if original != modified:
             to_return = User._copy(self._user)
@@ -454,6 +495,7 @@ class Member(_discord.abc.Messageable, _UserTag):
                 u.discriminator,
                 u.global_name,
                 u._public_flags,
+                u.primary_guild,
             ) = modified
             # Signal to dispatch on_user_update
             return to_return, u
@@ -545,7 +587,8 @@ class Member(_discord.abc.Messageable, _UserTag):
             role = g.get_role(role_id)
             if role:
                 result.append(role)
-        result.append(g.default_role)
+        if g.default_role:
+            result.append(g.default_role)
         result.sort()
         return result
 
@@ -584,6 +627,31 @@ class Member(_discord.abc.Messageable, _UserTag):
             return None
         return Asset._from_guild_avatar(
             self._state, self.guild.id, self.id, self._avatar
+        )
+
+    @property
+    def display_banner(self) -> Asset | None:
+        """Returns the member's display banner.
+
+        For regular members this is just their banner, but
+        if they have a guild specific banner then that
+        is returned instead.
+
+        .. versionadded:: 2.7
+        """
+        return self.guild_banner or self._user.banner
+
+    @property
+    def guild_banner(self) -> Asset | None:
+        """Returns an :class:`Asset` for the guild banner
+        the member has. If unavailable, ``None`` is returned.
+
+        .. versionadded:: 2.7
+        """
+        if self._banner is None:
+            return None
+        return Asset._from_guild_banner(
+            self._state, self.guild.id, self.id, self._banner
         )
 
     @property
@@ -684,7 +752,6 @@ class Member(_discord.abc.Messageable, _UserTag):
         self,
         *,
         delete_message_seconds: int | None = None,
-        delete_message_days: Literal[0, 1, 2, 3, 4, 5, 6, 7] | None = None,
         reason: str | None = None,
     ) -> None:
         """|coro|
@@ -695,7 +762,6 @@ class Member(_discord.abc.Messageable, _UserTag):
             self,
             reason=reason,
             delete_message_seconds=delete_message_seconds,
-            delete_message_days=delete_message_days,
         )
 
     async def unban(self, *, reason: str | None = None) -> None:
@@ -719,10 +785,14 @@ class Member(_discord.abc.Messageable, _UserTag):
         mute: bool = MISSING,
         deafen: bool = MISSING,
         suppress: bool = MISSING,
-        roles: list[_discord.abc.Snowflake] = MISSING,
+        roles: list[discord.abc.Snowflake] = MISSING,
         voice_channel: VocalGuildChannel | None = MISSING,
         reason: str | None = None,
         communication_disabled_until: datetime.datetime | None = MISSING,
+        bypass_verification: bool | None = MISSING,
+        banner: bytes | None = MISSING,
+        avatar: bytes | None = MISSING,
+        bio: str | None = MISSING,
     ) -> Member | None:
         """|coro|
 
@@ -745,6 +815,26 @@ class Member(_discord.abc.Messageable, _UserTag):
         +------------------------------+--------------------------------------+
         | communication_disabled_until | :attr:`Permissions.moderate_members` |
         +------------------------------+--------------------------------------+
+        | bypass_verification          | See note below                       |
+        +------------------------------+--------------------------------------+
+
+        .. note::
+
+            `bypass_verification` may be edited under three scenarios:
+
+            - Client has :attr:`Permissions.manage_guild`
+
+            - Client has :attr:`Permissions.manage_roles`
+
+            - Client has ALL THREE of :attr:`Permissions.moderate_members`, :attr:`Permissions.kick_members`, and :attr:`Permissions.ban_members`
+
+        .. note::
+
+            The following parameters are only available when editing the bot's own member:
+
+            - ``avatar``
+            - ``banner``
+            - ``bio``
 
         All parameters are optional.
 
@@ -769,7 +859,7 @@ class Member(_discord.abc.Messageable, _UserTag):
 
         roles: List[:class:`Role`]
             The member's new list of roles. This *replaces* the roles.
-        voice_channel: Optional[:class:`VoiceChannel`]
+        voice_channel: Optional[Union[:class:`VoiceChannel`, :class:`StageChannel`]]
             The voice channel to move the member to.
             Pass ``None`` to kick them from voice.
         reason: Optional[:class:`str`]
@@ -779,6 +869,30 @@ class Member(_discord.abc.Messageable, _UserTag):
             from timeout.
 
             .. versionadded:: 2.0
+        bypass_verification: Optional[:class:`bool`]
+            Indicates if the member should bypass the guild's verification requirements.
+
+            .. versionadded:: 2.6
+        banner: Optional[:class:`bytes`]
+            A :term:`py:bytes-like object` representing the banner.
+            Could be ``None`` to denote removal of the banner.
+
+            This is only available when editing the bot's own member (i.e. :attr:`Guild.me`).
+
+            .. versionadded:: 2.7
+        avatar: Optional[:class:`bytes`]
+            A :term:`py:bytes-like object` representing the avatar.
+            Could be ``None`` to denote removal of the avatar.
+
+            This is only available when editing the bot's own member (i.e. :attr:`Guild.me`).
+
+            .. versionadded:: 2.7
+        bio: Optional[:class:`str`]
+            The new bio for the member. Could be ``None`` to denote removal of the bio.
+
+            This is only available when editing the bot's own member (i.e. :attr:`Guild.me`).
+
+            .. versionadded:: 2.7
 
         Returns
         -------
@@ -792,16 +906,19 @@ class Member(_discord.abc.Messageable, _UserTag):
             You do not have the proper permissions to the action requested.
         HTTPException
             The operation failed.
+        InvalidArgument
+            You tried to edit the avatar, banner, or bio of a member that is not the bot.
         """
         http = self._state.http
         guild_id = self.guild.id
         me = self._state.self_id == self.id
         payload: dict[str, Any] = {}
+        bot_payload: dict[str, Any] = {}
 
         if nick is not MISSING:
             nick = nick or ""
             if me:
-                await http.change_my_nickname(guild_id, nick, reason=reason)
+                bot_payload["nick"] = nick
             else:
                 payload["nick"] = nick
 
@@ -824,9 +941,9 @@ class Member(_discord.abc.Messageable, _UserTag):
                 await http.edit_my_voice_state(guild_id, voice_state_payload)
             else:
                 if not suppress:
-                    voice_state_payload[
-                        "request_to_speak_timestamp"
-                    ] = datetime.datetime.utcnow().isoformat()
+                    voice_state_payload["request_to_speak_timestamp"] = (
+                        datetime.datetime.utcnow().isoformat()
+                    )
                 await http.edit_voice_state(guild_id, self.id, voice_state_payload)
 
         if voice_channel is not MISSING:
@@ -837,15 +954,45 @@ class Member(_discord.abc.Messageable, _UserTag):
 
         if communication_disabled_until is not MISSING:
             if communication_disabled_until is not None:
-                payload[
-                    "communication_disabled_until"
-                ] = communication_disabled_until.isoformat()
+                payload["communication_disabled_until"] = (
+                    communication_disabled_until.isoformat()
+                )
             else:
                 payload["communication_disabled_until"] = communication_disabled_until
 
+        if bypass_verification is not MISSING:
+            flags = MemberFlags._from_value(self.flags.value)
+            flags.bypasses_verification = bypass_verification
+            payload["flags"] = flags.value
+
+        if avatar is not MISSING:
+            if avatar is None:
+                bot_payload["avatar"] = None
+            else:
+                bot_payload["avatar"] = utils._bytes_to_base64_data(avatar)
+
+        if banner is not MISSING:
+            if banner is None:
+                bot_payload["banner"] = None
+            else:
+                bot_payload["banner"] = utils._bytes_to_base64_data(banner)
+
+        if bio is not MISSING:
+            bot_payload["bio"] = bio or ""
+
+        if bot_payload and not me:
+            raise InvalidArgument(
+                "Can only edit avatar, banner, or bio for the bot's member."
+            )
+
         if payload:
             data = await http.edit_member(guild_id, self.id, reason=reason, **payload)
-            return Member(data=data, guild=self.guild, state=self._state)
+        elif bot_payload:
+            data = await http.edit_member(guild_id, "@me", reason=reason, **bot_payload)
+        else:
+            return None
+
+        return Member(data=data, guild=self.guild, state=self._state)
 
     async def timeout(
         self, until: datetime.datetime | None, *, reason: str | None = None
@@ -958,7 +1105,7 @@ class Member(_discord.abc.Messageable, _UserTag):
             await self._state.http.edit_my_voice_state(self.guild.id, payload)
 
     async def move_to(
-        self, channel: VocalGuildChannel, *, reason: str | None = None
+        self, channel: VocalGuildChannel | None, *, reason: str | None = None
     ) -> None:
         """|coro|
 
@@ -974,7 +1121,7 @@ class Member(_discord.abc.Messageable, _UserTag):
 
         Parameters
         ----------
-        channel: Optional[:class:`VoiceChannel`]
+        channel: Optional[Union[:class:`VoiceChannel`, :class:`StageChannel`]]
             The new voice channel to move the member to.
             Pass ``None`` to kick them from voice.
         reason: Optional[:class:`str`]

@@ -21,17 +21,22 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 """
-import sys
 
-# PEP 655 Required and NotRequired were added in python 3.11. This file is simply a
-# shortcut import, so we don't have to repeat this import logic across files.
-if sys.version_info >= (3, 11):
-    from typing import NotRequired, Required, TypedDict
-else:
-    from typing_extensions import NotRequired, Required, TypedDict
+from __future__ import annotations
 
-__all__ = (
-    "Required",
-    "NotRequired",
-    "TypedDict",
-)
+from typing_extensions import NotRequired, TypedDict
+
+from _discord.types.user import User
+
+from .snowflake import Snowflake
+
+
+class SoundboardSound(TypedDict):
+    name: str
+    sound_id: Snowflake | int
+    volume: float
+    emoji_name: str | None
+    emoji_id: Snowflake | None
+    guild_id: NotRequired[Snowflake]
+    user: NotRequired[User]
+    available: bool

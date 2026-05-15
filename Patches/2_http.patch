@@ -1,5 +1,5 @@
 diff --git a/src/_discord/http.py b/src/_discord/http.py
-index 9eb7837..9ad7137 100644
+index a131e59..65c46c1 100644
 --- a/src/_discord/http.py
 +++ b/src/_discord/http.py
 @@ -25,6 +25,8 @@ DEALINGS IN THE SOFTWARE.
@@ -11,7 +11,7 @@ index 9eb7837..9ad7137 100644
  import asyncio
  import logging
  import sys
-@@ -101,6 +103,22 @@ async def json_or_text(response: aiohttp.ClientResponse) -> dict[str, Any] | str
+@@ -115,6 +117,22 @@ async def json_or_text(response: aiohttp.ClientResponse) -> dict[str, Any] | str
      return text
  
  
@@ -32,9 +32,9 @@ index 9eb7837..9ad7137 100644
 +
 +
  class Route:
-     def __init__(self, method: str, path: str, **parameters: Any) -> None:
-         self.path: str = path
-@@ -167,7 +185,7 @@ class HTTPClient:
+     API_BASE_URL: str = "https://discord.com/api/v{API_VERSION}"
+ 
+@@ -183,7 +201,7 @@ class HTTPClient:
          proxy: str | None = None,
          proxy_auth: aiohttp.BasicAuth | None = None,
          loop: asyncio.AbstractEventLoop | None = None,
@@ -43,7 +43,7 @@ index 9eb7837..9ad7137 100644
      ) -> None:
          self.loop: asyncio.AbstractEventLoop = (
              asyncio.get_event_loop() if loop is None else loop
-@@ -178,7 +196,7 @@ class HTTPClient:
+@@ -194,7 +212,7 @@ class HTTPClient:
          self._global_over: asyncio.Event = asyncio.Event()
          self._global_over.set()
          self.token: str | None = None
@@ -52,7 +52,7 @@ index 9eb7837..9ad7137 100644
          self.proxy: str | None = proxy
          self.proxy_auth: aiohttp.BasicAuth | None = proxy_auth
          self.use_clock: bool = not unsync_clock
-@@ -189,6 +207,7 @@ class HTTPClient:
+@@ -205,6 +223,7 @@ class HTTPClient:
          self.user_agent: str = user_agent.format(
              __version__, sys.version_info, aiohttp.__version__
          )
@@ -60,7 +60,7 @@ index 9eb7837..9ad7137 100644
  
      def recreate(self) -> None:
          if self.__session.closed:
-@@ -235,8 +254,23 @@ class HTTPClient:
+@@ -251,8 +270,23 @@ class HTTPClient:
              "User-Agent": self.user_agent,
          }
  
@@ -85,7 +85,7 @@ index 9eb7837..9ad7137 100644
          # some checking if it's a JSON request
          if "json" in kwargs:
              headers["Content-Type"] = "application/json"
-@@ -280,6 +314,11 @@ class HTTPClient:
+@@ -296,6 +330,11 @@ class HTTPClient:
                      kwargs["data"] = form_data
  
                  try:
@@ -97,7 +97,7 @@ index 9eb7837..9ad7137 100644
                      async with self.__session.request(
                          method, url, **kwargs
                      ) as response:
-@@ -319,7 +358,8 @@ class HTTPClient:
+@@ -335,7 +374,8 @@ class HTTPClient:
  
                          # we are being rate limited
                          if response.status == 429:
@@ -107,7 +107,7 @@ index 9eb7837..9ad7137 100644
                                  # Banned by Cloudflare more than likely.
                                  raise HTTPException(response, data)
  
-@@ -329,7 +369,6 @@ class HTTPClient:
+@@ -345,7 +385,6 @@ class HTTPClient:
                              )
  
                              # sleep a bit
@@ -115,34 +115,23 @@ index 9eb7837..9ad7137 100644
                              _log.warning(fmt, retry_after, bucket)
  
                              # check if it's a global rate limit
-@@ -406,22 +445,28 @@ class HTTPClient:
+@@ -437,13 +476,17 @@ class HTTPClient:
  
      # login management
  
 -    async def static_login(self, token: str) -> user.User:
-+    async def static_login(self, token: str, bot: bool) -> user.User:
++    async def static_login(self, token: str, bot: bool = True) -> user.User:
          # Necessary to get aiohttp to stop complaining about session creation
          self.__session = aiohttp.ClientSession(
              connector=self.connector, ws_response_class=DiscordClientWebSocketResponse
          )
          old_token = self.token
 -        self.token = token
-+        old_bot = self.bot_token
-+        self.token = f"Bot {token}" if bot else token
 +        self.bot_token = bot
++        self.token = f"Bot {token}" if bot else token
++
++        if not bot:
++            self.user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36"
  
          try:
              data = await self.request(Route("GET", "/users/@me"))
-         except HTTPException as exc:
-             self.token = old_token
-+            self.bot_token = old_bot
-             if exc.status == 401:
-                 raise LoginFailure("Improper token has been passed.") from exc
-             raise
- 
-+        if not bot:
-+            self.user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36"
-+
-         return data
- 
-     def logout(self) -> Response[None]:

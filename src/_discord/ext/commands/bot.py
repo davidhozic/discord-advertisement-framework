@@ -31,7 +31,7 @@ import sys
 import traceback
 from typing import TYPE_CHECKING, Any, Callable, Coroutine, Iterable, TypeVar
 
-import _discord
+import _discord as discord
 
 from . import errors
 from .context import Context
@@ -40,7 +40,7 @@ from .help import DefaultHelpCommand, HelpCommand
 from .view import StringView
 
 if TYPE_CHECKING:
-    from _discord.message import Message
+    from discord.message import Message
 
     from ._types import CoroFunc
 
@@ -51,7 +51,7 @@ __all__ = (
     "AutoShardedBot",
 )
 
-MISSING: Any = _discord.utils.MISSING
+MISSING: Any = discord.utils.MISSING
 
 T = TypeVar("T")
 CFT = TypeVar("CFT", bound="CoroFunc")
@@ -109,18 +109,20 @@ def _is_submodule(parent: str, child: str) -> bool:
     return parent == child or child.startswith(f"{parent}.")
 
 
-class BotBase(GroupMixin, _discord.cog.CogMixin):
+class BotBase(GroupMixin, discord.cog.CogMixin):
     _help_command = None
     _supports_prefixed_commands = True
 
     def __init__(
         self,
-        command_prefix: str
-        | Iterable[str]
-        | Callable[
-            [Bot | AutoShardedBot, Message],
-            str | Iterable[str] | Coroutine[Any, Any, str | Iterable[str]],
-        ] = when_mentioned,
+        command_prefix: (
+            str
+            | Iterable[str]
+            | Callable[
+                [Bot | AutoShardedBot, Message],
+                str | Iterable[str] | Coroutine[Any, Any, str | Iterable[str]],
+            ]
+        ) = when_mentioned,
         help_command: HelpCommand | None = MISSING,
         **options,
     ):
@@ -131,7 +133,7 @@ class BotBase(GroupMixin, _discord.cog.CogMixin):
         )
         self.strip_after_prefix = options.get("strip_after_prefix", False)
 
-    @_discord.utils.copy_doc(_discord.Client.close)
+    @discord.utils.copy_doc(discord.Client.close)
     async def close(self) -> None:
         for extension in tuple(self.__extensions):
             try:
@@ -182,7 +184,7 @@ class BotBase(GroupMixin, _discord.cog.CogMixin):
             return True
 
         # type-checker doesn't distinguish between functions and methods
-        return await _discord.utils.async_all(f(ctx) for f in data)  # type: ignore
+        return await discord.utils.async_all(f(ctx) for f in data)  # type: ignore
 
     # help command stuff
 
@@ -226,7 +228,7 @@ class BotBase(GroupMixin, _discord.cog.CogMixin):
         """
         prefix = ret = self.command_prefix
         if callable(prefix):
-            ret = await _discord.utils.maybe_coroutine(prefix, self, message)
+            ret = await discord.utils.maybe_coroutine(prefix, self, message)
 
         if not isinstance(ret, str):
             try:
@@ -296,7 +298,7 @@ class BotBase(GroupMixin, _discord.cog.CogMixin):
                 # if the context class' __init__ consumes something from the view this
                 # will be wrong.  That seems unreasonable though.
                 if message.content.startswith(tuple(prefix)):
-                    invoked_prefix = _discord.utils.find(view.skip_string, prefix)
+                    invoked_prefix = discord.utils.find(view.skip_string, prefix)
                 else:
                     return ctx
 
@@ -387,7 +389,7 @@ class BotBase(GroupMixin, _discord.cog.CogMixin):
         await self.process_commands(message)
 
 
-class Bot(BotBase, _discord.Bot):
+class Bot(BotBase, discord.Bot):
     """Represents a discord bot.
 
     This class is a subclass of :class:`discord.Bot` and as a result
@@ -449,7 +451,7 @@ class Bot(BotBase, _discord.Bot):
     """
 
 
-class AutoShardedBot(BotBase, _discord.AutoShardedBot):
+class AutoShardedBot(BotBase, discord.AutoShardedBot):
     """This is similar to :class:`.Bot` except that it is inherited from
     :class:`discord.AutoShardedBot` instead.
     """

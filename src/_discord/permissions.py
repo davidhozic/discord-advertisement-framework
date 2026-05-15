@@ -180,7 +180,7 @@ class Permissions(BaseFlags):
         """A factory method that creates a :class:`Permissions` with all
         permissions set to ``True``.
         """
-        return cls(0b11111111111111111111111111111111111111111)
+        return cls(~(~1 << 51))
 
     @classmethod
     def all_channel(cls: type[P]) -> P:
@@ -191,6 +191,7 @@ class Permissions(BaseFlags):
         - :attr:`manage_emojis`
         - :attr:`view_audit_log`
         - :attr:`view_guild_insights`
+        - :attr:`view_creator_monetization_analytics`
         - :attr:`manage_guild`
         - :attr:`change_nickname`
         - :attr:`manage_nicknames`
@@ -218,8 +219,10 @@ class Permissions(BaseFlags):
            permissions :attr:`administrator`, :attr:`create_instant_invite`, :attr:`kick_members`,
            :attr:`ban_members`, :attr:`change_nickname` and :attr:`manage_nicknames` are
            no longer part of the general permissions.
+        .. versionchanged:: 2.7
+           Added :attr:`view_creator_monetization_analytics` permission.
         """
-        return cls(0b01110000000010000000010010110000)
+        return cls(0b100000000001110000000010000000010010110000)
 
     @classmethod
     def membership(cls: type[P]) -> P:
@@ -250,7 +253,7 @@ class Permissions(BaseFlags):
         """A factory method that creates a :class:`Permissions` with all
         "Voice" permissions from the official Discord UI set to ``True``.
         """
-        return cls(0b00000011111100000000001100000000)
+        return cls(0b1001001001000000000000011111100000000001100000000)
 
     @classmethod
     def stage(cls: type[P]) -> P:
@@ -391,11 +394,11 @@ class Permissions(BaseFlags):
 
     @flag_value
     def manage_messages(self) -> int:
-        """:class:`bool`: Returns ``True`` if a user can delete or pin messages in a text channel.
+        """:class:`bool`: Returns ``True`` if a user can delete messages in a text channel.
 
-        .. note::
+        .. warning::
 
-            Note that there are currently no ways to edit other people's messages.
+            Starting from January 12th 2026, this will no longer grant the ability to pin/unpin messages. Use :attr:`pin_messages` instead.
         """
         return 1 << 13
 
@@ -416,7 +419,7 @@ class Permissions(BaseFlags):
 
     @flag_value
     def mention_everyone(self) -> int:
-        """:class:`bool`: Returns ``True`` if a user's @everyone or @here will mention everyone in the text channel."""
+        """:class:`bool`: Returns ``True`` if a user's ``@everyone``, ``@here`` or role mentions will mention in the text channel."""
         return 1 << 17
 
     @flag_value
@@ -611,12 +614,79 @@ class Permissions(BaseFlags):
         return 1 << 40
 
     @flag_value
+    def view_creator_monetization_analytics(self) -> int:
+        """:class:`bool`: Returns ``True`` if a user can view creator monetization (role subscription) analytics.
+
+        .. versionadded:: 2.7
+        """
+        return 1 << 41
+
+    @flag_value
+    def use_soundboard(self) -> int:
+        """:class:`bool`: Returns ``True`` if a user can use the soundboard in a voice channel.
+
+        .. versionadded:: 2.7
+        """
+        return 1 << 42
+
+    @flag_value
+    def use_external_sounds(self) -> int:
+        """:class:`bool`: Returns ``True`` if a user can use external soundboard sounds in a voice channel.
+
+        .. versionadded:: 2.7
+        """
+        return 1 << 45
+
+    @flag_value
     def send_voice_messages(self) -> int:
         """:class:`bool`: Returns ``True`` if a member can send voice messages.
 
         .. versionadded:: 2.5
         """
         return 1 << 46
+
+    @flag_value
+    def set_voice_channel_status(self) -> int:
+        """:class:`bool`: Returns ``True`` if a member can set voice channel status.
+
+        .. versionadded:: 2.5
+        """
+        return 1 << 48
+
+    @flag_value
+    def send_polls(self) -> int:
+        """:class:`bool`: Returns ``True`` if a member can send polls.
+
+        .. versionadded:: 2.6
+        """
+        return 1 << 49
+
+    @flag_value
+    def use_external_apps(self) -> int:
+        """:class:`bool`: Returns ``True`` if a member's user-installed apps can show public responses.
+        Users will still be able to use user-installed apps, but responses will be ephemeral.
+
+        This only applies to apps that are also not installed to the guild.
+
+        .. versionadded:: 2.6
+        """
+        return 1 << 50
+
+    @flag_value
+    def pin_messages(self) -> int:
+        """:class:`bool`: Returns ``True`` if a member can pin/unpin messages.
+
+        .. versionadded:: 2.7
+        """
+        return 1 << 51
+
+    @flag_value
+    def bypass_slowmode(self) -> int:
+        """:class:`bool`: Returns ``True`` if a user can bypass slowmode.
+
+        .. versionadded:: 2.7
+        """
+        return 1 << 52
 
 
 PO = TypeVar("PO", bound="PermissionOverwrite")
@@ -735,7 +805,13 @@ class PermissionOverwrite:
         use_external_stickers: bool | None
         start_embedded_activities: bool | None
         moderate_members: bool | None
+        use_soundboard: bool | None
+        use_external_sounds: bool | None
         send_voice_messages: bool | None
+        set_voice_channel_status: bool | None
+        send_polls: bool | None
+        use_external_apps: bool | None
+        pin_messages: bool | None
 
     def __init__(self, **kwargs: bool | None):
         self._values: dict[str, bool | None] = {}
@@ -801,7 +877,7 @@ class PermissionOverwrite:
         """
         return len(self._values) == 0
 
-    def update(self, **kwargs: bool) -> None:
+    def update(self, **kwargs: bool | None) -> None:
         r"""Bulk updates this permission overwrite object.
 
         Allows you to set multiple attributes by using keyword

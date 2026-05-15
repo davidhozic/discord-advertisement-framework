@@ -22,10 +22,12 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 """
+
 from __future__ import annotations
 
 import types
 from collections import namedtuple
+from enum import IntEnum
 from typing import TYPE_CHECKING, Any, ClassVar, TypeVar, Union
 
 __all__ = (
@@ -43,6 +45,7 @@ __all__ = (
     "ActivityType",
     "NotificationLevel",
     "TeamMembershipState",
+    "TeamRole",
     "WebhookType",
     "ExpireBehaviour",
     "ExpireBehavior",
@@ -67,6 +70,21 @@ __all__ = (
     "AutoModActionType",
     "AutoModKeywordPresetType",
     "ApplicationRoleConnectionMetadataType",
+    "PromptType",
+    "OnboardingMode",
+    "ReactionType",
+    "VoiceChannelEffectAnimationType",
+    "SKUType",
+    "EntitlementType",
+    "EntitlementOwnerType",
+    "IntegrationType",
+    "InteractionContextType",
+    "PollLayoutType",
+    "MessageReferenceType",
+    "ThreadArchiveDuration",
+    "SubscriptionStatus",
+    "SeparatorSpacingSize",
+    "SelectDefaultValueType",
 )
 
 
@@ -215,6 +233,7 @@ class ChannelType(Enum):
     stage_voice = 13
     directory = 14
     forum = 15
+    media = 16
 
     def __str__(self):
         return self.name
@@ -256,6 +275,12 @@ class MessageType(Enum):
     stage_raise_hand = 30
     stage_topic = 31
     guild_application_premium_subscription = 32
+    guild_incident_alert_mode_enabled = 36
+    guild_incident_alert_mode_disabled = 37
+    guild_incident_report_raid = 38
+    guild_incident_report_false_alarm = 39
+    purchase_notification = 44
+    poll_result = 46
 
 
 class VoiceRegion(Enum):
@@ -427,6 +452,13 @@ class AuditLogAction(Enum):
     auto_moderation_user_communication_disabled = 145
     creator_monetization_request_created = 150
     creator_monetization_terms_accepted = 151
+    onboarding_question_create = 163
+    onboarding_question_update = 164
+    onboarding_update = 167
+    server_guide_create = 190
+    server_guide_update = 191
+    voice_channel_status_update = 192
+    voice_channel_status_delete = 193
 
     @property
     def category(self) -> AuditLogActionCategory | None:
@@ -489,6 +521,13 @@ class AuditLogAction(Enum):
             AuditLogAction.auto_moderation_user_communication_disabled: None,
             AuditLogAction.creator_monetization_request_created: None,
             AuditLogAction.creator_monetization_terms_accepted: None,
+            AuditLogAction.onboarding_question_create: AuditLogActionCategory.create,
+            AuditLogAction.onboarding_question_update: AuditLogActionCategory.update,
+            AuditLogAction.onboarding_update: AuditLogActionCategory.update,
+            AuditLogAction.server_guide_create: AuditLogActionCategory.create,
+            AuditLogAction.server_guide_update: AuditLogActionCategory.update,
+            AuditLogAction.voice_channel_status_update: AuditLogActionCategory.update,
+            AuditLogAction.voice_channel_status_delete: AuditLogActionCategory.delete,
         }
         return lookup[self]
 
@@ -529,6 +568,14 @@ class AuditLogAction(Enum):
             return "application_command_permission"
         elif v < 146:
             return "auto_moderation_rule"
+        elif v < 152:
+            return "monetization"
+        elif v < 168:
+            return "onboarding"
+        elif v < 192:
+            return "server_guide"
+        elif v < 194:
+            return "voice_channel_status"
 
 
 class UserFlags(Enum):
@@ -578,6 +625,15 @@ class TeamMembershipState(Enum):
 
     invited = 1
     accepted = 2
+
+
+class TeamRole(Enum):
+    """Role of a team member."""
+
+    owner = "owner"
+    admin = "admin"
+    developer = "developer"
+    read_only = "read_only"
 
 
 class WebhookType(Enum):
@@ -655,6 +711,7 @@ class InteractionResponseType(Enum):
     message_update = 7  # for components
     auto_complete_result = 8  # for autocomplete interactions
     modal = 9  # for modal dialogs
+    premium_required = 10
 
 
 class VideoQualityMode(Enum):
@@ -679,6 +736,16 @@ class ComponentType(Enum):
     role_select = 6
     mentionable_select = 7
     channel_select = 8
+    section = 9
+    text_display = 10
+    thumbnail = 11
+    media_gallery = 12
+    file = 13
+    separator = 14
+    content_inventory_entry = 16
+    container = 17
+    label = 18
+    file_upload = 19
 
     def __int__(self):
         return self.value
@@ -692,6 +759,7 @@ class ButtonStyle(Enum):
     success = 3
     danger = 4
     link = 5
+    premium = 6
 
     # Aliases
     blurple = 1
@@ -776,9 +844,13 @@ class SlashCommandOptionType(Enum):
             # Type checking fails for this case, so ignore it.
             return cls.from_datatype(datatype.__args__)  # type: ignore
 
-        if datatype.__name__ in ["Member", "User"]:
+        if isinstance(datatype, str):
+            datatype_name = datatype
+        else:
+            datatype_name = datatype.__name__
+        if datatype_name in ["Member", "User"]:
             return cls.user
-        if datatype.__name__ in [
+        if datatype_name in [
             "GuildChannel",
             "TextChannel",
             "VoiceChannel",
@@ -787,17 +859,18 @@ class SlashCommandOptionType(Enum):
             "ThreadOption",
             "Thread",
             "ForumChannel",
+            "MediaChannel",
             "DMChannel",
         ]:
             return cls.channel
-        if datatype.__name__ == "Role":
+        if datatype_name == "Role":
             return cls.role
-        if datatype.__name__ == "Attachment":
+        if datatype_name == "Attachment":
             return cls.attachment
-        if datatype.__name__ == "Mentionable":
+        if datatype_name == "Mentionable":
             return cls.mentionable
 
-        if issubclass(datatype, str):
+        if isinstance(datatype, str) or issubclass(datatype, str):
             return cls.string
         if issubclass(datatype, bool):
             return cls.boolean
@@ -807,9 +880,10 @@ class SlashCommandOptionType(Enum):
             return cls.number
 
         from .commands.context import ApplicationContext
+        from .ext.bridge import BridgeContext
 
         if not issubclass(
-            datatype, ApplicationContext
+            datatype, (ApplicationContext, BridgeContext)
         ):  # TODO: prevent ctx being passed here in cog commands
             raise TypeError(
                 f"Invalid class {datatype} used as an input type for an Option"
@@ -942,6 +1016,129 @@ class ApplicationRoleConnectionMetadataType(Enum):
     datetime_greater_than_or_equal = 6
     boolean_equal = 7
     boolean_not_equal = 8
+
+
+class PromptType(Enum):
+    """Guild Onboarding Prompt Type"""
+
+    multiple_choice = 0
+    dropdown = 1
+
+
+class OnboardingMode(Enum):
+    """Guild Onboarding Mode"""
+
+    default = 0
+    advanced = 1
+
+
+class ReactionType(Enum):
+    """The reaction type"""
+
+    normal = 0
+    burst = 1
+
+
+class SKUType(Enum):
+    """The SKU type"""
+
+    durable = 2
+    consumable = 3
+    subscription = 5
+    subscription_group = 6
+
+
+class EntitlementType(Enum):
+    """The entitlement type"""
+
+    purchase = 1
+    premium_subscription = 2
+    developer_gift = 3
+    test_mode_purchase = 4
+    free_purchase = 5
+    user_gift = 6
+    premium_purchase = 7
+    application_subscription = 8
+
+
+class EntitlementOwnerType(Enum):
+    """The entitlement owner type"""
+
+    guild = 1
+    user = 2
+
+
+class IntegrationType(Enum):
+    """The application's integration type"""
+
+    guild_install = 0
+    user_install = 1
+
+
+class InteractionContextType(Enum):
+    """The interaction's context type"""
+
+    guild = 0
+    bot_dm = 1
+    private_channel = 2
+
+
+class PollLayoutType(Enum):
+    """The poll's layout type."""
+
+    default = 1
+
+
+class VoiceChannelEffectAnimationType(Enum):
+    """Voice channel effect animation type.
+
+    .. versionadded:: 2.7
+    """
+
+    premium = 0
+    basic = 1
+
+
+class MessageReferenceType(Enum):
+    """The type of the message reference object"""
+
+    default = 0
+    forward = 1
+
+
+class SubscriptionStatus(Enum):
+    """The status of a subscription."""
+
+    active = 0
+    ending = 1
+    inactive = 2
+
+
+class ThreadArchiveDuration(IntEnum):
+    """The time set until a thread is automatically archived."""
+
+    one_hour = 60
+    one_day = 1440
+    three_days = 4320
+    one_week = 10080
+
+
+class SeparatorSpacingSize(Enum):
+    """A separator component's spacing size."""
+
+    small = 1
+    large = 2
+
+    def __int__(self):
+        return self.value
+
+
+class SelectDefaultValueType(Enum):
+    """Represents the default value type of a select menu."""
+
+    channel = "channel"
+    role = "role"
+    user = "user"
 
 
 T = TypeVar("T")

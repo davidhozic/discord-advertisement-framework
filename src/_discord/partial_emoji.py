@@ -26,7 +26,7 @@ DEALINGS IN THE SOFTWARE.
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, Any, TypedDict, TypeVar
+from typing import TYPE_CHECKING, Any, Literal, TypedDict, TypeVar
 
 from . import utils
 from .asset import Asset, AssetMixin
@@ -100,7 +100,9 @@ class PartialEmoji(_EmojiTag, AssetMixin):
     if TYPE_CHECKING:
         id: int | None
 
-    def __init__(self, *, name: str, animated: bool = False, id: int | None = None):
+    def __init__(
+        self, *, name: str | None, animated: bool = False, id: int | None = None
+    ):
         self.animated = animated
         self.name = name
         self.id = id
@@ -125,7 +127,7 @@ class PartialEmoji(_EmojiTag, AssetMixin):
         - ``name:id``
         - ``<:name:id>``
 
-        If the format does not match then it is assumed to be a unicode emoji.
+        If the format does not match then it is assumed to be a Unicode emoji block, either as Unicode characters or as a Discord alias (``:smile:``).
 
         .. versionadded:: 2.0
 
@@ -139,6 +141,11 @@ class PartialEmoji(_EmojiTag, AssetMixin):
         :class:`PartialEmoji`
             The partial emoji from this string.
         """
+        if unicode_emoji := utils.EMOJIS_MAP.get(
+            value.removeprefix(":").removesuffix(":")
+        ):
+            return cls(name=unicode_emoji, id=None, animated=False)
+
         match = cls._CUSTOM_EMOJI_RE.match(value)
         if match is not None:
             groups = match.groupdict()
@@ -160,11 +167,11 @@ class PartialEmoji(_EmojiTag, AssetMixin):
     def _to_partial(self) -> PartialEmoji:
         return self
 
-    def _to_forum_tag_payload(
+    def _to_forum_reaction_payload(
         self,
-    ) -> TypedDict("TagPayload", {"emoji_id": int, "emoji_name": None}) | TypedDict(
-        "TagPayload", {"emoji_id": None, "emoji_name": str}
-    ):
+    ) -> TypedDict(
+        "ReactionPayload", {"emoji_id": int, "emoji_name": None}
+    ) | TypedDict("ReactionPayload", {"emoji_id": None, "emoji_name": str}):
         if self.id is None:
             return {"emoji_id": None, "emoji_name": self.name}
         else:
@@ -238,8 +245,18 @@ class PartialEmoji(_EmojiTag, AssetMixin):
         if self.is_unicode_emoji():
             return ""
 
-        fmt = "gif" if self.animated else "png"
-        return f"{Asset.BASE}/emojis/{self.id}.{fmt}"
+        url = f"{Asset.BASE}/emojis/{self.id}.{self.extension}"
+        if self.animated:
+            url += "?animated=true"
+        return url
+
+    @property
+    def extension(self) -> Literal["webp", "png"]:
+        """Return the file extension of the emoji.
+
+        .. versionadded:: 2.7.1
+        """
+        return "webp" if self.animated else "png"
 
     async def read(self) -> bytes:
         if self.is_unicode_emoji():

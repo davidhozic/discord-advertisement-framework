@@ -40,11 +40,12 @@ Releases
 |UNRELEASED|
 =====================
 
-.. rubric:: Removed:
+.. rubric:: Breaking changes
 
 - Voice functionality. It was hard to properly maintain, nor did it add any real value, as
   voice advertisements aren't effective as it requires users to be present in the voice channel
   at the time of sending.
+- Updated PyCord API wrapper to v2.7.2.
 
 
 v4.2.0

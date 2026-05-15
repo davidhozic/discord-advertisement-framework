@@ -25,8 +25,15 @@ DEALINGS IN THE SOFTWARE.
 
 from __future__ import annotations
 
-from .._typed_dict import NotRequired, TypedDict
+from typing_extensions import NotRequired, TypedDict
+
 from .snowflake import Snowflake
+
+
+class RoleColours(TypedDict):
+    primary_color: int
+    secondary_color: int | None
+    tertiary_color: int | None
 
 
 class Role(TypedDict):
@@ -34,11 +41,13 @@ class Role(TypedDict):
     id: Snowflake
     name: str
     color: int
+    colors: RoleColours
     hoist: bool
     position: int
     permissions: str
     managed: bool
     mentionable: bool
+    flags: int
 
 
 class RoleTags(TypedDict, total=False):

@@ -22,16 +22,19 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 """
+
 from __future__ import annotations
 
 from typing import Literal, Union
 
-from .._typed_dict import NotRequired, TypedDict
+from typing_extensions import NotRequired, TypedDict
+
 from ..enums import SortOrder
 from ..flags import ChannelFlags
+from .emoji import PartialEmoji
 from .snowflake import Snowflake
 from .threads import ThreadArchiveDuration, ThreadMember, ThreadMetadata
-from .user import PartialUser
+from .user import User
 
 OverwriteType = Literal[0, 1]
 
@@ -43,7 +46,7 @@ class PermissionOverwrite(TypedDict):
     deny: str
 
 
-ChannelType = Literal[0, 1, 2, 3, 4, 5, 10, 11, 12, 13]
+ChannelType = Literal[0, 1, 2, 3, 4, 5, 10, 11, 12, 13, 14, 15, 16]
 
 
 class _BaseChannel(TypedDict):
@@ -107,6 +110,7 @@ VideoQualityMode = Literal[1, 2]
 class VoiceChannel(_BaseGuildChannel):
     rtc_region: NotRequired[str | None]
     video_quality_mode: NotRequired[VideoQualityMode]
+    status: NotRequired[str | None]
     type: Literal[2]
     bitrate: int
     user_limit: int
@@ -157,7 +161,7 @@ class DMChannel(TypedDict):
     id: Snowflake
     type: Literal[1]
     last_message_id: Snowflake | None
-    recipients: list[PartialUser]
+    recipients: list[User]
 
 
 class GroupDMChannel(_BaseChannel):
@@ -179,3 +183,14 @@ class StageInstance(TypedDict):
     privacy_level: PrivacyLevel
     discoverable_disabled: bool
     guild_scheduled_event_id: Snowflake
+
+
+class VoiceChannelEffectSendEvent(TypedDict):
+    channel_id: Snowflake
+    guild_id: Snowflake
+    user_id: Snowflake
+    emoji: NotRequired[PartialEmoji | None]
+    animation_type: NotRequired[int | None]
+    animation_id: NotRequired[int]
+    sound_id: NotRequired[Snowflake | int]
+    sound_volume: NotRequired[float]

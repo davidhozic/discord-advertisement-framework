@@ -28,7 +28,13 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Callable, Iterable
 
 from .abc import Messageable, _purge_messages_helper
-from .enums import ChannelType, try_enum
+from .enums import (
+    ChannelType,
+)
+from .enums import ThreadArchiveDuration as ThreadArchiveDurationEnum
+from .enums import (
+    try_enum,
+)
 from .errors import ClientException
 from .flags import ChannelFlags
 from .mixins import Hashable
@@ -288,7 +294,7 @@ class Thread(Messageable, Hashable):
 
     @property
     def members(self) -> list[ThreadMember]:
-        """A list of thread members in this thread.
+        """A list of thread members in this thread, including the bot if it is a member of this thread.
 
         This requires :attr:`Intents.members` to be properly filled. Most of the time however,
         this data is not provided by the gateway and a call to :meth:`fetch_members` is
@@ -300,7 +306,7 @@ class Thread(Messageable, Hashable):
     def applied_tags(self) -> list[ForumTag]:
         """List[:class:`ForumTag`]: A list of tags applied to this thread.
 
-        This is only available for threads in forum channels.
+        This is only available for threads in forum or media channels.
         """
         from .channel import ForumChannel  # to prevent circular import
 
@@ -394,7 +400,7 @@ class Thread(Messageable, Hashable):
         return self._state._get_message(self.id)
 
     def is_pinned(self) -> bool:
-        """Whether the thread is pinned to the top of its parent forum channel.
+        """Whether the thread is pinned to the top of its parent forum or media channel.
 
         .. versionadded:: 2.3
         """
@@ -602,7 +608,9 @@ class Thread(Messageable, Hashable):
         locked: bool = MISSING,
         invitable: bool = MISSING,
         slowmode_delay: int = MISSING,
-        auto_archive_duration: ThreadArchiveDuration = MISSING,
+        auto_archive_duration: (
+            ThreadArchiveDuration | ThreadArchiveDurationEnum
+        ) = MISSING,
         pinned: bool = MISSING,
         applied_tags: list[ForumTag] = MISSING,
         reason: str | None = None,
@@ -632,13 +640,14 @@ class Thread(Messageable, Hashable):
         auto_archive_duration: :class:`int`
             The new duration in minutes before a thread is automatically archived for inactivity.
             Must be one of ``60``, ``1440``, ``4320``, or ``10080``.
+            :class:`ThreadArchiveDuration` can be used alternatively.
         slowmode_delay: :class:`int`
             Specifies the slowmode rate limit for user in this thread, in seconds.
             A value of ``0`` disables slowmode. The maximum value possible is ``21600``.
         reason: Optional[:class:`str`]
             The reason for editing this thread. Shows up on the audit log.
         pinned: :class:`bool`
-            Whether to pin the thread or not. This only works if the thread is part of a forum.
+            Whether to pin the thread or not. This only works if the thread is part of a forum or media channel.
         applied_tags: List[:class:`ForumTag`]
             The set of tags to apply to the thread. Each tag object should have an ID set.
 

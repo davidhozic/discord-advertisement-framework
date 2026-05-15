@@ -22,6 +22,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -41,10 +42,11 @@ from typing import (
     overload,
 )
 
-import _discord
+import _discord as discord
 
 from ...commands import (
     ApplicationCommand,
+    Option,
     _BaseCommand,
     message_command,
     slash_command,
@@ -67,7 +69,7 @@ from .errors import *
 if TYPE_CHECKING:
     from typing_extensions import Concatenate, ParamSpec, TypeGuard
 
-    from _discord.message import Message
+    from discord.message import Message
 
     from ._types import Check, Coro, CoroFunc, Error, Hook
 
@@ -102,7 +104,7 @@ __all__ = (
     "message_command",
 )
 
-MISSING: Any = _discord.utils.MISSING
+MISSING: Any = discord.utils.MISSING
 
 T = TypeVar("T")
 CogT = TypeVar("CogT", bound="Cog")
@@ -136,7 +138,7 @@ def get_signature_parameters(
     signature = inspect.signature(function)
     params = {}
     cache: dict[str, Any] = {}
-    eval_annotation = _discord.utils.evaluate_annotation
+    eval_annotation = discord.utils.evaluate_annotation
     for name, parameter in signature.parameters.items():
         annotation = parameter.annotation
         if annotation is parameter.empty:
@@ -296,6 +298,7 @@ class Command(_BaseCommand, Generic[CogT, P, T]):
 
         .. versionadded:: 2.0
     """
+
     __original_kwargs__: dict[str, Any]
 
     def __new__(cls: type[CommandT], *args: Any, **kwargs: Any) -> CommandT:
@@ -562,7 +565,13 @@ class Command(_BaseCommand, Generic[CogT, P, T]):
             ctx.bot.dispatch("command_error", ctx, error)
 
     async def transform(self, ctx: Context, param: inspect.Parameter) -> Any:
-        required = param.default is param.empty
+        if isinstance(param.annotation, Option):
+            default = param.annotation.default
+            required = param.annotation.required
+        else:
+            default = param.default
+            required = default is param.empty
+
         converter = get_converter(param)
         consume_rest_is_special = (
             param.kind == param.KEYWORD_ONLY and not self.rest_is_raw
@@ -599,7 +608,7 @@ class Command(_BaseCommand, Generic[CogT, P, T]):
                 ):
                     return await converter._construct_default(ctx)
                 raise MissingRequiredArgument(param)
-            return param.default
+            return default
 
         previous = view.index
         if consume_rest_is_special:
@@ -756,7 +765,7 @@ class Command(_BaseCommand, Generic[CogT, P, T]):
             try:
                 next(iterator)
             except StopIteration:
-                raise _discord.ClientException(
+                raise discord.ClientException(
                     f'Callback for {self.name} command is missing "self" parameter.'
                 )
 
@@ -764,7 +773,7 @@ class Command(_BaseCommand, Generic[CogT, P, T]):
         try:
             next(iterator)
         except StopIteration:
-            raise _discord.ClientException(
+            raise discord.ClientException(
                 f'Callback for {self.name} command is missing "ctx" parameter.'
             )
 
@@ -1186,7 +1195,7 @@ class Command(_BaseCommand, Generic[CogT, P, T]):
             if cog is not None:
                 local_check = Cog._get_overridden_method(cog.cog_check)
                 if local_check is not None:
-                    ret = await _discord.utils.maybe_coroutine(local_check, ctx)
+                    ret = await discord.utils.maybe_coroutine(local_check, ctx)
                     if not ret:
                         return False
 
@@ -1195,7 +1204,7 @@ class Command(_BaseCommand, Generic[CogT, P, T]):
                 # since we have no checks, then we just return True.
                 return True
 
-            return await _discord.utils.async_all(predicate(ctx) for predicate in predicates)  # type: ignore
+            return await discord.utils.async_all(predicate(ctx) for predicate in predicates)  # type: ignore
         finally:
             ctx.command = original
 
@@ -1317,7 +1326,7 @@ class GroupMixin(Generic[CogT]):
                 self.prefixed_commands[alias] = cmd
         return command
 
-    def walk_commands(self) -> Generator[Command[CogT, Any, Any], None, None]:
+    def walk_commands(self) -> Generator[Command[CogT, Any, Any]]:
         """An iterator that recursively walks through all commands and subcommands.
 
         .. versionchanged:: 1.4
@@ -1388,8 +1397,7 @@ class GroupMixin(Generic[CogT]):
             )
         ],
         Command[CogT, P, T],
-    ]:
-        ...
+    ]: ...
 
     @overload
     def command(
@@ -1398,8 +1406,7 @@ class GroupMixin(Generic[CogT]):
         cls: type[CommandT] = ...,
         *args: Any,
         **kwargs: Any,
-    ) -> Callable[[Callable[Concatenate[ContextT, P], Coro[Any]]], CommandT]:
-        ...
+    ) -> Callable[[Callable[Concatenate[ContextT, P], Coro[Any]]], CommandT]: ...
 
     def command(
         self,
@@ -1440,8 +1447,7 @@ class GroupMixin(Generic[CogT]):
             )
         ],
         Group[CogT, P, T],
-    ]:
-        ...
+    ]: ...
 
     @overload
     def group(
@@ -1450,8 +1456,7 @@ class GroupMixin(Generic[CogT]):
         cls: type[GroupT] = ...,
         *args: Any,
         **kwargs: Any,
-    ) -> Callable[[Callable[Concatenate[ContextT, P], Coro[Any]]], GroupT]:
-        ...
+    ) -> Callable[[Callable[Concatenate[ContextT, P], Coro[Any]]], GroupT]: ...
 
     def group(
         self,
@@ -1608,8 +1613,7 @@ def command(
         )
     ],
     Command[CogT, P, T],
-]:
-    ...
+]: ...
 
 
 @overload
@@ -1625,8 +1629,7 @@ def command(
         )
     ],
     Command[CogT, P, T],
-]:
-    ...
+]: ...
 
 
 @overload
@@ -1642,8 +1645,7 @@ def command(
         )
     ],
     CommandT,
-]:
-    ...
+]: ...
 
 
 def command(
@@ -1693,7 +1695,7 @@ def command(
         func: (
             Callable[Concatenate[ContextT, P], Coro[Any]]
             | Callable[Concatenate[CogT, ContextT, P], Coro[Any]]
-        )
+        ),
     ) -> CommandT:
         if isinstance(func, Command):
             raise TypeError("Callback is already a command.")
@@ -1715,8 +1717,7 @@ def group(
         )
     ],
     Group[CogT, P, T],
-]:
-    ...
+]: ...
 
 
 @overload
@@ -1732,8 +1733,7 @@ def group(
         )
     ],
     GroupT,
-]:
-    ...
+]: ...
 
 
 def group(
@@ -1799,7 +1799,7 @@ def check(predicate: Check) -> Callable[[T], T]:
         The ``predicate`` attribute was added.
 
     Examples
-    ---------
+    --------
 
     Creating a basic check to see if the command invoker is you.
 
@@ -1828,7 +1828,7 @@ def check(predicate: Check) -> Callable[[T], T]:
             await ctx.send('Only you!')
 
     Parameters
-    -----------
+    ----------
     predicate: Callable[[:class:`Context`], :class:`bool`]
         The predicate to check if the command should be invoked.
     """
@@ -1870,20 +1870,8 @@ def check_any(*checks: Check) -> Callable[[T], T]:
 
     .. versionadded:: 1.3
 
-    Parameters
-    ------------
-    \*checks: Callable[[:class:`Context`], :class:`bool`]
-        An argument list of checks that have been decorated with
-        the :func:`check` decorator.
-
-    Raises
-    -------
-    TypeError
-        A check passed has not been decorated with the :func:`check`
-        decorator.
-
     Examples
-    ---------
+    --------
 
     Creating a basic check to see if it's the bot owner or
     the server owner:
@@ -1899,6 +1887,19 @@ def check_any(*checks: Check) -> Callable[[T], T]:
         @commands.check_any(commands.is_owner(), is_guild_owner())
         async def only_for_owners(ctx):
             await ctx.send('Hello mister owner!')
+
+    Parameters
+    ----------
+    \*checks: Callable[[:class:`Context`], :class:`bool`]
+        An argument list of checks that have been decorated with
+        the :func:`check` decorator.
+
+    Raises
+    ------
+    TypeError
+        A check passed has not been decorated with the :func:`check`
+        decorator.
+
     """
 
     unwrapped = []
@@ -1961,9 +1962,9 @@ def has_role(item: int | str) -> Callable[[T], T]:
 
         # ctx.guild is None doesn't narrow ctx.author to Member
         if isinstance(item, int):
-            role = _discord.utils.get(ctx.author.roles, id=item)  # type: ignore
+            role = discord.utils.get(ctx.author.roles, id=item)  # type: ignore
         else:
-            role = _discord.utils.get(ctx.author.roles, name=item)  # type: ignore
+            role = discord.utils.get(ctx.author.roles, name=item)  # type: ignore
         if role is None:
             raise MissingRole(item)
         return True
@@ -1988,12 +1989,12 @@ def has_any_role(*items: int | str) -> Callable[[T], T]:
         instead of generic :exc:`.CheckFailure`
 
     Parameters
-    -----------
+    ----------
     items: List[Union[:class:`str`, :class:`int`]]
         An argument list of names or IDs to check that the member has roles wise.
 
     Example
-    --------
+    -------
 
     .. code-block:: python3
 
@@ -2008,7 +2009,7 @@ def has_any_role(*items: int | str) -> Callable[[T], T]:
             raise NoPrivateMessage()
 
         # ctx.guild is None doesn't narrow ctx.author to Member
-        getter = functools.partial(_discord.utils.get, ctx.author.roles)  # type: ignore
+        getter = functools.partial(discord.utils.get, ctx.author.roles)  # type: ignore
         if any(
             (
                 getter(id=item) is not None
@@ -2043,9 +2044,9 @@ def bot_has_role(item: int) -> Callable[[T], T]:
 
         me = ctx.me
         if isinstance(item, int):
-            role = _discord.utils.get(me.roles, id=item)
+            role = discord.utils.get(me.roles, id=item)
         else:
-            role = _discord.utils.get(me.roles, name=item)
+            role = discord.utils.get(me.roles, name=item)
         if role is None:
             raise BotMissingRole(item)
         return True
@@ -2072,7 +2073,7 @@ def bot_has_any_role(*items: int) -> Callable[[T], T]:
             raise NoPrivateMessage()
 
         me = ctx.me
-        getter = functools.partial(_discord.utils.get, me.roles)
+        getter = functools.partial(discord.utils.get, me.roles)
         if any(
             (
                 getter(id=item) is not None
@@ -2103,12 +2104,12 @@ def has_permissions(**perms: bool) -> Callable[[T], T]:
     If the command is executed within a DM, it returns ``True``.
 
     Parameters
-    ------------
+    ----------
     \*\*perms: Dict[:class:`str`, :class:`bool`]
         An argument list of permissions to check for.
 
     Example
-    ---------
+    -------
 
     .. code-block:: python3
 
@@ -2119,7 +2120,7 @@ def has_permissions(**perms: bool) -> Callable[[T], T]:
 
     """
 
-    invalid = set(perms) - set(_discord.Permissions.VALID_FLAGS)
+    invalid = set(perms) - set(discord.Permissions.VALID_FLAGS)
     if invalid:
         raise TypeError(f"Invalid permission(s): {', '.join(invalid)}")
 
@@ -2148,7 +2149,7 @@ def bot_has_permissions(**perms: bool) -> Callable[[T], T]:
     that is inherited from :exc:`.CheckFailure`.
     """
 
-    invalid = set(perms) - set(_discord.Permissions.VALID_FLAGS)
+    invalid = set(perms) - set(discord.Permissions.VALID_FLAGS)
     if invalid:
         raise TypeError(f"Invalid permission(s): {', '.join(invalid)}")
 
@@ -2185,7 +2186,7 @@ def has_guild_permissions(**perms: bool) -> Callable[[T], T]:
     .. versionadded:: 1.3
     """
 
-    invalid = set(perms) - set(_discord.Permissions.VALID_FLAGS)
+    invalid = set(perms) - set(discord.Permissions.VALID_FLAGS)
     if invalid:
         raise TypeError(f"Invalid permission(s): {', '.join(invalid)}")
 
@@ -2213,7 +2214,7 @@ def bot_has_guild_permissions(**perms: bool) -> Callable[[T], T]:
     .. versionadded:: 1.3
     """
 
-    invalid = set(perms) - set(_discord.Permissions.VALID_FLAGS)
+    invalid = set(perms) - set(discord.Permissions.VALID_FLAGS)
     if invalid:
         raise TypeError(f"Invalid permission(s): {', '.join(invalid)}")
 
@@ -2303,7 +2304,7 @@ def is_nsfw() -> Callable[[T], T]:
     def pred(ctx: Context) -> bool:
         ch = ctx.channel
         if ctx.guild is None or (
-            isinstance(ch, (_discord.TextChannel, _discord.Thread)) and ch.is_nsfw()
+            isinstance(ch, (discord.TextChannel, discord.Thread)) and ch.is_nsfw()
         ):
             return True
         raise NSFWChannelRequired(ch)  # type: ignore

@@ -45,11 +45,12 @@ from . import utils
 from .context_managers import Typing
 from .enums import ChannelType
 from .errors import ClientException, InvalidArgument
-from .file import File
-from .flags import MessageFlags
+from .file import File, VoiceMessage
+from .flags import ChannelFlags, MessageFlags
 from .invite import Invite
-from .iterators import HistoryIterator
+from .iterators import HistoryIterator, MessagePinIterator
 from .mentions import AllowedMentions
+from .partial_emoji import PartialEmoji, _EmojiTag
 from .permissions import PermissionOverwrite, Permissions
 from .role import Role
 from .scheduled_events import ScheduledEvent
@@ -84,17 +85,17 @@ if TYPE_CHECKING:
     from .client import Client
     from .embeds import Embed
     from .enums import InviteTarget
-    from .flags import ChannelFlags
     from .guild import Guild
     from .member import Member
     from .message import Message, MessageReference, PartialMessage
+    from .poll import Poll
     from .state import ConnectionState
     from .threads import Thread
     from .types.channel import Channel as ChannelPayload
     from .types.channel import GuildChannel as GuildChannelPayload
     from .types.channel import OverwriteType
     from .types.channel import PermissionOverwrite as PermissionOverwritePayload
-    from .ui.view import View
+    from .ui.view import BaseView
     from .user import ClientUser
 
     PartialMessageableChannel = Union[
@@ -114,7 +115,7 @@ async def _single_delete_strategy(
 
 
 async def _purge_messages_helper(
-    channel: TextChannel | Thread | VoiceChannel,
+    channel: TextChannel | StageChannel | Thread | VoiceChannel,
     *,
     limit: int | None = 100,
     check: Callable[[Message], bool] = MISSING,
@@ -234,7 +235,7 @@ class User(Snowflake, Protocol):
     name: str
     discriminator: str
     global_name: str | None
-    avatar: Asset
+    avatar: Asset | None
     bot: bool
 
     @property
@@ -340,8 +341,7 @@ class GuildChannel:
 
         def __init__(
             self, *, state: ConnectionState, guild: Guild, data: dict[str, Any]
-        ):
-            ...
+        ): ...
 
     def __str__(self) -> str:
         return self.name
@@ -418,8 +418,7 @@ class GuildChannel:
             pass
 
         try:
-            if options.pop("require_tag"):
-                options["flags"] = ChannelFlags.require_tag.flag
+            options["flags"] = options.pop("flags").value
         except KeyError:
             pass
 
@@ -506,6 +505,34 @@ class GuildChannel:
             if not isinstance(ch_type, ChannelType):
                 raise InvalidArgument("type field must be of type ChannelType")
             options["type"] = ch_type.value
+
+        try:
+            default_reaction_emoji = options["default_reaction_emoji"]
+        except KeyError:
+            pass
+        else:
+            if isinstance(
+                default_reaction_emoji, _EmojiTag
+            ):  # GuildEmoji, PartialEmoji
+                default_reaction_emoji = default_reaction_emoji._to_partial()
+            elif isinstance(default_reaction_emoji, int):
+                default_reaction_emoji = PartialEmoji(
+                    name=None, id=default_reaction_emoji
+                )
+            elif isinstance(default_reaction_emoji, str):
+                default_reaction_emoji = PartialEmoji.from_str(default_reaction_emoji)
+            elif default_reaction_emoji is None:
+                pass
+            else:
+                raise InvalidArgument(
+                    "default_reaction_emoji must be of type: GuildEmoji | int | str | None"
+                )
+
+            options["default_reaction_emoji"] = (
+                default_reaction_emoji._to_forum_reaction_payload()
+                if default_reaction_emoji
+                else None
+            )
 
         if options:
             return await self._state.http.edit_channel(
@@ -712,7 +739,7 @@ class GuildChannel:
             return Permissions.all()
 
         default = self.guild.default_role
-        base = Permissions(default.permissions.value)
+        base = Permissions(default.permissions.value if default else 0)
 
         # Handle the role case first
         if isinstance(obj, Role):
@@ -830,8 +857,7 @@ class GuildChannel:
         *,
         overwrite: PermissionOverwrite | None = ...,
         reason: str | None = ...,
-    ) -> None:
-        ...
+    ) -> None: ...
 
     @overload
     async def set_permissions(
@@ -840,8 +866,7 @@ class GuildChannel:
         *,
         reason: str | None = ...,
         **permissions: bool,
-    ) -> None:
-        ...
+    ) -> None: ...
 
     async def set_permissions(
         self, target, *, overwrite=MISSING, reason=None, **permissions
@@ -938,7 +963,7 @@ class GuildChannel:
         if overwrite is None:
             await http.delete_channel_permissions(self.id, target.id, reason=reason)
         elif isinstance(overwrite, PermissionOverwrite):
-            (allow, deny) = overwrite.pair()
+            allow, deny = overwrite.pair()
             await http.edit_channel_permissions(
                 self.id, target.id, allow.value, deny.value, perm_type, reason=reason
             )
@@ -1010,8 +1035,7 @@ class GuildChannel:
         category: Snowflake | None = MISSING,
         sync_permissions: bool = MISSING,
         reason: str | None = MISSING,
-    ) -> None:
-        ...
+    ) -> None: ...
 
     @overload
     async def move(
@@ -1022,8 +1046,7 @@ class GuildChannel:
         category: Snowflake | None = MISSING,
         sync_permissions: bool = MISSING,
         reason: str = MISSING,
-    ) -> None:
-        ...
+    ) -> None: ...
 
     @overload
     async def move(
@@ -1034,8 +1057,7 @@ class GuildChannel:
         category: Snowflake | None = MISSING,
         sync_permissions: bool = MISSING,
         reason: str = MISSING,
-    ) -> None:
-        ...
+    ) -> None: ...
 
     @overload
     async def move(
@@ -1046,8 +1068,7 @@ class GuildChannel:
         category: Snowflake | None = MISSING,
         sync_permissions: bool = MISSING,
         reason: str = MISSING,
-    ) -> None:
-        ...
+    ) -> None: ...
 
     async def move(self, **kwargs) -> None:
         """|coro|
@@ -1329,15 +1350,16 @@ class Messageable:
         file: File = ...,
         stickers: Sequence[GuildSticker | StickerItem] = ...,
         delete_after: float = ...,
-        nonce: str | int = ...,
+        nonce: int | str = ...,
+        enforce_nonce: bool = ...,
         allowed_mentions: AllowedMentions = ...,
         reference: Message | MessageReference | PartialMessage = ...,
         mention_author: bool = ...,
-        view: View = ...,
+        view: BaseView = ...,
+        poll: Poll = ...,
         suppress: bool = ...,
         silent: bool = ...,
-    ) -> Message:
-        ...
+    ) -> Message: ...
 
     @overload
     async def send(
@@ -1349,15 +1371,16 @@ class Messageable:
         files: list[File] = ...,
         stickers: Sequence[GuildSticker | StickerItem] = ...,
         delete_after: float = ...,
-        nonce: str | int = ...,
+        nonce: int | str = ...,
+        enforce_nonce: bool = ...,
         allowed_mentions: AllowedMentions = ...,
         reference: Message | MessageReference | PartialMessage = ...,
         mention_author: bool = ...,
-        view: View = ...,
+        view: BaseView = ...,
+        poll: Poll = ...,
         suppress: bool = ...,
         silent: bool = ...,
-    ) -> Message:
-        ...
+    ) -> Message: ...
 
     @overload
     async def send(
@@ -1369,15 +1392,16 @@ class Messageable:
         file: File = ...,
         stickers: Sequence[GuildSticker | StickerItem] = ...,
         delete_after: float = ...,
-        nonce: str | int = ...,
+        nonce: int | str = ...,
+        enforce_nonce: bool = ...,
         allowed_mentions: AllowedMentions = ...,
         reference: Message | MessageReference | PartialMessage = ...,
         mention_author: bool = ...,
-        view: View = ...,
+        view: BaseView = ...,
+        poll: Poll = ...,
         suppress: bool = ...,
         silent: bool = ...,
-    ) -> Message:
-        ...
+    ) -> Message: ...
 
     @overload
     async def send(
@@ -1389,15 +1413,16 @@ class Messageable:
         files: list[File] = ...,
         stickers: Sequence[GuildSticker | StickerItem] = ...,
         delete_after: float = ...,
-        nonce: str | int = ...,
+        nonce: int | str = ...,
+        enforce_nonce: bool = ...,
         allowed_mentions: AllowedMentions = ...,
         reference: Message | MessageReference | PartialMessage = ...,
         mention_author: bool = ...,
-        view: View = ...,
+        view: BaseView = ...,
+        poll: Poll = ...,
         suppress: bool = ...,
         silent: bool = ...,
-    ) -> Message:
-        ...
+    ) -> Message: ...
 
     async def send(
         self,
@@ -1411,10 +1436,12 @@ class Messageable:
         stickers=None,
         delete_after=None,
         nonce=None,
+        enforce_nonce=None,
         allowed_mentions=None,
         reference=None,
         mention_author=None,
         view=None,
+        poll=None,
         suppress=None,
         silent=None,
     ):
@@ -1448,9 +1475,13 @@ class Messageable:
             The file to upload.
         files: List[:class:`~discord.File`]
             A list of files to upload. Must be a maximum of 10.
-        nonce: :class:`int`
+        nonce: Union[:class:`str`, :class:`int`]
             The nonce to use for sending this message. If the message was successfully sent,
             then the message will have a nonce with this value.
+        enforce_nonce: Optional[:class:`bool`]
+            Whether :attr:`nonce` is enforced to be validated.
+
+            .. versionadded:: 2.5
         delete_after: :class:`float`
             If provided, the number of seconds to wait in the background
             before deleting the message we just sent. If the deletion fails,
@@ -1466,9 +1497,9 @@ class Messageable:
             .. versionadded:: 1.4
 
         reference: Union[:class:`~discord.Message`, :class:`~discord.MessageReference`, :class:`~discord.PartialMessage`]
-            A reference to the :class:`~discord.Message` to which you are replying, this can be created using
-            :meth:`~discord.Message.to_reference` or passed directly as a :class:`~discord.Message`. You can control
-            whether this mentions the author of the referenced message using the
+            A reference to the :class:`~discord.Message` being replied to or forwarded. This can be created using
+            :meth:`~discord.Message.to_reference`.
+            When replying, you can control whether this mentions the author of the referenced message using the
             :attr:`~discord.AllowedMentions.replied_user` attribute of ``allowed_mentions`` or by
             setting ``mention_author``.
 
@@ -1478,7 +1509,7 @@ class Messageable:
             If set, overrides the :attr:`~discord.AllowedMentions.replied_user` attribute of ``allowed_mentions``.
 
             .. versionadded:: 1.6
-        view: :class:`discord.ui.View`
+        view: :class:`discord.ui.BaseView`
             A Discord UI View to add to the message.
         embeds: List[:class:`~discord.Embed`]
             A list of embeds to upload. Must be a maximum of 10.
@@ -1494,6 +1525,10 @@ class Messageable:
             Whether to suppress push and desktop notifications for the message.
 
             .. versionadded:: 2.4
+        poll: :class:`Poll`
+            The poll to send.
+
+            .. versionadded:: 2.6
 
         Returns
         -------
@@ -1536,7 +1571,7 @@ class Messageable:
         flags = MessageFlags(
             suppress_embeds=bool(suppress),
             suppress_notifications=bool(silent),
-        ).value
+        )
 
         if stickers is not None:
             stickers = [sticker.id for sticker in stickers]
@@ -1554,9 +1589,19 @@ class Messageable:
             allowed_mentions = allowed_mentions or AllowedMentions().to_dict()
             allowed_mentions["replied_user"] = bool(mention_author)
 
+        _reference = None
         if reference is not None:
             try:
-                reference = reference.to_message_reference_dict()
+                _reference = reference.to_message_reference_dict()
+                from .message import MessageReference
+
+                if not isinstance(reference, MessageReference):
+                    utils.warn_deprecated(
+                        f"Passing {type(reference).__name__} to reference",
+                        "MessageReference",
+                        "2.7",
+                        "3.0",
+                    )
             except AttributeError:
                 raise InvalidArgument(
                     "reference parameter must be Message, MessageReference, or"
@@ -1566,12 +1611,21 @@ class Messageable:
         if view:
             if not hasattr(view, "__discord_ui_view__"):
                 raise InvalidArgument(
-                    f"view parameter must be View not {view.__class__!r}"
+                    f"view parameter must be BaseView not {view.__class__!r}"
                 )
 
             components = view.to_components()
+            if view.is_components_v2():
+                if embeds or content:
+                    raise TypeError(
+                        "cannot send embeds or content with a view using v2 component logic"
+                    )
+                flags.is_components_v2 = True
         else:
             components = None
+
+        if poll:
+            poll = poll.to_dict()
 
         if file is not None and files is not None:
             raise InvalidArgument("cannot pass both file and files parameter to send()")
@@ -1579,25 +1633,7 @@ class Messageable:
         if file is not None:
             if not isinstance(file, File):
                 raise InvalidArgument("file parameter must be File")
-
-            try:
-                data = await state.http.send_files(
-                    channel.id,
-                    files=[file],
-                    allowed_mentions=allowed_mentions,
-                    content=content,
-                    tts=tts,
-                    embed=embed,
-                    embeds=embeds,
-                    nonce=nonce,
-                    message_reference=reference,
-                    stickers=stickers,
-                    components=components,
-                    flags=flags,
-                )
-            finally:
-                file.close()
-
+            files = [file]
         elif files is not None:
             if len(files) > 10:
                 raise InvalidArgument(
@@ -1606,6 +1642,10 @@ class Messageable:
             elif not all(isinstance(file, File) for file in files):
                 raise InvalidArgument("files parameter must be a list of File")
 
+        if files is not None:
+            flags = flags + MessageFlags(
+                is_voice_message=any(isinstance(f, VoiceMessage) for f in files)
+            )
             try:
                 data = await state.http.send_files(
                     channel.id,
@@ -1615,11 +1655,13 @@ class Messageable:
                     embed=embed,
                     embeds=embeds,
                     nonce=nonce,
+                    enforce_nonce=enforce_nonce,
                     allowed_mentions=allowed_mentions,
-                    message_reference=reference,
+                    message_reference=_reference,
                     stickers=stickers,
                     components=components,
-                    flags=flags,
+                    flags=flags.value,
+                    poll=poll,
                 )
             finally:
                 for f in files:
@@ -1632,17 +1674,21 @@ class Messageable:
                 embed=embed,
                 embeds=embeds,
                 nonce=nonce,
+                enforce_nonce=enforce_nonce,
                 allowed_mentions=allowed_mentions,
-                message_reference=reference,
+                message_reference=_reference,
                 stickers=stickers,
                 components=components,
-                flags=flags,
+                flags=flags.value,
+                poll=poll,
             )
 
         ret = state.create_message(channel=channel, data=data)
         if view:
-            state.store_view(view, ret.id)
+            if view.is_dispatchable():
+                state.store_view(view, ret.id)
             view.message = ret
+            view.refresh(ret.components)
 
         if delete_after is not None:
             await ret.delete(delay=delete_after)
@@ -1708,32 +1754,64 @@ class Messageable:
         data = await self._state.http.get_message(channel.id, id)
         return self._state.create_message(channel=channel, data=data)
 
-    async def pins(self) -> list[Message]:
-        """|coro|
+    def pins(
+        self,
+        *,
+        limit: int | None = 50,
+        before: SnowflakeTime | None = None,
+    ) -> MessagePinIterator:
+        """Returns a :class:`~discord.MessagePinIterator` that enables receiving the destination's pinned messages.
 
-        Retrieves all messages that are currently pinned in the channel.
+        You must have :attr:`~discord.Permissions.read_message_history` permissions to use this.
 
-        .. note::
+        .. warning::
 
-            Due to a limitation with the Discord API, the :class:`.Message`
-            objects returned by this method do not contain complete
-            :attr:`.Message.reactions` data.
+            Starting from version 3.0, `await channel.pins()` will no longer return a list of :class:`Message`. See examples below for new usage instead.
 
-        Returns
-        -------
-        List[:class:`~discord.Message`]
-            The messages that are currently pinned.
+        Parameters
+        ----------
+        limit: Optional[:class:`int`]
+            The number of pinned messages to retrieve.
+            If ``None``, retrieves every pinned message in the channel.
+        before: Optional[Union[:class:`~discord.abc.Snowflake`, :class:`datetime.datetime`]]
+            Retrieve messages pinned before this datetime.
+            If a datetime is provided, it is recommended to use a UTC aware datetime.
+            If the datetime is naive, it is assumed to be local time.
+
+        Yields
+        ------
+        :class:`~discord.MessagePin`
+            The pinned message.
 
         Raises
         ------
+        ~discord.Forbidden
+            You do not have permissions to get pinned messages.
         ~discord.HTTPException
-            Retrieving the pinned messages failed.
-        """
+            The request to get pinned messages failed.
 
-        channel = await self._get_channel()
-        state = self._state
-        data = await state.http.pins_from(channel.id)
-        return [state.create_message(channel=channel, data=m) for m in data]
+        Examples
+        --------
+
+        Usage ::
+
+            counter = 0
+            async for pin in channel.pins(limit=250):
+                if pin.message.author == client.user:
+                    counter += 1
+
+        Flattening into a list: ::
+
+            pins = await channel.pins(limit=None).flatten()
+            # pins is now a list of MessagePin...
+
+        All parameters are optional.
+        """
+        return MessagePinIterator(
+            self,
+            limit=limit,
+            before=before,
+        )
 
     def can_send(self, *objects) -> bool:
         """Returns a :class:`bool` indicating whether you have the permissions to send the object(s).
@@ -1752,7 +1830,7 @@ class Messageable:
             "Message": "send_messages",
             "Embed": "embed_links",
             "File": "attach_files",
-            "Emoji": "use_external_emojis",
+            "GuildEmoji": "use_external_emojis",
             "GuildSticker": "use_external_stickers",
         }
         # Can't use channel = await self._get_channel() since its async
@@ -1777,7 +1855,7 @@ class Messageable:
                         mapping.get(type(obj).__name__) or mapping[obj.__name__]
                     )
 
-                if type(obj).__name__ == "Emoji":
+                if type(obj).__name__ == "GuildEmoji":
                     if (
                         obj._to_partial().is_unicode_emoji
                         or obj.guild_id == channel.guild.id
