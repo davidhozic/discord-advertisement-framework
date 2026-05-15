@@ -65,7 +65,7 @@ from typing import (
 )
 
 if TYPE_CHECKING:
-    from discord import (
+    from _discord import (
         Client,
         VoiceChannel,
         TextChannel,
@@ -674,7 +674,7 @@ async def get_or_fetch(
     :exc:`InvalidData`
         Raised when the object resolves to a different guild.
     """
-    from discord import AppEmoji, Client, Guild, Member, Role, User
+    from _discord import AppEmoji, Client, Guild, Member, Role, User
 
     if object_id is None:
         return default if default is not MISSING else None
@@ -744,7 +744,7 @@ async def get_or_fetch(
 @functools.lru_cache(maxsize=1)
 def _get_string_to_type_map() -> dict[str, type]:
     """Return a cached map of lowercase strings -> discord types."""
-    from discord import AppEmoji, Guild, Member, Role, User, abc, emoji
+    from _discord import AppEmoji, Guild, Member, Role, User, abc, emoji
 
     return {
         "channel": abc.GuildChannel,
@@ -760,7 +760,7 @@ def _get_string_to_type_map() -> dict[str, type]:
 @functools.lru_cache(maxsize=1)
 def _get_getter_fetcher_map() -> dict[type, tuple[_Getter, _Fetcher]]:
     """Return a cached map of type names -> (getter, fetcher) functions."""
-    from discord import Guild, Member, Role, User, abc, emoji
+    from _discord import Guild, Member, Role, User, abc, emoji
 
     base_map: dict[type, tuple[_Getter, _Fetcher]] = {
         Member: (

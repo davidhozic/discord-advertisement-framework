@@ -604,8 +604,8 @@ class SelectDefaultValue:
         inst: SelectDefaultValue | None = None,
     ) -> SelectDefaultValue:
         # preventing >circular imports<
-        from discord import Member, Object, Role, User, abc
-        from discord.user import _UserTag
+        from _discord import Member, Object, Role, User, abc
+        from _discord.user import _UserTag
 
         instances_mapping: dict[
             type, tuple[tuple[ComponentType, ...], SelectDefaultValueType]

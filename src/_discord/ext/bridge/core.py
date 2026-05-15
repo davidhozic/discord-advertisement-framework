@@ -30,7 +30,7 @@ from collections.abc import Iterator
 from typing import TYPE_CHECKING, Any, Callable
 
 import _discord.commands.options
-from discord import (
+from _discord import (
     ApplicationCommand,
     Attachment,
     Option,

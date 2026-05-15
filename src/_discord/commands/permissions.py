@@ -54,7 +54,7 @@ def default_permissions(**perms: bool) -> Callable:
 
     .. code-block:: python3
 
-        from discord import default_permissions
+        from _discord import default_permissions
 
         @bot.slash_command()
         @default_permissions(manage_messages=True)
@@ -89,7 +89,7 @@ def guild_only() -> Callable:
 
     .. code-block:: python3
 
-        from discord import guild_only
+        from _discord import guild_only
 
         @bot.slash_command()
         @guild_only()
@@ -120,7 +120,7 @@ def is_nsfw() -> Callable:
 
     .. code-block:: python3
 
-        from discord import is_nsfw
+        from _discord import is_nsfw
 
         @bot.slash_command()
         @is_nsfw()
