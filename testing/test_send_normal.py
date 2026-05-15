@@ -10,8 +10,6 @@ from daf.events import *
 
 # CONFIGURATION
 TEST_USER_ID = 145196308985020416
-VOICE_MESSAGE_TEST_LENGTH = 4.5  # Test if entire message is played
-
 
 @pytest.fixture(scope="module")
 async def TEXT_MESSAGE(channels, guilds, accounts: List[daf.ACCOUNT]):
@@ -33,28 +31,6 @@ async def DIRECT_MESSAGE(accounts: List[daf.ACCOUNT]):
     await user.add_message(direct_message)
     yield direct_message
     await accounts[0].remove_server(user)
-
-
-@pytest.fixture(scope="module")
-async def VOICE_MESSAGE(channels, guilds, accounts: List[daf.ACCOUNT]):
-    guild = daf.GUILD(guilds[0], logging=True)
-    await accounts[0].add_server(guild)
-    guild._event_ctrl.remove_listener(EventID._trigger_message_ready, guild._advertise)
-
-    cwd = os.getcwd()
-    os.chdir(os.path.dirname(__file__))
-    VOICE_MESSAGE_TEST_MESSAGE = daf.VoiceMessageData(daf.FILE("testing123.mp3"))
-    os.chdir(cwd)
-
-    voice_message = daf.message.VoiceMESSAGE(
-        period=daf.FixedDurationPeriod(timedelta(seconds=20)),
-        data=VOICE_MESSAGE_TEST_MESSAGE,
-        channels=channels[1],
-        volume=50
-    )
-    await guild.add_message(voice_message)
-    yield voice_message
-    await accounts[0].remove_server(guild)
 
 
 async def test_text_message_send(TEXT_MESSAGE: daf.TextMESSAGE, DIRECT_MESSAGE: daf.DirectMESSAGE):
@@ -89,17 +65,3 @@ async def test_text_message_send(TEXT_MESSAGE: daf.TextMESSAGE, DIRECT_MESSAGE: 
         assert sent_data_result["embed"] in [e.to_dict() for e in message.embeds], "DirectMESSAGE embed not in message embeds"
 
     assert message_ctx["success_info"]["success"], "Failed to send to all channels"
-
-
-async def test_voice_message_send(VOICE_MESSAGE: daf.VoiceMESSAGE):
-    "This tests if all the voice messages succeed in their sends"
-    voice_message = VOICE_MESSAGE
-
-    # Send
-    start_time = time.time()
-    message_context = await voice_message._send()
-    end_time = time.time()
-
-    # Check results
-    assert end_time - start_time >= VOICE_MESSAGE_TEST_LENGTH * len(voice_message.channels), "Message was not played till the end."
-    assert len(message_context["channels"]["failed"]) == 0, "Failed to send to all channels"

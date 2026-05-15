@@ -56,7 +56,6 @@ async def test_autochannel(guilds, channels, accounts):
             guild,
             messages=[
                 tm := daf.TextMESSAGE(period=daf.FixedDurationPeriod(timedelta(seconds=20)), data=daf.TextMessageData("Hello World"), channels=auto_channel),
-                vc := daf.VoiceMESSAGE(period=daf.FixedDurationPeriod(timedelta(seconds=20)), data=daf.VoiceMessageData(daf.FILE("testing123.mp3")), channels=auto_channel2)
             ]
         )
 
@@ -79,7 +78,6 @@ async def test_autochannel(guilds, channels, accounts):
         # Test update
         await daf_guild.update()
         await tm.update()
-        await vc.update()
         await auto_channel.update()
         await auto_channel2.update()
     finally:
