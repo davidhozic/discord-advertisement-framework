@@ -28,9 +28,6 @@ from __future__ import annotations
 import datetime
 from typing import TYPE_CHECKING, Any, Mapping, TypeVar
 
-from _discord.types.embed import EmbedType
-
-
 from . import utils
 from .colour import Colour
 
@@ -47,7 +44,8 @@ __all__ = (
 E = TypeVar("E", bound="Embed")
 
 if TYPE_CHECKING:
-    from _discord.types.embed import Embed as EmbedData
+    from discord.types.embed import Embed as EmbedData
+    from discord.types.embed import EmbedType
 
 
 class EmbedAuthor:
@@ -524,15 +522,7 @@ class Embed:
 
     @colour.setter
     def colour(self, value: int | Colour | None):  # type: ignore
-        if value is None or isinstance(value, Colour):
-            self._colour = value
-        elif isinstance(value, int):
-            self._colour = Colour(value=value)
-        else:
-            raise TypeError(
-                "Expected discord.Colour, int, or None but received"
-                f" {value.__class__.__name__} instead."
-            )
+        self._colour = Colour.resolve_value(value)
 
     color = colour
 

@@ -22,16 +22,21 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 """
+
 from __future__ import annotations
 
 from typing import Literal
 
-from .._typed_dict import NotRequired, TypedDict
+from typing_extensions import NotRequired, TypedDict
+
 from .member import MemberWithUser
 from .snowflake import Snowflake
 
 SupportedModes = Literal[
-    "xsalsa20_poly1305_lite", "xsalsa20_poly1305_suffix", "xsalsa20_poly1305"
+    "xsalsa20_poly1305_lite",
+    "xsalsa20_poly1305_suffix",
+    "xsalsa20_poly1305",
+    "aead_xchacha20_poly1305_rtpsize",
 ]
 
 

@@ -22,6 +22,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 """
+
 from __future__ import annotations
 
 import array
@@ -29,8 +30,10 @@ import asyncio
 import collections.abc
 import datetime
 import functools
+import importlib.resources
 import itertools
 import json
+import logging
 import re
 import sys
 import types
@@ -38,7 +41,6 @@ import unicodedata
 import warnings
 from base64 import b64encode
 from bisect import bisect_left
-from dataclasses import field
 from inspect import isawaitable as _isawaitable
 from inspect import signature as _signature
 from operator import attrgetter
@@ -55,7 +57,6 @@ from typing import (
     Iterator,
     Literal,
     Mapping,
-    NewType,
     Protocol,
     Sequence,
     TypeVar,
@@ -63,7 +64,24 @@ from typing import (
     overload,
 )
 
-from .errors import HTTPException, InvalidArgument
+if TYPE_CHECKING:
+    from discord import (
+        Client,
+        VoiceChannel,
+        TextChannel,
+        ForumChannel,
+        StageChannel,
+        CategoryChannel,
+        Thread,
+        Member,
+        User,
+        Guild,
+        Role,
+        GuildEmoji,
+        AppEmoji,
+    )
+
+from .errors import HTTPException, InvalidArgument, InvalidData
 
 try:
     import msgspec
@@ -98,9 +116,28 @@ __all__ = (
     "generate_snowflake",
     "basic_autocomplete",
     "filter_params",
+    "MISSING",
 )
 
+_log = logging.getLogger(__name__)
+
 DISCORD_EPOCH = 1420070400000
+
+try:
+    with (
+        importlib.resources.files(__package__)
+        .joinpath("emojis.json")
+        .open(encoding="utf-8") as f
+    ):
+        EMOJIS_MAP = json.load(f)
+except FileNotFoundError:
+    _log.debug(
+        "Couldn't find emojis.json. Is the package data missing? Discord emojis names will not work.",
+    )
+    EMOJIS_MAP = {}
+
+
+UNICODE_EMOJIS = set(EMOJIS_MAP.values())
 
 
 class _MissingSentinel:
@@ -115,27 +152,6 @@ class _MissingSentinel:
 
 
 MISSING: Any = _MissingSentinel()
-# As of 3.11, directly setting a dataclass field to MISSING causes a ValueError. Using
-# field(default=MISSING) produces the same error, but passing a lambda to
-# default_factory produces the same behavior as default=MISSING and does not raise an
-# error.
-MissingField = field(default_factory=lambda: MISSING)
-
-
-class _cached_property:
-    def __init__(self, function):
-        self.function = function
-        self.__doc__ = getattr(function, "__doc__")
-
-    def __get__(self, instance, owner):
-        if instance is None:
-            return self
-
-        value = self.function(instance)
-        setattr(instance, self.function.__name__, value)
-
-        return value
-
 
 if TYPE_CHECKING:
     from typing_extensions import ParamSpec
@@ -150,12 +166,9 @@ if TYPE_CHECKING:
     class _RequestLike(Protocol):
         headers: Mapping[str, Any]
 
-    cached_property = NewType("cached_property", property)
-
     P = ParamSpec("P")
 
 else:
-    cached_property = _cached_property
     AutocompleteContext = Any
     OptionChoice = Any
 
@@ -172,12 +185,12 @@ class CachedSlotProperty(Generic[T, T_co]):
         self.__doc__ = getattr(function, "__doc__")
 
     @overload
-    def __get__(self, instance: None, owner: type[T]) -> CachedSlotProperty[T, T_co]:
-        ...
+    def __get__(
+        self, instance: None, owner: type[T]
+    ) -> CachedSlotProperty[T, T_co]: ...
 
     @overload
-    def __get__(self, instance: T, owner: type[T]) -> T_co:
-        ...
+    def __get__(self, instance: T, owner: type[T]) -> T_co: ...
 
     def __get__(self, instance: T | None, owner: type[T]) -> Any:
         if instance is None:
@@ -251,18 +264,15 @@ def delay_task(delay: float, func: Coroutine):
 
 
 @overload
-def parse_time(timestamp: None) -> None:
-    ...
+def parse_time(timestamp: None) -> None: ...
 
 
 @overload
-def parse_time(timestamp: str) -> datetime.datetime:
-    ...
+def parse_time(timestamp: str) -> datetime.datetime: ...
 
 
 @overload
-def parse_time(timestamp: str | None) -> datetime.datetime | None:
-    ...
+def parse_time(timestamp: str | None) -> datetime.datetime | None: ...
 
 
 def parse_time(timestamp: str | None) -> datetime.datetime | None:
@@ -298,6 +308,7 @@ def warn_deprecated(
     since: str | None = None,
     removed: str | None = None,
     reference: str | None = None,
+    stacklevel: int = 3,
 ) -> None:
     """Warn about a deprecated function, with the ability to specify details about the deprecation. Emits a
     DeprecationWarning.
@@ -317,8 +328,9 @@ def warn_deprecated(
     reference: Optional[:class:`str`]
         A reference that explains the deprecation, typically a URL to a page such as a changelog entry or a GitHub
         issue/PR.
+    stacklevel: :class:`int`
+        The stacklevel kwarg passed to :func:`warnings.warn`. Defaults to 3.
     """
-    warnings.simplefilter("always", DeprecationWarning)  # turn off filter
     message = f"{name} is deprecated"
     if since:
         message += f" since version {since}"
@@ -330,8 +342,7 @@ def warn_deprecated(
     if reference:
         message += f" See {reference} for more information."
 
-    warnings.warn(message, stacklevel=3, category=DeprecationWarning)
-    warnings.simplefilter("default", DeprecationWarning)  # reset filter
+    warnings.warn(message, stacklevel=stacklevel, category=DeprecationWarning)
 
 
 def deprecated(
@@ -339,6 +350,7 @@ def deprecated(
     since: str | None = None,
     removed: str | None = None,
     reference: str | None = None,
+    stacklevel: int = 3,
     *,
     use_qualname: bool = True,
 ) -> Callable[[Callable[[P], T]], Callable[[P], T]]:
@@ -358,6 +370,8 @@ def deprecated(
     reference: Optional[:class:`str`]
         A reference that explains the deprecation, typically a URL to a page such as a changelog entry or a GitHub
         issue/PR.
+    stacklevel: :class:`int`
+        The stacklevel kwarg passed to :func:`warnings.warn`. Defaults to 3.
     use_qualname: :class:`bool`
         Whether to use the qualified name of the function in the deprecation warning. If ``False``, the short name of
         the function will be used instead. For example, __qualname__ will display as ``Client.login`` while __name__
@@ -373,6 +387,7 @@ def deprecated(
                 since=since,
                 removed=removed,
                 reference=reference,
+                stacklevel=stacklevel,
             )
             return func(*args, **kwargs)
 
@@ -569,64 +584,227 @@ def get(iterable: Iterable[T], **attrs: Any) -> T | None:
     return None
 
 
-async def get_or_fetch(obj, attr: str, id: int, *, default: Any = MISSING) -> Any:
-    """|coro|
+_FETCHABLE = TypeVar(
+    "_FETCHABLE",
+    bound="VoiceChannel | TextChannel | ForumChannel | StageChannel | CategoryChannel | Thread | Member | User | Guild | Role | GuildEmoji | AppEmoji",
+)
+_D = TypeVar("_D")
+_Getter = Callable[[Any, int], Any]
+_Fetcher = Callable[[Any, int], Awaitable[Any]]
 
-    Attempts to get an attribute from the object in cache. If it fails, it will attempt to fetch it.
-    If the fetch also fails, an error will be raised.
+
+# TODO: In version 3.0, remove the 'attr' and 'id' arguments.
+#       Also, eliminate the default 'MISSING' value for both 'object_type' and 'object_id'.
+@overload
+async def get_or_fetch(
+    obj: Guild | Client,
+    object_type: type[_FETCHABLE],
+    object_id: Literal[None],
+    default: _D = ...,
+    attr: str = ...,
+    id: int = ...,
+) -> None | _D: ...
+
+
+@overload
+async def get_or_fetch(
+    obj: Guild | Client,
+    object_type: type[_FETCHABLE],
+    object_id: int,
+    default: _D,
+    attr: str = ...,
+    id: int = ...,
+) -> _FETCHABLE | _D: ...
+
+
+@overload
+async def get_or_fetch(
+    obj: Guild | Client,
+    object_type: type[_FETCHABLE],
+    object_id: int,
+    *,
+    attr: str = ...,
+    id: int = ...,
+) -> _FETCHABLE: ...
+
+
+async def get_or_fetch(
+    obj: Guild | Client,
+    object_type: type[_FETCHABLE] = MISSING,
+    object_id: int | None = MISSING,
+    default: _D = MISSING,
+    attr: str = MISSING,
+    id: int = MISSING,
+) -> _FETCHABLE | _D | None:
+    """
+    Shortcut method to get data from an object either by returning the cached version, or if it does not exist, attempting to fetch it from the API.
 
     Parameters
     ----------
-    obj: Any
-        The object to use the get or fetch methods in
-    attr: :class:`str`
-        The attribute to get or fetch. Note the object must have both a ``get_`` and ``fetch_`` method for this attribute.
-    id: :class:`int`
-        The ID of the object
-    default: Any
-        The default value to return if the object is not found, instead of raising an error.
+    obj: :class:`~discord.Guild` | :class:`~discord.Client`
+        The object to operate on.
+
+    object_type: Type[:class:`~discord.VoiceChannel` | :class:`~discord.TextChannel` | :class:`~discord.ForumChannel` | :class:`~discord.StageChannel` | :class:`~discord.CategoryChannel` | :class:`~discord.Thread` | :class:`~discord.User` | :class:`~discord.Guild` | :class:`~discord.Role` | :class:`~discord.Member` | :class:`~discord.GuildEmoji` | :class:`~discord.AppEmoji`]
+        Type of object to fetch or get.
+
+    object_id: :class:`int` | :data:`None`
+        ID of object to get.
+
+    default: Any | :data:`None`
+        The value to return instead of raising if fetching fails.
 
     Returns
     -------
-    Any
-        The object found or the default value.
+    :class:`~discord.VoiceChannel` | :class:`~discord.TextChannel` | :class:`~discord.ForumChannel` | :class:`~discord.StageChannel` | :class:`~discord.CategoryChannel` | :class:`~discord.Thread` | :class:`~discord.User` | :class:`~discord.Guild` | :class:`~discord.Role` | :class:`~discord.Member` | :class:`~discord.GuildEmoji` | :class:`~discord.AppEmoji` | :data:`None`
+        The object if found, or `default` if provided when not found.
+        Returns :data:`None` only if `object_id` is :data:`None` and no `default` is given.
 
     Raises
     ------
-    :exc:`AttributeError`
-        The object is missing a ``get_`` or ``fetch_`` method
+    :exc:`TypeError`
+        Raised when required parameters are missing or invalid types are provided.
+    :exc:`InvalidArgument`
+        Raised when an unsupported or incompatible object type is used.
     :exc:`NotFound`
-        Invalid ID for the object
+        Invalid ID for the object.
     :exc:`HTTPException`
-        An error occurred fetching the object
+        An error occurred fetching the object.
     :exc:`Forbidden`
-        You do not have permission to fetch the object
-
-    Examples
-    --------
-
-    Getting a guild from a guild ID: ::
-
-        guild = await utils.get_or_fetch(client, 'guild', guild_id)
-
-    Getting a channel from the guild. If the channel is not found, return None: ::
-
-        channel = await utils.get_or_fetch(guild, 'channel', channel_id, default=None)
+        You do not have permission to fetch the object.
+    :exc:`InvalidData`
+        Raised when the object resolves to a different guild.
     """
-    getter = getattr(obj, f"get_{attr}")(id)
-    if getter is None:
-        try:
-            getter = await getattr(obj, f"fetch_{attr}")(id)
-        except AttributeError:
-            getter = await getattr(obj, f"_fetch_{attr}")(id)
-            if getter is None:
-                raise ValueError(f"Could not find {attr} with id {id} on {obj}")
-        except (HTTPException, ValueError):
-            if default is not MISSING:
-                return default
-            else:
-                raise
-    return getter
+    from discord import AppEmoji, Client, Guild, Member, Role, User
+
+    if object_id is None:
+        return default if default is not MISSING else None
+
+    # Temporary backward compatibility for 'attr' and 'id'.
+    # This entire if block should be removed in version 3.0.
+    if attr is not MISSING or id is not MISSING or isinstance(object_type, str):
+        warn_deprecated(
+            name="get_or_fetch(obj, attr='type', id=...)",
+            instead="get_or_fetch(obj, object_type=Type, object_id=...)",
+            since="2.7",
+            removed="3.0",
+        )
+
+        deprecated_attr = attr if attr is not MISSING else object_type
+        deprecated_id = id if id is not MISSING else object_id
+
+        if isinstance(deprecated_attr, str):
+            mapped_type = _get_string_to_type_map().get(deprecated_attr.lower())
+            if mapped_type is None:
+                raise InvalidArgument(
+                    f"Unknown type string '{deprecated_attr}' used. Please use a valid class like `discord.Member` instead."
+                )
+            object_type = mapped_type
+        elif isinstance(deprecated_attr, type):
+            object_type = deprecated_attr
+        else:
+            raise TypeError(
+                f"Invalid `attr` or `object_type`: expected a string or class, got {type(deprecated_attr).__name__}."
+            )
+
+        object_id = deprecated_id
+
+    if object_type is MISSING or object_id is MISSING:
+        raise TypeError("required parameters: `object_type` and `object_id`.")
+
+    if isinstance(obj, Guild) and object_type is User:
+        raise InvalidArgument("Guild cannot get_or_fetch User. Use Client instead.")
+    elif isinstance(obj, Client) and object_type is Member:
+        raise InvalidArgument("Client cannot get_or_fetch Member. Use Guild instead.")
+    elif isinstance(obj, Client) and object_type is Role:
+        raise InvalidArgument("Client cannot get_or_fetch Role. Use Guild instead.")
+    elif isinstance(obj, Guild) and object_type is Guild:
+        raise InvalidArgument("Guild cannot get_or_fetch Guild. Use Client instead.")
+    elif isinstance(obj, Guild) and object_type is AppEmoji:
+        raise InvalidArgument("Guild cannot get_or_fetch AppEmoji. Use Client instead.")
+
+    try:
+        getter, fetcher = _get_getter_fetcher_map()[object_type]
+    except KeyError:
+        raise InvalidArgument(
+            f"Class {object_type.__name__} cannot be used with discord.{type(obj).__name__}.get_or_fetch()"
+        )
+
+    result = getter(obj, object_id)
+    if result is not None:
+        return result
+
+    try:
+        return await fetcher(obj, object_id)
+    except (HTTPException, ValueError, InvalidData):
+        if default is not MISSING:
+            return default
+        raise
+
+
+@functools.lru_cache(maxsize=1)
+def _get_string_to_type_map() -> dict[str, type]:
+    """Return a cached map of lowercase strings -> discord types."""
+    from discord import AppEmoji, Guild, Member, Role, User, abc, emoji
+
+    return {
+        "channel": abc.GuildChannel,
+        "member": Member,
+        "user": User,
+        "guild": Guild,
+        "emoji": emoji._EmojiTag,
+        "appemoji": AppEmoji,
+        "role": Role,
+    }
+
+
+@functools.lru_cache(maxsize=1)
+def _get_getter_fetcher_map() -> dict[type, tuple[_Getter, _Fetcher]]:
+    """Return a cached map of type names -> (getter, fetcher) functions."""
+    from discord import Guild, Member, Role, User, abc, emoji
+
+    base_map: dict[type, tuple[_Getter, _Fetcher]] = {
+        Member: (
+            lambda obj, oid: obj.get_member(oid),
+            lambda obj, oid: obj.fetch_member(oid),
+        ),
+        Role: (
+            lambda obj, oid: obj.get_role(oid),
+            lambda obj, oid: obj.fetch_role(oid),
+        ),
+        User: (
+            lambda obj, oid: obj.get_user(oid),
+            lambda obj, oid: obj.fetch_user(oid),
+        ),
+        Guild: (
+            lambda obj, oid: obj.get_guild(oid),
+            lambda obj, oid: obj.fetch_guild(oid),
+        ),
+        emoji._EmojiTag: (
+            lambda obj, oid: obj.get_emoji(oid),
+            lambda obj, oid: obj.fetch_emoji(oid),
+        ),
+        abc.GuildChannel: (
+            lambda obj, oid: obj.get_channel(oid),
+            lambda obj, oid: obj.fetch_channel(oid),
+        ),
+    }
+
+    expanded: dict[type, tuple[_Getter, _Fetcher]] = {}
+    for base, funcs in base_map.items():
+        expanded[base] = funcs
+        for subclass in _all_subclasses(base):
+            if subclass not in expanded:
+                expanded[subclass] = funcs
+
+    return expanded
+
+
+def _all_subclasses(cls: type) -> set[type]:
+    """Recursively collect all subclasses of a class."""
+    subs = set(cls.__subclasses__())
+    for sub in cls.__subclasses__():
+        subs |= _all_subclasses(sub)
+    return subs
 
 
 def _unique(iterable: Iterable[T]) -> list[T]:
@@ -642,7 +820,7 @@ def _get_as_snowflake(data: Any, key: str) -> int | None:
         return value and int(value)
 
 
-def _get_mime_type_for_image(data: bytes):
+def _get_mime_type_for_file(data: bytes):
     if data.startswith(b"\x89\x50\x4e\x47\x0d\x0a\x1a\x0a"):
         return "image/png"
     elif data[0:3] == b"\xff\xd8\xff" or data[6:10] in (b"JFIF", b"Exif"):
@@ -651,13 +829,15 @@ def _get_mime_type_for_image(data: bytes):
         return "image/gif"
     elif data.startswith(b"RIFF") and data[8:12] == b"WEBP":
         return "image/webp"
+    elif data.startswith(b"\x49\x44\x33") or data.startswith(b"\xff\xfb"):
+        return "audio/mpeg"
     else:
-        raise InvalidArgument("Unsupported image type given")
+        raise InvalidArgument("Unsupported file type given")
 
 
 def _bytes_to_base64_data(data: bytes) -> str:
     fmt = "data:{mime};base64,{data}"
-    mime = _get_mime_type_for_image(data)
+    mime = _get_mime_type_for_file(data)
     b64 = b64encode(data).decode("ascii")
     return fmt.format(mime=mime, data=b64)
 
@@ -791,8 +971,7 @@ class SnowflakeList(array.array):
 
     if TYPE_CHECKING:
 
-        def __init__(self, data: Iterable[int], *, is_sorted: bool = False):
-            ...
+        def __init__(self, data: Iterable[int], *, is_sorted: bool = False): ...
 
     def __new__(cls, data: Iterable[int], *, is_sorted: bool = False):
         return array.array.__new__(cls, "Q", data if is_sorted else sorted(data))  # type: ignore
@@ -936,7 +1115,7 @@ def remove_markdown(text: str, *, ignore_links: bool = True) -> str:
     regex = _MARKDOWN_STOCK_REGEX
     if ignore_links:
         regex = f"(?:{_URL_REGEX}|{regex})"
-    return re.sub(regex, replacement, text, 0, re.MULTILINE)
+    return re.sub(regex, replacement, text, count=0, flags=re.MULTILINE)
 
 
 def escape_markdown(
@@ -978,7 +1157,7 @@ def escape_markdown(
         regex = _MARKDOWN_STOCK_REGEX
         if ignore_links:
             regex = f"(?:{_URL_REGEX}|{regex})"
-        return re.sub(regex, replacement, text, 0, re.MULTILINE | re.X)
+        return re.sub(regex, replacement, text, count=0, flags=re.MULTILINE | re.X)
     else:
         text = re.sub(r"\\", r"\\\\", text)
         return _MARKDOWN_ESCAPE_REGEX.sub(r"\\\1", text)
@@ -1093,13 +1272,11 @@ async def _achunk(iterator: AsyncIterator[T], max_size: int) -> AsyncIterator[li
 
 
 @overload
-def as_chunks(iterator: Iterator[T], max_size: int) -> Iterator[list[T]]:
-    ...
+def as_chunks(iterator: Iterator[T], max_size: int) -> Iterator[list[T]]: ...
 
 
 @overload
-def as_chunks(iterator: AsyncIterator[T], max_size: int) -> AsyncIterator[list[T]]:
-    ...
+def as_chunks(iterator: AsyncIterator[T], max_size: int) -> AsyncIterator[list[T]]: ...
 
 
 def as_chunks(iterator: _Iter[T], max_size: int) -> _Iter[list[T]]:
@@ -1235,7 +1412,9 @@ def resolve_annotation(
 TimestampStyle = Literal["f", "F", "d", "D", "t", "T", "R"]
 
 
-def format_dt(dt: datetime.datetime, /, style: TimestampStyle | None = None) -> str:
+def format_dt(
+    dt: datetime.datetime | datetime.time, /, style: TimestampStyle | None = None
+) -> str:
     """A helper function to format a :class:`datetime.datetime` for presentation within Discord.
 
     This allows for a locale-independent way of presenting data using Discord specific Markdown.
@@ -1265,7 +1444,7 @@ def format_dt(dt: datetime.datetime, /, style: TimestampStyle | None = None) -> 
 
     Parameters
     ----------
-    dt: :class:`datetime.datetime`
+    dt: Union[:class:`datetime.datetime`, :class:`datetime.time`]
         The datetime to format.
     style: :class:`str`
         The style to format the datetime with.
@@ -1275,6 +1454,8 @@ def format_dt(dt: datetime.datetime, /, style: TimestampStyle | None = None) -> 
     :class:`str`
         The formatted string.
     """
+    if isinstance(dt, datetime.time):
+        dt = datetime.datetime.combine(datetime.datetime.now(), dt)
     if style is None:
         return f"<t:{int(dt.timestamp())}>"
     return f"<t:{int(dt.timestamp())}:{style}>"
@@ -1304,9 +1485,12 @@ V = Union[Iterable[OptionChoice], Iterable[str], Iterable[int], Iterable[float]]
 AV = Awaitable[V]
 Values = Union[V, Callable[[AutocompleteContext], Union[V, AV]], AV]
 AutocompleteFunc = Callable[[AutocompleteContext], AV]
+FilterFunc = Callable[[AutocompleteContext, Any], Union[bool, Awaitable[bool]]]
 
 
-def basic_autocomplete(values: Values) -> AutocompleteFunc:
+def basic_autocomplete(
+    values: Values, *, filter: FilterFunc | None = None
+) -> AutocompleteFunc:
     """A helper function to make a basic autocomplete for slash commands. This is a pretty standard autocomplete and
     will return any options that start with the value from the user, case-insensitive. If the ``values`` parameter is
     callable, it will be called with the AutocompleteContext.
@@ -1318,18 +1502,21 @@ def basic_autocomplete(values: Values) -> AutocompleteFunc:
     values: Union[Union[Iterable[:class:`.OptionChoice`], Iterable[:class:`str`], Iterable[:class:`int`], Iterable[:class:`float`]], Callable[[:class:`.AutocompleteContext`], Union[Union[Iterable[:class:`str`], Iterable[:class:`int`], Iterable[:class:`float`]], Awaitable[Union[Iterable[:class:`str`], Iterable[:class:`int`], Iterable[:class:`float`]]]]], Awaitable[Union[Iterable[:class:`str`], Iterable[:class:`int`], Iterable[:class:`float`]]]]
         Possible values for the option. Accepts an iterable of :class:`str`, a callable (sync or async) that takes a
         single argument of :class:`.AutocompleteContext`, or a coroutine. Must resolve to an iterable of :class:`str`.
+    filter: Optional[Callable[[:class:`.AutocompleteContext`, Any], Union[:class:`bool`, Awaitable[:class:`bool`]]]]
+        An optional callable (sync or async) used to filter the autocomplete options. It accepts two arguments:
+        the :class:`.AutocompleteContext` and an item from ``values`` iteration treated as callback parameters. If ``None`` is provided, a default filter is used that includes items whose string representation starts with the user's input value, case-insensitive.
+
+        .. versionadded:: 2.7
 
     Returns
     -------
     Callable[[:class:`.AutocompleteContext`], Awaitable[Union[Iterable[:class:`.OptionChoice`], Iterable[:class:`str`], Iterable[:class:`int`], Iterable[:class:`float`]]]]
         A wrapped callback for the autocomplete.
 
-    Note
-    ----
-    Autocomplete cannot be used for options that have specified choices.
+    Examples
+    --------
 
-    Example
-    -------
+    Basic usage:
 
     .. code-block:: python3
 
@@ -1342,7 +1529,17 @@ def basic_autocomplete(values: Values) -> AutocompleteFunc:
 
         Option(str, "name", autocomplete=basic_autocomplete(autocomplete))
 
+    With filter parameter:
+
+    .. code-block:: python3
+
+        Option(str, "color", autocomplete=basic_autocomplete(("red", "green", "blue"), filter=lambda c, i: str(c.value or "") in i))
+
     .. versionadded:: 2.0
+
+    Note
+    ----
+    Autocomplete cannot be used for options that have specified choices.
     """
 
     async def autocomplete_callback(ctx: AutocompleteContext) -> V:
@@ -1353,11 +1550,23 @@ def basic_autocomplete(values: Values) -> AutocompleteFunc:
         if asyncio.iscoroutine(_values):
             _values = await _values
 
-        def check(item: Any) -> bool:
-            item = getattr(item, "name", item)
-            return str(item).lower().startswith(str(ctx.value or "").lower())
+        if filter is None:
 
-        gen = (val for val in _values if check(val))
+            def _filter(ctx: AutocompleteContext, item: Any) -> bool:
+                item = getattr(item, "name", item)
+                return str(item).lower().startswith(str(ctx.value or "").lower())
+
+            gen = (val for val in _values if _filter(ctx, val))
+
+        elif asyncio.iscoroutinefunction(filter):
+            gen = (val for val in _values if await filter(ctx, val))
+
+        elif callable(filter):
+            gen = (val for val in _values if filter(ctx, val))
+
+        else:
+            raise TypeError("``filter`` must be callable.")
+
         return iter(itertools.islice(gen, 25))
 
     return autocomplete_callback

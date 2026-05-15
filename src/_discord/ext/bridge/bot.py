@@ -22,15 +22,16 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 """
+
 from __future__ import annotations
 
 from abc import ABC
 from collections.abc import Iterator
 
-from _discord.commands import ApplicationContext
-from _discord.errors import CheckFailure, DiscordException
-from _discord.interactions import Interaction
-from _discord.message import Message
+from discord.commands import ApplicationContext
+from discord.errors import CheckFailure, DiscordException
+from discord.interactions import Interaction
+from discord.message import Message
 
 from ..commands import AutoShardedBot as ExtAutoShardedBot
 from ..commands import Bot as ExtBot

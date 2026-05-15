@@ -27,14 +27,14 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Callable
 
-from _discord.errors import ClientException, DiscordException
+from discord.errors import ClientException, DiscordException
 
 if TYPE_CHECKING:
     from inspect import Parameter
 
-    from _discord.abc import GuildChannel
-    from _discord.threads import Thread
-    from _discord.types.snowflake import Snowflake, SnowflakeList
+    from discord.abc import GuildChannel
+    from discord.threads import Thread
+    from discord.types.snowflake import Snowflake, SnowflakeList
 
     from .context import Context
     from .converter import Converter
@@ -212,10 +212,10 @@ class CheckAnyFailure(CheckFailure):
     """
 
     def __init__(
-        self, checks: list[CheckFailure], errors: list[Callable[[Context], bool]]
+        self, checks: list[Callable[[Context], bool]], errors: list[CheckFailure]
     ) -> None:
-        self.checks: list[CheckFailure] = checks
-        self.errors: list[Callable[[Context], bool]] = errors
+        self.checks: list[Callable[[Context], bool]] = checks
+        self.errors: list[CheckFailure] = errors
         super().__init__("You do not have permission to run this command.")
 
 

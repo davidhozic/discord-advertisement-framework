@@ -31,7 +31,15 @@ import signal
 import sys
 import traceback
 from types import TracebackType
-from typing import TYPE_CHECKING, Any, Callable, Coroutine, Generator, Sequence, TypeVar
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Coroutine,
+    Generator,
+    Sequence,
+    TypeVar,
+)
 
 import aiohttp
 
@@ -41,7 +49,7 @@ from .appinfo import AppInfo, PartialAppInfo
 from .application_role_connection import ApplicationRoleConnectionMetadata
 from .backoff import ExponentialBackoff
 from .channel import PartialMessageable, _threaded_channel_factory
-from .emoji import Emoji
+from .emoji import AppEmoji, GuildEmoji
 from .enums import ChannelType, Status
 from .errors import *
 from .flags import ApplicationFlags, Intents
@@ -49,26 +57,40 @@ from .gateway import *
 from .guild import Guild
 from .http import HTTPClient
 from .invite import Invite
-from .iterators import GuildIterator
+from .iterators import EntitlementIterator, GuildIterator
 from .mentions import AllowedMentions
+from .monetization import SKU, Entitlement
 from .object import Object
+from .soundboard import SoundboardSound
 from .stage_instance import StageInstance
 from .state import ConnectionState
 from .sticker import GuildSticker, StandardSticker, StickerPack, _sticker_factory
 from .template import Template
 from .threads import Thread
-from .ui.view import View
+from .ui.view import BaseView
 from .user import ClientUser, User
-from .utils import MISSING
+from .utils import _D, _FETCHABLE, MISSING
 from .voice_client import VoiceClient
 from .webhook import Webhook
 from .widget import Widget
 
 if TYPE_CHECKING:
     from .abc import GuildChannel, PrivateChannel, Snowflake, SnowflakeTime
-    from .channel import DMChannel
+    from .channel import (
+        CategoryChannel,
+        DMChannel,
+        ForumChannel,
+        StageChannel,
+        TextChannel,
+        VoiceChannel,
+    )
+    from .interactions import Interaction
     from .member import Member
     from .message import Message
+    from .poll import Poll
+    from .soundboard import SoundboardSound
+    from .threads import Thread, ThreadMember
+    from .ui.item import Item, ViewItem
     from .voice_client import VoiceProtocol
 
 __all__ = ("Client",)
@@ -197,6 +219,16 @@ class Client:
         To enable these events, this must be set to ``True``. Defaults to ``False``.
 
         .. versionadded:: 2.0
+    cache_app_emojis: :class:`bool`
+        Whether to automatically fetch and cache the application's emojis on startup and when fetching. Defaults to ``False``.
+
+        .. warning::
+
+            There are no events related to application emojis - if any are created/deleted on the
+            Developer Dashboard while the client is running, the cache will not be updated until you manually
+            run :func:`fetch_emojis`.
+
+        .. versionadded:: 2.7
 
     Attributes
     -----------
@@ -217,9 +249,9 @@ class Client:
         self.loop: asyncio.AbstractEventLoop = (
             asyncio.get_event_loop() if loop is None else loop
         )
-        self._listeners: dict[
-            str, list[tuple[asyncio.Future, Callable[..., bool]]]
-        ] = {}
+        self._listeners: dict[str, list[tuple[asyncio.Future, Callable[..., bool]]]] = (
+            {}
+        )
         self.shard_id: int | None = options.get("shard_id")
         self.shard_count: int | None = options.get("shard_count")
 
@@ -253,6 +285,9 @@ class Client:
         if VoiceClient.warn_nacl:
             VoiceClient.warn_nacl = False
             _log.warning("PyNaCl is not installed, voice will NOT be supported")
+
+        # Used to hard-reference tasks so they don't get garbage collected (discarded with done_callbacks)
+        self._tasks = set()
 
     async def __aenter__(self) -> Client:
         loop = asyncio.get_running_loop()
@@ -295,7 +330,8 @@ class Client:
 
     @property
     def latency(self) -> float:
-        """Measures latency between a HEARTBEAT and a HEARTBEAT_ACK in seconds.
+        """Measures latency between a HEARTBEAT and a HEARTBEAT_ACK in seconds. If no websocket
+        is present, this returns ``nan``, and if no heartbeat has been received yet, this returns ``float('inf')``.
 
         This could be referred to as the Discord WebSocket protocol latency.
         """
@@ -325,9 +361,29 @@ class Client:
         return self._connection.guilds
 
     @property
-    def emojis(self) -> list[Emoji]:
-        """The emojis that the connected client has."""
+    def emojis(self) -> list[GuildEmoji | AppEmoji]:
+        """The emojis that the connected client has.
+
+        .. note::
+
+            This only includes the application's emojis if `cache_app_emojis` is ``True``.
+        """
         return self._connection.emojis
+
+    @property
+    def guild_emojis(self) -> list[GuildEmoji]:
+        """The :class:`~discord.GuildEmoji` that the connected client has."""
+        return [e for e in self.emojis if isinstance(e, GuildEmoji)]
+
+    @property
+    def app_emojis(self) -> list[AppEmoji]:
+        """The :class:`~discord.AppEmoji` that the connected client has.
+
+        .. note::
+
+            This is only available if `cache_app_emojis` is ``True``.
+        """
+        return [e for e in self.emojis if isinstance(e, AppEmoji)]
 
     @property
     def stickers(self) -> list[GuildSticker]:
@@ -336,6 +392,14 @@ class Client:
         .. versionadded:: 2.0
         """
         return self._connection.stickers
+
+    @property
+    def polls(self) -> list[Poll]:
+        """The polls that the connected client has.
+
+        .. versionadded:: 2.6
+        """
+        return self._connection.polls
 
     @property
     def cached_messages(self) -> Sequence[Message]:
@@ -413,8 +477,12 @@ class Client:
         **kwargs: Any,
     ) -> asyncio.Task:
         wrapped = self._run_event(coro, event_name, *args, **kwargs)
-        # Schedules the task
-        return asyncio.create_task(wrapped, name=f"pycord: {event_name}")
+
+        # Schedule task and store in set to avoid task garbage collection
+        task = asyncio.create_task(wrapped, name=f"pycord: {event_name}")
+        self._tasks.add(task)
+        task.add_done_callback(self._tasks.discard)
+        return task
 
     def dispatch(self, event: str, *args: Any, **kwargs: Any) -> None:
         _log.debug("Dispatching event %s", event)
@@ -493,6 +561,54 @@ class Client:
         print(f"Ignoring exception in {event_method}", file=sys.stderr)
         traceback.print_exc()
 
+    async def on_view_error(
+        self, error: Exception, item: ViewItem, interaction: Interaction
+    ) -> None:
+        """|coro|
+
+        The default view error handler provided by the client.
+
+        This only fires for a view if you did not define its :func:`~discord.ui.BaseView.on_error`.
+
+        Parameters
+        ----------
+        error: :class:`Exception`
+            The exception that was raised.
+        item: :class:`ViewItem`
+            The item that the user interacted with.
+        interaction: :class:`Interaction`
+            The interaction that was received.
+        """
+
+        print(
+            f"Ignoring exception in view {interaction.view} for item {item}:",
+            file=sys.stderr,
+        )
+        traceback.print_exception(
+            error.__class__, error, error.__traceback__, file=sys.stderr
+        )
+
+    async def on_modal_error(self, error: Exception, interaction: Interaction) -> None:
+        """|coro|
+
+        The default modal error handler provided by the client.
+        The default implementation prints the traceback to stderr.
+
+        This only fires for a modal if you did not define its :func:`~discord.ui.BaseModal.on_error`.
+
+        Parameters
+        ----------
+        error: :class:`Exception`
+            The exception that was raised.
+        interaction: :class:`Interaction`
+            The interaction that was received.
+        """
+
+        print(f"Ignoring exception in modal {interaction.modal}:", file=sys.stderr)
+        traceback.print_exception(
+            error.__class__, error, error.__traceback__, file=sys.stderr
+        )
+
     # hooks
 
     async def _call_before_identify_hook(
@@ -529,7 +645,7 @@ class Client:
 
     # login state management
 
-    async def login(self, token: str, bot: bool) -> None:
+    async def login(self, token: str) -> None:
         """|coro|
 
         Logs in the client with the specified credentials.
@@ -558,7 +674,7 @@ class Client:
 
         _log.info("logging in using static token")
 
-        data = await self.http.static_login(token.strip(), bot)
+        data = await self.http.static_login(token.strip())
         self._connection.user = ClientUser(state=self._connection, data=data)
 
     async def connect(self, *, reconnect: bool = True) -> None:
@@ -653,6 +769,8 @@ class Client:
                 # Always try to RESUME the connection
                 # If the connection is not RESUME-able then the gateway will invalidate the session.
                 # This is apparently what the official Discord client does.
+                if self.ws is None:
+                    continue
                 ws_params.update(
                     sequence=self.ws.sequence, resume=True, session=self.ws.session_id
                 )
@@ -665,6 +783,7 @@ class Client:
         if self._closed:
             return
 
+        await self.http.close()
         self._closed = True
 
         for voice in self.voice_clients:
@@ -677,7 +796,6 @@ class Client:
         if self.ws is not None and self.ws.open:
             await self.ws.close(code=1000)
 
-        await self.http.close()
         self._ready.clear()
 
     def clear(self) -> None:
@@ -692,7 +810,7 @@ class Client:
         self._connection.clear()
         self.http.recreate()
 
-    async def start(self, token: str, *, reconnect: bool = True, bot: bool = True) -> None:
+    async def start(self, token: str, *, reconnect: bool = True) -> None:
         """|coro|
 
         A shorthand coroutine for :meth:`login` + :meth:`connect`.
@@ -702,7 +820,7 @@ class Client:
         TypeError
             An unexpected keyword argument was received.
         """
-        await self.login(token, bot=bot)
+        await self.login(token)
         await self.connect(reconnect=reconnect)
 
     def run(self, *args: Any, **kwargs: Any) -> None:
@@ -975,7 +1093,7 @@ class Client:
         """
         return self._connection.get_user(id)
 
-    def get_emoji(self, id: int, /) -> Emoji | None:
+    def get_emoji(self, id: int, /) -> GuildEmoji | AppEmoji | None:
         """Returns an emoji with the given ID.
 
         Parameters
@@ -985,7 +1103,7 @@ class Client:
 
         Returns
         -------
-        Optional[:class:`.Emoji`]
+        Optional[:class:`.GuildEmoji` | :class:`.AppEmoji`]
             The custom emoji or ``None`` if not found.
         """
         return self._connection.get_emoji(id)
@@ -1007,7 +1125,22 @@ class Client:
         """
         return self._connection.get_sticker(id)
 
-    def get_all_channels(self) -> Generator[GuildChannel, None, None]:
+    def get_poll(self, id: int, /) -> Poll | None:
+        """Returns a poll attached to the given message ID.
+
+        Parameters
+        ----------
+        id: :class:`int`
+            The message ID of the poll to search for.
+
+        Returns
+        -------
+        Optional[:class:`.Poll`]
+            The poll or ``None`` if not found.
+        """
+        return self._connection.get_poll(id)
+
+    def get_all_channels(self) -> Generator[GuildChannel]:
         """A generator that retrieves every :class:`.abc.GuildChannel` the client can 'access'.
 
         This is equivalent to: ::
@@ -1031,7 +1164,7 @@ class Client:
         for guild in self.guilds:
             yield from guild.channels
 
-    def get_all_members(self) -> Generator[Member, None, None]:
+    def get_all_members(self) -> Generator[Member]:
         """Returns a generator with every :class:`.Member` the client can see.
 
         This is equivalent to: ::
@@ -1048,7 +1181,12 @@ class Client:
         for guild in self.guilds:
             yield from guild.members
 
-    async def get_or_fetch_user(self, id: int, /) -> User | None:
+    @utils.deprecated(
+        instead="Client.get_or_fetch(User, id)",
+        since="2.7",
+        removed="3.0",
+    )
+    async def get_or_fetch_user(self, id: int, /) -> User | None:  # TODO: Remove in 3.0
         """|coro|
 
         Looks up a user in the user cache or fetches if not found.
@@ -1064,7 +1202,49 @@ class Client:
             The user or ``None`` if not found.
         """
 
-        return await utils.get_or_fetch(obj=self, attr="user", id=id, default=None)
+        return await self.get_or_fetch(object_type=User, object_id=id, default=None)
+
+    async def get_or_fetch(
+        self: Client,
+        object_type: type[_FETCHABLE],
+        object_id: int | None,
+        default: _D = None,
+    ) -> _FETCHABLE | _D | None:
+        """
+        Shortcut method to get data from an object either by returning the cached version, or if it does not exist, attempting to fetch it from the API.
+
+        Parameters
+        ----------
+        object_type: Type[:class:`VoiceChannel` | :class:`TextChannel` | :class:`ForumChannel` | :class:`StageChannel` | :class:`CategoryChannel` | :class:`Thread` | :class:`User` | :class:`Guild` | :class:`GuildEmoji` | :class:`AppEmoji`]
+            Type of object to fetch or get.
+
+        object_id: :class:`int` | :data:`None`
+            ID of object to get. If :data:`None`, returns `default` if provided, else :data:`None`.
+
+        default: Any | :data:`None`
+            A default to return instead of raising if fetch fails.
+
+        Returns
+        -------
+        :class:`VoiceChannel` | :class:`TextChannel` | :class:`ForumChannel` | :class:`StageChannel` | :class:`CategoryChannel` | :class:`Thread` | :class:`User` | :class:`Guild` | :class:`GuildEmoji` | :class:`AppEmoji` | :data:`None`
+            The object if found, or `default` if provided when not found.
+
+        Raises
+        ------
+        :exc:`TypeError`
+            Raised when required parameters are missing or invalid types are provided.
+        :exc:`InvalidArgument`
+            Raised when an unsupported or incompatible object type is used.
+        """
+        try:
+            return await utils.get_or_fetch(
+                obj=self,
+                object_type=object_type,
+                object_id=object_id,
+                default=default,
+            )
+        except (HTTPException, ValueError, InvalidData):
+            return default
 
     # listeners/waiters
 
@@ -1196,7 +1376,7 @@ class Client:
         TypeError
             The ``func`` parameter is not a coroutine function.
         ValueError
-            The ``name`` (event name) does not start with 'on_'
+            The ``name`` (event name) does not start with ``on_``.
 
         Example
         -------
@@ -1260,7 +1440,7 @@ class Client:
         TypeError
             The function being listened to is not a coroutine.
         ValueError
-            The ``name`` (event name) does not start with 'on_'
+            The ``name`` (event name) does not start with ``on_``.
 
         Example
         -------
@@ -1398,6 +1578,7 @@ class Client:
         limit: int | None = 100,
         before: SnowflakeTime = None,
         after: SnowflakeTime = None,
+        with_counts: bool = True,
     ) -> GuildIterator:
         """Retrieves an :class:`.AsyncIterator` that enables receiving your guilds.
 
@@ -1425,6 +1606,11 @@ class Client:
             Retrieve guilds after this date or object.
             If a datetime is provided, it is recommended to use a UTC aware datetime.
             If the datetime is naive, it is assumed to be local time.
+        with_counts: :class:`bool`
+            Whether to include member count information in guilds. This fills the
+            :attr:`.Guild.approximate_member_count` and :attr:`.Guild.approximate_presence_count`
+            fields.
+            Defaults to ``True``.
 
         Yields
         ------
@@ -1451,7 +1637,9 @@ class Client:
 
         All parameters are optional.
         """
-        return GuildIterator(self, limit=limit, before=before, after=after)
+        return GuildIterator(
+            self, limit=limit, before=before, after=after, with_counts=with_counts
+        )
 
     async def fetch_template(self, code: Template | str) -> Template:
         """|coro|
@@ -1912,8 +2100,8 @@ class Client:
         data = await state.http.start_private_message(user.id)
         return state.add_dm_channel(data)
 
-    def add_view(self, view: View, *, message_id: int | None = None) -> None:
-        """Registers a :class:`~discord.ui.View` for persistent listening.
+    def add_view(self, view: BaseView, *, message_id: int | None = None) -> None:
+        """Registers a :class:`~discord.ui.BaseView` for persistent listening.
 
         This method should be used for when a view is comprised of components
         that last longer than the lifecycle of the program.
@@ -1922,7 +2110,7 @@ class Client:
 
         Parameters
         ----------
-        view: :class:`discord.ui.View`
+        view: :class:`discord.ui.BaseView`
             The view to register for dispatching.
         message_id: Optional[:class:`int`]
             The message ID that the view is attached to. This is currently used to
@@ -1938,8 +2126,8 @@ class Client:
             and all their components have an explicitly provided ``custom_id``.
         """
 
-        if not isinstance(view, View):
-            raise TypeError(f"expected an instance of View not {view.__class__!r}")
+        if not isinstance(view, BaseView):
+            raise TypeError(f"expected an instance of BaseView not {view.__class__!r}")
 
         if not view.is_persistent():
             raise ValueError(
@@ -1950,7 +2138,7 @@ class Client:
         self._connection.store_view(view, message_id)
 
     @property
-    def persistent_views(self) -> Sequence[View]:
+    def persistent_views(self) -> Sequence[BaseView]:
         """A sequence of persistent views added to the client.
 
         .. versionadded:: 2.0
@@ -2000,3 +2188,251 @@ class Client:
             self.application_id, payload
         )
         return [ApplicationRoleConnectionMetadata.from_dict(r) for r in data]
+
+    async def fetch_skus(self) -> list[SKU]:
+        """|coro|
+
+        Fetches the bot's SKUs.
+
+        .. versionadded:: 2.5
+
+        Returns
+        -------
+        List[:class:`.SKU`]
+            The bot's SKUs.
+        """
+        data = await self._connection.http.list_skus(self.application_id)
+        return [SKU(state=self._connection, data=s) for s in data]
+
+    def entitlements(
+        self,
+        user: Snowflake | None = None,
+        skus: list[Snowflake] | None = None,
+        before: SnowflakeTime | None = None,
+        after: SnowflakeTime | None = None,
+        limit: int | None = 100,
+        guild: Snowflake | None = None,
+        exclude_ended: bool = False,
+    ) -> EntitlementIterator:
+        """Returns an :class:`.AsyncIterator` that enables fetching the application's entitlements.
+
+        .. versionadded:: 2.6
+
+        Parameters
+        ----------
+        user: :class:`.abc.Snowflake` | None
+            Limit the fetched entitlements to entitlements owned by this user.
+        skus: list[:class:`.abc.Snowflake`] | None
+            Limit the fetched entitlements to entitlements that are for these SKUs.
+        before: :class:`.abc.Snowflake` | :class:`datetime.datetime` | None
+            Retrieves guilds before this date or object.
+            If a datetime is provided, it is recommended to use a UTC-aware datetime.
+            If the datetime is naive, it is assumed to be local time.
+        after: :class:`.abc.Snowflake` | :class:`datetime.datetime` | None
+            Retrieve guilds after this date or object.
+            If a datetime is provided, it is recommended to use a UTC-aware datetime.
+            If the datetime is naive, it is assumed to be local time.
+        limit: Optional[:class:`int`]
+            The number of entitlements to retrieve.
+            If ``None``, retrieves every entitlement, which may be slow.
+            Defaults to ``100``.
+        guild: :class:`.abc.Snowflake` | None
+            Limit the fetched entitlements to entitlements owned by this guild.
+        exclude_ended: :class:`bool`
+            Whether to limit the fetched entitlements to those that have not ended.
+            Defaults to ``False``.
+
+        Yields
+        ------
+        :class:`.Entitlement`
+            The application's entitlements.
+
+        Raises
+        ------
+        :exc:`HTTPException`
+            Retrieving the entitlements failed.
+
+        Examples
+        --------
+
+        Usage ::
+
+            async for entitlement in client.entitlements():
+                print(entitlement.user_id)
+
+        Flattening into a list ::
+
+            entitlements = await user.entitlements().flatten()
+
+        All parameters are optional.
+        """
+        return EntitlementIterator(
+            self._connection,
+            user_id=user.id if user else None,
+            sku_ids=[sku.id for sku in skus] if skus else None,
+            before=before,
+            after=after,
+            limit=limit,
+            guild_id=guild.id if guild else None,
+            exclude_ended=exclude_ended,
+        )
+
+    @property
+    def store_url(self) -> str:
+        """:class:`str`: The URL that leads to the application's store page for monetization.
+
+        .. versionadded:: 2.6
+        """
+        return f"https://discord.com/application-directory/{self.application_id}/store"
+
+    async def fetch_emojis(self) -> list[AppEmoji]:
+        r"""|coro|
+
+        Retrieves all custom :class:`AppEmoji`\s from the application.
+
+        Raises
+        ---------
+        HTTPException
+            An error occurred fetching the emojis.
+
+        Returns
+        --------
+        List[:class:`AppEmoji`]
+            The retrieved emojis.
+        """
+        data = await self._connection.http.get_all_application_emojis(
+            self.application_id
+        )
+        return [
+            self._connection.maybe_store_app_emoji(self.application_id, d)
+            for d in data["items"]
+        ]
+
+    async def fetch_emoji(self, emoji_id: int, /) -> AppEmoji:
+        """|coro|
+
+        Retrieves a custom :class:`AppEmoji` from the application.
+
+        Parameters
+        ----------
+        emoji_id: :class:`int`
+            The emoji's ID.
+
+        Returns
+        -------
+        :class:`AppEmoji`
+            The retrieved emoji.
+
+        Raises
+        ------
+        NotFound
+            The emoji requested could not be found.
+        HTTPException
+            An error occurred fetching the emoji.
+        """
+        data = await self._connection.http.get_application_emoji(
+            self.application_id, emoji_id
+        )
+        return self._connection.maybe_store_app_emoji(self.application_id, data)
+
+    async def create_emoji(
+        self,
+        *,
+        name: str,
+        image: bytes,
+    ) -> AppEmoji:
+        r"""|coro|
+
+        Creates a custom :class:`AppEmoji` for the application.
+
+        There is currently a limit of 2000 emojis per application.
+
+        Parameters
+        -----------
+        name: :class:`str`
+            The emoji name. Must be at least 2 characters.
+        image: :class:`bytes`
+            The :term:`py:bytes-like object` representing the image data to use.
+            Only JPG, PNG and GIF images are supported.
+
+        Raises
+        -------
+        HTTPException
+            An error occurred creating an emoji.
+
+        Returns
+        --------
+        :class:`AppEmoji`
+            The created emoji.
+        """
+
+        img = utils._bytes_to_base64_data(image)
+        data = await self._connection.http.create_application_emoji(
+            self.application_id, name, img
+        )
+        return self._connection.maybe_store_app_emoji(self.application_id, data)
+
+    async def delete_emoji(self, emoji: Snowflake) -> None:
+        """|coro|
+
+        Deletes the custom :class:`AppEmoji` from the application.
+
+        Parameters
+        ----------
+        emoji: :class:`abc.Snowflake`
+            The emoji you are deleting.
+
+        Raises
+        ------
+        HTTPException
+            An error occurred deleting the emoji.
+        """
+
+        await self._connection.http.delete_application_emoji(
+            self.application_id, emoji.id
+        )
+        if self._connection.cache_app_emojis and self._connection.get_emoji(emoji.id):
+            self._connection.remove_emoji(emoji)
+
+    def get_sound(self, sound_id: int) -> SoundboardSound | None:
+        """Gets a :class:`.Sound` from the bot's sound cache.
+
+        .. versionadded:: 2.7
+
+        Parameters
+        ----------
+        sound_id: :class:`int`
+            The ID of the sound to get.
+
+        Returns
+        -------
+        Optional[:class:`.SoundboardSound`]
+            The sound with the given ID.
+        """
+        return self._connection._get_sound(sound_id)
+
+    @property
+    def sounds(self) -> list[SoundboardSound]:
+        """A list of all the sounds the bot can see.
+
+        .. versionadded:: 2.7
+        """
+        return self._connection.sounds
+
+    async def fetch_default_sounds(self) -> list[SoundboardSound]:
+        """|coro|
+
+        Fetches the bot's default sounds.
+
+        .. versionadded:: 2.7
+
+        Returns
+        -------
+        List[:class:`.SoundboardSound`]
+            The bot's default sounds.
+        """
+        data = await self._connection.http.get_default_sounds()
+        return [
+            SoundboardSound(http=self.http, state=self._connection, data=s)
+            for s in data
+        ]

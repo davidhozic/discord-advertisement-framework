@@ -22,11 +22,12 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 """
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Callable, Generator, TypeVar
 
-import _discord
+import discord
 
 from ...cog import Cog
 from ...commands import ApplicationCommand, SlashCommandGroup
@@ -39,7 +40,7 @@ __all__ = ("Cog",)
 CogT = TypeVar("CogT", bound="Cog")
 FuncT = TypeVar("FuncT", bound=Callable[..., Any])
 
-MISSING: Any = _discord.utils.MISSING
+MISSING: Any = discord.utils.MISSING
 
 
 class Cog(Cog):
@@ -49,7 +50,7 @@ class Cog(Cog):
         # To do this, we need to interfere with the Cog creation process.
         return super().__new__(cls)
 
-    def walk_commands(self) -> Generator[Command, None, None]:
+    def walk_commands(self) -> Generator[Command]:
         """An iterator that recursively walks through this cog's commands and subcommands.
 
         Yields
