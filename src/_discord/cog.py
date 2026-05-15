@@ -43,7 +43,7 @@ from typing import (
 
 from typing_extensions import TypeGuard
 
-import discord.utils
+import _discord as discord
 
 from . import errors
 from .commands import (

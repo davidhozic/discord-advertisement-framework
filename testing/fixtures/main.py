@@ -7,7 +7,11 @@ import sys
 import daf
 
 
-TEST_TOKEN1, TEST_TOKEN2 = os.environ.get("DISCORD_TOKEN", None).split(';')
+_discord_token = os.environ.get("DISCORD_TOKEN")
+if _discord_token is None or ";" not in _discord_token:
+    TEST_TOKEN1 = TEST_TOKEN2 = None
+else:
+    TEST_TOKEN1, TEST_TOKEN2 = _discord_token.split(";", 1)
 TEST_GUILD_ID = 863071397207212052
 TEST_TEXT_CHANNEL_NUM = 3
 TEST_VOICE_CHANNEL_NUM = 2
@@ -36,6 +40,9 @@ def event_loop():
 
 @pytest.fixture(scope="session")
 async def accounts():
+    if TEST_TOKEN1 is None or TEST_TOKEN2 is None:
+        pytest.skip("DISCORD_TOKEN is not set")
+
     accs = [
         daf.ACCOUNT(token=TEST_TOKEN1),
         daf.ACCOUNT(token=TEST_TOKEN2)

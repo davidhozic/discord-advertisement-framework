@@ -32,7 +32,7 @@ from typing import Tuple
 
 import aiohttp
 
-import discord
+import _discord as discord
 
 
 def show_version() -> None:
@@ -64,8 +64,8 @@ def core(parser, args) -> None:
 
 _bot_template = """#!/usr/bin/env python3
 
-from discord.ext import commands
-import discord
+from _discord.ext import commands
+import _discord as discord
 import config
 
 class Bot(commands.{base}):
@@ -118,8 +118,8 @@ var/
 config.py
 """
 
-_cog_template = '''from discord.ext import commands
-import discord
+_cog_template = '''from _discord.ext import commands
+import _discord as discord
 
 class {name}(commands.Cog{attrs}):
     """The description for {name} goes here."""

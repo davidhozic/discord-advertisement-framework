@@ -27,13 +27,13 @@ from __future__ import annotations
 import contextlib
 from typing import List
 
-import discord
-from discord.errors import DiscordException
-from discord.ext.bridge import BridgeContext
-from discord.ext.commands import Context
-from discord.file import File
-from discord.member import Member
-from discord.user import User
+import _discord as discord
+from _discord.errors import DiscordException
+from _discord.ext.bridge import BridgeContext
+from _discord.ext.commands import Context
+from _discord.file import File
+from _discord.member import Member
+from _discord.user import User
 
 __all__ = (
     "PaginatorButton",

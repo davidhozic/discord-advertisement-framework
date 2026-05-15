@@ -42,7 +42,7 @@ from typing import (
     overload,
 )
 
-import discord
+import _discord as discord
 
 from ...commands import (
     ApplicationCommand,

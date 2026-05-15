@@ -27,7 +27,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Callable, Generator, TypeVar
 
-import discord
+import _discord as discord
 
 from ...cog import Cog
 from ...commands import ApplicationCommand, SlashCommandGroup

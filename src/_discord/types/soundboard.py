@@ -26,7 +26,7 @@ from __future__ import annotations
 
 from typing_extensions import NotRequired, TypedDict
 
-from discord.types.user import User
+from _discord.types.user import User
 
 from .snowflake import Snowflake
 

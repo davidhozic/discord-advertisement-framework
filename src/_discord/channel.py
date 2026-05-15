@@ -38,7 +38,7 @@ from typing import (
     overload,
 )
 
-import discord.abc
+import _discord as discord
 
 from . import utils
 from .asset import Asset

@@ -32,7 +32,7 @@ import sys
 from operator import attrgetter
 from typing import TYPE_CHECKING, Any, TypeVar, Union
 
-import discord.abc
+import _discord as discord
 
 from . import utils
 from .activity import ActivityTypes, create_activity

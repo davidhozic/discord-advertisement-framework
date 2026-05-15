@@ -29,9 +29,8 @@ import inspect
 import re
 from typing import TYPE_CHECKING, Any, Generic, TypeVar, Union
 
-import discord.abc
-import discord.utils
-from discord.message import Message
+import _discord as discord
+from _discord.message import Message
 
 if TYPE_CHECKING:
     from typing_extensions import ParamSpec

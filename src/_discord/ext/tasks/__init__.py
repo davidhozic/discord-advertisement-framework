@@ -36,9 +36,9 @@ from typing import Any, Awaitable, Callable, Generic, TypeVar, cast
 
 import aiohttp
 
-import discord
-from discord.backoff import ExponentialBackoff
-from discord.utils import MISSING
+import _discord as discord
+from _discord.backoff import ExponentialBackoff
+from _discord.utils import MISSING
 
 __all__ = ("loop",)
 

@@ -30,8 +30,8 @@ import time
 from collections import deque
 from typing import TYPE_CHECKING, Any, Callable, Deque, TypeVar
 
-import discord.abc
-from discord.enums import Enum
+import _discord.abc
+from _discord.enums import Enum
 
 from ...abc import PrivateChannel
 from .errors import MaxConcurrencyReached

@@ -27,9 +27,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, TypeVar, overload
 
-import discord.abc
-from discord.interactions import Interaction, InteractionMessage, InteractionResponse
-from discord.webhook.async_ import Webhook
+import _discord as discord
+from _discord.interactions import Interaction, InteractionMessage, InteractionResponse
+from _discord.webhook.async_ import Webhook
 
 if TYPE_CHECKING:
     from typing import Awaitable, Callable

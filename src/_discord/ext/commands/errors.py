@@ -27,7 +27,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Callable
 
-from discord.errors import ClientException, DiscordException
+from _discord.errors import ClientException, DiscordException
 
 if TYPE_CHECKING:
     from inspect import Parameter

@@ -22,7 +22,7 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 """
 
-from discord.errors import DiscordException
+from _discord.errors import DiscordException
 
 
 class SinkException(DiscordException):

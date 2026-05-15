@@ -31,7 +31,7 @@ import itertools
 import re
 from typing import TYPE_CHECKING, Any
 
-import discord.utils
+import _discord.utils
 
 from .core import Command, Group
 from .errors import CommandError

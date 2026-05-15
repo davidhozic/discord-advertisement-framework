@@ -31,7 +31,7 @@ import sys
 import traceback
 from typing import TYPE_CHECKING, Any, Callable, Coroutine, Iterable, TypeVar
 
-import discord
+import _discord as discord
 
 from . import errors
 from .context import Context

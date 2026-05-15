@@ -27,7 +27,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, TypeVar
 
-import discord.abc
+import _discord as discord
 
 from .asset import Asset
 from .collectibles import Nameplate

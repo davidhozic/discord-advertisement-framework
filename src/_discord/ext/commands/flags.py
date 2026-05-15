@@ -31,7 +31,7 @@ import sys
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Iterator, Literal, Pattern, TypeVar, Union
 
-from discord.utils import (
+from _discord.utils import (
     MISSING,
     maybe_coroutine,
     resolve_annotation,

@@ -40,8 +40,8 @@ from typing import (
     runtime_checkable,
 )
 
-import discord
-from discord.utils import UNICODE_EMOJIS
+import _discord as discord
+from _discord.utils import UNICODE_EMOJIS
 
 from .errors import *
 
