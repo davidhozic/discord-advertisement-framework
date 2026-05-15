@@ -25,7 +25,7 @@ index c58c8ba..3761f0f 100644
 -            RuntimeWarning,
 -            stacklevel=2,
 -        )
-+__version__ = "2.4.1"
++__version__ = "2.7.2"
  
  
  class AdvancedVersionInfo(TypedDict):

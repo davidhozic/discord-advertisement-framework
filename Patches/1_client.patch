@@ -1,17 +1,17 @@
 diff --git a/src/_discord/client.py b/src/_discord/client.py
-index 0be4855..08c6469 100644
+index c686499..f62bc29 100644
 --- a/src/_discord/client.py
 +++ b/src/_discord/client.py
-@@ -482,7 +482,7 @@ class Client:
+@@ -645,7 +645,7 @@ class Client:
  
      # login state management
  
 -    async def login(self, token: str) -> None:
-+    async def login(self, token: str, bot: bool) -> None:
++    async def login(self, token: str, bot: bool = True) -> None:
          """|coro|
  
          Logs in the client with the specified credentials.
-@@ -511,7 +511,7 @@ class Client:
+@@ -674,7 +674,7 @@ class Client:
  
          _log.info("logging in using static token")
  
@@ -20,7 +20,7 @@ index 0be4855..08c6469 100644
          self._connection.user = ClientUser(state=self._connection, data=data)
  
      async def connect(self, *, reconnect: bool = True) -> None:
-@@ -645,7 +645,7 @@ class Client:
+@@ -810,7 +810,7 @@ class Client:
          self._connection.clear()
          self.http.recreate()
  
@@ -29,7 +29,7 @@ index 0be4855..08c6469 100644
          """|coro|
  
          A shorthand coroutine for :meth:`login` + :meth:`connect`.
-@@ -655,7 +655,7 @@ class Client:
+@@ -820,7 +820,7 @@ class Client:
          TypeError
              An unexpected keyword argument was received.
          """

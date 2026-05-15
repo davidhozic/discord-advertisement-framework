@@ -1,5 +1,5 @@
 diff --git a/src/_discord/embeds.py b/src/_discord/embeds.py
-index 44d51e8..7633330 100644
+index 77f0c70..ee85e91 100644
 --- a/src/_discord/embeds.py
 +++ b/src/_discord/embeds.py
 @@ -28,6 +28,9 @@ from __future__ import annotations
@@ -12,11 +12,13 @@ index 44d51e8..7633330 100644
  from . import utils
  from .colour import Colour
  
-@@ -45,7 +48,6 @@ E = TypeVar("E", bound="Embed")
+@@ -44,8 +47,7 @@ __all__ = (
+ E = TypeVar("E", bound="Embed")
  
  if TYPE_CHECKING:
-     from _discord.types.embed import Embed as EmbedData
--    from _discord.types.embed import EmbedType
+-    from discord.types.embed import Embed as EmbedData
+-    from discord.types.embed import EmbedType
++    from _discord.types.embed import Embed as EmbedData
  
  
  class EmbedAuthor:

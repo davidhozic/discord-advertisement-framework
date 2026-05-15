@@ -313,6 +313,7 @@ class DiscordWebSocket:
         self._buffer = bytearray()
         self._close_code = None
         self._rate_limiter = GatewayRatelimiter()
+        self.bot: bool = True
 
     @property
     def open(self):
@@ -349,6 +350,7 @@ class DiscordWebSocket:
 
         # dynamically add attributes needed
         ws.token = client.http.token
+        ws.bot = client.http.bot_token
         ws._connection = client._connection
         ws._discord_parsers = client._connection.parsers
         ws._dispatch = client.dispatch
@@ -409,34 +411,75 @@ class DiscordWebSocket:
 
     async def identify(self):
         """Sends the IDENTIFY packet."""
-        payload = {
-            "op": self.IDENTIFY,
-            "d": {
-                "token": self.token,
-                "properties": {
-                    "os": sys.platform,
-                    "browser": "pycord",
-                    "device": "pycord",
+        if self.bot:
+            payload = {
+                "op": self.IDENTIFY,
+                "d": {
+                    "token": self.token,
+                    "properties": {
+                        "os": sys.platform,
+                        "browser": "pycord",
+                        "device": "pycord",
+                    },
+                    "compress": True,
+                    "large_threshold": 250,
                 },
-                "compress": True,
-                "large_threshold": 250,
-            },
-        }
-
-        if self.shard_id is not None and self.shard_count is not None:
-            payload["d"]["shard"] = [self.shard_id, self.shard_count]
-
-        state = self._connection
-        if state._activity is not None or state._status is not None:
-            payload["d"]["presence"] = {
-                "status": state._status,
-                "game": state._activity,
-                "since": 0,
-                "afk": False,
             }
 
-        if state._intents is not None:
-            payload["d"]["intents"] = state._intents.value
+            if self.shard_id is not None and self.shard_count is not None:
+                payload["d"]["shard"] = [self.shard_id, self.shard_count]
+
+            state = self._connection
+            if state._activity is not None or state._status is not None:
+                payload["d"]["presence"] = {
+                    "status": state._status,
+                    "game": state._activity,
+                    "since": 0,
+                    "afk": False,
+                }
+
+            if state._intents is not None:
+                payload["d"]["intents"] = state._intents.value
+        else:
+            payload = {
+                "op": self.IDENTIFY,
+                "d": {
+                    "token": self.token,
+                    "capabilities": 16381,
+                    "properties": {
+                        "os": "Windows",
+                        "browser": "Chrome",
+                        "device": "",
+                        "system_locale": "en-US",
+                        "browser_user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36",
+                        "browser_version": "109.0.0.0",
+                        "os_version": "10",
+                        "referrer": "",
+                        "referring_domain": "",
+                        "referrer_current": "",
+                        "referring_domain_current": "",
+                        "release_channel": "stable",
+                        "client_build_number": 183619,
+                        "client_event_source": None,
+                    },
+                    "presence": {
+                        "status": "online",
+                        "since": 0,
+                        "activities": [],
+                        "afk": False,
+                    },
+                    "compress": False,
+                    "client_state": {
+                        "guild_versions": {},
+                        "highest_last_message_id": "0",
+                        "read_state_version": 0,
+                        "user_guild_settings_version": -1,
+                        "user_settings_version": -1,
+                        "private_channels_version": "0",
+                        "api_code_version": 0,
+                    },
+                },
+            }
 
         await self.call_hooks(
             "before_identify", self.shard_id, initial=self._initial_identify
